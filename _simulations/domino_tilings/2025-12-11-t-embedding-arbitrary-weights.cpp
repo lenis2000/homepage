@@ -427,9 +427,39 @@ static void setRandomIIDWeightsInternal() {
     }
 }
 
+// =============================================================================
+// COORDINATE MAPPING: T-embedding (x,y) <-> Weight matrix (matI, matJ)
+// =============================================================================
+// The weight matrix uses 4N x 4N grid to preserve half-integer distinctions.
+// This matches JS generateMasterWeights and applyExternalWeights.
+//
+// From edge midpoint (midX, midY) to matrix indices:
+//   matI = floor(2 * (midY + N))
+//   matJ = floor(2 * (midX + N))
+//
+// For structured weights (gamma, periodic), we use "old" 2N indices:
+//   oldRow = matI / 2
+//   oldCol = matJ / 2
+// =============================================================================
+
+// Helper: get matrix indices for an edge
+static void getEdgeMatrixIndices(const AztecEdge& edge, int N, int& matI, int& matJ, int& oldRow, int& oldCol) {
+    double x1 = g_aztecVertices[edge.v1].x;
+    double y1 = g_aztecVertices[edge.v1].y;
+    double x2 = g_aztecVertices[edge.v2].x;
+    double y2 = g_aztecVertices[edge.v2].y;
+    double midX = (x1 + x2) / 2.0;
+    double midY = (y1 + y2) / 2.0;
+
+    matI = (int)std::floor(2.0 * (midY + N));
+    matJ = (int)std::floor(2.0 * (midX + N));
+    oldRow = matI / 2;
+    oldCol = matJ / 2;
+}
+
 // Compute layered weight based on diagonal index and regime
-static double computeLayeredWeight(int diagIndex) {
-    double sqrtN = std::sqrt((double)g_aztecLevel);
+static double computeLayeredWeight(int diagIndex, int N) {
+    double sqrtN = std::sqrt((double)N);
     double u = uniformRandom();
 
     switch (g_layeredRegime) {
@@ -454,19 +484,18 @@ static double computeLayeredWeight(int diagIndex) {
     }
 }
 
-// Set layered weights by diagonal
+// Set layered weights by diagonal (matching JS generateMasterWeights layered mode)
 static void setLayeredWeightsInternal() {
+    int N = g_aztecLevel;
     for (size_t i = 0; i < g_aztecEdges.size(); i++) {
         AztecEdge& edge = g_aztecEdges[i];
-        double x1 = g_aztecVertices[edge.v1].x;
-        double y1 = g_aztecVertices[edge.v1].y;
-        double x2 = g_aztecVertices[edge.v2].x;
-        double y2 = g_aztecVertices[edge.v2].y;
-        double midX = (x1 + x2) / 2.0;
-        double midY = (y1 + y2) / 2.0;
-        int diagIndex = (int)std::round(midX + midY);
+        int matI, matJ, oldRow, oldCol;
+        getEdgeMatrixIndices(edge, N, matI, matJ, oldRow, oldCol);
 
-        double w = computeLayeredWeight(diagIndex);
+        // Diagonal index from 2N scale, centered
+        int diagIndex = oldRow + oldCol - N;
+
+        double w = computeLayeredWeight(diagIndex, N);
         edge.setWeight(mp_real(w));
     }
 }
@@ -516,19 +545,43 @@ static char classifyEdge(const AztecEdge& edge) {
     return '1';  // default
 }
 
-// Set gamma-distributed weights (alpha edges get Gamma(alpha), beta edges get Gamma(beta))
+// Set gamma-distributed weights per Duits-Van Peski structure
+// Black face (CW from top): alpha - 1 - 1 - beta
+// White face (CW from top): 1 - beta - alpha - 1
+// Rule: top edge of black → alpha, left edge of black → beta, else 1
 static void setGammaWeightsInternal() {
     for (size_t i = 0; i < g_aztecEdges.size(); i++) {
         AztecEdge& edge = g_aztecEdges[i];
-        char edgeType = classifyEdge(edge);
+        double x1 = g_aztecVertices[edge.v1].x;
+        double y1 = g_aztecVertices[edge.v1].y;
+        double x2 = g_aztecVertices[edge.v2].x;
+        double y2 = g_aztecVertices[edge.v2].y;
 
         double weight = 1.0;
-        if (edgeType == 'a') {
-            weight = gammaRandom(g_gammaAlpha);
-        } else if (edgeType == 'b') {
-            weight = gammaRandom(g_gammaBeta);
+
+        if (edge.isHorizontal) {
+            // Horizontal edge at y = y1
+            // Face below has center at (midX, y1 - 0.5)
+            // If face below is black, this is its TOP edge → alpha
+            double midX = (x1 + x2) / 2.0;
+            int faceX = (int)std::round(midX);
+            int faceY = (int)std::round(y1 - 0.5);
+            bool faceIsBlack = ((faceX + faceY) % 2) != 0;
+            if (faceIsBlack) {
+                weight = gammaRandom(g_gammaAlpha);
+            }
+        } else {
+            // Vertical edge at x = x1
+            // Face to the right has center at (x1 + 0.5, midY)
+            // If face to right is black, this is its LEFT edge → beta
+            double midY = (y1 + y2) / 2.0;
+            int faceX = (int)std::round(x1 + 0.5);
+            int faceY = (int)std::round(midY);
+            bool faceIsBlack = ((faceX + faceY) % 2) != 0;
+            if (faceIsBlack) {
+                weight = gammaRandom(g_gammaBeta);
+            }
         }
-        // 'g' and '1' stay at 1.0 per Duits-Van Peski
 
         edge.setWeight(mp_real(weight));
     }
@@ -571,74 +624,32 @@ static void setPeriodicWeightsInternal() {
         initPeriodicWeights(2, 2);
     }
 
+    int N = g_aztecLevel;
     int k = g_periodicK;
     int l = g_periodicL;
 
     for (size_t i = 0; i < g_aztecEdges.size(); i++) {
         AztecEdge& edge = g_aztecEdges[i];
-        double x1 = g_aztecVertices[edge.v1].x;
-        double y1 = g_aztecVertices[edge.v1].y;
-        double x2 = g_aztecVertices[edge.v2].x;
-        double y2 = g_aztecVertices[edge.v2].y;
-
-        // Find which black face this edge belongs to
-        int faceX, faceY;
-        char edgeDir; // 'a'=alpha, 'b'=beta, 'g'=gamma, '1'=one
-
-        if (edge.isHorizontal) {
-            // Horizontal edge from (x1,y1) to (x2,y1)
-            // Face above: center at (round(midX), round(y1 + 0.5))
-            // Face below: center at (round(midX), round(y1 - 0.5))
-            double midX = (x1 + x2) / 2.0;
-            int faceAboveX = (int)std::round(midX);
-            int faceAboveY = (int)std::round(y1 + 0.5);
-            int faceBelowX = (int)std::round(midX);
-            int faceBelowY = (int)std::round(y1 - 0.5);
-
-            if (isBlackFace(faceAboveX, faceAboveY)) {
-                faceX = faceAboveX; faceY = faceAboveY;
-                edgeDir = 'a'; // bottom edge of black face = alpha
-            } else if (isBlackFace(faceBelowX, faceBelowY)) {
-                faceX = faceBelowX; faceY = faceBelowY;
-                edgeDir = '1'; // top edge of black face = 1
-            } else {
-                edge.setWeight(mp_real(1));
-                continue;
-            }
-        } else {
-            // Vertical edge from (x1,y1) to (x1,y2)
-            double midY = (y1 + y2) / 2.0;
-            int faceRightX = (int)std::round(x1 + 0.5);
-            int faceRightY = (int)std::round(midY);
-            int faceLeftX = (int)std::round(x1 - 0.5);
-            int faceLeftY = (int)std::round(midY);
-
-            if (isBlackFace(faceRightX, faceRightY)) {
-                faceX = faceRightX; faceY = faceRightY;
-                edgeDir = 'g'; // left edge of black face = gamma
-            } else if (isBlackFace(faceLeftX, faceLeftY)) {
-                faceX = faceLeftX; faceY = faceLeftY;
-                edgeDir = 'b'; // right edge of black face = beta
-            } else {
-                edge.setWeight(mp_real(1));
-                continue;
-            }
-        }
-
-        // Compute periodic indices using diagonal coordinates
-        // diagI = (faceX + faceY) / 2, diagJ = (faceX - faceY) / 2
-        int diagI = (faceX + faceY) / 2;
-        int diagJ = (faceX - faceY) / 2;
-
-        // Map to periodic indices [0, l-1] and [0, k-1]
-        int pi = ((diagI % l) + l) % l;
-        int pj = ((diagJ % k) + k) % k;
+        int matI, matJ, oldRow, oldCol;
+        getEdgeMatrixIndices(edge, N, matI, matJ, oldRow, oldCol);
 
         double weight = 1.0;
-        if (edgeDir == 'a') weight = g_periodicAlpha[pj][pi];
-        else if (edgeDir == 'b') weight = g_periodicBeta[pj][pi];
-        else if (edgeDir == 'g') weight = g_periodicGamma[pj][pi];
-        // edgeDir == '1' stays at weight = 1.0
+        if (oldRow % 2 == 0) {
+            // Compute periodic indices from the 2N grid
+            int diagI = oldRow / 2;
+            int diagJ = oldCol / 2;
+            int pi = ((diagI % k) + k) % k;
+            int pj = ((diagJ % l) + l) % l;
+
+            if (oldCol % 2 == 0) {
+                // beta weight
+                weight = g_periodicBeta[pi][pj];
+            } else {
+                // alpha weight
+                weight = g_periodicAlpha[pi][pj];
+            }
+        }
+        // Odd old-rows stay at 1.0
 
         edge.setWeight(mp_real(weight));
     }
@@ -4220,29 +4231,14 @@ void applyExternalWeights(double* weightBuffer, int bufferSize) {
 }
 
 // Set weights based on mode:
-// 0 = All 1's (uniform)
-// 1 = Random IID
-// 2 = Random Layered
-// 3 = Random Gamma
-// 4 = Periodic (k x l periodicity)
+// 0 = All 1's (uniform) - only mode supported in C++
+// Other modes use JS generateMasterWeights() + applyExternalWeights()
 EMSCRIPTEN_KEEPALIVE
 void setAztecWeightMode(int mode) {
     if (mode == 0) {
-        // All 1's: all weights = 1
         setUniformWeightsInternal();
-    } else if (mode == 1) {
-        // Random IID
-        setRandomIIDWeightsInternal();
-    } else if (mode == 2) {
-        // Random Layered
-        setLayeredWeightsInternal();
-    } else if (mode == 3) {
-        // Random Gamma
-        setGammaWeightsInternal();
-    } else if (mode == 4) {
-        // Periodic weights
-        setPeriodicWeightsInternal();
     }
+    // Other modes: no-op, JS is source of truth via applyExternalWeights
 }
 
 // Set Random IID parameters (min and max range for uniform distribution)

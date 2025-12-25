@@ -3392,22 +3392,38 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       }
 
     } else if (mode === 'gamma') {
-      // Gamma: Engine B convention - even rows (in 2N scale) have weights
-      // In 4N scale, rows 0,1 -> old row 0, rows 2,3 -> old row 1, etc.
+      // Gamma: face-based classification per Duits-Van Peski
+      // Black face (CW from top): alpha - 1 - 1 - beta
+      // Matrix parity: i odd, j even → horizontal edge; i even, j odd → vertical edge
       const alpha = params.alpha || 0.2;
       const beta = params.beta || 0.25;
+
       for (let i = 0; i < dim; i++) {
-        const oldRow = Math.floor(i / 2);
-        if (oldRow % 2 === 0) {
-          for (let j = 0; j < dim; j++) {
-            const oldCol = Math.floor(j / 2);
-            // oldCol even → beta, oldCol odd → alpha
-            weights[i * dim + j] = (oldCol % 2 === 0)
-              ? gammaRandom(beta, 1.0, rng)
-              : gammaRandom(alpha, 1.0, rng);
+        for (let j = 0; j < dim; j++) {
+          const midY = i / 2 - N;
+          const midX = j / 2 - N;
+
+          if (i % 2 === 1 && j % 2 === 0) {
+            // Horizontal edge: check if TOP of black face
+            // Face below has center at (midX, midY - 0.5)
+            const faceX = Math.round(midX);
+            const faceY = Math.round(midY - 0.5);
+            const isBlack = ((faceX + faceY) % 2) !== 0;
+            if (isBlack) {
+              weights[i * dim + j] = gammaRandom(alpha, 1.0, rng);
+            }
+          } else if (i % 2 === 0 && j % 2 === 1) {
+            // Vertical edge: check if LEFT of black face
+            // Face to right has center at (midX + 0.5, midY)
+            const faceX = Math.round(midX + 0.5);
+            const faceY = Math.round(midY);
+            const isBlack = ((faceX + faceY) % 2) !== 0;
+            if (isBlack) {
+              weights[i * dim + j] = gammaRandom(beta, 1.0, rng);
+            }
           }
+          // Other positions stay at 1.0
         }
-        // Odd old-rows stay 1.0
       }
 
     } else if (mode === 'periodic') {
@@ -7550,22 +7566,27 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     computeAndDisplay();
   });
 
-  // Export edge weights to JSON
+  // Export edge weights to JSON (v2 format: edges with coordinates)
   document.getElementById('export-weights-btn').addEventListener('click', () => {
     const n = parseN();
-    const N = n;  // Aztec diamond size
     const { mode, params } = getCurrentWeightParams();
-    const masterWeights = generateMasterWeights(N, mode, params);
-    const dim = 4 * N;
+
+    // Export edges with coordinates and weights
+    const edges = aztecEdges.map(e => ({
+      v1: [e.x1, e.y1],
+      v2: [e.x2, e.y2],
+      weight: e.weight,
+      isHorizontal: e.isHorizontal
+    }));
 
     // Create export object
     const exportData = {
-      format: 'aztec-edge-weights-v1',
+      format: 'aztec-edge-weights-v2',
       n: n,
-      dim: dim,
+      numEdges: edges.length,
       mode: mode,
       params: params,
-      weights: Array.from(masterWeights)
+      edges: edges
     };
 
     // Download as JSON
@@ -7593,26 +7614,12 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target.result);
+        const n = data.n;
 
-        // Validate format
-        if (!data.weights || !Array.isArray(data.weights)) {
-          alert('Invalid file format: missing weights array');
+        if (!n) {
+          alert('Invalid file format: missing n');
           return;
         }
-
-        const n = data.n || Math.round(Math.sqrt(data.weights.length) / 4);
-        const dim = data.dim || 4 * n;
-
-        if (data.weights.length !== dim * dim) {
-          alert(`Weight array size mismatch: expected ${dim * dim}, got ${data.weights.length}`);
-          return;
-        }
-
-        // Update n input to match imported data
-        document.getElementById('sample-N-input').value = n;
-
-        // Convert to Float64Array
-        const masterWeights = new Float64Array(data.weights);
 
         // Initialize Aztec graph with correct size
         currentSimulationN = n;
@@ -7620,24 +7627,64 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         updateVEForN(n);
         initAztecGraph(n);
 
-        // Apply imported weights to geometry engine
+        // Validate v2 format
+        if (data.format !== 'aztec-edge-weights-v2' || !data.edges) {
+          alert('Invalid file format: expected aztec-edge-weights-v2 with edges array');
+          return;
+        }
+
+        // Build a lookup map for current edges by coordinate key
+        const edgeMap = new Map();
+        aztecEdges.forEach((e, idx) => {
+          // Normalize edge key (smaller coord first)
+          const key = [[e.x1, e.y1], [e.x2, e.y2]]
+            .sort((a, b) => a[0] - b[0] || a[1] - b[1])
+            .map(v => `${v[0]},${v[1]}`).join('|');
+          edgeMap.set(key, idx);
+        });
+
+        // Apply weights from imported edges
+        let matched = 0;
+        data.edges.forEach(importedEdge => {
+          const key = [importedEdge.v1, importedEdge.v2]
+            .sort((a, b) => a[0] - b[0] || a[1] - b[1])
+            .map(v => `${v[0]},${v[1]}`).join('|');
+          if (edgeMap.has(key)) {
+            aztecEdges[edgeMap.get(key)].weight = importedEdge.weight;
+            matched++;
+          }
+        });
+
+        console.log(`Imported ${matched}/${data.edges.length} edges`);
+
+        // Apply to C++ geometry engine
         if (wasmReady) {
-          const numWeights = masterWeights.length;
-          const ptr = Module._malloc(numWeights * 8);
-          for (let i = 0; i < numWeights; i++) {
+          const N = n;
+          const dim = 4 * N;
+          const masterWeights = new Float64Array(dim * dim).fill(1.0);
+
+          // Convert edge weights to matrix format for applyExternalWeights
+          aztecEdges.forEach(e => {
+            const midX = (e.x1 + e.x2) / 2;
+            const midY = (e.y1 + e.y2) / 2;
+            const matI = Math.floor(2 * (midY + N));
+            const matJ = Math.floor(2 * (midX + N));
+            if (matI >= 0 && matI < dim && matJ >= 0 && matJ < dim) {
+              masterWeights[matI * dim + matJ] = e.weight;
+            }
+          });
+
+          const ptr = Module._malloc(dim * dim * 8);
+          for (let i = 0; i < dim * dim; i++) {
             Module.setValue(ptr + i * 8, masterWeights[i], 'double');
           }
-          applyExternalWeights(ptr, numWeights);
+          applyExternalWeights(ptr, dim * dim);
           Module._free(ptr);
         }
 
         // Switch to "All 1's" preset so manual weights aren't overwritten on next compute
         weightPresetSelect.value = 'all-ones';
         updateWeightParamsVisibility();
-
-        // Store imported weights for future use
-        window._importedWeights = masterWeights;
-        window._importedN = n;
 
         computeAndDisplay();
       } catch (err) {
