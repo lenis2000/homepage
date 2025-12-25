@@ -528,7 +528,7 @@ static void setGammaWeightsInternal() {
         } else if (edgeType == 'b') {
             weight = gammaRandom(g_gammaBeta);
         }
-        // 'g' and '1' stay at 1.0
+        // 'g' and '1' stay at 1.0 per Duits-Van Peski
 
         edge.setWeight(mp_real(weight));
     }
