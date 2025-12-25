@@ -3384,10 +3384,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       // Black face (CW from top): 1 - w_i - 1 - 1 (only RIGHT edge gets w_i)
       // White face (CW from top): 1 - 1 - 1 - w_j (only LEFT edge gets w_j)
       // All horizontal edges = 1, only certain vertical edges get w
-      // SAME w along each SW/NE diagonal slice (constant x+y)
+      // SAME w along each diagonal slice (constant x - y, NW/SE direction)
       const regime = params.regime || 3;
 
-      // Pre-generate ONE weight per diagonal (diagonal index = x + y)
+      // Pre-generate ONE weight per diagonal (diagonal index = x - y)
       // Range: approximately -2N to 2N, so 4N+1 diagonals
       const diagWeights = {};
       for (let d = -2 * N; d <= 2 * N; d++) {
@@ -3409,8 +3409,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
             if (isBlackLeft) {
               // This edge is RIGHT of BLACK face → gets layered weight
-              // Use pre-generated weight for this diagonal
-              const diagIndex = faceX + faceY;
+              // Use pre-generated weight for this diagonal (x - y)
+              const diagIndex = faceX - faceY;
               weights[i * dim + j] = diagWeights[diagIndex];
             }
             // else: edge is RIGHT of WHITE face → stays 1.0
@@ -3523,26 +3523,27 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       // Layered: Only vertical edges get non-trivial weight
       // Black face (CW from top): 1 - w_i - 1 - 1 (RIGHT edge gets w)
       // White face (CW from top): 1 - 1 - 1 - w_j (LEFT edge gets w)
-      // SAME w along each SW/NE diagonal slice
-      // In EKLP format: j even = vertical edges, j odd = horizontal (= 1.0)
+      // SAME w along each diagonal slice (constant x - y, NW/SE direction)
+      //
+      // For EKLP: use same structure as gamma (even rows), but only j even (beta/vertical)
+      // gets the layered weight, j odd (alpha/horizontal) stays 1.0
       const regime = params.regime || 3;
 
-      // Pre-generate ONE weight per diagonal
-      // Range: approximately -N to N for the 2N×2N matrix
+      // Pre-generate ONE weight per diagonal (x - y)
       const diagWeights = {};
       for (let d = -2 * N; d <= 2 * N; d++) {
         diagWeights[d] = generateLayeredWeight(regime, d, N, rng);
       }
 
       for (let i = 0; i < dim; i++) {
-        if (i % 2 === 0) {  // Even rows only
+        if (i % 2 === 0) {  // Even rows like gamma
           for (let j = 0; j < dim; j++) {
             if (j % 2 === 0) {
-              // Vertical edge position: use pre-generated diagonal weight
-              const diagIndex = Math.floor(i / 2) + Math.floor(j / 2) - N;
+              // j even (beta/vertical position): layered weight
+              const diagIndex = Math.floor(j / 2) - Math.floor(i / 2);
               weights[i * dim + j] = diagWeights[diagIndex];
             }
-            // j odd (horizontal edges): stay at 1.0
+            // j odd (alpha/horizontal): stay at 1.0
           }
         }
         // Odd rows stay 1.0
@@ -3656,13 +3657,73 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return arr;
   }
 
-  // Helper: Send master weights to shuffling WASM and run simulation
+  // Convert aztecEdges (geometric format) to EKLP 2N×2N weight matrix
+  // This uses the actual edge weights from the T-embedding
+  function convertAztecEdgesToEKLP(N) {
+    const dim = 2 * N;
+    const weights = new Float64Array(dim * dim);
+    weights.fill(1.0);
+
+    // Build lookup from geometric midpoint to weight
+    const edgeMap = new Map();
+    for (const edge of aztecEdges) {
+      const mx = (edge.x1 + edge.x2) / 2;
+      const my = (edge.y1 + edge.y2) / 2;
+      const key = `${mx.toFixed(1)},${my.toFixed(1)},${edge.isHorizontal ? 'h' : 'v'}`;
+      edgeMap.set(key, edge.weight);
+    }
+
+    // Map EKLP matrix positions to geometric edges
+    // EKLP uses 2N×2N matrix; we need to find which edge each position represents
+    for (let i = 0; i < dim; i++) {
+      for (let j = 0; j < dim; j++) {
+        // Convert EKLP (i,j) to geometric midpoint
+        // For EKLP, the mapping is:
+        //   i even, j even → vertical edge (beta in gamma)
+        //   i even, j odd  → horizontal edge (alpha in gamma)
+        //   i odd → typically 1.0 in gamma, but we fill all for IID-style
+
+        // Geometric coordinates: map from [0, dim-1] to [-N+0.5, N-0.5] range
+        // Edge midpoint calculation based on EKLP block structure
+        const blockRow = Math.floor(i / 2);
+        const blockCol = Math.floor(j / 2);
+
+        // Geometric face center for this block
+        const fx = blockCol - N + 1;
+        const fy = blockRow - N + 1;
+
+        let mx, my, isHorizontal;
+
+        if (j % 2 === 0) {
+          // Vertical edge: LEFT of face at (fx, fy)
+          mx = fx - 0.5;
+          my = fy;
+          isHorizontal = false;
+        } else {
+          // Horizontal edge: BOTTOM of face at (fx, fy)
+          mx = fx;
+          my = fy - 0.5;
+          isHorizontal = true;
+        }
+
+        const key = `${mx.toFixed(1)},${my.toFixed(1)},${isHorizontal ? 'h' : 'v'}`;
+        const weight = edgeMap.get(key);
+        if (weight !== undefined) {
+          weights[i * dim + j] = weight;
+        }
+      }
+    }
+
+    return weights;
+  }
+
+  // Helper: Send weights to shuffling WASM and run simulation
   // Returns resultPtr (caller must free with shufflingFreeString)
-  async function runShufflingWithWeights(N, masterWeights, doubleDimer = true) {
-    const numWeights = masterWeights.length;
+  async function runShufflingWithWeights(N, eklpWeights, doubleDimer = true) {
+    const numWeights = eklpWeights.length;
     const weightsPtr = shufflingModule._malloc(numWeights * 8);
     for (let i = 0; i < numWeights; i++) {
-      shufflingModule.setValue(weightsPtr + i * 8, masterWeights[i], 'double');
+      shufflingModule.setValue(weightsPtr + i * 8, eklpWeights[i], 'double');
     }
     const resultPtr = doubleDimer
       ? await simulateAztecDoubleDimer(N, weightsPtr)
@@ -3715,10 +3776,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     if (N < 1) return;
 
     try {
-      // Use Shuffling Weight Buffer (2N×2N format for EKLP)
-      const { mode, params } = getCurrentWeightParams();
-      const shufflingWeights = generateShufflingWeights(N, mode, params);
-      const resultPtr = await runShufflingWithWeights(N, shufflingWeights, true);
+      // Convert aztecEdges (from T-embedding) to EKLP format
+      const eklpWeights = convertAztecEdgesToEKLP(N);
+      const resultPtr = await runShufflingWithWeights(N, eklpWeights, true);
 
       // Parse result
       const jsonStr = shufflingModule.UTF8ToString(resultPtr);
@@ -3783,11 +3843,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const preset = document.getElementById('weight-preset-select').value;
       let resultPtr;
 
-      // Use Shuffling Weight Buffer for double dimer mode (2N×2N for EKLP)
+      // Use aztecEdges weights converted to EKLP format for double dimer mode
       if (doubleDimerMode) {
-        const { mode, params } = getCurrentWeightParams();
-        const shufflingWeights = generateShufflingWeights(N, mode, params);
-        resultPtr = await runShufflingWithWeights(N, shufflingWeights, true);
+        const eklpWeights = convertAztecEdgesToEKLP(N);
+        resultPtr = await runShufflingWithWeights(N, eklpWeights, true);
 
       // Non-double-dimer: use specialized C++ functions for gamma/periodic
       } else if (preset === 'random-gamma') {
@@ -3829,10 +3888,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         shufflingModule._free(gammaPtr);
 
       } else {
-        // Non-double-dimer IID/layered/uniform: use Shuffling Weight Buffer (2N×2N)
-        const { mode, params } = getCurrentWeightParams();
-        const shufflingWeights = generateShufflingWeights(N, mode, params);
-        resultPtr = await runShufflingWithWeights(N, shufflingWeights, false);
+        // Non-double-dimer IID/layered/uniform: use aztecEdges weights
+        const eklpWeights = convertAztecEdgesToEKLP(N);
+        resultPtr = await runShufflingWithWeights(N, eklpWeights, false);
       }
 
       // Parse result
