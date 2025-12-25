@@ -34,17 +34,24 @@ code:
     </ul>
   </li>
   <li><strong>Gamma i.i.d.</strong>: Edge weights drawn from Gamma(α, β) distribution.</li>
-  <li><strong>Layered</strong>: Layered (row-dependent) weights with 5 regimes:
+  <li><strong>Layered (diagonal)</strong>: Diagonally layered weights where each diagonal (i + j = const) shares the same weight. Offers 5 regimes:
     <ul>
       <li><em>Regime 1 (Critical Scaling)</em>: Weights vary as Val1 + 2/√n or Val2 − 1/√n with given probabilities.</li>
       <li><em>Regime 2 (Rare Event Scaling)</em>: Weight = Val1 with probability 1/√n, otherwise Val2.</li>
       <li><em>Regime 3 (Bernoulli)</em>: Weight = Val1 (prob p₁) or Val2 (prob p₂). Default regime.</li>
-      <li><em>Regime 4 (Deterministic Periodic)</em>: Alternates between w₁ and w₂ by row.</li>
-      <li><em>Regime 5 (Continuous Uniform)</em>: Weights uniform on [a, b], varying by row.</li>
+      <li><em>Regime 4 (Deterministic Periodic)</em>: Alternates between w₁ and w₂ by diagonal.</li>
+      <li><em>Regime 5 (Continuous Uniform)</em>: Weights uniform on [a, b], varying by diagonal.</li>
     </ul>
   </li>
+  <li><strong>Layered (straight)</strong>: Horizontally layered weights where each row (y = const) shares the same weight. Same 5 regimes as diagonal layered, but layers run horizontally instead of along diagonals.</li>
   <li><strong>Periodic (k×l)</strong>: k-by-l periodic pattern of face weights. Opens an editor to set individual weights.</li>
 </ol>
+
+<h5>Edge Weight Export/Import</h5>
+<ul>
+  <li><strong>↓ Export</strong>: Saves current edge weights to a JSON file for later use or sharing.</li>
+  <li><strong>↑ Import</strong>: Loads edge weights from a previously saved JSON file, overriding the current weight preset.</li>
+</ul>
 
 <h5>Main Visualization</h5>
 <ul>
@@ -189,28 +196,28 @@ $$\mathcal{T}_k(\pm(k+1), 0) = \mathcal{T}_{k-1}(\pm k, 0), \qquad \mathcal{T}_k
 
 <li><strong>Alpha vertices</strong> (on-axis boundary, $|i|+|j|=k$, either $i=0$ or $j=0$):
 
-<em>Right/Left</em> (horizontal axis): $(\text{outer} + \alpha \cdot \text{inner})/(\alpha + 1)$
-$$\mathcal{T}_k(k, 0) = \frac{\mathcal{T}_{k-1}(k, 0) + \alpha_R \cdot \mathcal{T}_{k-1}(k-1, 0)}{\alpha_R + 1}$$
-$$\mathcal{T}_k(-k, 0) = \frac{\mathcal{T}_{k-1}(-k, 0) + \alpha_L \cdot \mathcal{T}_{k-1}(-(k-1), 0)}{\alpha_L + 1}$$
+<em>Right</em> (swapped): $(\alpha \cdot \text{outer} + \text{inner})/(\alpha + 1)$
+$$\mathcal{T}_k(k, 0) = \frac{\alpha_R \cdot \mathcal{T}_{k-1}(k, 0) + \mathcal{T}_{k-1}(k-1, 0)}{\alpha_R + 1}$$
 
-<em>Top/Bottom</em> (vertical axis): $(\alpha \cdot \text{outer} + \text{inner})/(\alpha + 1)$
-$$\mathcal{T}_k(0, k) = \frac{\alpha_T \cdot \mathcal{T}_{k-1}(0, k) + \mathcal{T}_{k-1}(0, k-1)}{\alpha_T + 1}$$
-$$\mathcal{T}_k(0, -k) = \frac{\alpha_B \cdot \mathcal{T}_{k-1}(0, -k) + \mathcal{T}_{k-1}(0, -(k-1))}{\alpha_B + 1}$$
+<em>Left, Top, Bottom</em>: $(\text{outer} + \alpha \cdot \text{inner})/(\alpha + 1)$
+$$\mathcal{T}_k(-k, 0) = \frac{\mathcal{T}_{k-1}(-k, 0) + \alpha_L \cdot \mathcal{T}_{k-1}(-(k-1), 0)}{\alpha_L + 1}$$
+$$\mathcal{T}_k(0, k) = \frac{\mathcal{T}_{k-1}(0, k) + \alpha_T \cdot \mathcal{T}_{k-1}(0, k-1)}{\alpha_T + 1}$$
+$$\mathcal{T}_k(0, -k) = \frac{\mathcal{T}_{k-1}(0, -k) + \alpha_B \cdot \mathcal{T}_{k-1}(0, -(k-1))}{\alpha_B + 1}$$
 </li>
 
 <li><strong>Beta vertices</strong> (off-axis boundary, $|i|+|j|=k$, $i \neq 0$ and $j \neq 0$). For $1 \leq m \leq k-1$:
 
-<em>Upper-right quadrant</em> $(i,j) = (m, k-m)$: $(\beta \cdot \text{left} + \text{down})/(\beta + 1)$
-$$\mathcal{T}_k(m, k-m) = \frac{\beta_{m,k-m} \cdot \mathcal{T}_{k-1}(m-1, k-m) + \mathcal{T}_{k-1}(m, k-m-1)}{\beta_{m,k-m} + 1}$$
+<em>Upper-right quadrant</em> $(i,j) = (m, k-m)$: $(\text{left} + \beta \cdot \text{down})/(\beta + 1)$
+$$\mathcal{T}_k(m, k-m) = \frac{\mathcal{T}_{k-1}(m-1, k-m) + \beta_{m,k-m} \cdot \mathcal{T}_{k-1}(m, k-m-1)}{\beta_{m,k-m} + 1}$$
 
-<em>Lower-right quadrant</em> $(i,j) = (m, -(k-m))$: $(\beta \cdot \text{left} + \text{up})/(\beta + 1)$
-$$\mathcal{T}_k(m, -(k-m)) = \frac{\beta_{m,-(k-m)} \cdot \mathcal{T}_{k-1}(m-1, -(k-m)) + \mathcal{T}_{k-1}(m, -(k-m)+1)}{\beta_{m,-(k-m)} + 1}$$
+<em>Lower-right quadrant</em> $(i,j) = (m, -(k-m))$: $(\text{left} + \beta \cdot \text{up})/(\beta + 1)$
+$$\mathcal{T}_k(m, -(k-m)) = \frac{\mathcal{T}_{k-1}(m-1, -(k-m)) + \beta_{m,-(k-m)} \cdot \mathcal{T}_{k-1}(m, -(k-m)+1)}{\beta_{m,-(k-m)} + 1}$$
 
-<em>Upper-left quadrant</em> $(i,j) = (-m, k-m)$: $(\text{down} + \beta \cdot \text{right})/(\beta + 1)$
-$$\mathcal{T}_k(-m, k-m) = \frac{\mathcal{T}_{k-1}(-m, k-m-1) + \beta_{-m,k-m} \cdot \mathcal{T}_{k-1}(-m+1, k-m)}{\beta_{-m,k-m} + 1}$$
+<em>Upper-left quadrant</em> $(i,j) = (-m, k-m)$: $(\text{right} + \beta \cdot \text{down})/(\beta + 1)$
+$$\mathcal{T}_k(-m, k-m) = \frac{\mathcal{T}_{k-1}(-m+1, k-m) + \beta_{-m,k-m} \cdot \mathcal{T}_{k-1}(-m, k-m-1)}{\beta_{-m,k-m} + 1}$$
 
-<em>Lower-left quadrant</em> $(i,j) = (-m, -(k-m))$: $(\text{up} + \beta \cdot \text{right})/(\beta + 1)$
-$$\mathcal{T}_k(-m, -(k-m)) = \frac{\mathcal{T}_{k-1}(-m, -(k-m)+1) + \beta_{-m,-(k-m)} \cdot \mathcal{T}_{k-1}(-m+1, -(k-m))}{\beta_{-m,-(k-m)} + 1}$$
+<em>Lower-left quadrant</em> $(i,j) = (-m, -(k-m))$: $(\beta \cdot \text{up} + \text{right})/(\beta + 1)$
+$$\mathcal{T}_k(-m, -(k-m)) = \frac{\beta_{-m,-(k-m)} \cdot \mathcal{T}_{k-1}(-m, -(k-m)+1) + \mathcal{T}_{k-1}(-m+1, -(k-m))}{\beta_{-m,-(k-m)} + 1}$$
 </li>
 
 <li><strong>Interior pass-through</strong> ($|i|+|j| < k$, $i+j+k$ even):
@@ -260,6 +267,33 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 </ul>
 
 <p>The γ weights are simply the face weights at interior positions, stored during the reduction process.</p>
+
+<h5>Edge Weight Distributions</h5>
+
+<p>This simulation supports several edge weight distributions:</p>
+
+<p><strong>IID Distributions:</strong> Each edge weight drawn independently from:</p>
+<ul>
+  <li><em>Uniform [a, b]</em>: $w \sim \mathrm{Uniform}(a, b)$.</li>
+  <li><em>Exponential</em>: $w \sim \mathrm{Exp}(1)$. (Other rates only scale weights, which doesn't affect T-embeddings.)</li>
+  <li><em>Pareto (α, x_min)</em>: $w = x_{\min} \cdot U^{-1/\alpha}$ where $U \sim \mathrm{Uniform}(0,1)$. Heavy-tailed distribution.</li>
+  <li><em>Geometric (p)</em>: $w \sim \mathrm{Geom}(p)$ with support $\{1, 2, 3, \ldots\}$. Mean = $1/p$.</li>
+</ul>
+
+<p><strong>Gamma Distribution</strong> <a href="https://arxiv.org/abs/2512.03033">[Duits–Van Peski]</a>:
+Edges on the bottom of each face have weight $\sim \Gamma(\alpha, 1)$; edges on the right of each face have weight $\sim \Gamma(\beta, 1)$.</p>
+
+<p><strong>Layered Weights</strong> <a href="https://arxiv.org/abs/2507.08560">[Bufetov–Petrov–Zografos]</a>:
+Weight depends on layer index (diagonal $i+j$ or row $y$). Five regimes:</p>
+<ul>
+  <li><em>Regime 1 (Critical Scaling)</em>: $w = v_1 + 2/\sqrt{n}$ with prob. $p_1$, else $w = v_2 - 1/\sqrt{n}$.</li>
+  <li><em>Regime 2 (Rare Event)</em>: $w = v_1$ with prob. $1/\sqrt{n}$, else $w = v_2$.</li>
+  <li><em>Regime 3 (Bernoulli)</em>: $w = v_1$ with prob. $p_1$, else $w = v_2$.</li>
+  <li><em>Regime 4 (Deterministic)</em>: $w = w_1, w_2, w_1, w_2, \ldots$ alternating by layer.</li>
+  <li><em>Regime 5 (Uniform)</em>: $w \sim \mathrm{Uniform}(a, b)$ drawn independently for each layer.</li>
+</ul>
+
+<p><strong>Periodic (k×l)</strong>: Face weights follow a spatially periodic $k \times l$ pattern, specified via an interactive editor.</p>
 
 <h5>3D Visualization: Origami Map</h5>
 <p>The <strong>origami map</strong> $\mathcal{O}$ is a companion to the T-embedding. Together, $\mathcal{T}$ and $\mathcal{O}$ define a <strong>t-surface</strong>
