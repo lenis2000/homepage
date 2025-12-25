@@ -3658,61 +3658,144 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   }
 
   // Convert aztecEdges (geometric format) to EKLP 2N×2N weight matrix
-  // This uses the actual edge weights from the T-embedding
+  // This handles ARBITRARY edge weights from the T-embedding
+  //
+  // EKLP matrix structure:
+  // - Even row i, even col j → beta edge (right of black face)
+  // - Even row i, odd col j → alpha edge (top of black face)
+  // - Odd row i, even col j → gamma edge (left of black face)
+  // - Odd row i, odd col j → delta edge (bottom of black face)
+  //
+  // Each edge belongs to exactly one black face in one of these 4 positions
   function convertAztecEdgesToEKLP(N) {
     const dim = 2 * N;
     const weights = new Float64Array(dim * dim);
     weights.fill(1.0);
 
-    // Build lookup from geometric midpoint to weight
-    const edgeMap = new Map();
     for (const edge of aztecEdges) {
-      const mx = (edge.x1 + edge.x2) / 2;
-      const my = (edge.y1 + edge.y2) / 2;
-      const key = `${mx.toFixed(1)},${my.toFixed(1)},${edge.isHorizontal ? 'h' : 'v'}`;
-      edgeMap.set(key, edge.weight);
+      const midX = (edge.x1 + edge.x2) / 2;
+      const midY = (edge.y1 + edge.y2) / 2;
+
+      // Determine edge type and associated black face
+      let edgeType, faceX, faceY;
+
+      // Check if horizontal or vertical based on coordinates (more robust than isHorizontal flag)
+      const isHoriz = (edge.y1 === edge.y2);
+
+      if (isHoriz) {
+        // Horizontal edge at y = midY (half-integer)
+        // Face below: center at (midX, floor(midY))
+        // Face above: center at (midX, ceil(midY))
+        const faceBelowY = Math.floor(midY);
+        const faceAboveY = Math.ceil(midY);
+        const faceBelowX = Math.round(midX);
+        const faceAboveX = Math.round(midX);
+
+        const isBlackBelow = ((faceBelowX + faceBelowY) % 2) !== 0;
+        const isBlackAbove = ((faceAboveX + faceAboveY) % 2) !== 0;
+
+        if (isBlackBelow) {
+          // Top edge of black face → alpha
+          edgeType = 'alpha';
+          faceX = faceBelowX;
+          faceY = faceBelowY;
+        } else if (isBlackAbove) {
+          // Bottom edge of black face → delta
+          edgeType = 'delta';
+          faceX = faceAboveX;
+          faceY = faceAboveY;
+        } else {
+          continue; // No adjacent black face (shouldn't happen)
+        }
+      } else {
+        // Vertical edge at x = midX (half-integer)
+        // Face to left: center at (floor(midX), midY)
+        // Face to right: center at (ceil(midX), midY)
+        const faceLeftX = Math.floor(midX);
+        const faceRightX = Math.ceil(midX);
+        const faceLeftY = Math.round(midY);
+        const faceRightY = Math.round(midY);
+
+        const isBlackLeft = ((faceLeftX + faceLeftY) % 2) !== 0;
+        const isBlackRight = ((faceRightX + faceRightY) % 2) !== 0;
+
+        if (isBlackLeft) {
+          // Right edge of black face → beta
+          edgeType = 'beta';
+          faceX = faceLeftX;
+          faceY = faceLeftY;
+        } else if (isBlackRight) {
+          // Left edge of black face → gamma
+          edgeType = 'gamma';
+          faceX = faceRightX;
+          faceY = faceRightY;
+        } else {
+          continue; // No adjacent black face
+        }
+      }
+
+      // Map black face (faceX, faceY) to EKLP cell (diagI, diagJ)
+      // faceX, faceY are integers where (faceX + faceY) is odd
+      // Range: |faceX| + |faceY| < N for interior faces
+      //
+      // Use antidiagonal coordinates to ensure unique mapping:
+      // - diagI from (faceX + faceY): identifies which antidiagonal
+      // - diagJ from (faceX - faceY): identifies position along antidiagonal
+      // Both range from 0 to N-1
+      const diagI = Math.floor((faceX + faceY + N) / 2);
+      const diagJ = Math.floor((faceX - faceY + N) / 2);
+
+      if (diagI < 0 || diagI >= N || diagJ < 0 || diagJ >= N) continue;
+
+      // Map edge type to position within the 2×2 cell
+      let i2, j2;
+      switch (edgeType) {
+        case 'alpha': // Top of black → even row, odd col
+          i2 = 2 * diagI;
+          j2 = 2 * diagJ + 1;
+          break;
+        case 'beta':  // Right of black → even row, even col
+          i2 = 2 * diagI;
+          j2 = 2 * diagJ;
+          break;
+        case 'gamma': // Left of black → odd row, even col
+          i2 = 2 * diagI + 1;
+          j2 = 2 * diagJ;
+          break;
+        case 'delta': // Bottom of black → odd row, odd col
+          i2 = 2 * diagI + 1;
+          j2 = 2 * diagJ + 1;
+          break;
+        default:
+          continue;
+      }
+
+      if (i2 >= 0 && i2 < dim && j2 >= 0 && j2 < dim) {
+        weights[i2 * dim + j2] = edge.weight;
+      }
     }
 
-    // Map EKLP matrix positions to geometric edges
-    // EKLP uses 2N×2N matrix; we need to find which edge each position represents
+    // Debug: log conversion statistics
+    let nonOneCount = 0;
+    let alphaCount = 0, betaCount = 0, gammaCount = 0, deltaCount = 0;
+    const cellsUsed = new Set();
     for (let i = 0; i < dim; i++) {
       for (let j = 0; j < dim; j++) {
-        // Convert EKLP (i,j) to geometric midpoint
-        // For EKLP, the mapping is:
-        //   i even, j even → vertical edge (beta in gamma)
-        //   i even, j odd  → horizontal edge (alpha in gamma)
-        //   i odd → typically 1.0 in gamma, but we fill all for IID-style
-
-        // Geometric coordinates: map from [0, dim-1] to [-N+0.5, N-0.5] range
-        // Edge midpoint calculation based on EKLP block structure
-        const blockRow = Math.floor(i / 2);
-        const blockCol = Math.floor(j / 2);
-
-        // Geometric face center for this block
-        const fx = blockCol - N + 1;
-        const fy = blockRow - N + 1;
-
-        let mx, my, isHorizontal;
-
-        if (j % 2 === 0) {
-          // Vertical edge: LEFT of face at (fx, fy)
-          mx = fx - 0.5;
-          my = fy;
-          isHorizontal = false;
-        } else {
-          // Horizontal edge: BOTTOM of face at (fx, fy)
-          mx = fx;
-          my = fy - 0.5;
-          isHorizontal = true;
-        }
-
-        const key = `${mx.toFixed(1)},${my.toFixed(1)},${isHorizontal ? 'h' : 'v'}`;
-        const weight = edgeMap.get(key);
-        if (weight !== undefined) {
-          weights[i * dim + j] = weight;
+        if (weights[i * dim + j] !== 1.0) {
+          nonOneCount++;
+          const isEvenRow = (i % 2 === 0);
+          const isEvenCol = (j % 2 === 0);
+          if (isEvenRow && isEvenCol) betaCount++;
+          else if (isEvenRow && !isEvenCol) alphaCount++;
+          else if (!isEvenRow && isEvenCol) gammaCount++;
+          else deltaCount++;
+          cellsUsed.add(`${Math.floor(i/2)},${Math.floor(j/2)}`);
         }
       }
     }
+    console.log(`EKLP conversion for N=${N}: ${aztecEdges.length} edges → ${nonOneCount} non-1.0 weights (α:${alphaCount} β:${betaCount} γ:${gammaCount} δ:${deltaCount})`);
+    console.log(`  Cells used: ${cellsUsed.size} out of ${N*N} expected (N²)`);
+    console.log(`  Matrix size: ${dim}×${dim} = ${dim*dim} positions`);
 
     return weights;
   }
@@ -3776,8 +3859,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     if (N < 1) return;
 
     try {
-      // Convert aztecEdges (from T-embedding) to EKLP format
-      const eklpWeights = convertAztecEdgesToEKLP(N);
+      // Generate EKLP weights directly (same seed ensures consistency)
+      const { mode, params } = getCurrentWeightParams();
+      const eklpWeights = generateShufflingWeights(N, mode, params);
       const resultPtr = await runShufflingWithWeights(N, eklpWeights, true);
 
       // Parse result
@@ -3843,9 +3927,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const preset = document.getElementById('weight-preset-select').value;
       let resultPtr;
 
-      // Use aztecEdges weights converted to EKLP format for double dimer mode
+      // Generate EKLP weights directly for double dimer mode
       if (doubleDimerMode) {
-        const eklpWeights = convertAztecEdgesToEKLP(N);
+        const { mode, params } = getCurrentWeightParams();
+        const eklpWeights = generateShufflingWeights(N, mode, params);
         resultPtr = await runShufflingWithWeights(N, eklpWeights, true);
 
       // Non-double-dimer: use specialized C++ functions for gamma/periodic
@@ -3888,8 +3973,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         shufflingModule._free(gammaPtr);
 
       } else {
-        // Non-double-dimer IID/layered/uniform: use aztecEdges weights
-        const eklpWeights = convertAztecEdgesToEKLP(N);
+        // Non-double-dimer IID/layered/uniform: generate EKLP weights directly
+        // (aztecEdges may be from a different size T-embedding)
+        const { mode, params } = getCurrentWeightParams();
+        const eklpWeights = generateShufflingWeights(N, mode, params);
         resultPtr = await runShufflingWithWeights(N, eklpWeights, false);
       }
 
