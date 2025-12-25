@@ -3555,17 +3555,16 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const beta = params.beta || 0.25;
 
       if (isHorizontal) {
-        // Check if TOP of black face (α edge)
+        // α edge = bottom of black face → black face is ABOVE the edge
         const faceX = Math.round(midX);
-        const faceY = Math.floor(midY);
+        const faceY = Math.ceil(midY);  // Face ABOVE the horizontal edge
         const isBlack = ((faceX + faceY) % 2) !== 0;
-        // Only interior faces get gamma weights (boundary edges stay 1.0)
         const isInterior = Math.abs(faceX) + Math.abs(faceY) < N;
         if (isBlack && isInterior) {
           return gammaRandom(alpha, 1.0, rng);
         }
       } else {
-        // Vertical: check if RIGHT of black face (β edge) - face to LEFT is black
+        // β edge = right of black face → black face is to LEFT of edge
         const faceX = Math.floor(midX);
         const faceY = Math.round(midY);
         const isBlack = ((faceX + faceY) % 2) !== 0;
@@ -3585,14 +3584,17 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const gammaW = params.gammaWeights || [[1, 1], [1, 1]];
 
       if (isHorizontal) {
-        // Alpha edge (bottom of black face)
+        // Alpha edge (bottom of black face) → black face is ABOVE the edge
         const faceX = Math.round(midX);
-        const faceY = Math.floor(midY);
+        const faceY = Math.ceil(midY);  // Face ABOVE the horizontal edge
         const isBlack = ((faceX + faceY) % 2) !== 0;
         const isInterior = Math.abs(faceX) + Math.abs(faceY) < N;
         if (isBlack && isInterior) {
-          const pi = ((faceY % k) + k) % k;
-          const pj = ((faceX % l) + l) % l;
+          // Diagonal periodicity: k along (x+y), l along (x-y)
+          const d1 = faceX + faceY;  // odd for black faces
+          const d2 = faceX - faceY;  // odd for black faces
+          const pi = ((Math.floor(d1 / 2) % k) + k) % k;
+          const pj = ((Math.floor(d2 / 2) % l) + l) % l;
           return alphaW[pi][pj];
         }
       } else {
@@ -3609,14 +3611,18 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
         // gamma = left edge of black → face to right is black
         if (rightIsBlack && rightIsInterior) {
-          const pi = ((faceRightY % k) + k) % k;
-          const pj = ((faceRightX % l) + l) % l;
+          const d1 = faceRightX + faceRightY;
+          const d2 = faceRightX - faceRightY;
+          const pi = ((Math.floor(d1 / 2) % k) + k) % k;
+          const pj = ((Math.floor(d2 / 2) % l) + l) % l;
           return gammaW[pi][pj];
         }
         // beta = right edge of black → face to left is black
         if (leftIsBlack && leftIsInterior) {
-          const pi = ((faceLeftY % k) + k) % k;
-          const pj = ((faceLeftX % l) + l) % l;
+          const d1 = faceLeftX + faceLeftY;
+          const d2 = faceLeftX - faceLeftY;
+          const pi = ((Math.floor(d1 / 2) % k) + k) % k;
+          const pj = ((Math.floor(d2 / 2) % l) + l) % l;
           return betaW[pi][pj];
         }
       }
