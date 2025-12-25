@@ -824,6 +824,18 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         </div>
       </div>
     </div>
+
+    <!-- DEBUG: Weight Export Controls -->
+    <div id="debug-weight-export" style="margin-top: 12px; padding: 10px; background: #fff3cd; border: 2px dashed #ffc107; border-radius: 4px;">
+      <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px;">
+        <strong style="font-size: 13px; color: #856404;">🔧 DEBUG - Export Weights (N from Size input):</strong>
+        <button id="debug-export-edges-btn" style="padding: 6px 12px; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: 500; font-size: 12px;" title="Export raw edge array from generateEdgeWeights()">Edges (raw)</button>
+        <button id="debug-export-master-btn" style="padding: 6px 12px; background: #6f42c1; color: white; border: none; border-radius: 4px; font-weight: 500; font-size: 12px;" title="Export 4N×4N master matrix for C++ T-embedding">Master 4N×4N</button>
+        <button id="debug-export-eklp-btn" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; font-weight: 500; font-size: 12px;" title="Export 2N×2N EKLP matrix for shuffling">EKLP 2N×2N</button>
+        <button id="debug-export-all-btn" style="padding: 6px 12px; background: #17a2b8; color: white; border: none; border-radius: 4px; font-weight: 500; font-size: 12px;" title="Export all formats in one JSON">All Formats</button>
+        <span id="debug-export-status" style="font-size: 12px; color: #856404;"></span>
+      </div>
+    </div>
   </div>
 </details>
 
@@ -3347,253 +3359,258 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   }
 
   // =============================================================================
-  // MASTER WEIGHT BUFFER - Single Source of Truth
+  // EDGE WEIGHTS - SINGLE SOURCE OF TRUTH
   // =============================================================================
-  // Generates a (2N)×(2N) Float64Array using Engine B's convention:
-  // - For structured modes (gamma, periodic): even rows have weights, odd rows = 1.0
-  // - For IID/layered: all positions get random weights
   //
-  // Returns: Float64Array of length dim*dim, indexed as weights[i * dim + j]
+  // Architecture:
+  //   generateEdgeWeights(N, mode, params)  →  edge array (geometric)
+  //                       ↓
+  //       ┌───────────────┴───────────────┐
+  //       ▼                               ▼
+  //   toMasterMatrix()              toEKLPMatrix()
+  //   4N×4N for C++                 2N×2N for shuffling
   //
-  function generateMasterWeights(N, mode, params = {}) {
-    // Use 4N x 4N matrix to preserve half-integer distinctions
-    // C++ uses: i = floor(2*(midY + N)), j = floor(2*(midX + N))
-    const dim = 4 * N;
-    const weights = new Float64Array(dim * dim);
+  // =============================================================================
+
+  // Generate ALL edges for Aztec diamond of size N with weights
+  // Returns: Array of {x1, y1, x2, y2, weight, isHorizontal}
+  function generateEdgeWeights(N, mode, params = {}) {
+    const edges = [];
     const seed = params.seed || 42;
     const rng = createSeededRNG(seed);
 
-    // Initialize all to 1.0
-    weights.fill(1.0);
-
-    if (mode === 'uniform') {
-      // All weights = 1.0, already done
-      return weights;
-
-    } else if (mode === 'iid') {
-      // IID: ALL positions get random weights
-      const distType = params.distType || 'uniform';
-      for (let i = 0; i < dim; i++) {
-        for (let j = 0; j < dim; j++) {
-          weights[i * dim + j] = generateIIDWeight(distType, rng);
-        }
-      }
-
-    } else if (mode === 'layered') {
-      // Layered: face-based classification
-      // Black face (CW from top): 1 - w_i - 1 - 1 (only RIGHT edge gets w_i)
-      // White face (CW from top): 1 - 1 - 1 - w_j (only LEFT edge gets w_j)
-      // All horizontal edges = 1, only certain vertical edges get w
-      // SAME w along each diagonal slice (constant x - y, NW/SE direction)
+    // Pre-generate diagonal weights for layered mode
+    let diagWeights = null;
+    if (mode === 'layered') {
       const regime = params.regime || 3;
-
-      // Pre-generate ONE weight per diagonal (diagonal index = x - y)
-      // Range: approximately -2N to 2N, so 4N+1 diagonals
-      const diagWeights = {};
+      diagWeights = {};
       for (let d = -2 * N; d <= 2 * N; d++) {
         diagWeights[d] = generateLayeredWeight(regime, d, N, rng);
       }
+    }
 
-      for (let i = 0; i < dim; i++) {
-        for (let j = 0; j < dim; j++) {
-          const midY = i / 2 - N;
-          const midX = j / 2 - N;
-
-          // Only vertical edges can have non-trivial weight
-          if (i % 2 === 0 && j % 2 === 1) {
-            // Vertical edge at (midX, midY)
-            // Check if this is RIGHT of BLACK face (i.e., face to LEFT is black)
-            const faceX = Math.round(midX - 0.5);  // Face to left of edge
-            const faceY = Math.round(midY);
-            const isBlackLeft = ((faceX + faceY) % 2) !== 0;
-
-            if (isBlackLeft) {
-              // This edge is RIGHT of BLACK face → gets layered weight
-              // Use pre-generated weight for this diagonal (x - y)
-              const diagIndex = faceX - faceY;
-              weights[i * dim + j] = diagWeights[diagIndex];
-            }
-            // else: edge is RIGHT of WHITE face → stays 1.0
-          }
-          // Horizontal edges (i odd, j even) stay at 1.0
-          // Other positions stay at 1.0
+    // Generate vertices: at (i + 0.5, j + 0.5) where |i+0.5| + |j+0.5| <= N + 0.5
+    // Simplified: i, j in [-N, N], constraint |i| + |j| <= N
+    const vertexSet = new Set();
+    for (let i = -N; i <= N; i++) {
+      for (let j = -N; j <= N; j++) {
+        const x = i + 0.5;
+        const y = j + 0.5;
+        if (Math.abs(x) + Math.abs(y) <= N + 0.5) {
+          vertexSet.add(`${x},${y}`);
         }
       }
+    }
 
-    } else if (mode === 'gamma') {
-      // Gamma: face-based classification per Duits-Van Peski
-      // Black face (CW from top): alpha - 1 - 1 - beta
-      // Matrix parity: i odd, j even → horizontal edge; i even, j odd → vertical edge
+    // Generate edges between adjacent vertices
+    for (let i = -N; i <= N; i++) {
+      for (let j = -N; j <= N; j++) {
+        const x = i + 0.5;
+        const y = j + 0.5;
+        if (!vertexSet.has(`${x},${y}`)) continue;
+
+        // Right neighbor (horizontal edge)
+        const rightKey = `${x + 1},${y}`;
+        if (vertexSet.has(rightKey)) {
+          const weight = computeEdgeWeight(x, y, x + 1, y, true, mode, params, rng, diagWeights, N);
+          edges.push({ x1: x, y1: y, x2: x + 1, y2: y, weight, isHorizontal: true });
+        }
+
+        // Top neighbor (vertical edge)
+        const topKey = `${x},${y + 1}`;
+        if (vertexSet.has(topKey)) {
+          const weight = computeEdgeWeight(x, y, x, y + 1, false, mode, params, rng, diagWeights, N);
+          edges.push({ x1: x, y1: y, x2: x, y2: y + 1, weight, isHorizontal: false });
+        }
+      }
+    }
+
+    return edges;
+  }
+
+  // Compute weight for a single edge based on mode
+  function computeEdgeWeight(x1, y1, x2, y2, isHorizontal, mode, params, rng, diagWeights, N) {
+    if (mode === 'uniform') {
+      return 1.0;
+    }
+
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
+
+    if (mode === 'iid') {
+      const distType = params.distType || 'uniform';
+      return generateIIDWeight(distType, rng);
+    }
+
+    if (mode === 'layered') {
+      // Only vertical edges on RIGHT of black face get layered weight
+      if (!isHorizontal) {
+        const faceX = Math.floor(midX);  // Face to left
+        const faceY = Math.round(midY);
+        const isBlackLeft = ((faceX + faceY) % 2) !== 0;
+        const isInterior = Math.abs(faceX) + Math.abs(faceY) < N;
+        if (isBlackLeft && isInterior) {
+          const diagIndex = faceX - faceY;
+          return diagWeights[diagIndex] || 1.0;
+        }
+      }
+      return 1.0;
+    }
+
+    if (mode === 'gamma') {
       const alpha = params.alpha || 0.2;
       const beta = params.beta || 0.25;
 
-      for (let i = 0; i < dim; i++) {
-        for (let j = 0; j < dim; j++) {
-          const midY = i / 2 - N;
-          const midX = j / 2 - N;
-
-          if (i % 2 === 1 && j % 2 === 0) {
-            // Horizontal edge: check if TOP of black face
-            // Face below has center at (midX, midY - 0.5)
-            const faceX = Math.round(midX);
-            const faceY = Math.round(midY - 0.5);
-            const isBlack = ((faceX + faceY) % 2) !== 0;
-            if (isBlack) {
-              weights[i * dim + j] = gammaRandom(alpha, 1.0, rng);
-            }
-          } else if (i % 2 === 0 && j % 2 === 1) {
-            // Vertical edge: check if LEFT of black face
-            // Face to right has center at (midX + 0.5, midY)
-            const faceX = Math.round(midX + 0.5);
-            const faceY = Math.round(midY);
-            const isBlack = ((faceX + faceY) % 2) !== 0;
-            if (isBlack) {
-              weights[i * dim + j] = gammaRandom(beta, 1.0, rng);
-            }
-          }
-          // Other positions stay at 1.0
+      if (isHorizontal) {
+        // Check if TOP of black face (α edge)
+        const faceX = Math.round(midX);
+        const faceY = Math.floor(midY);
+        const isBlack = ((faceX + faceY) % 2) !== 0;
+        // Only interior faces get gamma weights (boundary edges stay 1.0)
+        const isInterior = Math.abs(faceX) + Math.abs(faceY) < N;
+        if (isBlack && isInterior) {
+          return gammaRandom(alpha, 1.0, rng);
+        }
+      } else {
+        // Vertical: check if RIGHT of black face (β edge) - face to LEFT is black
+        const faceX = Math.floor(midX);
+        const faceY = Math.round(midY);
+        const isBlack = ((faceX + faceY) % 2) !== 0;
+        const isInterior = Math.abs(faceX) + Math.abs(faceY) < N;
+        if (isBlack && isInterior) {
+          return gammaRandom(beta, 1.0, rng);
         }
       }
+      return 1.0;
+    }
 
-    } else if (mode === 'periodic') {
-      // Periodic k×l: Engine B convention
+    if (mode === 'periodic') {
       const k = params.k || 2;
       const l = params.l || 2;
       const alphaW = params.alphaWeights || [[1, 1], [1, 1]];
       const betaW = params.betaWeights || [[1, 1], [1, 1]];
 
-      for (let i = 0; i < dim; i++) {
-        const oldRow = Math.floor(i / 2);
-        if (oldRow % 2 === 0) {
-          for (let j = 0; j < dim; j++) {
-            const oldCol = Math.floor(j / 2);
-            const diagI = Math.floor(oldRow / 2);
-            const diagJ = Math.floor(oldCol / 2);
-            const pi = ((diagI % k) + k) % k;
-            const pj = ((diagJ % l) + l) % l;
-
-            if (oldCol % 2 === 0) {
-              // beta weight
-              weights[i * dim + j] = betaW[pi][pj];
-            } else {
-              // alpha weight
-              weights[i * dim + j] = alphaW[pi][pj];
-            }
-          }
+      if (isHorizontal) {
+        // Alpha edge (top of black)
+        const faceX = Math.round(midX);
+        const faceY = Math.floor(midY);
+        const isBlack = ((faceX + faceY) % 2) !== 0;
+        const isInterior = Math.abs(faceX) + Math.abs(faceY) < N;
+        if (isBlack && isInterior) {
+          const pi = ((faceY % k) + k) % k;
+          const pj = ((faceX % l) + l) % l;
+          return alphaW[pi][pj];
         }
-        // Odd old-rows stay 1.0
+      } else {
+        // Beta edge (left of black = face to right is black)
+        const faceX = Math.ceil(midX);
+        const faceY = Math.round(midY);
+        const isBlack = ((faceX + faceY) % 2) !== 0;
+        const isInterior = Math.abs(faceX) + Math.abs(faceY) < N;
+        if (isBlack && isInterior) {
+          const pi = ((faceY % k) + k) % k;
+          const pj = ((faceX % l) + l) % l;
+          return betaW[pi][pj];
+        }
+      }
+      return 1.0;
+    }
+
+    return 1.0;
+  }
+
+  // Convert edge array to 4N×4N master matrix (for C++ T-embedding)
+  function toMasterMatrix(edges, N) {
+    const dim = 4 * N;
+    const weights = new Float64Array(dim * dim);
+    weights.fill(1.0);
+
+    for (const edge of edges) {
+      const midX = (edge.x1 + edge.x2) / 2;
+      const midY = (edge.y1 + edge.y2) / 2;
+      const i = Math.floor(2 * (midY + N));
+      const j = Math.floor(2 * (midX + N));
+      if (i >= 0 && i < dim && j >= 0 && j < dim) {
+        weights[i * dim + j] = edge.weight;
       }
     }
 
     return weights;
   }
 
-  // SHUFFLING WEIGHT BUFFER - For EKLP shuffling (Engine B)
-  // =============================================================================
-  // Generates a (2N)×(2N) Float64Array matching C++ EKLP format:
-  // - For gamma mode: even rows have beta (j even) / alpha (j odd), odd rows = 1.0
-  // - For IID mode: all positions get random weights
-  // - For layered mode: all positions get layer-dependent weights
-  //
-  // Returns: Float64Array of length (2N)*(2N), indexed as weights[i * dim + j]
-  //
-  function generateShufflingWeights(N, mode, params = {}) {
-    const dim = 2 * N;  // EKLP uses 2N×2N
+  // Convert edge array to 2N×2N EKLP matrix (for shuffling)
+  function toEKLPMatrix(edges, N) {
+    const dim = 2 * N;
     const weights = new Float64Array(dim * dim);
-    const seed = params.seed || 42;
-    const rng = createSeededRNG(seed);
-
-    // Initialize all to 1.0
     weights.fill(1.0);
 
-    if (mode === 'uniform') {
-      // All weights = 1.0, already done
-      return weights;
+    for (const edge of edges) {
+      const midX = (edge.x1 + edge.x2) / 2;
+      const midY = (edge.y1 + edge.y2) / 2;
 
-    } else if (mode === 'iid') {
-      // IID: ALL positions get random weights
-      const distType = params.distType || 'uniform';
-      for (let i = 0; i < dim; i++) {
-        for (let j = 0; j < dim; j++) {
-          weights[i * dim + j] = generateIIDWeight(distType, rng);
+      // Determine edge type and associated black face
+      let edgeType, faceX, faceY;
+
+      if (edge.isHorizontal) {
+        // Horizontal: check faces above/below
+        const faceBelowY = Math.floor(midY);
+        const faceAboveY = Math.ceil(midY);
+        const faceXCoord = Math.round(midX);
+
+        const isBlackBelow = ((faceXCoord + faceBelowY) % 2) !== 0;
+        const isBlackAbove = ((faceXCoord + faceAboveY) % 2) !== 0;
+
+        if (isBlackBelow) {
+          edgeType = 'alpha';  // Top of black
+          faceX = faceXCoord;
+          faceY = faceBelowY;
+        } else if (isBlackAbove) {
+          edgeType = 'delta';  // Bottom of black
+          faceX = faceXCoord;
+          faceY = faceAboveY;
+        } else {
+          continue;
+        }
+      } else {
+        // Vertical: check faces left/right
+        const faceLeftX = Math.floor(midX);
+        const faceRightX = Math.ceil(midX);
+        const faceYCoord = Math.round(midY);
+
+        const isBlackLeft = ((faceLeftX + faceYCoord) % 2) !== 0;
+        const isBlackRight = ((faceRightX + faceYCoord) % 2) !== 0;
+
+        if (isBlackLeft) {
+          edgeType = 'beta';  // Right of black
+          faceX = faceLeftX;
+          faceY = faceYCoord;
+        } else if (isBlackRight) {
+          edgeType = 'gamma';  // Left of black
+          faceX = faceRightX;
+          faceY = faceYCoord;
+        } else {
+          continue;
         }
       }
 
-    } else if (mode === 'layered') {
-      // Layered: Only vertical edges get non-trivial weight
-      // Black face (CW from top): 1 - w_i - 1 - 1 (RIGHT edge gets w)
-      // White face (CW from top): 1 - 1 - 1 - w_j (LEFT edge gets w)
-      // SAME w along each diagonal slice (constant x - y, NW/SE direction)
-      //
-      // For EKLP: use same structure as gamma (even rows), but only j even (beta/vertical)
-      // gets the layered weight, j odd (alpha/horizontal) stays 1.0
-      const regime = params.regime || 3;
+      // Map black face to EKLP cell using antidiagonal coords
+      const diagI = Math.floor((faceX + faceY + N) / 2);
+      const diagJ = Math.floor((faceX - faceY + N) / 2);
 
-      // Pre-generate ONE weight per diagonal (x - y)
-      const diagWeights = {};
-      for (let d = -2 * N; d <= 2 * N; d++) {
-        diagWeights[d] = generateLayeredWeight(regime, d, N, rng);
+      if (diagI < 0 || diagI >= N || diagJ < 0 || diagJ >= N) continue;
+
+      // Map edge type to position within 2×2 cell
+      let i2, j2;
+      switch (edgeType) {
+        case 'alpha': i2 = 2 * diagI; j2 = 2 * diagJ + 1; break;
+        case 'beta':  i2 = 2 * diagI; j2 = 2 * diagJ; break;
+        case 'gamma': i2 = 2 * diagI + 1; j2 = 2 * diagJ; break;
+        case 'delta': i2 = 2 * diagI + 1; j2 = 2 * diagJ + 1; break;
+        default: continue;
       }
 
-      for (let i = 0; i < dim; i++) {
-        if (i % 2 === 0) {  // Even rows like gamma
-          for (let j = 0; j < dim; j++) {
-            if (j % 2 === 0) {
-              // j even (beta/vertical position): layered weight
-              const diagIndex = Math.floor(j / 2) - Math.floor(i / 2);
-              weights[i * dim + j] = diagWeights[diagIndex];
-            }
-            // j odd (alpha/horizontal): stay at 1.0
-          }
-        }
-        // Odd rows stay 1.0
-      }
-
-    } else if (mode === 'gamma') {
-      // Gamma: matches C++ generateGammaEdgeWeights exactly
-      // Even rows: beta (j even), alpha (j odd)
-      // Odd rows: all 1.0
-      const alpha = params.alpha || 0.2;
-      const beta = params.beta || 0.25;
-
-      for (let i = 0; i < dim; i++) {
-        if (i % 2 === 0) {  // Even rows only
-          for (let j = 0; j < dim; j++) {
-            if (j % 2 === 0) {
-              weights[i * dim + j] = gammaRandom(beta, 1.0, rng);  // beta
-            } else {
-              weights[i * dim + j] = gammaRandom(alpha, 1.0, rng); // alpha
-            }
-          }
-        }
-        // Odd rows stay 1.0
-      }
-
-    } else if (mode === 'periodic') {
-      // Periodic k×l: Engine B convention (same as C++ generatePeriodicEdgeWeights)
-      const k = params.k || 2;
-      const l = params.l || 2;
-      const alphaW = params.alphaWeights || [[1, 1], [1, 1]];
-      const betaW = params.betaWeights || [[1, 1], [1, 1]];
-
-      for (let i = 0; i < dim; i++) {
-        if (i % 2 === 0) {  // Even rows only
-          for (let j = 0; j < dim; j++) {
-            const diagI = Math.floor(i / 2);
-            const diagJ = Math.floor(j / 2);
-            const pi = ((diagI % k) + k) % k;
-            const pj = ((diagJ % l) + l) % l;
-
-            if (j % 2 === 0) {
-              // beta weight
-              weights[i * dim + j] = betaW[pi][pj];
-            } else {
-              // alpha weight
-              weights[i * dim + j] = alphaW[pi][pj];
-            }
-          }
-        }
-        // Odd rows stay 1.0
+      if (i2 >= 0 && i2 < dim && j2 >= 0 && j2 < dim) {
+        weights[i2 * dim + j2] = edge.weight;
       }
     }
 
@@ -3657,149 +3674,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return arr;
   }
 
-  // Convert aztecEdges (geometric format) to EKLP 2N×2N weight matrix
-  // This handles ARBITRARY edge weights from the T-embedding
-  //
-  // EKLP matrix structure:
-  // - Even row i, even col j → beta edge (right of black face)
-  // - Even row i, odd col j → alpha edge (top of black face)
-  // - Odd row i, even col j → gamma edge (left of black face)
-  // - Odd row i, odd col j → delta edge (bottom of black face)
-  //
-  // Each edge belongs to exactly one black face in one of these 4 positions
-  function convertAztecEdgesToEKLP(N) {
-    const dim = 2 * N;
-    const weights = new Float64Array(dim * dim);
-    weights.fill(1.0);
-
-    for (const edge of aztecEdges) {
-      const midX = (edge.x1 + edge.x2) / 2;
-      const midY = (edge.y1 + edge.y2) / 2;
-
-      // Determine edge type and associated black face
-      let edgeType, faceX, faceY;
-
-      // Check if horizontal or vertical based on coordinates (more robust than isHorizontal flag)
-      const isHoriz = (edge.y1 === edge.y2);
-
-      if (isHoriz) {
-        // Horizontal edge at y = midY (half-integer)
-        // Face below: center at (midX, floor(midY))
-        // Face above: center at (midX, ceil(midY))
-        const faceBelowY = Math.floor(midY);
-        const faceAboveY = Math.ceil(midY);
-        const faceBelowX = Math.round(midX);
-        const faceAboveX = Math.round(midX);
-
-        const isBlackBelow = ((faceBelowX + faceBelowY) % 2) !== 0;
-        const isBlackAbove = ((faceAboveX + faceAboveY) % 2) !== 0;
-
-        if (isBlackBelow) {
-          // Top edge of black face → alpha
-          edgeType = 'alpha';
-          faceX = faceBelowX;
-          faceY = faceBelowY;
-        } else if (isBlackAbove) {
-          // Bottom edge of black face → delta
-          edgeType = 'delta';
-          faceX = faceAboveX;
-          faceY = faceAboveY;
-        } else {
-          continue; // No adjacent black face (shouldn't happen)
-        }
-      } else {
-        // Vertical edge at x = midX (half-integer)
-        // Face to left: center at (floor(midX), midY)
-        // Face to right: center at (ceil(midX), midY)
-        const faceLeftX = Math.floor(midX);
-        const faceRightX = Math.ceil(midX);
-        const faceLeftY = Math.round(midY);
-        const faceRightY = Math.round(midY);
-
-        const isBlackLeft = ((faceLeftX + faceLeftY) % 2) !== 0;
-        const isBlackRight = ((faceRightX + faceRightY) % 2) !== 0;
-
-        if (isBlackLeft) {
-          // Right edge of black face → beta
-          edgeType = 'beta';
-          faceX = faceLeftX;
-          faceY = faceLeftY;
-        } else if (isBlackRight) {
-          // Left edge of black face → gamma
-          edgeType = 'gamma';
-          faceX = faceRightX;
-          faceY = faceRightY;
-        } else {
-          continue; // No adjacent black face
-        }
-      }
-
-      // Map black face (faceX, faceY) to EKLP cell (diagI, diagJ)
-      // faceX, faceY are integers where (faceX + faceY) is odd
-      // Range: |faceX| + |faceY| < N for interior faces
-      //
-      // Use antidiagonal coordinates to ensure unique mapping:
-      // - diagI from (faceX + faceY): identifies which antidiagonal
-      // - diagJ from (faceX - faceY): identifies position along antidiagonal
-      // Both range from 0 to N-1
-      const diagI = Math.floor((faceX + faceY + N) / 2);
-      const diagJ = Math.floor((faceX - faceY + N) / 2);
-
-      if (diagI < 0 || diagI >= N || diagJ < 0 || diagJ >= N) continue;
-
-      // Map edge type to position within the 2×2 cell
-      let i2, j2;
-      switch (edgeType) {
-        case 'alpha': // Top of black → even row, odd col
-          i2 = 2 * diagI;
-          j2 = 2 * diagJ + 1;
-          break;
-        case 'beta':  // Right of black → even row, even col
-          i2 = 2 * diagI;
-          j2 = 2 * diagJ;
-          break;
-        case 'gamma': // Left of black → odd row, even col
-          i2 = 2 * diagI + 1;
-          j2 = 2 * diagJ;
-          break;
-        case 'delta': // Bottom of black → odd row, odd col
-          i2 = 2 * diagI + 1;
-          j2 = 2 * diagJ + 1;
-          break;
-        default:
-          continue;
-      }
-
-      if (i2 >= 0 && i2 < dim && j2 >= 0 && j2 < dim) {
-        weights[i2 * dim + j2] = edge.weight;
-      }
-    }
-
-    // Debug: log conversion statistics
-    let nonOneCount = 0;
-    let alphaCount = 0, betaCount = 0, gammaCount = 0, deltaCount = 0;
-    const cellsUsed = new Set();
-    for (let i = 0; i < dim; i++) {
-      for (let j = 0; j < dim; j++) {
-        if (weights[i * dim + j] !== 1.0) {
-          nonOneCount++;
-          const isEvenRow = (i % 2 === 0);
-          const isEvenCol = (j % 2 === 0);
-          if (isEvenRow && isEvenCol) betaCount++;
-          else if (isEvenRow && !isEvenCol) alphaCount++;
-          else if (!isEvenRow && isEvenCol) gammaCount++;
-          else deltaCount++;
-          cellsUsed.add(`${Math.floor(i/2)},${Math.floor(j/2)}`);
-        }
-      }
-    }
-    console.log(`EKLP conversion for N=${N}: ${aztecEdges.length} edges → ${nonOneCount} non-1.0 weights (α:${alphaCount} β:${betaCount} γ:${gammaCount} δ:${deltaCount})`);
-    console.log(`  Cells used: ${cellsUsed.size} out of ${N*N} expected (N²)`);
-    console.log(`  Matrix size: ${dim}×${dim} = ${dim*dim} positions`);
-
-    return weights;
-  }
-
   // Helper: Send weights to shuffling WASM and run simulation
   // Returns resultPtr (caller must free with shufflingFreeString)
   async function runShufflingWithWeights(N, eklpWeights, doubleDimer = true) {
@@ -3816,12 +3690,13 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   }
 
   // Helper: Apply master weights to geometry engine (Engine A)
-  // Uses generateMasterWeights() as single source of truth
+  // Uses generateEdgeWeights() → toMasterMatrix() as single source of truth
   function applyMasterWeightsToGeometry(N) {
     if (!wasmReady) return;
 
     const { mode, params } = getCurrentWeightParams();
-    const masterWeights = generateMasterWeights(N, mode, params);
+    const edges = generateEdgeWeights(N, mode, params);
+    const masterWeights = toMasterMatrix(edges, N);
 
     // Allocate memory in geometry engine WASM heap
     const numWeights = masterWeights.length;
@@ -3859,9 +3734,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     if (N < 1) return;
 
     try {
-      // Generate EKLP weights directly (same seed ensures consistency)
+      // Generate EKLP weights using single source of truth
       const { mode, params } = getCurrentWeightParams();
-      const eklpWeights = generateShufflingWeights(N, mode, params);
+      const edges = generateEdgeWeights(N, mode, params);
+      const eklpWeights = toEKLPMatrix(edges, N);
       const resultPtr = await runShufflingWithWeights(N, eklpWeights, true);
 
       // Parse result
@@ -3924,61 +3800,12 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     const startTime = performance.now();
 
     try {
-      const preset = document.getElementById('weight-preset-select').value;
-      let resultPtr;
-
-      // Generate EKLP weights directly for double dimer mode
-      if (doubleDimerMode) {
-        const { mode, params } = getCurrentWeightParams();
-        const eklpWeights = generateShufflingWeights(N, mode, params);
-        resultPtr = await runShufflingWithWeights(N, eklpWeights, true);
-
-      // Non-double-dimer: use specialized C++ functions for gamma/periodic
-      } else if (preset === 'random-gamma') {
-        const alpha = parseFloat(document.getElementById('gamma-alpha').value) || 0.2;
-        const beta = parseFloat(document.getElementById('gamma-beta').value) || 0.25;
-        resultPtr = await simulateAztecGammaDirect(N, alpha, beta);
-
-      } else if (preset === 'periodic') {
-        const k = parseInt(document.getElementById('periodic-k').value) || 2;
-        const l = parseInt(document.getElementById('periodic-l').value) || 2;
-        const periodicWeights = getPeriodicEdgeWeightsFromUI(k, l);
-
-        const alphaArray = new Float64Array(k * l);
-        const betaArray = new Float64Array(k * l);
-        const gammaArray = new Float64Array(k * l);
-
-        for (let j = 0; j < k; j++) {
-          for (let i = 0; i < l; i++) {
-            alphaArray[j * l + i] = periodicWeights.alpha[j][i];
-            betaArray[j * l + i] = periodicWeights.beta[j][i];
-            gammaArray[j * l + i] = periodicWeights.gamma[j][i];
-          }
-        }
-
-        const alphaPtr = shufflingModule._malloc(k * l * 8);
-        const betaPtr = shufflingModule._malloc(k * l * 8);
-        const gammaPtr = shufflingModule._malloc(k * l * 8);
-
-        for (let i = 0; i < k * l; i++) {
-          shufflingModule.setValue(alphaPtr + i * 8, alphaArray[i], 'double');
-          shufflingModule.setValue(betaPtr + i * 8, betaArray[i], 'double');
-          shufflingModule.setValue(gammaPtr + i * 8, gammaArray[i], 'double');
-        }
-
-        resultPtr = await simulateAztecPeriodicDirect(N, k, l, alphaPtr, betaPtr, gammaPtr);
-
-        shufflingModule._free(alphaPtr);
-        shufflingModule._free(betaPtr);
-        shufflingModule._free(gammaPtr);
-
-      } else {
-        // Non-double-dimer IID/layered/uniform: generate EKLP weights directly
-        // (aztecEdges may be from a different size T-embedding)
-        const { mode, params } = getCurrentWeightParams();
-        const eklpWeights = generateShufflingWeights(N, mode, params);
-        resultPtr = await runShufflingWithWeights(N, eklpWeights, false);
-      }
+      // ALL modes use single source of truth: generateEdgeWeights() → toEKLPMatrix()
+      // This ensures same weights for single and double dimer sampling
+      const { mode, params } = getCurrentWeightParams();
+      const edges = generateEdgeWeights(N, mode, params);
+      const eklpWeights = toEKLPMatrix(edges, N);
+      const resultPtr = await runShufflingWithWeights(N, eklpWeights, doubleDimerMode);
 
       // Parse result
       const jsonStr = shufflingModule.UTF8ToString(resultPtr);
@@ -5399,6 +5226,230 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         alert('PDF export failed: ' + e.message);
       }
     });
+
+    // ==========================================================================
+    // DEBUG: Weight Export Handlers
+    // ==========================================================================
+
+    function debugDownloadJSON(data, filename) {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function debugSetStatus(msg) {
+      const el = document.getElementById('debug-export-status');
+      if (el) el.textContent = msg;
+    }
+
+    // Export raw edges from generateEdgeWeights()
+    document.getElementById('debug-export-edges-btn').addEventListener('click', () => {
+      const N = parseInt(document.getElementById('sample-N-input').value) || 6;
+      const { mode, params } = getCurrentWeightParams();
+
+      debugSetStatus(`Generating edges for N=${N}...`);
+      const edges = generateEdgeWeights(N, mode, params);
+
+      // Count non-1.0 weights
+      let nonOneCount = 0;
+      for (const e of edges) {
+        if (e.weight !== 1.0) nonOneCount++;
+      }
+
+      const exportData = {
+        format: 'debug-edges-raw',
+        N: N,
+        mode: mode,
+        params: params,
+        totalEdges: edges.length,
+        nonOneWeights: nonOneCount,
+        edges: edges.map(e => ({
+          v1: [e.x1, e.y1],
+          v2: [e.x2, e.y2],
+          weight: e.weight,
+          isHorizontal: e.isHorizontal
+        }))
+      };
+
+      debugDownloadJSON(exportData, `debug-edges-N${N}-${mode}.json`);
+      debugSetStatus(`Exported ${edges.length} edges (${nonOneCount} non-1.0)`);
+    });
+
+    // Export 4N×4N master matrix
+    document.getElementById('debug-export-master-btn').addEventListener('click', () => {
+      const N = parseInt(document.getElementById('sample-N-input').value) || 6;
+      const { mode, params } = getCurrentWeightParams();
+
+      debugSetStatus(`Generating master matrix for N=${N}...`);
+      const edges = generateEdgeWeights(N, mode, params);
+      const masterWeights = toMasterMatrix(edges, N);
+
+      const dim = 4 * N;
+      let nonOneCount = 0;
+      for (let i = 0; i < masterWeights.length; i++) {
+        if (masterWeights[i] !== 1.0) nonOneCount++;
+      }
+
+      // Convert to 2D array for readability
+      const matrix2D = [];
+      for (let i = 0; i < dim; i++) {
+        const row = [];
+        for (let j = 0; j < dim; j++) {
+          row.push(masterWeights[i * dim + j]);
+        }
+        matrix2D.push(row);
+      }
+
+      const exportData = {
+        format: 'debug-master-4Nx4N',
+        N: N,
+        dim: dim,
+        mode: mode,
+        params: params,
+        totalCells: masterWeights.length,
+        nonOneWeights: nonOneCount,
+        matrix: matrix2D
+      };
+
+      debugDownloadJSON(exportData, `debug-master-N${N}-${mode}.json`);
+      debugSetStatus(`Exported ${dim}×${dim} master (${nonOneCount} non-1.0)`);
+    });
+
+    // Export 2N×2N EKLP matrix
+    document.getElementById('debug-export-eklp-btn').addEventListener('click', () => {
+      const N = parseInt(document.getElementById('sample-N-input').value) || 6;
+      const { mode, params } = getCurrentWeightParams();
+
+      debugSetStatus(`Generating EKLP matrix for N=${N}...`);
+      const edges = generateEdgeWeights(N, mode, params);
+      const eklpWeights = toEKLPMatrix(edges, N);
+
+      const dim = 2 * N;
+      let nonOneCount = 0;
+      let alphaCount = 0, betaCount = 0, gammaCount = 0, deltaCount = 0;
+
+      for (let i = 0; i < dim; i++) {
+        for (let j = 0; j < dim; j++) {
+          const w = eklpWeights[i * dim + j];
+          if (w !== 1.0) {
+            nonOneCount++;
+            const isEvenRow = (i % 2 === 0);
+            const isEvenCol = (j % 2 === 0);
+            if (isEvenRow && isEvenCol) betaCount++;
+            else if (isEvenRow && !isEvenCol) alphaCount++;
+            else if (!isEvenRow && isEvenCol) gammaCount++;
+            else deltaCount++;
+          }
+        }
+      }
+
+      // Convert to 2D array for readability
+      const matrix2D = [];
+      for (let i = 0; i < dim; i++) {
+        const row = [];
+        for (let j = 0; j < dim; j++) {
+          row.push(eklpWeights[i * dim + j]);
+        }
+        matrix2D.push(row);
+      }
+
+      const exportData = {
+        format: 'debug-eklp-2Nx2N',
+        N: N,
+        dim: dim,
+        mode: mode,
+        params: params,
+        totalCells: eklpWeights.length,
+        nonOneWeights: nonOneCount,
+        breakdown: { alpha: alphaCount, beta: betaCount, gamma: gammaCount, delta: deltaCount },
+        matrix: matrix2D
+      };
+
+      debugDownloadJSON(exportData, `debug-eklp-N${N}-${mode}.json`);
+      debugSetStatus(`EKLP ${dim}×${dim}: ${nonOneCount} non-1.0 (α:${alphaCount} β:${betaCount} γ:${gammaCount} δ:${deltaCount})`);
+    });
+
+    // Export all formats in one JSON
+    document.getElementById('debug-export-all-btn').addEventListener('click', () => {
+      const N = parseInt(document.getElementById('sample-N-input').value) || 6;
+      const { mode, params } = getCurrentWeightParams();
+
+      debugSetStatus(`Generating all formats for N=${N}...`);
+
+      // Generate edges once (single source of truth!)
+      const edges = generateEdgeWeights(N, mode, params);
+      const masterWeights = toMasterMatrix(edges, N);
+      const eklpWeights = toEKLPMatrix(edges, N);
+
+      // Stats
+      let edgeNonOne = 0;
+      for (const e of edges) if (e.weight !== 1.0) edgeNonOne++;
+
+      let masterNonOne = 0;
+      for (let i = 0; i < masterWeights.length; i++) if (masterWeights[i] !== 1.0) masterNonOne++;
+
+      const dim2N = 2 * N;
+      let eklpNonOne = 0, alphaCount = 0, betaCount = 0, gammaCount = 0, deltaCount = 0;
+      for (let i = 0; i < dim2N; i++) {
+        for (let j = 0; j < dim2N; j++) {
+          const w = eklpWeights[i * dim2N + j];
+          if (w !== 1.0) {
+            eklpNonOne++;
+            const isEvenRow = (i % 2 === 0);
+            const isEvenCol = (j % 2 === 0);
+            if (isEvenRow && isEvenCol) betaCount++;
+            else if (isEvenRow && !isEvenCol) alphaCount++;
+            else if (!isEvenRow && isEvenCol) gammaCount++;
+            else deltaCount++;
+          }
+        }
+      }
+
+      // Convert matrices to 2D
+      const dim4N = 4 * N;
+      const master2D = [];
+      for (let i = 0; i < dim4N; i++) {
+        const row = [];
+        for (let j = 0; j < dim4N; j++) row.push(masterWeights[i * dim4N + j]);
+        master2D.push(row);
+      }
+
+      const eklp2D = [];
+      for (let i = 0; i < dim2N; i++) {
+        const row = [];
+        for (let j = 0; j < dim2N; j++) row.push(eklpWeights[i * dim2N + j]);
+        eklp2D.push(row);
+      }
+
+      const exportData = {
+        format: 'debug-all-formats',
+        N: N,
+        mode: mode,
+        params: params,
+        summary: {
+          edges: { total: edges.length, nonOne: edgeNonOne },
+          master: { dim: dim4N, total: masterWeights.length, nonOne: masterNonOne },
+          eklp: { dim: dim2N, total: eklpWeights.length, nonOne: eklpNonOne,
+                  breakdown: { alpha: alphaCount, beta: betaCount, gamma: gammaCount, delta: deltaCount } }
+        },
+        edges: edges.map(e => ({ v1: [e.x1, e.y1], v2: [e.x2, e.y2], weight: e.weight, isHorizontal: e.isHorizontal })),
+        masterMatrix: master2D,
+        eklpMatrix: eklp2D
+      };
+
+      debugDownloadJSON(exportData, `debug-all-N${N}-${mode}.json`);
+      debugSetStatus(`All exported: edges=${edges.length}, master=${dim4N}², eklp=${dim2N}²`);
+    });
+
+    // ==========================================================================
+    // END DEBUG
+    // ==========================================================================
 
     sampleCanvas.style.cursor = 'grab';
 
