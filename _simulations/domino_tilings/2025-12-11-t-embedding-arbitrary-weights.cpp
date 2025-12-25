@@ -120,6 +120,7 @@ static std::vector<std::vector<int>> g_adj;
 static std::vector<std::pair<double, double>> g_blackQuadCenters;
 
 // Store graph history for stepping back (stack of states)
+// Only enabled for n <= 15 to avoid memory bottleneck at large n
 struct AztecGraphState {
     std::vector<AztecVertex> vertices;
     std::vector<AztecEdge> edges;
@@ -128,6 +129,7 @@ struct AztecGraphState {
     int level;
 };
 static std::vector<AztecGraphState> g_aztecHistory;
+static const int HISTORY_MAX_N = 15;  // Disable history above this n
 
 // Double edge ratios for T-embedding alpha values (captured from step 11)
 struct DoubleEdgeRatios {
@@ -331,8 +333,9 @@ static void generateAztecGraphInternal(int k) {
 //
 // The V_gauge set depends on n mod 4 (see paper for exact definition)
 
-// Save current state to history
+// Save current state to history (only for small n)
 static void pushAztecState() {
+    if (g_aztecLevel > HISTORY_MAX_N) return;  // Skip for large n
     AztecGraphState state;
     state.vertices = g_aztecVertices;
     state.edges = g_aztecEdges;
@@ -3895,9 +3898,7 @@ void applyExternalWeights(double* weightBuffer, int bufferSize) {
 // This clears all history, cached coefficients, and T-embedding caches but keeps the weights
 EMSCRIPTEN_KEEPALIVE
 void resetAztecGraphPreservingWeights() {
-    // [FIX]: Unwind history to return to Step 0 (original state) before capturing weights.
-    // If we capture weights from a reduced step (e.g. Step 5), we apply transformed weights
-    // to a fresh graph, causing corruption.
+    // Unwind history to return to Step 0 before capturing weights
     while (!g_aztecHistory.empty()) {
         popAztecState();
     }
