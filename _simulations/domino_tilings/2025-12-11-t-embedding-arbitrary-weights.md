@@ -3459,6 +3459,98 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return weights;
   }
 
+  // SHUFFLING WEIGHT BUFFER - For EKLP shuffling (Engine B)
+  // =============================================================================
+  // Generates a (2N)×(2N) Float64Array matching C++ EKLP format:
+  // - For gamma mode: even rows have beta (j even) / alpha (j odd), odd rows = 1.0
+  // - For IID mode: all positions get random weights
+  // - For layered mode: all positions get layer-dependent weights
+  //
+  // Returns: Float64Array of length (2N)*(2N), indexed as weights[i * dim + j]
+  //
+  function generateShufflingWeights(N, mode, params = {}) {
+    const dim = 2 * N;  // EKLP uses 2N×2N
+    const weights = new Float64Array(dim * dim);
+    const seed = params.seed || 42;
+    const rng = createSeededRNG(seed);
+
+    // Initialize all to 1.0
+    weights.fill(1.0);
+
+    if (mode === 'uniform') {
+      // All weights = 1.0, already done
+      return weights;
+
+    } else if (mode === 'iid') {
+      // IID: ALL positions get random weights
+      const distType = params.distType || 'uniform';
+      for (let i = 0; i < dim; i++) {
+        for (let j = 0; j < dim; j++) {
+          weights[i * dim + j] = generateIIDWeight(distType, rng);
+        }
+      }
+
+    } else if (mode === 'layered') {
+      // Layered: weight depends on diagonal index
+      const regime = params.regime || 3;
+      for (let i = 0; i < dim; i++) {
+        for (let j = 0; j < dim; j++) {
+          const diagIndex = (i - N) + (j - N);
+          weights[i * dim + j] = generateLayeredWeight(regime, diagIndex, N, rng);
+        }
+      }
+
+    } else if (mode === 'gamma') {
+      // Gamma: matches C++ generateGammaEdgeWeights exactly
+      // Even rows: beta (j even), alpha (j odd)
+      // Odd rows: all 1.0
+      const alpha = params.alpha || 0.2;
+      const beta = params.beta || 0.25;
+
+      for (let i = 0; i < dim; i++) {
+        if (i % 2 === 0) {  // Even rows only
+          for (let j = 0; j < dim; j++) {
+            if (j % 2 === 0) {
+              weights[i * dim + j] = gammaRandom(beta, 1.0, rng);  // beta
+            } else {
+              weights[i * dim + j] = gammaRandom(alpha, 1.0, rng); // alpha
+            }
+          }
+        }
+        // Odd rows stay 1.0
+      }
+
+    } else if (mode === 'periodic') {
+      // Periodic k×l: Engine B convention (same as C++ generatePeriodicEdgeWeights)
+      const k = params.k || 2;
+      const l = params.l || 2;
+      const alphaW = params.alphaWeights || [[1, 1], [1, 1]];
+      const betaW = params.betaWeights || [[1, 1], [1, 1]];
+
+      for (let i = 0; i < dim; i++) {
+        if (i % 2 === 0) {  // Even rows only
+          for (let j = 0; j < dim; j++) {
+            const diagI = Math.floor(i / 2);
+            const diagJ = Math.floor(j / 2);
+            const pi = ((diagI % k) + k) % k;
+            const pj = ((diagJ % l) + l) % l;
+
+            if (j % 2 === 0) {
+              // beta weight
+              weights[i * dim + j] = betaW[pi][pj];
+            } else {
+              // alpha weight
+              weights[i * dim + j] = alphaW[pi][pj];
+            }
+          }
+        }
+        // Odd rows stay 1.0
+      }
+    }
+
+    return weights;
+  }
+
   // Helper: Get current weight mode and params from UI
   function getCurrentWeightParams() {
     const preset = document.getElementById('weight-preset-select').value;
@@ -3575,10 +3667,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     if (N < 1) return;
 
     try {
-      // Use Master Weight Buffer - single source of truth
+      // Use Shuffling Weight Buffer (2N×2N format for EKLP)
       const { mode, params } = getCurrentWeightParams();
-      const masterWeights = generateMasterWeights(N, mode, params);
-      const resultPtr = await runShufflingWithWeights(N, masterWeights, true);
+      const shufflingWeights = generateShufflingWeights(N, mode, params);
+      const resultPtr = await runShufflingWithWeights(N, shufflingWeights, true);
 
       // Parse result
       const jsonStr = shufflingModule.UTF8ToString(resultPtr);
@@ -3643,11 +3735,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const preset = document.getElementById('weight-preset-select').value;
       let resultPtr;
 
-      // Use Master Weight Buffer for double dimer mode (unified path)
+      // Use Shuffling Weight Buffer for double dimer mode (2N×2N for EKLP)
       if (doubleDimerMode) {
         const { mode, params } = getCurrentWeightParams();
-        const masterWeights = generateMasterWeights(N, mode, params);
-        resultPtr = await runShufflingWithWeights(N, masterWeights, true);
+        const shufflingWeights = generateShufflingWeights(N, mode, params);
+        resultPtr = await runShufflingWithWeights(N, shufflingWeights, true);
 
       // Non-double-dimer: use specialized C++ functions for gamma/periodic
       } else if (preset === 'random-gamma') {
@@ -3689,10 +3781,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         shufflingModule._free(gammaPtr);
 
       } else {
-        // Non-double-dimer IID/layered/uniform: use Master Weight Buffer
+        // Non-double-dimer IID/layered/uniform: use Shuffling Weight Buffer (2N×2N)
         const { mode, params } = getCurrentWeightParams();
-        const masterWeights = generateMasterWeights(N, mode, params);
-        resultPtr = await runShufflingWithWeights(N, masterWeights, false);
+        const shufflingWeights = generateShufflingWeights(N, mode, params);
+        resultPtr = await runShufflingWithWeights(N, shufflingWeights, false);
       }
 
       // Parse result
