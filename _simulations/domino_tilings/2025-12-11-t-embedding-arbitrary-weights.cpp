@@ -28,9 +28,9 @@
 #include <unordered_set>
 #include <algorithm>
 
-// Use standard double precision
-using mp_real = double;
-using mp_complex = std::complex<double>;
+// Use long double for better precision in deep recurrences (n > 30)
+using mp_real = long double;
+using mp_complex = std::complex<long double>;
 
 // Hash function for std::pair<int,int> to use with unordered_map
 struct PairHash {
@@ -2360,7 +2360,7 @@ static void tryCaptureFaceWeights() {
 
 struct TembVertex {
     int i, j;           // Integer indices
-    double re, im;      // Complex coordinates T(i,j) = re + i*im
+    mp_real re, im;     // Complex coordinates T(i,j) = re + i*im (full precision)
 };
 
 struct TembLevel {
@@ -2398,9 +2398,9 @@ static void computeT0() {
     t0.vertices.push_back({-1, 0, -1.0, 0.0});
 
     // Boundary vertices on imaginary axis: i/sqrt(X_ROOT)
-    double invSqrtRoot = 1.0 / std::sqrt(static_cast<double>(rootWeight));
-    t0.vertices.push_back({0, 1, 0.0, invSqrtRoot});
-    t0.vertices.push_back({0, -1, 0.0, -invSqrtRoot});
+    mp_real invSqrtRoot = 1.0L / std::sqrt(rootWeight);
+    t0.vertices.push_back({0, 1, 0.0L, invSqrtRoot});
+    t0.vertices.push_back({0, -1, 0.0L, -invSqrtRoot});
 
     // Store or update T_0
     bool found = false;
@@ -2790,8 +2790,8 @@ static void computeTk(int k) {
                 TembVertex v;
                 v.i = i;
                 v.j = j;
-                v.re = static_cast<double>(Tcurr_vec[idx(i, j)].real());
-                v.im = static_cast<double>(Tcurr_vec[idx(i, j)].imag());
+                v.re = Tcurr_vec[idx(i, j)].real();
+                v.im = Tcurr_vec[idx(i, j)].imag();
                 tk.vertices.push_back(v);
             }
         }
@@ -2940,9 +2940,9 @@ static void computeO0() {
     o0.vertices.push_back({-1, 0, 1.0, 0.0});  // Note: 1.0, not -1.0!
 
     // Boundary vertices on imaginary axis: BOTH are +i/sqrt(X_ROOT)
-    double invSqrtRoot = 1.0 / std::sqrt(static_cast<double>(rootWeight));
-    o0.vertices.push_back({0, 1, 0.0, invSqrtRoot});
-    o0.vertices.push_back({0, -1, 0.0, invSqrtRoot});  // Note: +invSqrtRoot, not -invSqrtRoot!
+    mp_real invSqrtRoot = 1.0L / std::sqrt(rootWeight);
+    o0.vertices.push_back({0, 1, 0.0L, invSqrtRoot});
+    o0.vertices.push_back({0, -1, 0.0L, invSqrtRoot});  // Note: +invSqrtRoot, not -invSqrtRoot!
 
     // Store or update O_0
     bool found = false;
@@ -3186,8 +3186,8 @@ static void computeOk(int k) {
                 TembVertex v;
                 v.i = i;
                 v.j = j;
-                v.re = static_cast<double>(Ocurr_vec[idx(i, j)].real());
-                v.im = static_cast<double>(Ocurr_vec[idx(i, j)].imag());
+                v.re = Ocurr_vec[idx(i, j)].real();
+                v.im = Ocurr_vec[idx(i, j)].imag();
                 ok.vertices.push_back(v);
             }
         }
