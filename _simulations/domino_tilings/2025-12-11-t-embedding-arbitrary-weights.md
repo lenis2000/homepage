@@ -1387,14 +1387,12 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let setN, initCoefficients, computeTembedding, freeString;
   let generateAztecGraph, getAztecGraphJSON, getAztecFacesJSON, getStoredFaceWeightsJSON, getBetaRatiosJSON, getTembeddingLevelJSON, getOrigamiLevelJSON;
   let getFirstReductionJSON;  // Export reduced graph after first 5 steps
-  let randomizeAztecWeights, applyExternalWeights, setAztecWeightMode, setRandomIIDParams, setLayeredParams, setGammaParams;
-  let setPeriodicPeriod, setPeriodicWeight, getPeriodicParams;
-  let resetAztecGraphPreservingWeights, setAztecGraphLevel, seedRng;
+  let applyExternalWeights;  // Golden bridge: JS sends weights to C++
+  let resetAztecGraphPreservingWeights, setAztecGraphLevel;
   let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
   let getComputeTimeMs;
   let clearTembLevels;
   let clearStoredWeightsExport;
-  let setIIDDistribution;
 
   // Track current weight mode: 0=All 1's (uniform), 1=Random IID, 2=Layered, 3=Gamma, 4=Periodic
   let currentWeightMode = 1;  // Default to Random IID
@@ -2380,36 +2378,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     refreshAztecFromCpp();
   }
 
-  // Randomize all edge weights (calls C++ via WASM)
+  // Randomize all edge weights (JS only - C++ receives weights via applyExternalWeights)
   function randomizeWeights() {
-    if (!wasmReady) {
-      // Fallback to JS randomization
-      for (const e of aztecEdges) {
-        e.weight = randomWeight();
-      }
-      renderAztecGraph();
-      return;
+    for (const e of aztecEdges) {
+      e.weight = randomWeight();
     }
-
-    // Randomize in C++
-    randomizeAztecWeights();
-
-    // Re-fetch graph data
-    let ptr = getAztecGraphJSON();
-    let jsonStr = Module.UTF8ToString(ptr);
-    freeString(ptr);
-    let graphData = JSON.parse(jsonStr);
-
-    // Update edges with new weights
-    aztecEdges = graphData.edges.map(e => ({
-      x1: aztecVertices[e.v1].x,
-      y1: aztecVertices[e.v1].y,
-      x2: aztecVertices[e.v2].x,
-      y2: aztecVertices[e.v2].y,
-      weight: e.weight,
-      isHorizontal: e.isHorizontal
-    }));
-
     renderAztecGraph();
   }
 
@@ -2545,19 +2518,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       getBetaRatiosJSON = Module.cwrap('getBetaRatiosJSON', 'number', []);
       getTembeddingLevelJSON = Module.cwrap('getTembeddingLevelJSON', 'number', ['number']);
       getOrigamiLevelJSON = Module.cwrap('getOrigamiLevelJSON', 'number', ['number']);
-      randomizeAztecWeights = Module.cwrap('randomizeAztecWeights', null, []);
       applyExternalWeights = Module.cwrap('applyExternalWeights', null, ['number', 'number']);
-      setAztecWeightMode = Module.cwrap('setAztecWeightMode', null, ['number']);
-      setRandomIIDParams = Module.cwrap('setRandomIIDParams', null, ['number', 'number']);
-      setIIDDistribution = Module.cwrap('setIIDDistribution', null, ['number', 'number', 'number']);
-      setLayeredParams = Module.cwrap('setLayeredParams', null, ['number', 'number', 'number', 'number', 'number']);
-      setGammaParams = Module.cwrap('setGammaParams', null, ['number', 'number']);
-      setPeriodicPeriod = Module.cwrap('setPeriodicPeriod', null, ['number', 'number']);
-      setPeriodicWeight = Module.cwrap('setPeriodicWeight', null, ['number', 'number', 'number', 'number']);
-      getPeriodicParams = Module.cwrap('getPeriodicParams', 'number', []);
       resetAztecGraphPreservingWeights = Module.cwrap('resetAztecGraphPreservingWeights', null, []);
-      seedRng = Module.cwrap('seedRng', null, ['number']);
-      seedRng(42);  // Fixed seed for reproducible results on load
       setAztecGraphLevel = Module.cwrap('setAztecGraphLevel', null, ['number']);
       aztecGraphStepDown = Module.cwrap('aztecGraphStepDown', null, []);
       aztecGraphStepUp = Module.cwrap('aztecGraphStepUp', null, []);
@@ -7485,35 +7447,22 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   // Initialize visibility
   updateParamVisibility(weightPresetSelect.value);
 
-  // Build periodic weights editor UI
+  // Build periodic weights editor UI (JS-only - C++ receives weights via applyExternalWeights)
   function buildWeightsEditor() {
     const k = parseInt(document.getElementById('periodic-k').value) || 2;
     const l = parseInt(document.getElementById('periodic-l').value) || 2;
     document.getElementById('weights-editor-dims').textContent = `${k}×${l}`;
 
-    // Initialize periodic params in C++
-    if (wasmReady && setPeriodicPeriod) {
-      setPeriodicPeriod(k, l);
-    }
-
-    // Get current values from C++
+    // Initialize arrays with defaults (JS-only, no C++ sync)
     let params = { k: k, l: l, alpha: [], beta: [], gamma: [] };
-    if (wasmReady && getPeriodicParams) {
-      const ptr = getPeriodicParams();
-      const json = Module.UTF8ToString(ptr);
-      freeString(ptr);
-      params = JSON.parse(json);
-    }
-
-    // Initialize default arrays if needed
     for (let j = 0; j < k; j++) {
-      if (!params.alpha[j]) params.alpha[j] = [];
-      if (!params.beta[j]) params.beta[j] = [];
-      if (!params.gamma[j]) params.gamma[j] = [];
+      params.alpha[j] = [];
+      params.beta[j] = [];
+      params.gamma[j] = [];
       for (let i = 0; i < l; i++) {
-        if (params.alpha[j][i] === undefined) params.alpha[j][i] = 1;
-        if (params.beta[j][i] === undefined) params.beta[j][i] = 1;
-        if (params.gamma[j][i] === undefined) params.gamma[j][i] = 1;
+        params.alpha[j][i] = 1;
+        params.beta[j][i] = 1;
+        params.gamma[j][i] = 1;
       }
     }
 
@@ -7540,16 +7489,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
           input.dataset.type = t;
           input.dataset.j = j;
           input.dataset.i = i;
-          // Update C++ immediately when value changes
-          input.addEventListener('input', () => {
-            const type = parseInt(input.dataset.type);
-            const jIdx = parseInt(input.dataset.j);
-            const iIdx = parseInt(input.dataset.i);
-            const value = parseFloat(input.value) || 1;
-            if (wasmReady && setPeriodicWeight) {
-              setPeriodicWeight(type, jIdx, iIdx, value);
-            }
-          });
+          input.id = `periodic-${['alpha', 'beta', 'gamma'][t]}-${j}-${i}`;
           // Enter key triggers compute
           input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -7634,23 +7574,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     document.getElementById('periodic-preset-desc').textContent = preset.desc;
     document.getElementById('weights-editor-dims').textContent = `${k}×${l}`;
 
-    // Update C++
-    if (wasmReady && setPeriodicPeriod) {
-      setPeriodicPeriod(k, l);
-    }
-
-    // Set the weights in C++
-    if (wasmReady && setPeriodicWeight) {
-      for (let j = 0; j < k; j++) {
-        for (let i = 0; i < l; i++) {
-          setPeriodicWeight(0, j, i, preset.alpha[j][i]);
-          setPeriodicWeight(1, j, i, preset.beta[j][i]);
-          setPeriodicWeight(2, j, i, preset.gamma[j][i]);
-        }
-      }
-    }
-
-    // Rebuild the UI table with preset values
+    // Rebuild the UI table with preset values (C++ receives weights via applyExternalWeights)
     rebuildWeightsTables(k, l, preset);
   }
 
@@ -7678,15 +7602,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
           input.dataset.type = t;
           input.dataset.j = j;
           input.dataset.i = i;
-          input.addEventListener('input', () => {
-            const type = parseInt(input.dataset.type);
-            const jIdx = parseInt(input.dataset.j);
-            const iIdx = parseInt(input.dataset.i);
-            const value = parseFloat(input.value) || 1;
-            if (wasmReady && setPeriodicWeight) {
-              setPeriodicWeight(type, jIdx, iIdx, value);
-            }
-          });
+          // Weights are read from UI via getCurrentWeightParams() when computing
           // Enter key triggers compute
           input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
