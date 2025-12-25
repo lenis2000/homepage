@@ -1700,161 +1700,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let selectedAztecEdge = null;
   let selectedAztecFace = null;
 
-  // Generate random weight from 0.5 to 2.0 with step 0.1
-  function randomWeight() {
-    const steps = Math.floor(Math.random() * 16); // 0-15 steps
-    return 0.5 + steps * 0.1;
-  }
-
-  // Generate Aztec diamond graph vertices for level k
-  function generateAztecVertices(k) {
-    const vertices = [];
-    // Vertices at half-integer coordinates where |x| + |y| <= k + 0.5
-    for (let i = -k; i <= k; i++) {
-      for (let j = -k; j <= k; j++) {
-        const x = i + 0.5;
-        const y = j + 0.5;
-        if (Math.abs(x) + Math.abs(y) <= k + 0.5) {
-          // Bipartite coloring depends on i + j + k
-          const isWhite = ((i + j + k) % 2 === 0);
-          vertices.push({ x, y, isWhite, key: `${x},${y}` });
-        }
-      }
-    }
-    return vertices;
-  }
-
-  // Generate edges between adjacent vertices
-  function generateAztecEdges(vertices) {
-    const vertexSet = new Set(vertices.map(v => v.key));
-    const edges = [];
-
-    for (const v of vertices) {
-      // Right neighbor (x+1, y)
-      const rightKey = `${v.x + 1},${v.y}`;
-      if (vertexSet.has(rightKey)) {
-        edges.push({
-          x1: v.x, y1: v.y,
-          x2: v.x + 1, y2: v.y,
-          weight: randomWeight(),
-          key: `h:${v.x},${v.y}`
-        });
-      }
-      // Top neighbor (x, y+1)
-      const topKey = `${v.x},${v.y + 1}`;
-      if (vertexSet.has(topKey)) {
-        edges.push({
-          x1: v.x, y1: v.y,
-          x2: v.x, y2: v.y + 1,
-          weight: randomWeight(),
-          key: `v:${v.x},${v.y}`
-        });
-      }
-    }
-    return edges;
-  }
-
-  // Compute face weights for all faces in the Aztec diamond
-  // Face weight formula: X = (w1→b1 × w2→b2) / (w2→b1 × w1→b2)
-  // where w1, b1, w2, b2 are vertices in clockwise order starting from white
-  function computeFaceWeights() {
-    if (aztecVertices.length === 0 || aztecEdges.length === 0) return [];
-
-    // Build vertex lookup map: "x,y" -> vertex object
-    const vertexMap = new Map();
-    for (const v of aztecVertices) {
-      vertexMap.set(`${v.x},${v.y}`, v);
-    }
-
-    // Build edge lookup map: canonical key -> edge weight
-    const edgeMap = new Map();
-    for (const e of aztecEdges) {
-      // Canonical key: smaller coordinate pair first
-      const key = e.x1 < e.x2 || (e.x1 === e.x2 && e.y1 < e.y2)
-        ? `${e.x1},${e.y1}-${e.x2},${e.y2}`
-        : `${e.x2},${e.y2}-${e.x1},${e.y1}`;
-      edgeMap.set(key, e.weight);
-    }
-
-    // Helper to get edge weight between two vertices
-    function getEdgeWeight(x1, y1, x2, y2) {
-      const key = x1 < x2 || (x1 === x2 && y1 < y2)
-        ? `${x1},${y1}-${x2},${y2}`
-        : `${x2},${y2}-${x1},${y1}`;
-      return edgeMap.get(key);
-    }
-
-    const faceWeights = [];
-    const k = aztecLevel;
-
-    // Iterate over all possible face positions (integer coordinates)
-    for (let i = -k; i < k; i++) {
-      for (let j = -k; j < k; j++) {
-        // Face corners at half-integer coordinates
-        const blX = i + 0.5, blY = j + 0.5;      // bottom-left
-        const brX = i + 1.5, brY = j + 0.5;      // bottom-right
-        const tlX = i + 0.5, tlY = j + 1.5;      // top-left
-        const trX = i + 1.5, trY = j + 1.5;      // top-right
-
-        // Check if all 4 vertices exist
-        const blV = vertexMap.get(`${blX},${blY}`);
-        const brV = vertexMap.get(`${brX},${brY}`);
-        const tlV = vertexMap.get(`${tlX},${tlY}`);
-        const trV = vertexMap.get(`${trX},${trY}`);
-
-        if (!blV || !brV || !tlV || !trV) continue;
-
-        // Check if all 4 edges exist
-        const bottom = getEdgeWeight(blX, blY, brX, brY);
-        const right = getEdgeWeight(brX, brY, trX, trY);
-        const top = getEdgeWeight(tlX, tlY, trX, trY);
-        const left = getEdgeWeight(blX, blY, tlX, tlY);
-
-        if (bottom === undefined || right === undefined ||
-            top === undefined || left === undefined) continue;
-
-        // Compute face weight based on which diagonal is white
-        // BL and TR have same parity, BR and TL have same parity
-        let faceWeight;
-        if (blV.isWhite) {
-          // Type A: white at BL/TR, clockwise from BL: w1=BL, b1=BR, w2=TR, b2=TL
-          // X = (w1→b1 × w2→b2) / (w2→b1 × w1→b2) = (bottom × top) / (right × left)
-          faceWeight = (bottom * top) / (right * left);
-        } else {
-          // Type B: white at BR/TL, clockwise from BR: w1=BR, b1=TR, w2=TL, b2=BL
-          // X = (w1→b1 × w2→b2) / (w2→b1 × w1→b2) = (right × left) / (top × bottom)
-          faceWeight = (right * left) / (top * bottom);
-        }
-
-        // Compute centroid (at integer coordinates i+1, j+1)
-        const cx = (blX + brX + tlX + trX) / 4;
-        const cy = (blY + brY + tlY + trY) / 4;
-
-        // Store face with index coordinates and type
-        faceWeights.push({
-          cx, cy,
-          weight: faceWeight,
-          faceI: i,           // Face index (BL corner at i+0.5, j+0.5)
-          faceJ: j,
-          isTypeA: blV.isWhite  // Type A if BL is white
-        });
-      }
-    }
-
-    return faceWeights;
-  }
-
   // Initialize Aztec graph (calls C++ via WASM)
   function initAztecGraph(k) {
-    if (!wasmReady) {
-      // Fallback to JS generation if WASM not ready
-      aztecLevel = k;
-      aztecVertices = generateAztecVertices(k);
-      aztecEdges = generateAztecEdges(aztecVertices);
-      updateAztecUI();
-      renderAztecGraph();
-      return;
-    }
+    if (!wasmReady) return;
 
     // Generate graph in C++
     generateAztecGraph(k);
@@ -2174,17 +2022,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     // Draw face weights
     const showFaceWeights = document.getElementById('show-face-weights-chk').checked;
     aztecFaceScreenPositions = [];  // Reset for click detection
-    if (showFaceWeights) {
-      // Get face weights from C++ if WASM is ready, otherwise fall back to JS
-      let faceWeights = [];
-      if (wasmReady && getAztecFacesJSON) {
-        let ptr = getAztecFacesJSON();
-        let jsonStr = Module.UTF8ToString(ptr);
-        freeString(ptr);
-        faceWeights = JSON.parse(jsonStr);
-      } else {
-        faceWeights = computeFaceWeights();
-      }
+    if (showFaceWeights && wasmReady && getAztecFacesJSON) {
+      const ptr = getAztecFacesJSON();
+      const jsonStr = Module.UTF8ToString(ptr);
+      freeString(ptr);
+      const faceWeights = JSON.parse(jsonStr);
 
       for (let idx = 0; idx < faceWeights.length; idx++) {
         const face = faceWeights[idx];
@@ -2495,46 +2337,89 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   // ========== T-EMBEDDING CODE (unchanged) ==========
 
-  function initWasm() {
-    if (typeof Module === 'undefined') {
-      setTimeout(initWasm, 100);
-      return;
-    }
+  // Initialize geometry module function bindings
+  function initGeometryFunctions(mod) {
+    setN = mod.cwrap('setN', null, ['number']);
+    initCoefficients = mod.cwrap('initCoefficients', null, []);
+    computeTembedding = mod.cwrap('computeTembedding', null, []);
+    freeString = mod.cwrap('freeString', null, ['number']);
 
+    // Aztec graph functions
+    generateAztecGraph = mod.cwrap('generateAztecGraph', null, ['number']);
+    getAztecGraphJSON = mod.cwrap('getAztecGraphJSON', 'number', []);
+    getFirstReductionJSON = mod.cwrap('getFirstReductionJSON', 'number', []);
+    getAztecFacesJSON = mod.cwrap('getAztecFacesJSON', 'number', []);
+    getStoredFaceWeightsJSON = mod.cwrap('getStoredFaceWeightsJSON', 'number', []);
+    getBetaRatiosJSON = mod.cwrap('getBetaRatiosJSON', 'number', []);
+    getTembeddingLevelJSON = mod.cwrap('getTembeddingLevelJSON', 'number', ['number']);
+    getOrigamiLevelJSON = mod.cwrap('getOrigamiLevelJSON', 'number', ['number']);
+    applyExternalWeights = mod.cwrap('applyExternalWeights', null, ['number', 'number']);
+    resetAztecGraphPreservingWeights = mod.cwrap('resetAztecGraphPreservingWeights', null, []);
+    setAztecGraphLevel = mod.cwrap('setAztecGraphLevel', null, ['number']);
+    aztecGraphStepDown = mod.cwrap('aztecGraphStepDown', null, []);
+    aztecGraphStepUp = mod.cwrap('aztecGraphStepUp', null, []);
+    getAztecReductionStep = mod.cwrap('getAztecReductionStep', 'number', []);
+    canAztecStepUp = mod.cwrap('canAztecStepUp', 'number', []);
+    canAztecStepDown = mod.cwrap('canAztecStepDown', 'number', []);
+    getComputeTimeMs = mod.cwrap('getComputeTimeMs', 'number', []);
+    clearTembLevels = mod.cwrap('clearTembLevels', null, []);
+    clearStoredWeightsExport = mod.cwrap('clearStoredWeightsExport', null, []);
+  }
+
+  // Load both WASM modules in parallel
+  async function loadAllWasmModules() {
     loadingMsg.style.display = 'block';
+    loadingMsg.innerHTML = '⏳ Loading WASM modules...';
 
-    Module.onRuntimeInitialized = function() {
-      setN = Module.cwrap('setN', null, ['number']);
-      initCoefficients = Module.cwrap('initCoefficients', null, []);
-      computeTembedding = Module.cwrap('computeTembedding', null, []);
-      freeString = Module.cwrap('freeString', null, ['number']);
+    // Promise for geometry module
+    const geometryPromise = new Promise((resolve) => {
+      const checkModule = () => {
+        if (typeof Module === 'undefined') {
+          setTimeout(checkModule, 50);
+          return;
+        }
+        if (Module.calledRun) {
+          resolve(Module);
+        } else {
+          Module.onRuntimeInitialized = () => resolve(Module);
+        }
+      };
+      checkModule();
+    });
 
-      // Aztec graph functions
-      generateAztecGraph = Module.cwrap('generateAztecGraph', null, ['number']);
-      getAztecGraphJSON = Module.cwrap('getAztecGraphJSON', 'number', []);
-      getFirstReductionJSON = Module.cwrap('getFirstReductionJSON', 'number', []);
-      getAztecFacesJSON = Module.cwrap('getAztecFacesJSON', 'number', []);
-      getStoredFaceWeightsJSON = Module.cwrap('getStoredFaceWeightsJSON', 'number', []);
-      getBetaRatiosJSON = Module.cwrap('getBetaRatiosJSON', 'number', []);
-      getTembeddingLevelJSON = Module.cwrap('getTembeddingLevelJSON', 'number', ['number']);
-      getOrigamiLevelJSON = Module.cwrap('getOrigamiLevelJSON', 'number', ['number']);
-      applyExternalWeights = Module.cwrap('applyExternalWeights', null, ['number', 'number']);
-      resetAztecGraphPreservingWeights = Module.cwrap('resetAztecGraphPreservingWeights', null, []);
-      setAztecGraphLevel = Module.cwrap('setAztecGraphLevel', null, ['number']);
-      aztecGraphStepDown = Module.cwrap('aztecGraphStepDown', null, []);
-      aztecGraphStepUp = Module.cwrap('aztecGraphStepUp', null, []);
-      getAztecReductionStep = Module.cwrap('getAztecReductionStep', 'number', []);
-      canAztecStepUp = Module.cwrap('canAztecStepUp', 'number', []);
-      canAztecStepDown = Module.cwrap('canAztecStepDown', 'number', []);
-      getComputeTimeMs = Module.cwrap('getComputeTimeMs', 'number', []);
-      clearTembLevels = Module.cwrap('clearTembLevels', null, []);
-      clearStoredWeightsExport = Module.cwrap('clearStoredWeightsExport', null, []);
+    // Promise for shuffling module
+    const shufflingPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = '/js/2025-12-11-t-embedding-shuffling.js';
+      script.onload = async () => {
+        try {
+          const mod = await createShufflingModule();
+          resolve(mod);
+        } catch (e) {
+          reject(e);
+        }
+      };
+      script.onerror = () => reject(new Error('Failed to load shuffling module'));
+      document.head.appendChild(script);
+    });
 
+    try {
+      // Load both modules in parallel
+      const [geometryModule, shufflingMod] = await Promise.all([geometryPromise, shufflingPromise]);
+
+      // Initialize geometry functions
+      initGeometryFunctions(geometryModule);
+
+      // Initialize shuffling functions
+      shufflingModule = shufflingMod;
+      initShufflingFunctions();
+
+      // Both modules ready
       wasmReady = true;
 
       // Auto-compute on load with selected preset weights
       const n = parseN();
-      currentSimulationN = n;  // Sync state on load
+      currentSimulationN = n;
       setN(n);
 
       // Update stepwise section visibility based on n
@@ -2545,33 +2430,29 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       applyMasterWeightsToGeometry(n);
       computeAndDisplay();
 
-      // Precompute all T-embedding levels for stepwise UI (only needed for small n)
-      // if (n <= STEP_BY_STEP_MAX_N) {
-      //   for (let k = 0; k <= maxK; k++) {
-      //     let ptr = getTembeddingLevelJSON(k);
-      //     freeString(ptr);
-      //   }
-      // }
+      // Precompute IID weights if needed
+      const preset = document.getElementById('weight-preset-select').value;
+      if (preset === 'random-iid') {
+        const N = parseInt(document.getElementById('sample-N-input').value) || 6;
+        getOrComputeIIDWeights(N);
+      }
 
-      // Now hide loading message
+      // Generate initial sample
+      generateRandomSample();
+
+      // Hide loading message
       loadingMsg.style.display = 'none';
-
-      // Store T-embedding Module reference before loading shuffling module
-      const tembModule = Module;
-
-      // Load shuffling WASM module dynamically
-      loadShufflingModule(tembModule);
-    };
-
-    if (Module.calledRun) {
-      Module.onRuntimeInitialized();
+    } catch (error) {
+      loadingMsg.innerHTML = '❌ Error loading WASM: ' + error.message;
+      loadingMsg.style.background = '#fee';
+      loadingMsg.style.borderColor = '#c00';
+      console.error('WASM loading failed:', error);
     }
   }
 
   // ========== RANDOM SAMPLE SHUFFLING ==========
 
   // Sample state
-  let shufflingWasmReady = false;
   let shufflingModule = null;
   let simulateAztecWithWeightMatrix = null;
   let simulateAztecGammaDirect = null;
@@ -3210,18 +3091,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   const sampleCtx = sampleCanvas ? sampleCanvas.getContext('2d') : null;
 
-  function loadShufflingModule(tembModule) {
-    // Create script element to load shuffling WASM (modularized build)
-    const script = document.createElement('script');
-    script.src = '/js/2025-12-11-t-embedding-shuffling.js';
-    script.onload = async function() {
-      // createShufflingModule is a factory function that returns a Promise
-      shufflingModule = await createShufflingModule();
-      initShufflingFunctions();
-    };
-    document.head.appendChild(script);
-  }
-
+  // Initialize shuffling module function bindings (called from loadAllWasmModules)
   function initShufflingFunctions() {
     simulateAztecWithWeightMatrix = shufflingModule.cwrap('simulateAztecWithWeightMatrix', 'number',
       ['number', 'number'], {async: true});
@@ -3235,18 +3105,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       ['number', 'number'], {async: true});
     shufflingFreeString = shufflingModule.cwrap('freeString', null, ['number']);
     shufflingGetProgress = shufflingModule.cwrap('getProgress', 'number', []);
-
-    shufflingWasmReady = true;
-
-    // Precompute IID weights on load (since random-iid is default)
-    const preset = document.getElementById('weight-preset-select').value;
-    if (preset === 'random-iid') {
-      const N = parseInt(document.getElementById('sample-N-input').value) || 6;
-      getOrComputeIIDWeights(N);
-    }
-
-    // Generate initial sample with default weights
-    generateRandomSample();
   }
 
   // Get periodic edge weights from UI (alpha, beta, gamma tables)
@@ -3850,8 +3708,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   // Sample double dimer configuration for T-embedding visualization
   // Note: This visualization covers only interior quadrilateral faces (boundary excluded for visualization purposes)
   async function sampleTembDoubleDimer() {
-    if (!shufflingWasmReady) {
-      alert('WASM module not ready. Please wait a moment and try again.');
+    if (!wasmReady) {
+      alert('WASM modules not ready. Please wait a moment and try again.');
       return;
     }
 
@@ -3913,7 +3771,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   }
 
   async function generateRandomSample() {
-    if (!shufflingWasmReady) return;
+    if (!wasmReady) return;
 
     let N = parseInt(document.getElementById('sample-N-input').value) || 6;
     const timeSpan = document.getElementById('sample-time');
@@ -10322,7 +10180,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     benchmarkBtn.addEventListener('click', runBenchmark);
   }
 
-  // Initialize
-  initWasm();
+  // Initialize - load both WASM modules in parallel
+  loadAllWasmModules();
 })();
 </script>
