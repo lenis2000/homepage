@@ -3582,9 +3582,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const l = params.l || 2;
       const alphaW = params.alphaWeights || [[1, 1], [1, 1]];
       const betaW = params.betaWeights || [[1, 1], [1, 1]];
+      const gammaW = params.gammaWeights || [[1, 1], [1, 1]];
 
       if (isHorizontal) {
-        // Alpha edge (top of black)
+        // Alpha edge (bottom of black face)
         const faceX = Math.round(midX);
         const faceY = Math.floor(midY);
         const isBlack = ((faceX + faceY) % 2) !== 0;
@@ -3595,14 +3596,27 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
           return alphaW[pi][pj];
         }
       } else {
-        // Beta edge (left of black = face to right is black)
-        const faceX = Math.ceil(midX);
-        const faceY = Math.round(midY);
-        const isBlack = ((faceX + faceY) % 2) !== 0;
-        const isInterior = Math.abs(faceX) + Math.abs(faceY) < N;
-        if (isBlack && isInterior) {
-          const pi = ((faceY % k) + k) % k;
-          const pj = ((faceX % l) + l) % l;
+        // Vertical edge: check both adjacent faces
+        const faceRightX = Math.ceil(midX);
+        const faceRightY = Math.round(midY);
+        const rightIsBlack = ((faceRightX + faceRightY) % 2) !== 0;
+        const rightIsInterior = Math.abs(faceRightX) + Math.abs(faceRightY) < N;
+
+        const faceLeftX = Math.floor(midX);
+        const faceLeftY = Math.round(midY);
+        const leftIsBlack = ((faceLeftX + faceLeftY) % 2) !== 0;
+        const leftIsInterior = Math.abs(faceLeftX) + Math.abs(faceLeftY) < N;
+
+        // gamma = left edge of black → face to right is black
+        if (rightIsBlack && rightIsInterior) {
+          const pi = ((faceRightY % k) + k) % k;
+          const pj = ((faceRightX % l) + l) % l;
+          return gammaW[pi][pj];
+        }
+        // beta = right edge of black → face to left is black
+        if (leftIsBlack && leftIsInterior) {
+          const pi = ((faceLeftY % k) + k) % k;
+          const pj = ((faceLeftX % l) + l) % l;
           return betaW[pi][pj];
         }
       }
