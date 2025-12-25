@@ -3384,8 +3384,15 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       // Black face (CW from top): 1 - w_i - 1 - 1 (only RIGHT edge gets w_i)
       // White face (CW from top): 1 - 1 - 1 - w_j (only LEFT edge gets w_j)
       // All horizontal edges = 1, only certain vertical edges get w
-      // w_i = w_j along same diagonal slice
+      // SAME w along each SW/NE diagonal slice (constant x+y)
       const regime = params.regime || 3;
+
+      // Pre-generate ONE weight per diagonal (diagonal index = x + y)
+      // Range: approximately -2N to 2N, so 4N+1 diagonals
+      const diagWeights = {};
+      for (let d = -2 * N; d <= 2 * N; d++) {
+        diagWeights[d] = generateLayeredWeight(regime, d, N, rng);
+      }
 
       for (let i = 0; i < dim; i++) {
         for (let j = 0; j < dim; j++) {
@@ -3402,9 +3409,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
             if (isBlackLeft) {
               // This edge is RIGHT of BLACK face → gets layered weight
-              // Diagonal index based on the face position
+              // Use pre-generated weight for this diagonal
               const diagIndex = faceX + faceY;
-              weights[i * dim + j] = generateLayeredWeight(regime, diagIndex, N, rng);
+              weights[i * dim + j] = diagWeights[diagIndex];
             }
             // else: edge is RIGHT of WHITE face → stays 1.0
           }
@@ -3513,13 +3520,32 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       }
 
     } else if (mode === 'layered') {
-      // Layered: weight depends on diagonal index
+      // Layered: Only vertical edges get non-trivial weight
+      // Black face (CW from top): 1 - w_i - 1 - 1 (RIGHT edge gets w)
+      // White face (CW from top): 1 - 1 - 1 - w_j (LEFT edge gets w)
+      // SAME w along each SW/NE diagonal slice
+      // In EKLP format: j even = vertical edges, j odd = horizontal (= 1.0)
       const regime = params.regime || 3;
+
+      // Pre-generate ONE weight per diagonal
+      // Range: approximately -N to N for the 2N×2N matrix
+      const diagWeights = {};
+      for (let d = -2 * N; d <= 2 * N; d++) {
+        diagWeights[d] = generateLayeredWeight(regime, d, N, rng);
+      }
+
       for (let i = 0; i < dim; i++) {
-        for (let j = 0; j < dim; j++) {
-          const diagIndex = (i - N) + (j - N);
-          weights[i * dim + j] = generateLayeredWeight(regime, diagIndex, N, rng);
+        if (i % 2 === 0) {  // Even rows only
+          for (let j = 0; j < dim; j++) {
+            if (j % 2 === 0) {
+              // Vertical edge position: use pre-generated diagonal weight
+              const diagIndex = Math.floor(i / 2) + Math.floor(j / 2) - N;
+              weights[i * dim + j] = diagWeights[diagIndex];
+            }
+            // j odd (horizontal edges): stay at 1.0
+          }
         }
+        // Odd rows stay 1.0
       }
 
     } else if (mode === 'gamma') {
