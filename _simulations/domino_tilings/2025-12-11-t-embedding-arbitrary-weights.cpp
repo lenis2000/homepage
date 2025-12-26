@@ -241,6 +241,16 @@ struct FastGrid {
     }
 };
 
+// Persistent FastGrid for vertex lookups - avoids repeated allocations in step functions
+// Initialized lazily on first use, then reused with clear()
+static FastGrid* g_vertexGrid = nullptr;
+static FastGrid& getVertexGrid() {
+    if (!g_vertexGrid) {
+        g_vertexGrid = new FastGrid(MAX_N + 20);
+    }
+    return *g_vertexGrid;
+}
+
 static std::string makeKey(int j, int k) {
     std::ostringstream ss;
     ss << j << "," << k;
@@ -296,8 +306,9 @@ static void generateAztecGraphInternal(int k) {
     g_cachedBlackQuadsLevel = -1;  // Invalidate quad cache
     clearStoredWeights();  // Clear stored face weights when graph changes
 
-    // Map from (i,j) integer key to vertex index (using 64-bit key for efficiency)
-    std::map<int64_t, int> vertexIndex;
+    // Use persistent FastGrid for O(1) vertex lookup (avoids std::map allocations)
+    FastGrid& vertexGrid = getVertexGrid();
+    vertexGrid.clear();
 
     // Generate vertices
     for (int i = -k; i <= k; i++) {
@@ -315,7 +326,7 @@ static void generateAztecGraphInternal(int k) {
                 v.inVgauge = false;
                 v.toContract = false;
 
-                vertexIndex[makeIntKey64(i, j)] = (int)g_aztecVertices.size();
+                vertexGrid.at(i, j) = (int)g_aztecVertices.size();
                 g_aztecVertices.push_back(v);
             }
         }
@@ -329,12 +340,12 @@ static void generateAztecGraphInternal(int k) {
         int j = static_cast<int>(std::round(y - 0.5));
 
         // Check right neighbor (i+1, j)
-        {
-            auto it = vertexIndex.find(makeIntKey64(i + 1, j));
-            if (it != vertexIndex.end()) {
+        if (vertexGrid.inBounds(i + 1, j)) {
+            int neighborIdx = vertexGrid.at(i + 1, j);
+            if (neighborIdx != -1) {
                 AztecEdge e;
                 e.v1 = (int)idx;
-                e.v2 = it->second;
+                e.v2 = neighborIdx;
                 e.setWeight(mp_real(1));  // Default uniform weight
                 e.isHorizontal = true;
                 e.gaugeTransformed = false;
@@ -343,12 +354,12 @@ static void generateAztecGraphInternal(int k) {
         }
 
         // Check top neighbor (i, j+1)
-        {
-            auto it = vertexIndex.find(makeIntKey64(i, j + 1));
-            if (it != vertexIndex.end()) {
+        if (vertexGrid.inBounds(i, j + 1)) {
+            int neighborIdx = vertexGrid.at(i, j + 1);
+            if (neighborIdx != -1) {
                 AztecEdge e;
                 e.v1 = (int)idx;
-                e.v2 = it->second;
+                e.v2 = neighborIdx;
                 e.setWeight(mp_real(1));  // Default uniform weight
                 e.isHorizontal = false;
                 e.gaugeTransformed = false;
@@ -478,8 +489,9 @@ static void aztecStep1_GaugeTransform() {
 
     int n = g_aztecLevel;
 
-    // Build vertex lookup using FastGrid for O(1) lookups
-    FastGrid vertexGrid(n + 5);
+    // Build vertex lookup using persistent FastGrid (avoids reallocation)
+    FastGrid& vertexGrid = getVertexGrid();
+    vertexGrid.clear();
     for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
         int i, j;
         getIntCoords(g_aztecVertices[idx].x, g_aztecVertices[idx].y, i, j);
@@ -645,8 +657,9 @@ static void aztecStep2_WhiteGaugeTransform() {
         v.toContract = false;
     }
 
-    // Build vertex lookup using FastGrid for O(1) lookups
-    FastGrid vertexGrid(n + 5);
+    // Build vertex lookup using persistent FastGrid (avoids reallocation)
+    FastGrid& vertexGrid = getVertexGrid();
+    vertexGrid.clear();
     for (size_t idx = 0; idx < g_aztecVertices.size(); idx++) {
         int i, j;
         getIntCoords(g_aztecVertices[idx].x, g_aztecVertices[idx].y, i, j);
