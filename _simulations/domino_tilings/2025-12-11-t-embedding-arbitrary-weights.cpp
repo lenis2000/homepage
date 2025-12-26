@@ -113,8 +113,24 @@ static int g_aztecReductionStep = 0;  // 0=original, 1=gauge transformed, 2=degr
 static std::vector<AztecVertex> g_aztecVertices;
 static std::vector<AztecEdge> g_aztecEdges;
 
+// Fixed-capacity adjacency list entry (max degree 4 for grid graphs)
+// Eliminates per-vertex heap allocations
+struct TinyVec {
+    int data[4];
+    int sz = 0;
+
+    void clear() { sz = 0; }
+    void push_back(int val) { if (sz < 4) data[sz++] = val; }
+    int size() const { return sz; }
+    int* begin() { return data; }
+    int* end() { return data + sz; }
+    const int* begin() const { return data; }
+    const int* end() const { return data + sz; }
+    int operator[](int i) const { return data[i]; }
+};
+
 // Global adjacency cache: g_adj[vertex_idx] = list of edge indices incident to that vertex
-static std::vector<std::vector<int>> g_adj;
+static std::vector<TinyVec> g_adj;
 
 // Black quad centers (preserved across transformations)
 static std::vector<std::pair<double, double>> g_blackQuadCenters;
@@ -217,8 +233,9 @@ static std::string makeKey(int j, int k) {
 
 // Rebuild the global adjacency cache from current vertices and edges
 // Only includes active edges connecting active vertices
+// Uses TinyVec for zero per-vertex allocations
 static void rebuildAdjacency() {
-    g_adj.assign(g_aztecVertices.size(), std::vector<int>());
+    g_adj.assign(g_aztecVertices.size(), TinyVec());  // Single allocation, no per-vertex heap allocs
     for (size_t i = 0; i < g_aztecEdges.size(); ++i) {
         if (!g_aztecEdges[i].active) continue;  // Skip inactive edges
         int v1 = g_aztecEdges[i].v1;
