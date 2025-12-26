@@ -129,6 +129,22 @@ struct TinyVec {
     int operator[](int i) const { return data[i]; }
 };
 
+// Helper for O(E log E) edge merging via sort instead of O(E log E) map insertions
+// Sorting is cache-friendly and avoids per-insertion heap allocations
+struct SortableEdge {
+    int v1, v2;           // Normalized vertex indices (v1 < v2)
+    int originalIndex;    // Index into original edge array
+
+    bool operator<(const SortableEdge& other) const {
+        if (v1 != other.v1) return v1 < other.v1;
+        return v2 < other.v2;
+    }
+
+    bool sameEndpoints(const SortableEdge& other) const {
+        return v1 == other.v1 && v2 == other.v2;
+    }
+};
+
 // Global adjacency cache: g_adj[vertex_idx] = list of edge indices incident to that vertex
 static std::vector<TinyVec> g_adj;
 
@@ -987,39 +1003,55 @@ static void aztecStep4_BlackContraction() {
         }
     }
 
-    // Merge double edges: sum weights using log-sum-exp for numerical stability
-    // log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
-    std::map<std::pair<int,int>, mp_real> edgeLogWeights;  // Store LOG of summed weights
-    std::map<std::pair<int,int>, bool> edgeHorizontal;
-    std::map<std::pair<int,int>, bool> edgeSeen;
-    for (const auto& e : remappedEdges) {
-        int v1 = std::min(e.v1, e.v2);
-        int v2 = std::max(e.v1, e.v2);
-        auto key = std::make_pair(v1, v2);
-        if (!edgeSeen[key]) {
-            edgeLogWeights[key] = e.logWeight;
-            edgeSeen[key] = true;
-        } else {
-            // Log-sum-exp: log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
-            mp_real a = edgeLogWeights[key];
-            mp_real b = e.logWeight;
-            mp_real maxAB = (a > b) ? a : b;
-            mp_real diff = abs(a - b);
-            edgeLogWeights[key] = maxAB + log(mp_real(1) + exp(-diff));
-        }
-        edgeHorizontal[key] = e.isHorizontal;
+    // Merge double edges using vector-sort-scan pattern (cache-friendly, no per-edge allocations)
+    // Collect edges with normalized vertex order for sorting
+    std::vector<SortableEdge> sortableEdges;
+    sortableEdges.reserve(remappedEdges.size());
+    for (size_t i = 0; i < remappedEdges.size(); ++i) {
+        int v1 = remappedEdges[i].v1;
+        int v2 = remappedEdges[i].v2;
+        if (v1 > v2) std::swap(v1, v2);
+        sortableEdges.push_back({v1, v2, (int)i});
     }
 
-    // Build final edge list
+    // Sort to bring duplicate edges together
+    std::sort(sortableEdges.begin(), sortableEdges.end());
+
+    // Linear scan to merge duplicates using log-sum-exp for numerical stability
+    // log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
     std::vector<AztecEdge> newEdges;
-    for (const auto& [key, logWeight] : edgeLogWeights) {
-        AztecEdge e;
-        e.v1 = key.first;
-        e.v2 = key.second;
-        e.logWeight = logWeight;  // Already in log space
-        e.isHorizontal = edgeHorizontal[key];
-        e.gaugeTransformed = false;
-        newEdges.push_back(e);
+    newEdges.reserve(sortableEdges.size());
+
+    for (size_t i = 0; i < sortableEdges.size(); ) {
+        // Find range of edges with same endpoints
+        size_t j = i + 1;
+        while (j < sortableEdges.size() && sortableEdges[i].sameEndpoints(sortableEdges[j])) {
+            ++j;
+        }
+
+        // Merge edges in range [i, j) using log-sum-exp
+        const AztecEdge& firstEdge = remappedEdges[sortableEdges[i].originalIndex];
+        mp_real mergedLogWeight = firstEdge.logWeight;
+
+        for (size_t k = i + 1; k < j; ++k) {
+            mp_real b = remappedEdges[sortableEdges[k].originalIndex].logWeight;
+            // Log-sum-exp: log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
+            mp_real maxAB = (mergedLogWeight > b) ? mergedLogWeight : b;
+            mp_real diff = std::abs(mergedLogWeight - b);
+            mergedLogWeight = maxAB + log(mp_real(1) + exp(-diff));
+        }
+
+        // Create merged edge
+        AztecEdge mergedEdge;
+        mergedEdge.v1 = sortableEdges[i].v1;
+        mergedEdge.v2 = sortableEdges[i].v2;
+        mergedEdge.logWeight = mergedLogWeight;
+        mergedEdge.isHorizontal = firstEdge.isHorizontal;
+        mergedEdge.gaugeTransformed = false;
+        mergedEdge.active = true;
+        newEdges.push_back(mergedEdge);
+
+        i = j;  // Move to next group
     }
 
     // Update global state
@@ -1131,39 +1163,55 @@ static void aztecStep5_WhiteContraction() {
         }
     }
 
-    // Merge double edges: sum weights using log-sum-exp for numerical stability
-    // log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
-    std::map<std::pair<int,int>, mp_real> edgeLogWeights;  // Store LOG of summed weights
-    std::map<std::pair<int,int>, bool> edgeHorizontal;
-    std::map<std::pair<int,int>, bool> edgeSeen;
-    for (const auto& e : remappedEdges) {
-        int v1 = std::min(e.v1, e.v2);
-        int v2 = std::max(e.v1, e.v2);
-        auto key = std::make_pair(v1, v2);
-        if (!edgeSeen[key]) {
-            edgeLogWeights[key] = e.logWeight;
-            edgeSeen[key] = true;
-        } else {
-            // Log-sum-exp: log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
-            mp_real a = edgeLogWeights[key];
-            mp_real b = e.logWeight;
-            mp_real maxAB = (a > b) ? a : b;
-            mp_real diff = abs(a - b);
-            edgeLogWeights[key] = maxAB + log(mp_real(1) + exp(-diff));
-        }
-        edgeHorizontal[key] = e.isHorizontal;
+    // Merge double edges using vector-sort-scan pattern (cache-friendly, no per-edge allocations)
+    // Collect edges with normalized vertex order for sorting
+    std::vector<SortableEdge> sortableEdges;
+    sortableEdges.reserve(remappedEdges.size());
+    for (size_t i = 0; i < remappedEdges.size(); ++i) {
+        int v1 = remappedEdges[i].v1;
+        int v2 = remappedEdges[i].v2;
+        if (v1 > v2) std::swap(v1, v2);
+        sortableEdges.push_back({v1, v2, (int)i});
     }
 
-    // Build final edge list
+    // Sort to bring duplicate edges together
+    std::sort(sortableEdges.begin(), sortableEdges.end());
+
+    // Linear scan to merge duplicates using log-sum-exp for numerical stability
+    // log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
     std::vector<AztecEdge> newEdges;
-    for (const auto& [key, logWeight] : edgeLogWeights) {
-        AztecEdge e;
-        e.v1 = key.first;
-        e.v2 = key.second;
-        e.logWeight = logWeight;  // Already in log space
-        e.isHorizontal = edgeHorizontal[key];
-        e.gaugeTransformed = false;
-        newEdges.push_back(e);
+    newEdges.reserve(sortableEdges.size());
+
+    for (size_t i = 0; i < sortableEdges.size(); ) {
+        // Find range of edges with same endpoints
+        size_t j = i + 1;
+        while (j < sortableEdges.size() && sortableEdges[i].sameEndpoints(sortableEdges[j])) {
+            ++j;
+        }
+
+        // Merge edges in range [i, j) using log-sum-exp
+        const AztecEdge& firstEdge = remappedEdges[sortableEdges[i].originalIndex];
+        mp_real mergedLogWeight = firstEdge.logWeight;
+
+        for (size_t k = i + 1; k < j; ++k) {
+            mp_real b = remappedEdges[sortableEdges[k].originalIndex].logWeight;
+            // Log-sum-exp: log(e^a + e^b) = max(a,b) + log(1 + e^{-|a-b|})
+            mp_real maxAB = (mergedLogWeight > b) ? mergedLogWeight : b;
+            mp_real diff = std::abs(mergedLogWeight - b);
+            mergedLogWeight = maxAB + log(mp_real(1) + exp(-diff));
+        }
+
+        // Create merged edge
+        AztecEdge mergedEdge;
+        mergedEdge.v1 = sortableEdges[i].v1;
+        mergedEdge.v2 = sortableEdges[i].v2;
+        mergedEdge.logWeight = mergedLogWeight;
+        mergedEdge.isHorizontal = firstEdge.isHorizontal;
+        mergedEdge.gaugeTransformed = false;
+        mergedEdge.active = true;
+        newEdges.push_back(mergedEdge);
+
+        i = j;  // Move to next group
     }
 
     // Update global state
