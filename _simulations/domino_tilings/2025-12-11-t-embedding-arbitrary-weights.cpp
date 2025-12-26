@@ -9,7 +9,7 @@
   2. Going UP (1 → n): Build T-embedding using recurrence formulas
 
   Compile command (AI agent: use single line for auto-approval):
-    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getFirstReductionJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_applyExternalWeights','_resetAztecGraphPreservingWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_getAztecLevel','_canAztecStepUp','_canAztecStepDown','_getComputeTimeMs','_freeString','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
+    emcc 2025-12-11-t-embedding-arbitrary-weights.cpp -o 2025-12-11-t-embedding-arbitrary-weights.js -O3 -ffast-math -flto -DNDEBUG -s WASM=1 -s "EXPORTED_FUNCTIONS=['_setN','_clearTembLevels','_clearStoredWeightsExport','_initCoefficients','_computeTembedding','_generateAztecGraph','_getAztecGraphJSON','_getFirstReductionJSON','_getAztecFacesJSON','_getStoredFaceWeightsJSON','_getBetaRatiosJSON','_getTembeddingLevelJSON','_getOrigamiLevelJSON','_applyExternalWeights','_resetAztecGraphPreservingWeights','_setAztecGraphLevel','_aztecGraphStepDown','_aztecGraphStepUp','_getAztecReductionStep','_getAztecLevel','_canAztecStepUp','_canAztecStepDown','_getComputeTimeMs','_freeString','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -s DISABLE_EXCEPTION_CATCHING=1 -s MALLOC=emmalloc && mv 2025-12-11-t-embedding-arbitrary-weights.js ../../js/
 */
 
 #include <emscripten.h>
@@ -1746,13 +1746,16 @@ static void aztecStep10_UrbanRenewal() {
 
         if (innerVerts.size() != 4) continue;
 
-        // Sort inner vertices by angle around center for consistent ordering
+        // Sort inner vertices by quadrant around center (replaces expensive atan2)
+        // Quadrant order matches atan2 angle ordering: SW(0), SE(1), NE(2), NW(3)
+        auto getQuadrant = [&](int idx) -> int {
+            double dx = g_aztecVertices[idx].x - center.first;
+            double dy = g_aztecVertices[idx].y - center.second;
+            if (dy < 0) return (dx < 0) ? 0 : 1;  // SW=0, SE=1
+            else        return (dx > 0) ? 2 : 3;  // NE=2, NW=3
+        };
         std::sort(innerVerts.begin(), innerVerts.end(), [&](int a, int b) {
-            double angleA = std::atan2(g_aztecVertices[a].y - center.second,
-                                       g_aztecVertices[a].x - center.first);
-            double angleB = std::atan2(g_aztecVertices[b].y - center.second,
-                                       g_aztecVertices[b].x - center.first);
-            return angleA < angleB;
+            return getQuadrant(a) < getQuadrant(b);
         });
 
         // For each inner vertex, find the outer diagonal vertex
