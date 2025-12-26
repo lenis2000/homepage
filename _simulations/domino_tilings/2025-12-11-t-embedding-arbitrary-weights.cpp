@@ -488,15 +488,8 @@ static void aztecStep1_GaugeTransform() {
         }
     }
 
-    // Build edge lookup: for each vertex, list of (neighbor_idx, edge_idx)
-    // Use vector of vectors for O(1) access by vertex index
-    std::vector<std::vector<std::pair<int, int>>> adjacency(g_aztecVertices.size());
-    for (size_t i = 0; i < g_aztecEdges.size(); i++) {
-        int v1 = g_aztecEdges[i].v1;
-        int v2 = g_aztecEdges[i].v2;
-        adjacency[v1].push_back({v2, (int)i});
-        adjacency[v2].push_back({v1, (int)i});
-    }
+    // Use global g_adj (TinyVec-based) instead of building local adjacency
+    // g_adj is already current from generateAztecGraphInternal() or previous step's rebuildAdjacency()
 
     // Find black vertices on diagonals i - j = ±(n-1)
     // These are gauge vertices, but we exclude corners (vertices without valid boundary neighbor)
@@ -549,10 +542,12 @@ static void aztecStep1_GaugeTransform() {
         g_aztecVertices[gv.idx].inVgauge = true;
     }
 
-    // Helper function to find edge index between two vertices
-    auto findEdge = [&adjacency](int v1, int v2) -> int {
-        for (const auto& [neighbor, edgeIdx] : adjacency[v1]) {
-            if (neighbor == v2) return edgeIdx;
+    // Helper function to find edge index between two vertices using global g_adj
+    auto findEdge = [](int v1, int v2) -> int {
+        if (v1 < 0 || v1 >= (int)g_adj.size()) return -1;
+        for (int eIdx : g_adj[v1]) {
+            const auto& e = g_aztecEdges[eIdx];
+            if ((e.v1 == v1 && e.v2 == v2) || (e.v1 == v2 && e.v2 == v1)) return eIdx;
         }
         return -1;
     };
@@ -584,7 +579,7 @@ static void aztecStep1_GaugeTransform() {
         mp_real logLambda = g_aztecEdges[refEdgeIdx].logWeight - g_aztecEdges[edgeToBoundaryIdx].logWeight;
 
         // Apply λ to all edges adjacent to this gauge vertex (add log(λ) to logWeight)
-        for (const auto& [neighbor, eIdx] : adjacency[vIdx]) {
+        for (int eIdx : g_adj[vIdx]) {
             g_aztecEdges[eIdx].logWeight += logLambda;
             g_aztecEdges[eIdx].gaugeTransformed = true;
         }
@@ -617,7 +612,7 @@ static void aztecStep1_GaugeTransform() {
         mp_real logLambda = g_aztecEdges[refEdgeIdx].logWeight - g_aztecEdges[edgeToBoundaryIdx].logWeight;
 
         // Apply λ to all edges adjacent to this gauge vertex (add log(λ) to logWeight)
-        for (const auto& [neighbor, eIdx] : adjacency[vIdx]) {
+        for (int eIdx : g_adj[vIdx]) {
             g_aztecEdges[eIdx].logWeight += logLambda;
             g_aztecEdges[eIdx].gaugeTransformed = true;
         }
@@ -660,14 +655,8 @@ static void aztecStep2_WhiteGaugeTransform() {
         }
     }
 
-    // Build edge lookup: vertex -> [(neighbor, edgeIdx)] using vector for O(1) access
-    std::vector<std::vector<std::pair<int, int>>> adjacency(g_aztecVertices.size());
-    for (size_t eIdx = 0; eIdx < g_aztecEdges.size(); eIdx++) {
-        int v1 = g_aztecEdges[eIdx].v1;
-        int v2 = g_aztecEdges[eIdx].v2;
-        adjacency[v1].push_back({v2, (int)eIdx});
-        adjacency[v2].push_back({v1, (int)eIdx});
-    }
+    // Use global g_adj (TinyVec-based) instead of building local adjacency
+    // g_adj is already current from previous step's rebuildAdjacency()
 
     // Find BLACK boundary vertices on x+y = n (positive) and x+y = -n (negative)
     // x+y = n means (i+0.5) + (j+0.5) = n, i.e., i+j = n-1
@@ -704,10 +693,12 @@ static void aztecStep2_WhiteGaugeTransform() {
     std::sort(negativeDiagVertices.begin(), negativeDiagVertices.end(),
               [](const BlackBoundaryVertex& a, const BlackBoundaryVertex& b) { return a.i > b.i; });
 
-    // Helper to find edge index
-    auto findEdge = [&adjacency](int v1, int v2) -> int {
-        for (const auto& [neighbor, edgeIdx] : adjacency[v1]) {
-            if (neighbor == v2) return edgeIdx;
+    // Helper to find edge index using global g_adj
+    auto findEdge = [](int v1, int v2) -> int {
+        if (v1 < 0 || v1 >= (int)g_adj.size()) return -1;
+        for (int eIdx : g_adj[v1]) {
+            const auto& e = g_aztecEdges[eIdx];
+            if ((e.v1 == v1 && e.v2 == v2) || (e.v1 == v2 && e.v2 == v1)) return eIdx;
         }
         return -1;
     };
@@ -759,7 +750,7 @@ static void aztecStep2_WhiteGaugeTransform() {
         g_aztecVertices[gaugeNeighborIdx].inVgauge = true;
 
         // Apply λ to ALL edges at the gauge neighbor (add log(λ) to logWeight)
-        for (const auto& [neighbor, eIdx] : adjacency[gaugeNeighborIdx]) {
+        for (int eIdx : g_adj[gaugeNeighborIdx]) {
             g_aztecEdges[eIdx].logWeight += logLambda;
             g_aztecEdges[eIdx].gaugeTransformed = true;
         }
@@ -812,7 +803,7 @@ static void aztecStep2_WhiteGaugeTransform() {
         g_aztecVertices[gaugeNeighborIdx].inVgauge = true;
 
         // Apply λ to ALL edges at the gauge neighbor (add log(λ) to logWeight)
-        for (const auto& [neighbor, eIdx] : adjacency[gaugeNeighborIdx]) {
+        for (int eIdx : g_adj[gaugeNeighborIdx]) {
             g_aztecEdges[eIdx].logWeight += logLambda;
             g_aztecEdges[eIdx].gaugeTransformed = true;
         }
