@@ -1419,16 +1419,17 @@ static void aztecStep8_SplitVertices() {
     }
 
     // For each selected vertex, create mapping of which new vertex gets which edges
-    std::unordered_map<int, int> oldToNW;  // selected idx -> new NW/SW vertex idx
-    std::unordered_map<int, int> oldToSE;  // selected idx -> new SE/NE vertex idx
-    std::unordered_map<int, int> oldToMid; // selected idx -> middle vertex idx (stays at original idx)
+    // Using vectors indexed by vertex ID instead of hash maps for O(1) direct access
+    size_t numV = g_aztecVertices.size();
+    std::vector<int> oldToNW(numV, -1);  // selected idx -> new NW/SW vertex idx (-1 = not selected)
+    std::vector<int> oldToSE(numV, -1);  // selected idx -> new SE/NE vertex idx (-1 = not selected)
 
     // Store original positions before any modification
-    std::unordered_map<int, std::pair<double, double>> originalPos;
-    std::unordered_map<int, bool> originalColor;
+    std::vector<std::pair<double, double>> originalPos(numV);
+    std::vector<int8_t> originalColor(numV, -1);  // -1 = not selected, 0 = black, 1 = white
     for (int idx : selectedVertices) {
         originalPos[idx] = {g_aztecVertices[idx].x, g_aztecVertices[idx].y};
-        originalColor[idx] = g_aztecVertices[idx].isWhite;
+        originalColor[idx] = g_aztecVertices[idx].isWhite ? 1 : 0;
     }
 
     // Record edge count before adding chain edges
@@ -1438,7 +1439,7 @@ static void aztecStep8_SplitVertices() {
     for (int idx : selectedVertices) {
         double x = originalPos[idx].first;
         double y = originalPos[idx].second;
-        bool isWhite = originalColor[idx];
+        bool isWhite = (originalColor[idx] == 1);
 
         // Create two new outer vertices with SAME color as original
         AztecVertex outer1, outer2;
@@ -1480,16 +1481,15 @@ static void aztecStep8_SplitVertices() {
 
         oldToNW[idx] = outerIdx1;  // NW for white, SW for black
         oldToSE[idx] = outerIdx2;  // SE for white, NE for black
-        oldToMid[idx] = idx;
     }
 
     // Redirect ONLY original edges (not chain edges) from selected vertices to outer vertices
     for (size_t eIdx = 0; eIdx < originalEdgeCount; eIdx++) {
         auto& e = g_aztecEdges[eIdx];
-        // Check if v1 was a selected vertex
-        if (oldToNW.count(e.v1)) {
+        // Check if v1 was a selected vertex (vector lookup instead of hash map)
+        if (e.v1 < (int)numV && oldToNW[e.v1] != -1) {
             int oldIdx = e.v1;
-            bool wasWhite = originalColor[oldIdx];
+            bool wasWhite = (originalColor[oldIdx] == 1);
             double oldX = originalPos[oldIdx].first;
             double oldY = originalPos[oldIdx].second;
             double otherX = g_aztecVertices[e.v2].x;
@@ -1516,10 +1516,10 @@ static void aztecStep8_SplitVertices() {
             }
         }
 
-        // Check if v2 was a selected vertex
-        if (oldToNW.count(e.v2)) {
+        // Check if v2 was a selected vertex (vector lookup instead of hash map)
+        if (e.v2 < (int)numV && oldToNW[e.v2] != -1) {
             int oldIdx = e.v2;
-            bool wasWhite = originalColor[oldIdx];
+            bool wasWhite = (originalColor[oldIdx] == 1);
             double oldX = originalPos[oldIdx].first;
             double oldY = originalPos[oldIdx].second;
             double otherX = g_aztecVertices[e.v1].x;
