@@ -1801,7 +1801,8 @@ static void aztecStep10_UrbanRenewal() {
         mp_real term2 = log_w + log_y;
         mp_real maxTerm = (term1 > term2) ? term1 : term2;
         mp_real diffTerm = abs(term1 - term2);
-        mp_real log_D = maxTerm + log(mp_real(1) + exp(-diffTerm));
+        // Fast path: if diff > 36, exp(-diff) < 1e-16 (below double epsilon)
+        mp_real log_D = (diffTerm > 36.0) ? maxTerm : maxTerm + log(mp_real(1) + exp(-diffTerm));
 
         std::vector<mp_real> newLogWeights = {
             log_z - log_D, log_w - log_D,
@@ -2076,7 +2077,8 @@ static void aztecStep11_CombineDoubleEdges() {
             mp_real b = g_aztecEdges[idx].logWeight;
             mp_real maxAB = (a > b) ? a : b;
             mp_real diff = abs(a - b);
-            logTotalWeight = maxAB + log(mp_real(1) + exp(-diff));
+            // Fast path: if diff > 36, exp(-diff) < 1e-16 (below double epsilon)
+            logTotalWeight = (diff > 36.0) ? maxAB : maxAB + log(mp_real(1) + exp(-diff));
             gaugeT = gaugeT || g_aztecEdges[idx].gaugeTransformed;
         }
 
