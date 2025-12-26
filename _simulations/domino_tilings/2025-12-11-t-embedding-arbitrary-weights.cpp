@@ -119,6 +119,14 @@ static std::vector<std::vector<int>> g_adj;
 // Black quad centers (preserved across transformations)
 static std::vector<std::pair<double, double>> g_blackQuadCenters;
 
+// Cached black quad vertex indices (computed in Step 12, reused in Step 8)
+struct CachedBlackQuad {
+    int blIdx, brIdx, tlIdx, trIdx;
+    double cx, cy;
+};
+static std::vector<CachedBlackQuad> g_cachedBlackQuads;
+static int g_cachedBlackQuadsLevel = -1;  // Level for which cache is valid
+
 // Store graph history for stepping back (stack of states)
 // Only enabled for n <= 15 to avoid memory bottleneck at large n
 struct AztecGraphState {
@@ -252,6 +260,7 @@ static void generateAztecGraphInternal(int k) {
     g_aztecVertices.clear();
     g_aztecEdges.clear();
     g_aztecLevel = k;
+    g_cachedBlackQuadsLevel = -1;  // Invalidate quad cache
     clearStoredWeights();  // Clear stored face weights when graph changes
 
     // Map from (i,j) integer key to vertex index (using 64-bit key for efficiency)
@@ -355,6 +364,7 @@ static bool popAztecState() {
     g_blackQuadCenters = state.blackQuadCenters;
     g_aztecReductionStep = state.step;
     g_aztecLevel = state.level;
+    g_cachedBlackQuadsLevel = -1;  // Invalidate quad cache on state restore
     rebuildAdjacency();  // Rebuild adjacency after restoring state
     return true;
 }
@@ -1297,58 +1307,77 @@ static void aztecStep8_SplitVertices() {
 
     // Find all black quads and their vertex indices
     // Black quads have WHITE vertices at NW (TL) and SE (BR) corners
+    // Use cached quads from Step 12 if available, otherwise compute
     struct BlackQuad {
         int blIdx, brIdx, tlIdx, trIdx;
         double cx, cy;  // center
     };
     std::vector<BlackQuad> blackQuads;
     std::unordered_set<int> verticesInBlackQuads;  // indices of vertices belonging to black quads
-    std::unordered_set<int64_t> visitedFaces;
 
-    for (const auto& v : g_aztecVertices) {
-        double x = v.x, y = v.y;
-        int64_t faceKey = makePosKey(x, y);
-        if (visitedFaces.count(faceKey)) continue;
+    if (g_cachedBlackQuadsLevel == g_aztecLevel && !g_cachedBlackQuads.empty()) {
+        // Use cached quads from Step 12
+        blackQuads.reserve(g_cachedBlackQuads.size());
+        for (const auto& cq : g_cachedBlackQuads) {
+            BlackQuad bq;
+            bq.blIdx = cq.blIdx; bq.brIdx = cq.brIdx;
+            bq.tlIdx = cq.tlIdx; bq.trIdx = cq.trIdx;
+            bq.cx = cq.cx; bq.cy = cq.cy;
+            blackQuads.push_back(bq);
+            verticesInBlackQuads.insert(cq.blIdx);
+            verticesInBlackQuads.insert(cq.brIdx);
+            verticesInBlackQuads.insert(cq.tlIdx);
+            verticesInBlackQuads.insert(cq.trIdx);
+        }
+    } else {
+        // Fallback: compute quads (first iteration or after step-up)
+        std::unordered_set<int64_t> visitedFaces;
 
-        // Look for face with BL at (x, y)
-        int64_t blKey = makePosKey(x, y);
-        int64_t brKey = makePosKey(x + 1, y);
-        int64_t tlKey = makePosKey(x, y + 1);
-        int64_t trKey = makePosKey(x + 1, y + 1);
+        for (const auto& v : g_aztecVertices) {
+            double x = v.x, y = v.y;
+            int64_t faceKey = makePosKey(x, y);
+            if (visitedFaces.count(faceKey)) continue;
 
-        if (vertexIndex.count(blKey) && vertexIndex.count(brKey) &&
-            vertexIndex.count(tlKey) && vertexIndex.count(trKey)) {
-            // Check all 4 edges exist
-            if (hasEdge(blKey, brKey) && hasEdge(tlKey, trKey) &&
-                hasEdge(blKey, tlKey) && hasEdge(brKey, trKey)) {
-                visitedFaces.insert(faceKey);
+            // Look for face with BL at (x, y)
+            int64_t blKey = makePosKey(x, y);
+            int64_t brKey = makePosKey(x + 1, y);
+            int64_t tlKey = makePosKey(x, y + 1);
+            int64_t trKey = makePosKey(x + 1, y + 1);
 
-                int blIdx = vertexIndex[blKey];
-                int brIdx = vertexIndex[brKey];
-                int tlIdx = vertexIndex[tlKey];
-                int trIdx = vertexIndex[trKey];
+            if (vertexIndex.count(blKey) && vertexIndex.count(brKey) &&
+                vertexIndex.count(tlKey) && vertexIndex.count(trKey)) {
+                // Check all 4 edges exist
+                if (hasEdge(blKey, brKey) && hasEdge(tlKey, trKey) &&
+                    hasEdge(blKey, tlKey) && hasEdge(brKey, trKey)) {
+                    visitedFaces.insert(faceKey);
 
-                bool tlWhite = g_aztecVertices[tlIdx].isWhite;
-                bool brWhite = g_aztecVertices[brIdx].isWhite;
+                    int blIdx = vertexIndex[blKey];
+                    int brIdx = vertexIndex[brKey];
+                    int tlIdx = vertexIndex[tlKey];
+                    int trIdx = vertexIndex[trKey];
 
-                // Black quad: WHITE at NW and SE
-                if (tlWhite && brWhite) {
-                    // Compute center by averaging all 4 vertices
-                    double cx = (g_aztecVertices[blIdx].x + g_aztecVertices[brIdx].x +
-                                 g_aztecVertices[tlIdx].x + g_aztecVertices[trIdx].x) / 4.0;
-                    double cy = (g_aztecVertices[blIdx].y + g_aztecVertices[brIdx].y +
-                                 g_aztecVertices[tlIdx].y + g_aztecVertices[trIdx].y) / 4.0;
+                    bool tlWhite = g_aztecVertices[tlIdx].isWhite;
+                    bool brWhite = g_aztecVertices[brIdx].isWhite;
 
-                    BlackQuad bq;
-                    bq.blIdx = blIdx; bq.brIdx = brIdx;
-                    bq.tlIdx = tlIdx; bq.trIdx = trIdx;
-                    bq.cx = cx; bq.cy = cy;
-                    blackQuads.push_back(bq);
+                    // Black quad: WHITE at NW and SE
+                    if (tlWhite && brWhite) {
+                        // Compute center by averaging all 4 vertices
+                        double cx = (g_aztecVertices[blIdx].x + g_aztecVertices[brIdx].x +
+                                     g_aztecVertices[tlIdx].x + g_aztecVertices[trIdx].x) / 4.0;
+                        double cy = (g_aztecVertices[blIdx].y + g_aztecVertices[brIdx].y +
+                                     g_aztecVertices[tlIdx].y + g_aztecVertices[trIdx].y) / 4.0;
 
-                    verticesInBlackQuads.insert(blIdx);
-                    verticesInBlackQuads.insert(brIdx);
-                    verticesInBlackQuads.insert(tlIdx);
-                    verticesInBlackQuads.insert(trIdx);
+                        BlackQuad bq;
+                        bq.blIdx = blIdx; bq.brIdx = brIdx;
+                        bq.tlIdx = tlIdx; bq.trIdx = trIdx;
+                        bq.cx = cx; bq.cy = cy;
+                        blackQuads.push_back(bq);
+
+                        verticesInBlackQuads.insert(blIdx);
+                        verticesInBlackQuads.insert(brIdx);
+                        verticesInBlackQuads.insert(tlIdx);
+                        verticesInBlackQuads.insert(trIdx);
+                    }
                 }
             }
         }
@@ -2092,9 +2121,10 @@ static void aztecStep12_StartNextIteration() {
         return edgeSet.count(k1 < k2 ? std::make_pair(k1, k2) : std::make_pair(k2, k1)) > 0;
     };
 
-    // Find all black quad centers in current graph
+    // Find all black quad centers and cache vertex indices for Step 8 reuse
     // Black quads have WHITE vertices at NW (TL) and SE (BR) corners
     g_blackQuadCenters.clear();
+    g_cachedBlackQuads.clear();
     std::unordered_set<int64_t> visitedFaces;
 
     for (const auto& v : g_aztecVertices) {
@@ -2130,10 +2160,13 @@ static void aztecStep12_StartNextIteration() {
                     double cy = (g_aztecVertices[blIdx].y + g_aztecVertices[brIdx].y +
                                  g_aztecVertices[tlIdx].y + g_aztecVertices[trIdx].y) / 4.0;
                     g_blackQuadCenters.push_back({cx, cy});
+                    // Cache vertex indices for Step 8 reuse
+                    g_cachedBlackQuads.push_back({blIdx, brIdx, tlIdx, trIdx, cx, cy});
                 }
             }
         }
     }
+    g_cachedBlackQuadsLevel = newLevel;  // Cache is valid for the new level
 
     g_aztecReductionStep = 6;  // Back to fold 1: shaded
     rebuildAdjacency();
