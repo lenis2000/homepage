@@ -1286,28 +1286,9 @@ static void aztecStep8_SplitVertices() {
 
     const double shiftAmount = 0.2;  // Shift towards center for non-selected vertices
 
-    // Build vertex index using 64-bit integer keys (unordered for O(1) lookup)
-    std::unordered_map<int64_t, int> vertexIndex;
-    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
-        vertexIndex[makePosKey(g_aztecVertices[i].x, g_aztecVertices[i].y)] = (int)i;
-    }
-
-    // Build edge lookup using ordered pairs of vertex keys (unordered for O(1) lookup)
-    std::unordered_set<std::pair<int64_t, int64_t>, PairHash64> edgeSet;
-    for (const auto& e : g_aztecEdges) {
-        int64_t k1 = makePosKey(g_aztecVertices[e.v1].x, g_aztecVertices[e.v1].y);
-        int64_t k2 = makePosKey(g_aztecVertices[e.v2].x, g_aztecVertices[e.v2].y);
-        edgeSet.insert(k1 < k2 ? std::make_pair(k1, k2) : std::make_pair(k2, k1));
-    }
-
-    // Helper to check if edge exists
-    auto hasEdge = [&](int64_t k1, int64_t k2) {
-        return edgeSet.count(k1 < k2 ? std::make_pair(k1, k2) : std::make_pair(k2, k1)) > 0;
-    };
-
     // Find all black quads and their vertex indices
     // Black quads have WHITE vertices at NW (TL) and SE (BR) corners
-    // Use cached quads from Step 12 if available, otherwise compute
+    // Use cached quads from Step 12 if available, otherwise compute using g_adj
     struct BlackQuad {
         int blIdx, brIdx, tlIdx, trIdx;
         double cx, cy;  // center
@@ -1330,55 +1311,76 @@ static void aztecStep8_SplitVertices() {
             verticesInBlackQuads.insert(cq.trIdx);
         }
     } else {
-        // Fallback: compute quads (first iteration or after step-up)
-        std::unordered_set<int64_t> visitedFaces;
+        // Fallback: compute quads using g_adj (topological search, no hash maps)
+        // For each vertex as potential BL, find Right and Top neighbors via adjacency
+        std::vector<bool> usedAsBL(g_aztecVertices.size(), false);
 
-        for (const auto& v : g_aztecVertices) {
-            double x = v.x, y = v.y;
-            int64_t faceKey = makePosKey(x, y);
-            if (visitedFaces.count(faceKey)) continue;
+        for (int blIdx = 0; blIdx < (int)g_aztecVertices.size(); blIdx++) {
+            if (usedAsBL[blIdx]) continue;
 
-            // Look for face with BL at (x, y)
-            int64_t blKey = makePosKey(x, y);
-            int64_t brKey = makePosKey(x + 1, y);
-            int64_t tlKey = makePosKey(x, y + 1);
-            int64_t trKey = makePosKey(x + 1, y + 1);
+            double blX = g_aztecVertices[blIdx].x;
+            double blY = g_aztecVertices[blIdx].y;
 
-            if (vertexIndex.count(blKey) && vertexIndex.count(brKey) &&
-                vertexIndex.count(tlKey) && vertexIndex.count(trKey)) {
-                // Check all 4 edges exist
-                if (hasEdge(blKey, brKey) && hasEdge(tlKey, trKey) &&
-                    hasEdge(blKey, tlKey) && hasEdge(brKey, trKey)) {
-                    visitedFaces.insert(faceKey);
+            // Find Right (BR) and Top (TL) neighbors using adjacency
+            int brIdx = -1, tlIdx = -1;
+            for (int eIdx : g_adj[blIdx]) {
+                const auto& edge = g_aztecEdges[eIdx];
+                int nIdx = (edge.v1 == blIdx) ? edge.v2 : edge.v1;
+                double dx = g_aztecVertices[nIdx].x - blX;
+                double dy = g_aztecVertices[nIdx].y - blY;
 
-                    int blIdx = vertexIndex[blKey];
-                    int brIdx = vertexIndex[brKey];
-                    int tlIdx = vertexIndex[tlKey];
-                    int trIdx = vertexIndex[trKey];
+                if (std::abs(dx - 1.0) < 0.01 && std::abs(dy) < 0.01) brIdx = nIdx;  // Right
+                if (std::abs(dx) < 0.01 && std::abs(dy - 1.0) < 0.01) tlIdx = nIdx;  // Top
+            }
 
-                    bool tlWhite = g_aztecVertices[tlIdx].isWhite;
-                    bool brWhite = g_aztecVertices[brIdx].isWhite;
+            if (brIdx == -1 || tlIdx == -1) continue;
 
-                    // Black quad: WHITE at NW and SE
-                    if (tlWhite && brWhite) {
-                        // Compute center by averaging all 4 vertices
-                        double cx = (g_aztecVertices[blIdx].x + g_aztecVertices[brIdx].x +
-                                     g_aztecVertices[tlIdx].x + g_aztecVertices[trIdx].x) / 4.0;
-                        double cy = (g_aztecVertices[blIdx].y + g_aztecVertices[brIdx].y +
-                                     g_aztecVertices[tlIdx].y + g_aztecVertices[trIdx].y) / 4.0;
+            // Find TR: check if BR has a Top neighbor that is also TL's Right neighbor
+            int trIdx = -1;
+            for (int eIdx : g_adj[brIdx]) {
+                const auto& edge = g_aztecEdges[eIdx];
+                int nIdx = (edge.v1 == brIdx) ? edge.v2 : edge.v1;
+                double dx = g_aztecVertices[nIdx].x - g_aztecVertices[brIdx].x;
+                double dy = g_aztecVertices[nIdx].y - g_aztecVertices[brIdx].y;
 
-                        BlackQuad bq;
-                        bq.blIdx = blIdx; bq.brIdx = brIdx;
-                        bq.tlIdx = tlIdx; bq.trIdx = trIdx;
-                        bq.cx = cx; bq.cy = cy;
-                        blackQuads.push_back(bq);
-
-                        verticesInBlackQuads.insert(blIdx);
-                        verticesInBlackQuads.insert(brIdx);
-                        verticesInBlackQuads.insert(tlIdx);
-                        verticesInBlackQuads.insert(trIdx);
+                if (std::abs(dx) < 0.01 && std::abs(dy - 1.0) < 0.01) {
+                    // Found BR's top neighbor, verify it connects to TL
+                    for (int eIdx2 : g_adj[tlIdx]) {
+                        const auto& edge2 = g_aztecEdges[eIdx2];
+                        int nIdx2 = (edge2.v1 == tlIdx) ? edge2.v2 : edge2.v1;
+                        if (nIdx2 == nIdx) {
+                            trIdx = nIdx;
+                            break;
+                        }
                     }
+                    if (trIdx != -1) break;
                 }
+            }
+
+            if (trIdx == -1) continue;
+
+            // Found a quad - check if it's a black quad (WHITE at TL and BR)
+            bool tlWhite = g_aztecVertices[tlIdx].isWhite;
+            bool brWhite = g_aztecVertices[brIdx].isWhite;
+
+            if (tlWhite && brWhite) {
+                usedAsBL[blIdx] = true;
+
+                double cx = (g_aztecVertices[blIdx].x + g_aztecVertices[brIdx].x +
+                             g_aztecVertices[tlIdx].x + g_aztecVertices[trIdx].x) / 4.0;
+                double cy = (g_aztecVertices[blIdx].y + g_aztecVertices[brIdx].y +
+                             g_aztecVertices[tlIdx].y + g_aztecVertices[trIdx].y) / 4.0;
+
+                BlackQuad bq;
+                bq.blIdx = blIdx; bq.brIdx = brIdx;
+                bq.tlIdx = tlIdx; bq.trIdx = trIdx;
+                bq.cx = cx; bq.cy = cy;
+                blackQuads.push_back(bq);
+
+                verticesInBlackQuads.insert(blIdx);
+                verticesInBlackQuads.insert(brIdx);
+                verticesInBlackQuads.insert(tlIdx);
+                verticesInBlackQuads.insert(trIdx);
             }
         }
     }
@@ -2101,69 +2103,70 @@ static void aztecStep12_StartNextIteration() {
         }
     }
 
-    // Re-compute black quad centers for new level using current graph structure
-    // Build vertex index using 64-bit integer keys
-    std::unordered_map<int64_t, int> vertexIndex;
-    for (size_t i = 0; i < g_aztecVertices.size(); i++) {
-        vertexIndex[makePosKey(g_aztecVertices[i].x, g_aztecVertices[i].y)] = (int)i;
-    }
-
-    // Build edge lookup using ordered pairs of vertex keys
-    std::unordered_set<std::pair<int64_t, int64_t>, PairHash64> edgeSet;
-    for (const auto& e : g_aztecEdges) {
-        int64_t k1 = makePosKey(g_aztecVertices[e.v1].x, g_aztecVertices[e.v1].y);
-        int64_t k2 = makePosKey(g_aztecVertices[e.v2].x, g_aztecVertices[e.v2].y);
-        edgeSet.insert(k1 < k2 ? std::make_pair(k1, k2) : std::make_pair(k2, k1));
-    }
-
-    // Helper to check if edge exists
-    auto hasEdge = [&](int64_t k1, int64_t k2) {
-        return edgeSet.count(k1 < k2 ? std::make_pair(k1, k2) : std::make_pair(k2, k1)) > 0;
-    };
-
-    // Find all black quad centers and cache vertex indices for Step 8 reuse
+    // Re-compute black quad centers using g_adj (topological search, no hash maps)
     // Black quads have WHITE vertices at NW (TL) and SE (BR) corners
     g_blackQuadCenters.clear();
     g_cachedBlackQuads.clear();
-    std::unordered_set<int64_t> visitedFaces;
+    std::vector<bool> usedAsBL(g_aztecVertices.size(), false);
 
-    for (const auto& v : g_aztecVertices) {
-        double x = v.x, y = v.y;
-        int64_t faceKey = makePosKey(x, y);
-        if (visitedFaces.count(faceKey)) continue;
+    for (int blIdx = 0; blIdx < (int)g_aztecVertices.size(); blIdx++) {
+        if (usedAsBL[blIdx]) continue;
 
-        // Look for face with BL at (x, y)
-        int64_t blKey = makePosKey(x, y);
-        int64_t brKey = makePosKey(x + 1, y);
-        int64_t tlKey = makePosKey(x, y + 1);
-        int64_t trKey = makePosKey(x + 1, y + 1);
+        double blX = g_aztecVertices[blIdx].x;
+        double blY = g_aztecVertices[blIdx].y;
 
-        if (vertexIndex.count(blKey) && vertexIndex.count(brKey) &&
-            vertexIndex.count(tlKey) && vertexIndex.count(trKey)) {
-            // Check all 4 edges exist
-            if (hasEdge(blKey, brKey) && hasEdge(tlKey, trKey) &&
-                hasEdge(blKey, tlKey) && hasEdge(brKey, trKey)) {
-                visitedFaces.insert(faceKey);
+        // Find Right (BR) and Top (TL) neighbors using adjacency
+        int brIdx = -1, tlIdx = -1;
+        for (int eIdx : g_adj[blIdx]) {
+            const auto& edge = g_aztecEdges[eIdx];
+            int nIdx = (edge.v1 == blIdx) ? edge.v2 : edge.v1;
+            double dx = g_aztecVertices[nIdx].x - blX;
+            double dy = g_aztecVertices[nIdx].y - blY;
 
-                int blIdx = vertexIndex[blKey];
-                int brIdx = vertexIndex[brKey];
-                int tlIdx = vertexIndex[tlKey];
-                int trIdx = vertexIndex[trKey];
+            if (std::abs(dx - 1.0) < 0.01 && std::abs(dy) < 0.01) brIdx = nIdx;  // Right
+            if (std::abs(dx) < 0.01 && std::abs(dy - 1.0) < 0.01) tlIdx = nIdx;  // Top
+        }
 
-                bool tlWhite = g_aztecVertices[tlIdx].isWhite;
-                bool brWhite = g_aztecVertices[brIdx].isWhite;
+        if (brIdx == -1 || tlIdx == -1) continue;
 
-                // Black quad: WHITE at NW and SE
-                if (tlWhite && brWhite) {
-                    double cx = (g_aztecVertices[blIdx].x + g_aztecVertices[brIdx].x +
-                                 g_aztecVertices[tlIdx].x + g_aztecVertices[trIdx].x) / 4.0;
-                    double cy = (g_aztecVertices[blIdx].y + g_aztecVertices[brIdx].y +
-                                 g_aztecVertices[tlIdx].y + g_aztecVertices[trIdx].y) / 4.0;
-                    g_blackQuadCenters.push_back({cx, cy});
-                    // Cache vertex indices for Step 8 reuse
-                    g_cachedBlackQuads.push_back({blIdx, brIdx, tlIdx, trIdx, cx, cy});
+        // Find TR: check if BR has a Top neighbor that is also TL's Right neighbor
+        int trIdx = -1;
+        for (int eIdx : g_adj[brIdx]) {
+            const auto& edge = g_aztecEdges[eIdx];
+            int nIdx = (edge.v1 == brIdx) ? edge.v2 : edge.v1;
+            double dx = g_aztecVertices[nIdx].x - g_aztecVertices[brIdx].x;
+            double dy = g_aztecVertices[nIdx].y - g_aztecVertices[brIdx].y;
+
+            if (std::abs(dx) < 0.01 && std::abs(dy - 1.0) < 0.01) {
+                // Found BR's top neighbor, verify it connects to TL
+                for (int eIdx2 : g_adj[tlIdx]) {
+                    const auto& edge2 = g_aztecEdges[eIdx2];
+                    int nIdx2 = (edge2.v1 == tlIdx) ? edge2.v2 : edge2.v1;
+                    if (nIdx2 == nIdx) {
+                        trIdx = nIdx;
+                        break;
+                    }
                 }
+                if (trIdx != -1) break;
             }
+        }
+
+        if (trIdx == -1) continue;
+
+        // Found a quad - check if it's a black quad (WHITE at TL and BR)
+        bool tlWhite = g_aztecVertices[tlIdx].isWhite;
+        bool brWhite = g_aztecVertices[brIdx].isWhite;
+
+        if (tlWhite && brWhite) {
+            usedAsBL[blIdx] = true;
+
+            double cx = (g_aztecVertices[blIdx].x + g_aztecVertices[brIdx].x +
+                         g_aztecVertices[tlIdx].x + g_aztecVertices[trIdx].x) / 4.0;
+            double cy = (g_aztecVertices[blIdx].y + g_aztecVertices[brIdx].y +
+                         g_aztecVertices[tlIdx].y + g_aztecVertices[trIdx].y) / 4.0;
+            g_blackQuadCenters.push_back({cx, cy});
+            // Cache vertex indices for Step 8 reuse
+            g_cachedBlackQuads.push_back({blIdx, brIdx, tlIdx, trIdx, cx, cy});
         }
     }
     g_cachedBlackQuadsLevel = newLevel;  // Cache is valid for the new level
