@@ -1256,7 +1256,8 @@ static void aztecStep7_MarkDiagonalVertices() {
     }
 
     g_aztecReductionStep = 7;
-    rebuildAdjacency();
+    // Skip rebuildAdjacency() - only marked inVgauge flags, no topology change
+    // Step 8 builds its own local vertex/edge lookups
 }
 
 // STEP 8: Split green vertices into 3-vertex chains (Folding step 3)
@@ -1613,7 +1614,8 @@ static void aztecStep9_DiagonalGauge() {
     }
 
     g_aztecReductionStep = 9;
-    rebuildAdjacency();
+    // Skip rebuildAdjacency() - only modified edge weights, no topology change
+    // Step 10 builds its own local adjacency list
 }
 
 // STEP 10: Urban Renewal (Folding step 4)
