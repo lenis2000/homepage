@@ -826,7 +826,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
             <span>Quality:</span>
             <input type="range" id="png-quality-slider" min="1" max="100" value="85" style="width: 70px;" aria-label="PNG quality">
-            <span style="font-family: monospace; min-width: 30px;">85</span>
+            <span id="png-quality-value" style="font-family: monospace; min-width: 30px;">85</span>
           </label>
         </div>
         <span style="color: #dee2e6;">|</span>
@@ -949,7 +949,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
             <span>Q:</span>
             <input type="range" id="sample-png-quality" min="1" max="100" value="85" style="width: 60px;" aria-label="PNG quality">
-            <span style="font-family: monospace; min-width: 30px;">85</span>
+            <span id="sample-png-quality-value" style="font-family: monospace; min-width: 30px;">85</span>
           </label>
           <button id="sample-export-pdf-btn" style="padding: 6px 14px; background: #E57200; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export as PDF">PDF</button>
         </div>
@@ -5022,6 +5022,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     // Responsive: re-render on window resize
     window.addEventListener('resize', () => {
       renderSample();
+    });
+
+    // Sample PNG quality slider value display
+    document.getElementById('sample-png-quality').addEventListener('input', (e) => {
+      document.getElementById('sample-png-quality-value').textContent = e.target.value;
     });
 
     // Export PNG (canvas capture like T-embedding)
@@ -10005,6 +10010,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   document.getElementById('export-png-btn').addEventListener('click', exportPng);
   document.getElementById('export-obj-btn').addEventListener('click', exportOBJ);
   document.getElementById('export-gif-btn').addEventListener('click', exportGif);
+
+  // PNG quality slider value display
+  document.getElementById('png-quality-slider').addEventListener('input', (e) => {
+    document.getElementById('png-quality-value').textContent = e.target.value;
+  });
 
   // Copy to clipboard buttons
   function copyToClipboard(elementId, btn) {
