@@ -326,7 +326,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 12px;">
     <label style="display: flex; align-items: center; gap: 6px;">
       <strong>Size (n):</strong>
-      <input id="n-input" type="number" value="6" min="1" max="200" style="width: 70px;" aria-label="Aztec diamond size">
+      <input id="n-input" type="number" value="6" min="1" max="500" style="width: 70px;" aria-label="Aztec diamond size">
     </label>
 
     <label style="display: flex; align-items: center; gap: 6px;">
@@ -1423,7 +1423,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let getFirstReductionJSON;  // Export reduced graph after first 5 steps
   let applyExternalWeights;  // Golden bridge: JS sends weights to C++
   let resetAztecGraphPreservingWeights, setAztecGraphLevel;
-  let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, canAztecStepUp, canAztecStepDown;
+  let aztecGraphStepDown, aztecGraphStepUp, getAztecReductionStep, getAztecLevel, canAztecStepUp, canAztecStepDown;
   let getComputeTimeMs;
   let clearTembLevels;
   let clearStoredWeightsExport;
@@ -2393,6 +2393,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     aztecGraphStepDown = mod.cwrap('aztecGraphStepDown', null, []);
     aztecGraphStepUp = mod.cwrap('aztecGraphStepUp', null, []);
     getAztecReductionStep = mod.cwrap('getAztecReductionStep', 'number', []);
+    getAztecLevel = mod.cwrap('getAztecLevel', 'number', []);
     canAztecStepUp = mod.cwrap('canAztecStepUp', 'number', []);
     canAztecStepDown = mod.cwrap('canAztecStepDown', 'number', []);
     getComputeTimeMs = mod.cwrap('getComputeTimeMs', 'number', []);
@@ -5321,15 +5322,34 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         refreshAztecFromCpp();
       } else {
         // NOTE: Do NOT call refreshAztecFromCpp() inside loops - it's extremely expensive
-        computeTimeSpan.textContent = "Folding...";
+        const foldingStart = performance.now();
+        let lastUpdate = foldingStart;
+
+        const updateFoldingTimer = () => {
+          const elapsed = Math.floor((performance.now() - foldingStart) / 1000);
+          const level = getAztecLevel();
+          computeTimeSpan.textContent = `Folding... level ${level}, ${elapsed}s`;
+        };
+
+        updateFoldingTimer();
         await delay(10);  // Yield to render text
 
         while (canAztecStepDown()) {
           aztecGraphStepDown();
+          if (performance.now() - lastUpdate > 1000) {
+            updateFoldingTimer();
+            lastUpdate = performance.now();
+            await delay(0);
+          }
         }
 
         while (canAztecStepUp()) {
           aztecGraphStepUp();
+          if (performance.now() - lastUpdate > 1000) {
+            updateFoldingTimer();
+            lastUpdate = performance.now();
+            await delay(0);
+          }
         }
 
         // Update UI once after folding/unfolding is done
@@ -5337,13 +5357,26 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       }
 
       // --- PHASE 2: COMPUTING T AND O MAPS ---
-      computeTimeSpan.textContent = "Computing T...";
-      await delay(10);  // Yield to render text
+      const tembStart = performance.now();
+      let tembLastUpdate = tembStart;
+
+      const updateTembTimer = (k, maxK) => {
+        const elapsed = Math.floor((performance.now() - tembStart) / 1000);
+        computeTimeSpan.textContent = `Computing T... k=${k}/${maxK}, ${elapsed}s`;
+      };
 
       const finalK = Math.max(0, n - 2);
+      updateTembTimer(0, finalK);
+      await delay(10);  // Yield to render text
+
       for (let k = 0; k <= finalK; k++) {
         let ptr = getTembeddingLevelJSON(k);
         freeString(ptr);
+        if (performance.now() - tembLastUpdate > 1000) {
+          updateTembTimer(k, finalK);
+          tembLastUpdate = performance.now();
+          await delay(0);
+        }
       }
 
       // maxK = n - 2 (for input n, we have T_0 through T_{n-2})
