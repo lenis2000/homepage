@@ -1837,7 +1837,8 @@ static void aztecStep11_CombineDoubleEdges() {
     }
 
     // Group edges by vertex pair (normalized so smaller index first)
-    std::map<std::pair<int,int>, std::vector<size_t>> edgeGroups;
+    // Using unordered_map for O(1) insertion instead of O(log E) with std::map
+    std::unordered_map<std::pair<int,int>, std::vector<size_t>, PairHash> edgeGroups;
     for (size_t i = 0; i < g_aztecEdges.size(); i++) {
         int v1 = std::min(g_aztecEdges[i].v1, g_aztecEdges[i].v2);
         int v2 = std::max(g_aztecEdges[i].v1, g_aztecEdges[i].v2);
