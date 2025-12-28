@@ -297,18 +297,22 @@ published: true
 <summary><strong>About this simulation</strong></summary>
 <div class="about-content">
 
-**Coupling From The Past (CFTP)** is an algorithm for exact sampling from a target distribution. Here we sample partitions $\lambda$ contained in an $M \times N$ rectangle with probability proportional to $q^{|\lambda|}$, where $|\lambda|$ is the number of boxes.
+<p><strong>Coupling From The Past (CFTP)</strong> is an algorithm for exact sampling from a target distribution. Here we sample partitions $\lambda$ contained in an $M \times N$ rectangle with probability proportional to $q^{|\lambda|}$, where $|\lambda|$ is the number of boxes.</p>
 
-**Parameters:**
-- $N$: Width of the bounding rectangle
-- $a = M/N$: Aspect ratio (so $M = \lfloor aN \rfloor$)
-- $q$: Weight parameter. When $q < 1$, smaller partitions are favored; when $q > 1$, larger partitions are favored.
+<p><strong>Parameters:</strong></p>
+<ul>
+  <li>$N$: Width of the bounding rectangle</li>
+  <li>$a = M/N$: Aspect ratio (so $M = \lfloor aN \rfloor$)</li>
+  <li>$q$: Weight parameter. When $q &lt; 1$, smaller partitions are favored; when $q &gt; 1$, larger partitions are favored.</li>
+</ul>
 
-**Glauber Dynamics:** At each step, pick a corner (addable or removable position) uniformly at random:
-- If addable: add box with probability $q/(1+q)$
-- If removable: remove box with probability $1/(1+q)$
+<p><strong>Glauber Dynamics:</strong> At each step, pick a corner (addable or removable position) uniformly at random:</p>
+<ul>
+  <li>If addable: add box with probability $q/(1+q)$</li>
+  <li>If removable: remove box with probability $1/(1+q)$</li>
+</ul>
 
-**CFTP:** Run two coupled chains from extremal states (empty and full rectangle). When they coalesce, we have an exact sample from the stationary distribution.
+<p><strong>CFTP:</strong> Run two coupled chains from extremal states (empty and full rectangle). When they coalesce, we have an exact sample from the stationary distribution.</p>
 
 </div>
 </details>
