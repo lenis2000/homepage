@@ -382,7 +382,6 @@ published: true
 // WASM module loading
 var Module = {
   onRuntimeInitialized: function() {
-    console.log("WASM module loaded");
     if (window.onWASMReady) window.onWASMReady();
   }
 };
@@ -396,7 +395,7 @@ var Module = {
   let wasmReady = false;
   let initSimulation, runCFTPEpoch, runGlauberSteps;
   let getPartitionData, getLowerData, getUpperData, freeString;
-  let getM, getN, getArea, getGap, getDebugInfo;
+  let getM, getN, getArea, getGap;
 
   window.onWASMReady = function() {
     initSimulation = Module.cwrap('initSimulation', null, ['number', 'number', 'number']);
@@ -410,10 +409,7 @@ var Module = {
     getN = Module.cwrap('getN', 'number', []);
     getArea = Module.cwrap('getArea', 'number', []);
     getGap = Module.cwrap('getGap', 'number', []);
-    getDebugInfo = Module.cwrap('getDebugInfo', 'number', []);
     wasmReady = true;
-    console.log("WASM functions wrapped");
-    // Initialize with current params
     updateParams();
     reset();
   };
@@ -868,7 +864,7 @@ var Module = {
     return JSON.parse(str);
   }
 
-  // CFTP using WASM - with progress reporting
+  // CFTP using WASM - runs until coalescence with progress updates
   function runCFTP() {
     if (isRunning) return;
     if (!wasmReady) {
@@ -886,9 +882,9 @@ var Module = {
     // Re-initialize WASM with current parameters
     initSimulation(N, parseFloat(sliderA.value), q);
 
-    let epoch = 0;
+    let batch = 0;
 
-    function runEpoch() {
+    function runBatch() {
       if (!isRunning) {
         btnCFTP.disabled = false;
         btnGlauber.disabled = false;
@@ -897,14 +893,13 @@ var Module = {
         return;
       }
 
-      epoch++;
+      batch++;
 
-      // Run one CFTP epoch in WASM
+      // Run one batch (50M steps) in WASM
       const result = runCFTPEpoch();
       const gap = getGap();
       const wasmM = getM();
       const wasmN = getN();
-      const maxArea = wasmM * wasmN;
 
       // Get the bounds for display
       const lowerArr = getArrayFromWasm(getLowerData);
@@ -912,34 +907,17 @@ var Module = {
       lowerBound = new Partition(wasmM, wasmN, lowerArr);
       upperBound = new Partition(wasmM, wasmN, upperArr);
 
-      // Debug: log paths
-      const debugPtr = getDebugInfo();
-      const debugStr = Module.UTF8ToString(debugPtr);
-      freeString(debugPtr);
-      console.log(`Epoch ${epoch}: ${debugStr}, gap=${gap}`);
-
-      // Estimate T from epoch (T = 2^epoch)
-      cftpT = Math.pow(2, epoch);
+      // Steps = batch * 50M
+      cftpT = batch * 50000000;
       stepCount = cftpT;
 
       if (result === 1) {
         // Coalesced!
         const partArr = getArrayFromWasm(getPartitionData);
-        console.log("Coalesced partition:", partArr);
-        console.log("Partition size:", partArr.reduce((a,b) => a+b, 0));
         currentPartition = new Partition(wasmM, wasmN, partArr);
         lowerBound = null;
         upperBound = null;
-        setStatus(`CFTP coalesced! Epoch ${epoch}, T=${cftpT.toLocaleString()}, size=${currentPartition.size()}`, 'success');
-        updateStats();
-        draw();
-        stopSimulation();
-        return;
-      }
-
-      if (result === -1) {
-        // Timeout
-        setStatus(`CFTP timeout at epoch ${epoch}, T=${cftpT.toLocaleString()}, gap=${gap.toLocaleString()}`, 'running');
+        setStatus(`CFTP coalesced! Steps=${cftpT.toLocaleString()}, size=${currentPartition.size()}`, 'success');
         updateStats();
         draw();
         stopSimulation();
@@ -947,16 +925,15 @@ var Module = {
       }
 
       // Still running - update status
-      const pct = ((1 - gap / maxArea) * 100).toFixed(1);
-      setStatus(`Epoch ${epoch}: T=${cftpT.toLocaleString()}, gap=${gap.toLocaleString()} (${pct}% converged)`, 'running');
+      setStatus(`CFTP running: ${cftpT.toLocaleString()} steps, gap=${gap}`, 'running');
       updateStats();
       draw();
 
-      // Continue to next epoch
-      setTimeout(runEpoch, 1);
+      // Continue to next batch
+      setTimeout(runBatch, 1);
     }
 
-    runEpoch();
+    runBatch();
   }
 
   btnCFTP.addEventListener('click', runCFTP);

@@ -215,42 +215,36 @@ bool isCoalesced() {
     return true;
 }
 
-// Run one CFTP epoch with current T, return: 0=not coalesced, 1=coalesced, -1=timeout
+// Run a batch of CFTP steps, return: 0=not coalesced, 1=coalesced
+// Runs 50M steps per call for progress updates
 int runCFTPEpoch() {
-    currentEpoch++;
+    const int BATCH_SIZE = 50000000;  // 50M steps per batch
 
-    // First epoch starts with T=1
+    // First call: initialize extremal states
     if (currentT == 0) {
-        currentT = 1;
-    } else {
-        currentT *= 2;
+        // Lower: empty partition = 111...000 (M ones then N zeros)
+        lowerPath.assign(M + N, 0);
+        for (int i = 0; i < M; i++) lowerPath[i] = 1;
+
+        // Upper: full partition = 000...111 (N zeros then M ones)
+        upperPath.assign(M + N, 0);
+        for (int i = N; i < M + N; i++) upperPath[i] = 1;
     }
 
-    // Check timeout
-    if (currentT > 100000000) {
-        return -1;
+    // Run batch of coupled steps
+    for (int t = 0; t < BATCH_SIZE; t++) {
+        uint64_t seed = globalRng.next();
+        coupledGlauberStepPath(lowerPath, upperPath, seed);
+        currentT++;
+
+        // Check coalescence periodically
+        if ((currentT % 1000000) == 0 && isCoalesced()) {
+            path = lowerPath;
+            return 1;
+        }
     }
 
-    // Generate seeds if needed
-    while ((int)seeds.size() < currentT) {
-        seeds.push_back(globalRng.next());
-    }
-
-    // Initialize extremal states
-    // Lower: empty partition = 111...000 (M ones then N zeros) - go up first
-    lowerPath.assign(M + N, 0);
-    for (int i = 0; i < M; i++) lowerPath[i] = 1;
-
-    // Upper: full partition = 000...111 (N zeros then M ones) - go right first
-    upperPath.assign(M + N, 0);
-    for (int i = N; i < M + N; i++) upperPath[i] = 1;
-
-    // Run T coupled steps (forward is fine for CFTP with monotone coupling)
-    for (int t = 0; t < currentT; t++) {
-        coupledGlauberStepPath(lowerPath, upperPath, seeds[t]);
-    }
-
-    // Check coalescence
+    // Final check after batch
     if (isCoalesced()) {
         path = lowerPath;
         return 1;
