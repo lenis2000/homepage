@@ -342,8 +342,9 @@ where $A = \frac{1-e^{-\gamma}}{1-e^{-\gamma(1+a)}}$ and $B = \frac{1-e^{-\gamma
         <input type="text" id="inputQ" value="1" style="width: 80px;">
       </div>
       <div class="control-group">
-        <label for="inputGamma">γ = -N·log(q)</label>
-        <input type="text" id="inputGamma" value="0" style="width: 80px;">
+        <label for="sliderGamma">γ = -N·log(q)</label>
+        <input type="range" id="sliderGamma" min="-20" max="20" step="0.1" value="0">
+        <span class="value-display" id="valueGamma">0</span>
       </div>
     </div>
     <div class="control-row">
@@ -788,7 +789,8 @@ var Module = {
   const sliderN = document.getElementById('sliderN');
   const sliderA = document.getElementById('sliderA');
   const inputQ = document.getElementById('inputQ');
-  const inputGamma = document.getElementById('inputGamma');
+  const sliderGamma = document.getElementById('sliderGamma');
+  const valueGamma = document.getElementById('valueGamma');
   const sliderSpeed = document.getElementById('sliderSpeed');
   const btnCFTP = document.getElementById('btnCFTP');
   const btnGlauber = document.getElementById('btnGlauber');
@@ -810,28 +812,35 @@ var Module = {
     document.getElementById('statSize').textContent = currentPartition ? currentPartition.size() : 0;
   }
 
-  // Update gamma from q (gamma = -N * log(q))
+  // Update gamma display from q (gamma = -N * log(q))
   function updateGammaFromQ() {
     const qVal = parseFloat(inputQ.value);
     if (qVal > 0 && !isNaN(qVal)) {
       q = qVal;
       const gamma = -N * Math.log(q);
-      inputGamma.value = gamma.toFixed(4);
+      // If gamma is within slider range, update slider; otherwise show "..."
+      if (gamma >= -20 && gamma <= 20) {
+        sliderGamma.value = gamma;
+        valueGamma.textContent = gamma.toFixed(2);
+      } else {
+        valueGamma.textContent = gamma > 20 ? '>20' : '<-20';
+      }
     }
   }
 
-  // Update q from gamma (q = exp(-gamma / N))
+  // Update q from gamma slider (q = exp(-gamma / N))
   function updateQFromGamma() {
-    const gamma = parseFloat(inputGamma.value);
+    const gamma = parseFloat(sliderGamma.value);
     if (!isNaN(gamma)) {
       q = Math.exp(-gamma / N);
       inputQ.value = q.toFixed(6);
+      valueGamma.textContent = gamma.toFixed(1);
     }
   }
 
   // When N changes, keep gamma fixed and update q
   function updateQFromN() {
-    const gamma = parseFloat(inputGamma.value);
+    const gamma = parseFloat(sliderGamma.value);
     if (!isNaN(gamma)) {
       q = Math.exp(-gamma / N);
       inputQ.value = q.toFixed(6);
@@ -869,7 +878,7 @@ var Module = {
     }
     draw();
   });
-  inputGamma.addEventListener('input', () => {
+  sliderGamma.addEventListener('input', () => {
     updateQFromGamma();
     updateParams();
     // Update WASM q if Glauber is running
