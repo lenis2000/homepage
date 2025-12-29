@@ -117,6 +117,11 @@ void initSimulation(int n, double a, double qVal) {
 }
 
 int getM() { return M; }
+
+// Update just q without resetting path
+void setQ(double qVal) {
+    q = qVal;
+}
 int getN() { return N; }
 
 // Glauber step on a path

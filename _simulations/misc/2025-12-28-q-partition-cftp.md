@@ -397,7 +397,7 @@ var Module = {
 
   // ==================== WASM function wrappers ====================
   let wasmReady = false;
-  let initSimulation, runCFTPEpoch, runGlauberSteps;
+  let initSimulation, runCFTPEpoch, runGlauberSteps, setQ;
   let getPartitionData, getLowerData, getUpperData, freeString;
   let getM, getN, getArea, getGap;
 
@@ -413,6 +413,7 @@ var Module = {
     getN = Module.cwrap('getN', 'number', []);
     getArea = Module.cwrap('getArea', 'number', []);
     getGap = Module.cwrap('getGap', 'number', []);
+    setQ = Module.cwrap('setQ', null, ['number']);
     wasmReady = true;
     updateParams();
     reset();
@@ -697,6 +698,52 @@ var Module = {
       drawPartitionPath(currentPartition, colors[0], 3);
     }
 
+    // Draw limit shape curve
+    // y = x + log(1 + ((e^(a*κ) - 1)(e^((1-x)*κ) - 1)) / (e^κ - 1)) / κ
+    // where κ = log(q)
+    function drawLimitShape() {
+      const aa = M / N;  // aspect ratio a
+      const kappa = Math.log(q);  // κ = log(q)
+
+      ctx.strokeStyle = '#ff0000';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+
+      const steps = 200;
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;  // t in [0, 1], this is x
+
+        let y;
+        if (Math.abs(kappa) < 1e-6) {
+          // κ → 0 limit: y = x + a*(1-x)
+          y = t + aa * (1 - t);
+        } else {
+          // General case
+          const eAK = Math.exp(aa * kappa);
+          const e1mxK = Math.exp((1 - t) * kappa);
+          const eK = Math.exp(kappa);
+          const numerator = (eAK - 1) * (e1mxK - 1);
+          const denominator = eK - 1;
+          y = t + Math.log(1 + numerator / denominator) / kappa;
+        }
+
+        // Map to canvas coordinates
+        const canvasX = offsetX + t * N * scale;
+        const canvasY = offsetY + (y - t) * N * scale;
+
+        if (i === 0) {
+          ctx.moveTo(canvasX, canvasY);
+        } else {
+          ctx.lineTo(canvasX, canvasY);
+        }
+      }
+
+      ctx.stroke();
+    }
+
+    drawLimitShape();
+
     // Labels
     ctx.fillStyle = colors[1];
     ctx.font = '14px "franklingothic-book", Arial, sans-serif';
@@ -787,9 +834,21 @@ var Module = {
   });
   inputQ.addEventListener('input', () => {
     updateGammaFromQ();
+    updateParams();
+    // Update WASM q if Glauber is running
+    if (wasmReady && isRunning && !isCFTP) {
+      setQ(q);
+    }
+    draw();
   });
   inputGamma.addEventListener('input', () => {
     updateQFromGamma();
+    updateParams();
+    // Update WASM q if Glauber is running
+    if (wasmReady && isRunning && !isCFTP) {
+      setQ(q);
+    }
+    draw();
   });
   sliderSpeed.addEventListener('input', updateParams);
 
@@ -824,17 +883,22 @@ var Module = {
     btnGlauber.classList.remove('active');
   }
 
-  // Glauber dynamics
+  // Glauber dynamics using WASM (same algorithm as CFTP)
   function runGlauber() {
     if (isRunning) return;
+    if (!wasmReady) {
+      setStatus('WASM not ready yet, please wait...', 'running');
+      return;
+    }
 
     isRunning = true;
     isCFTP = false;
-    currentPartition = Partition.empty(M, N);
     lowerBound = null;
     upperBound = null;
-    stepCount = 0;
     cftpT = 0;
+
+    // Just update q without resetting the path (continue from current state)
+    setQ(q);
 
     btnCFTP.disabled = true;
     btnGlauber.disabled = true;
@@ -842,15 +906,18 @@ var Module = {
     btnStop.disabled = false;
     setStatus('Running Glauber dynamics...', 'running');
 
-    const rng = new SeededRNG(Date.now());
-
     function step() {
       if (!isRunning) return;
 
-      for (let i = 0; i < stepsPerFrame; i++) {
-        glauberStep(currentPartition, rng, q);
-        stepCount++;
-      }
+      // Run steps in WASM
+      runGlauberSteps(stepsPerFrame);
+      stepCount += stepsPerFrame;
+
+      // Get partition from WASM for display
+      const wasmM = getM();
+      const wasmN = getN();
+      const partArr = getArrayFromWasm(getPartitionData);
+      currentPartition = new Partition(wasmM, wasmN, partArr);
 
       updateStats();
       draw();
