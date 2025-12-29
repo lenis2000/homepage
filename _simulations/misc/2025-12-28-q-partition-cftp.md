@@ -314,6 +314,12 @@ published: true
 
 <p><strong>CFTP:</strong> Run two coupled chains from extremal states (empty and full rectangle). When they coalesce, we have an exact sample from the stationary distribution.</p>
 
+<p><strong>Limit Shape:</strong> As $N \to \infty$ with $q = e^{-\gamma/N}$ for fixed $\gamma > 0$, the rescaled partition boundary converges to a deterministic curve given by the implicit equation:
+$$A e^{-\gamma y} + B e^{-\gamma x} = 1$$
+where $A = \frac{1-e^{-\gamma}}{1-e^{-\gamma(1+a)}}$ and $B = \frac{1-e^{-\gamma a}}{1-e^{-\gamma(1+a)}}$. The red curve shows this limit shape.</p>
+
+<p><strong>Reference:</strong> A. Vershik, "Statistical mechanics of combinatorial partitions, and their limit shapes," <em>Functional Analysis and Its Applications</em> 30 (1996), 90-105.</p>
+
 </div>
 </details>
 
@@ -700,11 +706,11 @@ var Module = {
 
     // Draw limit shape curve
     // Using: A·e^{-cy} + B·e^{-cx} = 1 (both exponents negative)
-    // c = γ/N where γ = -N·log(q)
+    // c = γ/N² (scaled by N)
     function drawLimitShape() {
       const aa = M / N;  // aspect ratio a
       const gamma = -N * Math.log(q);  // γ from the formula q = e^(-γ/N)
-      const c = gamma / N;  // c = γ/N
+      const c = gamma;  // c = γ (no N scaling)
 
       ctx.strokeStyle = '#ff0000';
       ctx.lineWidth = 2;
