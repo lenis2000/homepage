@@ -699,44 +699,66 @@ var Module = {
     }
 
     // Draw limit shape curve
-    // y = x + log(1 + ((e^(a*κ) - 1)(e^((1-x)*κ) - 1)) / (e^κ - 1)) / κ
-    // where κ = log(q)
+    // Using: A·e^{-cy} + B·e^{-cx} = 1 (both exponents negative)
+    // c = γ/N where γ = -N·log(q)
     function drawLimitShape() {
       const aa = M / N;  // aspect ratio a
-      const kappa = Math.log(q);  // κ = log(q)
+      const gamma = -N * Math.log(q);  // γ from the formula q = e^(-γ/N)
+      const c = gamma / N;  // c = γ/N
 
       ctx.strokeStyle = '#ff0000';
       ctx.lineWidth = 2;
       ctx.setLineDash([]);
       ctx.beginPath();
 
+      // For c ≈ 0 (q ≈ 1): straight diagonal from bottom-left to top-right
+      if (Math.abs(c) < 1e-6) {
+        ctx.moveTo(offsetX, offsetY + M * scale);
+        ctx.lineTo(offsetX + N * scale, offsetY);
+        ctx.stroke();
+        return;
+      }
+
+      // Use formula: A·e^{-cy} + B·e^{-cx} = 1
+      // where A = (1-e^{-c})/(1-e^{-c(1+a)}), B = (1-e^{-ca})/(1-e^{-c(1+a)})
+      // Solving for y: y = -ln((1 - B·e^{-cx})/A) / c
+      const denom = 1 - Math.exp(-c * (1 + aa));
+      const A = (1 - Math.exp(-c)) / denom;
+      const B = (1 - Math.exp(-c * aa)) / denom;
+
       const steps = 200;
+      let points = [];
+
       for (let i = 0; i <= steps; i++) {
-        const t = i / steps;  // t in [0, 1], this is x
+        const x_norm = i / steps;  // x in [0, 1]
+        const exp_neg_cx = Math.exp(-c * x_norm);
+        const inside = (1 - B * exp_neg_cx) / A;
 
-        let y;
-        if (Math.abs(kappa) < 1e-6) {
-          // κ → 0 limit: y = x + a*(1-x)
-          y = t + aa * (1 - t);
-        } else {
-          // General case
-          const eAK = Math.exp(aa * kappa);
-          const e1mxK = Math.exp((1 - t) * kappa);
-          const eK = Math.exp(kappa);
-          const numerator = (eAK - 1) * (e1mxK - 1);
-          const denominator = eK - 1;
-          y = t + Math.log(1 + numerator / denominator) / kappa;
+        if (inside > 0) {
+          const y_formula = -Math.log(inside) / c;
+          // Flip y: curve goes from (0, aa) to (1, 0) in formula coords
+          // We want bottom-left to top-right, so y_screen = aa - y_formula
+          const y_norm = aa - y_formula;
+
+          if (y_norm >= -0.1 && y_norm <= aa * 1.1) {
+            // Map to screen: x_norm=0 -> left, x_norm=1 -> right
+            // y_norm=0 -> bottom, y_norm=aa -> top
+            const canvasX = offsetX + x_norm * N * scale;
+            const canvasY = offsetY + M * scale - (y_norm / aa) * M * scale;
+            points.push({x: canvasX, y: canvasY, xn: x_norm, yn: y_norm});
+          }
         }
+      }
 
-        // Map to canvas coordinates
-        const canvasX = offsetX + t * N * scale;
-        const canvasY = offsetY + (y - t) * N * scale;
-
-        if (i === 0) {
-          ctx.moveTo(canvasX, canvasY);
-        } else {
-          ctx.lineTo(canvasX, canvasY);
+      if (points.length > 0) {
+        ctx.moveTo(offsetX, offsetY + M * scale);
+        for (let p of points) {
+          ctx.lineTo(p.x, p.y);
         }
+        ctx.lineTo(offsetX + N * scale, offsetY);
+      } else {
+        ctx.moveTo(offsetX, offsetY + M * scale);
+        ctx.lineTo(offsetX + N * scale, offsetY);
       }
 
       ctx.stroke();
