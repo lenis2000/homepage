@@ -473,7 +473,8 @@ class SlideEngine {
     getMaxSimStep(slideId) {
         const sims = this.getSimsForSlide(slideId);
         if (sims.length === 0) return 0;
-        return Math.max(...sims.map(s => s.step));
+        // Consider both legacy 'step' (single step number) and new 'steps' (total step count)
+        return Math.max(...sims.map(s => s.sim.steps || s.step || 0));
     }
 
     pauseAllSimulations(slideId) {
@@ -506,7 +507,19 @@ class SlideEngine {
 
         if (this.currentSimStep < maxStep) {
             this.currentSimStep++;
-            this.startSimulationsUpToStep(slideId, this.currentSimStep);
+            const sims = this.getSimsForSlide(slideId);
+
+            sims.forEach(({ sim, step: registeredStep }) => {
+                if (typeof sim.onStep === 'function') {
+                    // New API: call onStep with current step number
+                    sim.onStep(this.currentSimStep);
+                } else {
+                    // Legacy API: start sim when current step reaches its registered step
+                    if (this.currentSimStep === registeredStep && typeof sim.start === 'function') {
+                        sim.start();
+                    }
+                }
+            });
             return true;
         }
         return false;
@@ -517,8 +530,21 @@ class SlideEngine {
         const slideId = this.slides[this.current].id;
 
         if (this.currentSimStep > 0) {
+            const prevStep = this.currentSimStep;
             this.currentSimStep--;
-            this.startSimulationsUpToStep(slideId, this.currentSimStep);
+            const sims = this.getSimsForSlide(slideId);
+
+            sims.forEach(({ sim, step: registeredStep }) => {
+                if (typeof sim.onStepBack === 'function') {
+                    // New API: call onStepBack with current step number
+                    sim.onStepBack(this.currentSimStep);
+                } else {
+                    // Legacy API: pause sim when going below its registered step
+                    if (prevStep === registeredStep && typeof sim.pause === 'function') {
+                        sim.pause();
+                    }
+                }
+            });
             return true;
         }
         return false;
@@ -744,11 +770,25 @@ class SlideSimulation {
         // Auto-register with slide engine
         function register() {
             if (window.slideEngine && config.slideId !== undefined) {
-                window.slideEngine.registerSimulation(config.slideId, {
+                // Build simulation interface
+                const simInterface = {
                     get isRunning() { return sim.isRunning; },
                     start: () => sim.start(),
                     pause: () => sim.pause()
-                }, config.step || 0);
+                };
+
+                // Add multi-step support if configured
+                if (config.steps) {
+                    simInterface.steps = config.steps;
+                }
+                if (config.onStep) {
+                    simInterface.onStep = (step) => config.onStep.call(sim, step);
+                }
+                if (config.onStepBack) {
+                    simInterface.onStepBack = (step) => config.onStepBack.call(sim, step);
+                }
+
+                window.slideEngine.registerSimulation(config.slideId, simInterface, config.step || 0);
             } else {
                 // Retry shortly - slideEngine might not be initialized yet
                 setTimeout(register, 50);

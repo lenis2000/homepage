@@ -39,34 +39,61 @@ Fragments reveal in order. Going back hides them in reverse.
 
 **Simulation integration (SlideSimulation helper):**
 ```javascript
-// Use SlideSimulation.create() to avoid boilerplate
+// Basic simulation with start/pause
 const sim = SlideSimulation.create({
-    canvasId: 'my-canvas',      // Canvas element ID
-    slideId: 'my-slide',        // Slide section ID
-    step: 1,                    // 0=auto-start, 1+=Nth arrow press
+    canvasId: 'my-canvas',
+    slideId: 'my-slide',
+    step: 1,                    // Start on 1st arrow press (0=auto-start)
 
-    // Custom state (merged into sim object)
-    particles: [],
+    particles: [],              // Custom state (merged into sim object)
 
-    init(ctx, canvas) {
-        // Setup - called once and on reset
-        this.particles = [...];
-    },
+    init(ctx, canvas) { /* setup */ },
+    update(dt) { /* physics - dt is delta time in seconds */ },
+    draw(ctx, canvas) { /* render */ },
 
-    update(dt) {
-        // Physics/logic - dt is delta time in seconds
-        this.particles.forEach(p => { p.x += p.vx * dt; });
-    },
-
-    draw(ctx, canvas) {
-        // Render
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        this.particles.forEach(p => { /* draw */ });
-    }
+    onStart() { /* optional: called when started */ },
+    onPause() { /* optional: called when paused */ }
 });
 
 // sim.start(), sim.pause(), sim.toggle(), sim.reset() available
 // Click on canvas toggles automatically
+```
+
+**Multi-phase simulations (onStep API):**
+```javascript
+// For simulations with multiple phases (e.g., sample → transform → 3D)
+SlideSimulation.create({
+    canvasId: 'phase-canvas',
+    slideId: 'my-slide',
+    steps: 3,                   // Total number of arrow-activated steps
+
+    phase: 0,                   // Track current phase
+
+    onStep(step) {
+        // Called when arrow advances to step N (1, 2, 3...)
+        if (step === 1) { this.startSampling(); }
+        if (step === 2) { this.freezeAndShow(); }
+        if (step === 3) { this.transformTo3D(); }
+    },
+
+    onStepBack(step) {
+        // Called when going backward to step N (2, 1, 0...)
+        if (step === 0) { this.reset(); }
+        if (step === 1) { this.resumeSampling(); }
+        if (step === 2) { this.backTo2D(); }
+    },
+
+    init(ctx, canvas) { /* setup */ },
+    update(dt) { /* physics */ },
+    draw(ctx, canvas) { /* render */ }
+});
+```
+
+**Multiple sims on one slide (legacy step system):**
+```javascript
+// Sim 1 starts on 1st arrow, Sim 2 starts on 2nd arrow
+SlideSimulation.create({ canvasId: 'sim1', slideId: 'my-slide', step: 1, ... });
+SlideSimulation.create({ canvasId: 'sim2', slideId: 'my-slide', step: 2, ... });
 ```
 
 **Manual registration (low-level):**

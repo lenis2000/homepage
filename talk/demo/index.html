@@ -122,7 +122,26 @@ description: "Demo of the interactive slide presentation system"
     </div>
 </section>
 
-<!-- ==================== Slide 8: Hash Links ==================== -->
+<!-- ==================== Slide 8: Multi-Phase Simulation ==================== -->
+<section class="slide slide-simulation" id="multiphase" data-title="Multi-Phase">
+    <h2>Multi-Phase Simulation (onStep API)</h2>
+    <p style="margin-bottom: 0.5rem; color: var(--slide-muted);">
+        Press → to advance through phases: <strong>Init → Sample → Transform</strong>
+    </p>
+    <div style="text-align: center;">
+        <div style="position: relative; display: inline-block;">
+            <canvas id="multiphase-canvas" width="400" height="300" style="border: 2px solid var(--slide-navy); border-radius: 8px;"></canvas>
+            <div id="phase-indicator" style="position: absolute; top: 8px; left: 8px; background: var(--slide-navy); color: white; padding: 4px 12px; border-radius: 4px; font-size: 0.9rem;">
+                Phase 0: Initial
+            </div>
+        </div>
+    </div>
+    <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--slide-muted);">
+        Uses <code>onStep(step)</code> to receive arbitrary commands on each arrow press.
+    </p>
+</section>
+
+<!-- ==================== Slide 9: Hash Links ==================== -->
 <section class="slide" id="links" data-title="Hash Links">
     <h2>Direct Links to Slides</h2>
     <p>Each slide has a unique URL hash for direct linking:</p>
@@ -134,16 +153,16 @@ description: "Demo of the interactive slide presentation system"
     <p style="margin-top: 1.5rem;">Share links like <code>/talk/demo/#math</code> to jump directly to a specific slide.</p>
 </section>
 
-<!-- ==================== Slide 9: Summary ==================== -->
+<!-- ==================== Slide 10: Summary ==================== -->
 <section class="slide slide-center" id="summary" data-title="Summary">
     <h2>Summary</h2>
     <ul style="text-align: left; display: inline-block;">
         <li>Keyboard &amp; touch navigation</li>
-        <li>Jump menu for quick access</li>
+        <li>Jump menu for quick access (G)</li>
         <li>UVA-branded styling</li>
-        <li>Dark mode support</li>
-        <li>Math rendering</li>
-        <li>Simulation integration</li>
+        <li>Math rendering (KaTeX)</li>
+        <li>Simulation step system</li>
+        <li>Multi-phase simulations (onStep)</li>
         <li>Responsive design</li>
     </ul>
     <p style="margin-top: 2rem;">
@@ -257,6 +276,147 @@ window.sim2 = SlideSimulation.create({
 // Button handlers
 document.getElementById('sim-toggle').addEventListener('click', () => window.sim1 && window.sim1.toggle());
 document.getElementById('sim-toggle-2').addEventListener('click', () => window.sim2 && window.sim2.toggle());
+
+// Multi-phase simulation demo (uses onStep API)
+window.multiPhaseSim = SlideSimulation.create({
+    canvasId: 'multiphase-canvas',
+    slideId: 'multiphase',
+    steps: 3,  // 3 arrow presses on this slide
+
+    // State
+    phase: 0,
+    points: [],
+    transformProgress: 0,
+
+    init(ctx, canvas) {
+        this.phase = 0;
+        this.points = [];
+        this.transformProgress = 0;
+        // Generate grid of points
+        for (let x = 50; x < canvas.width - 30; x += 40) {
+            for (let y = 50; y < canvas.height - 30; y += 40) {
+                this.points.push({
+                    x: x, y: y,
+                    origX: x, origY: y,
+                    targetX: x, targetY: y,
+                    vx: 0, vy: 0,
+                    color: '#232D4B'
+                });
+            }
+        }
+        this.updatePhaseIndicator();
+    },
+
+    onStep(step) {
+        this.phase = step;
+        if (step === 1) {
+            // Phase 1: Start "sampling" - add random motion
+            this.points.forEach(p => {
+                p.vx = (Math.random() - 0.5) * 4;
+                p.vy = (Math.random() - 0.5) * 4;
+                p.color = '#e57200';
+            });
+            this.start();
+        } else if (step === 2) {
+            // Phase 2: Stop sampling, freeze positions
+            this.pause();
+            this.points.forEach(p => {
+                p.vx = 0;
+                p.vy = 0;
+                p.color = '#6c757d';
+            });
+            this.draw(this.ctx, this.canvas);
+        } else if (step === 3) {
+            // Phase 3: Transform - animate to circular pattern
+            this.transformProgress = 0;
+            const cx = this.canvas.width / 2;
+            const cy = this.canvas.height / 2;
+            this.points.forEach((p, i) => {
+                const angle = (i / this.points.length) * Math.PI * 2;
+                const radius = 80 + (i % 3) * 30;
+                p.targetX = cx + Math.cos(angle) * radius;
+                p.targetY = cy + Math.sin(angle) * radius;
+                p.color = '#232D4B';
+            });
+            this.start();
+        }
+        this.updatePhaseIndicator();
+    },
+
+    onStepBack(step) {
+        this.phase = step;
+        if (step === 0) {
+            // Back to initial state
+            this.pause();
+            this.points.forEach(p => {
+                p.x = p.origX;
+                p.y = p.origY;
+                p.vx = 0;
+                p.vy = 0;
+                p.color = '#232D4B';
+            });
+            this.draw(this.ctx, this.canvas);
+        } else if (step === 1) {
+            // Back to sampling
+            this.points.forEach(p => {
+                p.vx = (Math.random() - 0.5) * 4;
+                p.vy = (Math.random() - 0.5) * 4;
+                p.color = '#e57200';
+            });
+            this.start();
+        } else if (step === 2) {
+            // Back to frozen
+            this.pause();
+            this.points.forEach(p => {
+                p.vx = 0;
+                p.vy = 0;
+                p.color = '#6c757d';
+            });
+            this.draw(this.ctx, this.canvas);
+        }
+        this.updatePhaseIndicator();
+    },
+
+    updatePhaseIndicator() {
+        const indicator = document.getElementById('phase-indicator');
+        if (!indicator) return;
+        const labels = ['Phase 0: Initial', 'Phase 1: Sampling', 'Phase 2: Frozen', 'Phase 3: Transformed'];
+        indicator.textContent = labels[this.phase] || 'Unknown';
+    },
+
+    update(dt) {
+        if (this.phase === 1) {
+            // Sampling mode: random bounce
+            this.points.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 20 || p.x > this.canvas.width - 20) p.vx *= -1;
+                if (p.y < 20 || p.y > this.canvas.height - 20) p.vy *= -1;
+            });
+        } else if (this.phase === 3) {
+            // Transform mode: animate to targets
+            this.transformProgress += dt * 2;
+            const t = Math.min(1, this.transformProgress);
+            this.points.forEach(p => {
+                p.x = p.x + (p.targetX - p.x) * 0.05;
+                p.y = p.y + (p.targetY - p.y) * 0.05;
+            });
+            if (t >= 1) this.pause();
+        }
+    },
+
+    draw(ctx, canvas) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        this.points.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+        });
+    }
+});
 
 }); // end DOMContentLoaded
 </script>
