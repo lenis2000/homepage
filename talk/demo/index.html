@@ -236,6 +236,12 @@ description: "Demo of the interactive slide presentation system"
     initParticles();
     draw();
 
+    // Click on canvas to start/stop
+    canvas.style.cursor = 'pointer';
+    canvas.addEventListener('click', () => {
+        isRunning ? stop() : start();
+    });
+
     // Event listeners
     document.getElementById('sim-toggle').addEventListener('click', () => {
         isRunning ? stop() : start();

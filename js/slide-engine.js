@@ -41,6 +41,22 @@ class SlideEngine {
             return;
         }
 
+        // Add accessibility attributes to slides
+        this.slides.forEach((slide, index) => {
+            slide.setAttribute('role', 'region');
+            slide.setAttribute('aria-roledescription', 'slide');
+            slide.setAttribute('aria-label', slide.dataset.title || `Slide ${index + 1}`);
+            slide.setAttribute('aria-hidden', 'true');
+        });
+
+        // Create live region for announcements
+        this.liveRegion = document.createElement('div');
+        this.liveRegion.setAttribute('role', 'status');
+        this.liveRegion.setAttribute('aria-live', 'polite');
+        this.liveRegion.setAttribute('aria-atomic', 'true');
+        this.liveRegion.className = 'sr-only';
+        document.body.appendChild(this.liveRegion);
+
         // Build UI components
         this.buildProgressBar();
         this.buildNavigation();
@@ -86,20 +102,42 @@ class SlideEngine {
         if (!nav) {
             nav = document.createElement('nav');
             nav.className = 'slide-nav';
-            nav.innerHTML = `
-                <button class="slide-prev" aria-label="Previous slide">&#9664;</button>
-                <span class="slide-counter">1 / ${this.slides.length}</span>
-                <button class="slide-next" aria-label="Next slide">&#9654;</button>
-                <button class="slide-menu" aria-label="Jump to slide">&#9776;</button>
-            `;
+            nav.setAttribute('aria-label', 'Slide navigation');
             document.body.appendChild(nav);
         }
 
-        this.counter = nav.querySelector('.slide-counter');
+        // Create dots container
+        const dotsContainer = document.createElement('div');
+        dotsContainer.className = 'slide-dots';
 
-        nav.querySelector('.slide-prev').addEventListener('click', () => this.prev());
-        nav.querySelector('.slide-next').addEventListener('click', () => this.next());
-        nav.querySelector('.slide-menu').addEventListener('click', () => this.toggleJumpMenu());
+        // Create a dot for each slide
+        this.slides.forEach((slide, index) => {
+            const dot = document.createElement('div');
+            dot.className = 'slide-dot';
+            dot.setAttribute('role', 'button');
+            dot.setAttribute('aria-label', `Go to slide ${index + 1}: ${slide.dataset.title || ''}`);
+            dot.addEventListener('click', () => this.goTo(index));
+            dotsContainer.appendChild(dot);
+        });
+
+        nav.appendChild(dotsContainer);
+
+        // Add counter
+        const counter = document.createElement('span');
+        counter.className = 'slide-counter';
+        counter.textContent = `1/${this.slides.length}`;
+        nav.appendChild(counter);
+
+        // Add menu button
+        const menuBtn = document.createElement('button');
+        menuBtn.className = 'slide-menu';
+        menuBtn.setAttribute('aria-label', 'Jump to slide');
+        menuBtn.innerHTML = '&#9776;';
+        menuBtn.addEventListener('click', () => this.toggleJumpMenu());
+        nav.appendChild(menuBtn);
+
+        this.dotsContainer = dotsContainer;
+        this.counter = counter;
     }
 
     buildJumpMenu() {
@@ -144,6 +182,9 @@ class SlideEngine {
             const title = slide.dataset.title || `Slide ${index + 1}`;
             const item = document.createElement('div');
             item.className = 'slide-jump-item';
+            item.setAttribute('tabindex', '0');
+            item.setAttribute('role', 'button');
+            item.setAttribute('aria-label', `Go to slide ${index + 1}: ${title}`);
             item.innerHTML = `
                 <div class="slide-jump-number">${index + 1}</div>
                 <div class="slide-jump-title">${title}</div>
@@ -151,6 +192,13 @@ class SlideEngine {
             item.addEventListener('click', () => {
                 this.goTo(index);
                 this.toggleJumpMenu(false);
+            });
+            item.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.goTo(index);
+                    this.toggleJumpMenu(false);
+                }
             });
             grid.appendChild(item);
         });
@@ -245,11 +293,17 @@ class SlideEngine {
         // Reset fragments on previous slide (hide all)
         this.showFragmentsUpTo(prevSlide, 0);
 
-        // Update visibility
+        // Update visibility and accessibility
         prevSlide.classList.remove('active');
+        prevSlide.setAttribute('aria-hidden', 'true');
         nextSlide.classList.add('active');
+        nextSlide.setAttribute('aria-hidden', 'false');
+        nextSlide.scrollTop = 0; // Start from top
 
         this.current = index;
+
+        // Announce slide change to screen readers
+        this.announce(`Slide ${index + 1} of ${this.slides.length}: ${nextSlide.dataset.title || ''}`);
 
         // Handle fragments on new slide
         const fragments = this.getFragments(nextSlide);
@@ -278,6 +332,14 @@ class SlideEngine {
         }
     }
 
+    // ==================== Accessibility ====================
+
+    announce(message) {
+        if (this.liveRegion) {
+            this.liveRegion.textContent = message;
+        }
+    }
+
     // ==================== UI Updates ====================
 
     updateProgress() {
@@ -287,8 +349,17 @@ class SlideEngine {
     }
 
     updateCounter() {
-        if (!this.counter) return;
-        this.counter.textContent = `${this.current + 1} / ${this.slides.length}`;
+        // Update dots - highlight current
+        if (this.dotsContainer) {
+            const dots = this.dotsContainer.querySelectorAll('.slide-dot');
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === this.current);
+            });
+        }
+        // Update counter text
+        if (this.counter) {
+            this.counter.textContent = `${this.current + 1}/${this.slides.length}`;
+        }
     }
 
     updateJumpMenuHighlight() {
