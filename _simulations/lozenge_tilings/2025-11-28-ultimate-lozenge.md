@@ -5311,6 +5311,12 @@ function initLozengeApp() {
         if (activeTriangles.size === 0) {
             console.warn('Letter not found:', char);
         }
+        // Reset view and fit to region
+        renderer.resetView();
+        renderer.fitToRegion(activeTriangles);
+        if (renderer3D) {
+            renderer3D.resetCamera();
+        }
         // Apply theme if specified
         if (theme) {
             const paletteIndex = renderer.colorPalettes.findIndex(p => p.name === theme);
