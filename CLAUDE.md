@@ -89,6 +89,40 @@ SlideSimulation.create({
 });
 ```
 
+**Lifecycle methods on sim object:**
+Inside any custom method, you can call:
+- `this.start()` / `this.pause()` / `this.toggle()` - control animation
+- `this.draw()` - manually redraw (useful after state changes when paused)
+- `this.init()` - reinitialize
+- `this.reset()` - pause + reinitialize + redraw
+- `this.canvas`, `this.ctx` - access canvas and 2D context
+
+**Phase control buttons (clickable UI):**
+```html
+<div style="position: relative; display: inline-block;">
+    <canvas id="my-canvas" width="400" height="300"></canvas>
+    <div id="phase-controls" style="position: absolute; top: 8px; right: 8px; display: flex; gap: 4px;"></div>
+</div>
+```
+```javascript
+createPhaseButtons() {
+    const container = document.getElementById('phase-controls');
+    for (let i = 0; i <= this.steps; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = i;
+        btn.style.cssText = 'width: 28px; height: 28px; border-radius: 4px; font-weight: bold; cursor: pointer;';
+        btn.addEventListener('click', () => this.goToPhase(i));
+        container.appendChild(btn);
+    }
+},
+
+goToPhase(targetPhase) {
+    while (this.phase < targetPhase) { this.phase++; this.applyPhase(this.phase); }
+    while (this.phase > targetPhase) { this.applyPhaseBack(this.phase - 1); this.phase--; }
+    this.updatePhaseButtons();
+}
+```
+
 **Multiple sims on one slide (legacy step system):**
 ```javascript
 // Sim 1 starts on 1st arrow, Sim 2 starts on 2nd arrow

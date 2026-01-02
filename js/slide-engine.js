@@ -714,9 +714,22 @@ class SlideSimulation {
             // Merge any custom properties from config
             ...Object.fromEntries(
                 Object.entries(config).filter(([k]) =>
-                    !['canvasId', 'slideId', 'step', 'init', 'draw', 'update', 'reset', 'onStart', 'onPause'].includes(k)
+                    !['canvasId', 'slideId', 'step', 'steps', 'init', 'draw', 'update', 'reset', 'onStart', 'onPause', 'onStep', 'onStepBack'].includes(k)
                 )
             ),
+
+            // Expose lifecycle methods so they can be called via this.draw(), this.init(), etc.
+            init() {
+                if (config.init) config.init.call(sim, ctx, canvas);
+            },
+
+            draw() {
+                if (config.draw) config.draw.call(sim, ctx, canvas);
+            },
+
+            update(dt) {
+                if (config.update) config.update.call(sim, dt);
+            },
 
             start() {
                 if (sim.isRunning) return;
@@ -742,8 +755,8 @@ class SlideSimulation {
             reset() {
                 sim.pause();
                 if (config.reset) config.reset.call(sim);
-                if (config.init) config.init.call(sim, ctx, canvas);
-                if (config.draw) config.draw.call(sim, ctx, canvas);
+                sim.init();
+                sim.draw();
             },
 
             animate() {
@@ -752,16 +765,16 @@ class SlideSimulation {
                 const dt = (now - sim.lastTime) / 1000;
                 sim.lastTime = now;
 
-                if (config.update) config.update.call(sim, dt);
-                if (config.draw) config.draw.call(sim, ctx, canvas);
+                sim.update(dt);
+                sim.draw();
 
                 sim.animationId = requestAnimationFrame(() => sim.animate());
             }
         };
 
         // Initialize
-        if (config.init) config.init.call(sim, ctx, canvas);
-        if (config.draw) config.draw.call(sim, ctx, canvas);
+        sim.init();
+        sim.draw();
 
         // Click to toggle
         canvas.style.cursor = 'pointer';
