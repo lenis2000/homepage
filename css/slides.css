@@ -220,11 +220,28 @@
     display: none;
 }
 
-/* Slide counter - right aligned */
+/* Direct navigation arrows */
+.slide-prev-direct,
+.slide-next-direct {
+    background: transparent;
+    border: none;
+    color: #666;
+    font-size: 10px;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.slide-prev-direct:hover,
+.slide-next-direct:hover {
+    color: var(--slide-accent);
+}
+
+/* Slide counter */
 .slide-counter {
     color: #555;
     font-family: 'SF Mono', Monaco, monospace;
     font-size: 11px;
+    margin: 0 4px;
 }
 
 /* Menu button */
@@ -235,7 +252,7 @@
     font-size: 12px;
     cursor: pointer;
     padding: 2px 6px;
-    margin-left: 8px;
+    margin-left: 4px;
 }
 
 .slide-nav .slide-menu:hover {

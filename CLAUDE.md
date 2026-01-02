@@ -37,13 +37,51 @@ Slides live in `/talk/<name>/index.html` (URL: `/talk/<name>/`).
 ```
 Fragments reveal in order. Going back hides them in reverse.
 
-**Simulation integration:**
+**Simulation integration (SlideSimulation helper):**
+```javascript
+// Use SlideSimulation.create() to avoid boilerplate
+const sim = SlideSimulation.create({
+    canvasId: 'my-canvas',      // Canvas element ID
+    slideId: 'my-slide',        // Slide section ID
+    step: 1,                    // 0=auto-start, 1+=Nth arrow press
+
+    // Custom state (merged into sim object)
+    particles: [],
+
+    init(ctx, canvas) {
+        // Setup - called once and on reset
+        this.particles = [...];
+    },
+
+    update(dt) {
+        // Physics/logic - dt is delta time in seconds
+        this.particles.forEach(p => { p.x += p.vx * dt; });
+    },
+
+    draw(ctx, canvas) {
+        // Render
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        this.particles.forEach(p => { /* draw */ });
+    }
+});
+
+// sim.start(), sim.pause(), sim.toggle(), sim.reset() available
+// Click on canvas toggles automatically
+```
+
+**Manual registration (low-level):**
 ```javascript
 window.slideEngine.registerSimulation('slide-id', {
-    isRunning: false,
-    pause() { /* stop animation */ },
-    resume() { /* restart if was running */ }
-});
+    start() { /* start animation */ },
+    pause() { /* stop animation */ }
+}, 1); // step: 0=auto, 1+=Nth arrow
 ```
+
+**Keyboard shortcuts:**
+- Arrow keys, Space, PageDown/Up for next/prev
+- Cmd+Left/Right (Mac) or Home/End for first/last slide
+- G to open jump menu (type number + Enter)
+- F for fullscreen
+- Direct arrows (◀ ▶) in footer skip fragments/sims
 
 **Demo:** `/talk/demo/` shows all features

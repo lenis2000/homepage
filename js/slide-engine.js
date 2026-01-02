@@ -27,7 +27,8 @@ class SlideEngine {
         this.slides = [];
         this.current = 0;
         this.currentFragment = 0;     // Current fragment index within slide
-        this.simulations = new Map();
+        this.currentSimStep = 0;      // Current simulation step within slide
+        this.simulations = new Map(); // slideId -> array of {sim, step}
         this.jumpMenuOpen = false;
         this.touchStartX = 0;
         this.touchStartY = 0;
@@ -122,11 +123,27 @@ class SlideEngine {
 
         nav.appendChild(dotsContainer);
 
+        // Add prev button (direct slide skip)
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'slide-prev-direct';
+        prevBtn.setAttribute('aria-label', 'Previous slide');
+        prevBtn.innerHTML = '&#9664;';
+        prevBtn.addEventListener('click', () => this.goTo(this.current - 1));
+        nav.appendChild(prevBtn);
+
         // Add counter
         const counter = document.createElement('span');
         counter.className = 'slide-counter';
         counter.textContent = `1/${this.slides.length}`;
         nav.appendChild(counter);
+
+        // Add next button (direct slide skip)
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'slide-next-direct';
+        nextBtn.setAttribute('aria-label', 'Next slide');
+        nextBtn.innerHTML = '&#9654;';
+        nextBtn.addEventListener('click', () => this.goTo(this.current + 1));
+        nav.appendChild(nextBtn);
 
         // Add menu button
         const menuBtn = document.createElement('button');
@@ -262,25 +279,33 @@ class SlideEngine {
         if (this.nextFragment()) {
             return;
         }
-        // No more fragments, go to next slide
+        // Then try to advance simulation step
+        if (this.nextSimStep()) {
+            return;
+        }
+        // No more fragments or sim steps, go to next slide
         if (this.current < this.slides.length - 1) {
             this.goTo(this.current + 1);
         }
     }
 
     prev() {
-        // First try to hide current fragment
+        // First try to go back simulation step
+        if (this.prevSimStep()) {
+            return;
+        }
+        // Then try to hide current fragment
         if (this.prevFragment()) {
             return;
         }
-        // No fragments to hide, go to previous slide
+        // No sim steps or fragments to hide, go to previous slide
         if (this.current > 0) {
-            this.goTo(this.current - 1, { showAllFragments: true });
+            this.goTo(this.current - 1, { showAllFragments: true, showAllSims: true });
         }
     }
 
     goTo(index, options = {}) {
-        const opts = { updateHash: true, showAllFragments: false, ...options };
+        const opts = { updateHash: true, showAllFragments: false, showAllSims: false, ...options };
         if (index < 0 || index >= this.slides.length) return;
         if (index === this.current && this.slides[this.current].classList.contains('active')) return;
 
@@ -288,7 +313,7 @@ class SlideEngine {
         const nextSlide = this.slides[index];
 
         // Pause simulation on previous slide
-        this.pauseSimulation(prevSlide.id);
+        this.pauseAllSimulations(prevSlide.id);
 
         // Reset fragments on previous slide (hide all)
         this.showFragmentsUpTo(prevSlide, 0);
@@ -317,8 +342,19 @@ class SlideEngine {
             this.currentFragment = 0;
         }
 
-        // Resume simulation on new slide
-        this.resumeSimulation(nextSlide.id);
+        // Handle simulations on new slide
+        const maxSimStep = this.getMaxSimStep(nextSlide.id);
+        if (opts.showAllSims) {
+            // Coming from next slide - start all sims
+            this.currentSimStep = maxSimStep;
+            this.startSimulationsUpToStep(nextSlide.id, maxSimStep);
+        } else {
+            // Coming from previous slide - all sims paused, step 0
+            this.currentSimStep = 0;
+            this.pauseAllSimulations(nextSlide.id);
+            // Start step-0 sims (auto-start)
+            this.startSimulationsUpToStep(nextSlide.id, 0);
+        }
 
         // Update UI
         this.updateProgress();
@@ -420,23 +456,72 @@ class SlideEngine {
 
     // ==================== Simulation Management ====================
 
-    registerSimulation(slideId, simulation) {
-        this.simulations.set(slideId, simulation);
+    // Register simulation with optional step (1-based, 0 means start immediately)
+    registerSimulation(slideId, simulation, step = 0) {
+        if (!this.simulations.has(slideId)) {
+            this.simulations.set(slideId, []);
+        }
+        this.simulations.get(slideId).push({ sim: simulation, step: step });
+        // Sort by step
+        this.simulations.get(slideId).sort((a, b) => a.step - b.step);
     }
 
-    pauseSimulation(slideId) {
-        const sim = this.simulations.get(slideId);
-        if (sim && typeof sim.pause === 'function') {
-            sim._wasRunning = sim.isRunning;
-            sim.pause();
-        }
+    getSimsForSlide(slideId) {
+        return this.simulations.get(slideId) || [];
     }
 
-    resumeSimulation(slideId) {
-        const sim = this.simulations.get(slideId);
-        if (sim && typeof sim.resume === 'function' && sim._wasRunning) {
-            sim.resume();
+    getMaxSimStep(slideId) {
+        const sims = this.getSimsForSlide(slideId);
+        if (sims.length === 0) return 0;
+        return Math.max(...sims.map(s => s.step));
+    }
+
+    pauseAllSimulations(slideId) {
+        const sims = this.getSimsForSlide(slideId);
+        sims.forEach(({ sim }) => {
+            if (typeof sim.pause === 'function') {
+                sim.pause();
+            }
+        });
+    }
+
+    startSimulationsUpToStep(slideId, step) {
+        const sims = this.getSimsForSlide(slideId);
+        sims.forEach(({ sim, step: simStep }) => {
+            if (simStep <= step && simStep > 0) {
+                if (typeof sim.start === 'function') sim.start();
+            } else if (simStep === 0) {
+                // Step 0 means auto-start on slide enter
+                if (typeof sim.start === 'function') sim.start();
+            } else {
+                if (typeof sim.pause === 'function') sim.pause();
+            }
+        });
+    }
+
+    // Returns true if there was a simulation step to advance
+    nextSimStep() {
+        const slideId = this.slides[this.current].id;
+        const maxStep = this.getMaxSimStep(slideId);
+
+        if (this.currentSimStep < maxStep) {
+            this.currentSimStep++;
+            this.startSimulationsUpToStep(slideId, this.currentSimStep);
+            return true;
         }
+        return false;
+    }
+
+    // Returns true if there was a simulation step to go back
+    prevSimStep() {
+        const slideId = this.slides[this.current].id;
+
+        if (this.currentSimStep > 0) {
+            this.currentSimStep--;
+            this.startSimulationsUpToStep(slideId, this.currentSimStep);
+            return true;
+        }
+        return false;
     }
 
     // ==================== Event Bindings ====================
@@ -465,6 +550,15 @@ class SlideEngine {
 
             switch (e.key) {
                 case 'ArrowRight':
+                    // Cmd+Right on Mac = End (go to last slide)
+                    if (e.metaKey) {
+                        e.preventDefault();
+                        this.goTo(this.slides.length - 1);
+                        return;
+                    }
+                    e.preventDefault();
+                    this.next();
+                    break;
                 case 'ArrowDown':
                 case ' ':
                 case 'PageDown':
@@ -472,6 +566,15 @@ class SlideEngine {
                     this.next();
                     break;
                 case 'ArrowLeft':
+                    // Cmd+Left on Mac = Home (go to first slide)
+                    if (e.metaKey) {
+                        e.preventDefault();
+                        this.goTo(0);
+                        return;
+                    }
+                    e.preventDefault();
+                    this.prev();
+                    break;
                 case 'ArrowUp':
                 case 'PageUp':
                     e.preventDefault();
@@ -553,10 +656,117 @@ class SlideEngine {
     }
 }
 
+/**
+ * Helper to create and register a canvas simulation with minimal boilerplate.
+ *
+ * Usage:
+ *   SlideSimulation.create({
+ *       canvasId: 'my-canvas',
+ *       slideId: 'my-slide',
+ *       step: 1,  // 0 = auto-start, 1+ = starts on Nth arrow
+ *       init(ctx, canvas) { ... },      // Called once on setup
+ *       draw(ctx, canvas) { ... },      // Called every frame
+ *       update(dt) { ... },             // Called every frame before draw
+ *       reset() { ... }                 // Optional: called on reset
+ *   });
+ */
+class SlideSimulation {
+    static create(config) {
+        const canvas = document.getElementById(config.canvasId);
+        if (!canvas) {
+            console.warn(`SlideSimulation: Canvas #${config.canvasId} not found`);
+            return null;
+        }
+
+        const ctx = canvas.getContext('2d');
+        const sim = {
+            canvas,
+            ctx,
+            isRunning: false,
+            animationId: null,
+            lastTime: 0,
+            // Merge any custom properties from config
+            ...Object.fromEntries(
+                Object.entries(config).filter(([k]) =>
+                    !['canvasId', 'slideId', 'step', 'init', 'draw', 'update', 'reset', 'onStart', 'onPause'].includes(k)
+                )
+            ),
+
+            start() {
+                if (sim.isRunning) return;
+                sim.isRunning = true;
+                sim.lastTime = performance.now();
+                sim.animate();
+                if (config.onStart) config.onStart();
+            },
+
+            pause() {
+                sim.isRunning = false;
+                if (sim.animationId) {
+                    cancelAnimationFrame(sim.animationId);
+                    sim.animationId = null;
+                }
+                if (config.onPause) config.onPause();
+            },
+
+            toggle() {
+                sim.isRunning ? sim.pause() : sim.start();
+            },
+
+            reset() {
+                sim.pause();
+                if (config.reset) config.reset.call(sim);
+                if (config.init) config.init.call(sim, ctx, canvas);
+                if (config.draw) config.draw.call(sim, ctx, canvas);
+            },
+
+            animate() {
+                if (!sim.isRunning) return;
+                const now = performance.now();
+                const dt = (now - sim.lastTime) / 1000;
+                sim.lastTime = now;
+
+                if (config.update) config.update.call(sim, dt);
+                if (config.draw) config.draw.call(sim, ctx, canvas);
+
+                sim.animationId = requestAnimationFrame(() => sim.animate());
+            }
+        };
+
+        // Initialize
+        if (config.init) config.init.call(sim, ctx, canvas);
+        if (config.draw) config.draw.call(sim, ctx, canvas);
+
+        // Click to toggle
+        canvas.style.cursor = 'pointer';
+        canvas.addEventListener('click', () => sim.toggle());
+
+        // Auto-register with slide engine
+        function register() {
+            if (window.slideEngine && config.slideId !== undefined) {
+                window.slideEngine.registerSimulation(config.slideId, {
+                    get isRunning() { return sim.isRunning; },
+                    start: () => sim.start(),
+                    pause: () => sim.pause()
+                }, config.step || 0);
+            } else {
+                // Retry shortly - slideEngine might not be initialized yet
+                setTimeout(register, 50);
+            }
+        }
+
+        // Try to register immediately or after a short delay
+        setTimeout(register, 10);
+
+        return sim;
+    }
+}
+
 // Export for module systems
 if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-    module.exports = SlideEngine;
+    module.exports = { SlideEngine, SlideSimulation };
 }
 
 // Make available globally
 window.SlideEngine = SlideEngine;
+window.SlideSimulation = SlideSimulation;

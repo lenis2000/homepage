@@ -102,17 +102,23 @@ description: "Demo of the interactive slide presentation system"
 
 <!-- ==================== Slide 7: Simulation Placeholder ==================== -->
 <section class="slide slide-simulation" id="simulation" data-title="Simulation">
-    <h2>Interactive Simulations</h2>
-    <div class="simulation-container">
-        <canvas id="demo-canvas" width="600" height="400"></canvas>
-    </div>
-    <div class="simulation-controls">
-        <button id="sim-toggle">Start</button>
-        <button id="sim-reset" class="btn-secondary">Reset</button>
-        <label>
-            Speed:
-            <input type="range" id="sim-speed" min="1" max="100" value="50">
-        </label>
+    <h2>Interactive Simulations (Step System)</h2>
+    <p style="margin-bottom: 1rem; color: var(--slide-muted);">Press → to start Sim 1, then → again for Sim 2</p>
+    <div style="display: flex; gap: 2rem; justify-content: center; flex-wrap: wrap;">
+        <div style="text-align: center;">
+            <div style="font-weight: bold; margin-bottom: 0.5rem;">Simulation 1 (Step 1)</div>
+            <div style="position: relative; display: inline-block;">
+                <canvas id="demo-canvas" width="280" height="200" style="border: 2px solid var(--slide-navy); border-radius: 8px;"></canvas>
+                <button id="sim-toggle" style="position: absolute; top: 8px; right: 8px; background: var(--slide-accent); color: white; border: none; border-radius: 4px; padding: 4px 10px; font-size: 0.8rem; cursor: pointer;">▶</button>
+            </div>
+        </div>
+        <div style="text-align: center;">
+            <div style="font-weight: bold; margin-bottom: 0.5rem;">Simulation 2 (Step 2)</div>
+            <div style="position: relative; display: inline-block;">
+                <canvas id="demo-canvas-2" width="280" height="200" style="border: 2px solid var(--slide-navy); border-radius: 8px;"></canvas>
+                <button id="sim-toggle-2" style="position: absolute; top: 8px; right: 8px; background: var(--slide-accent); color: white; border: none; border-radius: 4px; padding: 4px 10px; font-size: 0.8rem; cursor: pointer;">▶</button>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -145,134 +151,112 @@ description: "Demo of the interactive slide presentation system"
     </p>
 </section>
 
-<!-- Demo simulation script -->
+<!-- Demo simulations using SlideSimulation helper -->
 <script>
-(function() {
-    const canvas = document.getElementById('demo-canvas');
-    if (!canvas) return;
+document.addEventListener('DOMContentLoaded', function() {
 
-    const ctx = canvas.getContext('2d');
-    let isRunning = false;
-    let animationId = null;
-    let particles = [];
-    let speed = 50;
+// Simulation 1: Bouncing particles (Step 1)
+window.sim1 = SlideSimulation.create({
+    canvasId: 'demo-canvas',
+    slideId: 'simulation',
+    step: 1,
+    particles: [],
+    onStart() { document.getElementById('sim-toggle').textContent = '⏸'; },
+    onPause() { document.getElementById('sim-toggle').textContent = '▶'; },
 
-    // Create particles
-    function initParticles() {
-        particles = [];
-        for (let i = 0; i < 50; i++) {
-            particles.push({
+    init(ctx, canvas) {
+        this.particles = [];
+        for (let i = 0; i < 20; i++) {
+            this.particles.push({
                 x: Math.random() * canvas.width,
                 y: Math.random() * canvas.height,
-                vx: (Math.random() - 0.5) * 2,
-                vy: (Math.random() - 0.5) * 2,
-                radius: Math.random() * 8 + 4,
-                color: ['#e57200', '#232D4B', '#6c757d'][Math.floor(Math.random() * 3)]
+                vx: (Math.random() - 0.5) * 3,
+                vy: (Math.random() - 0.5) * 3,
+                radius: Math.random() * 6 + 3,
+                color: ['#e57200', '#232D4B'][Math.floor(Math.random() * 2)]
             });
         }
-    }
+    },
 
-    function draw() {
-        // Get background color based on theme
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        ctx.fillStyle = isDark ? '#1a1a1a' : '#ffffff';
+    update(dt) {
+        const canvas = this.canvas;
+        this.particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.x < p.radius || p.x > canvas.width - p.radius) p.vx *= -1;
+            if (p.y < p.radius || p.y > canvas.height - p.radius) p.vy *= -1;
+            p.x = Math.max(p.radius, Math.min(canvas.width - p.radius, p.x));
+            p.y = Math.max(p.radius, Math.min(canvas.height - p.radius, p.y));
+        });
+    },
+
+    draw(ctx, canvas) {
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Draw particles
-        particles.forEach(p => {
+        this.particles.forEach(p => {
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
             ctx.fillStyle = p.color;
             ctx.fill();
         });
     }
+});
 
-    function update() {
-        const speedFactor = speed / 50;
-        particles.forEach(p => {
-            p.x += p.vx * speedFactor;
-            p.y += p.vy * speedFactor;
+// Simulation 2: Spinning shapes (Step 2)
+window.sim2 = SlideSimulation.create({
+    canvasId: 'demo-canvas-2',
+    slideId: 'simulation',
+    step: 2,
+    angle: 0,
+    shapes: [],
+    onStart() { document.getElementById('sim-toggle-2').textContent = '⏸'; },
+    onPause() { document.getElementById('sim-toggle-2').textContent = '▶'; },
 
-            // Bounce off walls
-            if (p.x < p.radius || p.x > canvas.width - p.radius) p.vx *= -1;
-            if (p.y < p.radius || p.y > canvas.height - p.radius) p.vy *= -1;
-
-            // Keep in bounds
-            p.x = Math.max(p.radius, Math.min(canvas.width - p.radius, p.x));
-            p.y = Math.max(p.radius, Math.min(canvas.height - p.radius, p.y));
-        });
-    }
-
-    function animate() {
-        if (!isRunning) return;
-        update();
-        draw();
-        animationId = requestAnimationFrame(animate);
-    }
-
-    function start() {
-        if (isRunning) return;
-        isRunning = true;
-        document.getElementById('sim-toggle').textContent = 'Stop';
-        animate();
-    }
-
-    function stop() {
-        isRunning = false;
-        document.getElementById('sim-toggle').textContent = 'Start';
-        if (animationId) {
-            cancelAnimationFrame(animationId);
-            animationId = null;
+    init(ctx, canvas) {
+        this.angle = 0;
+        this.shapes = [];
+        for (let i = 0; i < 5; i++) {
+            this.shapes.push({
+                x: 40 + i * 50,
+                y: canvas.height / 2,
+                size: 15 + i * 3,
+                speed: 0.02 + i * 0.01,
+                color: ['#e57200', '#232D4B', '#6c757d', '#e57200', '#232D4B'][i]
+            });
         }
-    }
+    },
 
-    function reset() {
-        stop();
-        initParticles();
-        draw();
-    }
+    update(dt) {
+        this.angle += 0.03;
+    },
 
-    // Initialize
-    initParticles();
-    draw();
+    draw(ctx, canvas) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Click on canvas to start/stop
-    canvas.style.cursor = 'pointer';
-    canvas.addEventListener('click', () => {
-        isRunning ? stop() : start();
-    });
-
-    // Event listeners
-    document.getElementById('sim-toggle').addEventListener('click', () => {
-        isRunning ? stop() : start();
-    });
-
-    document.getElementById('sim-reset').addEventListener('click', reset);
-
-    document.getElementById('sim-speed').addEventListener('input', (e) => {
-        speed = parseInt(e.target.value);
-    });
-
-    // Register with slide engine for pause/resume
-    if (window.slideEngine) {
-        window.slideEngine.registerSimulation('simulation', {
-            isRunning: false,
-            pause: stop,
-            resume: () => { if (particles.length > 0) start(); }
-        });
-    } else {
-        // Wait for slide engine to initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                if (window.slideEngine) {
-                    window.slideEngine.registerSimulation('simulation', {
-                        get isRunning() { return isRunning; },
-                        pause: stop,
-                        resume: () => { if (particles.length > 0 && isRunning) start(); }
-                    });
-                }
-            }, 100);
+        this.shapes.forEach((s, i) => {
+            ctx.save();
+            ctx.translate(s.x, s.y);
+            ctx.rotate(this.angle * s.speed * 50);
+            ctx.beginPath();
+            const sides = 3 + i;
+            for (let j = 0; j <= sides; j++) {
+                const a = (j / sides) * Math.PI * 2 - Math.PI / 2;
+                const px = Math.cos(a) * s.size;
+                const py = Math.sin(a) * s.size;
+                if (j === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.fillStyle = s.color;
+            ctx.fill();
+            ctx.restore();
         });
     }
-})();
+});
+
+// Button handlers
+document.getElementById('sim-toggle').addEventListener('click', () => window.sim1 && window.sim1.toggle());
+document.getElementById('sim-toggle-2').addEventListener('click', () => window.sim2 && window.sim2.toggle());
+
+}); // end DOMContentLoaded
 </script>
