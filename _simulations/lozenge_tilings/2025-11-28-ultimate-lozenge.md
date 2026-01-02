@@ -614,8 +614,8 @@ if (window.LOZENGE_WEBGPU) {
     <span class="param-group"><label for="hexAInput" class="param-label">a</label><input type="number" class="param-input" id="hexAInput" value="4" min="1" max="30" aria-label="Hexagon side a"></span>
     <span class="param-group"><label for="hexBInput" class="param-label">b</label><input type="number" class="param-input" id="hexBInput" value="3" min="1" max="30" aria-label="Hexagon side b"></span>
     <span class="param-group"><label for="hexCInput" class="param-label">c</label><input type="number" class="param-input" id="hexCInput" value="5" min="1" max="30" aria-label="Hexagon side c"></span>
-    <select id="letterSelect" style="padding: 4px 8px; font-size: 12px;" aria-label="Select letter or number shape">
-      <option value="">Letters and Numbers (under construction)</option>
+    <select id="letterSelect" style="padding: 4px 8px; font-size: 12px;" aria-label="Select preset shape">
+      <option value="">Presets</option>
     </select>
   </div>
 </div>
@@ -5285,15 +5285,17 @@ function initLozengeApp() {
             opt.textContent = i.toString();
             select.appendChild(opt);
         }
-        // Add special shapes
+        // Add special shapes (with optional theme)
         const specialShapes = [
-            { value: '*', label: '*' },
-            { value: '***', label: '***' }
+            { value: '*', label: 'Snowflake' },
+            { value: '***', label: 'Snowman' },
+            { value: 'christmas-tree', label: 'Christmas Tree', theme: 'New Year' }
         ];
         for (const shape of specialShapes) {
             const opt = document.createElement('option');
             opt.value = shape.value;
             opt.textContent = shape.label;
+            if (shape.theme) opt.dataset.theme = shape.theme;
             select.appendChild(opt);
         }
     }
@@ -5302,10 +5304,23 @@ function initLozengeApp() {
     el.letterSelect.addEventListener('change', async (e) => {
         const char = e.target.value;
         if (!char) return;
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        const theme = selectedOption.dataset.theme;
         saveState();
         activeTriangles = await loadLetterTriangles(char);
         if (activeTriangles.size === 0) {
             console.warn('Letter not found:', char);
+        }
+        // Apply theme if specified
+        if (theme) {
+            const paletteIndex = renderer.colorPalettes.findIndex(p => p.name === theme);
+            if (paletteIndex !== -1) {
+                renderer.setPalette(paletteIndex);
+                if (renderer3D) {
+                    renderer3D.setPalette(paletteIndex);
+                }
+                el.paletteSelect.value = paletteIndex;
+            }
         }
         reinitialize();
         e.target.value = ''; // Reset to placeholder
