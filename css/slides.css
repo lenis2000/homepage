@@ -1,0 +1,563 @@
+/**
+ * Slide Presentation Styles
+ *
+ * UVA-branded styles for interactive presentations.
+ * Uses CSS variables from main.css for theme support.
+ */
+
+/* ==================== Slide Variables ==================== */
+
+:root {
+    --slide-bg: var(--bg-primary, #ffffff);
+    --slide-text: var(--text-primary, #212529);
+    --slide-accent: var(--accent-color, #e57200);
+    --slide-navy: #232D4B;
+    --slide-muted: var(--text-secondary, #6c757d);
+    --slide-border: var(--border-color, #DADADA);
+    --progress-bg: var(--border-color, #dee2e6);
+}
+
+[data-theme="dark"] {
+    --slide-navy: #4a6a9a;
+}
+
+/* ==================== Base Presentation ==================== */
+
+.slide-presentation {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: var(--slide-bg);
+}
+
+.slides-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+}
+
+/* ==================== Individual Slides ==================== */
+
+.slide {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    padding: 4rem 6rem;
+    box-sizing: border-box;
+    background: var(--slide-bg);
+    color: var(--slide-text);
+    overflow: hidden;
+}
+
+.slide.active {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Center content by default */
+.slide-center {
+    align-items: center;
+    text-align: center;
+}
+
+/* Top-aligned content */
+.slide-top {
+    justify-content: flex-start;
+    padding-top: 6rem;
+}
+
+/* ==================== Typography ==================== */
+
+.slide h1 {
+    font-family: "franklingothic-demi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 3.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--slide-navy);
+    margin-bottom: 1rem;
+    line-height: 1.2;
+}
+
+.slide h2 {
+    font-family: "franklingothic-demi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 2.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--slide-navy);
+    margin-bottom: 1.5rem;
+    line-height: 1.3;
+}
+
+.slide h3 {
+    font-family: "franklingothic-demi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 1.8rem;
+    color: var(--slide-text);
+    margin-bottom: 1rem;
+}
+
+.slide p, .slide li {
+    font-family: "franklingothic-book", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 1.5rem;
+    line-height: 1.6;
+    margin-bottom: 0.75rem;
+}
+
+.slide ul, .slide ol {
+    margin-left: 2rem;
+    margin-bottom: 1rem;
+}
+
+.slide li {
+    margin-bottom: 0.5rem;
+}
+
+.slide a {
+    color: var(--slide-accent);
+    text-decoration: none;
+}
+
+.slide a:hover {
+    text-decoration: underline;
+}
+
+/* Subtitle styling */
+.slide .subtitle {
+    font-family: 'Unna', serif;
+    font-style: italic;
+    font-size: 1.8rem;
+    color: var(--slide-muted);
+    margin-top: -0.5rem;
+    margin-bottom: 2rem;
+}
+
+/* Author styling */
+.slide .author {
+    font-size: 1.3rem;
+    color: var(--slide-muted);
+    margin-top: 2rem;
+}
+
+/* ==================== Progress Bar ==================== */
+
+.slide-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--progress-bg);
+    z-index: 1000;
+}
+
+.slide-progress-bar {
+    height: 100%;
+    background: var(--slide-accent);
+    transition: width 0.3s ease;
+    width: 0;
+}
+
+/* ==================== Navigation Controls ==================== */
+
+.slide-nav {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 0.5rem 1.25rem;
+    border-radius: 2rem;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.slide-nav button {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.slide-nav button:hover {
+    color: var(--slide-accent);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.slide-nav button:active {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.slide-counter {
+    color: white;
+    font-family: 'SF Mono', Monaco, 'Consolas', monospace;
+    font-size: 0.9rem;
+    min-width: 4rem;
+    text-align: center;
+}
+
+/* ==================== Jump Menu ==================== */
+
+.slide-jump-menu {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    padding: 2rem 3rem;
+    overflow-y: auto;
+}
+
+.slide-jump-menu[hidden] {
+    display: none;
+}
+
+/* Number input at top */
+.slide-jump-input-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.slide-jump-input-wrapper label {
+    color: white;
+    font-size: 1.2rem;
+}
+
+.slide-jump-input {
+    width: 100px;
+    padding: 0.5rem 1rem;
+    font-size: 1.2rem;
+    border: 2px solid var(--slide-accent);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #212529;
+    text-align: center;
+}
+
+.slide-jump-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(229, 114, 0, 0.4);
+}
+
+/* Grid of slides */
+.slide-jump-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    align-content: start;
+}
+
+.slide-jump-item {
+    background: var(--slide-bg);
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.2s, outline-color 0.2s;
+    outline: 2px solid transparent;
+}
+
+.slide-jump-item:hover {
+    transform: scale(1.03);
+    outline-color: var(--slide-accent);
+}
+
+.slide-jump-item.current {
+    outline: 3px solid var(--slide-accent);
+}
+
+.slide-jump-number {
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--slide-accent);
+    margin-bottom: 0.25rem;
+}
+
+.slide-jump-title {
+    font-size: 0.9rem;
+    color: var(--slide-text);
+    line-height: 1.3;
+}
+
+/* ==================== Simulation Slides ==================== */
+
+.slide.slide-simulation {
+    padding: 2rem 3rem;
+}
+
+.slide.slide-simulation h2 {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.simulation-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+}
+
+.simulation-container canvas {
+    max-width: 100%;
+    max-height: 100%;
+    border: 2px solid var(--slide-navy);
+    border-radius: 8px;
+    background: var(--slide-bg);
+}
+
+.simulation-controls {
+    background: var(--bg-secondary, #F1F1EF);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin-top: 1rem;
+    margin-bottom: 4rem;  /* Space for fixed nav bar */
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.simulation-controls button {
+    background: var(--slide-accent);
+    border: none;
+    color: white;
+    padding: 0.5rem 1.25rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.simulation-controls button:hover {
+    background: #c45f00;
+}
+
+.simulation-controls button.btn-secondary {
+    background: var(--slide-muted);
+}
+
+.simulation-controls button.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.simulation-controls label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    color: var(--slide-text);
+}
+
+.simulation-controls input[type="range"] {
+    width: 150px;
+}
+
+/* ==================== Two-Column Layout ==================== */
+
+.slide-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: center;
+    width: 100%;
+}
+
+.slide-columns > * {
+    min-width: 0;
+}
+
+/* ==================== Images ==================== */
+
+.slide img {
+    max-width: 100%;
+    max-height: 60vh;
+    border-radius: 8px;
+}
+
+.slide figure {
+    margin: 0;
+    text-align: center;
+}
+
+.slide figcaption {
+    font-size: 1rem;
+    color: var(--slide-muted);
+    margin-top: 0.5rem;
+    font-style: italic;
+}
+
+/* ==================== Code Blocks ==================== */
+
+.slide pre {
+    background: var(--code-bg, #f5f5f5);
+    padding: 1.5rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 1.1rem;
+    line-height: 1.4;
+}
+
+.slide code {
+    font-family: 'SF Mono', Monaco, 'Consolas', monospace;
+}
+
+/* ==================== Responsive ==================== */
+
+@media (max-width: 1024px) {
+    .slide {
+        padding: 3rem 4rem;
+    }
+
+    .slide h1 {
+        font-size: 2.8rem;
+    }
+
+    .slide h2 {
+        font-size: 2rem;
+    }
+
+    .slide p, .slide li {
+        font-size: 1.3rem;
+    }
+
+    .slide-columns {
+        gap: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .slide {
+        padding: 2rem;
+    }
+
+    .slide h1 {
+        font-size: 2rem;
+    }
+
+    .slide h2 {
+        font-size: 1.5rem;
+    }
+
+    .slide p, .slide li {
+        font-size: 1.1rem;
+    }
+
+    .slide-columns {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .slide-nav {
+        bottom: 1rem;
+        padding: 0.4rem 1rem;
+    }
+
+    .slide-jump-menu {
+        padding: 1.5rem;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+
+    .simulation-controls {
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* ==================== Fragments (PowerPoint-style builds) ==================== */
+
+.fragment {
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.fragment.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Fragment animation variants */
+.fragment.fade-up {
+    transform: translateY(20px);
+}
+
+.fragment.fade-up.visible {
+    transform: translateY(0);
+}
+
+.fragment.fade-down {
+    transform: translateY(-20px);
+}
+
+.fragment.fade-down.visible {
+    transform: translateY(0);
+}
+
+.fragment.fade-left {
+    transform: translateX(20px);
+}
+
+.fragment.fade-left.visible {
+    transform: translateX(0);
+}
+
+.fragment.fade-right {
+    transform: translateX(-20px);
+}
+
+.fragment.fade-right.visible {
+    transform: translateX(0);
+}
+
+.fragment.zoom-in {
+    transform: scale(0.9);
+}
+
+.fragment.zoom-in.visible {
+    transform: scale(1);
+}
+
+/* Highlight fragment - dims then brightens */
+.fragment.highlight {
+    opacity: 0.4;
+    visibility: visible;
+}
+
+.fragment.highlight.visible {
+    opacity: 1;
+}
+
+/* ==================== Print Styles ==================== */
+
+@media print {
+    .slide-progress,
+    .slide-nav,
+    .slide-jump-menu {
+        display: none !important;
+    }
+
+    .slide {
+        display: block !important;
+        position: relative;
+        page-break-after: always;
+        height: auto;
+        min-height: 100vh;
+    }
+}

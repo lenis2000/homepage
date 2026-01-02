@@ -1,0 +1,272 @@
+---
+layout: slides
+title: "Slide Demo"
+description: "Demo of the interactive slide presentation system"
+---
+
+<!-- ==================== Slide 1: Title ==================== -->
+<section class="slide slide-center" id="title" data-title="Title">
+    <h1>Interactive Slide Demo</h1>
+    <p class="subtitle">Testing the presentation infrastructure</p>
+    <p class="author">Press arrow keys to navigate</p>
+</section>
+
+<!-- ==================== Slide 2: Navigation Help ==================== -->
+<section class="slide" id="navigation" data-title="Navigation">
+    <h2>How to Navigate</h2>
+    <ul>
+        <li><strong>Arrow keys</strong> or <strong>Space</strong> &mdash; Next/Previous slide</li>
+        <li><strong>G</strong> &mdash; Open jump menu (go to any slide)</li>
+        <li><strong>F</strong> &mdash; Toggle fullscreen</li>
+        <li><strong>Home/End</strong> &mdash; First/Last slide</li>
+        <li><strong>Swipe</strong> &mdash; Works on touch devices</li>
+    </ul>
+    <p style="margin-top: 2rem; color: var(--slide-muted);">
+        You can also click the navigation buttons at the bottom.
+    </p>
+</section>
+
+<!-- ==================== Slide 3: Typography ==================== -->
+<section class="slide" id="typography" data-title="Typography">
+    <h2>Typography Examples</h2>
+    <h3>This is a Heading 3</h3>
+    <p>Regular paragraph text uses Franklin Gothic Book. It's designed for readability in presentations.</p>
+    <p>You can use <strong>bold text</strong>, <em>italic text</em>, and <a href="#">links styled in UVA orange</a>.</p>
+    <p class="subtitle">Serif italics use the Unna font for an elegant touch.</p>
+</section>
+
+<!-- ==================== Slide 4: Two Columns ==================== -->
+<section class="slide" id="columns" data-title="Two Columns">
+    <h2>Two-Column Layout</h2>
+    <div class="slide-columns">
+        <div>
+            <h3>Left Column</h3>
+            <p>Content can be split into two columns for side-by-side comparisons or image-text layouts.</p>
+            <ul>
+                <li>First point</li>
+                <li>Second point</li>
+                <li>Third point</li>
+            </ul>
+        </div>
+        <div>
+            <h3>Right Column</h3>
+            <p>Each column automatically takes half the available width.</p>
+            <p>On mobile devices, columns stack vertically for better readability.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== Slide 5: Fragments ==================== -->
+<section class="slide" id="fragments" data-title="Fragments">
+    <h2>Step-by-Step Reveals</h2>
+    <p>Press arrow or click to reveal each item:</p>
+    <ul>
+        <li class="fragment fade-up">First point appears</li>
+        <li class="fragment fade-up">Second point follows</li>
+        <li class="fragment fade-up">Third point last</li>
+    </ul>
+    <p class="fragment fade-up" style="margin-top: 2rem; color: var(--slide-accent);">
+        <strong>Fragment classes:</strong> <code>fade-up</code>, <code>fade-down</code>, <code>fade-left</code>, <code>fade-right</code>, <code>zoom-in</code>
+    </p>
+</section>
+
+<!-- ==================== Slide 6: Math ==================== -->
+<section class="slide slide-center" id="math" data-title="Math">
+    <h2>Math Rendering with KaTeX</h2>
+    <p>Inline math: \( e^{i\pi} + 1 = 0 \)</p>
+    <p style="font-size: 2rem; margin-top: 2rem;">
+        $$ \int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi} $$
+    </p>
+    <p style="margin-top: 2rem; color: var(--slide-muted);">
+        Math is rendered automatically using KaTeX.
+    </p>
+</section>
+
+<!-- ==================== Slide 6: Code ==================== -->
+<section class="slide" id="code" data-title="Code">
+    <h2>Code Blocks</h2>
+    <pre><code>class SlideEngine {
+    constructor(options) {
+        this.slides = [];
+        this.current = 0;
+    }
+
+    next() {
+        if (this.current < this.slides.length - 1) {
+            this.goTo(this.current + 1);
+        }
+    }
+}</code></pre>
+    <p style="margin-top: 1rem;">Code blocks use a monospace font with proper syntax highlighting support.</p>
+</section>
+
+<!-- ==================== Slide 7: Simulation Placeholder ==================== -->
+<section class="slide slide-simulation" id="simulation" data-title="Simulation">
+    <h2>Interactive Simulations</h2>
+    <div class="simulation-container">
+        <canvas id="demo-canvas" width="600" height="400"></canvas>
+    </div>
+    <div class="simulation-controls">
+        <button id="sim-toggle">Start</button>
+        <button id="sim-reset" class="btn-secondary">Reset</button>
+        <label>
+            Speed:
+            <input type="range" id="sim-speed" min="1" max="100" value="50">
+        </label>
+    </div>
+</section>
+
+<!-- ==================== Slide 8: Hash Links ==================== -->
+<section class="slide" id="links" data-title="Hash Links">
+    <h2>Direct Links to Slides</h2>
+    <p>Each slide has a unique URL hash for direct linking:</p>
+    <ul>
+        <li><code>#title</code> &mdash; Title slide</li>
+        <li><code>#navigation</code> &mdash; Navigation help</li>
+        <li><code>#simulation</code> &mdash; Interactive demo</li>
+    </ul>
+    <p style="margin-top: 1.5rem;">Share links like <code>/talk/demo/#math</code> to jump directly to a specific slide.</p>
+</section>
+
+<!-- ==================== Slide 9: Summary ==================== -->
+<section class="slide slide-center" id="summary" data-title="Summary">
+    <h2>Summary</h2>
+    <ul style="text-align: left; display: inline-block;">
+        <li>Keyboard &amp; touch navigation</li>
+        <li>Jump menu for quick access</li>
+        <li>UVA-branded styling</li>
+        <li>Dark mode support</li>
+        <li>Math rendering</li>
+        <li>Simulation integration</li>
+        <li>Responsive design</li>
+    </ul>
+    <p style="margin-top: 2rem;">
+        <strong>Press G</strong> to try the jump menu!
+    </p>
+</section>
+
+<!-- Demo simulation script -->
+<script>
+(function() {
+    const canvas = document.getElementById('demo-canvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    let isRunning = false;
+    let animationId = null;
+    let particles = [];
+    let speed = 50;
+
+    // Create particles
+    function initParticles() {
+        particles = [];
+        for (let i = 0; i < 50; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                radius: Math.random() * 8 + 4,
+                color: ['#e57200', '#232D4B', '#6c757d'][Math.floor(Math.random() * 3)]
+            });
+        }
+    }
+
+    function draw() {
+        // Get background color based on theme
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        ctx.fillStyle = isDark ? '#1a1a1a' : '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw particles
+        particles.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+        });
+    }
+
+    function update() {
+        const speedFactor = speed / 50;
+        particles.forEach(p => {
+            p.x += p.vx * speedFactor;
+            p.y += p.vy * speedFactor;
+
+            // Bounce off walls
+            if (p.x < p.radius || p.x > canvas.width - p.radius) p.vx *= -1;
+            if (p.y < p.radius || p.y > canvas.height - p.radius) p.vy *= -1;
+
+            // Keep in bounds
+            p.x = Math.max(p.radius, Math.min(canvas.width - p.radius, p.x));
+            p.y = Math.max(p.radius, Math.min(canvas.height - p.radius, p.y));
+        });
+    }
+
+    function animate() {
+        if (!isRunning) return;
+        update();
+        draw();
+        animationId = requestAnimationFrame(animate);
+    }
+
+    function start() {
+        if (isRunning) return;
+        isRunning = true;
+        document.getElementById('sim-toggle').textContent = 'Stop';
+        animate();
+    }
+
+    function stop() {
+        isRunning = false;
+        document.getElementById('sim-toggle').textContent = 'Start';
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+        }
+    }
+
+    function reset() {
+        stop();
+        initParticles();
+        draw();
+    }
+
+    // Initialize
+    initParticles();
+    draw();
+
+    // Event listeners
+    document.getElementById('sim-toggle').addEventListener('click', () => {
+        isRunning ? stop() : start();
+    });
+
+    document.getElementById('sim-reset').addEventListener('click', reset);
+
+    document.getElementById('sim-speed').addEventListener('input', (e) => {
+        speed = parseInt(e.target.value);
+    });
+
+    // Register with slide engine for pause/resume
+    if (window.slideEngine) {
+        window.slideEngine.registerSimulation('simulation', {
+            isRunning: false,
+            pause: stop,
+            resume: () => { if (particles.length > 0) start(); }
+        });
+    } else {
+        // Wait for slide engine to initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (window.slideEngine) {
+                    window.slideEngine.registerSimulation('simulation', {
+                        get isRunning() { return isRunning; },
+                        pause: stop,
+                        resume: () => { if (particles.length > 0 && isRunning) start(); }
+                    });
+                }
+            }, 100);
+        });
+    }
+})();
+</script>

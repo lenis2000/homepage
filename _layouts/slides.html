@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>{{ page.title }} &bull; Leonid Petrov</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{ page.description | default: site.description }}">
+
+    {% include opengraph.html %}
+
+    <!-- KaTeX for math -->
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.7.1/katex.min.css" integrity="sha384-wITovz90syo1dJWVh32uuETPVEtGigN07tkttEqPv+uR2SE/mbQcG7ATL28aI9H0" crossorigin="anonymous">
+
+    <!-- Bootstrap (for utility classes) -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+
+    <!-- Font Awesome -->
+    <link href="{{ site.url }}/css/fontawesome-free-6.2.1-web/css/all.min.css" rel="stylesheet">
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Unna" rel="stylesheet">
+
+    <!-- Site CSS -->
+    <link href="{{ site.url }}/css/main.css" rel="stylesheet">
+
+    <!-- Slides CSS -->
+    <link href="{{ site.url }}/css/slides.css" rel="stylesheet">
+
+    <!-- Theme toggle -->
+    <script src="{{ site.url }}/js/theme-toggle.js"></script>
+
+    {% if page.extra_css %}
+    <style>{{ page.extra_css }}</style>
+    {% endif %}
+</head>
+
+<body class="slide-presentation">
+
+    <!-- Slides container -->
+    <main class="slides-container">
+        {{ content }}
+    </main>
+
+    <!-- Color schemes (for simulations) -->
+    <script src="{{ site.url }}/js/colorschemes.js"></script>
+
+    <!-- Slide engine -->
+    <script src="{{ site.url }}/js/slide-engine.js"></script>
+
+    <!-- Math rendering -->
+    {% include math.js %}
+
+    <!-- Initialize slide engine -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const engine = new SlideEngine({
+                showProgress: {{ page.show_progress | default: true }},
+                showNav: {{ page.show_nav | default: true }}
+            });
+            engine.init();
+
+            // Expose engine globally for debugging and simulation registration
+            window.slideEngine = engine;
+        });
+    </script>
+
+    {% if page.extra_js %}
+    <script>{{ page.extra_js }}</script>
+    {% endif %}
+
+</body>
+
+</html>
