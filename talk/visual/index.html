@@ -274,7 +274,7 @@ window.addEventListener('wasm-loaded', async function() {
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1rem, 3vw, 4rem); margin-top: 2vh; align-items: start;">
         <!-- Left column: Salt crystal images -->
         <div>
-            <p style="text-align: center; margin-bottom: 2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">Salt — same substance at different scales and growth conditions</p>
+            <p style="text-align: left; margin-bottom: 2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">Salt — same substance with cubic crystal structure, at different scales and growth conditions</p>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.5rem, 1vw, 1rem);">
                 <figure style="margin: 0;">
                     <img src="images/salt-micro-public-domain.jpg" alt="Salt crystals microscopic" style="width: 100%; height: 28vh; object-fit: cover; border-radius: 4px;">
@@ -289,17 +289,19 @@ window.addEventListener('wasm-loaded', async function() {
                     <figcaption><strong style="color: var(--slide-navy);">Mesoscopic</strong> · Lavinsky, CC BY-SA 3.0</figcaption>
                 </figure>
                 <figure style="margin: 0;">
-                    <img src="images/salt-smooth-deadsea-xta11-cc-by-sa-4.jpg" alt="Smooth salt formation" style="width: 100%; height: 28vh; object-fit: cover; border-radius: 4px;">
+                    <div style="overflow: hidden; border-radius: 4px; height: 28vh;">
+                        <img src="images/salt-smooth-deadsea-xta11-cc-by-sa-4.jpg" alt="Smooth salt formation" style="width: 100%; height: 100%; object-fit: cover; transform: scale(1.5); transform-origin: right bottom;">
+                    </div>
                     <figcaption><strong style="color: var(--slide-navy);">Macroscopic</strong> · xta11, CC BY-SA 4.0</figcaption>
                 </figure>
             </div>
         </div>
 
         <!-- Right column: Crystal growth simulation -->
-        <div style="text-align: center;">
-            <p style="margin-bottom: 2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">Random crystal growth</p>
-            <canvas id="crystal-growth-canvas" style="width: 35vh; height: 45vh; border: 2px solid var(--slide-navy); border-radius: 8px; background: #fff;"></canvas>
-            <p style="font-size: clamp(1rem, 1.4vw, 1.3rem); color: var(--slide-muted); margin-top: 1vh;">[Simulation placeholder]</p>
+        <div>
+            <p style="text-align: left; margin-bottom: 2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">Random crystal growth<br><span style="visibility: hidden;">phantom</span></p>
+            <canvas id="crystal-growth-canvas" style="width: 100%; height: 62vh; border: 2px solid var(--slide-navy); border-radius: 8px; background: #fff;"></canvas>
+            <p style="font-size: clamp(1rem, 1.4vw, 1.3rem); color: var(--slide-muted); margin-top: 1vh; text-align: left;">[Simulation placeholder]</p>
         </div>
     </div>
 
