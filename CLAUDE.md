@@ -142,7 +142,9 @@ window.slideEngine.registerSimulation('slide-id', {
 - Arrow keys, Space, PageDown/Up for next/prev
 - Cmd+Left/Right (Mac) or Home/End for first/last slide
 - G to open jump menu (type number + Enter)
+- P to show build order overlay (fragments/simulations per slide)
 - F for fullscreen
+- Escape to close any overlay
 - Direct arrows (◀ ▶) in footer skip fragments/sims
 
 **Demo:** `/talk/demo/` shows all features

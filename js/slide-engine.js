@@ -6,6 +6,7 @@
  * - Hash-based routing (#slide-N)
  * - Jump menu (press G)
  * - Fullscreen toggle (press F)
+ * - Build order overlay (press P) - shows all slides with fragments/simulations
  * - Simulation pause/resume on slide transitions
  * - Touch swipe support
  *
@@ -30,6 +31,7 @@ class SlideEngine {
         this.currentSimStep = 0;      // Current simulation step within slide
         this.simulations = new Map(); // slideId -> array of {sim, step}
         this.jumpMenuOpen = false;
+        this.buildOverlayOpen = false;
         this.touchStartX = 0;
         this.touchStartY = 0;
     }
@@ -62,6 +64,7 @@ class SlideEngine {
         this.buildProgressBar();
         this.buildNavigation();
         this.buildJumpMenu();
+        this.buildBuildOverlay();
 
         // Bind events
         this.bindKeyboard();
@@ -226,6 +229,101 @@ class SlideEngine {
                 this.toggleJumpMenu(false);
             }
         });
+    }
+
+    buildBuildOverlay() {
+        let overlay = document.querySelector('.slide-build-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'slide-build-overlay';
+            overlay.hidden = true;
+            document.body.appendChild(overlay);
+        }
+        this.buildOverlay = overlay;
+
+        // Close on background click
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                this.toggleBuildOverlay(false);
+            }
+        });
+    }
+
+    updateBuildOverlay() {
+        if (!this.buildOverlay) return;
+
+        let html = '<div class="slide-build-content">';
+        html += '<h2>Build Order Overview <span style="font-weight:normal;font-size:0.7em">(press P to close)</span></h2>';
+
+        this.slides.forEach((slide, index) => {
+            const slideId = slide.id || `slide-${index + 1}`;
+            const title = slide.dataset.title || `Slide ${index + 1}`;
+            const fragments = this.getFragments(slide);
+            const sims = this.getSimsForSlide(slideId);
+
+            // Collect all build steps for this slide
+            const buildSteps = [];
+
+            // Fragments (each is a step)
+            fragments.forEach((frag, i) => {
+                const text = frag.textContent.substring(0, 50).trim() || '(fragment)';
+                const classes = Array.from(frag.classList).filter(c => c !== 'fragment' && c !== 'visible').join(' ');
+                buildSteps.push({
+                    type: 'fragment',
+                    order: i + 1,
+                    label: `Fragment ${i + 1}${classes ? ` [${classes}]` : ''}: "${text}${frag.textContent.length > 50 ? '...' : ''}"`
+                });
+            });
+
+            // Simulations
+            sims.forEach(({ sim, step }) => {
+                const stepLabel = step === 0 ? 'auto' : step;
+                const stepsCount = sim.steps ? ` (${sim.steps} phases)` : '';
+                buildSteps.push({
+                    type: 'simulation',
+                    order: step,
+                    label: `Sim step=${stepLabel}${stepsCount}`
+                });
+            });
+
+            // Sort by order
+            buildSteps.sort((a, b) => a.order - b.order);
+
+            const isCurrent = index === this.current;
+            html += `<div class="slide-build-item${isCurrent ? ' current' : ''}">`;
+            html += `<div class="slide-build-header" onclick="window.slideEngine.goTo(${index}); window.slideEngine.toggleBuildOverlay(false);">`;
+            html += `<span class="slide-build-num">${index + 1}</span>`;
+            html += `<span class="slide-build-title">${title}</span>`;
+            html += `<span class="slide-build-id">#${slideId}</span>`;
+            html += '</div>';
+
+            if (buildSteps.length > 0) {
+                html += '<ul class="slide-build-steps">';
+                buildSteps.forEach(step => {
+                    const icon = step.type === 'fragment' ? '&#9654;' : '&#9881;';
+                    const typeClass = step.type === 'fragment' ? 'fragment-step' : 'sim-step';
+                    html += `<li class="${typeClass}"><span class="step-icon">${icon}</span> ${step.label}</li>`;
+                });
+                html += '</ul>';
+            } else {
+                html += '<div class="slide-build-empty">No fragments or simulations</div>';
+            }
+
+            html += '</div>';
+        });
+
+        html += '</div>';
+        this.buildOverlay.innerHTML = html;
+    }
+
+    toggleBuildOverlay(forceState) {
+        const shouldOpen = forceState !== undefined ? forceState : !this.buildOverlayOpen;
+        this.buildOverlayOpen = shouldOpen;
+
+        if (shouldOpen) {
+            this.updateBuildOverlay();
+        }
+        this.buildOverlay.hidden = !shouldOpen;
     }
 
     // ==================== Fragment Management ====================
@@ -564,15 +662,22 @@ class SlideEngine {
             // Don't capture when typing in inputs
             if (this.isInputFocused()) return;
 
-            // Close jump menu on Escape
-            if (e.key === 'Escape' && this.jumpMenuOpen) {
-                e.preventDefault();
-                this.toggleJumpMenu(false);
-                return;
+            // Close overlays on Escape
+            if (e.key === 'Escape') {
+                if (this.buildOverlayOpen) {
+                    e.preventDefault();
+                    this.toggleBuildOverlay(false);
+                    return;
+                }
+                if (this.jumpMenuOpen) {
+                    e.preventDefault();
+                    this.toggleJumpMenu(false);
+                    return;
+                }
             }
 
-            // Don't navigate when jump menu is open (except Escape)
-            if (this.jumpMenuOpen) return;
+            // Don't navigate when overlays are open (except Escape)
+            if (this.jumpMenuOpen || this.buildOverlayOpen) return;
 
             switch (e.key) {
                 case 'ArrowRight':
@@ -623,6 +728,11 @@ class SlideEngine {
                 case 'F':
                     e.preventDefault();
                     this.toggleFullscreen();
+                    break;
+                case 'p':
+                case 'P':
+                    e.preventDefault();
+                    this.toggleBuildOverlay();
                     break;
             }
 

@@ -349,6 +349,120 @@
     line-height: 1.3;
 }
 
+/* ==================== Build Order Overlay ==================== */
+
+.slide-build-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 2000;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+.slide-build-overlay[hidden] {
+    display: none;
+}
+
+.slide-build-content {
+    max-width: 900px;
+    width: 100%;
+}
+
+.slide-build-content h2 {
+    color: white;
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.slide-build-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid transparent;
+}
+
+.slide-build-item.current {
+    background: rgba(229, 114, 0, 0.15);
+    border-left-color: var(--slide-accent);
+}
+
+.slide-build-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    padding: 0.25rem 0;
+}
+
+.slide-build-header:hover {
+    opacity: 0.8;
+}
+
+.slide-build-num {
+    background: var(--slide-accent);
+    color: white;
+    font-weight: bold;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    min-width: 2rem;
+    text-align: center;
+}
+
+.slide-build-title {
+    color: white;
+    font-weight: 500;
+    flex: 1;
+}
+
+.slide-build-id {
+    color: rgba(255, 255, 255, 0.4);
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.8rem;
+}
+
+.slide-build-steps {
+    list-style: none;
+    margin: 0.5rem 0 0 2.5rem;
+    padding: 0;
+    font-size: 0.85rem;
+}
+
+.slide-build-steps li {
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0.2rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.slide-build-steps .step-icon {
+    font-size: 0.7rem;
+    opacity: 0.6;
+}
+
+.slide-build-steps .fragment-step {
+    color: #8be9fd;
+}
+
+.slide-build-steps .sim-step {
+    color: #50fa7b;
+}
+
+.slide-build-empty {
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 0.85rem;
+    margin-left: 2.5rem;
+    font-style: italic;
+}
+
 /* ==================== Simulation Slides ==================== */
 
 .slide.slide-simulation {
