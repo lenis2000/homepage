@@ -26,17 +26,21 @@ Slides live in `/talk/<name>/index.html` (URL: `/talk/<name>/`).
 
 Use `vh`, `vw`, and `clamp()` for consistent sizing across all slides. No manual zoom adjustment needed.
 
-| Element | Pattern | Example |
-|---------|---------|---------|
-| Slide titles | `clamp(min, vw, max)` | `font-size: clamp(1rem, 1.5vw, 1.4rem)` |
-| Section headers | `clamp()` | `font-size: clamp(1.5rem, 3vw, 2.5rem)` |
-| Body text | `clamp()` | `font-size: clamp(1rem, 1.8vw, 1.5rem)` |
-| Captions | `clamp()` | `font-size: clamp(0.75rem, 1vw, 1rem)` |
-| Grid images (2x2) | `vh` height | `height: 22vh` |
-| Single feature image | `vh` height | `height: 50vh` |
-| Simulation SVG | `vh` height | `height: 55vh; width: auto` |
-| Grid gaps | `clamp()` | `gap: clamp(0.5rem, 1vw, 1rem)` |
-| Margins | `vh`/`vw` | `margin-top: 2vh` |
+| Element | Size | Notes |
+|---------|------|-------|
+| **Title slide h1** | `clamp(2.5rem, 3.5vw, 4rem)` | Main talk title |
+| **Part headers (I, II, III)** | `clamp(3rem, 5vw, 5.5rem)` | Large section dividers |
+| **Slide titles (h2.slide-title)** | `clamp(1rem, 1.5vw, 1.4rem)` | Standard slide header |
+| **Body text (STANDARD)** | `clamp(1.2rem, 2.2vw, 1.8rem)` | Use this for most text |
+| **Highlighted/question text** | `clamp(1.5rem, 2.8vw, 2.2rem)` | Important callouts |
+| **Formula text** | `clamp(1.5rem, 2.5vw, 2rem)` | Math formulas |
+| **Captions/labels** | `clamp(0.75rem, 1vw, 1rem)` | Small text under images |
+| **Input labels** | `clamp(0.9rem, 1.5vw, 1.1rem)` | Form controls |
+| Grid images (2x2) | `height: 22vh` | |
+| Single feature image | `height: 50vh` | |
+| Simulation canvas | `height: 55vh; width: auto` | |
+| Grid gaps | `clamp(0.5rem, 1vw, 1rem)` | |
+| Margins | `margin-top: 2vh` | Use vh/vw |
 
 **Navigation:**
 - Arrow keys, Space, PageDown/Up for next/prev
