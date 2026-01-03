@@ -22,6 +22,22 @@ Slides live in `/talk/<name>/index.html` (URL: `/talk/<name>/`).
 - `.slide-simulation` - For slides with interactive simulations
 - `.slide-columns` - Two-column grid layout
 
+**Responsive design for projector (1920x1080 at 100% zoom):**
+
+Use `vh`, `vw`, and `clamp()` for consistent sizing across all slides. No manual zoom adjustment needed.
+
+| Element | Pattern | Example |
+|---------|---------|---------|
+| Slide titles | `clamp(min, vw, max)` | `font-size: clamp(1rem, 1.5vw, 1.4rem)` |
+| Section headers | `clamp()` | `font-size: clamp(1.5rem, 3vw, 2.5rem)` |
+| Body text | `clamp()` | `font-size: clamp(1rem, 1.8vw, 1.5rem)` |
+| Captions | `clamp()` | `font-size: clamp(0.75rem, 1vw, 1rem)` |
+| Grid images (2x2) | `vh` height | `height: 22vh` |
+| Single feature image | `vh` height | `height: 50vh` |
+| Simulation SVG | `vh` height | `height: 55vh; width: auto` |
+| Grid gaps | `clamp()` | `gap: clamp(0.5rem, 1vw, 1rem)` |
+| Margins | `vh`/`vw` | `margin-top: 2vh` |
+
 **Navigation:**
 - Arrow keys, Space, PageDown/Up for next/prev
 - G to open jump menu (type number + Enter to jump)
@@ -36,6 +52,23 @@ Slides live in `/talk/<name>/index.html` (URL: `/talk/<name>/`).
 <li class="fragment zoom-in">Zooms in</li>
 ```
 Fragments reveal in order. Going back hides them in reverse.
+
+**Canvas vs SVG for simulations:**
+- **Canvas**: Use for animation (fast). Use 2x resolution for crisp rendering on retina/projectors.
+- **SVG**: Use for static export only. DOM manipulation is too slow for animation (~70ms/frame).
+
+Canvas setup for 1920x1080 projector (55vh height):
+```html
+<canvas id="my-sim" width="1600" height="1200" style="height: 55vh; width: auto;"></canvas>
+```
+```javascript
+const canvas = document.getElementById('my-sim');
+const ctx = canvas.getContext('2d');
+const displayWidth = 800, displayHeight = 600;  // 55vh at 1080p
+const dpr = 2;  // 2x for crisp rendering
+ctx.setTransform(dpr, 0, 0, dpr, 0, 0);  // Scale context
+// Draw at display coordinates (800x600), canvas is 1600x1200
+```
 
 **Simulation integration (SlideSimulation helper):**
 ```javascript

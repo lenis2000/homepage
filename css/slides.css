@@ -131,11 +131,11 @@
 }
 
 /* Slide title in upper left corner */
-.slide.slide-center h2.slide-title {
+.slide h2.slide-title {
     position: absolute;
-    top: 1.5rem;
-    left: 2rem;
-    font-size: 1.2rem;
+    top: 2vh;
+    left: 2vw;
+    font-size: clamp(2rem, 3.1vw, 3.5rem);
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: var(--slide-navy);
@@ -144,16 +144,23 @@
     text-align: left;
 }
 
+/* Responsive slide utilities */
+.slide figcaption {
+    font-size: clamp(0.9rem, 1.4vw, 1.3rem);
+    color: var(--slide-muted);
+    margin-top: 0.5vh;
+}
+
 .slide h3 {
     font-family: "franklingothic-demi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
     color: #212529;
     margin-bottom: 1rem;
 }
 
 .slide p, .slide li {
     font-family: "franklingothic-book", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    font-size: clamp(0.9rem, 2vw, 1.5rem);
+    font-size: clamp(1.1rem, 2.5vw, 1.8rem);
     line-height: 1.6;
     margin-bottom: 0.75rem;
 }
