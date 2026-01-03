@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', function() {
             dimers: dimers,
             initialDimers: [...dimers], // Save initial state for reset
             isValid: isValid,
-            stepsPerFrame: 5000,
+            stepsPerFrame: 10000,
             colors: colors,
 
             init(ctx, canvas) {
@@ -144,9 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             update(dt) {
                 if (!this.isValid || !this.isRunning) return;
-                // Reinit WASM with our triangles (in case another slide changed it)
-                this.reinitWasm();
-                // Run Glauber steps
+                // Run Glauber steps (WASM already inited in onStep)
                 const ptr = performGlauberStepsWasm(this.stepsPerFrame);
                 freeStringWasm(ptr);
                 // Refresh dimers
@@ -173,23 +171,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 setUseRandomSweepsWasm(1);
             },
 
+            onSlideEnter() {
+                // Reinit WASM and re-export fresh dimers when entering slide
+                this.reinitWasm();
+                // Re-export dimers from WASM (don't use cached data!)
+                const dPtr = exportDimersWasm();
+                const jsonStr = Module.UTF8ToString(dPtr);
+                freeStringWasm(dPtr);
+                const result = JSON.parse(jsonStr);
+                this.dimers = Array.isArray(result) ? result : (result.dimers || []);
+                this.draw();
+            },
+
             onStep(step) {
                 // Step 1: start the simulation
                 if (step === 1) {
-                    // Reinit WASM in case another slide changed it
+                    // Reinit WASM - Thank You slide may have overwritten it during page load
                     this.reinitWasm();
+                    const dPtr = exportDimersWasm();
+                    const jsonStr = Module.UTF8ToString(dPtr);
+                    freeStringWasm(dPtr);
+                    const result = JSON.parse(jsonStr);
+                    this.dimers = Array.isArray(result) ? result : (result.dimers || []);
                     this.start();
                 }
             },
 
             onStepBack(step) {
-                // Back to step 0: stop and reset to initial state
+                // Back to step 0: just pause, don't reset
                 if (step === 0) {
                     this.pause();
-                    // Restore initial dimers and reinit WASM
-                    this.dimers = [...this.initialDimers];
-                    this.reinitWasm();
-                    this.draw();
                 }
             },
 
@@ -419,6 +430,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 freeStringWasm(dPtr);
                 const dimerResult = JSON.parse(dimerStr);
                 state.dimers = Array.isArray(dimerResult) ? dimerResult : (dimerResult.dimers || []);
+                state.initialDimers = [...state.dimers]; // Save initial state
+            }
+        }
+
+        // Reinit all letters (called on slide enter)
+        function reinitAllLetters() {
+            currentLetterIdx = 0; // Reset to start from T
+            for (const state of letterStates) {
+                const dataPtr = Module._malloc(state.triangleArr.length * 4);
+                for (let i = 0; i < state.triangleArr.length; i++) {
+                    Module.setValue(dataPtr + i * 4, state.triangleArr[i], 'i32');
+                }
+                const ptr = initFromTrianglesWasm(dataPtr, state.triangleArr.length);
+                freeStringWasm(ptr);
+                Module._free(dataPtr);
+                setUseRandomSweepsWasm(1);
+                // Re-export fresh dimers from WASM (don't use cached data!)
+                const dPtr = exportDimersWasm();
+                const dimerStr = Module.UTF8ToString(dPtr);
+                freeStringWasm(dPtr);
+                const dimerResult = JSON.parse(dimerStr);
+                state.dimers = Array.isArray(dimerResult) ? dimerResult : (dimerResult.dimers || []);
+                drawLetter(state);
             }
         }
 
@@ -503,8 +537,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Import current dimers to restore state
                 // Actually we can't easily restore - just run more steps
-                // This will mix states but creates nice visual effect
-                const stepPtr = performGlauberStepsWasm(500);
+                // Slower steps for letters
+                const stepPtr = performGlauberStepsWasm(50);
                 freeStringWasm(stepPtr);
 
                 // Export new dimers
@@ -537,7 +571,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Register with slide engine - auto-start when slide is shown
         if (window.slideEngine) {
-            window.slideEngine.registerSimulation('thankyou', { start, pause }, 0);
+            window.slideEngine.registerSimulation('thankyou', {
+                start,
+                pause,
+                onSlideEnter: reinitAllLetters,
+                onSlideLeave: pause
+            }, 0);
         }
     });
 });
