@@ -410,7 +410,8 @@ class SlideEngine {
         const prevSlide = this.slides[this.current];
         const nextSlide = this.slides[index];
 
-        // Pause simulation on previous slide
+        // Notify simulations of slide leave, then pause
+        this.notifySlideLeave(prevSlide.id);
         this.pauseAllSimulations(prevSlide.id);
 
         // Reset fragments on previous slide (hide all)
@@ -439,6 +440,9 @@ class SlideEngine {
             this.showFragmentsUpTo(nextSlide, 0);
             this.currentFragment = 0;
         }
+
+        // Notify simulations of slide enter
+        this.notifySlideEnter(nextSlide.id);
 
         // Handle simulations on new slide
         const maxSimStep = this.getMaxSimStep(nextSlide.id);
@@ -562,6 +566,15 @@ class SlideEngine {
         this.simulations.get(slideId).push({ sim: simulation, step: step });
         // Sort by step
         this.simulations.get(slideId).sort((a, b) => a.step - b.step);
+
+        // If this slide is already active, call onSlideEnter now
+        // (handles case where simulation registers after initial goTo)
+        const currentSlide = this.slides[this.current];
+        if (currentSlide && currentSlide.id === slideId) {
+            if (typeof simulation.onSlideEnter === 'function') {
+                simulation.onSlideEnter();
+            }
+        }
     }
 
     getSimsForSlide(slideId) {
@@ -580,6 +593,24 @@ class SlideEngine {
         sims.forEach(({ sim }) => {
             if (typeof sim.pause === 'function') {
                 sim.pause();
+            }
+        });
+    }
+
+    notifySlideEnter(slideId) {
+        const sims = this.getSimsForSlide(slideId);
+        sims.forEach(({ sim }) => {
+            if (typeof sim.onSlideEnter === 'function') {
+                sim.onSlideEnter();
+            }
+        });
+    }
+
+    notifySlideLeave(slideId) {
+        const sims = this.getSimsForSlide(slideId);
+        sims.forEach(({ sim }) => {
+            if (typeof sim.onSlideLeave === 'function') {
+                sim.onSlideLeave();
             }
         });
     }
@@ -909,6 +940,12 @@ class SlideSimulation {
                 }
                 if (config.onStepBack) {
                     simInterface.onStepBack = (step) => config.onStepBack.call(sim, step);
+                }
+                if (config.onSlideEnter) {
+                    simInterface.onSlideEnter = () => config.onSlideEnter.call(sim);
+                }
+                if (config.onSlideLeave) {
+                    simInterface.onSlideLeave = () => config.onSlideLeave.call(sim);
                 }
 
                 window.slideEngine.registerSimulation(config.slideId, simInterface, config.step || 0);
