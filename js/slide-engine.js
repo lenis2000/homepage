@@ -846,7 +846,7 @@ class SlideSimulation {
                 sim.isRunning = true;
                 sim.lastTime = performance.now();
                 sim.animate();
-                if (config.onStart) config.onStart();
+                if (config.onStart) config.onStart.call(sim);
             },
 
             pause() {
@@ -855,7 +855,7 @@ class SlideSimulation {
                     cancelAnimationFrame(sim.animationId);
                     sim.animationId = null;
                 }
-                if (config.onPause) config.onPause();
+                if (config.onPause) config.onPause.call(sim);
             },
 
             toggle() {
