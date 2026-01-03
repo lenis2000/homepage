@@ -138,6 +138,61 @@ window.slideEngine.registerSimulation('slide-id', {
 }, 1); // step: 0=auto, 1+=Nth arrow
 ```
 
+**Slide lifecycle hooks:**
+```javascript
+window.slideEngine.registerSimulation('slide-id', {
+    start() { /* start animation */ },
+    pause() { /* stop animation */ },
+    onSlideEnter() { /* called when navigating TO this slide */ },
+    onSlideLeave() { /* called when navigating AWAY from this slide */ }
+}, 0);
+```
+
+**WASM state management (critical for multi-slide WASM simulations):**
+
+When multiple slides share a single global WASM module (e.g., lozenge tilings), state bleeds between slides. Key rules:
+
+1. **Reinit at moment of use, not just on slide enter** - Other slides' async init can overwrite WASM after your `onSlideEnter`. Reinit in `onStep()` when animation actually starts:
+```javascript
+onStep(step) {
+    if (step === 1) {
+        this.reinitWasm();           // Reclaim WASM state
+        this.dimers = this.exportDimers();  // Fresh export
+        this.start();
+    }
+}
+```
+
+2. **Always re-export after reinit** - Never use cached JS data after reinit:
+```javascript
+onSlideEnter() {
+    this.reinitWasm();
+    // WRONG: this.dimers = this.cachedDimers;
+    // RIGHT: re-export from WASM
+    const ptr = exportDimersWasm();
+    this.dimers = JSON.parse(Module.UTF8ToString(ptr));
+    freeStringWasm(ptr);
+    this.draw();
+}
+```
+
+3. **Stop animations on slide leave** - Prevent background updates from corrupting other slides:
+```javascript
+onSlideLeave() { this.pause(); }
+```
+
+4. **For cycling animations (like Thank You letters)** - Reinit WASM before each item's update:
+```javascript
+function animate() {
+    const state = letterStates[currentIdx];
+    reinitWasmWith(state.triangles);  // Reinit before Glauber
+    performGlauberSteps(50);
+    state.dimers = exportDimers();    // Fresh export
+    draw(state);
+    currentIdx = (currentIdx + 1) % letterStates.length;
+}
+```
+
 **Keyboard shortcuts:**
 - Arrow keys, Space, PageDown/Up for next/prev
 - Cmd+Left/Right (Mac) or Home/End for first/last slide
