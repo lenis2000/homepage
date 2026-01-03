@@ -260,6 +260,176 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 </script>
 
+<!-- ==================== PART 0: How Nature Creates Shape ==================== -->
+
+<section class="slide slide-center" id="nature-builds" data-title="How Nature Builds">
+    <h2 class="slide-title">How Nature Builds</h2>
+    <p class="fragment" style="font-size: 1.5rem; margin-top: 2rem;">Nature creates perfect geometric order from chaos.</p>
+    <p class="fragment" style="font-size: 1.2rem; color: var(--slide-muted); margin-top: 1rem;">[Images: Hopper Salt Crystal, Bismuth crystals]</p>
+    <p class="fragment" style="font-size: 1.3rem; margin-top: 2rem; font-style: italic;">Why does a random pile of cubes become smooth?</p>
+</section>
+
+<!-- ==================== PART 1: The 2D Warm-Up ==================== -->
+
+<section class="slide slide-center" id="part1-intro" data-title="Part 1: 2D">
+    <h2>Part 1</h2>
+    <h3 style="color: var(--slide-muted); text-transform: uppercase; letter-spacing: 0.05em;">The 2D Warm-Up</h3>
+    <p style="margin-top: 2rem; font-size: 1.2rem;">The Bridge from Counting to Statistical Mechanics</p>
+</section>
+
+<section class="slide slide-center" id="grid-paths" data-title="Grid Paths">
+    <h2 class="slide-title">Paths on a Grid</h2>
+    <p class="fragment" style="margin-top: 1.5rem;">Start at (0, 0), end at (n, n)</p>
+    <p class="fragment">Move only right (R) or up (U)</p>
+    <p class="fragment" style="margin-top: 1rem; font-size: 1.3rem;">How many paths exist?</p>
+    <p class="fragment" style="font-size: 2rem; color: var(--uva-orange); margin-top: 1rem;">
+        \(\binom{2n}{n}\)
+    </p>
+</section>
+
+<section class="slide slide-center" id="count-paths" data-title="Counting Paths">
+    <h2 class="slide-title">Small Example: n = 3</h2>
+    <p style="margin-top: 1.5rem;">[Interactive: Show all 20 paths for n=3]</p>
+    <p class="fragment" style="margin-top: 2rem;">Each path is equally likely under uniform measure.</p>
+</section>
+
+<section class="slide slide-center" id="limit-shape-2d" data-title="Limit Shape (2D)">
+    <h2 class="slide-title">The Limit Shape</h2>
+    <p class="fragment" style="margin-top: 1.5rem;">Scale up to n = 100, 1000, ...</p>
+    <p class="fragment" style="margin-top: 1rem;">[Simulation: Random path for large n]</p>
+    <p class="fragment" style="font-size: 1.3rem; margin-top: 2rem;">It looks like a straight diagonal line!</p>
+    <p class="fragment" style="color: var(--slide-muted);">This is the <strong>Law of Large Numbers</strong>.</p>
+</section>
+
+<section class="slide slide-center" id="q-deformation" data-title="q-Deformation">
+    <h2 class="slide-title">The q-Deformation</h2>
+    <p class="fragment" style="margin-top: 1.5rem;">Imagine the <strong>area under the path</strong> represents "energy" or "cost".</p>
+    <p class="fragment" style="margin-top: 1rem;">Weight each path by \(q^{\text{area}}\)</p>
+    <p class="fragment" style="margin-top: 2rem; font-size: 1.2rem;">The parameter q acts like inverse temperature.</p>
+</section>
+
+<section class="slide slide-center" id="q-slider" data-title="The q-Slider">
+    <h2 class="slide-title">Bending the Curve</h2>
+    <p style="margin-top: 1rem;">[Interactive: q-slider simulation]</p>
+    <ul style="margin-top: 2rem; text-align: left; display: inline-block;">
+        <li class="fragment"><strong>q = 1:</strong> Uniform randomness (straight diagonal)</li>
+        <li class="fragment"><strong>q &lt; 1:</strong> Path hugs the axes (minimizing area)</li>
+        <li class="fragment"><strong>q &gt; 1:</strong> Path bulges out (maximizing area)</li>
+    </ul>
+</section>
+
+<section class="slide slide-center" id="lesson-2d" data-title="The Lesson">
+    <h2 class="slide-title">The Lesson</h2>
+    <p class="fragment" style="font-size: 1.5rem; margin-top: 2rem;">"By changing one parameter, we bend the curve."</p>
+    <p class="fragment" style="margin-top: 2rem; color: var(--slide-muted);">This foreshadows the limit shapes in 3D...</p>
+</section>
+
+<!-- ==================== PART 2: The 3D Main Event ==================== -->
+
+<section class="slide slide-center" id="part2-intro" data-title="Part 2: 3D">
+    <h2>Part 2</h2>
+    <h3 style="color: var(--slide-muted); text-transform: uppercase; letter-spacing: 0.05em;">The 3D Main Event</h3>
+    <p style="margin-top: 2rem; font-size: 1.2rem;">From Discrete Cubes to Algebraic Curves</p>
+</section>
+
+<section class="slide slide-center" id="geometric-bridge" data-title="Geometric Bridge">
+    <h2 class="slide-title">Three Views, One Object</h2>
+    <ul style="margin-top: 2rem; text-align: left; display: inline-block; font-size: 1.2rem;">
+        <li class="fragment">Lozenge Tiling</li>
+        <li class="fragment">Stepped Surface</li>
+        <li class="fragment">Stack of Cubes in a Corner (Plane Partition)</li>
+    </ul>
+    <p class="fragment" style="margin-top: 2rem;">[Visual: Show equivalence]</p>
+</section>
+
+<section class="slide slide-center" id="hexagon-cube" data-title="Hexagon = Cube">
+    <h2 class="slide-title">The Visual Trick</h2>
+    <p class="fragment" style="margin-top: 1.5rem;">A single hexagon...</p>
+    <p class="fragment">...tiled by 3 rhombi...</p>
+    <p class="fragment">...looks exactly like a cube!</p>
+    <p class="fragment" style="margin-top: 2rem;">[Image: Hexagon with 3 lozenges = cube]</p>
+</section>
+
+<section class="slide slide-center" id="slices" data-title="Slices = Paths">
+    <h2 class="slide-title">Connecting to Part 1</h2>
+    <p class="fragment" style="margin-top: 1.5rem;">Take a "slice" of the 3D stack...</p>
+    <p class="fragment" style="margin-top: 1rem;">It is exactly an up-right path!</p>
+    <p class="fragment" style="margin-top: 2rem; font-size: 1.2rem;">The 3D object is just many 2D paths <strong>interlacing</strong>.</p>
+</section>
+
+<section class="slide slide-center" id="growth-sim" data-title="Growth Simulation">
+    <h2 class="slide-title">The Growth Simulation</h2>
+    <p style="margin-top: 1rem;">[Interactive: Start with empty room, pour cubes in, watch them settle]</p>
+    <p class="fragment" style="margin-top: 2rem;">Cubes stack randomly...</p>
+    <p class="fragment">...but a definite <strong>shape</strong> emerges.</p>
+</section>
+
+<section class="slide slide-center" id="arctic-circle" data-title="Arctic Circle">
+    <h2 class="slide-title">The Arctic Circle</h2>
+    <p style="margin-top: 1rem;">[Simulation: Large hexagon tiling with arctic circle]</p>
+    <p class="fragment" style="margin-top: 2rem;">A sharp boundary appears!</p>
+</section>
+
+<section class="slide slide-center" id="phase-transition" data-title="Phase Transition">
+    <h2 class="slide-title">Phase Transition</h2>
+    <ul style="margin-top: 2rem; text-align: left; display: inline-block; font-size: 1.2rem;">
+        <li class="fragment"><strong>Frozen Region:</strong> Brickwork pattern (Deterministic) - The solid crystal</li>
+        <li class="fragment"><strong>Liquid Region:</strong> Chaotic disorder (Random) - The melted solution</li>
+        <li class="fragment"><strong>The Boundary:</strong> An algebraic curve</li>
+    </ul>
+</section>
+
+<section class="slide slide-center" id="gff" data-title="Gaussian Free Field">
+    <h2 class="slide-title">The Gaussian Free Field</h2>
+    <p class="fragment" style="margin-top: 1.5rem; font-style: italic;">"If the limit shape is the smooth terrain of a hill,<br>the GFF describes the rough grass and rocks on top."</p>
+    <p class="fragment" style="margin-top: 2rem;">[Heatmap: Height fluctuations]</p>
+    <p class="fragment" style="margin-top: 1rem; color: var(--slide-muted);">This noise is <strong>universal</strong>.</p>
+</section>
+
+<!-- ==================== PART 3: Algorithmic Magic ==================== -->
+
+<section class="slide slide-center" id="part3-intro" data-title="Part 3: Algorithms">
+    <h2>Part 3</h2>
+    <h3 style="color: var(--slide-muted); text-transform: uppercase; letter-spacing: 0.05em;">Algorithmic Magic</h3>
+    <p style="margin-top: 2rem; font-size: 1.2rem;">"How do we actually build these?"</p>
+</section>
+
+<section class="slide slide-center" id="glauber-naive" data-title="Glauber Dynamics">
+    <h2 class="slide-title">The "Naive" Approach: Glauber Dynamics</h2>
+    <p class="fragment" style="margin-top: 1.5rem;"><strong>Algorithm:</strong></p>
+    <ol style="margin-top: 1rem; text-align: left; display: inline-block;">
+        <li class="fragment">Pick a random spot</li>
+        <li class="fragment">If you can add/remove a cube, do it with probability 1/2</li>
+        <li class="fragment">Repeat</li>
+    </ol>
+    <p class="fragment" style="margin-top: 2rem;">[Simulation: Slow Glauber dynamics]</p>
+</section>
+
+<section class="slide slide-center" id="glauber-slow" data-title="Glauber is Slow">
+    <h2 class="slide-title">The Problem</h2>
+    <p class="fragment" style="font-size: 1.3rem; margin-top: 2rem;">Local updates take forever to mix.</p>
+    <p class="fragment" style="margin-top: 1rem; color: var(--slide-muted);">Mixing time is polynomial (or worse).</p>
+    <p class="fragment" style="margin-top: 2rem;">[Visual: Surface trying to evolve but getting stuck]</p>
+</section>
+
+<section class="slide slide-center" id="smart-approach" data-title="Smart Sampling">
+    <h2 class="slide-title">The "Smart" Approach</h2>
+    <p class="fragment" style="margin-top: 1.5rem;">CFTP / Domino Shuffling / RSK</p>
+    <p class="fragment" style="margin-top: 2rem; font-style: italic;">"Instead of moving one cube at a time, use the deep mathematical structure to sample the entire system at once."</p>
+</section>
+
+<section class="slide slide-center" id="instant-sample" data-title="Instant Sampling">
+    <h2 class="slide-title">Instant Sampling</h2>
+    <p style="margin-top: 1rem;">[Button: Generate n=100 sample instantly]</p>
+    <p class="fragment" style="margin-top: 2rem;">Contrast: Glauber would take hours.</p>
+    <p class="fragment" style="margin-top: 1rem;">This takes milliseconds.</p>
+</section>
+
+<section class="slide slide-center" id="takeaway" data-title="The Takeaway">
+    <h2 class="slide-title">The Takeaway</h2>
+    <p class="fragment" style="font-size: 1.8rem; margin-top: 2rem; color: var(--uva-orange);">Good math leads to fast algorithms.</p>
+</section>
+
 <!-- ==================== Slide: Thank You ==================== -->
 <section class="slide slide-center" id="thankyou" data-title="Thank You">
     <div style="display: flex; flex-direction: column; gap: 24px; align-items: center; justify-content: center;">

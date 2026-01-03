@@ -130,6 +130,20 @@
     line-height: 1.3;
 }
 
+/* Slide title in upper left corner */
+.slide.slide-center h2.slide-title {
+    position: absolute;
+    top: 1.5rem;
+    left: 2rem;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--slide-navy);
+    font-weight: 600;
+    margin: 0;
+    text-align: left;
+}
+
 .slide h3 {
     font-family: "franklingothic-demi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: clamp(1.2rem, 2.5vw, 1.8rem);
