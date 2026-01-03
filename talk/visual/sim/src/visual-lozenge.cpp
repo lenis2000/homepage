@@ -2,6 +2,8 @@
 Compile from src/ folder:
 emcc visual-lozenge.cpp -o ../visual-lozenge.js \
   -s WASM=1 \
+  -s MODULARIZE=1 \
+  -s EXPORT_NAME='LozengeModule' \
   -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_setHoleBaseHeight','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_getCFTPMinGridData','_getCFTPMaxGridData','_loadDimersForLoops','_detectLoopSizes','_filterLoopsBySize','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue','lengthBytesUTF8','stringToUTF8']" \
   -s ALLOW_MEMORY_GROWTH=1 \
@@ -10,6 +12,11 @@ emcc visual-lozenge.cpp -o ../visual-lozenge.js \
   -s ENVIRONMENT=web \
   -s SINGLE_FILE=1 \
   -O3 -ffast-math -flto -msimd128
+
+Usage in JavaScript (modularized):
+  const lozenge = await LozengeModule();
+  const initFromTriangles = lozenge.cwrap('initFromTriangles', 'number', ['number', 'number']);
+  // Each instance has isolated state - no conflicts between slides!
 
 Visual Lozenge Sampler (for talk/visual - self-contained copy)
 - Arbitrary topology support (holes, disconnected regions)

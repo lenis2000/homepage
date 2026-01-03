@@ -148,50 +148,50 @@ window.slideEngine.registerSimulation('slide-id', {
 }, 0);
 ```
 
-**WASM state management (critical for multi-slide WASM simulations):**
+**Modularized WASM (recommended for multi-slide simulations):**
 
-When multiple slides share a single global WASM module (e.g., lozenge tilings), state bleeds between slides. Key rules:
+Compile WASM with `MODULARIZE` and unique `EXPORT_NAME` to create isolated instances per slide:
 
-1. **Reinit at moment of use, not just on slide enter** - Other slides' async init can overwrite WASM after your `onSlideEnter`. Reinit in `onStep()` when animation actually starts:
-```javascript
-onStep(step) {
-    if (step === 1) {
-        this.reinitWasm();           // Reclaim WASM state
-        this.dimers = this.exportDimers();  // Fresh export
-        this.start();
-    }
-}
+```bash
+emcc simulation.cpp -o simulation.js \
+  -s MODULARIZE=1 \
+  -s EXPORT_NAME='MySimModule' \
+  -s "EXPORTED_FUNCTIONS=[...]" \
+  -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
+  -s ALLOW_MEMORY_GROWTH=1 \
+  -O3
 ```
 
-2. **Always re-export after reinit** - Never use cached JS data after reinit:
+Each slide creates its own instance - completely isolated state, no conflicts:
 ```javascript
+// Title slide - its own WASM instance
+const titleWasm = await LozengeModule();
+const initFromTriangles = titleWasm.cwrap('initFromTriangles', 'number', ['number', 'number']);
+
+// Thank You slide - separate WASM instance
+const thankYouWasm = await LozengeModule();
+const initFromTriangles2 = thankYouWasm.cwrap('initFromTriangles', 'number', ['number', 'number']);
+
+// No state conflicts! Each instance has its own memory.
+```
+
+**Benefits:**
+- No reinit dance between slides
+- No `onSlideEnter`/`onSlideLeave` for state management
+- Simpler code, fewer bugs
+- Can run different simulations simultaneously
+
+**Memory usage:** Each instance has its own WASM memory (~32MB default). For many slides, consider lazy loading:
+```javascript
+let wasm = null;
 onSlideEnter() {
-    this.reinitWasm();
-    // WRONG: this.dimers = this.cachedDimers;
-    // RIGHT: re-export from WASM
-    const ptr = exportDimersWasm();
-    this.dimers = JSON.parse(Module.UTF8ToString(ptr));
-    freeStringWasm(ptr);
-    this.draw();
+    if (!wasm) wasm = await LozengeModule();
+    // ... init
 }
 ```
 
-3. **Stop animations on slide leave** - Prevent background updates from corrupting other slides:
-```javascript
-onSlideLeave() { this.pause(); }
-```
-
-4. **For cycling animations (like Thank You letters)** - Reinit WASM before each item's update:
-```javascript
-function animate() {
-    const state = letterStates[currentIdx];
-    reinitWasmWith(state.triangles);  // Reinit before Glauber
-    performGlauberSteps(50);
-    state.dimers = exportDimers();    // Fresh export
-    draw(state);
-    currentIdx = (currentIdx + 1) % letterStates.length;
-}
-```
+**Legacy approach (single shared Module):**
+If using non-modularized WASM with global `Module`, reinit at moment of use and re-export data after reinit. See `/talk/visual/` history for examples.
 
 **Keyboard shortcuts:**
 - Arrow keys, Space, PageDown/Up for next/prev

@@ -4,6 +4,8 @@ THREADED BUILD - Requires COOP/COEP headers for SharedArrayBuffer
 Compile from src/ folder:
 emcc visual-lozenge-threaded.cpp -o ../visual-lozenge-threaded.js \
   -s WASM=1 \
+  -s MODULARIZE=1 \
+  -s EXPORT_NAME='LozengeModule' \
   -pthread \
   -s PTHREAD_POOL_SIZE=4 \
   -s SHARED_MEMORY=1 \
@@ -15,6 +17,11 @@ emcc visual-lozenge-threaded.cpp -o ../visual-lozenge-threaded.js \
   -s ENVIRONMENT=web,worker \
   -s SINGLE_FILE=1 \
   -O3 -ffast-math -flto -msimd128
+
+Usage in JavaScript (modularized):
+  const lozenge = await LozengeModule();
+  const initFromTriangles = lozenge.cwrap('initFromTriangles', 'number', ['number', 'number']);
+  // Each instance has isolated state - no conflicts between slides!
 
 Visual Lozenge Sampler - THREADED VERSION (for talk/visual - self-contained copy)
 - Arbitrary topology support (holes, disconnected regions)

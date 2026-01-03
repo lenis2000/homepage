@@ -26,185 +26,138 @@ window.VISUAL_THREADED = typeof SharedArrayBuffer !== 'undefined';
 window.VISUAL_WEBGPU = !!navigator.gpu;
 </script>
 <script>
-// Load appropriate WASM module from local sim folder
+// Load appropriate WASM module from local sim folder (now modularized - exports LozengeModule factory)
 document.write('<script src="/talk/visual/sim/visual-lozenge' + (window.VISUAL_THREADED ? '-threaded' : '') + '.js"><\/script>');
 </script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Wait for WASM Module to be ready
-    if (typeof Module === 'undefined') {
-        console.error('WASM Module not loaded');
+document.addEventListener('DOMContentLoaded', async function() {
+    // Wait for LozengeModule factory to be available
+    if (typeof LozengeModule === 'undefined') {
+        console.error('LozengeModule not loaded');
         return;
     }
 
-    Module.onRuntimeInitialized = Module.onRuntimeInitialized || function() {};
-    const originalOnInit = Module.onRuntimeInitialized;
-    Module.onRuntimeInitialized = function() {
-        originalOnInit();
-        initTitleSimulation();
-    };
+    // Create isolated WASM instance for Title slide
+    const wasm = await LozengeModule();
 
-    // If already initialized
-    if (Module.calledRun) {
-        initTitleSimulation();
+    // Triangular lattice constants (for equilateral triangles)
+    const slope = 1 / Math.sqrt(3);
+    const deltaC = 2 / Math.sqrt(3);
+
+    function getVertex(n, j) {
+        return { x: n, y: slope * n + j * deltaC };
     }
 
-    async function initTitleSimulation() {
-        // Triangular lattice constants (for equilateral triangles)
-        const slope = 1 / Math.sqrt(3);
-        const deltaC = 2 / Math.sqrt(3);
+    // WASM interface (using our isolated instance)
+    const initFromTrianglesWasm = wasm.cwrap('initFromTriangles', 'number', ['number', 'number']);
+    const performGlauberStepsWasm = wasm.cwrap('performGlauberSteps', 'number', ['number']);
+    const exportDimersWasm = wasm.cwrap('exportDimers', 'number', []);
+    const freeStringWasm = wasm.cwrap('freeString', null, ['number']);
+    const setUseRandomSweepsWasm = wasm.cwrap('setUseRandomSweeps', null, ['number']);
 
-        function getVertex(n, j) {
-            return { x: n, y: slope * n + j * deltaC };
-        }
+    // Color palette (UVA)
+    const colors = ['#E57200', '#232D4B', '#F9DCBF'];
 
-        // WASM interface
-        const initFromTrianglesWasm = Module.cwrap('initFromTriangles', 'number', ['number', 'number']);
-        const performGlauberStepsWasm = Module.cwrap('performGlauberSteps', 'number', ['number']);
-        const exportDimersWasm = Module.cwrap('exportDimers', 'number', []);
-        const freeStringWasm = Module.cwrap('freeString', null, ['number']);
-        const setUseRandomSweepsWasm = Module.cwrap('setUseRandomSweeps', null, ['number']);
+    // Simulation state
+    let activeTriangles = new Map();
+    let dimers = [];
+    let isValid = false;
 
-        // Color palette (UVA)
-        const colors = ['#E57200', '#232D4B', '#F9DCBF'];
+    // Load Rotunda preset
+    try {
+        const response = await fetch('/letters/Rotunda.json');
+        if (response.ok) {
+            const data = await response.json();
+            if (data.triangles) {
+                for (const t of data.triangles) {
+                    const type = t.type || t.t;
+                    activeTriangles.set(`${t.n},${t.j},${type}`, { n: t.n, j: t.j, type });
+                }
 
-        // Simulation state
-        let activeTriangles = new Map();
-        let dimers = [];
-        let isValid = false;
-        let showShape = true; // Start by showing shape only
-        let stepsPerFrame = 1000;
+                // Initialize WASM region
+                const arr = [];
+                for (const [key, tri] of activeTriangles) {
+                    arr.push(tri.n, tri.j, tri.type);
+                }
 
-        // Load Rotunda preset FIRST (before creating simulation)
-        try {
-            const response = await fetch('/letters/Rotunda.json');
-            if (response.ok) {
-                const data = await response.json();
-                if (data.triangles) {
-                    for (const t of data.triangles) {
-                        const type = t.type || t.t;
-                        activeTriangles.set(`${t.n},${t.j},${type}`, { n: t.n, j: t.j, type });
+                if (arr.length > 0) {
+                    const dataPtr = wasm._malloc(arr.length * 4);
+                    for (let i = 0; i < arr.length; i++) {
+                        wasm.setValue(dataPtr + i * 4, arr[i], 'i32');
                     }
 
-                    // Initialize WASM region
-                    const arr = [];
-                    for (const [key, tri] of activeTriangles) {
-                        arr.push(tri.n, tri.j, tri.type);
-                    }
+                    const ptr = initFromTrianglesWasm(dataPtr, arr.length);
+                    const jsonStr = wasm.UTF8ToString(ptr);
+                    freeStringWasm(ptr);
+                    wasm._free(dataPtr);
 
-                    if (arr.length > 0) {
-                        const dataPtr = Module._malloc(arr.length * 4);
-                        for (let i = 0; i < arr.length; i++) {
-                            Module.setValue(dataPtr + i * 4, arr[i], 'i32');
-                        }
+                    const result = JSON.parse(jsonStr);
+                    isValid = result.status === 'valid';
 
-                        const ptr = initFromTrianglesWasm(dataPtr, arr.length);
-                        const jsonStr = Module.UTF8ToString(ptr);
-                        freeStringWasm(ptr);
-                        Module._free(dataPtr);
-
+                    if (isValid) {
+                        setUseRandomSweepsWasm(1);
+                        // Export initial dimers so we can show lozenges on load
+                        const dPtr = exportDimersWasm();
+                        const jsonStr = wasm.UTF8ToString(dPtr);
+                        freeStringWasm(dPtr);
                         const result = JSON.parse(jsonStr);
-                        isValid = result.status === 'valid';
-
-                        if (isValid) {
-                            setUseRandomSweepsWasm(1);
-                            // Export initial dimers so we can show lozenges on load
-                            const dPtr = exportDimersWasm();
-                            const jsonStr = Module.UTF8ToString(dPtr);
-                            freeStringWasm(dPtr);
-                            const result = JSON.parse(jsonStr);
-                            const dimerArr = Array.isArray(result) ? result : (result.dimers || []);
-                            dimers.push(...dimerArr);
-                        }
+                        const dimerArr = Array.isArray(result) ? result : (result.dimers || []);
+                        dimers.push(...dimerArr);
                     }
                 }
             }
-        } catch (e) {
-            // Failed to load preset
         }
+    } catch (e) {
+        // Failed to load preset
+    }
 
-        // Create simulation using SlideSimulation helper (data already loaded)
-        const sim = SlideSimulation.create({
-            canvasId: 'title-canvas',
-            slideId: 'title',
-            steps: 1, // Total number of steps (use steps not step for onStep API)
+    // Create simulation using SlideSimulation helper (data already loaded)
+    // No more reinit needed - this slide has its own isolated WASM instance!
+    const sim = SlideSimulation.create({
+        canvasId: 'title-canvas',
+        slideId: 'title',
+        steps: 1,
 
-            // Store state on sim object
-            activeTriangles: activeTriangles,
-            dimers: dimers,
-            initialDimers: [...dimers], // Save initial state for reset
-            isValid: isValid,
-            stepsPerFrame: 10000,
-            colors: colors,
+        // Store state on sim object
+        activeTriangles: activeTriangles,
+        dimers: dimers,
+        isValid: isValid,
+        stepsPerFrame: 10000,
+        colors: colors,
 
-            init(ctx, canvas) {
-                // Data already loaded and stored above
-            },
+        init(ctx, canvas) {
+            // Data already loaded and stored above
+        },
 
-            update(dt) {
-                if (!this.isValid || !this.isRunning) return;
-                // Run Glauber steps (WASM already inited in onStep)
-                const ptr = performGlauberStepsWasm(this.stepsPerFrame);
-                freeStringWasm(ptr);
-                // Refresh dimers
-                const dPtr = exportDimersWasm();
-                const jsonStr = Module.UTF8ToString(dPtr);
-                freeStringWasm(dPtr);
-                const result = JSON.parse(jsonStr);
-                this.dimers = Array.isArray(result) ? result : (result.dimers || []);
-            },
+        update(dt) {
+            if (!this.isValid || !this.isRunning) return;
+            // Run Glauber steps
+            const ptr = performGlauberStepsWasm(this.stepsPerFrame);
+            freeStringWasm(ptr);
+            // Refresh dimers
+            const dPtr = exportDimersWasm();
+            const jsonStr = wasm.UTF8ToString(dPtr);
+            freeStringWasm(dPtr);
+            const result = JSON.parse(jsonStr);
+            this.dimers = Array.isArray(result) ? result : (result.dimers || []);
+        },
 
-            // Helper to reinit WASM with Rotunda triangles
-            reinitWasm() {
-                const arr = [];
-                for (const [, tri] of this.activeTriangles) {
-                    arr.push(tri.n, tri.j, tri.type);
-                }
-                const dataPtr = Module._malloc(arr.length * 4);
-                for (let i = 0; i < arr.length; i++) {
-                    Module.setValue(dataPtr + i * 4, arr[i], 'i32');
-                }
-                const ptr = initFromTrianglesWasm(dataPtr, arr.length);
-                freeStringWasm(ptr);
-                Module._free(dataPtr);
-                setUseRandomSweepsWasm(1);
-            },
+        onStep(step) {
+            // Step 1: start the simulation
+            if (step === 1) {
+                this.start();
+            }
+        },
 
-            onSlideEnter() {
-                // Reinit WASM and re-export fresh dimers when entering slide
-                this.reinitWasm();
-                // Re-export dimers from WASM (don't use cached data!)
-                const dPtr = exportDimersWasm();
-                const jsonStr = Module.UTF8ToString(dPtr);
-                freeStringWasm(dPtr);
-                const result = JSON.parse(jsonStr);
-                this.dimers = Array.isArray(result) ? result : (result.dimers || []);
-                this.draw();
-            },
+        onStepBack(step) {
+            // Back to step 0: just pause
+            if (step === 0) {
+                this.pause();
+            }
+        },
 
-            onStep(step) {
-                // Step 1: start the simulation
-                if (step === 1) {
-                    // Reinit WASM - Thank You slide may have overwritten it during page load
-                    this.reinitWasm();
-                    const dPtr = exportDimersWasm();
-                    const jsonStr = Module.UTF8ToString(dPtr);
-                    freeStringWasm(dPtr);
-                    const result = JSON.parse(jsonStr);
-                    this.dimers = Array.isArray(result) ? result : (result.dimers || []);
-                    this.start();
-                }
-            },
-
-            onStepBack(step) {
-                // Back to step 0: just pause, don't reset
-                if (step === 0) {
-                    this.pause();
-                }
-            },
-
-            draw(ctx, canvas) {
+        draw(ctx, canvas) {
                 // Use fixed display size to prevent layout changes
                 const displayWidth = 500;
                 const displayHeight = 380;
@@ -304,7 +257,6 @@ document.addEventListener('DOMContentLoaded', function() {
             },
 
         });
-    }
 });
 </script>
 
@@ -327,257 +279,228 @@ document.addEventListener('DOMContentLoaded', function() {
 </section>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    // Wait for LozengeModule factory to be available
+    if (typeof LozengeModule === 'undefined') {
+        console.error('LozengeModule not loaded');
+        return;
+    }
+
+    // Create isolated WASM instance for Thank You slide - completely separate from Title!
+    const wasm = await LozengeModule();
+
     const letters = ['T', 'H', 'A', 'N', 'K', 'Y', 'O', 'U'];
     const colors = ['#E57200', '#232D4B', '#F9DCBF'];
 
-    function waitForWasm(callback) {
-        if (typeof Module !== 'undefined' && Module.calledRun) {
-            callback();
-        } else if (typeof Module !== 'undefined') {
-            const origInit = Module.onRuntimeInitialized || function(){};
-            Module.onRuntimeInitialized = function() { origInit(); callback(); };
-        } else {
-            setTimeout(() => waitForWasm(callback), 100);
+    const slope = 1 / Math.sqrt(3);
+    const deltaC = 2 / Math.sqrt(3);
+
+    function getVertex(n, j) {
+        return { x: n, y: slope * n + j * deltaC };
+    }
+
+    // WASM interface (using our isolated instance)
+    const initFromTrianglesWasm = wasm.cwrap('initFromTriangles', 'number', ['number', 'number']);
+    const performGlauberStepsWasm = wasm.cwrap('performGlauberSteps', 'number', ['number']);
+    const exportDimersWasm = wasm.cwrap('exportDimers', 'number', []);
+    const freeStringWasm = wasm.cwrap('freeString', null, ['number']);
+    const setUseRandomSweepsWasm = wasm.cwrap('setUseRandomSweeps', null, ['number']);
+
+    // Store state for each letter
+    const letterStates = [];
+
+    // Load all letters
+    for (const letter of letters) {
+        const canvasId = `letter-${letter}`;
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) continue;
+
+        try {
+            const response = await fetch(`/letters/${letter}.json`);
+            if (!response.ok) continue;
+            const data = await response.json();
+            if (!data.triangles) continue;
+
+            const triangles = new Map();
+            const triangleArr = [];
+            for (const t of data.triangles) {
+                const type = t.type || t.t;
+                triangles.set(`${t.n},${t.j},${type}`, { n: t.n, j: t.j, type });
+                triangleArr.push(t.n, t.j, type);
+            }
+
+            // Calculate bounds
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            for (const [, tri] of triangles) {
+                let verts;
+                if (tri.type === 1) {
+                    verts = [getVertex(tri.n, tri.j), getVertex(tri.n, tri.j - 1), getVertex(tri.n + 1, tri.j - 1)];
+                } else {
+                    verts = [getVertex(tri.n, tri.j), getVertex(tri.n + 1, tri.j), getVertex(tri.n + 1, tri.j - 1)];
+                }
+                for (const v of verts) {
+                    minX = Math.min(minX, v.x);
+                    maxX = Math.max(maxX, v.x);
+                    minY = Math.min(minY, v.y);
+                    maxY = Math.max(maxY, v.y);
+                }
+            }
+
+            letterStates.push({
+                letter,
+                canvas,
+                ctx: canvas.getContext('2d'),
+                triangles,
+                triangleArr,
+                dimers: [],
+                bounds: { minX, maxX, minY, maxY }
+            });
+        } catch (e) {
+            // Skip failed letters
         }
     }
 
-    waitForWasm(async function() {
-        const slope = 1 / Math.sqrt(3);
-        const deltaC = 2 / Math.sqrt(3);
-
-        function getVertex(n, j) {
-            return { x: n, y: slope * n + j * deltaC };
+    // Initialize each letter and get initial dimers
+    for (const state of letterStates) {
+        const dataPtr = wasm._malloc(state.triangleArr.length * 4);
+        for (let i = 0; i < state.triangleArr.length; i++) {
+            wasm.setValue(dataPtr + i * 4, state.triangleArr[i], 'i32');
         }
+        const ptr = initFromTrianglesWasm(dataPtr, state.triangleArr.length);
+        const jsonStr = wasm.UTF8ToString(ptr);
+        freeStringWasm(ptr);
+        wasm._free(dataPtr);
 
-        // WASM interface
-        const initFromTrianglesWasm = Module.cwrap('initFromTriangles', 'number', ['number', 'number']);
-        const performGlauberStepsWasm = Module.cwrap('performGlauberSteps', 'number', ['number']);
-        const exportDimersWasm = Module.cwrap('exportDimers', 'number', []);
-        const freeStringWasm = Module.cwrap('freeString', null, ['number']);
-        const setUseRandomSweepsWasm = Module.cwrap('setUseRandomSweeps', null, ['number']);
+        const result = JSON.parse(jsonStr);
+        if (result.status === 'valid') {
+            setUseRandomSweepsWasm(1);
+            const dPtr = exportDimersWasm();
+            const dimerStr = wasm.UTF8ToString(dPtr);
+            freeStringWasm(dPtr);
+            const dimerResult = JSON.parse(dimerStr);
+            state.dimers = Array.isArray(dimerResult) ? dimerResult : (dimerResult.dimers || []);
+        }
+    }
 
-        // Store state for each letter
-        const letterStates = [];
+    // Draw function for a letter
+    function drawLetter(state) {
+        const { canvas, ctx, bounds, dimers } = state;
+        const { minX, maxX, minY, maxY } = bounds;
 
-        // Load all letters
-        for (const letter of letters) {
-            const canvasId = `letter-${letter}`;
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) continue;
+        // Use fixed dimensions to prevent zoom issues
+        const displayWidth = 100;
+        const displayHeight = 130;
+        const dpr = window.devicePixelRatio || 1;
+        if (canvas.width !== displayWidth * dpr) {
+            canvas.width = displayWidth * dpr;
+            canvas.height = displayHeight * dpr;
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-            try {
-                const response = await fetch(`/letters/${letter}.json`);
-                if (!response.ok) continue;
-                const data = await response.json();
-                if (!data.triangles) continue;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, displayWidth, displayHeight);
 
-                const triangles = new Map();
-                const triangleArr = [];
-                for (const t of data.triangles) {
-                    const type = t.type || t.t;
-                    triangles.set(`${t.n},${t.j},${type}`, { n: t.n, j: t.j, type });
-                    triangleArr.push(t.n, t.j, type);
-                }
+        const regionWidth = maxX - minX;
+        const regionHeight = maxY - minY;
+        const scale = Math.min(displayWidth / regionWidth, displayHeight / regionHeight) * 0.85;
+        const centerX = displayWidth / 2 - ((minX + maxX) / 2) * scale;
+        const centerY = displayHeight / 2 + ((minY + maxY) / 2) * scale;
 
-                // Calculate bounds
-                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-                for (const [, tri] of triangles) {
-                    let verts;
-                    if (tri.type === 1) {
-                        verts = [getVertex(tri.n, tri.j), getVertex(tri.n, tri.j - 1), getVertex(tri.n + 1, tri.j - 1)];
-                    } else {
-                        verts = [getVertex(tri.n, tri.j), getVertex(tri.n + 1, tri.j), getVertex(tri.n + 1, tri.j - 1)];
-                    }
-                    for (const v of verts) {
-                        minX = Math.min(minX, v.x);
-                        maxX = Math.max(maxX, v.x);
-                        minY = Math.min(minY, v.y);
-                        maxY = Math.max(maxY, v.y);
-                    }
-                }
-
-                letterStates.push({
-                    letter,
-                    canvas,
-                    ctx: canvas.getContext('2d'),
-                    triangles,
-                    triangleArr,
-                    dimers: [],
-                    bounds: { minX, maxX, minY, maxY }
-                });
-            } catch (e) {
-                // Skip failed letters
+        // Draw lozenges
+        for (const d of dimers) {
+            const bn = d.bn, bj = d.bj, t = d.t;
+            let verts;
+            if (t === 0) {
+                verts = [getVertex(bn, bj), getVertex(bn + 1, bj), getVertex(bn + 1, bj - 1), getVertex(bn, bj - 1)];
+            } else if (t === 1) {
+                verts = [getVertex(bn, bj), getVertex(bn + 1, bj - 1), getVertex(bn + 1, bj - 2), getVertex(bn, bj - 1)];
+            } else {
+                verts = [getVertex(bn - 1, bj), getVertex(bn, bj), getVertex(bn + 1, bj - 1), getVertex(bn, bj - 1)];
             }
-        }
 
-        // Initialize each letter and get initial dimers
-        for (const state of letterStates) {
-            const dataPtr = Module._malloc(state.triangleArr.length * 4);
+            ctx.beginPath();
+            const p0 = [centerX + verts[0].x * scale, centerY - verts[0].y * scale];
+            ctx.moveTo(p0[0], p0[1]);
+            for (let i = 1; i < 4; i++) {
+                const p = [centerX + verts[i].x * scale, centerY - verts[i].y * scale];
+                ctx.lineTo(p[0], p[1]);
+            }
+            ctx.closePath();
+            ctx.fillStyle = colors[t];
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        }
+    }
+
+    // Initial draw
+    for (const state of letterStates) {
+        drawLetter(state);
+    }
+
+    // Animation: cycle through letters, updating one per frame
+    // With isolated WASM instance, no need to reinit - just run Glauber on current state!
+    let currentLetterIdx = 0;
+    let isRunning = false;
+    let animationId = null;
+
+    function animate() {
+        if (!isRunning) return;
+
+        // Update current letter
+        const state = letterStates[currentLetterIdx];
+        if (state) {
+            // Re-init WASM with this letter's triangles (still needed since we cycle through letters)
+            const dataPtr = wasm._malloc(state.triangleArr.length * 4);
             for (let i = 0; i < state.triangleArr.length; i++) {
-                Module.setValue(dataPtr + i * 4, state.triangleArr[i], 'i32');
+                wasm.setValue(dataPtr + i * 4, state.triangleArr[i], 'i32');
             }
             const ptr = initFromTrianglesWasm(dataPtr, state.triangleArr.length);
-            const jsonStr = Module.UTF8ToString(ptr);
             freeStringWasm(ptr);
-            Module._free(dataPtr);
+            wasm._free(dataPtr);
 
-            const result = JSON.parse(jsonStr);
-            if (result.status === 'valid') {
-                setUseRandomSweepsWasm(1);
-                const dPtr = exportDimersWasm();
-                const dimerStr = Module.UTF8ToString(dPtr);
-                freeStringWasm(dPtr);
-                const dimerResult = JSON.parse(dimerStr);
-                state.dimers = Array.isArray(dimerResult) ? dimerResult : (dimerResult.dimers || []);
-                state.initialDimers = [...state.dimers]; // Save initial state
-            }
-        }
+            setUseRandomSweepsWasm(1);
 
-        // Reinit all letters (called on slide enter)
-        function reinitAllLetters() {
-            currentLetterIdx = 0; // Reset to start from T
-            for (const state of letterStates) {
-                const dataPtr = Module._malloc(state.triangleArr.length * 4);
-                for (let i = 0; i < state.triangleArr.length; i++) {
-                    Module.setValue(dataPtr + i * 4, state.triangleArr[i], 'i32');
-                }
-                const ptr = initFromTrianglesWasm(dataPtr, state.triangleArr.length);
-                freeStringWasm(ptr);
-                Module._free(dataPtr);
-                setUseRandomSweepsWasm(1);
-                // Re-export fresh dimers from WASM (don't use cached data!)
-                const dPtr = exportDimersWasm();
-                const dimerStr = Module.UTF8ToString(dPtr);
-                freeStringWasm(dPtr);
-                const dimerResult = JSON.parse(dimerStr);
-                state.dimers = Array.isArray(dimerResult) ? dimerResult : (dimerResult.dimers || []);
-                drawLetter(state);
-            }
-        }
+            // Run Glauber steps
+            const stepPtr = performGlauberStepsWasm(50);
+            freeStringWasm(stepPtr);
 
-        // Draw function for a letter
-        function drawLetter(state) {
-            const { canvas, ctx, bounds, dimers } = state;
-            const { minX, maxX, minY, maxY } = bounds;
+            // Export new dimers
+            const dPtr = exportDimersWasm();
+            const dimerStr = wasm.UTF8ToString(dPtr);
+            freeStringWasm(dPtr);
+            const dimerResult = JSON.parse(dimerStr);
+            state.dimers = Array.isArray(dimerResult) ? dimerResult : (dimerResult.dimers || []);
 
-            // Use fixed dimensions to prevent zoom issues
-            const displayWidth = 100;
-            const displayHeight = 130;
-            const dpr = window.devicePixelRatio || 1;
-            if (canvas.width !== displayWidth * dpr) {
-                canvas.width = displayWidth * dpr;
-                canvas.height = displayHeight * dpr;
-            }
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, displayWidth, displayHeight);
-
-            const regionWidth = maxX - minX;
-            const regionHeight = maxY - minY;
-            const scale = Math.min(displayWidth / regionWidth, displayHeight / regionHeight) * 0.85;
-            const centerX = displayWidth / 2 - ((minX + maxX) / 2) * scale;
-            const centerY = displayHeight / 2 + ((minY + maxY) / 2) * scale;
-
-            // Draw lozenges
-            for (const d of dimers) {
-                const bn = d.bn, bj = d.bj, t = d.t;
-                let verts;
-                if (t === 0) {
-                    verts = [getVertex(bn, bj), getVertex(bn + 1, bj), getVertex(bn + 1, bj - 1), getVertex(bn, bj - 1)];
-                } else if (t === 1) {
-                    verts = [getVertex(bn, bj), getVertex(bn + 1, bj - 1), getVertex(bn + 1, bj - 2), getVertex(bn, bj - 1)];
-                } else {
-                    verts = [getVertex(bn - 1, bj), getVertex(bn, bj), getVertex(bn + 1, bj - 1), getVertex(bn, bj - 1)];
-                }
-
-                ctx.beginPath();
-                const p0 = [centerX + verts[0].x * scale, centerY - verts[0].y * scale];
-                ctx.moveTo(p0[0], p0[1]);
-                for (let i = 1; i < 4; i++) {
-                    const p = [centerX + verts[i].x * scale, centerY - verts[i].y * scale];
-                    ctx.lineTo(p[0], p[1]);
-                }
-                ctx.closePath();
-                ctx.fillStyle = colors[t];
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(0,0,0,0.15)';
-                ctx.lineWidth = 0.5;
-                ctx.stroke();
-            }
-        }
-
-        // Initial draw
-        for (const state of letterStates) {
             drawLetter(state);
         }
 
-        // Animation: cycle through letters, updating one per frame
-        let currentLetterIdx = 0;
-        let isRunning = false;
-        let animationId = null;
+        currentLetterIdx = (currentLetterIdx + 1) % letterStates.length;
+        animationId = requestAnimationFrame(animate);
+    }
 
-        function animate() {
-            if (!isRunning) return;
+    function start() {
+        if (isRunning) return;
+        isRunning = true;
+        animate();
+    }
 
-            // Update current letter
-            const state = letterStates[currentLetterIdx];
-            if (state) {
-                // Re-init WASM with this letter's triangles
-                const dataPtr = Module._malloc(state.triangleArr.length * 4);
-                for (let i = 0; i < state.triangleArr.length; i++) {
-                    Module.setValue(dataPtr + i * 4, state.triangleArr[i], 'i32');
-                }
-                const ptr = initFromTrianglesWasm(dataPtr, state.triangleArr.length);
-                freeStringWasm(ptr);
-                Module._free(dataPtr);
-
-                setUseRandomSweepsWasm(1);
-
-                // Import current dimers to restore state
-                // Actually we can't easily restore - just run more steps
-                // Slower steps for letters
-                const stepPtr = performGlauberStepsWasm(50);
-                freeStringWasm(stepPtr);
-
-                // Export new dimers
-                const dPtr = exportDimersWasm();
-                const dimerStr = Module.UTF8ToString(dPtr);
-                freeStringWasm(dPtr);
-                const dimerResult = JSON.parse(dimerStr);
-                state.dimers = Array.isArray(dimerResult) ? dimerResult : (dimerResult.dimers || []);
-
-                drawLetter(state);
-            }
-
-            currentLetterIdx = (currentLetterIdx + 1) % letterStates.length;
-            animationId = requestAnimationFrame(animate);
+    function pause() {
+        isRunning = false;
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
         }
+    }
 
-        function start() {
-            if (isRunning) return;
-            isRunning = true;
-            animate();
-        }
-
-        function pause() {
-            isRunning = false;
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-                animationId = null;
-            }
-        }
-
-        // Register with slide engine - auto-start when slide is shown
-        if (window.slideEngine) {
-            window.slideEngine.registerSimulation('thankyou', {
-                start,
-                pause,
-                onSlideEnter: reinitAllLetters,
-                onSlideLeave: pause
-            }, 0);
-        }
-    });
+    // Register with slide engine - auto-start when slide is shown
+    // No onSlideEnter/onSlideLeave needed - isolated WASM instance means no state conflicts!
+    if (window.slideEngine) {
+        window.slideEngine.registerSimulation('thankyou', {
+            start,
+            pause
+        }, 0);
+    }
 });
 </script>
