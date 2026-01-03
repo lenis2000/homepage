@@ -53,6 +53,26 @@ Use `vh`, `vw`, and `clamp()` for consistent sizing across all slides. No manual
 ```
 Fragments reveal in order. Going back hides them in reverse.
 
+**Fragment vs Simulation ordering:**
+The slide-engine processes fragments BEFORE simulations on the same arrow press. To have a simulation start before text appears:
+1. Remove `class="fragment"` from the text element
+2. Use `opacity: 0` and `transition: opacity 0.3s` for the hidden state
+3. Use `onStep` API in the simulation to show the text on a later step:
+```javascript
+window.slideEngine.registerSimulation('my-slide', {
+    start, pause,
+    steps: 2,
+    onStep(step) {
+        if (step === 1) start();  // Arrow 1: start animation
+        if (step === 2) document.getElementById('my-text').style.opacity = '1';  // Arrow 2: show text
+    },
+    onStepBack(step) {
+        if (step === 0) { pause(); document.getElementById('my-text').style.opacity = '0'; }
+        if (step === 1) document.getElementById('my-text').style.opacity = '0';
+    }
+}, 1);
+```
+
 **Canvas vs SVG for simulations:**
 - **Canvas**: Use for animation (fast). Use 2x resolution for crisp rendering on retina/projectors.
 - **SVG**: Use for static export only. DOM manipulation is too slow for animation (~70ms/frame).
