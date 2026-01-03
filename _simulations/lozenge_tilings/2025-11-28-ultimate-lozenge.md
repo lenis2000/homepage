@@ -5289,7 +5289,8 @@ function initLozengeApp() {
         const specialShapes = [
             { value: '*', label: 'Snowflake' },
             { value: '***', label: 'Snowman' },
-            { value: 'christmas-tree', label: 'Christmas Tree', theme: 'New Year' }
+            { value: 'christmas-tree', label: 'Christmas Tree', theme: 'New Year' },
+            { value: 'Rotunda', label: 'Rotunda', theme: 'UVA' }
         ];
         for (const shape of specialShapes) {
             const opt = document.createElement('option');
