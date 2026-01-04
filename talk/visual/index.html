@@ -2051,7 +2051,7 @@ window.addEventListener('wasm-loaded', async function() {
 </script>
 
 <section class="slide slide-top" id="q-deformation" data-title="q-Deformation">
-    <h2 class="slide-title">The q-Deformation</h2>
+    <h2 class="slide-title">q-Deformation</h2>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
         <!-- Left: Explanation text blocks -->
@@ -2060,7 +2060,10 @@ window.addEventListener('wasm-loaded', async function() {
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
                 <strong style="color: var(--slide-accent);">Area above a path:</strong><br>
                 Count unit squares above the path
-                <canvas id="area-example-canvas" width="300" height="200" style="height: 10vh; width: auto; display: block; margin-top: 0.5vh;"></canvas>
+                <div style="display: flex; align-items: center; gap: 1vw; margin-top: 0.5vh;">
+                    <canvas id="area-example-canvas" width="300" height="200" style="height: 10vh; width: auto;"></canvas>
+                    <span style="font-weight: bold; font-size: clamp(1.5rem, 2.5vw, 2.2rem);">Area = 8</span>
+                </div>
             </div>
 
             <!-- Block 2: q-weighting -->
@@ -2072,8 +2075,7 @@ window.addEventListener('wasm-loaded', async function() {
             <!-- Block 3: q-Binomial -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
                 <strong style="color: var(--slide-accent);">q-Binomial coefficient:</strong><br>
-                \(\displaystyle\binom{a+b}{a}_q = \frac{[a+b]_q!}{[a]_q![b]_q!}\)<br>
-                <span style="font-size: 0.85em;">where \([n]_q! = [1]_q[2]_q\cdots[n]_q\) and \([k]_q = 1+q+\cdots+q^{k-1}\)</span>
+                \(\displaystyle\binom{a+b}{a}_q = \sum_{\text{paths}} q^{\text{area}}\)
             </div>
 
             <!-- Block 4: Example -->
@@ -2184,13 +2186,14 @@ window.addEventListener('wasm-loaded', async function() {
         // Draw a specific path with area shaded
         // This path: R U R U R R U has area_below = 0+1+1+2 = 4, so area_above = 12-4 = 8
         const exPath = ['R', 'U', 'R', 'U', 'R', 'R', 'U'];
-        const padding = 20;
+        const padding = h * 0.1;
         const gridW = w - 2 * padding;
         const gridH = h - 2 * padding;
-        const stepX = gridW / A;
-        const stepY = gridH / B;
-        const baseX = padding;
-        const baseY = padding;
+        const step = Math.min(gridW / A, gridH / B);
+        const stepX = step;
+        const stepY = step;
+        const baseX = (w - A * step) / 2;
+        const baseY = (h - B * step) / 2;
 
         // Shade area ABOVE path
         areaCtx.fillStyle = 'rgba(229, 114, 0, 0.3)';
@@ -2208,18 +2211,20 @@ window.addEventListener('wasm-loaded', async function() {
         }
 
         // Draw grid
+        const actualGridW = A * stepX;
+        const actualGridH = B * stepY;
         areaCtx.strokeStyle = '#ccc';
         areaCtx.lineWidth = 1;
         for (let i = 0; i <= A; i++) {
             areaCtx.beginPath();
             areaCtx.moveTo(baseX + i * stepX, baseY);
-            areaCtx.lineTo(baseX + i * stepX, baseY + gridH);
+            areaCtx.lineTo(baseX + i * stepX, baseY + actualGridH);
             areaCtx.stroke();
         }
         for (let j = 0; j <= B; j++) {
             areaCtx.beginPath();
-            areaCtx.moveTo(baseX, baseY + gridH - j * stepY);
-            areaCtx.lineTo(baseX + gridW, baseY + gridH - j * stepY);
+            areaCtx.moveTo(baseX, baseY + actualGridH - j * stepY);
+            areaCtx.lineTo(baseX + actualGridW, baseY + actualGridH - j * stepY);
             areaCtx.stroke();
         }
 
@@ -2230,19 +2235,13 @@ window.addEventListener('wasm-loaded', async function() {
         areaCtx.lineJoin = 'round';
         areaCtx.beginPath();
         x = 0; y = 0;
-        areaCtx.moveTo(baseX + x * stepX, baseY + gridH - y * stepY);
+        areaCtx.moveTo(baseX + x * stepX, baseY + actualGridH - y * stepY);
         for (const move of exPath) {
             if (move === 'R') x++;
             else y++;
-            areaCtx.lineTo(baseX + x * stepX, baseY + gridH - y * stepY);
+            areaCtx.lineTo(baseX + x * stepX, baseY + actualGridH - y * stepY);
         }
         areaCtx.stroke();
-
-        // Label
-        areaCtx.fillStyle = '#232D4B';
-        areaCtx.font = 'bold 24px sans-serif';
-        areaCtx.textAlign = 'center';
-        areaCtx.fillText('Area = 8', w / 2, h - 3);
     }
 
     function drawAllPaths(q) {
