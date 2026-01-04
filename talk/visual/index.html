@@ -1785,13 +1785,58 @@ window.addEventListener('wasm-loaded', async function() {
         }
     }
 
-    async function collectSamplesCPU(count) {
-        for (let i = 0; i < count; i++) {
-            await runCFTP();
-            statusEl.textContent = `${samples.length} samples`;
-            drawHistogram();
-            await new Promise(r => setTimeout(r, 10));
+    // JavaScript Glauber dynamics for CPU fallback
+    function runGlauberJS(initialBits, steps) {
+        const path = initialBits.slice();  // Copy
+        const len = path.length;
+        for (let s = 0; s < steps; s++) {
+            const pos = Math.floor(Math.random() * (len - 1));
+            const wantAdd = Math.random() < 0.5;  // q=1 uniform
+            if (wantAdd) {
+                if (path[pos] === 1 && path[pos + 1] === 0) {
+                    path[pos] = 0;
+                    path[pos + 1] = 1;
+                }
+            } else {
+                if (path[pos] === 0 && path[pos + 1] === 1) {
+                    path[pos] = 1;
+                    path[pos + 1] = 0;
+                }
+            }
         }
+        // Compute middleY
+        let x = 0, y = 0;
+        for (let i = 0; i < len; i++) {
+            if (x === midX) return y;
+            if (path[i] === 0) x++; else y++;
+        }
+        return y;
+    }
+
+    async function collectSamplesCPU(count) {
+        // Same approach as GPU: one CFTP, then Glauber from that state
+        statusEl.textContent = 'Getting initial sample...';
+        statusEl.style.color = '#E57200';
+
+        const initialPath = await runCFTP();
+        if (!initialPath) return;
+
+        const initialBits = pathToBits(initialPath);
+        const stepsPerSample = 1000000;  // 1M steps like GPU
+
+        for (let i = 0; i < count; i++) {
+            const y = runGlauberJS(initialBits, stepsPerSample);
+            middleYs.push(y);
+            if (i % 10 === 0) {
+                statusEl.textContent = `${middleYs.length} samples (CPU)`;
+                drawHistogram();
+                await new Promise(r => setTimeout(r, 0));  // Yield to UI
+            }
+        }
+        statusEl.textContent = `${middleYs.length} samples`;
+        statusEl.style.color = 'var(--slide-muted)';
+        updateFormula();
+        drawHistogram();
     }
 
     async function collectSamples(count) {
