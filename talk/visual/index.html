@@ -2392,11 +2392,278 @@ window.addEventListener('wasm-loaded', async function() {
 })();
 </script>
 
-<section class="slide slide-center" id="lesson-2d" data-title="The Lesson">
-    <h2 class="slide-title">The Lesson</h2>
-    <p class="fragment" style="font-size: 1.5rem; margin-top: 2rem;">"By changing one parameter, we bend the curve."</p>
-    <p class="fragment" style="margin-top: 2rem; color: var(--slide-muted);">This foreshadows the limit shapes in 3D...</p>
+<section class="slide slide-top" id="q-limit-shape" data-title="q-Limit Shape">
+    <h2 class="slide-title">q-Limit Shape</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
+        <!-- Left: Explanation -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; padding-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <!-- Block 1: Limit Shape -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Limit shape</strong> <span style="font-size: 0.85em;">[Vershik 1996]</span><br>
+                As \(N \to \infty\) with \(q = e^{-\gamma/N}\), the boundary converges to:
+                $$A e^{-\gamma y} + B e^{-\gamma x} = 1$$
+                <span style="font-size: 0.85em;">
+                \(\displaystyle A = \frac{1-e^{-\gamma}}{1-e^{-\gamma(1+\alpha)}}\), \(\displaystyle B = \frac{1-e^{-\gamma \alpha}}{1-e^{-\gamma(1+\alpha)}}\)<br>
+                \(\alpha\) = rectangle aspect ratio
+                </span>
+            </div>
+
+            <!-- Block 2: Energy Functional -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Variational principle for limit shape \(y=f(x)\):</strong><br>
+                Minimize \(\displaystyle \int \sigma(f'(x)) \, dx + \gamma \cdot \text{Area}/N\)<br>
+                <span style="font-size: 0.85em;">\(\sigma(s) = -\frac{1}{N}\log\)(# paths approximating slope \(s\))</span>
+            </div>
+
+        </div>
+
+        <!-- Right: Simulation canvas -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <!-- q slider -->
+            <div style="display: flex; align-items: center; gap: 1vw; margin-bottom: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+                <label for="q-limit-slider" style="font-weight: bold;">q = </label>
+                <input type="range" id="q-limit-slider" min="0.5" max="1.5" step="0.01" value="0.99" style="width: 12vw;">
+                <span id="q-limit-value" style="font-weight: bold; min-width: 3em;">0.99</span>
+                <button id="q-limit-resample" style="padding: 0.5vh 1vw; cursor: pointer;">Resample</button>
+            </div>
+            <canvas id="q-limit-canvas" width="1200" height="900" style="height: 70vh; width: auto;"></canvas>
+            <div style="font-size: clamp(0.9rem, 1.5vw, 1.1rem); color: var(--slide-muted); margin-top: 0.5vh;">
+                <span>a = 360, b = 270</span> · <span id="q-limit-status">Loading...</span>
+            </div>
+        </div>
+    </div>
 </section>
+
+<script src="/talk/visual/sim/q-partition-cftp.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    const canvas = document.getElementById('q-limit-canvas');
+    const ctx = canvas.getContext('2d');
+    const slider = document.getElementById('q-limit-slider');
+    const qValueSpan = document.getElementById('q-limit-value');
+    const statusEl = document.getElementById('q-limit-status');
+    const resampleBtn = document.getElementById('q-limit-resample');
+
+    const N = 360;  // Width (a)
+    const M = 270;  // Height (b)
+    let q = 0.99;
+
+    // WASM module
+    let wasm = null;
+    let initSimulation, runCFTPBatch, getCoalesced, getPartitionPath, freeString, getM, getN;
+
+    // Partition path (sequence of 0=right, 1=up)
+    let partitionPath = [];
+    let isRunning = false;
+
+    // Colors
+    const colors = ['#E57200', '#232D4B', '#F9DCBF'];
+
+    async function initWasm() {
+        if (typeof QPartitionModule === 'undefined') {
+            statusEl.textContent = 'WASM not loaded';
+            return false;
+        }
+        wasm = await QPartitionModule();
+        initSimulation = wasm.cwrap('initSimulation', null, ['number', 'number', 'number']);
+        runCFTPBatch = wasm.cwrap('runCFTPBatch', 'number', []);
+        getCoalesced = wasm.cwrap('getCoalesced', 'number', []);
+        getPartitionPath = wasm.cwrap('getPartitionPath', 'number', []);
+        freeString = wasm.cwrap('freeString', null, ['number']);
+        getM = wasm.cwrap('getM', 'number', []);
+        getN = wasm.cwrap('getN', 'number', []);
+        return true;
+    }
+
+    function getPathFromWasm() {
+        const ptr = getPartitionPath();
+        const str = wasm.UTF8ToString(ptr);
+        freeString(ptr);
+        return JSON.parse(str);
+    }
+
+    async function runCFTP() {
+        if (!wasm || isRunning) return;
+        isRunning = true;
+        statusEl.textContent = 'Sampling...';
+
+        initSimulation(N, M, q);
+
+        let totalSteps = 0;
+        const batchSize = 10000000;  // Hardcoded in WASM
+
+        while (!getCoalesced()) {
+            runCFTPBatch();
+            totalSteps += batchSize;
+            statusEl.textContent = `Sampling... ${(totalSteps / 1e6).toFixed(0)}M steps`;
+            await new Promise(r => setTimeout(r, 1));
+        }
+
+        partitionPath = getPathFromWasm();
+        statusEl.textContent = `Sampled in ${(totalSteps / 1e6).toFixed(1)}M steps`;
+        isRunning = false;
+        draw();
+    }
+
+    function draw() {
+        const w = canvas.width, h = canvas.height;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, w, h);
+
+        const padding = 60;
+        const drawW = w - 2 * padding;
+        const drawH = h - 2 * padding;
+
+        // Scale to fit M x N rectangle
+        const scaleX = drawW / N;
+        const scaleY = drawH / M;
+        const scale = Math.min(scaleX, scaleY);
+
+        const offsetX = padding + (drawW - N * scale) / 2;
+        const offsetY = padding + (drawH - M * scale) / 2;
+
+        // Bounding rectangle
+        ctx.strokeStyle = colors[1];
+        ctx.lineWidth = 2;
+        ctx.strokeRect(offsetX, offsetY, N * scale, M * scale);
+
+        // Draw partition (filled region)
+        // partitionPath is [[x,y], [x,y], ...] from (0,0) to (N,M)
+        if (partitionPath.length > 0) {
+            ctx.fillStyle = colors[0] + '60';
+            ctx.beginPath();
+            // Start at bottom-left corner
+            ctx.moveTo(offsetX, offsetY + M * scale);
+
+            // Path goes from (0,0) to (N,M) in math coords
+            // Canvas: x goes right, y goes DOWN, so we flip y
+            for (const [px, py] of partitionPath) {
+                ctx.lineTo(offsetX + px * scale, offsetY + (M - py) * scale);
+            }
+
+            // Close: go to top-left, then back to start
+            ctx.lineTo(offsetX, offsetY);
+            ctx.lineTo(offsetX, offsetY + M * scale);
+            ctx.closePath();
+            ctx.fill();
+
+            // Draw path line
+            ctx.strokeStyle = colors[0];
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            for (let i = 0; i < partitionPath.length; i++) {
+                const [px, py] = partitionPath[i];
+                const cx = offsetX + px * scale;
+                const cy = offsetY + (M - py) * scale;
+                if (i === 0) ctx.moveTo(cx, cy);
+                else ctx.lineTo(cx, cy);
+            }
+            ctx.stroke();
+        }
+
+        // Draw limit shape curve
+        drawLimitShape(offsetX, offsetY, scale);
+    }
+
+    function drawLimitShape(offsetX, offsetY, scale) {
+        const aa = M / N;  // aspect ratio
+        const gamma = -N * Math.log(q);
+
+        ctx.strokeStyle = '#ff0000';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 4]);
+        ctx.beginPath();
+
+        // For γ ≈ 0: straight diagonal
+        if (Math.abs(gamma) < 1e-6) {
+            ctx.moveTo(offsetX, offsetY + M * scale);
+            ctx.lineTo(offsetX + N * scale, offsetY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            return;
+        }
+
+        // A·e^{-γy} + B·e^{-γx} = 1
+        const denom = 1 - Math.exp(-gamma * (1 + aa));
+        const A = (1 - Math.exp(-gamma)) / denom;
+        const B = (1 - Math.exp(-gamma * aa)) / denom;
+
+        const steps = 200;
+        let started = false;
+
+        for (let i = 0; i <= steps; i++) {
+            const x_norm = i / steps;
+            const exp_neg_cx = Math.exp(-gamma * x_norm);
+            const inside = (1 - B * exp_neg_cx) / A;
+
+            if (inside > 0) {
+                const y_formula = -Math.log(inside) / gamma;
+                const y_norm = aa - y_formula;
+
+                if (y_norm >= 0 && y_norm <= aa) {
+                    const canvasX = offsetX + x_norm * N * scale;
+                    const canvasY = offsetY + M * scale - (y_norm / aa) * M * scale;
+
+                    if (!started) {
+                        ctx.moveTo(canvasX, canvasY);
+                        started = true;
+                    } else {
+                        ctx.lineTo(canvasX, canvasY);
+                    }
+                }
+            }
+        }
+
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    function updateQ() {
+        q = parseFloat(slider.value);
+        qValueSpan.textContent = q.toFixed(2);
+        draw();
+    }
+
+    slider.addEventListener('input', updateQ);
+    resampleBtn.addEventListener('click', () => runCFTP());
+
+    // Initialize
+    async function init() {
+        const ok = await initWasm();
+        if (ok) {
+            await runCFTP();
+        }
+    }
+
+    // Register with slide engine
+    function waitForSlideEngine() {
+        if (window.slideEngine) {
+            window.slideEngine.registerSimulation('q-limit-shape', {
+                start() {},
+                pause() {},
+                onSlideEnter() {
+                    if (!wasm) {
+                        init();
+                    } else if (partitionPath.length === 0) {
+                        runCFTP();
+                    } else {
+                        draw();
+                    }
+                }
+            }, 0);
+        } else {
+            setTimeout(waitForSlideEngine, 50);
+        }
+    }
+    waitForSlideEngine();
+
+    // Initial draw placeholder
+    draw();
+})();
+</script>
 
 <!-- ==================== PART 2: The 3D Main Event ==================== -->
 

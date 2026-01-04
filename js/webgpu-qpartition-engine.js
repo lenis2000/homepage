@@ -15,6 +15,7 @@ class WebGPUQPartitionEngine {
         this.N = 0;
         this.M = 0;
         this.numChains = 0;
+        this.samplingLock = null;  // Promise for current sampling operation
     }
 
     /**
@@ -202,8 +203,22 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     async sample(N, M, numChains, initialPath, stepsPerChain = 20000) {
         if (!this.isReady) throw new Error("Engine not initialized");
 
+        // Wait for any previous sampling operation to complete
+        if (this.samplingLock) {
+            try {
+                await this.samplingLock;
+            } catch (e) {
+                // Previous operation failed, continue with new one
+            }
+        }
+
+        // Create a new lock for this operation
+        let resolveLock;
+        this.samplingLock = new Promise(resolve => { resolveLock = resolve; });
+
         console.log(`WebGPU sample: N=${N}, M=${M}, chains=${numChains}, steps=${stepsPerChain}`);
 
+        try {
         this.N = N;
         this.M = M;
         this.numChains = numChains;
@@ -309,6 +324,9 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         this.paramsBuffer.destroy();
 
         return middleYData;
+        } finally {
+            resolveLock();  // Release the lock
+        }
     }
 
     destroy() {

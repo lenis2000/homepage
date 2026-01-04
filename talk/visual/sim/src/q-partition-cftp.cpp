@@ -9,7 +9,7 @@ emcc q-partition-cftp.cpp -o ../q-partition-cftp.js \
   -s WASM=1 \
   -s MODULARIZE=1 \
   -s EXPORT_NAME='QPartitionModule' \
-  -s "EXPORTED_FUNCTIONS=['_initSimulation','_runCFTPBatch','_getCoalesced','_getProgress','_getPartitionPath','_freeString','_getM','_getN','_setPath','_runGlauberAndGetMiddleY']" \
+  -s "EXPORTED_FUNCTIONS=['_initSimulation','_runCFTPBatch','_getCoalesced','_getProgress','_getPartitionPath','_freeString','_getM','_getN','_setPath','_runGlauberAndGetMiddleY','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=64MB \
