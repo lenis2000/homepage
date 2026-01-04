@@ -1765,13 +1765,22 @@ window.addEventListener('wasm-loaded', async function() {
             // Convert to bit format for GPU
             const initialBits = pathToBits(initialPath);
 
-            // Step 2: Run GPU Glauber chains from this initial state
-            statusEl.textContent = `GPU: ${count} chains...`;
-            const gpuMiddleYs = await gpuEngine.sample(N, M, count, initialBits, 1000000);  // 1M steps - mixing time is O(n²)
+            // Step 2: Run GPU Glauber chains in batches of 10k
+            const batchSize = 10000;
+            let remaining = count;
+            while (remaining > 0) {
+                const thisBatch = Math.min(batchSize, remaining);
+                statusEl.textContent = `GPU: ${middleYs.length}/${count + middleYs.length - remaining} samples...`;
 
-            // Add GPU results to histogram
-            for (let i = 0; i < gpuMiddleYs.length; i++) {
-                middleYs.push(gpuMiddleYs[i]);
+                const gpuMiddleYs = await gpuEngine.sample(N, M, thisBatch, initialBits, 1000000);
+
+                for (let i = 0; i < gpuMiddleYs.length; i++) {
+                    middleYs.push(gpuMiddleYs[i]);
+                }
+
+                remaining -= thisBatch;
+                drawHistogram();
+                await new Promise(r => setTimeout(r, 0));  // Yield to UI
             }
 
             statusEl.textContent = `${middleYs.length} samples (GPU)`;
