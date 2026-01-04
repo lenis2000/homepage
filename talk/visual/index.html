@@ -2000,6 +2000,13 @@ window.addEventListener('wasm-loaded', async function() {
                     reset();
                     histContainer.style.opacity = '0';
                     observationEl.style.opacity = '0';
+                    questionEl.style.opacity = '0';
+                    answerEl.style.opacity = '0';
+                    // Reset the slide engine's step counter
+                    if (window.slideEngine) {
+                        window.slideEngine.currentSimStep = 0;
+                        window.slideEngine.slideHistory.set('limit-shape-2d', { fragment: 0, simStep: 0 });
+                    }
                 }
             }, 1);
         } else {
