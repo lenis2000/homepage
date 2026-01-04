@@ -1463,6 +1463,10 @@ window.addEventListener('wasm-loaded', async function() {
             <div id="histogram-stats" style="margin-top: 0.5vh; font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted);">
                 <span id="histogram-count">0</span> samples
             </div>
+            <!-- Mobile placeholder -->
+            <div id="histogram-mobile-placeholder" style="display: none; height: 45vh; width: 35vw; background: rgba(35, 45, 75, 0.05); border-radius: 8px; justify-content: center; align-items: center; text-align: center; padding: 2vw;">
+                <p style="font-size: clamp(1rem, 1.8vw, 1.4rem); color: var(--slide-muted);">Histogram available<br>on desktop only</p>
+            </div>
         </div>
     </div>
 
@@ -1497,9 +1501,12 @@ window.addEventListener('wasm-loaded', async function() {
         return;
     }
 
-    // Initialize GPU engine if WebGPU available
+    // Detect mobile
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    // Initialize GPU engine if WebGPU available (skip on mobile)
     let gpuEngine = null;
-    if (WebGPUQPartitionEngine.isAvailable()) {
+    if (!isMobile && WebGPUQPartitionEngine.isAvailable()) {
         try {
             gpuEngine = new WebGPUQPartitionEngine();
             await gpuEngine.init();
@@ -1509,7 +1516,7 @@ window.addEventListener('wasm-loaded', async function() {
             gpuEngine = null;
         }
     } else {
-        console.log('WebGPU not available, using CPU (WASM)');
+        console.log(isMobile ? 'Mobile: simple mode' : 'WebGPU not available, using CPU');
     }
 
     // Path canvas (left)
@@ -1521,6 +1528,15 @@ window.addEventListener('wasm-loaded', async function() {
     const histCtx = histCanvas.getContext('2d');
     const histContainer = document.getElementById('histogram-container');
     const histCountEl = document.getElementById('histogram-count');
+    const histStats = document.getElementById('histogram-stats');
+    const histPlaceholder = document.getElementById('histogram-mobile-placeholder');
+
+    // On mobile: hide canvas, show placeholder
+    if (isMobile) {
+        histCanvas.style.display = 'none';
+        histStats.style.display = 'none';
+        histPlaceholder.style.display = 'flex';
+    }
 
     // Other elements
     const statusEl = document.getElementById('limit-shape-status');
@@ -1954,30 +1970,49 @@ window.addEventListener('wasm-loaded', async function() {
                 pause() {},
                 steps: 5,
                 async onStep(step) {
-                    console.log('limit-shape-2d step:', step, 'gpuEngine:', !!gpuEngine);
-                    if (step === 1) {
-                        // Step 1: Run ONE sample, show observation text
-                        samples = [];
-                        middleYs = [];
-                        await runCFTP();
-                        observationEl.style.opacity = '1';
-                        drawHistogram();  // Draw histogram with 1 sample (hidden but ready)
-                    } else if (step === 2) {
-                        // Step 2: Collect 20 more samples, show histogram
-                        histContainer.style.opacity = '1';
-                        drawHistogram();  // Show the 1 sample we have immediately
-                        await collectSamples(19);  // Already have 1, add 19 more = 20 total
-                    } else if (step === 3) {
-                        // Step 3: Collect many more samples (20k if GPU, 200 if CPU)
-                        const count = gpuEngine ? 20000 : 200;
-                        await collectSamples(count);
-                    } else if (step === 4) {
-                        // Step 4: Ask the question
-                        questionEl.style.opacity = '1';
-                    } else if (step === 5) {
-                        // Step 5: Show the answer + Brownian bridge graph
-                        answerEl.style.opacity = '1';
-                        drawBrownianBridge();
+                    console.log('limit-shape-2d step:', step, 'isMobile:', isMobile);
+                    if (isMobile) {
+                        // Mobile: simple mode - just CFTP samples, no histogram
+                        if (step === 1) {
+                            samples = [];
+                            middleYs = [];
+                            await runCFTP();
+                            observationEl.style.opacity = '1';
+                        } else if (step === 2) {
+                            // Run 4 more CFTP samples (5 total)
+                            for (let i = 0; i < 4; i++) {
+                                await runCFTP();
+                            }
+                            histContainer.style.opacity = '1';  // Shows placeholder
+                        } else if (step === 3) {
+                            // Skip on mobile
+                        } else if (step === 4) {
+                            questionEl.style.opacity = '1';
+                        } else if (step === 5) {
+                            answerEl.style.opacity = '1';
+                            drawBrownianBridge();
+                        }
+                    } else {
+                        // Desktop: full experience
+                        if (step === 1) {
+                            samples = [];
+                            middleYs = [];
+                            await runCFTP();
+                            observationEl.style.opacity = '1';
+                            drawHistogram();
+                        } else if (step === 2) {
+                            histContainer.style.opacity = '1';
+                            drawHistogram();
+                            await collectSamples(19);
+                        } else if (step === 3) {
+                            const count = gpuEngine ? 20000 : 200;
+                            await collectSamples(count);
+                        } else if (step === 4) {
+                            questionEl.style.opacity = '1';
+                        } else if (step === 5) {
+                            answerEl.style.opacity = '1';
+                            drawBrownianBridge();
+                        }
                     }
                 },
                 onStepBack(step) {
@@ -2019,21 +2054,11 @@ window.addEventListener('wasm-loaded', async function() {
     <h2 class="slide-title">The q-Deformation</h2>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
-        <!-- Left: All 35 paths grid -->
-        <div style="display: flex; flex-direction: column; align-items: center;">
-            <div style="font-size: clamp(0.9rem, 1.5vw, 1.1rem); margin-bottom: 0.5vh; display: flex; align-items: center; gap: 1vw;">
-                <label for="q-slider">q = </label>
-                <input type="range" id="q-slider" min="0" max="2" step="0.01" value="1" style="width: 12vw;">
-                <span id="q-value" style="font-weight: bold; min-width: 3em;">1.00</span>
-            </div>
-            <canvas id="q-paths-canvas" width="1000" height="1400" style="height: 65vh; width: auto;"></canvas>
-        </div>
-
-        <!-- Right: Explanation text -->
+        <!-- Left: Explanation text -->
         <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); text-align: left; padding-top: 1vh;">
             <div style="margin-bottom: 2vh;">
-                <strong style="color: var(--slide-accent);">Area under a path:</strong><br>
-                <span style="font-size: clamp(0.9rem, 1.5vw, 1.2rem);">Count unit squares below the path</span>
+                <strong style="color: var(--slide-accent);">Area above a path:</strong><br>
+                <span style="font-size: clamp(0.9rem, 1.5vw, 1.2rem);">Count unit squares above the path</span>
                 <canvas id="area-example-canvas" width="300" height="200" style="height: 12vh; width: auto; display: block; margin-top: 0.5vh;"></canvas>
             </div>
 
@@ -2055,10 +2080,20 @@ window.addEventListener('wasm-loaded', async function() {
             </div>
 
             <div style="margin-top: 2vh; font-size: clamp(0.85rem, 1.4vw, 1.1rem); color: var(--slide-muted);">
-                <strong>q &lt; 1:</strong> prefers smaller area (paths hug axes)<br>
+                <strong>q &lt; 1:</strong> prefers smaller area (paths bulge out)<br>
                 <strong>q = 1:</strong> uniform (all 35 paths equally likely)<br>
-                <strong>q &gt; 1:</strong> prefers larger area (paths bulge out)
+                <strong>q &gt; 1:</strong> prefers larger area (paths hug axes)
             </div>
+        </div>
+
+        <!-- Right: All 35 paths grid -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="font-size: clamp(0.9rem, 1.5vw, 1.1rem); margin-bottom: 0.5vh; display: flex; align-items: center; gap: 1vw;">
+                <label for="q-slider">q = </label>
+                <input type="range" id="q-slider" min="0" max="2" step="0.01" value="1" style="width: 12vw;">
+                <span id="q-value" style="font-weight: bold; min-width: 3em;">1.00</span>
+            </div>
+            <canvas id="q-paths-canvas" width="1000" height="1400" style="height: 65vh; width: auto;"></canvas>
         </div>
     </div>
 </section>
@@ -2100,14 +2135,15 @@ window.addEventListener('wasm-loaded', async function() {
         return paths;
     }
 
-    // Calculate area under a path (unit squares below)
+    // Calculate area ABOVE a path (unit squares above)
+    // Area above = A*B - area below
     function calcArea(path) {
-        let area = 0, y = 0;
+        let areaBelow = 0, y = 0;
         for (const move of path) {
-            if (move === 'R') area += y;
+            if (move === 'R') areaBelow += y;
             else y++;
         }
-        return area;
+        return A * B - areaBelow;
     }
 
     const allPaths = generateAllPaths(A, B);
@@ -2150,7 +2186,8 @@ window.addEventListener('wasm-loaded', async function() {
         areaCtx.fillRect(0, 0, w, h);
 
         // Draw a specific path with area shaded
-        const exPath = ['R', 'U', 'R', 'U', 'R', 'R', 'U']; // area = 0+1+1+2 = 4
+        // This path: R U R U R R U has area_below = 0+1+1+2 = 4, so area_above = 12-4 = 8
+        const exPath = ['R', 'U', 'R', 'U', 'R', 'R', 'U'];
         const padding = 20;
         const gridW = w - 2 * padding;
         const gridH = h - 2 * padding;
@@ -2159,14 +2196,14 @@ window.addEventListener('wasm-loaded', async function() {
         const baseX = padding;
         const baseY = padding;
 
-        // Shade area under path
+        // Shade area ABOVE path
         areaCtx.fillStyle = 'rgba(229, 114, 0, 0.3)';
         let x = 0, y = 0;
         for (const move of exPath) {
             if (move === 'R') {
-                // Shade column from 0 to y
-                if (y > 0) {
-                    areaCtx.fillRect(baseX + x * stepX, baseY + gridH - y * stepY, stepX, y * stepY);
+                // Shade column from y to B (above the path)
+                if (y < B) {
+                    areaCtx.fillRect(baseX + x * stepX, baseY, stepX, (B - y) * stepY);
                 }
                 x++;
             } else {
@@ -2209,7 +2246,7 @@ window.addEventListener('wasm-loaded', async function() {
         areaCtx.fillStyle = '#232D4B';
         areaCtx.font = 'bold 14px sans-serif';
         areaCtx.textAlign = 'center';
-        areaCtx.fillText('Area = 4', w / 2, h - 5);
+        areaCtx.fillText('Area = 8', w / 2, h - 5);
     }
 
     function drawAllPaths(q) {
