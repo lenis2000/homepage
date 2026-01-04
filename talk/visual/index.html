@@ -2923,11 +2923,10 @@ window.addEventListener('wasm-loaded', async function() {
 </section>
 
 <script>
-window.addEventListener('wasm-loaded', async function() {
-    // Wait for LozengeModule factory to be available
-    if (typeof LozengeModule === 'undefined') {
-        console.error('LozengeModule not loaded');
-        return;
+(async function initThankYou() {
+    // Wait for LozengeModule to be available (polling instead of event listener)
+    while (typeof LozengeModule === 'undefined') {
+        await new Promise(r => setTimeout(r, 50));
     }
 
     // Create isolated WASM instance for Thank You slide - completely separate from Title!
@@ -3139,14 +3138,24 @@ window.addEventListener('wasm-loaded', async function() {
     }
 
     // Register with slide engine - auto-start when slide is shown
-    // No onSlideEnter/onSlideLeave needed - isolated WASM instance means no state conflicts!
-    if (window.slideEngine) {
-        window.slideEngine.registerSimulation('thankyou', {
-            start,
-            pause
-        }, 0);
+    function waitForSlideEngine() {
+        if (window.slideEngine) {
+            window.slideEngine.registerSimulation('thankyou', {
+                start,
+                pause,
+                onSlideEnter() {
+                    for (const state of letterStates) {
+                        drawLetter(state);
+                    }
+                    start();
+                }
+            }, 0);
+        } else {
+            setTimeout(waitForSlideEngine, 50);
+        }
     }
-});
+    waitForSlideEngine();
+})();
 </script>
 
 <!-- Global: Escape/Enter key blurs input fields for slide navigation -->
