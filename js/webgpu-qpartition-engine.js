@@ -37,7 +37,12 @@ class WebGPUQPartitionEngine {
             throw new Error("No WebGPU adapter found");
         }
 
-        this.device = await adapter.requestDevice();
+        try {
+            this.device = await adapter.requestDevice();
+        } catch (e) {
+            console.error("WebGPU device request failed:", e);
+            throw new Error("WebGPU device request failed: " + e.message);
+        }
 
         // Inline shader code for Glauber sampling (no CFTP, just mixing)
         const shaderCode = `
@@ -196,6 +201,8 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
      */
     async sample(N, M, numChains, initialPath, stepsPerChain = 20000) {
         if (!this.isReady) throw new Error("Engine not initialized");
+
+        console.log(`WebGPU sample: N=${N}, M=${M}, chains=${numChains}, steps=${stepsPerChain}`);
 
         this.N = N;
         this.M = M;

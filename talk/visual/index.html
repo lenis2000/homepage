@@ -1782,21 +1782,32 @@ window.addEventListener('wasm-loaded', async function() {
         statusEl.style.color = '#E57200';
 
         try {
-            // Step 1: Get ONE valid path via CPU CFTP
-            const initialPath = await runCFTP();
-            if (!initialPath) return collectSamplesCPU(count);
+            // Use existing sample if available, otherwise run CFTP
+            let initialPath;
+            if (samples.length > 0) {
+                initialPath = samples[samples.length - 1];
+            } else {
+                initialPath = await runCFTP();
+                if (!initialPath) return collectSamplesCPU(count);
+            }
 
             // Convert to bit format for GPU
             const initialBits = pathToBits(initialPath);
 
-            // Step 2: Run GPU Glauber chains in batches of 5k (20k = 4 batches)
+            // Run GPU Glauber chains in batches of 5k (20k = 4 batches)
             const batchSize = 5000;
             let remaining = count;
             while (remaining > 0) {
                 const thisBatch = Math.min(batchSize, remaining);
                 statusEl.textContent = `GPU: ${middleYs.length}/${count + middleYs.length - remaining} samples...`;
 
-                const gpuMiddleYs = await gpuEngine.sample(N, M, thisBatch, initialBits, 1000000);
+                // Add timeout for GPU operations (10 seconds)
+                const gpuPromise = gpuEngine.sample(N, M, thisBatch, initialBits, 1000000);
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('GPU timeout')), 10000)
+                );
+
+                const gpuMiddleYs = await Promise.race([gpuPromise, timeoutPromise]);
 
                 for (let i = 0; i < gpuMiddleYs.length; i++) {
                     middleYs.push(gpuMiddleYs[i]);
@@ -1813,7 +1824,8 @@ window.addEventListener('wasm-loaded', async function() {
             drawPathCanvas();
             drawHistogram();
         } catch (e) {
-            console.error('GPU sampling failed:', e);
+            console.error('GPU sampling failed, falling back to CPU:', e);
+            gpuEngine = null;  // Disable GPU for future calls
             return collectSamplesCPU(count);
         }
     }
@@ -1841,8 +1853,14 @@ window.addEventListener('wasm-loaded', async function() {
         statusEl.textContent = 'Getting initial sample...';
         statusEl.style.color = '#E57200';
 
-        const initialPath = await runCFTP();
-        if (!initialPath) return;
+        // Use existing sample if available, otherwise run CFTP
+        let initialPath;
+        if (samples.length > 0) {
+            initialPath = samples[samples.length - 1];
+        } else {
+            initialPath = await runCFTP();
+            if (!initialPath) return;
+        }
 
         const initialBits = pathToBits(initialPath);
         const stepsPerSample = 1000000;  // 1M steps like GPU
@@ -1850,11 +1868,9 @@ window.addEventListener('wasm-loaded', async function() {
         for (let i = 0; i < count; i++) {
             const y = runGlauberWASM(initialBits, stepsPerSample);
             middleYs.push(y);
-            if (i % 10 === 0) {
-                statusEl.textContent = `${middleYs.length} samples (CPU)`;
-                drawHistogram();
-                await new Promise(r => setTimeout(r, 0));  // Yield to UI
-            }
+            statusEl.textContent = `${middleYs.length} samples (CPU)`;
+            drawHistogram();
+            await new Promise(r => setTimeout(r, 0));  // Yield to UI after each sample
         }
         statusEl.textContent = `${middleYs.length} samples`;
         statusEl.style.color = 'var(--slide-muted)';
@@ -1944,15 +1960,18 @@ window.addEventListener('wasm-loaded', async function() {
                 pause() {},
                 steps: 5,
                 async onStep(step) {
+                    console.log('limit-shape-2d step:', step, 'gpuEngine:', !!gpuEngine);
                     if (step === 1) {
                         // Step 1: Run ONE sample, show observation text
                         samples = [];
                         middleYs = [];
                         await runCFTP();
                         observationEl.style.opacity = '1';
+                        drawHistogram();  // Draw histogram with 1 sample (hidden but ready)
                     } else if (step === 2) {
                         // Step 2: Collect 20 more samples, show histogram
                         histContainer.style.opacity = '1';
+                        drawHistogram();  // Show the 1 sample we have immediately
                         await collectSamples(19);  // Already have 1, add 19 more = 20 total
                     } else if (step === 3) {
                         // Step 3: Collect many more samples (20k if GPU, 200 if CPU)
