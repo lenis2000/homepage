@@ -200,11 +200,28 @@
     margin-top: 2rem;
 }
 
+/* ==================== Top Navigation Bar ==================== */
+
+.slide-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--footer-height);
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0 12px;
+    background: #f0f0f0;
+    border-bottom: 1px solid #ddd;
+    z-index: 1000;
+}
+
 /* ==================== Progress Bar ==================== */
 
 .slide-progress {
     position: fixed;
-    top: 0;
+    top: var(--footer-height);
     left: 0;
     right: 0;
     height: 4px;
@@ -219,42 +236,35 @@
     width: 0;
 }
 
-/* ==================== Footer Navigation Bar ==================== */
-
-.slide-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: var(--footer-height);
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    padding: 0 12px;
-    background: #f0f0f0;
-    border-top: 1px solid #ddd;
-    z-index: 1000;
-}
-
 /* Hide dots */
 .slide-dots {
     display: none;
 }
 
-/* Direct navigation arrows */
+/* Navigation arrows */
 .slide-prev-direct,
-.slide-next-direct {
+.slide-next-direct,
+.slide-prev-step,
+.slide-next-step {
     background: transparent;
     border: none;
     color: #666;
-    font-size: 10px;
+    font-size: 12px;
     cursor: pointer;
     padding: 2px 4px;
 }
 
 .slide-prev-direct:hover,
-.slide-next-direct:hover {
+.slide-next-direct:hover,
+.slide-prev-step:hover,
+.slide-next-step:hover {
     color: var(--slide-accent);
+}
+
+/* Double arrows slightly larger */
+.slide-prev-direct,
+.slide-next-direct {
+    font-size: 14px;
 }
 
 /* Slide counter */
@@ -638,7 +648,7 @@
     }
 
     .slide-nav {
-        bottom: 0.5rem;
+        top: 0.5rem;
         padding: 0.3rem 0.75rem;
         font-size: 0.9rem;
     }

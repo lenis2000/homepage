@@ -126,13 +126,21 @@ class SlideEngine {
 
         nav.appendChild(dotsContainer);
 
-        // Add prev button (direct slide skip)
-        const prevBtn = document.createElement('button');
-        prevBtn.className = 'slide-prev-direct';
-        prevBtn.setAttribute('aria-label', 'Previous slide');
-        prevBtn.innerHTML = '&#9664;';
-        prevBtn.addEventListener('click', () => this.goTo(this.current - 1));
-        nav.appendChild(prevBtn);
+        // Add prev-slide button (direct slide skip)
+        const prevSlideBtn = document.createElement('button');
+        prevSlideBtn.className = 'slide-prev-direct';
+        prevSlideBtn.setAttribute('aria-label', 'Previous slide');
+        prevSlideBtn.innerHTML = '&#8676;'; // ⇤
+        prevSlideBtn.addEventListener('click', () => this.goTo(this.current - 1));
+        nav.appendChild(prevSlideBtn);
+
+        // Add single-prev button (step, then slide - like arrow keys)
+        const prevStepBtn = document.createElement('button');
+        prevStepBtn.className = 'slide-prev-step';
+        prevStepBtn.setAttribute('aria-label', 'Previous step');
+        prevStepBtn.innerHTML = '&#9664;'; // ◀
+        prevStepBtn.addEventListener('click', () => this.prev());
+        nav.appendChild(prevStepBtn);
 
         // Add counter
         const counter = document.createElement('span');
@@ -140,13 +148,21 @@ class SlideEngine {
         counter.textContent = `1/${this.slides.length}`;
         nav.appendChild(counter);
 
-        // Add next button (direct slide skip)
-        const nextBtn = document.createElement('button');
-        nextBtn.className = 'slide-next-direct';
-        nextBtn.setAttribute('aria-label', 'Next slide');
-        nextBtn.innerHTML = '&#9654;';
-        nextBtn.addEventListener('click', () => this.goTo(this.current + 1));
-        nav.appendChild(nextBtn);
+        // Add single-next button (step, then slide - like arrow keys)
+        const nextStepBtn = document.createElement('button');
+        nextStepBtn.className = 'slide-next-step';
+        nextStepBtn.setAttribute('aria-label', 'Next step');
+        nextStepBtn.innerHTML = '&#9654;'; // ▶
+        nextStepBtn.addEventListener('click', () => this.next());
+        nav.appendChild(nextStepBtn);
+
+        // Add next-slide button (direct slide skip)
+        const nextSlideBtn = document.createElement('button');
+        nextSlideBtn.className = 'slide-next-direct';
+        nextSlideBtn.setAttribute('aria-label', 'Next slide');
+        nextSlideBtn.innerHTML = '&#8677;'; // ⇥
+        nextSlideBtn.addEventListener('click', () => this.goTo(this.current + 1));
+        nav.appendChild(nextSlideBtn);
 
         // Add menu button
         const menuBtn = document.createElement('button');
@@ -400,6 +416,20 @@ class SlideEngine {
         if (this.current > 0) {
             this.goTo(this.current - 1, { showAllFragments: true, showAllSims: true });
         }
+    }
+
+    // Step within current slide only (no slide change)
+    nextStep() {
+        if (this.nextFragment()) return true;
+        if (this.nextSimStep()) return true;
+        return false;
+    }
+
+    // Step back within current slide only (no slide change)
+    prevStep() {
+        if (this.prevSimStep()) return true;
+        if (this.prevFragment()) return true;
+        return false;
     }
 
     goTo(index, options = {}) {
