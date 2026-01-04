@@ -1497,20 +1497,19 @@ window.addEventListener('wasm-loaded', async function() {
         return;
     }
 
-    // Initialize GPU engine if WebGPU available (skip on mobile - too slow)
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    // Initialize GPU engine if WebGPU available
     let gpuEngine = null;
-    if (!isMobile && WebGPUQPartitionEngine.isAvailable()) {
+    if (WebGPUQPartitionEngine.isAvailable()) {
         try {
             gpuEngine = new WebGPUQPartitionEngine();
             await gpuEngine.init();
-            console.log('WebGPU CFTP engine ready');
+            console.log('WebGPU engine ready');
         } catch (e) {
             console.warn('WebGPU init failed, using CPU fallback:', e);
             gpuEngine = null;
         }
     } else {
-        console.log(isMobile ? 'Mobile detected, using CPU (WASM)' : 'WebGPU not available, using CPU (WASM)');
+        console.log('WebGPU not available, using CPU (WASM)');
     }
 
     // Path canvas (left)
@@ -1547,6 +1546,7 @@ window.addEventListener('wasm-loaded', async function() {
     let samples = [];      // Store full paths for overlay
     let middleYs = [];     // Store y-values at x = N/2 for histogram
     let isRunning = false;
+    let cachedInitialBits = null;  // Cache the initial path bits after first CFTP
 
     function updateFormula() {
         const count = middleYs.length;  // Use histogram sample count
@@ -1751,6 +1751,8 @@ window.addEventListener('wasm-loaded', async function() {
                     const path = JSON.parse(str);
                     samples.push(path);
                     middleYs.push(getMiddleY(path));
+                    // Cache the bits for future Glauber sampling
+                    cachedInitialBits = pathToBits(path);
                     statusEl.textContent = `${samples.length} sample${samples.length > 1 ? 's' : ''}`;
                     statusEl.style.color = 'var(--slide-muted)';
                     updateFormula();
@@ -1779,21 +1781,16 @@ window.addEventListener('wasm-loaded', async function() {
     async function collectSamplesGPU(count) {
         if (!gpuEngine) return collectSamplesCPU(count);
 
-        statusEl.textContent = 'Getting initial sample...';
-        statusEl.style.color = '#E57200';
-
         try {
-            // Use existing sample if available, otherwise run CFTP
-            let initialPath;
-            if (samples.length > 0) {
-                initialPath = samples[samples.length - 1];
-            } else {
-                initialPath = await runCFTP();
+            // Use cached bits, or run CFTP if needed
+            if (!cachedInitialBits) {
+                statusEl.textContent = 'Getting initial sample...';
+                statusEl.style.color = '#E57200';
+                const initialPath = await runCFTP();
                 if (!initialPath) return collectSamplesCPU(count);
             }
 
-            // Convert to bit format for GPU
-            const initialBits = pathToBits(initialPath);
+            const initialBits = cachedInitialBits;
 
             // Run GPU Glauber chains in batches of 5k (20k = 4 batches)
             const batchSize = 5000;
@@ -1850,22 +1847,16 @@ window.addEventListener('wasm-loaded', async function() {
     }
 
     async function collectSamplesCPU(count) {
-        // Same approach as GPU: one CFTP, then Glauber from that state
-        statusEl.textContent = 'Getting initial sample...';
-        statusEl.style.color = '#E57200';
-
-        // Use existing sample if available, otherwise run CFTP
-        let initialPath;
-        if (samples.length > 0) {
-            initialPath = samples[samples.length - 1];
-        } else {
-            initialPath = await runCFTP();
+        // Use cached bits, or run CFTP if needed
+        if (!cachedInitialBits) {
+            statusEl.textContent = 'Getting initial sample...';
+            statusEl.style.color = '#E57200';
+            const initialPath = await runCFTP();
             if (!initialPath) return;
         }
 
-        const initialBits = pathToBits(initialPath);
-        // Mobile needs fewer steps to stay responsive (100k vs 1M)
-        const stepsPerSample = isMobile ? 100000 : 1000000;
+        const initialBits = cachedInitialBits;
+        const stepsPerSample = 1000000;  // 1M steps per sample
 
         for (let i = 0; i < count; i++) {
             const y = runGlauberWASM(initialBits, stepsPerSample);
@@ -1943,6 +1934,7 @@ window.addEventListener('wasm-loaded', async function() {
     function reset() {
         samples = [];
         middleYs = [];
+        cachedInitialBits = null;
         observationEl.style.opacity = '0';
         questionEl.style.opacity = '0';
         answerEl.style.opacity = '0';
@@ -1976,10 +1968,8 @@ window.addEventListener('wasm-loaded', async function() {
                         drawHistogram();  // Show the 1 sample we have immediately
                         await collectSamples(19);  // Already have 1, add 19 more = 20 total
                     } else if (step === 3) {
-                        // Step 3: Collect many more samples
-                        // Mobile gets fewer samples (GPU or not)
-                        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                        const count = isMobile ? 200 : (gpuEngine ? 20000 : 200);
+                        // Step 3: Collect many more samples (20k if GPU, 200 if CPU)
+                        const count = gpuEngine ? 20000 : 200;
                         await collectSamples(count);
                     } else if (step === 4) {
                         // Step 4: Ask the question
@@ -2025,22 +2015,326 @@ window.addEventListener('wasm-loaded', async function() {
 })();
 </script>
 
-<section class="slide slide-center" id="q-deformation" data-title="q-Deformation">
+<section class="slide slide-top" id="q-deformation" data-title="q-Deformation">
     <h2 class="slide-title">The q-Deformation</h2>
-    <p class="fragment" style="margin-top: 1.5rem;">Imagine the <strong>area under the path</strong> represents "energy" or "cost".</p>
-    <p class="fragment" style="margin-top: 1rem;">Weight each path by \(q^{\text{area}}\)</p>
-    <p class="fragment" style="margin-top: 2rem; font-size: 1.2rem;">The parameter q acts like inverse temperature.</p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
+        <!-- Left: All 35 paths grid -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="font-size: clamp(0.9rem, 1.5vw, 1.1rem); margin-bottom: 0.5vh; display: flex; align-items: center; gap: 1vw;">
+                <label for="q-slider">q = </label>
+                <input type="range" id="q-slider" min="0" max="2" step="0.01" value="1" style="width: 12vw;">
+                <span id="q-value" style="font-weight: bold; min-width: 3em;">1.00</span>
+            </div>
+            <canvas id="q-paths-canvas" width="1000" height="1400" style="height: 65vh; width: auto;"></canvas>
+        </div>
+
+        <!-- Right: Explanation text -->
+        <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); text-align: left; padding-top: 1vh;">
+            <div style="margin-bottom: 2vh;">
+                <strong style="color: var(--slide-accent);">Area under a path:</strong><br>
+                <span style="font-size: clamp(0.9rem, 1.5vw, 1.2rem);">Count unit squares below the path</span>
+                <canvas id="area-example-canvas" width="300" height="200" style="height: 12vh; width: auto; display: block; margin-top: 0.5vh;"></canvas>
+            </div>
+
+            <div style="margin-bottom: 2vh;">
+                <strong style="color: var(--slide-accent);">q-weighting:</strong><br>
+                <span style="font-size: clamp(0.9rem, 1.5vw, 1.2rem);">Weight of path = \(q^{\text{area}}\)</span><br>
+                <span style="font-size: clamp(0.9rem, 1.5vw, 1.2rem);">Probability = \(\displaystyle\frac{q^{\text{area}}}{\sum_{\text{paths}} q^{\text{area}}}\)</span>
+            </div>
+
+            <div style="margin-bottom: 2vh;">
+                <strong style="color: var(--slide-accent);">q-Binomial coefficient:</strong><br>
+                <span style="font-size: clamp(0.85rem, 1.4vw, 1.1rem);">\(\displaystyle\binom{a+b}{a}_q = \frac{[a+b]_q!}{[a]_q![b]_q!}\)</span><br>
+                <span style="font-size: clamp(0.85rem, 1.4vw, 1.1rem);">where \([n]_q! = [1]_q[2]_q\cdots[n]_q\) and \([k]_q = 1+q+\cdots+q^{k-1}\)</span>
+            </div>
+
+            <div style="margin-bottom: 1vh;">
+                <strong style="color: var(--slide-accent);">Example (a=4, b=3):</strong><br>
+                <span id="q-binomial-formula" style="font-size: clamp(0.8rem, 1.2vw, 1rem); word-break: break-word;"></span>
+            </div>
+
+            <div style="margin-top: 2vh; font-size: clamp(0.85rem, 1.4vw, 1.1rem); color: var(--slide-muted);">
+                <strong>q &lt; 1:</strong> prefers smaller area (paths hug axes)<br>
+                <strong>q = 1:</strong> uniform (all 35 paths equally likely)<br>
+                <strong>q &gt; 1:</strong> prefers larger area (paths bulge out)
+            </div>
+        </div>
+    </div>
 </section>
 
-<section class="slide slide-center" id="q-slider" data-title="The q-Slider">
-    <h2 class="slide-title">Bending the Curve</h2>
-    <p style="margin-top: 1rem;">[Interactive: q-slider simulation]</p>
-    <ul style="margin-top: 2rem; text-align: left; display: inline-block;">
-        <li class="fragment"><strong>q = 1:</strong> Uniform randomness (straight diagonal)</li>
-        <li class="fragment"><strong>q &lt; 1:</strong> Path hugs the axes (minimizing area)</li>
-        <li class="fragment"><strong>q &gt; 1:</strong> Path bulges out (maximizing area)</li>
-    </ul>
-</section>
+<script>
+(function() {
+    'use strict';
+
+    const canvas = document.getElementById('q-paths-canvas');
+    const ctx = canvas.getContext('2d');
+    const areaCanvas = document.getElementById('area-example-canvas');
+    const areaCtx = areaCanvas.getContext('2d');
+    const slider = document.getElementById('q-slider');
+    const qValueSpan = document.getElementById('q-value');
+    const qBinomialEl = document.getElementById('q-binomial-formula');
+
+    const A = 4, B = 3;
+
+    // Generate all paths from (0,0) to (A,B)
+    function generateAllPaths(a, b) {
+        const paths = [];
+        function generate(path, remainR, remainU) {
+            if (remainR === 0 && remainU === 0) {
+                paths.push([...path]);
+                return;
+            }
+            if (remainR > 0) {
+                path.push('R');
+                generate(path, remainR - 1, remainU);
+                path.pop();
+            }
+            if (remainU > 0) {
+                path.push('U');
+                generate(path, remainR, remainU - 1);
+                path.pop();
+            }
+        }
+        generate([], a, b);
+        return paths;
+    }
+
+    // Calculate area under a path (unit squares below)
+    function calcArea(path) {
+        let area = 0, y = 0;
+        for (const move of path) {
+            if (move === 'R') area += y;
+            else y++;
+        }
+        return area;
+    }
+
+    const allPaths = generateAllPaths(A, B);
+    const pathAreas = allPaths.map(calcArea);
+
+    // Coefficients of the q-binomial polynomial (pre-computed)
+    // 1 + q + 2q^2 + 3q^3 + 4q^4 + 4q^5 + 5q^6 + 4q^7 + 4q^8 + 3q^9 + 2q^10 + q^11 + q^12
+    const qBinomCoeffs = [1, 1, 2, 3, 4, 4, 5, 4, 4, 3, 2, 1, 1];
+
+    function evalQBinomial(q) {
+        if (Math.abs(q - 1) < 1e-10) return 35;
+        let sum = 0;
+        for (let i = 0; i < qBinomCoeffs.length; i++) {
+            sum += qBinomCoeffs[i] * Math.pow(q, i);
+        }
+        return sum;
+    }
+
+    function updateQBinomialFormula(q) {
+        const val = evalQBinomial(q);
+        let polyStr = '1 + q + 2q² + 3q³ + 4q⁴ + 4q⁵ + 5q⁶ + 4q⁷ + 4q⁸ + 3q⁹ + 2q¹⁰ + q¹¹ + q¹²';
+        if (Math.abs(q - 1) < 0.01) {
+            qBinomialEl.innerHTML = `\\(\\displaystyle\\binom{7}{4}_q = \\) ${polyStr}<br>At \\(q=1\\): <strong style="color: var(--slide-accent);">35</strong> paths`;
+        } else {
+            qBinomialEl.innerHTML = `\\(\\displaystyle\\binom{7}{4}_q = \\) ${polyStr}<br>At \\(q=${q.toFixed(2)}\\): <strong style="color: var(--slide-accent);">${val.toFixed(2)}</strong>`;
+        }
+        if (window.renderMathInElement) {
+            renderMathInElement(qBinomialEl, {
+                delimiters: [
+                    {left: "\\(", right: "\\)", display: false},
+                    {left: "$$", right: "$$", display: true}
+                ]
+            });
+        }
+    }
+
+    function drawAreaExample() {
+        const w = areaCanvas.width, h = areaCanvas.height;
+        areaCtx.fillStyle = '#fff';
+        areaCtx.fillRect(0, 0, w, h);
+
+        // Draw a specific path with area shaded
+        const exPath = ['R', 'U', 'R', 'U', 'R', 'R', 'U']; // area = 0+1+1+2 = 4
+        const padding = 20;
+        const gridW = w - 2 * padding;
+        const gridH = h - 2 * padding;
+        const stepX = gridW / A;
+        const stepY = gridH / B;
+        const baseX = padding;
+        const baseY = padding;
+
+        // Shade area under path
+        areaCtx.fillStyle = 'rgba(229, 114, 0, 0.3)';
+        let x = 0, y = 0;
+        for (const move of exPath) {
+            if (move === 'R') {
+                // Shade column from 0 to y
+                if (y > 0) {
+                    areaCtx.fillRect(baseX + x * stepX, baseY + gridH - y * stepY, stepX, y * stepY);
+                }
+                x++;
+            } else {
+                y++;
+            }
+        }
+
+        // Draw grid
+        areaCtx.strokeStyle = '#ccc';
+        areaCtx.lineWidth = 1;
+        for (let i = 0; i <= A; i++) {
+            areaCtx.beginPath();
+            areaCtx.moveTo(baseX + i * stepX, baseY);
+            areaCtx.lineTo(baseX + i * stepX, baseY + gridH);
+            areaCtx.stroke();
+        }
+        for (let j = 0; j <= B; j++) {
+            areaCtx.beginPath();
+            areaCtx.moveTo(baseX, baseY + gridH - j * stepY);
+            areaCtx.lineTo(baseX + gridW, baseY + gridH - j * stepY);
+            areaCtx.stroke();
+        }
+
+        // Draw path
+        areaCtx.strokeStyle = '#E57200';
+        areaCtx.lineWidth = 3;
+        areaCtx.lineCap = 'round';
+        areaCtx.lineJoin = 'round';
+        areaCtx.beginPath();
+        x = 0; y = 0;
+        areaCtx.moveTo(baseX + x * stepX, baseY + gridH - y * stepY);
+        for (const move of exPath) {
+            if (move === 'R') x++;
+            else y++;
+            areaCtx.lineTo(baseX + x * stepX, baseY + gridH - y * stepY);
+        }
+        areaCtx.stroke();
+
+        // Label
+        areaCtx.fillStyle = '#232D4B';
+        areaCtx.font = 'bold 14px sans-serif';
+        areaCtx.textAlign = 'center';
+        areaCtx.fillText('Area = 4', w / 2, h - 5);
+    }
+
+    function drawAllPaths(q) {
+        const w = canvas.width, h = canvas.height;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, w, h);
+
+        // Layout: 7 columns x 5 rows
+        const cols = 7, rows = 5;
+        const cellW = w / cols;
+        const cellH = h / rows;
+        const padding = 12;
+        const gridPadding = 8;
+
+        // Calculate weights
+        const qSum = evalQBinomial(q);
+        const weights = pathAreas.map(area => Math.pow(q, area));
+        const probs = weights.map(wt => wt / qSum);
+        const maxProb = Math.max(...probs);
+
+        // Sort paths by area for nice display
+        const sorted = allPaths.map((p, i) => ({ path: p, area: pathAreas[i], prob: probs[i], weight: weights[i] }));
+        sorted.sort((a, b) => a.area - b.area);
+
+        for (let idx = 0; idx < sorted.length; idx++) {
+            const { path, area, prob, weight } = sorted[idx];
+            const col = idx % cols;
+            const row = Math.floor(idx / cols);
+
+            const cellX = col * cellW + padding;
+            const cellY = row * cellH + padding;
+            const innerW = cellW - 2 * padding;
+            const innerH = cellH - 2 * padding - 40; // leave space for text
+
+            // Draw mini grid
+            const stepX = (innerW - 2 * gridPadding) / A;
+            const stepY = (innerH - 2 * gridPadding) / B;
+            const baseX = cellX + gridPadding;
+            const baseY = cellY + gridPadding;
+
+            // Grid lines
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= A; i++) {
+                ctx.beginPath();
+                ctx.moveTo(baseX + i * stepX, baseY);
+                ctx.lineTo(baseX + i * stepX, baseY + innerH - 2 * gridPadding);
+                ctx.stroke();
+            }
+            for (let j = 0; j <= B; j++) {
+                ctx.beginPath();
+                ctx.moveTo(baseX, baseY + (innerH - 2 * gridPadding) - j * stepY);
+                ctx.lineTo(baseX + (innerW - 2 * gridPadding), baseY + (innerH - 2 * gridPadding) - j * stepY);
+                ctx.stroke();
+            }
+
+            // Path line weight based on probability (thicker = higher prob)
+            const minLineW = 2;
+            const maxLineW = 10;
+            const lineW = minLineW + (maxLineW - minLineW) * (prob / maxProb);
+
+            // Draw path
+            ctx.strokeStyle = '#E57200';
+            ctx.lineWidth = lineW;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            let x = 0, y = 0;
+            ctx.moveTo(baseX + x * stepX, baseY + (innerH - 2 * gridPadding) - y * stepY);
+            for (const move of path) {
+                if (move === 'R') x++;
+                else y++;
+                ctx.lineTo(baseX + x * stepX, baseY + (innerH - 2 * gridPadding) - y * stepY);
+            }
+            ctx.stroke();
+
+            // Text: area and probability
+            const textY = cellY + innerH + 5;
+            ctx.fillStyle = '#232D4B';
+
+            // Font weight based on probability
+            const fontWeight = prob / maxProb > 0.5 ? 'bold' : 'normal';
+            ctx.font = `${fontWeight} 18px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText(`area=${area}`, cellX + innerW / 2 + padding, textY);
+
+            // Probability as decimal
+            ctx.font = `${fontWeight} 20px sans-serif`;
+            ctx.fillStyle = prob / maxProb > 0.7 ? '#E57200' : '#666';
+            const probStr = prob.toFixed(4);
+            ctx.fillText(probStr, cellX + innerW / 2 + padding, textY + 22);
+        }
+    }
+
+    function update() {
+        const q = parseFloat(slider.value);
+        qValueSpan.textContent = q.toFixed(2);
+        drawAllPaths(q);
+        updateQBinomialFormula(q);
+    }
+
+    slider.addEventListener('input', update);
+
+    // Initial draw
+    drawAreaExample();
+    update();
+
+    // Register with slide engine
+    function waitForSlideEngine() {
+        if (window.slideEngine) {
+            window.slideEngine.registerSimulation('q-deformation', {
+                start() {},
+                pause() {},
+                onSlideEnter() {
+                    slider.value = 1;
+                    update();
+                }
+            }, 0);
+        } else {
+            setTimeout(waitForSlideEngine, 50);
+        }
+    }
+    waitForSlideEngine();
+})();
+</script>
 
 <section class="slide slide-center" id="lesson-2d" data-title="The Lesson">
     <h2 class="slide-title">The Lesson</h2>
