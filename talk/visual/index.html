@@ -2797,15 +2797,759 @@ window.addEventListener('wasm-loaded', async function() {
     <h3 style="font-size: clamp(3rem, 5vw, 5.5rem); color: var(--slide-muted); text-transform: uppercase; letter-spacing: 0.05em;">One dimension up</h3>
 </section>
 
-<section class="slide slide-center" id="geometric-bridge" data-title="Geometric Bridge">
-    <h2 class="slide-title">Three Views, One Object</h2>
-    <ul style="margin-top: 2rem; text-align: left; display: inline-block; font-size: 1.2rem;">
-        <li class="fragment">Lozenge Tiling</li>
-        <li class="fragment">Stepped Surface</li>
-        <li class="fragment">Stack of Cubes in a Corner (Plane Partition)</li>
-    </ul>
-    <p class="fragment" style="margin-top: 2rem;">[Visual: Show equivalence]</p>
+<section class="slide slide-center" id="geometric-bridge" data-title="From Paths to 3D">
+    <h2 class="slide-title">From Paths to 3D</h2>
+    <div style="display: flex; gap: 2vw; align-items: center; width: 95vw; height: 78vh;">
+        <!-- Left pane: 3D view + description -->
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;">
+            <div style="position: relative; width: 100%; flex: 1;">
+                <canvas id="bridge-3d-canvas" style="width: 100%; height: 100%;"></canvas>
+            </div>
+            <div id="bridge-description" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; line-height: 1.6; margin-top: 2vh;">
+                surface in <span id="bridge-box-size">1 × 12 × 9</span> box
+            </div>
+        </div>
+        <!-- Right pane: snowflake -->
+        <div id="bridge-right-pane" style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;">
+            <div style="position: relative; width: 100%; flex: 1;">
+                <canvas id="bridge-snowflake-canvas" style="width: 100%; height: 100%;"></canvas>
+            </div>
+            <div id="snowflake-description" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; line-height: 1.6; margin-top: 2vh;">
+            </div>
+        </div>
+    </div>
 </section>
+
+<script>
+// From Paths to 3D: Asymmetric hexagon a×12×9 with WASM CFTP sampling
+(async function() {
+    'use strict';
+
+    const canvas = document.getElementById('bridge-3d-canvas');
+    const descEl = document.getElementById('bridge-description');
+    if (!canvas) return;
+
+    // Wait for LozengeModule to be available
+    while (typeof LozengeModule === 'undefined') {
+        await new Promise(r => setTimeout(r, 50));
+    }
+
+    // Create our own WASM instance (isolated from other slides)
+    const wasm = await LozengeModule();
+
+    // WASM interface
+    const initFromTriangles = wasm.cwrap('initFromTriangles', 'number', ['number', 'number']);
+    const runCFTP = wasm.cwrap('runCFTP', 'number', []);
+    const exportDimersWasm = wasm.cwrap('exportDimers', 'number', []);
+    const freeString = wasm.cwrap('freeString', null, ['number']);
+
+    // Parameters: a x B x C hexagon (a varies 1-9)
+    const B = 12, C = 9;
+    let currentA = 1;
+    let currentDimers = [];
+
+    // Colors (UVA scheme)
+    const colors = ['#E57200', '#232D4B', '#F9DCBF'];
+
+    // Triangle geometry helpers
+    const slope = 1 / Math.sqrt(3);
+    const deltaC = 2 / Math.sqrt(3);
+
+    function getVertex(n, j) { return { x: n, y: slope * n + j * deltaC }; }
+
+    function getRightTriangleCentroid(n, j) {
+        const v1 = getVertex(n, j), v2 = getVertex(n, j - 1), v3 = getVertex(n + 1, j - 1);
+        return { x: (v1.x + v2.x + v3.x) / 3, y: (v1.y + v2.y + v3.y) / 3 };
+    }
+    function getLeftTriangleCentroid(n, j) {
+        const v1 = getVertex(n, j), v2 = getVertex(n + 1, j), v3 = getVertex(n + 1, j - 1);
+        return { x: (v1.x + v2.x + v3.x) / 3, y: (v1.y + v2.y + v3.y) / 3 };
+    }
+
+    function pointInPolygon(x, y, polygon) {
+        if (polygon.length < 3) return false;
+        let inside = false;
+        for (let i = 0, pj = polygon.length - 1; i < polygon.length; pj = i++) {
+            const xi = polygon[i].x, yi = polygon[i].y;
+            const xj = polygon[pj].x, yj = polygon[pj].y;
+            if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
+    // Generate triangles for a×b×c hexagon and pass to WASM
+    function generateHexagonTriangles(a, b, c) {
+        // Generate asymmetric hexagon boundary: sides [a, b, c, a, b, c]
+        const directions = [[1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1]];
+        const sideLengths = [a, b, c, a, b, c];
+        const boundary = [];
+        let bn = 0, bj = 0;
+        for (let dir = 0; dir < 6; dir++) {
+            for (let step = 0; step < sideLengths[dir]; step++) {
+                boundary.push(getVertex(bn, bj));
+                bn += directions[dir][0];
+                bj += directions[dir][1];
+            }
+        }
+
+        // Bounding box
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const v of boundary) {
+            minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+            minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+        }
+        const searchMinN = Math.floor(minX) - 2;
+        const searchMaxN = Math.ceil(maxX) + 2;
+        const nRange = searchMaxN - searchMinN;
+        const searchMinJ = Math.floor(minY / deltaC) - nRange - 5;
+        const searchMaxJ = Math.ceil(maxY / deltaC) + nRange + 5;
+
+        // Generate triangles inside hexagon
+        const triangleArr = [];
+        for (let n = searchMinN; n <= searchMaxN; n++) {
+            for (let j = searchMinJ; j <= searchMaxJ; j++) {
+                // Type 1 = right-pointing (black), Type 2 = left-pointing (white)
+                const rc = getRightTriangleCentroid(n, j);
+                if (pointInPolygon(rc.x, rc.y, boundary)) {
+                    triangleArr.push(n, j, 1);  // n, j, type=1 (black/right)
+                }
+                const lc = getLeftTriangleCentroid(n, j);
+                if (pointInPolygon(lc.x, lc.y, boundary)) {
+                    triangleArr.push(n, j, 2);  // n, j, type=2 (white/left)
+                }
+            }
+        }
+
+        return triangleArr;
+    }
+
+    // Initialize WASM with hexagon and run CFTP
+    function sampleHexagon(a, b, c) {
+        const triangleArr = generateHexagonTriangles(a, b, c);
+
+        // Allocate memory and copy triangle data to WASM
+        const dataPtr = wasm._malloc(triangleArr.length * 4);
+        for (let i = 0; i < triangleArr.length; i++) {
+            wasm.setValue(dataPtr + i * 4, triangleArr[i], 'i32');
+        }
+
+        // Initialize from triangles
+        const initPtr = initFromTriangles(dataPtr, triangleArr.length);
+        freeString(initPtr);
+        wasm._free(dataPtr);
+
+        // Run CFTP for exact sampling
+        const cftpPtr = runCFTP();
+        const cftpResult = wasm.UTF8ToString(cftpPtr);
+        freeString(cftpPtr);
+
+        // Export sampled dimers
+        const dimersPtr = exportDimersWasm();
+        const dimersJson = wasm.UTF8ToString(dimersPtr);
+        freeString(dimersPtr);
+
+        const parsed = JSON.parse(dimersJson);
+        currentDimers = parsed.dimers || [];
+    }
+
+    // ===== THREE.JS RENDERING =====
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xffffff);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // Orthographic camera for clean 2D-like projection
+    const frustumSize = 30;
+    let aspect = canvas.clientWidth / canvas.clientHeight || 1;
+    const camera = new THREE.OrthographicCamera(
+        -frustumSize * aspect / 2, frustumSize * aspect / 2,
+        frustumSize / 2, -frustumSize / 2,
+        0.1, 1000
+    );
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = false;
+    controls.enablePan = true;
+    controls.enableZoom = true;
+
+    function resize() {
+        const w = canvas.clientWidth, h = canvas.clientHeight;
+        if (w === 0 || h === 0) return;
+        renderer.setSize(w, h, false);
+        aspect = w / h;
+        camera.left = -frustumSize * aspect / 2;
+        camera.right = frustumSize * aspect / 2;
+        camera.top = frustumSize / 2;
+        camera.bottom = -frustumSize / 2;
+        camera.updateProjectionMatrix();
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Lighting
+    scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+    const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.25);
+    hemi.position.set(0, 20, 0);
+    scene.add(hemi);
+    const directional = new THREE.DirectionalLight(0xffffff, 1.2);
+    directional.position.set(15, 20, 5);
+    scene.add(directional);
+    const fill = new THREE.DirectionalLight(0xffffff, 0.3);
+    fill.position.set(-10, 5, -5);
+    scene.add(fill);
+
+    // Extra lights for rotation mode (from 4 more sides)
+    const rotationLights = [];
+    const lightPositions = [
+        [20, 10, 20], [-20, 10, 20], [20, 10, -20], [-20, 10, -20]
+    ];
+    for (const pos of lightPositions) {
+        const light = new THREE.DirectionalLight(0xffffff, 0.4);
+        light.position.set(pos[0], pos[1], pos[2]);
+        light.visible = false;
+        scene.add(light);
+        rotationLights.push(light);
+    }
+
+    const meshGroup = new THREE.Group();
+    scene.add(meshGroup);
+
+    // Camera for a×12×9 hexagon (ortho view)
+    camera.position.set(40.2, -28.6, -17.5);
+    camera.zoom = 1.432;
+    camera.updateProjectionMatrix();
+    controls.target.set(2.3, -7.8, 0.8);
+    controls.update();
+
+    // Vertex and height helpers
+    function getVertexKeys(dimer) {
+        const { bn, bj, t } = dimer;
+        if (t === 0) return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+        if (t === 1) return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+        return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+    }
+
+    function getHeightPattern(t) {
+        if (t === 0) return [0, 0, 0, 0];
+        if (t === 1) return [1, 0, 0, 1];
+        return [1, 1, 0, 0];
+    }
+
+    function to3D(n, j, h) {
+        return { x: h, y: -n - h, z: j - h };
+    }
+
+    function buildGeometry() {
+        while (meshGroup.children.length > 0) {
+            const child = meshGroup.children[0];
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+            meshGroup.remove(child);
+        }
+
+        if (currentDimers.length === 0) return;
+
+        // Build vertex-to-dimer map and calculate heights via BFS
+        const vertexToDimers = new Map();
+        for (const dimer of currentDimers) {
+            for (const [n, j] of getVertexKeys(dimer)) {
+                const key = `${n},${j}`;
+                if (!vertexToDimers.has(key)) vertexToDimers.set(key, []);
+                vertexToDimers.get(key).push(dimer);
+            }
+        }
+
+        const heights = new Map();
+        const firstVerts = getVertexKeys(currentDimers[0]);
+        const startKey = `${firstVerts[0][0]},${firstVerts[0][1]}`;
+        heights.set(startKey, 0);
+
+        const queue = [startKey];
+        const visited = new Set();
+
+        while (queue.length > 0) {
+            const currentKey = queue.shift();
+            if (visited.has(currentKey)) continue;
+            visited.add(currentKey);
+
+            const currentH = heights.get(currentKey);
+            const [cn, cj] = currentKey.split(',').map(Number);
+
+            for (const dimer of vertexToDimers.get(currentKey) || []) {
+                const verts = getVertexKeys(dimer);
+                const pattern = getHeightPattern(dimer.t);
+                const myIdx = verts.findIndex(([vn, vj]) => vn === cn && vj === cj);
+                if (myIdx >= 0) {
+                    for (let i = 0; i < 4; i++) {
+                        const vkey = `${verts[i][0]},${verts[i][1]}`;
+                        if (!heights.has(vkey)) {
+                            heights.set(vkey, currentH + (pattern[i] - pattern[myIdx]));
+                            queue.push(vkey);
+                        }
+                    }
+                }
+            }
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [], normals = [], vertexColors = [], indices = [];
+
+        function addQuad(v1, v2, v3, v4, color) {
+            const baseIndex = vertices.length / 3;
+            vertices.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z, v4.x, v4.y, v4.z);
+            const edge1 = { x: v2.x - v1.x, y: v2.y - v1.y, z: v2.z - v1.z };
+            const edge2 = { x: v4.x - v1.x, y: v4.y - v1.y, z: v4.z - v1.z };
+            const nx = edge1.y * edge2.z - edge1.z * edge2.y;
+            const ny = edge1.z * edge2.x - edge1.x * edge2.z;
+            const nz = edge1.x * edge2.y - edge1.y * edge2.x;
+            const len = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1;
+            for (let i = 0; i < 4; i++) normals.push(nx/len, ny/len, nz/len);
+            const clr = new THREE.Color(color);
+            for (let i = 0; i < 4; i++) vertexColors.push(clr.r, clr.g, clr.b);
+            indices.push(baseIndex, baseIndex+1, baseIndex+2, baseIndex, baseIndex+2, baseIndex+3);
+        }
+
+        for (const dimer of currentDimers) {
+            const verts = getVertexKeys(dimer);
+            const v3d = verts.map(([n, j]) => to3D(n, j, heights.get(`${n},${j}`) || 0));
+            addQuad(v3d[0], v3d[1], v3d[2], v3d[3], colors[dimer.t]);
+        }
+
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
+        geometry.setIndex(indices);
+
+        currentMaterial = new THREE.MeshStandardMaterial({
+            vertexColors: true, side: THREE.DoubleSide, flatShading: true, roughness: 0.3, metalness: autoRotate ? 0 : 0.5
+        });
+        meshGroup.add(new THREE.Mesh(geometry, currentMaterial));
+
+        const edgesGeometry = new THREE.EdgesGeometry(geometry, 10);
+        meshGroup.add(new THREE.LineSegments(edgesGeometry, new THREE.LineBasicMaterial({ color: 0x222222, opacity: 0.6, transparent: true })));
+    }
+
+    let isRunning = false;
+    let animationId = null;
+    let autoRotate = false;
+    const rotateSpeed = 0.012; // radians per frame
+    let currentMaterial = null; // Reference to mesh material
+
+    function regenerate() {
+        sampleHexagon(currentA, B, C);
+        buildGeometry();
+        // Update description
+        descEl.innerHTML = `surface in <span id="bridge-box-size">${currentA} × 12 × 9</span> box`;
+        renderer.render(scene, camera);
+    }
+
+    function animate() {
+        if (!isRunning) return;
+
+        if (autoRotate) {
+            // Rotate camera around its up vector (visual vertical)
+            const axis = camera.up.clone().normalize();
+            const offset = camera.position.clone().sub(controls.target);
+            offset.applyAxisAngle(axis, rotateSpeed);
+            camera.position.copy(controls.target).add(offset);
+            camera.lookAt(controls.target);
+        }
+
+        controls.update();
+        renderer.render(scene, camera);
+        animationId = requestAnimationFrame(animate);
+    }
+
+    function start() {
+        if (isRunning) return;
+        isRunning = true;
+        animate();
+    }
+
+    function pause() {
+        isRunning = false;
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+        }
+    }
+
+    function startAutoRotate() {
+        autoRotate = true;
+        // Turn on extra lights
+        for (const light of rotationLights) light.visible = true;
+        // Make material matte
+        if (currentMaterial) currentMaterial.metalness = 0;
+        if (!isRunning) start();
+    }
+
+    function stopAutoRotate() {
+        autoRotate = false;
+        // Turn off extra lights
+        for (const light of rotationLights) light.visible = false;
+        // Restore metallic material
+        if (currentMaterial) currentMaterial.metalness = 0.5;
+    }
+
+    function setLayerCount(a) {
+        currentA = Math.max(1, Math.min(9, a));
+        regenerate();
+    }
+
+    // Listen for controls changes to render when paused
+    controls.addEventListener('change', () => {
+        if (!isRunning) renderer.render(scene, camera);
+    });
+
+    // Initial render
+    regenerate();
+
+    // Register with slide engine
+    function waitForSlideEngine() {
+        if (window.slideEngine) {
+            window.slideEngine.registerSimulation('geometric-bridge', {
+                start,
+                pause,
+                steps: 10,
+                onSlideEnter() {
+                    // Reset camera to default position
+                    camera.position.set(40.2, -28.6, -17.5);
+                    camera.zoom = 1.432;
+                    camera.updateProjectionMatrix();
+                    controls.target.set(2.3, -7.8, 0.8);
+                    controls.update();
+                    stopAutoRotate();
+
+                    setTimeout(() => {
+                        resize();
+                        renderer.render(scene, camera);
+                        if (window.bridgeSnowflake) {
+                            window.bridgeSnowflake.resize();
+                            window.bridgeSnowflake.render();
+                        }
+                    }, 50);
+                    start();
+                    if (window.bridgeSnowflake) window.bridgeSnowflake.start();
+                },
+                onSlideLeave() {
+                    stopAutoRotate();
+                    pause();
+                    if (window.bridgeSnowflake) window.bridgeSnowflake.pause();
+                },
+                onStep(step) {
+                    if (step <= 8) {
+                        stopAutoRotate();
+                        setLayerCount(step + 1);
+                    } else if (step === 9) {
+                        // Start rotating the 9×12×9 hexagon
+                        startAutoRotate();
+                    } else if (step === 10 && window.bridgeSnowflake) {
+                        window.bridgeSnowflake.regenerate();
+                    }
+                },
+                onStepBack(step) {
+                    if (step <= 8) {
+                        stopAutoRotate();
+                        setLayerCount(step + 1);
+                    } else if (step === 9) {
+                        startAutoRotate();
+                    }
+                }
+            }, 0);
+        } else {
+            setTimeout(waitForSlideEngine, 50);
+        }
+    }
+    waitForSlideEngine();
+})();
+
+// Snowflake visualization (right pane)
+(async function() {
+    'use strict';
+
+    const canvas = document.getElementById('bridge-snowflake-canvas');
+    const descEl = document.getElementById('snowflake-description');
+    if (!canvas) return;
+
+    // Wait for LozengeModule
+    while (typeof LozengeModule === 'undefined') {
+        await new Promise(r => setTimeout(r, 50));
+    }
+
+    // Create separate WASM instance for snowflake
+    const wasm = await LozengeModule();
+    const initFromTriangles = wasm.cwrap('initFromTriangles', 'number', ['number', 'number']);
+    const runCFTP = wasm.cwrap('runCFTP', 'number', []);
+    const exportDimersWasm = wasm.cwrap('exportDimers', 'number', []);
+    const freeString = wasm.cwrap('freeString', null, ['number']);
+
+    // Load snowflake triangles
+    let snowflakeTriangles = null;
+    try {
+        const resp = await fetch('/letters/big_snoflake.json');
+        const data = await resp.json();
+        snowflakeTriangles = data.triangles;
+    } catch (e) {
+        console.error('Failed to load snowflake:', e);
+        return;
+    }
+
+    let currentDimers = [];
+    const colors = ['#E57200', '#232D4B', '#F9DCBF'];
+
+    // Three.js setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xffffff);
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // Orthographic camera
+    const frustumSize = 80;
+    let aspect = canvas.clientWidth / canvas.clientHeight || 1;
+    const camera = new THREE.OrthographicCamera(
+        -frustumSize * aspect / 2, frustumSize * aspect / 2,
+        frustumSize / 2, -frustumSize / 2,
+        0.1, 1000
+    );
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = false;
+    controls.enablePan = true;
+    controls.enableZoom = true;
+
+    function resize() {
+        const w = canvas.clientWidth, h = canvas.clientHeight;
+        if (w === 0 || h === 0) return;
+        renderer.setSize(w, h, false);
+        aspect = w / h;
+        camera.left = -frustumSize * aspect / 2;
+        camera.right = frustumSize * aspect / 2;
+        camera.top = frustumSize / 2;
+        camera.bottom = -frustumSize / 2;
+        camera.updateProjectionMatrix();
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Lighting
+    scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+    const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.25);
+    hemi.position.set(0, 20, 0);
+    scene.add(hemi);
+    const directional = new THREE.DirectionalLight(0xffffff, 1.2);
+    directional.position.set(15, 20, 5);
+    scene.add(directional);
+
+    const meshGroup = new THREE.Group();
+    scene.add(meshGroup);
+
+    // Camera position (will tune later)
+    camera.position.set(50, -40, -30);
+    camera.zoom = 1.0;
+    camera.updateProjectionMatrix();
+    controls.target.set(0, 0, 0);
+    controls.update();
+
+    // Geometry helpers (same as hexagon)
+    function getVertexKeys(dimer) {
+        const { bn, bj, t } = dimer;
+        if (t === 0) return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+        if (t === 1) return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+        return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+    }
+
+    function getHeightPattern(t) {
+        if (t === 0) return [0, 0, 0, 0];
+        if (t === 1) return [1, 0, 0, 1];
+        return [1, 1, 0, 0];
+    }
+
+    function to3D(n, j, h) {
+        return { x: h, y: -n - h, z: j - h };
+    }
+
+    function buildGeometry() {
+        while (meshGroup.children.length > 0) {
+            const child = meshGroup.children[0];
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+            meshGroup.remove(child);
+        }
+
+        if (!Array.isArray(currentDimers) || currentDimers.length === 0) return;
+
+        // Build vertex-to-dimer map and calculate heights via BFS
+        const vertexMap = new Map();
+        for (const d of currentDimers) {
+            const keys = getVertexKeys(d);
+            for (const [kn, kj] of keys) {
+                const key = `${kn},${kj}`;
+                if (!vertexMap.has(key)) vertexMap.set(key, []);
+                vertexMap.get(key).push(d);
+            }
+        }
+
+        const heights = new Map();
+        const queue = [];
+        const firstD = currentDimers[0];
+        const firstKeys = getVertexKeys(firstD);
+        const pattern = getHeightPattern(firstD.t);
+        for (let i = 0; i < 4; i++) {
+            const key = `${firstKeys[i][0]},${firstKeys[i][1]}`;
+            heights.set(key, pattern[i]);
+            queue.push(firstKeys[i]);
+        }
+
+        while (queue.length > 0) {
+            const [cn, cj] = queue.shift();
+            const key = `${cn},${cj}`;
+            const h = heights.get(key);
+            const dimers = vertexMap.get(key) || [];
+            for (const d of dimers) {
+                const keys = getVertexKeys(d);
+                const pat = getHeightPattern(d.t);
+                let baseIdx = -1;
+                for (let i = 0; i < 4; i++) {
+                    if (keys[i][0] === cn && keys[i][1] === cj) { baseIdx = i; break; }
+                }
+                if (baseIdx === -1) continue;
+                const baseH = h - pat[baseIdx];
+                for (let i = 0; i < 4; i++) {
+                    const vkey = `${keys[i][0]},${keys[i][1]}`;
+                    if (!heights.has(vkey)) {
+                        heights.set(vkey, baseH + pat[i]);
+                        queue.push(keys[i]);
+                    }
+                }
+            }
+        }
+
+        // Build mesh for each dimer
+        for (const d of currentDimers) {
+            const keys = getVertexKeys(d);
+            const pat = getHeightPattern(d.t);
+            const verts3D = [];
+            for (let i = 0; i < 4; i++) {
+                const h = heights.get(`${keys[i][0]},${keys[i][1]}`) || 0;
+                verts3D.push(to3D(keys[i][0], keys[i][1], h));
+            }
+
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array([
+                verts3D[0].x, verts3D[0].y, verts3D[0].z,
+                verts3D[1].x, verts3D[1].y, verts3D[1].z,
+                verts3D[2].x, verts3D[2].y, verts3D[2].z,
+                verts3D[0].x, verts3D[0].y, verts3D[0].z,
+                verts3D[2].x, verts3D[2].y, verts3D[2].z,
+                verts3D[3].x, verts3D[3].y, verts3D[3].z,
+            ]);
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.computeVertexNormals();
+
+            const material = new THREE.MeshStandardMaterial({
+                color: colors[d.t],
+                side: THREE.DoubleSide,
+                metalness: 0.1,
+                roughness: 0.7
+            });
+            meshGroup.add(new THREE.Mesh(geometry, material));
+
+            const edgesGeometry = new THREE.EdgesGeometry(geometry, 10);
+            meshGroup.add(new THREE.LineSegments(edgesGeometry, new THREE.LineBasicMaterial({ color: 0x222222, opacity: 0.6, transparent: true })));
+        }
+    }
+
+    function sampleSnowflake() {
+        if (!snowflakeTriangles) {
+            currentDimers = [];
+            return;
+        }
+
+        // Convert triangles to flat array for WASM
+        const triArr = [];
+        for (const tri of snowflakeTriangles) {
+            triArr.push(tri.n, tri.j, tri.type);
+        }
+
+        const ptr = wasm._malloc(triArr.length * 4);
+        for (let i = 0; i < triArr.length; i++) {
+            wasm.setValue(ptr + i * 4, triArr[i], 'i32');
+        }
+
+        const count = snowflakeTriangles.length;
+        initFromTriangles(ptr, count);
+        wasm._free(ptr);
+
+        // Run CFTP
+        runCFTP();
+
+        // Export dimers
+        const strPtr = exportDimersWasm();
+        const jsonStr = wasm.UTF8ToString(strPtr);
+        freeString(strPtr);
+
+        try {
+            const parsed = JSON.parse(jsonStr);
+            currentDimers = Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            currentDimers = [];
+        }
+    }
+
+    let isRunning = false;
+    let animationId = null;
+    let hasSampled = false;
+
+    function regenerate() {
+        sampleSnowflake();
+        buildGeometry();
+        renderer.render(scene, camera);
+        hasSampled = true;
+    }
+
+    function animate() {
+        if (!isRunning) return;
+        controls.update();
+        renderer.render(scene, camera);
+        animationId = requestAnimationFrame(animate);
+    }
+
+    function start() {
+        if (isRunning) return;
+        isRunning = true;
+        animate();
+    }
+
+    function pause() {
+        isRunning = false;
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+        }
+    }
+
+    // Listen for controls changes
+    controls.addEventListener('change', () => {
+        if (!isRunning) renderer.render(scene, camera);
+    });
+
+    // Show placeholder initially
+    renderer.render(scene, camera);
+
+    // Expose for step control from main script
+    window.bridgeSnowflake = {
+        regenerate,
+        start,
+        pause,
+        resize,
+        render: () => renderer.render(scene, camera),
+        hasSampled: () => hasSampled
+    };
+})();
+</script>
 
 <section class="slide slide-center" id="hexagon-cube" data-title="Hexagon = Cube">
     <h2 class="slide-title">The Visual Trick</h2>
