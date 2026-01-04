@@ -2343,7 +2343,7 @@ window.addEventListener('wasm-loaded', async function() {
             const textAlpha = 0.3 + 0.7 * Math.pow(probRatio, 0.5);
             ctx.fillStyle = probRatio > 0.5 ? `rgba(229, 114, 0, ${textAlpha})` : `rgba(102, 102, 102, ${textAlpha})`;
             ctx.textAlign = 'center';
-            const probStr = prob.toFixed(4);
+            const probStr = (prob * 100).toFixed(1) + '%';
             ctx.fillText(probStr, cellX + innerW / 2 + padding, textY);
         }
     }
