@@ -2054,46 +2054,43 @@ window.addEventListener('wasm-loaded', async function() {
     <h2 class="slide-title">The q-Deformation</h2>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
-        <!-- Left: Explanation text -->
-        <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); text-align: left; padding-top: 1vh;">
-            <div style="margin-bottom: 2vh;">
+        <!-- Left: Explanation text blocks -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; padding-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <!-- Block 1: Area -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
                 <strong style="color: var(--slide-accent);">Area above a path:</strong><br>
-                <span style="font-size: clamp(0.9rem, 1.5vw, 1.2rem);">Count unit squares above the path</span>
-                <canvas id="area-example-canvas" width="300" height="200" style="height: 12vh; width: auto; display: block; margin-top: 0.5vh;"></canvas>
+                Count unit squares above the path
+                <canvas id="area-example-canvas" width="300" height="200" style="height: 10vh; width: auto; display: block; margin-top: 0.5vh;"></canvas>
             </div>
 
-            <div style="margin-bottom: 2vh;">
+            <!-- Block 2: q-weighting -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
                 <strong style="color: var(--slide-accent);">q-weighting:</strong><br>
-                <span style="font-size: clamp(0.9rem, 1.5vw, 1.2rem);">Weight of path = \(q^{\text{area}}\)</span><br>
-                <span style="font-size: clamp(0.9rem, 1.5vw, 1.2rem);">Probability = \(\displaystyle\frac{q^{\text{area}}}{\sum_{\text{paths}} q^{\text{area}}}\)</span>
+                Weight = \(q^{\text{area}}\), &nbsp; Probability = \(\displaystyle\frac{q^{\text{area}}}{\sum_{\text{paths}} q^{\text{area}}}\)
             </div>
 
-            <div style="margin-bottom: 2vh;">
+            <!-- Block 3: q-Binomial -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
                 <strong style="color: var(--slide-accent);">q-Binomial coefficient:</strong><br>
-                <span style="font-size: clamp(0.85rem, 1.4vw, 1.1rem);">\(\displaystyle\binom{a+b}{a}_q = \frac{[a+b]_q!}{[a]_q![b]_q!}\)</span><br>
-                <span style="font-size: clamp(0.85rem, 1.4vw, 1.1rem);">where \([n]_q! = [1]_q[2]_q\cdots[n]_q\) and \([k]_q = 1+q+\cdots+q^{k-1}\)</span>
+                \(\displaystyle\binom{a+b}{a}_q = \frac{[a+b]_q!}{[a]_q![b]_q!}\)<br>
+                <span style="font-size: 0.85em;">where \([n]_q! = [1]_q[2]_q\cdots[n]_q\) and \([k]_q = 1+q+\cdots+q^{k-1}\)</span>
             </div>
 
-            <div style="margin-bottom: 1vh;">
+            <!-- Block 4: Example -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
                 <strong style="color: var(--slide-accent);">Example (a=4, b=3):</strong><br>
-                <span id="q-binomial-formula" style="font-size: clamp(0.8rem, 1.2vw, 1rem); word-break: break-word;"></span>
-            </div>
-
-            <div style="margin-top: 2vh; font-size: clamp(0.85rem, 1.4vw, 1.1rem); color: var(--slide-muted);">
-                <strong>q &lt; 1:</strong> prefers smaller area (paths bulge out)<br>
-                <strong>q = 1:</strong> uniform (all 35 paths equally likely)<br>
-                <strong>q &gt; 1:</strong> prefers larger area (paths hug axes)
+                <span id="q-binomial-formula"></span>
             </div>
         </div>
 
         <!-- Right: All 35 paths grid -->
         <div style="display: flex; flex-direction: column; align-items: center;">
-            <div style="font-size: clamp(0.9rem, 1.5vw, 1.1rem); margin-bottom: 0.5vh; display: flex; align-items: center; gap: 1vw;">
+            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 0.5vh; display: flex; align-items: center; gap: 1vw;">
                 <label for="q-slider">q = </label>
                 <input type="range" id="q-slider" min="0" max="2" step="0.01" value="1" style="width: 12vw;">
                 <span id="q-value" style="font-weight: bold; min-width: 3em;">1.00</span>
             </div>
-            <canvas id="q-paths-canvas" width="1000" height="1400" style="height: 65vh; width: auto;"></canvas>
+            <canvas id="q-paths-canvas" width="1100" height="900" style="height: 78vh; width: auto;"></canvas>
         </div>
     </div>
 </section>
@@ -2164,11 +2161,10 @@ window.addEventListener('wasm-loaded', async function() {
 
     function updateQBinomialFormula(q) {
         const val = evalQBinomial(q);
-        let polyStr = '1 + q + 2q² + 3q³ + 4q⁴ + 4q⁵ + 5q⁶ + 4q⁷ + 4q⁸ + 3q⁹ + 2q¹⁰ + q¹¹ + q¹²';
         if (Math.abs(q - 1) < 0.01) {
-            qBinomialEl.innerHTML = `\\(\\displaystyle\\binom{7}{4}_q = \\) ${polyStr}<br>At \\(q=1\\): <strong style="color: var(--slide-accent);">35</strong> paths`;
+            qBinomialEl.innerHTML = `\\(\\displaystyle\\binom{7}{4}_q = 1 + q + 2q^2 + 3q^3 + 4q^4 + 4q^5 + 5q^6\\)<br>\\(\\phantom{\\binom{7}{4}_q =} +\\, 4q^7 + 4q^8 + 3q^9 + 2q^{10} + q^{11} + q^{12}\\)<br>At \\(q=1\\): <strong style="color: var(--slide-accent);">35</strong> paths`;
         } else {
-            qBinomialEl.innerHTML = `\\(\\displaystyle\\binom{7}{4}_q = \\) ${polyStr}<br>At \\(q=${q.toFixed(2)}\\): <strong style="color: var(--slide-accent);">${val.toFixed(2)}</strong>`;
+            qBinomialEl.innerHTML = `\\(\\displaystyle\\binom{7}{4}_q = 1 + q + 2q^2 + 3q^3 + 4q^4 + 4q^5 + 5q^6\\)<br>\\(\\phantom{\\binom{7}{4}_q =} +\\, 4q^7 + 4q^8 + 3q^9 + 2q^{10} + q^{11} + q^{12}\\)<br>At \\(q=${q.toFixed(2)}\\): <strong style="color: var(--slide-accent);">${val.toFixed(2)}</strong>`;
         }
         if (window.renderMathInElement) {
             renderMathInElement(qBinomialEl, {
@@ -2244,9 +2240,9 @@ window.addEventListener('wasm-loaded', async function() {
 
         // Label
         areaCtx.fillStyle = '#232D4B';
-        areaCtx.font = 'bold 14px sans-serif';
+        areaCtx.font = 'bold 24px sans-serif';
         areaCtx.textAlign = 'center';
-        areaCtx.fillText('Area = 8', w / 2, h - 5);
+        areaCtx.fillText('Area = 8', w / 2, h - 3);
     }
 
     function drawAllPaths(q) {
@@ -2258,8 +2254,8 @@ window.addEventListener('wasm-loaded', async function() {
         const cols = 7, rows = 5;
         const cellW = w / cols;
         const cellH = h / rows;
-        const padding = 12;
-        const gridPadding = 8;
+        const padding = 6;
+        const gridPadding = 4;
 
         // Calculate weights
         const qSum = evalQBinomial(q);
@@ -2279,27 +2275,30 @@ window.addEventListener('wasm-loaded', async function() {
             const cellX = col * cellW + padding;
             const cellY = row * cellH + padding;
             const innerW = cellW - 2 * padding;
-            const innerH = cellH - 2 * padding - 40; // leave space for text
+            const innerH = cellH - 2 * padding - 28; // leave space for text
 
-            // Draw mini grid
-            const stepX = (innerW - 2 * gridPadding) / A;
-            const stepY = (innerH - 2 * gridPadding) / B;
-            const baseX = cellX + gridPadding;
-            const baseY = cellY + gridPadding;
+            // Draw mini grid with correct 4:3 aspect ratio
+            const availW = innerW - 2 * gridPadding;
+            const availH = innerH - 2 * gridPadding;
+            const step = Math.min(availW / A, availH / B); // uniform step for square cells
+            const gridW = step * A;
+            const gridH = step * B;
+            const baseX = cellX + gridPadding + (availW - gridW) / 2; // center horizontally
+            const baseY = cellY + gridPadding + (availH - gridH) / 2; // center vertically
 
             // Grid lines
             ctx.strokeStyle = '#ddd';
             ctx.lineWidth = 1;
             for (let i = 0; i <= A; i++) {
                 ctx.beginPath();
-                ctx.moveTo(baseX + i * stepX, baseY);
-                ctx.lineTo(baseX + i * stepX, baseY + innerH - 2 * gridPadding);
+                ctx.moveTo(baseX + i * step, baseY);
+                ctx.lineTo(baseX + i * step, baseY + gridH);
                 ctx.stroke();
             }
             for (let j = 0; j <= B; j++) {
                 ctx.beginPath();
-                ctx.moveTo(baseX, baseY + (innerH - 2 * gridPadding) - j * stepY);
-                ctx.lineTo(baseX + (innerW - 2 * gridPadding), baseY + (innerH - 2 * gridPadding) - j * stepY);
+                ctx.moveTo(baseX, baseY + gridH - j * step);
+                ctx.lineTo(baseX + gridW, baseY + gridH - j * step);
                 ctx.stroke();
             }
 
@@ -2315,29 +2314,22 @@ window.addEventListener('wasm-loaded', async function() {
             ctx.lineJoin = 'round';
             ctx.beginPath();
             let x = 0, y = 0;
-            ctx.moveTo(baseX + x * stepX, baseY + (innerH - 2 * gridPadding) - y * stepY);
+            ctx.moveTo(baseX, baseY + gridH);
             for (const move of path) {
                 if (move === 'R') x++;
                 else y++;
-                ctx.lineTo(baseX + x * stepX, baseY + (innerH - 2 * gridPadding) - y * stepY);
+                ctx.lineTo(baseX + x * step, baseY + gridH - y * step);
             }
             ctx.stroke();
 
-            // Text: area and probability
-            const textY = cellY + innerH + 5;
-            ctx.fillStyle = '#232D4B';
-
-            // Font weight based on probability
+            // Probability only (no area label)
+            const textY = cellY + innerH + 15;
             const fontWeight = prob / maxProb > 0.5 ? 'bold' : 'normal';
-            ctx.font = `${fontWeight} 18px sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.fillText(`area=${area}`, cellX + innerW / 2 + padding, textY);
-
-            // Probability as decimal
-            ctx.font = `${fontWeight} 20px sans-serif`;
+            ctx.font = `${fontWeight} 22px sans-serif`;
             ctx.fillStyle = prob / maxProb > 0.7 ? '#E57200' : '#666';
+            ctx.textAlign = 'center';
             const probStr = prob.toFixed(4);
-            ctx.fillText(probStr, cellX + innerW / 2 + padding, textY + 22);
+            ctx.fillText(probStr, cellX + innerW / 2 + padding, textY);
         }
     }
 
