@@ -1455,7 +1455,7 @@ window.addEventListener('wasm-loaded', async function() {
         <div id="histogram-container" style="opacity: 0; transition: opacity 0.3s; display: flex; flex-direction: column; align-items: center;">
             <canvas id="histogram-canvas" width="800" height="700" style="height: 45vh; width: auto;"></canvas>
             <div id="histogram-stats" style="margin-top: 0.5vh; font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted);">
-                <span id="histogram-count">0</span> samples — mean: <span id="histogram-mean">—</span>, std: <span id="histogram-std">—</span>
+                <span id="histogram-count">0</span> samples
             </div>
         </div>
     </div>
@@ -1466,6 +1466,7 @@ window.addEventListener('wasm-loaded', async function() {
 </section>
 
 <script src="/talk/visual/sim/q-partition-cftp.js"></script>
+<script src="/js/webgpu-qpartition-engine.js"></script>
 <script>
 (async function() {
     'use strict';
@@ -1474,6 +1475,21 @@ window.addEventListener('wasm-loaded', async function() {
     if (typeof QPartitionModule === 'undefined') {
         console.error('QPartitionModule not loaded');
         return;
+    }
+
+    // Initialize GPU engine if WebGPU available
+    let gpuEngine = null;
+    if (WebGPUQPartitionEngine.isAvailable()) {
+        try {
+            gpuEngine = new WebGPUQPartitionEngine();
+            await gpuEngine.init();
+            console.log('WebGPU CFTP engine ready');
+        } catch (e) {
+            console.warn('WebGPU init failed, using CPU fallback:', e);
+            gpuEngine = null;
+        }
+    } else {
+        console.log('WebGPU not available, using CPU (WASM) for CFTP sampling');
     }
 
     // Path canvas (left)
@@ -1485,8 +1501,6 @@ window.addEventListener('wasm-loaded', async function() {
     const histCtx = histCanvas.getContext('2d');
     const histContainer = document.getElementById('histogram-container');
     const histCountEl = document.getElementById('histogram-count');
-    const histMeanEl = document.getElementById('histogram-mean');
-    const histStdEl = document.getElementById('histogram-std');
 
     // Other elements
     const statusEl = document.getElementById('limit-shape-status');
@@ -1510,7 +1524,7 @@ window.addEventListener('wasm-loaded', async function() {
     let isRunning = false;
 
     function updateFormula() {
-        const count = samples.length;
+        const count = middleYs.length;  // Use histogram sample count
         if (count === 0) {
             formulaEl.innerHTML = `\\(a = ${N},\\; b = ${M}\\)`;
         } else if (count === 1) {
@@ -1617,12 +1631,11 @@ window.addEventListener('wasm-loaded', async function() {
 
         if (middleYs.length === 0) return;
 
-        // Compute histogram bins
-        const expectedY = M / 2;  // Expected y at midpoint = 60
+        // Compute histogram bins - use fixed bin width of 2 for smooth Gaussian look
         const minY = Math.min(...middleYs);
         const maxY = Math.max(...middleYs);
         const range = Math.max(maxY - minY, 10);
-        const binCount = Math.min(20, Math.ceil(Math.sqrt(middleYs.length) * 1.5));
+        const binCount = Math.max(10, Math.min(20, Math.ceil(range / 2)));  // ~2 units per bin
         const binWidth = range / binCount;
         const bins = new Array(binCount).fill(0);
 
@@ -1655,18 +1668,6 @@ window.addEventListener('wasm-loaded', async function() {
             histCtx.strokeRect(x + 1, y, barW - 2, barH);
         }
 
-        // Draw expected value line
-        const expectedX = padding.left + ((expectedY - minY) / range) * w;
-        if (expectedX >= padding.left && expectedX <= padding.left + w) {
-            histCtx.strokeStyle = '#232D4B';
-            histCtx.lineWidth = 2;
-            histCtx.setLineDash([8, 4]);
-            histCtx.beginPath();
-            histCtx.moveTo(expectedX, padding.top);
-            histCtx.lineTo(expectedX, padding.top + h);
-            histCtx.stroke();
-            histCtx.setLineDash([]);
-        }
 
         // X-axis labels
         histCtx.fillStyle = '#232D4B';
@@ -1685,14 +1686,8 @@ window.addEventListener('wasm-loaded', async function() {
         histCtx.fillText('frequency', 0, 0);
         histCtx.restore();
 
-        // Update stats
-        const mean = middleYs.reduce((a, b) => a + b, 0) / middleYs.length;
-        const variance = middleYs.reduce((a, b) => a + (b - mean) ** 2, 0) / middleYs.length;
-        const std = Math.sqrt(variance);
-
+        // Update sample count
         histCountEl.textContent = middleYs.length;
-        histMeanEl.textContent = mean.toFixed(1);
-        histStdEl.textContent = std.toFixed(1);
     }
 
     // Extract y-value at x = N/2 from a path
@@ -1745,13 +1740,65 @@ window.addEventListener('wasm-loaded', async function() {
         });
     }
 
-    async function collectSamples(count, updateCallback) {
+    // Convert coordinate path [[x,y], ...] to bit array (0=right, 1=up)
+    function pathToBits(coordPath) {
+        const bits = [];
+        for (let i = 1; i < coordPath.length; i++) {
+            const dx = coordPath[i][0] - coordPath[i-1][0];
+            const dy = coordPath[i][1] - coordPath[i-1][1];
+            bits.push(dy > 0 ? 1 : 0);  // 1 = up, 0 = right
+        }
+        return bits;
+    }
+
+    async function collectSamplesGPU(count) {
+        if (!gpuEngine) return collectSamplesCPU(count);
+
+        statusEl.textContent = 'Getting initial sample...';
+        statusEl.style.color = '#E57200';
+
+        try {
+            // Step 1: Get ONE valid path via CPU CFTP
+            const initialPath = await runCFTP();
+            if (!initialPath) return collectSamplesCPU(count);
+
+            // Convert to bit format for GPU
+            const initialBits = pathToBits(initialPath);
+
+            // Step 2: Run GPU Glauber chains from this initial state
+            statusEl.textContent = `GPU: ${count} chains...`;
+            const gpuMiddleYs = await gpuEngine.sample(N, M, count, initialBits, 1000000);  // 1M steps - mixing time is O(n²)
+
+            // Add GPU results to histogram
+            for (let i = 0; i < gpuMiddleYs.length; i++) {
+                middleYs.push(gpuMiddleYs[i]);
+            }
+
+            statusEl.textContent = `${middleYs.length} samples (GPU)`;
+            statusEl.style.color = 'var(--slide-muted)';
+            updateFormula();
+            drawPathCanvas();
+            drawHistogram();
+        } catch (e) {
+            console.error('GPU sampling failed:', e);
+            return collectSamplesCPU(count);
+        }
+    }
+
+    async function collectSamplesCPU(count) {
         for (let i = 0; i < count; i++) {
             await runCFTP();
-            if (updateCallback) updateCallback(i + 1, count);
+            statusEl.textContent = `${samples.length} samples`;
             drawHistogram();
-            // Small delay to let UI update
             await new Promise(r => setTimeout(r, 10));
+        }
+    }
+
+    async function collectSamples(count) {
+        if (gpuEngine) {
+            await collectSamplesGPU(count);
+        } else {
+            await collectSamplesCPU(count);
         }
     }
 
@@ -1763,8 +1810,6 @@ window.addEventListener('wasm-loaded', async function() {
         statusEl.textContent = 'Ready';
         statusEl.style.color = 'var(--slide-muted)';
         histCountEl.textContent = '0';
-        histMeanEl.textContent = '—';
-        histStdEl.textContent = '—';
         updateFormula();
         drawPathCanvas();
     }
@@ -1775,7 +1820,7 @@ window.addEventListener('wasm-loaded', async function() {
             window.slideEngine.registerSimulation('limit-shape-2d', {
                 start() {},
                 pause() {},
-                steps: 2,
+                steps: 3,
                 async onStep(step) {
                     if (step === 1) {
                         // Step 1: Run ONE sample, show observation text
@@ -1787,22 +1832,25 @@ window.addEventListener('wasm-loaded', async function() {
                         // Step 2: Collect 20 more samples, show histogram
                         histContainer.style.opacity = '1';
                         await collectSamples(19);  // Already have 1, add 19 more = 20 total
+                    } else if (step === 3) {
+                        // Step 3: Collect 20000 more samples for smooth histogram
+                        await collectSamples(20000);
                     }
                 },
                 onStepBack(step) {
-                    if (step === 0) {
-                        reset();
-                    } else if (step === 1) {
-                        // Back to step 1: hide histogram, keep one sample
-                        histContainer.style.opacity = '0';
-                        samples = samples.slice(0, 1);
-                        middleYs = middleYs.slice(0, 1);
-                        updateFormula();
-                        drawPathCanvas();
+                    // Always reset to step 0 on any back motion
+                    reset();
+                    // Also reset the slide engine's step counter for this slide
+                    if (window.slideEngine) {
+                        window.slideEngine.currentSimStep = 0;
+                        window.slideEngine.slideHistory.set('limit-shape-2d', { fragment: 0, simStep: 0 });
                     }
                 },
                 onSlideEnter() {
+                    // Always reset to step 0 when entering (whether forward or back)
                     reset();
+                    histContainer.style.opacity = '0';
+                    observationEl.style.opacity = '0';
                 }
             }, 1);
         } else {
