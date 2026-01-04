@@ -3213,7 +3213,7 @@ window.addEventListener('wasm-loaded', async function() {
             window.slideEngine.registerSimulation('geometric-bridge', {
                 start,
                 pause,
-                steps: 10,
+                steps: 11,
                 onSlideEnter() {
                     // Reset camera to default position
                     camera.position.set(40.2, -28.6, -17.5);
@@ -3232,12 +3232,10 @@ window.addEventListener('wasm-loaded', async function() {
                         }
                     }, 50);
                     start();
-                    if (window.bridgeSnowflake) window.bridgeSnowflake.start();
                 },
                 onSlideLeave() {
                     stopAutoRotate();
                     pause();
-                    if (window.bridgeSnowflake) window.bridgeSnowflake.pause();
                 },
                 onStep(step) {
                     if (step <= 8) {
@@ -3247,6 +3245,11 @@ window.addEventListener('wasm-loaded', async function() {
                         // Start rotating the 9×12×9 hexagon
                         startAutoRotate();
                     } else if (step === 10 && window.bridgeSnowflake) {
+                        // Stop hexagon rotation, show snowflake region (unsampled)
+                        stopAutoRotate();
+                        window.bridgeSnowflake.showRegion();
+                    } else if (step === 11 && window.bridgeSnowflake) {
+                        // CFTP sample the snowflake
                         window.bridgeSnowflake.regenerate();
                     }
                 },
@@ -3256,6 +3259,8 @@ window.addEventListener('wasm-loaded', async function() {
                         setLayerCount(step + 1);
                     } else if (step === 9) {
                         startAutoRotate();
+                    } else if (step === 10 && window.bridgeSnowflake) {
+                        window.bridgeSnowflake.showRegion();
                     }
                 }
             }, 0);
@@ -3293,7 +3298,6 @@ window.addEventListener('wasm-loaded', async function() {
         const data = await resp.json();
         snowflakeTriangles = data.triangles;
     } catch (e) {
-        console.error('Failed to load snowflake:', e);
         return;
     }
 
@@ -3306,8 +3310,8 @@ window.addEventListener('wasm-loaded', async function() {
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Orthographic camera
-    const frustumSize = 80;
+    // Orthographic camera (sized for snowflake)
+    const frustumSize = 75;
     let aspect = canvas.clientWidth / canvas.clientHeight || 1;
     const camera = new THREE.OrthographicCamera(
         -frustumSize * aspect / 2, frustumSize * aspect / 2,
@@ -3346,29 +3350,24 @@ window.addEventListener('wasm-loaded', async function() {
     const meshGroup = new THREE.Group();
     scene.add(meshGroup);
 
-    // Camera position (will tune later)
-    camera.position.set(50, -40, -30);
+    // Camera position - looking down at flat snowflake initially
+    camera.position.set(0, 100, 0);
     camera.zoom = 1.0;
     camera.updateProjectionMatrix();
     controls.target.set(0, 0, 0);
+    camera.up.set(0, 0, -1); // Z-axis is up in view
     controls.update();
 
-    // Geometry helpers (same as hexagon)
-    function getVertexKeys(dimer) {
+    // Get vertices for each lozenge type (flat 2D)
+    function getLozengeVerts(dimer) {
         const { bn, bj, t } = dimer;
-        if (t === 0) return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
-        if (t === 1) return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
-        return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
-    }
-
-    function getHeightPattern(t) {
-        if (t === 0) return [0, 0, 0, 0];
-        if (t === 1) return [1, 0, 0, 1];
-        return [1, 1, 0, 0];
-    }
-
-    function to3D(n, j, h) {
-        return { x: h, y: -n - h, z: j - h };
+        if (t === 0) { // horizontal
+            return [getVertex(bn, bj), getVertex(bn+1, bj), getVertex(bn+1, bj-1), getVertex(bn, bj-1)];
+        } else if (t === 1) { // left-leaning
+            return [getVertex(bn, bj), getVertex(bn+1, bj-1), getVertex(bn+1, bj-2), getVertex(bn, bj-1)];
+        } else { // right-leaning
+            return [getVertex(bn-1, bj), getVertex(bn, bj), getVertex(bn+1, bj-1), getVertex(bn, bj-1)];
+        }
     }
 
     function buildGeometry() {
@@ -3381,79 +3380,25 @@ window.addEventListener('wasm-loaded', async function() {
 
         if (!Array.isArray(currentDimers) || currentDimers.length === 0) return;
 
-        // Build vertex-to-dimer map and calculate heights via BFS
-        const vertexMap = new Map();
+        // Build flat 2D lozenges
         for (const d of currentDimers) {
-            const keys = getVertexKeys(d);
-            for (const [kn, kj] of keys) {
-                const key = `${kn},${kj}`;
-                if (!vertexMap.has(key)) vertexMap.set(key, []);
-                vertexMap.get(key).push(d);
-            }
-        }
-
-        const heights = new Map();
-        const queue = [];
-        const firstD = currentDimers[0];
-        const firstKeys = getVertexKeys(firstD);
-        const pattern = getHeightPattern(firstD.t);
-        for (let i = 0; i < 4; i++) {
-            const key = `${firstKeys[i][0]},${firstKeys[i][1]}`;
-            heights.set(key, pattern[i]);
-            queue.push(firstKeys[i]);
-        }
-
-        while (queue.length > 0) {
-            const [cn, cj] = queue.shift();
-            const key = `${cn},${cj}`;
-            const h = heights.get(key);
-            const dimers = vertexMap.get(key) || [];
-            for (const d of dimers) {
-                const keys = getVertexKeys(d);
-                const pat = getHeightPattern(d.t);
-                let baseIdx = -1;
-                for (let i = 0; i < 4; i++) {
-                    if (keys[i][0] === cn && keys[i][1] === cj) { baseIdx = i; break; }
-                }
-                if (baseIdx === -1) continue;
-                const baseH = h - pat[baseIdx];
-                for (let i = 0; i < 4; i++) {
-                    const vkey = `${keys[i][0]},${keys[i][1]}`;
-                    if (!heights.has(vkey)) {
-                        heights.set(vkey, baseH + pat[i]);
-                        queue.push(keys[i]);
-                    }
-                }
-            }
-        }
-
-        // Build mesh for each dimer
-        for (const d of currentDimers) {
-            const keys = getVertexKeys(d);
-            const pat = getHeightPattern(d.t);
-            const verts3D = [];
-            for (let i = 0; i < 4; i++) {
-                const h = heights.get(`${keys[i][0]},${keys[i][1]}`) || 0;
-                verts3D.push(to3D(keys[i][0], keys[i][1], h));
-            }
-
+            const verts = getLozengeVerts(d);
             const geometry = new THREE.BufferGeometry();
+            // Flat in x-z plane (y=0)
             const positions = new Float32Array([
-                verts3D[0].x, verts3D[0].y, verts3D[0].z,
-                verts3D[1].x, verts3D[1].y, verts3D[1].z,
-                verts3D[2].x, verts3D[2].y, verts3D[2].z,
-                verts3D[0].x, verts3D[0].y, verts3D[0].z,
-                verts3D[2].x, verts3D[2].y, verts3D[2].z,
-                verts3D[3].x, verts3D[3].y, verts3D[3].z,
+                verts[0].x, 0, verts[0].y,
+                verts[1].x, 0, verts[1].y,
+                verts[2].x, 0, verts[2].y,
+                verts[0].x, 0, verts[0].y,
+                verts[2].x, 0, verts[2].y,
+                verts[3].x, 0, verts[3].y,
             ]);
             geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
             geometry.computeVertexNormals();
 
-            const material = new THREE.MeshStandardMaterial({
+            const material = new THREE.MeshBasicMaterial({
                 color: colors[d.t],
-                side: THREE.DoubleSide,
-                metalness: 0.1,
-                roughness: 0.7
+                side: THREE.DoubleSide
             });
             meshGroup.add(new THREE.Mesh(geometry, material));
 
@@ -3479,8 +3424,7 @@ window.addEventListener('wasm-loaded', async function() {
             wasm.setValue(ptr + i * 4, triArr[i], 'i32');
         }
 
-        const count = snowflakeTriangles.length;
-        initFromTriangles(ptr, count);
+        initFromTriangles(ptr, triArr.length);
         wasm._free(ptr);
 
         // Run CFTP
@@ -3493,15 +3437,75 @@ window.addEventListener('wasm-loaded', async function() {
 
         try {
             const parsed = JSON.parse(jsonStr);
-            currentDimers = Array.isArray(parsed) ? parsed : [];
+            currentDimers = Array.isArray(parsed.dimers) ? parsed.dimers : [];
         } catch (e) {
             currentDimers = [];
         }
     }
 
-    let isRunning = false;
-    let animationId = null;
     let hasSampled = false;
+
+    // Triangular lattice helpers (same as hexagon)
+    const slope = 1 / Math.sqrt(3);
+    const deltaC = 2 / Math.sqrt(3);
+    function getVertex(n, j) { return { x: n, y: slope * n + j * deltaC }; }
+
+    // Show the region as flat 2D (unsampled)
+    function showRegion() {
+        // Clear existing geometry
+        while (meshGroup.children.length > 0) {
+            const child = meshGroup.children[0];
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+            meshGroup.remove(child);
+        }
+
+        if (!snowflakeTriangles) return;
+
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [], indices = [], vertexColors = [];
+        const baseColor = new THREE.Color('#CCCCCC');
+
+        for (const tri of snowflakeTriangles) {
+            const { n, j, type } = tri;
+            const baseIndex = vertices.length / 3;
+            let v1, v2, v3;
+            if (type === 1) { // right-pointing (black)
+                v1 = getVertex(n, j);
+                v2 = getVertex(n, j - 1);
+                v3 = getVertex(n + 1, j - 1);
+            } else { // left-pointing (white), type === 2
+                v1 = getVertex(n, j);
+                v2 = getVertex(n + 1, j);
+                v3 = getVertex(n + 1, j - 1);
+            }
+            // Flat in x-z plane (y=0), using x->x, y->z
+            vertices.push(v1.x, 0, v1.y, v2.x, 0, v2.y, v3.x, 0, v3.y);
+            for (let i = 0; i < 3; i++) vertexColors.push(baseColor.r, baseColor.g, baseColor.b);
+            indices.push(baseIndex, baseIndex+1, baseIndex+2);
+        }
+
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+
+        const material = new THREE.MeshBasicMaterial({
+            vertexColors: true, side: THREE.DoubleSide
+        });
+        meshGroup.add(new THREE.Mesh(geometry, material));
+
+        geometry.computeBoundingBox();
+        const bb = geometry.boundingBox;
+
+        // Center camera on the geometry
+        const center = new THREE.Vector3();
+        bb.getCenter(center);
+        controls.target.copy(center);
+        camera.position.set(center.x, center.y + 100, center.z);
+        controls.update();
+        renderer.render(scene, camera);
+    }
 
     function regenerate() {
         sampleSnowflake();
@@ -3510,30 +3514,9 @@ window.addEventListener('wasm-loaded', async function() {
         hasSampled = true;
     }
 
-    function animate() {
-        if (!isRunning) return;
-        controls.update();
-        renderer.render(scene, camera);
-        animationId = requestAnimationFrame(animate);
-    }
-
-    function start() {
-        if (isRunning) return;
-        isRunning = true;
-        animate();
-    }
-
-    function pause() {
-        isRunning = false;
-        if (animationId) {
-            cancelAnimationFrame(animationId);
-            animationId = null;
-        }
-    }
-
     // Listen for controls changes
     controls.addEventListener('change', () => {
-        if (!isRunning) renderer.render(scene, camera);
+        renderer.render(scene, camera);
     });
 
     // Show placeholder initially
@@ -3541,9 +3524,8 @@ window.addEventListener('wasm-loaded', async function() {
 
     // Expose for step control from main script
     window.bridgeSnowflake = {
+        showRegion,
         regenerate,
-        start,
-        pause,
         resize,
         render: () => renderer.render(scene, camera),
         hasSampled: () => hasSampled
