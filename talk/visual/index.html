@@ -2908,16 +2908,16 @@ window.addEventListener('wasm-loaded', async function() {
 <section class="slide slide-center" id="thankyou" data-title="Thank You">
     <div style="display: flex; flex-direction: column; gap: clamp(1rem, 3vh, 3rem); align-items: center; justify-content: center;">
         <div style="display: flex; gap: clamp(0.5rem, 1.5vw, 1.5rem); justify-content: center;">
-            <canvas id="letter-T" width="100" height="130" style="width: 12vh; height: 15vh;"></canvas>
-            <canvas id="letter-H" width="100" height="130" style="width: 12vh; height: 15vh;"></canvas>
-            <canvas id="letter-A" width="100" height="130" style="width: 12vh; height: 15vh;"></canvas>
-            <canvas id="letter-N" width="100" height="130" style="width: 12vh; height: 15vh;"></canvas>
-            <canvas id="letter-K" width="100" height="130" style="width: 12vh; height: 15vh;"></canvas>
+            <canvas id="letter-T" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
+            <canvas id="letter-H" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
+            <canvas id="letter-A" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
+            <canvas id="letter-N" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
+            <canvas id="letter-K" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
         </div>
         <div style="display: flex; gap: clamp(0.5rem, 1.5vw, 1.5rem); justify-content: center;">
-            <canvas id="letter-Y" width="100" height="130" style="width: 12vh; height: 15vh;"></canvas>
-            <canvas id="letter-O" width="100" height="130" style="width: 12vh; height: 15vh;"></canvas>
-            <canvas id="letter-U" width="100" height="130" style="width: 12vh; height: 15vh;"></canvas>
+            <canvas id="letter-Y" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
+            <canvas id="letter-O" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
+            <canvas id="letter-U" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
         </div>
     </div>
 </section>
@@ -3031,8 +3031,8 @@ window.addEventListener('wasm-loaded', async function() {
         const { minX, maxX, minY, maxY } = bounds;
 
         // Use fixed dimensions to prevent zoom issues
-        const displayWidth = 100;
-        const displayHeight = 130;
+        const displayWidth = 200;
+        const displayHeight = 260;
         const dpr = window.devicePixelRatio || 1;
         if (canvas.width !== displayWidth * dpr) {
             canvas.width = displayWidth * dpr;
@@ -3045,7 +3045,8 @@ window.addEventListener('wasm-loaded', async function() {
 
         const regionWidth = maxX - minX;
         const regionHeight = maxY - minY;
-        const scale = Math.min(displayWidth / regionWidth, displayHeight / regionHeight) * 0.85;
+        // Scale by HEIGHT only so all letters have same lozenge height (K aligns with others)
+        const scale = (displayHeight / regionHeight) * 0.85;
         const centerX = displayWidth / 2 - ((minX + maxX) / 2) * scale;
         const centerY = displayHeight / 2 + ((minY + maxY) / 2) * scale;
 
