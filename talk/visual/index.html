@@ -2808,6 +2808,11 @@ window.addEventListener('wasm-loaded', async function() {
             <div id="bridge-description" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; line-height: 1.6; margin-top: 2vh;">
                 surface in <span id="bridge-box-size">1 × 12 × 9</span> box
             </div>
+            <div id="macmahon-text" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; line-height: 1.5; margin-top: 1vh; opacity: 0; transition: opacity 0.3s;">
+                <div>number of surfaces in \(a \times b \times c\) box is \(\displaystyle\prod_{i=1}^{a}\prod_{j=1}^{b}\prod_{k=1}^{c}\frac{i+j+k-1}{i+j+k-2}\)</div>
+                <div style="margin-top: 0.5vh;">[MacMahon, c. 1900]</div>
+                <div style="margin-top: 1vh;">For 9 × 12 × 9: <span style="font-family: monospace; font-size: clamp(1.4rem, 2.5vw, 2rem); font-weight: bold; color: #E57200;">1,340,992,301,315,806,672,824,460,528,012,500</span></div>
+            </div>
         </div>
         <!-- Right pane: snowflake -->
         <div id="bridge-right-pane" style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;">
@@ -3213,7 +3218,7 @@ window.addEventListener('wasm-loaded', async function() {
             window.slideEngine.registerSimulation('geometric-bridge', {
                 start,
                 pause,
-                steps: 11,
+                steps: 12,
                 onSlideEnter() {
                     // Reset camera to default position
                     camera.position.set(40.2, -28.6, -17.5);
@@ -3238,28 +3243,39 @@ window.addEventListener('wasm-loaded', async function() {
                     pause();
                 },
                 onStep(step) {
+                    const macmahonEl = document.getElementById('macmahon-text');
                     if (step <= 8) {
                         stopAutoRotate();
                         setLayerCount(step + 1);
+                        if (macmahonEl) macmahonEl.style.opacity = '0';
                     } else if (step === 9) {
                         // Start rotating the 9×12×9 hexagon
                         startAutoRotate();
-                    } else if (step === 10 && window.bridgeSnowflake) {
+                    } else if (step === 10) {
+                        // Show MacMahon formula (keep rotating)
+                        if (macmahonEl) macmahonEl.style.opacity = '1';
+                        if (window.MathJax) MathJax.typeset();
+                    } else if (step === 11 && window.bridgeSnowflake) {
                         // Stop hexagon rotation, show snowflake region (unsampled)
                         stopAutoRotate();
                         window.bridgeSnowflake.showRegion();
-                    } else if (step === 11 && window.bridgeSnowflake) {
+                    } else if (step === 12 && window.bridgeSnowflake) {
                         // CFTP sample the snowflake
                         window.bridgeSnowflake.regenerate();
                     }
                 },
                 onStepBack(step) {
+                    const macmahonEl = document.getElementById('macmahon-text');
                     if (step <= 8) {
                         stopAutoRotate();
                         setLayerCount(step + 1);
+                        if (macmahonEl) macmahonEl.style.opacity = '0';
                     } else if (step === 9) {
                         startAutoRotate();
-                    } else if (step === 10 && window.bridgeSnowflake) {
+                        if (macmahonEl) macmahonEl.style.opacity = '0';
+                    } else if (step === 10) {
+                        if (macmahonEl) macmahonEl.style.opacity = '1';
+                    } else if (step === 11 && window.bridgeSnowflake) {
                         window.bridgeSnowflake.showRegion();
                     }
                 }
