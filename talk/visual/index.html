@@ -1833,8 +1833,9 @@ window.addEventListener('wasm-loaded', async function() {
                         histContainer.style.opacity = '1';
                         await collectSamples(19);  // Already have 1, add 19 more = 20 total
                     } else if (step === 3) {
-                        // Step 3: Collect 20000 more samples for smooth histogram
-                        await collectSamples(20000);
+                        // Step 3: Collect many more samples (20k if GPU, 100 if CPU)
+                        const count = gpuEngine ? 20000 : 100;
+                        await collectSamples(count);
                     }
                 },
                 onStepBack(step) {
