@@ -1497,9 +1497,10 @@ window.addEventListener('wasm-loaded', async function() {
         return;
     }
 
-    // Initialize GPU engine if WebGPU available
+    // Initialize GPU engine if WebGPU available (skip on mobile - too slow)
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     let gpuEngine = null;
-    if (WebGPUQPartitionEngine.isAvailable()) {
+    if (!isMobile && WebGPUQPartitionEngine.isAvailable()) {
         try {
             gpuEngine = new WebGPUQPartitionEngine();
             await gpuEngine.init();
@@ -1509,7 +1510,7 @@ window.addEventListener('wasm-loaded', async function() {
             gpuEngine = null;
         }
     } else {
-        console.log('WebGPU not available, using CPU (WASM) for CFTP sampling');
+        console.log(isMobile ? 'Mobile detected, using CPU (WASM)' : 'WebGPU not available, using CPU (WASM)');
     }
 
     // Path canvas (left)
@@ -1863,7 +1864,8 @@ window.addEventListener('wasm-loaded', async function() {
         }
 
         const initialBits = pathToBits(initialPath);
-        const stepsPerSample = 1000000;  // 1M steps like GPU
+        // Mobile needs fewer steps to stay responsive (100k vs 1M)
+        const stepsPerSample = isMobile ? 100000 : 1000000;
 
         for (let i = 0; i < count; i++) {
             const y = runGlauberWASM(initialBits, stepsPerSample);
