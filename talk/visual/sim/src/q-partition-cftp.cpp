@@ -9,8 +9,8 @@ emcc q-partition-cftp.cpp -o ../q-partition-cftp.js \
   -s WASM=1 \
   -s MODULARIZE=1 \
   -s EXPORT_NAME='QPartitionModule' \
-  -s "EXPORTED_FUNCTIONS=['_initSimulation','_runCFTPBatch','_getCoalesced','_getProgress','_getPartitionPath','_freeString','_getM','_getN']" \
-  -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString']" \
+  -s "EXPORTED_FUNCTIONS=['_initSimulation','_runCFTPBatch','_getCoalesced','_getProgress','_getPartitionPath','_freeString','_getM','_getN','_setPath','_runGlauberAndGetMiddleY']" \
+  -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=64MB \
   -s ENVIRONMENT=web \
@@ -229,6 +229,53 @@ char* getPartitionPath() {
 
 void freeString(char* ptr) {
     free(ptr);
+}
+
+// Single-chain Glauber step (not coupled)
+inline void singleGlauberStep(RNG& rng) {
+    int len = M + N;
+    if (len < 2) return;
+
+    int i = rng.randInt(len - 1);
+    double u = rng.uniform();
+
+    bool wantAdd = (u < q / (1.0 + q));
+
+    if (wantAdd) {
+        if (path[i] == 1 && path[i+1] == 0) {
+            path[i] = 0;
+            path[i+1] = 1;
+        }
+    } else {
+        if (path[i] == 0 && path[i+1] == 1) {
+            path[i] = 1;
+            path[i+1] = 0;
+        }
+    }
+}
+
+// Set path from bit array (for initializing from CFTP result)
+void setPath(int* bits, int len) {
+    path.assign(bits, bits + len);
+}
+
+// Run Glauber steps and return middleY
+int runGlauberAndGetMiddleY(int steps) {
+    // Reseed RNG for independence
+    globalRng = RNG((uint64_t)time(nullptr) ^ (uint64_t)rand());
+
+    for (int s = 0; s < steps; s++) {
+        singleGlauberStep(globalRng);
+    }
+
+    // Compute y at x = N/2
+    int targetX = N / 2;
+    int x = 0, y = 0;
+    for (int i = 0; i < M + N; i++) {
+        if (x == targetX) return y;
+        if (path[i] == 0) x++; else y++;
+    }
+    return y;
 }
 
 } // extern "C"
