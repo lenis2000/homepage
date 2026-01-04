@@ -30,6 +30,7 @@ class SlideEngine {
         this.currentFragment = 0;     // Current fragment index within slide
         this.currentSimStep = 0;      // Current simulation step within slide
         this.simulations = new Map(); // slideId -> array of {sim, step}
+        this.slideHistory = new Map(); // slideId -> {fragment, simStep} - remembers state per slide
         this.jumpMenuOpen = false;
         this.buildOverlayOpen = false;
         this.touchStartX = 0;
@@ -414,7 +415,7 @@ class SlideEngine {
         }
         // No sim steps or fragments to hide, go to previous slide
         if (this.current > 0) {
-            this.goTo(this.current - 1, { showAllFragments: true, showAllSims: true });
+            this.goTo(this.current - 1, { direction: 'backward' });
         }
     }
 
@@ -433,12 +434,22 @@ class SlideEngine {
     }
 
     goTo(index, options = {}) {
-        const opts = { updateHash: true, showAllFragments: false, showAllSims: false, ...options };
+        const opts = { updateHash: true, direction: 'jump', ...options };
+        // direction: 'forward' (from prev slide), 'backward' (from next slide), 'jump' (menu/hash)
         if (index < 0 || index >= this.slides.length) return;
         if (index === this.current && this.slides[this.current].classList.contains('active')) return;
 
         const prevSlide = this.slides[this.current];
         const nextSlide = this.slides[index];
+        const prevIndex = this.current;
+
+        // Save current state before leaving
+        if (prevSlide.id) {
+            this.slideHistory.set(prevSlide.id, {
+                fragment: this.currentFragment,
+                simStep: this.currentSimStep
+            });
+        }
 
         // Notify simulations of slide leave, then pause
         this.notifySlideLeave(prevSlide.id);
@@ -459,29 +470,46 @@ class SlideEngine {
         // Announce slide change to screen readers
         this.announce(`Slide ${index + 1} of ${this.slides.length}: ${nextSlide.dataset.title || ''}`);
 
-        // Handle fragments on new slide
-        const fragments = this.getFragments(nextSlide);
-        if (opts.showAllFragments) {
-            // Coming from next slide (going back) - show all fragments
-            this.showFragmentsUpTo(nextSlide, fragments.length);
-            this.currentFragment = fragments.length;
-        } else {
-            // Coming from previous slide - hide all fragments
-            this.showFragmentsUpTo(nextSlide, 0);
-            this.currentFragment = 0;
+        // Determine navigation direction if not explicitly set
+        let direction = opts.direction;
+        if (direction === 'jump') {
+            // Auto-detect based on index change
+            if (index === prevIndex + 1) direction = 'forward';
+            else if (index === prevIndex - 1) direction = 'backward';
         }
 
-        // Notify simulations of slide enter
+        // Get saved state for this slide
+        const savedState = this.slideHistory.get(nextSlide.id) || { fragment: 0, simStep: 0 };
+        const fragments = this.getFragments(nextSlide);
+        const maxSimStep = this.getMaxSimStep(nextSlide.id);
+
+        // Notify simulations of slide enter (before stepping)
         this.notifySlideEnter(nextSlide.id);
 
-        // Handle simulations on new slide
-        const maxSimStep = this.getMaxSimStep(nextSlide.id);
-        if (opts.showAllSims) {
-            // Coming from next slide - start all sims
-            this.currentSimStep = maxSimStep;
-            this.startSimulationsUpToStep(nextSlide.id, maxSimStep);
+        if (direction === 'forward') {
+            // Coming from previous slide - fresh start
+            this.showFragmentsUpTo(nextSlide, 0);
+            this.currentFragment = 0;
+            this.currentSimStep = 0;
+            this.pauseAllSimulations(nextSlide.id);
+            // Start step-0 sims (auto-start)
+            this.startSimulationsUpToStep(nextSlide.id, 0);
+        } else if (direction === 'backward') {
+            // Coming from next slide - restore to saved state or max
+            const targetFragment = savedState.fragment || fragments.length;
+            const targetSimStep = savedState.simStep || maxSimStep;
+
+            this.showFragmentsUpTo(nextSlide, targetFragment);
+            this.currentFragment = targetFragment;
+
+            // Step through sims to target step using onStep calls
+            this.currentSimStep = 0;
+            this.startSimulationsUpToStep(nextSlide.id, 0);
+            this.restoreSimStepsTo(nextSlide.id, targetSimStep);
         } else {
-            // Coming from previous slide - all sims paused, step 0
+            // Jump (from menu/hash) - always start fresh
+            this.showFragmentsUpTo(nextSlide, 0);
+            this.currentFragment = 0;
             this.currentSimStep = 0;
             this.pauseAllSimulations(nextSlide.id);
             // Start step-0 sims (auto-start)
@@ -497,6 +525,21 @@ class SlideEngine {
         if (opts.updateHash) {
             const slideId = nextSlide.id || `${this.options.hashPrefix}${index + 1}`;
             history.pushState(null, '', `#${slideId}`);
+        }
+    }
+
+    // Restore sim steps by calling onStep sequentially from current to target
+    restoreSimStepsTo(slideId, targetStep) {
+        const sims = this.getSimsForSlide(slideId);
+        while (this.currentSimStep < targetStep) {
+            this.currentSimStep++;
+            sims.forEach(({ sim, step: registeredStep }) => {
+                if (typeof sim.onStep === 'function') {
+                    sim.onStep(this.currentSimStep);
+                } else if (this.currentSimStep === registeredStep && typeof sim.start === 'function') {
+                    sim.start();
+                }
+            });
         }
     }
 

@@ -1159,14 +1159,12 @@ window.addEventListener('wasm-loaded', async function() {
             pause() {},
             steps: 3,
             onStep(step) {
+                simDiv.style.opacity = '1';
                 if (step === 1) {
-                    // Show simulation with a=2, b=2
                     inputA.value = 2;
                     inputB.value = 2;
-                    simDiv.style.opacity = '1';
                     drawPaths();
                 } else if (step === 2) {
-                    // Change to a=4, b=3
                     inputA.value = 4;
                     inputB.value = 3;
                     drawPaths();
@@ -1175,20 +1173,26 @@ window.addEventListener('wasm-loaded', async function() {
                 }
             },
             onStepBack(step) {
+                // Mirror forward steps exactly
+                answerDiv.style.opacity = '0';
                 if (step === 0) {
                     simDiv.style.opacity = '0';
-                    answerDiv.style.opacity = '0';
-                } else if (step === 1) {
-                    // Back to a=2, b=2
-                    inputA.value = 2;
-                    inputB.value = 2;
-                    drawPaths();
-                    answerDiv.style.opacity = '0';
-                } else if (step === 2) {
-                    answerDiv.style.opacity = '0';
+                } else {
+                    simDiv.style.opacity = '1';
+                    if (step === 1) {
+                        inputA.value = 2;
+                        inputB.value = 2;
+                        drawPaths();
+                    } else if (step === 2) {
+                        inputA.value = 4;
+                        inputB.value = 3;
+                        drawPaths();
+                    }
                 }
             },
             onSlideEnter() {
+                simDiv.style.opacity = '0';
+                answerDiv.style.opacity = '0';
                 inputA.value = 2;
                 inputB.value = 2;
                 drawPaths();
@@ -1203,8 +1207,8 @@ window.addEventListener('wasm-loaded', async function() {
     <h2 class="slide-title">Pick one path at random</h2>
 
     <p style="font-size: clamp(1.8rem, 3.5vw, 2.8rem); margin-top: 2vh;">
-        <span id="random-path-text1" style="opacity: 0; transition: opacity 0.3s;">Pick one path at random from \(\displaystyle\binom{a+b}{a}\) possible ones.</span>
-        <span id="random-path-question" style="opacity: 0; transition: opacity 0.3s; color: var(--slide-accent);"> How does it look like?</span>
+        <span id="random-path-text1">Pick one path at random from \(\displaystyle\binom{a+b}{a}\) possible ones.</span>
+        <span id="random-path-question" style="color: var(--slide-accent);"> How does it look like?</span>
     </p>
 
     <div id="random-path-sim" style="opacity: 0; transition: opacity 0.3s; margin-top: 2vh; display: flex; flex-direction: column; align-items: center;">
@@ -1385,50 +1389,60 @@ window.addEventListener('wasm-loaded', async function() {
         window.slideEngine.registerSimulation('random-path', {
             start() {},
             pause() {},
-            steps: 7,
+            steps: 5,
             onStep(step) {
+                simDiv.style.opacity = '1';
                 if (step === 1) {
-                    text1.style.opacity = '1';
-                } else if (step === 2) {
-                    question.style.opacity = '1';
-                } else if (step === 3) {
-                    simDiv.style.opacity = '1';
                     setParams(4, 3);
-                } else if (step === 4) {
+                } else if (step === 2) {
                     setParams(12, 9);
+                } else if (step === 3) {
+                    // Resample
+                    currentPath = generateRandomPath(12, 9);
+                    drawPath();
+                } else if (step === 4) {
+                    // Resample again
+                    currentPath = generateRandomPath(12, 9);
+                    drawPath();
                 } else if (step === 5) {
-                    // Resample at a=12, b=9
-                    currentPath = generateRandomPath(12, 9);
-                    drawPath();
-                } else if (step === 6) {
-                    // Resample again at a=12, b=9
-                    currentPath = generateRandomPath(12, 9);
-                    drawPath();
-                } else if (step === 7) {
                     setParams(120, 90);
                 }
             },
             onStepBack(step) {
+                // Mirror the forward steps exactly
                 if (step === 0) {
-                    text1.style.opacity = '0';
-                    question.style.opacity = '0';
                     simDiv.style.opacity = '0';
-                } else if (step === 1) {
-                    question.style.opacity = '0';
-                    simDiv.style.opacity = '0';
-                } else if (step === 2) {
-                    simDiv.style.opacity = '0';
-                } else if (step === 3) {
-                    setParams(4, 3);
-                } else if (step === 4 || step === 5 || step === 6) {
-                    setParams(12, 9);
+                } else {
+                    simDiv.style.opacity = '1';
+                    if (step === 1) {
+                        setParams(4, 3);
+                    } else if (step === 2) {
+                        setParams(12, 9);
+                    } else if (step === 3) {
+                        // Show 12,9 with a path (resample)
+                        currentPath = generateRandomPath(12, 9);
+                        drawPath();
+                    } else if (step === 4) {
+                        // Show 12,9 with a path (resample)
+                        currentPath = generateRandomPath(12, 9);
+                        drawPath();
+                    }
                 }
             },
             onSlideEnter() {
-                // Reset to initial state
-                text1.style.opacity = '0';
-                question.style.opacity = '0';
                 simDiv.style.opacity = '0';
+                // Reset to initial state
+                currentA = 4;
+                currentB = 3;
+                currentPath = null;
+                showPath = true;
+            },
+            onSlideLeave() {
+                simDiv.style.opacity = '0';
+                currentA = 4;
+                currentB = 3;
+                currentPath = null;
+                showPath = true;
             }
         }, 1);
     }
@@ -1436,13 +1450,255 @@ window.addEventListener('wasm-loaded', async function() {
 })();
 </script>
 
-<section class="slide slide-center" id="limit-shape-2d" data-title="Limit Shape (2D)">
-    <h2 class="slide-title">The Limit Shape</h2>
-    <p class="fragment" style="margin-top: 1.5rem;">Scale up to n = 100, 1000, ...</p>
-    <p class="fragment" style="margin-top: 1rem;">[Simulation: Random path for large n]</p>
-    <p class="fragment" style="font-size: 1.3rem; margin-top: 2rem;">It looks like a straight diagonal line!</p>
-    <p class="fragment" style="color: var(--slide-muted);">This is the <strong>Law of Large Numbers</strong>.</p>
+<section class="slide slide-center" id="limit-shape-2d" data-title="Limit Shape">
+    <h2 class="slide-title">Limit shape and fluctuations</h2>
+
+    <p style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-top: 2vh;">
+        Sample a <strong style="color: var(--slide-accent);">uniform random path</strong> in a large box.
+        <span style="font-style: italic; color: var(--slide-muted);"> [Click canvas to resample]</span>
+    </p>
+
+    <div style="margin-top: 2vh; display: flex; flex-direction: column; align-items: center;">
+        <div id="limit-shape-formula" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 1vh;"></div>
+        <canvas id="limit-shape-canvas" width="1600" height="900" style="height: 55vh; width: auto; cursor: pointer;"></canvas>
+        <div id="limit-shape-status" style="margin-top: 0.5vh; font-size: clamp(0.75rem, 1vw, 1rem); font-style: italic; color: var(--slide-muted);">Ready</div>
+    </div>
+
+    <p id="limit-shape-observation" style="opacity: 0; transition: opacity 0.3s; font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-top: 2vh;">
+        The path looks like the <strong style="color: #232D4B;">dashed diagonal</strong> — the <strong>Law of Large Numbers</strong>.
+    </p>
+    <p id="limit-shape-gaussian" style="opacity: 0; transition: opacity 0.3s; font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-top: 1vh;">
+        Fluctuations are of order \(\sqrt{N}\) — <strong style="color: var(--slide-accent);">Gaussian behavior</strong>.
+    </p>
 </section>
+
+<script src="/talk/visual/sim/q-partition-cftp.js"></script>
+<script>
+(async function() {
+    'use strict';
+
+    // Wait for QPartitionModule to be available
+    if (typeof QPartitionModule === 'undefined') {
+        console.error('QPartitionModule not loaded');
+        return;
+    }
+
+    const canvas = document.getElementById('limit-shape-canvas');
+    const ctx = canvas.getContext('2d');
+    const statusEl = document.getElementById('limit-shape-status');
+    const formulaEl = document.getElementById('limit-shape-formula');
+    const observationEl = document.getElementById('limit-shape-observation');
+    const gaussianEl = document.getElementById('limit-shape-gaussian');
+
+    // Fixed size: 210 x 120 (matching previous slide)
+    const N = 210;
+    const M = 120;
+
+    // Create isolated WASM instance
+    const wasm = await QPartitionModule();
+    const initSimulation = wasm.cwrap('initSimulation', null, ['number', 'number', 'number']);
+    const runCFTPBatch = wasm.cwrap('runCFTPBatch', 'number', []);
+    const getPartitionPath = wasm.cwrap('getPartitionPath', 'number', []);
+    const freeString = wasm.cwrap('freeString', null, ['number']);
+
+    let samples = [];  // Store multiple samples for Gaussian visualization
+    let isRunning = false;
+
+    function updateFormula() {
+        const count = samples.length;
+        if (count === 0) {
+            formulaEl.innerHTML = `\\(a = ${N},\\; b = ${M}\\)`;
+        } else if (count === 1) {
+            formulaEl.innerHTML = `\\(a = ${N},\\; b = ${M}\\) — <strong style="color: var(--slide-accent);">1 sample</strong>`;
+        } else {
+            formulaEl.innerHTML = `\\(a = ${N},\\; b = ${M}\\) — <strong style="color: var(--slide-accent);">${count} samples overlaid</strong>`;
+        }
+        if (window.renderMathInElement) {
+            renderMathInElement(formulaEl, {
+                delimiters: [
+                    {left: "\\(", right: "\\)", display: false},
+                    {left: "$$", right: "$$", display: true}
+                ]
+            });
+        }
+    }
+
+    function drawCanvas() {
+        const padding = 80;
+        const gridW = canvas.width - 2 * padding;
+        const gridH = canvas.height - 2 * padding;
+        const scaleX = gridW / N;
+        const scaleY = gridH / M;
+        const baseX = padding;
+        const baseY = padding;
+
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw bounding box
+        ctx.strokeStyle = '#232D4B';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(baseX, baseY, gridW, gridH);
+
+        // Draw grid dots at corners only (like random-path slide)
+        ctx.fillStyle = '#232D4B';
+        const dotRadius = 8;
+        // Bottom-left (0,0)
+        ctx.beginPath();
+        ctx.arc(baseX, baseY + gridH, dotRadius, 0, Math.PI * 2);
+        ctx.fill();
+        // Top-right (N, M)
+        ctx.beginPath();
+        ctx.arc(baseX + gridW, baseY, dotRadius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw diagonal (limit shape) - dashed dark blue line
+        ctx.strokeStyle = '#232D4B';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([15, 8]);
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY + gridH);
+        ctx.lineTo(baseX + gridW, baseY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw all stored samples (oldest faded, newest bold)
+        for (let i = 0; i < samples.length; i++) {
+            const path = samples[i];
+            const isLast = (i === samples.length - 1);
+            ctx.strokeStyle = isLast ? '#E57200' : 'rgba(229, 114, 0, 0.35)';
+            ctx.lineWidth = isLast ? 6 : 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            for (let j = 0; j < path.length; j++) {
+                const [x, y] = path[j];
+                const canvasX = baseX + x * scaleX;
+                const canvasY = baseY + gridH - y * scaleY;
+                if (j === 0) ctx.moveTo(canvasX, canvasY);
+                else ctx.lineTo(canvasX, canvasY);
+            }
+            ctx.stroke();
+        }
+
+        // Coordinate labels (matching random-path style)
+        ctx.fillStyle = '#232D4B';
+        ctx.font = 'bold 28px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('(0, 0)', baseX, baseY + gridH + 15);
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(`(${N}, ${M})`, baseX + gridW, baseY - 15);
+    }
+
+    async function runCFTP() {
+        if (isRunning) return;
+        isRunning = true;
+
+        initSimulation(N, M, 1.0);  // q=1 for uniform
+        statusEl.textContent = 'Sampling...';
+        statusEl.style.color = '#E57200';
+
+        return new Promise((resolve) => {
+            function step() {
+                const done = runCFTPBatch();
+
+                if (done) {
+                    const ptr = getPartitionPath();
+                    const str = wasm.UTF8ToString(ptr);
+                    freeString(ptr);
+                    const path = JSON.parse(str);
+                    samples.push(path);
+                    statusEl.textContent = samples.length === 1 ? 'Done' : `${samples.length} samples`;
+                    statusEl.style.color = 'var(--slide-muted)';
+                    updateFormula();
+                    drawCanvas();
+                    isRunning = false;
+                    resolve();
+                } else {
+                    statusEl.textContent = 'Sampling...';
+                    requestAnimationFrame(step);
+                }
+            }
+            step();
+        });
+    }
+
+    function reset() {
+        samples = [];
+        observationEl.style.opacity = '0';
+        gaussianEl.style.opacity = '0';
+        statusEl.textContent = 'Ready';
+        statusEl.style.color = 'var(--slide-muted)';
+        updateFormula();
+        drawCanvas();
+    }
+
+    // Click to resample
+    canvas.addEventListener('click', () => {
+        if (!isRunning) {
+            runCFTP();
+        }
+    });
+
+    // Register with slide engine
+    function waitForSlideEngine() {
+        if (window.slideEngine) {
+            window.slideEngine.registerSimulation('limit-shape-2d', {
+                start() {},
+                pause() {},
+                steps: 3,
+                async onStep(step) {
+                    if (step === 1) {
+                        // Run first CFTP sample
+                        samples = [];
+                        await runCFTP();
+                    } else if (step === 2) {
+                        // Show observation text
+                        observationEl.style.opacity = '1';
+                    } else if (step === 3) {
+                        // Show Gaussian text and overlay more samples
+                        gaussianEl.style.opacity = '1';
+                        statusEl.textContent = 'Sampling more...';
+                        for (let i = 0; i < 4; i++) {
+                            await runCFTP();
+                        }
+                        statusEl.textContent = '5 samples overlaid';
+                    }
+                },
+                onStepBack(step) {
+                    if (step === 0) {
+                        reset();
+                    } else if (step === 1) {
+                        observationEl.style.opacity = '0';
+                        gaussianEl.style.opacity = '0';
+                        // Keep just one sample
+                        samples = samples.slice(0, 1);
+                        updateFormula();
+                        drawCanvas();
+                    } else if (step === 2) {
+                        gaussianEl.style.opacity = '0';
+                        // Keep just one sample
+                        samples = samples.slice(0, 1);
+                        updateFormula();
+                        drawCanvas();
+                    }
+                },
+                onSlideEnter() {
+                    reset();
+                }
+            }, 1);
+        } else {
+            setTimeout(waitForSlideEngine, 50);
+        }
+    }
+    waitForSlideEngine();
+
+    // Initial draw
+    updateFormula();
+    drawCanvas();
+})();
+</script>
 
 <section class="slide slide-center" id="q-deformation" data-title="q-Deformation">
     <h2 class="slide-title">The q-Deformation</h2>
