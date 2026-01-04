@@ -965,7 +965,7 @@ window.addEventListener('wasm-loaded', async function() {
                 <label style="font-size: clamp(0.9rem, 1.5vw, 1.1rem);">b = <input type="number" id="path-b" value="2" min="1" max="7" style="width: 3rem; font-size: 1rem;"></label>
                 <span id="path-count" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--uva-orange); margin-left: 1rem;"></span>
             </div>
-            <canvas id="paths-canvas" width="700" height="500" style="border: 1px solid #ccc; border-radius: 8px; width: 100%; height: auto;"></canvas>
+            <canvas id="paths-canvas" width="700" height="500" style="width: 100%; height: auto;"></canvas>
         </div>
     </div>
 </section>
@@ -1202,19 +1202,16 @@ window.addEventListener('wasm-loaded', async function() {
 <section class="slide slide-center" id="random-path" data-title="Random Path">
     <h2 class="slide-title">Pick one path at random</h2>
 
-    <p id="random-path-text1" style="opacity: 0; transition: opacity 0.3s; font-size: clamp(1.8rem, 3.5vw, 2.8rem); margin-top: 2vh;">
-        Pick one path at random from \(\displaystyle\binom{a+b}{a}\) possible ones
-    </p>
-
-    <p id="random-path-question" style="opacity: 0; transition: opacity 0.3s; font-size: clamp(1.5rem, 2.8vw, 2.2rem); margin-top: 2vh; color: var(--slide-accent);">
-        How does it look like?
+    <p style="font-size: clamp(1.8rem, 3.5vw, 2.8rem); margin-top: 2vh;">
+        <span id="random-path-text1" style="opacity: 0; transition: opacity 0.3s;">Pick one path at random from \(\displaystyle\binom{a+b}{a}\) possible ones.</span>
+        <span id="random-path-question" style="opacity: 0; transition: opacity 0.3s; color: var(--slide-accent);"> How does it look like?</span>
     </p>
 
     <div id="random-path-sim" style="opacity: 0; transition: opacity 0.3s; margin-top: 2vh; display: flex; flex-direction: column; align-items: center;">
         <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 1vh;">
             <span id="random-path-formula"></span>
         </div>
-        <canvas id="random-path-canvas" width="1200" height="900" style="height: 45vh; width: auto; border: 1px solid #ccc; border-radius: 8px;"></canvas>
+        <canvas id="random-path-canvas" width="1200" height="900" style="height: 65vh; width: auto;"></canvas>
     </div>
 </section>
 <script>
@@ -1290,15 +1287,11 @@ window.addEventListener('wasm-loaded', async function() {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         if (!showPath) {
-            // For large a,b, just show the number without the path
-            ctx.fillStyle = '#232D4B';
-            ctx.font = 'bold 60px sans-serif';
+            // For large a,b, just show a big sad face
+            ctx.font = '300px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            const count = binomial(a + b, a);
-            ctx.fillText(count.toLocaleString() + ' paths', canvas.width / 2, canvas.height / 2);
-            ctx.font = '36px sans-serif';
-            ctx.fillText('(too many to draw!)', canvas.width / 2, canvas.height / 2 + 70);
+            ctx.fillText('😢', canvas.width / 2, canvas.height / 2);
             return;
         }
 
@@ -1343,7 +1336,7 @@ window.addEventListener('wasm-loaded', async function() {
 
         // Draw path
         ctx.strokeStyle = '#E57200';
-        ctx.lineWidth = 8;
+        ctx.lineWidth = 16;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -1392,7 +1385,7 @@ window.addEventListener('wasm-loaded', async function() {
         window.slideEngine.registerSimulation('random-path', {
             start() {},
             pause() {},
-            steps: 5,
+            steps: 7,
             onStep(step) {
                 if (step === 1) {
                     text1.style.opacity = '1';
@@ -1404,6 +1397,14 @@ window.addEventListener('wasm-loaded', async function() {
                 } else if (step === 4) {
                     setParams(12, 9);
                 } else if (step === 5) {
+                    // Resample at a=12, b=9
+                    currentPath = generateRandomPath(12, 9);
+                    drawPath();
+                } else if (step === 6) {
+                    // Resample again at a=12, b=9
+                    currentPath = generateRandomPath(12, 9);
+                    drawPath();
+                } else if (step === 7) {
                     setParams(120, 90);
                 }
             },
@@ -1419,7 +1420,7 @@ window.addEventListener('wasm-loaded', async function() {
                     simDiv.style.opacity = '0';
                 } else if (step === 3) {
                     setParams(4, 3);
-                } else if (step === 4) {
+                } else if (step === 4 || step === 5 || step === 6) {
                     setParams(12, 9);
                 }
             },
@@ -1825,12 +1826,13 @@ window.addEventListener('wasm-loaded', async function() {
 });
 </script>
 
-<!-- Global: Escape key blurs input fields for slide navigation -->
+<!-- Global: Escape/Enter key blurs input fields for slide navigation -->
 <script>
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.activeElement &&
+    if ((e.key === 'Escape' || e.key === 'Enter') && document.activeElement &&
         (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
         document.activeElement.blur();
+        e.preventDefault();
     }
 });
 </script>
