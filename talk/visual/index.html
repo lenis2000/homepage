@@ -265,10 +265,17 @@ window.addEventListener('wasm-loaded', async function() {
     draw();
 
     // Register with slide engine for step control
-    window.slideEngine.registerSimulation('title', {
-        start: startSim,
-        pause: pauseSim
-    }, 1);
+    function waitForSlideEngine() {
+        if (window.slideEngine) {
+            window.slideEngine.registerSimulation('title', {
+                start: startSim,
+                pause: pauseSim
+            }, 1);
+        } else {
+            setTimeout(waitForSlideEngine, 50);
+        }
+    }
+    waitForSlideEngine();
 });
 </script>
 
@@ -2416,15 +2423,22 @@ window.addEventListener('wasm-loaded', async function() {
                 <span style="font-size: 0.85em;">\(\sigma(s) = -\frac{1}{N}\log\)(# paths approximating slope \(s\))</span>
             </div>
 
+            <!-- Block 3: Fluctuations -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Fluctuations:</strong> Random curve − limit shape<br>
+                <canvas id="fluctuations-canvas" width="800" height="300" style="width: 100%; height: 15vh; margin-top: 0.5vh;"></canvas>
+            </div>
+
         </div>
 
         <!-- Right: Simulation canvas -->
         <div style="display: flex; flex-direction: column; align-items: center;">
-            <!-- q slider -->
+            <!-- gamma slider -->
             <div style="display: flex; align-items: center; gap: 1vw; margin-bottom: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-                <label for="q-limit-slider" style="font-weight: bold;">q = </label>
-                <input type="range" id="q-limit-slider" min="0.5" max="1.5" step="0.01" value="0.99" style="width: 12vw;">
-                <span id="q-limit-value" style="font-weight: bold; min-width: 3em;">0.99</span>
+                <label for="gamma-slider" style="font-weight: bold;">γ = </label>
+                <input type="range" id="gamma-slider" min="-50" max="50" step="0.01" value="3.6" style="width: 12vw;">
+                <span id="gamma-value" style="font-weight: bold; min-width: 3em;">3.6</span>
+                <span style="margin-left: 1vw;">(q = <span id="q-limit-value">0.990</span>)</span>
                 <button id="q-limit-resample" style="padding: 0.5vh 1vw; cursor: pointer;">Resample</button>
             </div>
             <canvas id="q-limit-canvas" width="1200" height="900" style="height: 70vh; width: auto;"></canvas>
@@ -2442,7 +2456,10 @@ window.addEventListener('wasm-loaded', async function() {
 
     const canvas = document.getElementById('q-limit-canvas');
     const ctx = canvas.getContext('2d');
-    const slider = document.getElementById('q-limit-slider');
+    const flucCanvas = document.getElementById('fluctuations-canvas');
+    const flucCtx = flucCanvas.getContext('2d');
+    const gammaSlider = document.getElementById('gamma-slider');
+    const gammaValueSpan = document.getElementById('gamma-value');
     const qValueSpan = document.getElementById('q-limit-value');
     const statusEl = document.getElementById('q-limit-status');
     const resampleBtn = document.getElementById('q-limit-resample');
@@ -2566,6 +2583,9 @@ window.addEventListener('wasm-loaded', async function() {
 
         // Draw limit shape curve
         drawLimitShape(offsetX, offsetY, scale);
+
+        // Draw fluctuations
+        drawFluctuations();
     }
 
     function drawLimitShape(offsetX, offsetY, scale) {
@@ -2586,48 +2606,118 @@ window.addEventListener('wasm-loaded', async function() {
             return;
         }
 
-        // A·e^{-γy} + B·e^{-γx} = 1
+        // A·e^{-γy} + B·e^{-γx} = 1 with y measured from TOP
         const denom = 1 - Math.exp(-gamma * (1 + aa));
         const A = (1 - Math.exp(-gamma)) / denom;
         const B = (1 - Math.exp(-gamma * aa)) / denom;
 
         const steps = 200;
-        let started = false;
 
-        for (let i = 0; i <= steps; i++) {
+        // Start at bottom-left corner
+        ctx.moveTo(offsetX, offsetY + M * scale);
+
+        for (let i = 1; i < steps; i++) {
             const x_norm = i / steps;
             const exp_neg_cx = Math.exp(-gamma * x_norm);
             const inside = (1 - B * exp_neg_cx) / A;
 
             if (inside > 0) {
                 const y_formula = -Math.log(inside) / gamma;
-                const y_norm = aa - y_formula;
+                // y_formula goes from aa (at x=0) to 0 (at x=1)
+                // We want y to go from 0 to M as x goes from 0 to N
+                const y_scaled = (aa - y_formula) / aa * M;
 
-                if (y_norm >= 0 && y_norm <= aa) {
-                    const canvasX = offsetX + x_norm * N * scale;
-                    const canvasY = offsetY + M * scale - (y_norm / aa) * M * scale;
-
-                    if (!started) {
-                        ctx.moveTo(canvasX, canvasY);
-                        started = true;
-                    } else {
-                        ctx.lineTo(canvasX, canvasY);
-                    }
-                }
+                const canvasX = offsetX + x_norm * N * scale;
+                const canvasY = offsetY + (M - y_scaled) * scale;
+                ctx.lineTo(canvasX, canvasY);
             }
         }
 
+        // End at top-right corner
+        ctx.lineTo(offsetX + N * scale, offsetY);
         ctx.stroke();
         ctx.setLineDash([]);
     }
 
-    function updateQ() {
-        q = parseFloat(slider.value);
-        qValueSpan.textContent = q.toFixed(2);
+    function getLimitShapeY(x_norm) {
+        // Returns y in [0, 1] range (normalized to M)
+        const aa = M / N;
+        const gamma = -N * Math.log(q);
+        if (Math.abs(gamma) < 1e-6) {
+            return x_norm;  // Straight diagonal: y/M = x/N
+        }
+        const denom = 1 - Math.exp(-gamma * (1 + aa));
+        const A = (1 - Math.exp(-gamma)) / denom;
+        const B = (1 - Math.exp(-gamma * aa)) / denom;
+        const exp_neg_cx = Math.exp(-gamma * x_norm);
+        const inside = (1 - B * exp_neg_cx) / A;
+        if (inside <= 0) return x_norm;
+        const y_formula = -Math.log(inside) / gamma;
+        // y_formula goes from aa to 0 as x goes 0 to 1
+        // We want output in [0, 1] where 0 at x=0 and 1 at x=1
+        return (aa - y_formula) / aa;
+    }
+
+    function drawFluctuations() {
+        const w = flucCanvas.width, h = flucCanvas.height;
+        flucCtx.fillStyle = '#ffffff';
+        flucCtx.fillRect(0, 0, w, h);
+
+        if (partitionPath.length === 0) return;
+
+        const padding = 20;
+        const drawW = w - 2 * padding;
+        const drawH = h - 2 * padding;
+
+        // Compute fluctuations: path_y - limit_shape_y at each x
+        const fluctuations = [];
+        for (const [px, py] of partitionPath) {
+            const x_norm = px / N;
+            const limitY = getLimitShapeY(x_norm) * M;  // Scale to M
+            const diff = py - limitY;
+            fluctuations.push({ x: px, diff: diff, x_norm: x_norm });
+        }
+
+        if (fluctuations.length === 0) return;
+
+        // Find max deviation for scaling
+        let maxDev = 1;
+        for (const f of fluctuations) {
+            maxDev = Math.max(maxDev, Math.abs(f.diff));
+        }
+
+        // Draw zero line
+        const zeroY = padding + drawH / 2;
+        flucCtx.strokeStyle = '#ccc';
+        flucCtx.lineWidth = 1;
+        flucCtx.beginPath();
+        flucCtx.moveTo(padding, zeroY);
+        flucCtx.lineTo(padding + drawW, zeroY);
+        flucCtx.stroke();
+
+        // Draw fluctuation curve
+        flucCtx.strokeStyle = colors[0];
+        flucCtx.lineWidth = 4;
+        flucCtx.beginPath();
+        for (let i = 0; i < fluctuations.length; i++) {
+            const f = fluctuations[i];
+            const cx = padding + f.x_norm * drawW;
+            const cy = zeroY - (f.diff / maxDev) * (drawH / 2) * 0.9;
+            if (i === 0) flucCtx.moveTo(cx, cy);
+            else flucCtx.lineTo(cx, cy);
+        }
+        flucCtx.stroke();
+    }
+
+    function updateGamma() {
+        const gamma = parseFloat(gammaSlider.value);
+        gammaValueSpan.textContent = gamma.toFixed(1);
+        q = Math.exp(-gamma / N);
+        qValueSpan.textContent = q.toFixed(4);
         draw();
     }
 
-    slider.addEventListener('input', updateQ);
+    gammaSlider.addEventListener('input', updateGamma);
     resampleBtn.addEventListener('click', () => runCFTP());
 
     // Initialize
@@ -2638,12 +2728,26 @@ window.addEventListener('wasm-loaded', async function() {
         }
     }
 
+    // Set gamma programmatically and resample
+    function setGamma(gamma) {
+        gammaSlider.value = gamma;
+        gammaValueSpan.textContent = gamma.toFixed(1);
+        q = Math.exp(-gamma / N);
+        qValueSpan.textContent = q.toFixed(4);
+        draw();  // Update limit shape curve immediately
+        runCFTP();  // Start sampling in background
+    }
+
+    // Step gamma values
+    const stepGammas = [3.6, 1, -8];  // step 0 (initial), step 1, step 2
+
     // Register with slide engine
     function waitForSlideEngine() {
         if (window.slideEngine) {
             window.slideEngine.registerSimulation('q-limit-shape', {
                 start() {},
                 pause() {},
+                steps: 2,
                 onSlideEnter() {
                     if (!wasm) {
                         init();
@@ -2651,6 +2755,16 @@ window.addEventListener('wasm-loaded', async function() {
                         runCFTP();
                     } else {
                         draw();
+                    }
+                },
+                onStep(step) {
+                    if (step >= 1 && step <= stepGammas.length - 1) {
+                        setGamma(stepGammas[step]);
+                    }
+                },
+                onStepBack(step) {
+                    if (step >= 0 && step <= stepGammas.length - 1) {
+                        setGamma(stepGammas[step]);
                     }
                 }
             }, 0);
