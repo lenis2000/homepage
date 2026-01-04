@@ -1441,15 +1441,28 @@ window.addEventListener('wasm-loaded', async function() {
 <section class="slide slide-center" id="limit-shape-2d" data-title="Limit Shape">
     <h2 class="slide-title">Limit shape and fluctuations</h2>
 
-    <p style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-top: 2vh;">
-        Sample a <strong style="color: var(--slide-accent);">uniform random path</strong> in a large box: <span id="limit-shape-formula" style="display: inline;"></span>
+    <p style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-top: 1vh;">
+        Sample a <strong style="color: var(--slide-accent);">uniformly random path</strong> in a large box: <span id="limit-shape-formula" style="display: inline;"></span>
     </p>
 
-    <div style="margin-top: 2vh; display: flex; flex-direction: column; align-items: center;">
-        <canvas id="limit-shape-canvas" width="1600" height="900" style="height: 55vh; width: auto; cursor: pointer;"></canvas>
-        <div id="limit-shape-status" style="margin-top: 0.5vh; font-size: clamp(0.75rem, 1vw, 1rem); font-style: italic; color: var(--slide-muted);">Ready</div>
+    <div style="margin-top: 1vh; display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; align-items: start; width: 95%;">
+        <!-- Left: Path overlay -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <canvas id="limit-shape-canvas" width="1200" height="700" style="height: 45vh; width: auto;"></canvas>
+            <div id="limit-shape-status" style="margin-top: 0.5vh; font-size: clamp(0.75rem, 1vw, 1rem); font-style: italic; color: var(--slide-muted);">Ready</div>
+        </div>
+        <!-- Right: Histogram (hidden initially) -->
+        <div id="histogram-container" style="opacity: 0; transition: opacity 0.3s; display: flex; flex-direction: column; align-items: center;">
+            <canvas id="histogram-canvas" width="800" height="700" style="height: 45vh; width: auto;"></canvas>
+            <div id="histogram-stats" style="margin-top: 0.5vh; font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted);">
+                <span id="histogram-count">0</span> samples — mean: <span id="histogram-mean">—</span>, std: <span id="histogram-std">—</span>
+            </div>
+        </div>
     </div>
 
+    <p id="limit-shape-observation" style="opacity: 0; transition: opacity 0.3s; font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-top: 1vh;">
+        The path follows the <strong style="color: #232D4B;">diagonal</strong> — this is the <strong>Law of Large Numbers</strong> (Limit Shape phenomenon).
+    </p>
 </section>
 
 <script src="/talk/visual/sim/q-partition-cftp.js"></script>
@@ -1463,14 +1476,27 @@ window.addEventListener('wasm-loaded', async function() {
         return;
     }
 
+    // Path canvas (left)
     const canvas = document.getElementById('limit-shape-canvas');
     const ctx = canvas.getContext('2d');
+
+    // Histogram canvas (right)
+    const histCanvas = document.getElementById('histogram-canvas');
+    const histCtx = histCanvas.getContext('2d');
+    const histContainer = document.getElementById('histogram-container');
+    const histCountEl = document.getElementById('histogram-count');
+    const histMeanEl = document.getElementById('histogram-mean');
+    const histStdEl = document.getElementById('histogram-std');
+
+    // Other elements
     const statusEl = document.getElementById('limit-shape-status');
     const formulaEl = document.getElementById('limit-shape-formula');
+    const observationEl = document.getElementById('limit-shape-observation');
 
     // Fixed size: 210 x 120 (matching previous slide)
     const N = 210;
     const M = 120;
+    const midX = Math.floor(N / 2);  // x = 105, expected y ≈ 60
 
     // Create isolated WASM instance
     const wasm = await QPartitionModule();
@@ -1479,7 +1505,8 @@ window.addEventListener('wasm-loaded', async function() {
     const getPartitionPath = wasm.cwrap('getPartitionPath', 'number', []);
     const freeString = wasm.cwrap('freeString', null, ['number']);
 
-    let samples = [];  // Store multiple samples for Gaussian visualization
+    let samples = [];      // Store full paths for overlay
+    let middleYs = [];     // Store y-values at x = N/2 for histogram
     let isRunning = false;
 
     function updateFormula() {
@@ -1489,7 +1516,7 @@ window.addEventListener('wasm-loaded', async function() {
         } else if (count === 1) {
             formulaEl.innerHTML = `\\(a = ${N},\\; b = ${M}\\) — <strong style="color: var(--slide-accent);">1 sample</strong>`;
         } else {
-            formulaEl.innerHTML = `\\(a = ${N},\\; b = ${M}\\) — <strong style="color: var(--slide-accent);">${count} samples overlaid</strong>`;
+            formulaEl.innerHTML = `\\(a = ${N},\\; b = ${M}\\) — <strong style="color: var(--slide-accent);">${count} samples</strong>`;
         }
         if (window.renderMathInElement) {
             renderMathInElement(formulaEl, {
@@ -1501,8 +1528,8 @@ window.addEventListener('wasm-loaded', async function() {
         }
     }
 
-    function drawCanvas() {
-        const padding = 80;
+    function drawPathCanvas() {
+        const padding = 60;
         const gridW = canvas.width - 2 * padding;
         const gridH = canvas.height - 2 * padding;
         const scaleX = gridW / N;
@@ -1515,37 +1542,48 @@ window.addEventListener('wasm-loaded', async function() {
 
         // Draw bounding box
         ctx.strokeStyle = '#232D4B';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
         ctx.strokeRect(baseX, baseY, gridW, gridH);
 
-        // Draw grid dots at corners only (like random-path slide)
+        // Draw grid dots at corners only
         ctx.fillStyle = '#232D4B';
-        const dotRadius = 8;
-        // Bottom-left (0,0)
+        const dotRadius = 6;
         ctx.beginPath();
         ctx.arc(baseX, baseY + gridH, dotRadius, 0, Math.PI * 2);
         ctx.fill();
-        // Top-right (N, M)
         ctx.beginPath();
         ctx.arc(baseX + gridW, baseY, dotRadius, 0, Math.PI * 2);
         ctx.fill();
 
         // Draw diagonal (limit shape) - dashed dark blue line
         ctx.strokeStyle = '#232D4B';
-        ctx.lineWidth = 4;
-        ctx.setLineDash([15, 8]);
+        ctx.lineWidth = 3;
+        ctx.setLineDash([12, 6]);
         ctx.beginPath();
         ctx.moveTo(baseX, baseY + gridH);
         ctx.lineTo(baseX + gridW, baseY);
         ctx.stroke();
         ctx.setLineDash([]);
 
+        // Draw vertical line at x = N/2 (where we measure y)
+        if (middleYs.length > 0) {
+            const midCanvasX = baseX + midX * scaleX;
+            ctx.strokeStyle = 'rgba(35, 45, 75, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(midCanvasX, baseY);
+            ctx.lineTo(midCanvasX, baseY + gridH);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
         // Draw all stored samples (oldest faded, newest bold)
         for (let i = 0; i < samples.length; i++) {
             const path = samples[i];
             const isLast = (i === samples.length - 1);
-            ctx.strokeStyle = isLast ? '#E57200' : 'rgba(229, 114, 0, 0.35)';
-            ctx.lineWidth = isLast ? 6 : 3;
+            ctx.strokeStyle = isLast ? '#E57200' : 'rgba(229, 114, 0, 0.25)';
+            ctx.lineWidth = isLast ? 4 : 2;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.beginPath();
@@ -1559,18 +1597,123 @@ window.addEventListener('wasm-loaded', async function() {
             ctx.stroke();
         }
 
-        // Coordinate labels (matching random-path style)
+        // Coordinate labels
         ctx.fillStyle = '#232D4B';
-        ctx.font = 'bold 28px sans-serif';
+        ctx.font = 'bold 22px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText('(0, 0)', baseX, baseY + gridH + 15);
+        ctx.fillText('(0, 0)', baseX, baseY + gridH + 10);
         ctx.textBaseline = 'bottom';
-        ctx.fillText(`(${N}, ${M})`, baseX + gridW, baseY - 15);
+        ctx.fillText(`(${N}, ${M})`, baseX + gridW, baseY - 10);
+    }
+
+    function drawHistogram() {
+        const padding = { top: 40, right: 40, bottom: 60, left: 70 };
+        const w = histCanvas.width - padding.left - padding.right;
+        const h = histCanvas.height - padding.top - padding.bottom;
+
+        histCtx.fillStyle = '#fff';
+        histCtx.fillRect(0, 0, histCanvas.width, histCanvas.height);
+
+        if (middleYs.length === 0) return;
+
+        // Compute histogram bins
+        const expectedY = M / 2;  // Expected y at midpoint = 60
+        const minY = Math.min(...middleYs);
+        const maxY = Math.max(...middleYs);
+        const range = Math.max(maxY - minY, 10);
+        const binCount = Math.min(20, Math.ceil(Math.sqrt(middleYs.length) * 1.5));
+        const binWidth = range / binCount;
+        const bins = new Array(binCount).fill(0);
+
+        for (const y of middleYs) {
+            const binIdx = Math.min(binCount - 1, Math.floor((y - minY) / binWidth));
+            bins[binIdx]++;
+        }
+        const maxBin = Math.max(...bins);
+
+        // Draw axes
+        histCtx.strokeStyle = '#232D4B';
+        histCtx.lineWidth = 2;
+        histCtx.beginPath();
+        histCtx.moveTo(padding.left, padding.top);
+        histCtx.lineTo(padding.left, padding.top + h);
+        histCtx.lineTo(padding.left + w, padding.top + h);
+        histCtx.stroke();
+
+        // Draw bars
+        const barW = w / binCount;
+        for (let i = 0; i < binCount; i++) {
+            const barH = (bins[i] / maxBin) * h * 0.9;
+            const x = padding.left + i * barW;
+            const y = padding.top + h - barH;
+
+            histCtx.fillStyle = '#E57200';
+            histCtx.fillRect(x + 1, y, barW - 2, barH);
+            histCtx.strokeStyle = '#232D4B';
+            histCtx.lineWidth = 1;
+            histCtx.strokeRect(x + 1, y, barW - 2, barH);
+        }
+
+        // Draw expected value line
+        const expectedX = padding.left + ((expectedY - minY) / range) * w;
+        if (expectedX >= padding.left && expectedX <= padding.left + w) {
+            histCtx.strokeStyle = '#232D4B';
+            histCtx.lineWidth = 2;
+            histCtx.setLineDash([8, 4]);
+            histCtx.beginPath();
+            histCtx.moveTo(expectedX, padding.top);
+            histCtx.lineTo(expectedX, padding.top + h);
+            histCtx.stroke();
+            histCtx.setLineDash([]);
+        }
+
+        // X-axis labels
+        histCtx.fillStyle = '#232D4B';
+        histCtx.font = '18px sans-serif';
+        histCtx.textAlign = 'center';
+        histCtx.textBaseline = 'top';
+        histCtx.fillText(`${Math.round(minY)}`, padding.left, padding.top + h + 8);
+        histCtx.fillText(`${Math.round(maxY)}`, padding.left + w, padding.top + h + 8);
+        histCtx.fillText(`y at x=${midX}`, padding.left + w / 2, padding.top + h + 30);
+
+        // Y-axis label
+        histCtx.save();
+        histCtx.translate(20, padding.top + h / 2);
+        histCtx.rotate(-Math.PI / 2);
+        histCtx.textAlign = 'center';
+        histCtx.fillText('frequency', 0, 0);
+        histCtx.restore();
+
+        // Update stats
+        const mean = middleYs.reduce((a, b) => a + b, 0) / middleYs.length;
+        const variance = middleYs.reduce((a, b) => a + (b - mean) ** 2, 0) / middleYs.length;
+        const std = Math.sqrt(variance);
+
+        histCountEl.textContent = middleYs.length;
+        histMeanEl.textContent = mean.toFixed(1);
+        histStdEl.textContent = std.toFixed(1);
+    }
+
+    // Extract y-value at x = N/2 from a path
+    function getMiddleY(path) {
+        // Path is array of [x, y] pairs, find the one where x = midX
+        for (let i = 0; i < path.length; i++) {
+            if (path[i][0] === midX) {
+                return path[i][1];
+            }
+        }
+        // Fallback: interpolate
+        for (let i = 0; i < path.length - 1; i++) {
+            if (path[i][0] <= midX && path[i + 1][0] > midX) {
+                return path[i][1];
+            }
+        }
+        return M / 2;
     }
 
     async function runCFTP() {
-        if (isRunning) return;
+        if (isRunning) return null;
         isRunning = true;
 
         initSimulation(N, M, 1.0);  // q=1 for uniform
@@ -1587,14 +1730,14 @@ window.addEventListener('wasm-loaded', async function() {
                     freeString(ptr);
                     const path = JSON.parse(str);
                     samples.push(path);
-                    statusEl.textContent = samples.length === 1 ? 'Done' : `${samples.length} samples`;
+                    middleYs.push(getMiddleY(path));
+                    statusEl.textContent = `${samples.length} sample${samples.length > 1 ? 's' : ''}`;
                     statusEl.style.color = 'var(--slide-muted)';
                     updateFormula();
-                    drawCanvas();
+                    drawPathCanvas();
                     isRunning = false;
-                    resolve();
+                    resolve(path);
                 } else {
-                    statusEl.textContent = 'Sampling...';
                     requestAnimationFrame(step);
                 }
             }
@@ -1602,22 +1745,29 @@ window.addEventListener('wasm-loaded', async function() {
         });
     }
 
-    function reset() {
-        samples = [];
-        observationEl.style.opacity = '0';
-        gaussianEl.style.opacity = '0';
-        statusEl.textContent = 'Ready';
-        statusEl.style.color = 'var(--slide-muted)';
-        updateFormula();
-        drawCanvas();
+    async function collectSamples(count, updateCallback) {
+        for (let i = 0; i < count; i++) {
+            await runCFTP();
+            if (updateCallback) updateCallback(i + 1, count);
+            drawHistogram();
+            // Small delay to let UI update
+            await new Promise(r => setTimeout(r, 10));
+        }
     }
 
-    // Click to resample
-    canvas.addEventListener('click', () => {
-        if (!isRunning) {
-            runCFTP();
-        }
-    });
+    function reset() {
+        samples = [];
+        middleYs = [];
+        observationEl.style.opacity = '0';
+        histContainer.style.opacity = '0';
+        statusEl.textContent = 'Ready';
+        statusEl.style.color = 'var(--slide-muted)';
+        histCountEl.textContent = '0';
+        histMeanEl.textContent = '—';
+        histStdEl.textContent = '—';
+        updateFormula();
+        drawPathCanvas();
+    }
 
     // Register with slide engine
     function waitForSlideEngine() {
@@ -1625,17 +1775,30 @@ window.addEventListener('wasm-loaded', async function() {
             window.slideEngine.registerSimulation('limit-shape-2d', {
                 start() {},
                 pause() {},
-                steps: 1,
+                steps: 2,
                 async onStep(step) {
                     if (step === 1) {
-                        // Run first CFTP sample
+                        // Step 1: Run ONE sample, show observation text
                         samples = [];
+                        middleYs = [];
                         await runCFTP();
+                        observationEl.style.opacity = '1';
+                    } else if (step === 2) {
+                        // Step 2: Collect 20 more samples, show histogram
+                        histContainer.style.opacity = '1';
+                        await collectSamples(19);  // Already have 1, add 19 more = 20 total
                     }
                 },
                 onStepBack(step) {
                     if (step === 0) {
                         reset();
+                    } else if (step === 1) {
+                        // Back to step 1: hide histogram, keep one sample
+                        histContainer.style.opacity = '0';
+                        samples = samples.slice(0, 1);
+                        middleYs = middleYs.slice(0, 1);
+                        updateFormula();
+                        drawPathCanvas();
                     }
                 },
                 onSlideEnter() {
@@ -1650,7 +1813,7 @@ window.addEventListener('wasm-loaded', async function() {
 
     // Initial draw
     updateFormula();
-    drawCanvas();
+    drawPathCanvas();
 })();
 </script>
 
