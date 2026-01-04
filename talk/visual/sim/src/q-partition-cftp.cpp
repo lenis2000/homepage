@@ -203,19 +203,19 @@ int getM() { return M; }
 int getN() { return N; }
 
 // Get partition path as JSON array of (x, y) coordinates
-// The path goes from (0, M) to (N, 0)
+// The path goes from (0, 0) to (N, M) - up and right
 char* getPartitionPath() {
     std::ostringstream oss;
     oss << "[";
 
-    int x = 0, y = M;
+    int x = 0, y = 0;
     oss << "[" << x << "," << y << "]";
 
     for (int i = 0; i < M + N; i++) {
         if (path[i] == 0) {
             x++;  // Right step
         } else {
-            y--;  // Up step (decrease y)
+            y++;  // Up step
         }
         oss << ",[" << x << "," << y << "]";
     }

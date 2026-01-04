@@ -146,6 +146,27 @@ SlideSimulation.create({
 });
 ```
 
+**CRITICAL: Each step must fully establish its own state.**
+
+Do NOT assume incremental changes from the previous step. The slide engine may restore to any step when navigating (forward, backward, or jumping). Each `onStep(N)` and `onStepBack(N)` must set ALL state needed for that step and redraw completely.
+
+```javascript
+// BAD - assumes step 2 already set the grid size
+onStepBack(step) {
+    if (step === 3) {
+        currentPath = generateRandomPath(12, 9);  // Wrong! currentA/currentB may be 120/90
+        drawPath();
+    }
+}
+
+// GOOD - each step fully establishes its state
+onStepBack(step) {
+    if (step === 3) {
+        setParams(12, 9);  // Sets currentA, currentB, clears path, redraws
+    }
+}
+```
+
 **Lifecycle methods on sim object:**
 Inside any custom method, you can call:
 - `this.start()` / `this.pause()` / `this.toggle()` - control animation

@@ -1396,36 +1396,24 @@ window.addEventListener('wasm-loaded', async function() {
                     setParams(4, 3);
                 } else if (step === 2) {
                     setParams(12, 9);
-                } else if (step === 3) {
-                    // Resample
-                    currentPath = generateRandomPath(12, 9);
-                    drawPath();
-                } else if (step === 4) {
-                    // Resample again
-                    currentPath = generateRandomPath(12, 9);
-                    drawPath();
+                } else if (step === 3 || step === 4) {
+                    // Resample - setParams ensures grid size is correct
+                    setParams(12, 9);
                 } else if (step === 5) {
                     setParams(120, 90);
                 }
             },
             onStepBack(step) {
-                // Mirror the forward steps exactly
+                // Each step must fully set state and redraw
                 if (step === 0) {
                     simDiv.style.opacity = '0';
                 } else {
                     simDiv.style.opacity = '1';
                     if (step === 1) {
-                        setParams(4, 3);
-                    } else if (step === 2) {
+                        setParams(4, 3);  // 4x3 grid with new random path
+                    } else if (step === 2 || step === 3 || step === 4) {
+                        // All these steps show 12x9 grid - setParams handles everything
                         setParams(12, 9);
-                    } else if (step === 3) {
-                        // Show 12,9 with a path (resample)
-                        currentPath = generateRandomPath(12, 9);
-                        drawPath();
-                    } else if (step === 4) {
-                        // Show 12,9 with a path (resample)
-                        currentPath = generateRandomPath(12, 9);
-                        drawPath();
                     }
                 }
             },
@@ -1454,22 +1442,14 @@ window.addEventListener('wasm-loaded', async function() {
     <h2 class="slide-title">Limit shape and fluctuations</h2>
 
     <p style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-top: 2vh;">
-        Sample a <strong style="color: var(--slide-accent);">uniform random path</strong> in a large box.
-        <span style="font-style: italic; color: var(--slide-muted);"> [Click canvas to resample]</span>
+        Sample a <strong style="color: var(--slide-accent);">uniform random path</strong> in a large box: <span id="limit-shape-formula" style="display: inline;"></span>
     </p>
 
     <div style="margin-top: 2vh; display: flex; flex-direction: column; align-items: center;">
-        <div id="limit-shape-formula" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 1vh;"></div>
         <canvas id="limit-shape-canvas" width="1600" height="900" style="height: 55vh; width: auto; cursor: pointer;"></canvas>
         <div id="limit-shape-status" style="margin-top: 0.5vh; font-size: clamp(0.75rem, 1vw, 1rem); font-style: italic; color: var(--slide-muted);">Ready</div>
     </div>
 
-    <p id="limit-shape-observation" style="opacity: 0; transition: opacity 0.3s; font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-top: 2vh;">
-        The path looks like the <strong style="color: #232D4B;">dashed diagonal</strong> — the <strong>Law of Large Numbers</strong>.
-    </p>
-    <p id="limit-shape-gaussian" style="opacity: 0; transition: opacity 0.3s; font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-top: 1vh;">
-        Fluctuations are of order \(\sqrt{N}\) — <strong style="color: var(--slide-accent);">Gaussian behavior</strong>.
-    </p>
 </section>
 
 <script src="/talk/visual/sim/q-partition-cftp.js"></script>
@@ -1487,8 +1467,6 @@ window.addEventListener('wasm-loaded', async function() {
     const ctx = canvas.getContext('2d');
     const statusEl = document.getElementById('limit-shape-status');
     const formulaEl = document.getElementById('limit-shape-formula');
-    const observationEl = document.getElementById('limit-shape-observation');
-    const gaussianEl = document.getElementById('limit-shape-gaussian');
 
     // Fixed size: 210 x 120 (matching previous slide)
     const N = 210;
@@ -1647,41 +1625,17 @@ window.addEventListener('wasm-loaded', async function() {
             window.slideEngine.registerSimulation('limit-shape-2d', {
                 start() {},
                 pause() {},
-                steps: 3,
+                steps: 1,
                 async onStep(step) {
                     if (step === 1) {
                         // Run first CFTP sample
                         samples = [];
                         await runCFTP();
-                    } else if (step === 2) {
-                        // Show observation text
-                        observationEl.style.opacity = '1';
-                    } else if (step === 3) {
-                        // Show Gaussian text and overlay more samples
-                        gaussianEl.style.opacity = '1';
-                        statusEl.textContent = 'Sampling more...';
-                        for (let i = 0; i < 4; i++) {
-                            await runCFTP();
-                        }
-                        statusEl.textContent = '5 samples overlaid';
                     }
                 },
                 onStepBack(step) {
                     if (step === 0) {
                         reset();
-                    } else if (step === 1) {
-                        observationEl.style.opacity = '0';
-                        gaussianEl.style.opacity = '0';
-                        // Keep just one sample
-                        samples = samples.slice(0, 1);
-                        updateFormula();
-                        drawCanvas();
-                    } else if (step === 2) {
-                        gaussianEl.style.opacity = '0';
-                        // Keep just one sample
-                        samples = samples.slice(0, 1);
-                        updateFormula();
-                        drawCanvas();
                     }
                 },
                 onSlideEnter() {
