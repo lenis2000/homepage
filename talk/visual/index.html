@@ -1974,8 +1974,10 @@ window.addEventListener('wasm-loaded', async function() {
                         drawHistogram();  // Show the 1 sample we have immediately
                         await collectSamples(19);  // Already have 1, add 19 more = 20 total
                     } else if (step === 3) {
-                        // Step 3: Collect many more samples (20k if GPU, 200 if CPU)
-                        const count = gpuEngine ? 20000 : 200;
+                        // Step 3: Collect many more samples
+                        // Mobile gets fewer samples (GPU or not)
+                        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                        const count = isMobile ? 200 : (gpuEngine ? 20000 : 200);
                         await collectSamples(count);
                     } else if (step === 4) {
                         // Step 4: Ask the question
