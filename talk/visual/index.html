@@ -2419,8 +2419,9 @@ window.addEventListener('wasm-loaded', async function() {
             <!-- Block 2: Energy Functional -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
                 <strong style="color: var(--slide-accent);">Variational principle for limit shape \(y=f(x)\):</strong><br>
-                Minimize \(\displaystyle \int \sigma(f'(x)) \, dx + \gamma \cdot \text{Area}/N\)<br>
-                <span style="font-size: 0.85em;">\(\sigma(s) = -\frac{1}{N}\log\)(# paths approximating slope \(s\))</span>
+                Maximize: energy − γ·area = <br>
+                \(\int \sigma(f'(x)) \, dx - \gamma \cdot \int f(x) \, dx\),<br>
+                <span style="font-size: 0.85em;">\(\sigma(s) = \frac{1}{N}\log\)(# paths approximating slope \(s\)) = energy</span>
             </div>
 
             <!-- Block 3: Fluctuations -->
@@ -2740,6 +2741,7 @@ window.addEventListener('wasm-loaded', async function() {
 
     // Step gamma values
     const stepGammas = [3.6, 1, -8];  // step 0 (initial), step 1, step 2
+    let currentStep = 0;
 
     // Register with slide engine
     function waitForSlideEngine() {
@@ -2749,6 +2751,13 @@ window.addEventListener('wasm-loaded', async function() {
                 pause() {},
                 steps: 2,
                 onSlideEnter() {
+                    // Restore gamma for current step
+                    const gamma = stepGammas[currentStep];
+                    gammaSlider.value = gamma;
+                    gammaValueSpan.textContent = gamma.toFixed(1);
+                    q = Math.exp(-gamma / N);
+                    qValueSpan.textContent = q.toFixed(4);
+
                     if (!wasm) {
                         init();
                     } else if (partitionPath.length === 0) {
@@ -2758,11 +2767,13 @@ window.addEventListener('wasm-loaded', async function() {
                     }
                 },
                 onStep(step) {
+                    currentStep = step;
                     if (step >= 1 && step <= stepGammas.length - 1) {
                         setGamma(stepGammas[step]);
                     }
                 },
                 onStepBack(step) {
+                    currentStep = step;
                     if (step >= 0 && step <= stepGammas.length - 1) {
                         setGamma(stepGammas[step]);
                     }
