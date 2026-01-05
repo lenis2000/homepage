@@ -4268,45 +4268,54 @@ window.addEventListener('wasm-loaded', async function() {
 </script>
 
 <section class="slide slide-top" id="energy" data-title="Energy">
-    <h2 class="slide-title">Energy</h2>
+    <h2 class="slide-title">Local energy</h2>
 
-    <div style="display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 2vw; margin-top: 1vh; width: 100%;">
+    <div style="display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 2vw; margin-top: 1vh; width: 100%; align-items: start;">
         <!-- Left: Text explanation -->
-        <div style="display: flex; flex-direction: column; gap: 1.5vh; padding-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
             <!-- How to get limit shape -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-accent);">How to get limit shape?</strong>
                 <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
                     <li>Approximate any surface by piecewise-planar patches</li>
-                    <li>Locally, we know how many configurations approximate a given slope</li>
+                    <li>Figure out how many configurations approximate a given continuous slope \((A,B)\)</li>
                     <li>Integrate and maximize to get the typical shape</li>
                 </ul>
             </div>
 
             <!-- CKP 2000 -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Surface tension σ(s) [CKP 2000]</strong><br>
-                The "energy cost" per unit area for a surface with slope \(s\)
+                <strong style="color: var(--slide-accent);">Energy σ(A,B) [Cohn-Kenyon-Propp 2000]</strong><br>
+                    \(\sigma(A,B) = \dfrac1\pi
+                    ( L(\pi p_1)+L(\pi p_2)+L(\pi (1-p_1-p_2))),
+                    \)
+                    where \(p_1, p_2, 1-p_1-p_2\) is the normal direction to the patch, and <br>
+                    \(
+                    L(z)=\int_0^z\log|2\sin t|\,dt
+                    \) is the Lobachevsky function.
             </div>
 
             <!-- Integral -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Variational principle</strong><br>
-                Limit shape minimizes: \(\displaystyle\int \sigma(\nabla h)\, dxdy\)<br>
-                Subject to boundary conditions
+                <strong style="color: var(--slide-accent);">Variational principle, subject to boundary conditions</strong><br>
+                Limit shape $z=h(x,y)$ maximizes \(\displaystyle\iint \sigma(\nabla h)\, dxdy\)
             </div>
 
             <!-- KOS 2006 -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Generalizations [KOS 2006]</strong><br>
-                Surfaces from plaquettes of other shapes,<br>
-                not just 1×1 squares in three directions
+                <strong style="color: var(--slide-accent);">Generalization [Kenyon-Okounkov-Sheffield 2006]</strong><br>
+                Our surfaces are formed from \(1\times 1\) squares in three coordinate directions.
+                The theory of limit shapes generalizes
+                to surfaces from plaquettes of other shapes, possibly weighted.
+                Local energy expressed through <b>algebraic geometry</b> of the plaquettes.
             </div>
         </div>
 
         <!-- Right: 3D tiling canvas -->
         <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 1vh;">
-            <!-- Controls at top -->
+            <!-- 3D tiling canvas (main) -->
+            <canvas id="energy-tiling-canvas" width="1200" height="1000" style="height: 80vh; width:47vw; border: 1px solid #ccc;"></canvas>
+            <!-- Controls below -->
             <div id="energy-controls" style="display: flex; gap: 1vw; align-items: center; flex-wrap: wrap; font-size: clamp(0.75rem, 1.5vw, 1.1rem);">
                 <label style="display: flex; align-items: center; gap: 0.3vw;">
                     A: <input type="number" id="gradient-a" min="-5" max="5" step="0.1" value="-2" style="width: 4em; font-size: inherit; padding: 0.2em;">
@@ -4316,8 +4325,6 @@ window.addEventListener('wasm-loaded', async function() {
                 </label>
                 <button id="energy-sample" style="padding: 0.3em 0.6em; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px; font-size: inherit;">Sample</button>
             </div>
-            <!-- 3D tiling canvas (main) -->
-            <canvas id="energy-tiling-canvas" width="1200" height="1000" style="height: 77vh; width: auto; border: 1px solid #ccc;"></canvas>
         </div>
     </div>
 </section>
@@ -4371,25 +4378,24 @@ window.addEventListener('wasm-loaded', async function() {
             if (renderer) renderer.render(scene, camera);
         });
 
-        // Lighting - stronger for visibility during rotation
-        scene.add(new THREE.AmbientLight(0xffffff, 0.5));  // Stronger ambient
-        const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.3);
+        // Lighting (same as limit-shape)
+        scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+        const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.25);
         hemi.position.set(0, 20, 0);
         scene.add(hemi);
-        // Main key light
-        const directional = new THREE.DirectionalLight(0xffffff, 1.0);
+        const directional = new THREE.DirectionalLight(0xffffff, 1.2);
         directional.position.set(15, 20, 5);
         scene.add(directional);
-        // Fill lights from multiple angles for rotation visibility
-        const fill1 = new THREE.DirectionalLight(0xffffff, 0.6);
-        fill1.position.set(-15, 15, 10);
-        scene.add(fill1);
-        const fill2 = new THREE.DirectionalLight(0xffffff, 0.6);
-        fill2.position.set(10, 15, -15);
-        scene.add(fill2);
-        const fill3 = new THREE.DirectionalLight(0xffffff, 0.5);
-        fill3.position.set(-10, 10, -15);
-        scene.add(fill3);
+        const fill = new THREE.DirectionalLight(0xffffff, 0.3);
+        fill.position.set(-10, 5, -5);
+        scene.add(fill);
+        // Warm orange-tinted lights for rotation
+        const warmLight1 = new THREE.DirectionalLight(0xffaa66, 0.7);
+        warmLight1.position.set(-30, 10, 30);
+        scene.add(warmLight1);
+        const warmLight2 = new THREE.DirectionalLight(0xffcc88, 0.6);
+        warmLight2.position.set(-30, 10, -30);
+        scene.add(warmLight2);
 
         meshGroup = new THREE.Group();
         scene.add(meshGroup);
@@ -4779,7 +4785,8 @@ window.addEventListener('wasm-loaded', async function() {
             side: THREE.DoubleSide,
             flatShading: true,
             roughness: 0.3,
-            metalness: 0.5
+            metalness: 0.35,
+            color: 0xddeeff  // Subtle blue tint
         });
         const mesh = new THREE.Mesh(geometry, material);
         meshGroup.add(mesh);
