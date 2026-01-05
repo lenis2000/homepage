@@ -2453,9 +2453,9 @@ window.addEventListener('wasm-loaded', async function() {
 <section class="slide slide-top" id="q-limit-shape" data-title="q-Limit Shape">
     <h2 class="slide-title">q-Limit Shape</h2>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%; height: 85vh;">
         <!-- Left: Explanation -->
-        <div style="display: flex; flex-direction: column; gap: 1.5vh; padding-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); justify-content: space-between; height: 100%;">
             <!-- Block 1: Limit Shape -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
                 <strong style="color: var(--slide-accent);">Limit shape [Vershik 1996]</strong><br>
@@ -2490,23 +2490,25 @@ window.addEventListener('wasm-loaded', async function() {
         </div>
 
         <!-- Right: Simulation canvas -->
-        <div style="display: flex; flex-direction: column; align-items: center;">
-            <!-- gamma slider -->
-            <div style="display: flex; align-items: center; gap: 1vw; margin-bottom: 0.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-                <label for="gamma-slider" style="font-weight: bold;">γ = </label>
-                <input type="range" id="gamma-slider" min="-50" max="50" step="0.01" value="3.6" style="width: 12vw;">
-                <span id="gamma-value" style="font-weight: bold; min-width: 3em;">3.6</span>
-                <span style="margin-left: 1vw;">(q = <span id="q-limit-value">0.990</span>)</span>
-                <button id="q-limit-resample" style="padding: 0.5vh 1vw; cursor: pointer;">Resample</button>
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 100%;">
+            <!-- Controls at top -->
+            <div>
+                <div style="display: flex; align-items: center; gap: 1vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+                    <label for="gamma-slider" style="font-weight: bold;">γ = </label>
+                    <input type="range" id="gamma-slider" min="-50" max="50" step="0.01" value="3.6" style="width: 12vw;">
+                    <span id="gamma-value" style="font-weight: bold; min-width: 3em;">3.6</span>
+                    <span style="margin-left: 1vw;">(q = <span id="q-limit-value">0.990</span>)</span>
+                    <button id="q-limit-resample" style="padding: 0.5vh 1vw; cursor: pointer;">Resample</button>
+                </div>
+                <div style="font-size: clamp(0.9rem, 1.5vw, 1.1rem); color: var(--slide-muted); text-align: center;">
+                    <span>a = 360, b = 270</span> · <span id="q-limit-status">Loading...</span>
+                </div>
             </div>
-            <div style="font-size: clamp(0.9rem, 1.5vw, 1.1rem); color: var(--slide-muted); margin-bottom: 0.5vh;">
-                <span>a = 360, b = 270</span> · <span id="q-limit-status">Loading...</span>
-            </div>
-            <canvas id="q-limit-canvas" width="1200" height="900" style="height: 55vh; width: auto;"></canvas>
+            <canvas id="q-limit-canvas" width="1200" height="900" style="max-height: 58vh; width: auto;"></canvas>
             <!-- Fluctuations block -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.5vh 1vw; margin-top: 1vh; width: 100%; box-sizing: border-box;">
-                <strong style="color: var(--slide-accent); font-size: clamp(1rem, 1.8vw, 1.4rem);">Fluctuations:</strong> <span style="font-size: clamp(1rem, 1.8vw, 1.4rem);">Random curve − limit shape</span><br>
-                <canvas id="fluctuations-canvas" width="800" height="200" style="width: 100%; height: 10vh; margin-top: 0.3vh;"></canvas>
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.5vh 1vw; width: 100%; box-sizing: border-box;">
+                <strong style="color: var(--slide-accent); font-size: clamp(1rem, 1.8vw, 1.4rem);">Fluctuations:</strong> <span style="font-size: clamp(1rem, 1.8vw, 1.4rem);">Random curve minus limit shape</span><br>
+                <canvas id="fluctuations-canvas" width="800" height="200" style="width: 100%; height: 12vh;"></canvas>
             </div>
         </div>
     </div>
