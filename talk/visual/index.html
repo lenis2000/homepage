@@ -3073,14 +3073,15 @@ window.addEventListener('wasm-loaded', async function() {
         fill.position.set(-10, 5, -5);
         scene.add(fill);
 
-        // Extra lights for rotation mode (from 4 more sides)
+        // Extra lights for rotation mode (warm orange tints)
         rotationLights = [];
-        const lightPositions = [
-            [20, 10, 20], [-20, 10, 20], [20, 10, -20], [-20, 10, -20]
+        const rotationLightConfigs = [
+            { pos: [-20, 10, 20], color: 0xffaa66, intensity: 0.7 },   // Orange tint
+            { pos: [-20, 10, -20], color: 0xffcc88, intensity: 0.6 }   // Warm tint
         ];
-        for (const pos of lightPositions) {
-            const light = new THREE.DirectionalLight(0xffffff, 0.4);
-            light.position.set(pos[0], pos[1], pos[2]);
+        for (const cfg of rotationLightConfigs) {
+            const light = new THREE.DirectionalLight(cfg.color, cfg.intensity);
+            light.position.set(cfg.pos[0], cfg.pos[1], cfg.pos[2]);
             light.visible = false;
             scene.add(light);
             rotationLights.push(light);
@@ -3245,7 +3246,8 @@ window.addEventListener('wasm-loaded', async function() {
         geometry.setIndex(indices);
 
         currentMaterial = new THREE.MeshStandardMaterial({
-            vertexColors: true, side: THREE.DoubleSide, flatShading: true, roughness: 0.3, metalness: autoRotate ? 0 : 0.5
+            vertexColors: true, side: THREE.DoubleSide, flatShading: true, roughness: 0.3, metalness: autoRotate ? 0.35 : 0.5,
+            color: 0xddeeff  // Subtle blue tint
         });
         meshGroup.add(new THREE.Mesh(geometry, currentMaterial));
 
@@ -3306,8 +3308,8 @@ window.addEventListener('wasm-loaded', async function() {
         autoRotate = true;
         // Turn on extra lights
         for (const light of rotationLights) if (light) light.visible = true;
-        // Make material matte
-        if (currentMaterial) currentMaterial.metalness = 0;
+        // Keep some metalness for vivid look
+        if (currentMaterial) currentMaterial.metalness = 0.35;
         if (!isRunning) start();
     }
 
@@ -3799,12 +3801,15 @@ window.addEventListener('wasm-loaded', async function() {
         fill.position.set(-10, 5, -5);
         scene.add(fill);
 
-        // Extra lights for rotation
+        // Extra lights for rotation (warm orange tints)
         rotationLights = [];
-        const rotationLightPositions = [[30, 10, 30], [-30, 10, 30], [30, 10, -30], [-30, 10, -30]];
-        for (const pos of rotationLightPositions) {
-            const light = new THREE.DirectionalLight(0xffffff, 0.4);
-            light.position.set(pos[0], pos[1], pos[2]);
+        const rotationLightConfigs = [
+            { pos: [-30, 10, 30], color: 0xffaa66, intensity: 0.7 },   // Orange tint
+            { pos: [-30, 10, -30], color: 0xffcc88, intensity: 0.6 }   // Warm tint
+        ];
+        for (const cfg of rotationLightConfigs) {
+            const light = new THREE.DirectionalLight(cfg.color, cfg.intensity);
+            light.position.set(cfg.pos[0], cfg.pos[1], cfg.pos[2]);
             light.visible = false;
             scene.add(light);
             rotationLights.push(light);
@@ -3963,7 +3968,8 @@ window.addEventListener('wasm-loaded', async function() {
         geometry.setIndex(indices);
 
         currentMaterial = new THREE.MeshStandardMaterial({
-            vertexColors: true, side: THREE.DoubleSide, flatShading: true, roughness: 0.3, metalness: autoRotate ? 0 : 0.5
+            vertexColors: true, side: THREE.DoubleSide, flatShading: true, roughness: 0.3, metalness: autoRotate ? 0.35 : 0.5,
+            color: 0xddeeff  // Subtle blue tint
         });
         meshGroup.add(new THREE.Mesh(geometry, currentMaterial));
 
@@ -4127,7 +4133,7 @@ window.addEventListener('wasm-loaded', async function() {
     function startAutoRotate() {
         autoRotate = true;
         for (const light of rotationLights) if (light) light.visible = true;
-        if (currentMaterial) currentMaterial.metalness = 0;
+        if (currentMaterial) currentMaterial.metalness = 0.35;  // Keep some metalness for vivid look
         if (!isRunning) start();
     }
 
@@ -4681,7 +4687,7 @@ window.addEventListener('wasm-loaded', async function() {
     }
 
     // Draw lozenges as 3D stepped surface
-    function drawFromDimers(dimers, triangleArr) {
+    function drawFromDimers(dimers, triangleArr, resetCamera = true) {
         if (!meshGroup) return;
 
         // Clear previous meshes
@@ -4789,8 +4795,8 @@ window.addEventListener('wasm-loaded', async function() {
         const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
         meshGroup.add(edges);
 
-        // Center camera on geometry
-        if (geometry.boundingSphere) {
+        // Center camera on geometry (only if resetCamera is true)
+        if (resetCamera && geometry.boundingSphere) {
             const center = geometry.boundingSphere.center;
             const radius = geometry.boundingSphere.radius;
             controls.target.copy(center);
@@ -4803,7 +4809,7 @@ window.addEventListener('wasm-loaded', async function() {
     }
 
     // Sample function
-    async function sample(A, B) {
+    async function sample(A, B, resetCamera = true) {
         const triangles = generateTriangles(A, B);
 
         // Pass to WASM
@@ -4897,7 +4903,7 @@ window.addEventListener('wasm-loaded', async function() {
             dimers = parsed.dimers || [];
         }
 
-        drawFromDimers(dimers, triangles);
+        drawFromDimers(dimers, triangles, resetCamera);
     }
 
     // Wire up Sample button
@@ -4945,20 +4951,20 @@ window.addEventListener('wasm-loaded', async function() {
             // Presets for stepping through (preset 0 is pre-sampled on slide enter)
             const presets = [
                 { A: -2, B: 0.3 },
-                { A: -0.2, B: 0.3 },
                 { A: -0.05, B: 0.4 },
+                { A: -0.2, B: 0.3 },
                 { A: -0.2, B: 0 },
                 { A: 0, B: 0 }
             ];
             let currentPreset = 0;
 
-            function applyPreset(idx) {
+            function applyPreset(idx, resetCamera = true) {
                 if (idx < 0 || idx >= presets.length) return;
                 currentPreset = idx;
                 const { A, B } = presets[idx];
                 document.getElementById('gradient-a').value = A;
                 document.getElementById('gradient-b').value = B;
-                sample(A, B);
+                sample(A, B, resetCamera);
             }
 
             window.slideEngine.registerSimulation('energy', {
@@ -4968,13 +4974,13 @@ window.addEventListener('wasm-loaded', async function() {
                 onStep(step) {
                     // step 1 -> preset 1, step 2 -> preset 2, step 3 -> preset 3
                     if (step >= 1 && step < presets.length) {
-                        applyPreset(step);
+                        applyPreset(step, false);  // Don't reset camera angle
                     }
                 },
                 onStepBack(step) {
                     // step 0 -> preset 0, step 1 -> preset 1, step 2 -> preset 2
                     if (step >= 0 && step < presets.length) {
-                        applyPreset(step);
+                        applyPreset(step, false);  // Don't reset camera angle
                     }
                 },
                 onSlideEnter() {
