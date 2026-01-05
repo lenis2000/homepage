@@ -4267,25 +4267,34 @@ window.addEventListener('wasm-loaded', async function() {
     <div style="display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 2vw; margin-top: 1vh; width: 100%;">
         <!-- Left: Text explanation -->
         <div style="display: flex; flex-direction: column; gap: 1.5vh; padding-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <!-- How to get limit shape -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">How to get limit shape?</strong>
+                <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
+                    <li>Approximate any surface by piecewise-planar patches</li>
+                    <li>Locally, we know how many configurations approximate a given slope</li>
+                    <li>Integrate and maximize to get the typical shape</li>
+                </ul>
+            </div>
+
             <!-- CKP 2000 -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-accent);">Surface tension σ(s) [CKP 2000]</strong><br>
-                The "energy cost" per unit area for a surface with slope \(s\).<br>
-                Limit shape minimizes: \(\displaystyle\int \sigma(\nabla h)\, dxdy\)
+                The "energy cost" per unit area for a surface with slope \(s\)
+            </div>
+
+            <!-- Integral -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Variational principle</strong><br>
+                Limit shape minimizes: \(\displaystyle\int \sigma(\nabla h)\, dxdy\)<br>
+                Subject to boundary conditions
             </div>
 
             <!-- KOS 2006 -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">General bipartite graphs [KOS 2006]</strong><br>
-                For periodic planar graphs: \(\sigma\) determined by spectral curve.<br>
-                Phase diagram = amoeba of the curve.
-            </div>
-
-            <!-- Explanation of visual -->
-            <div class="fragment" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Fixed slope = local behavior</strong><br>
-                What does a tiling look like at slope \(s\)?<br>
-                <span style="font-size: 0.9em;">→ Sample from parallelogram with that boundary slope</span>
+                <strong style="color: var(--slide-accent);">Generalizations [KOS 2006]</strong><br>
+                Surfaces from plaquettes of other shapes,<br>
+                not just 1×1 squares in three directions
             </div>
         </div>
 
@@ -4294,7 +4303,7 @@ window.addEventListener('wasm-loaded', async function() {
             <!-- Controls at top -->
             <div id="energy-controls" style="display: flex; gap: 1vw; align-items: center; flex-wrap: wrap; font-size: clamp(0.75rem, 1.5vw, 1.1rem);">
                 <label style="display: flex; align-items: center; gap: 0.3vw;">
-                    A: <input type="number" id="gradient-a" min="-5" max="5" step="0.1" value="-0.2" style="width: 4em; font-size: inherit; padding: 0.2em;">
+                    A: <input type="number" id="gradient-a" min="-5" max="5" step="0.1" value="-2" style="width: 4em; font-size: inherit; padding: 0.2em;">
                 </label>
                 <label style="display: flex; align-items: center; gap: 0.3vw;">
                     B: <input type="number" id="gradient-b" min="-5" max="5" step="0.1" value="0.3" style="width: 4em; font-size: inherit; padding: 0.2em;">
@@ -4935,10 +4944,11 @@ window.addEventListener('wasm-loaded', async function() {
         if (typeof window.slideEngine !== 'undefined') {
             // Presets for stepping through (preset 0 is pre-sampled on slide enter)
             const presets = [
-                { A: -0.2, B: 0.3 },   // preset 0: pre-sampled
-                { A: -0.2, B: 0 },     // preset 1: step 1
-                { A: -0.8, B: 0.05 },  // preset 2: step 2
-                { A: 0, B: 0 }         // preset 3: step 3
+                { A: -2, B: 0.3 },
+                { A: -0.2, B: 0.3 },
+                { A: -0.05, B: 0.4 },
+                { A: -0.2, B: 0 },
+                { A: 0, B: 0 }
             ];
             let currentPreset = 0;
 
