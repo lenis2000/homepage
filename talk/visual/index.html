@@ -5035,43 +5035,42 @@ window.addEventListener('wasm-loaded', async function() {
 <!-- ==================== Q-volume deformations ==================== -->
 <section class="slide slide-top" id="q-volume" data-title="Q-volume deformations">
     <h2 class="slide-title">Q-volume deformations</h2>
-    <div style="display: grid; grid-template-columns: 0.4fr 0.6fr; gap: 2vw; margin-top: 1vh; width: 100%; align-items: start;">
-        <!-- Left: Text explanation -->
-        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">q-weighted measure</strong><br>
-                Weight each tiling by \(q^{\text{volume}}\)<br>
-                where volume = 3D volume under stepped surface
-            </div>
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Effect of q</strong><br>
-                \(q > 1\): favor flatter tilings (more volume)<br>
-                \(q < 1\): favor tilted tilings (less volume)<br>
-                \(q = 1\): uniform measure
-            </div>
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Limit shapes change</strong><br>
-                Different q → different variational problem<br>
-                → different frozen/liquid boundaries
-            </div>
+    <!-- Top: Five tilings with q inputs -->
+    <div style="display: flex; gap: 0.8vw; justify-content: center; margin-top: 1vh;">
+        <div style="text-align: center;">
+            <canvas id="qvol-canvas-0" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
+            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.3vh;">q = <input type="text" id="qvol-input-0" value="0.7" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px;"></div>
         </div>
-        <!-- Right: Three tilings side by side -->
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
-            <div style="display: flex; gap: 1vw; justify-content: center;">
-                <div style="text-align: center;">
-                    <canvas id="qvol-canvas-low" width="400" height="400" style="width: 18vw; height: 18vw; border: 1px solid #ccc;"></canvas>
-                    <div style="font-size: clamp(0.9rem, 1.5vw, 1.2rem); margin-top: 0.5vh;">q = 0.7 (tilted)</div>
-                </div>
-                <div style="text-align: center;">
-                    <canvas id="qvol-canvas-mid" width="400" height="400" style="width: 18vw; height: 18vw; border: 1px solid #ccc;"></canvas>
-                    <div style="font-size: clamp(0.9rem, 1.5vw, 1.2rem); margin-top: 0.5vh;">q = 1 (uniform)</div>
-                </div>
-                <div style="text-align: center;">
-                    <canvas id="qvol-canvas-high" width="400" height="400" style="width: 18vw; height: 18vw; border: 1px solid #ccc;"></canvas>
-                    <div style="font-size: clamp(0.9rem, 1.5vw, 1.2rem); margin-top: 0.5vh;">q = 1.4 (flat)</div>
-                </div>
-            </div>
-            <button id="qvol-sample-btn" style="padding: 0.5em 1.5em; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px; font-size: clamp(0.9rem, 1.5vw, 1.2rem);">Re-sample All</button>
+        <div style="text-align: center;">
+            <canvas id="qvol-canvas-1" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
+            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.3vh;">q = <input type="text" id="qvol-input-1" value="0.9" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px;"></div>
+        </div>
+        <div style="text-align: center;">
+            <canvas id="qvol-canvas-2" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
+            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.3vh;">q = <input type="text" id="qvol-input-2" value="1" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px;"></div>
+        </div>
+        <div style="text-align: center;">
+            <canvas id="qvol-canvas-3" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
+            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.3vh;">q = <input type="text" id="qvol-input-3" value="1.1" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px;"></div>
+        </div>
+        <div style="text-align: center;">
+            <canvas id="qvol-canvas-4" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
+            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.3vh;">q = <input type="text" id="qvol-input-4" value="1.4" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px;"></div>
+        </div>
+    </div>
+    <!-- Resample button under pictures -->
+    <button id="qvol-sample-btn" style="margin-top: 1vh; padding: 0.4em 1.2em; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px; font-size: clamp(0.8rem, 1.2vw, 1rem);">Re-sample All</button>
+    <!-- Bottom: Text explanation (2 panes) -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1.5vh; width: 100%;">
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+            <strong style="color: var(--slide-accent);">q-weighted measure</strong><br>
+            \(\displaystyle P(T) = \frac{q^{\mathrm{vol}(T)}}{\sum_{T'} q^{\mathrm{vol}(T')}}\)<br>
+            <span style="font-size: 0.85em;">\(q < 1\): tilted surface &nbsp;|&nbsp; \(q = 1\): uniform &nbsp;|&nbsp; \(q > 1\): flat surface</span>
+        </div>
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+            <strong style="color: var(--slide-accent);">Variational principle</strong> <span style="font-size: 0.85em;">(\(\gamma = -\log q\))</span><br>
+            Maximize <span style="color: #232D4B; font-weight: 800;">entropy − γ·volume</span><br>
+            <span style="font-size: 0.85em;">Entropy favors "typical" shapes; \(\gamma\) tilts the balance toward more/less volume</span>
         </div>
     </div>
 </section>
@@ -5081,21 +5080,23 @@ window.addEventListener('wasm-loaded', async function() {
 (async function() {
     'use strict';
 
-    const canvasLow = document.getElementById('qvol-canvas-low');
-    const canvasMid = document.getElementById('qvol-canvas-mid');
-    const canvasHigh = document.getElementById('qvol-canvas-high');
+    // 5 canvases with q inputs
+    const canvases = [0,1,2,3,4].map(i => document.getElementById(`qvol-canvas-${i}`));
+    const qInputs = [0,1,2,3,4].map(i => document.getElementById(`qvol-input-${i}`));
     const sampleBtn = document.getElementById('qvol-sample-btn');
-    if (!canvasLow || !canvasMid || !canvasHigh) return;
+    if (canvases.some(c => !c) || qInputs.some(i => !i)) return;
+
+    function getQValues() {
+        return qInputs.map(input => parseFloat(input.value) || 1.0);
+    }
 
     // Wait for LozengeModule
     while (typeof LozengeModule === 'undefined') {
         await new Promise(r => setTimeout(r, 50));
     }
 
-    // Create three separate WASM instances
-    const wasmLow = await LozengeModule();
-    const wasmMid = await LozengeModule();
-    const wasmHigh = await LozengeModule();
+    // Create 5 separate WASM instances
+    const wasms = await Promise.all([0,1,2,3,4].map(() => LozengeModule()));
 
     function setupWasm(wasm) {
         return {
@@ -5105,13 +5106,16 @@ window.addEventListener('wasm-loaded', async function() {
             exportDimers: wasm.cwrap('exportDimers', 'number', []),
             freeString: wasm.cwrap('freeString', null, ['number']),
             setQBias: wasm.cwrap('setQBias', null, ['number']),
-            setUseRandomSweeps: wasm.cwrap('setUseRandomSweeps', null, ['number'])
+            setUseRandomSweeps: wasm.cwrap('setUseRandomSweeps', null, ['number']),
+            initCFTP: wasm.cwrap('initCFTP', 'number', []),
+            runCFTP: wasm.cwrap('runCFTP', 'number', []),
+            getGridBounds: wasm.cwrap('getGridBounds', 'number', []),
+            getCFTPMinGridData: wasm.cwrap('getCFTPMinGridData', 'number', []),
+            getCFTPMaxGridData: wasm.cwrap('getCFTPMaxGridData', 'number', [])
         };
     }
 
-    const simLow = setupWasm(wasmLow);
-    const simMid = setupWasm(wasmMid);
-    const simHigh = setupWasm(wasmHigh);
+    const sims = wasms.map(w => setupWasm(w));
 
     const colors = ['#E57200', '#232D4B', '#F9DCBF'];
     const slope = 1 / Math.sqrt(3);
@@ -5119,47 +5123,24 @@ window.addEventListener('wasm-loaded', async function() {
 
     function getVertex(n, j) { return { x: n, y: slope * n + j * deltaC }; }
 
-    // Generate 8×8×8 hexagon triangles
-    function generateHexTriangles(size) {
-        const a = size, b = size, c = size;
-        const directions = [[1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1]];
-        const sideLengths = [a, b, c, a, b, c];
-        const boundary = [];
-        let bn = 0, bj = 0;
-        for (let side = 0; side < 6; side++) {
-            const [dn, dj] = directions[side];
-            for (let i = 0; i < sideLengths[side]; i++) {
-                boundary.push({ x: getVertex(bn, bj).x, y: getVertex(bn, bj).y });
-                bn += dn; bj += dj;
-            }
-        }
+    // Load shape from JSON file
+    let shapeTriangles = null;
+    try {
+        const resp = await fetch('/letters/shape_for_arctic_small.json');
+        const data = await resp.json();
+        shapeTriangles = data.triangles;
+    } catch (e) {
+        console.error('Failed to load shape_for_arctic_small.json:', e);
+        return;
+    }
 
-        function pointInPolygon(px, py, poly) {
-            let inside = false;
-            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-                const xi = poly[i].x, yi = poly[i].y;
-                const xj = poly[j].x, yj = poly[j].y;
-                if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
-                    inside = !inside;
-                }
-            }
-            return inside;
+    function getTrianglesArray() {
+        if (!shapeTriangles) return [];
+        const arr = [];
+        for (const tri of shapeTriangles) {
+            arr.push(tri.n, tri.j, tri.type);
         }
-
-        const triangles = [];
-        for (let n = -size; n <= 2 * size; n++) {
-            for (let j = -size; j <= 2 * size; j++) {
-                // Black triangle centroid
-                const v1 = getVertex(n, j), v2 = getVertex(n, j-1), v3 = getVertex(n+1, j-1);
-                const bcx = (v1.x + v2.x + v3.x) / 3, bcy = (v1.y + v2.y + v3.y) / 3;
-                if (pointInPolygon(bcx, bcy, boundary)) triangles.push(n, j, 1);
-                // White triangle centroid
-                const w1 = getVertex(n, j), w2 = getVertex(n+1, j), w3 = getVertex(n+1, j-1);
-                const wcx = (w1.x + w2.x + w3.x) / 3, wcy = (w1.y + w2.y + w3.y) / 3;
-                if (pointInPolygon(wcx, wcy, boundary)) triangles.push(n, j, 2);
-            }
-        }
-        return triangles;
+        return arr;
     }
 
     function initSim(sim, triangles) {
@@ -5171,6 +5152,12 @@ window.addEventListener('wasm-loaded', async function() {
         sim.freeString(ptr);
         sim.wasm._free(dataPtr);
         sim.setUseRandomSweeps(1);
+    }
+
+    // CPU CFTP - updates internal WASM state
+    function runCFTP(sim) {
+        const ptr = sim.runCFTP();
+        sim.freeString(ptr);
     }
 
     function runGlauber(sim, steps) {
@@ -5194,7 +5181,6 @@ window.addEventListener('wasm-loaded', async function() {
 
         if (!dimers || dimers.length === 0) return;
 
-        // Compute bounds
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
         for (const d of dimers) {
             const verts = getLozengeVerts(d);
@@ -5203,15 +5189,22 @@ window.addEventListener('wasm-loaded', async function() {
                 minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
             }
         }
-        const scale = Math.min(w / (maxX - minX), h / (maxY - minY)) * 0.9;
-        const cx = w / 2 - ((minX + maxX) / 2) * scale;
-        const cy = h / 2 + ((minY + maxY) / 2) * scale;
+
+        // Rotate 90 degrees: swap width/height for scale calculation
+        const scale = Math.min(w / (maxY - minY), h / (maxX - minX)) * 0.9;
+        const cx = w / 2;
+        const cy = h / 2;
+        const offsetX = (minY + maxY) / 2;
+        const offsetY = (minX + maxX) / 2;
 
         for (const d of dimers) {
             const verts = getLozengeVerts(d);
             ctx.beginPath();
-            ctx.moveTo(cx + verts[0].x * scale, cy - verts[0].y * scale);
-            for (let i = 1; i < 4; i++) ctx.lineTo(cx + verts[i].x * scale, cy - verts[i].y * scale);
+            // Rotate 90°: (x,y) -> (y, -x)
+            ctx.moveTo(cx + (verts[0].y - offsetX) * scale, cy + (verts[0].x - offsetY) * scale);
+            for (let i = 1; i < 4; i++) {
+                ctx.lineTo(cx + (verts[i].y - offsetX) * scale, cy + (verts[i].x - offsetY) * scale);
+            }
             ctx.closePath();
             ctx.fillStyle = colors[d.t];
             ctx.fill();
@@ -5228,40 +5221,61 @@ window.addEventListener('wasm-loaded', async function() {
         return [getVertex(bn-1, bj), getVertex(bn, bj), getVertex(bn+1, bj-1), getVertex(bn, bj-1)];
     }
 
-    const triangles = generateHexTriangles(8);
-    let initialized = false;
+    const triangles = getTrianglesArray();
+    let sampling = false;
+    let sampled = false;
 
     async function sampleAll() {
-        if (!initialized) {
-            initSim(simLow, triangles);
-            initSim(simMid, triangles);
-            initSim(simHigh, triangles);
-            initialized = true;
+        if (sampling) return;
+        sampling = true;
+        sampled = true;
+
+        const qValues = getQValues();
+
+        // Sample each q value sequentially, showing result immediately
+        for (let i = 0; i < qValues.length; i++) {
+            const q = qValues[i];
+            const sim = sims[i];
+
+            // Clear canvas to show we're working on it
+            const ctx = canvases[i].getContext('2d');
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(0, 0, canvases[i].width, canvases[i].height);
+            ctx.fillStyle = '#999';
+            ctx.font = '20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Sampling...', canvases[i].width/2, canvases[i].height/2);
+
+            // Yield to let UI update
+            await new Promise(r => setTimeout(r, 50));
+
+            // Reinitialize region
+            initSim(sim, triangles);
+
+            // Set q-bias BEFORE CFTP
+            sim.setQBias(q);
+
+            // Run CPU CFTP (uses q-bias for q-weighted sampling)
+            runCFTP(sim);
+
+            // Draw this result immediately
+            drawTiling(canvases[i], getDimers(sim));
+
+            // Small delay between samples so user can see progress
+            await new Promise(r => setTimeout(r, 100));
         }
 
-        simLow.setQBias(0.7);
-        simMid.setQBias(1.0);
-        simHigh.setQBias(1.4);
-
-        // Run enough steps for mixing
-        runGlauber(simLow, 50000);
-        runGlauber(simMid, 50000);
-        runGlauber(simHigh, 50000);
-
-        drawTiling(canvasLow, getDimers(simLow));
-        drawTiling(canvasMid, getDimers(simMid));
-        drawTiling(canvasHigh, getDimers(simHigh));
+        sampling = false;
     }
 
     sampleBtn.addEventListener('click', sampleAll);
 
-    // Register with slide engine
     function waitForSlideEngine() {
         if (window.slideEngine) {
             window.slideEngine.registerSimulation('q-volume', {
                 start() {},
                 pause() {},
-                onSlideEnter() { if (!initialized) sampleAll(); },
+                onSlideEnter() { if (!sampled) sampleAll(); },
                 onSlideLeave() {}
             }, 0);
         } else {
@@ -5281,7 +5295,7 @@ window.addEventListener('wasm-loaded', async function() {
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-accent);">Double dimer model</strong><br>
                 Superimpose two independent tilings<br>
-                → union of edges forms loops
+                → symmetric difference forms loops
             </div>
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-accent);">Height fluctuations</strong><br>
@@ -5300,21 +5314,20 @@ window.addEventListener('wasm-loaded', async function() {
                 dimers, spanning trees, Ising, ...
             </div>
         </div>
-        <!-- Right: Double dimer visualization -->
+        <!-- Right: GFF heatmap visualization -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
-            <canvas id="double-dimer-canvas" width="800" height="700" style="width: 45vw; height: 70vh; border: 1px solid #ccc;"></canvas>
-            <button id="double-dimer-btn" style="padding: 0.5em 1.5em; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px; font-size: clamp(0.9rem, 1.5vw, 1.2rem);">Re-sample Double Dimer</button>
+            <canvas id="gff-canvas" width="800" height="700" style="width: 45vw; height: 70vh; border: 1px solid #ccc;"></canvas>
+            <button id="gff-sample-btn" style="padding: 0.5em 1.5em; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px; font-size: clamp(0.9rem, 1.5vw, 1.2rem);">Re-sample GFF</button>
         </div>
     </div>
 </section>
-
-<!-- Fluctuations slide script -->
+<!-- Fluctuations slide script with GPU CFTP (WebGPU engine loaded at top of file) -->
 <script>
 (async function() {
     'use strict';
 
-    const canvas = document.getElementById('double-dimer-canvas');
-    const sampleBtn = document.getElementById('double-dimer-btn');
+    const canvas = document.getElementById('gff-canvas');
+    const sampleBtn = document.getElementById('gff-sample-btn');
     if (!canvas) return;
 
     // Wait for LozengeModule
@@ -5324,67 +5337,121 @@ window.addEventListener('wasm-loaded', async function() {
 
     const wasm = await LozengeModule();
 
+    // WASM function wrappers
     const initFromTriangles = wasm.cwrap('initFromTriangles', 'number', ['number', 'number']);
-    const runCFTP = wasm.cwrap('runCFTP', 'number', []);
-    const exportDimers = wasm.cwrap('exportDimers', 'number', []);
     const freeString = wasm.cwrap('freeString', null, ['number']);
+    const initCFTPWasm = wasm.cwrap('initCFTP', 'number', []);
+    const getGridBoundsWasm = wasm.cwrap('getGridBounds', 'number', []);
+    const getCFTPMinGridDataWasm = wasm.cwrap('getCFTPMinGridData', 'number', []);
+    const getCFTPMaxGridDataWasm = wasm.cwrap('getCFTPMaxGridData', 'number', []);
+    const exportDimers = wasm.cwrap('exportDimers', 'number', []);
+    const runCFTP = wasm.cwrap('runCFTP', 'number', []);
 
     const slope = 1 / Math.sqrt(3);
     const deltaC = 2 / Math.sqrt(3);
+    const sqrt2 = Math.sqrt(2);
     function getVertex(n, j) { return { x: n, y: slope * n + j * deltaC }; }
 
-    // Generate hexagon triangles
-    function generateHexTriangles(size) {
-        const a = size, b = size, c = size;
-        const directions = [[1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1]];
-        const sideLengths = [a, b, c, a, b, c];
-        const boundary = [];
-        let bn = 0, bj = 0;
-        for (let side = 0; side < 6; side++) {
-            const [dn, dj] = directions[side];
-            for (let i = 0; i < sideLengths[side]; i++) {
-                boundary.push({ x: getVertex(bn, bj).x, y: getVertex(bn, bj).y });
-                bn += dn; bj += dj;
-            }
-        }
+    // GPU engine
+    let gpuEngine = null;
+    let gpuAvailable = false;
 
-        function pointInPolygon(px, py, poly) {
-            let inside = false;
-            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-                const xi = poly[i].x, yi = poly[i].y;
-                const xj = poly[j].x, yj = poly[j].y;
-                if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
-                    inside = !inside;
-                }
-            }
-            return inside;
-        }
+    // Initialize GPU engine if available
+    async function initGpuEngine() {
+        if (!navigator.gpu) return false;
 
-        const triangles = [];
-        for (let n = -size; n <= 2 * size; n++) {
-            for (let j = -size; j <= 2 * size; j++) {
-                const v1 = getVertex(n, j), v2 = getVertex(n, j-1), v3 = getVertex(n+1, j-1);
-                const bcx = (v1.x + v2.x + v3.x) / 3, bcy = (v1.y + v2.y + v3.y) / 3;
-                if (pointInPolygon(bcx, bcy, boundary)) triangles.push(n, j, 1);
-                const w1 = getVertex(n, j), w2 = getVertex(n+1, j), w3 = getVertex(n+1, j-1);
-                const wcx = (w1.x + w2.x + w3.x) / 3, wcy = (w1.y + w2.y + w3.y) / 3;
-                if (pointInPolygon(wcx, wcy, boundary)) triangles.push(n, j, 2);
-            }
+        // Wait for WebGPU engine script to load (loaded at top of file)
+        let waitCount = 0;
+        while (!window.WebGPULozengeEngine && waitCount < 50) {
+            await new Promise(r => setTimeout(r, 100));
+            waitCount++;
         }
-        return triangles;
+        if (!window.WebGPULozengeEngine) return false;
+        try {
+            gpuEngine = new WebGPULozengeEngine();
+            const initPromise = gpuEngine.init();
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('GPU init timeout')), 5000)
+            );
+            await Promise.race([initPromise, timeoutPromise]);
+            gpuAvailable = gpuEngine.isAvailable();
+            console.log('GFF slide: GPU engine', gpuAvailable ? 'ready' : 'unavailable');
+            return gpuAvailable;
+        } catch (e) {
+            console.warn('GFF slide: GPU init failed:', e);
+            return false;
+        }
     }
 
-    function initRegion(triangles) {
-        const dataPtr = wasm._malloc(triangles.length * 4);
-        for (let i = 0; i < triangles.length; i++) {
-            wasm.setValue(dataPtr + i * 4, triangles[i], 'i32');
+    // Load shape from JSON file
+    let shapeData = null;
+
+    async function loadShapeData() {
+        const response = await fetch('/letters/shape_for_arctic.json');
+        const json = await response.json();
+
+        const triangleArr = [];
+        const blackTriangles = [];
+        const whiteTriangles = [];
+
+        for (const tri of json.triangles) {
+            const { n, j, type } = tri;
+            triangleArr.push(n, j, type);
+
+            if (type === 1) {
+                const bv1 = getVertex(n, j), bv2 = getVertex(n, j-1), bv3 = getVertex(n+1, j-1);
+                blackTriangles.push({ n, j, verts: [bv1, bv2, bv3] });
+            } else {
+                const wv1 = getVertex(n, j), wv2 = getVertex(n+1, j), wv3 = getVertex(n+1, j-1);
+                whiteTriangles.push({ n, j, verts: [wv1, wv2, wv3] });
+            }
         }
-        const ptr = initFromTriangles(dataPtr, triangles.length);
+
+        return { triangleArr, blackTriangles, whiteTriangles };
+    }
+
+    function initRegion() {
+        const dataPtr = wasm._malloc(shapeData.triangleArr.length * 4);
+        for (let i = 0; i < shapeData.triangleArr.length; i++) {
+            wasm.setValue(dataPtr + i * 4, shapeData.triangleArr[i], 'i32');
+        }
+        const ptr = initFromTriangles(dataPtr, shapeData.triangleArr.length);
         freeString(ptr);
         wasm._free(dataPtr);
     }
 
-    function sampleCFTP() {
+    // Get extremal grid data for GPU
+    function getGridBounds() {
+        const ptr = getGridBoundsWasm();
+        const str = wasm.UTF8ToString(ptr);
+        freeString(ptr);
+        return JSON.parse(str);
+    }
+
+    function getCFTPMinRawGridData(bounds) {
+        const dataPtr = getCFTPMinGridDataWasm();
+        if (!dataPtr) return null;
+        const data = new Int32Array(bounds.size);
+        for (let i = 0; i < bounds.size; i++) {
+            data[i] = wasm.getValue(dataPtr + i * 4, 'i32');
+        }
+        wasm._free(dataPtr);
+        return data;
+    }
+
+    function getCFTPMaxRawGridData(bounds) {
+        const dataPtr = getCFTPMaxGridDataWasm();
+        if (!dataPtr) return null;
+        const data = new Int32Array(bounds.size);
+        for (let i = 0; i < bounds.size; i++) {
+            data[i] = wasm.getValue(dataPtr + i * 4, 'i32');
+        }
+        wasm._free(dataPtr);
+        return data;
+    }
+
+    // WASM CFTP fallback
+    function sampleCFTPWasm() {
         const ptr = runCFTP();
         freeString(ptr);
         const dimPtr = exportDimers();
@@ -5393,124 +5460,274 @@ window.addEventListener('wasm-loaded', async function() {
         return JSON.parse(json).dimers || [];
     }
 
-    // Get dimer edge as string key
-    function dimerEdgeKey(d) {
-        const { bn, bj, t } = d;
-        // Return the edge connecting black to white triangle centers
-        if (t === 0) return `${bn},${bj}-${bn},${bj-1}`;  // horizontal
-        if (t === 1) return `${bn},${bj}-${bn+1},${bj-1}`;  // NE-SW
-        return `${bn-1},${bj}-${bn},${bj-1}`;  // NW-SE
-    }
+    // Compute height function from dimers
+    function computeHeightFunction(dimers) {
+        const getVertexKeys = (dimer) => {
+            const { bn, bj, t } = dimer;
+            if (t === 0) return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+            if (t === 1) return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+            return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+        };
+        const getHeightPattern = (t) => {
+            if (t === 0) return [0, 0, 0, 0];
+            if (t === 1) return [1, 0, 0, 1];
+            return [1, 1, 0, 0];
+        };
 
-    // Get the two triangle centers for a dimer
-    function getDimerCenters(d) {
-        const { bn, bj, t } = d;
-        // Black triangle center (right-pointing)
-        const blackV1 = getVertex(bn, bj), blackV2 = getVertex(bn, bj-1), blackV3 = getVertex(bn+1, bj-1);
-        const blackCenter = { x: (blackV1.x + blackV2.x + blackV3.x)/3, y: (blackV1.y + blackV2.y + blackV3.y)/3 };
-
-        // White triangle center depends on type
-        let whiteCenter;
-        if (t === 0) {
-            const wv1 = getVertex(bn, bj-1), wv2 = getVertex(bn+1, bj-1), wv3 = getVertex(bn+1, bj-2);
-            whiteCenter = { x: (wv1.x + wv2.x + wv3.x)/3, y: (wv1.y + wv2.y + wv3.y)/3 };
-        } else if (t === 1) {
-            const wv1 = getVertex(bn+1, bj), wv2 = getVertex(bn+1, bj-1), wv3 = getVertex(bn+2, bj-1);
-            whiteCenter = { x: (wv1.x + wv2.x + wv3.x)/3, y: (wv1.y + wv2.y + wv3.y)/3 };
-        } else {
-            const wv1 = getVertex(bn-1, bj-1), wv2 = getVertex(bn, bj-1), wv3 = getVertex(bn, bj-2);
-            whiteCenter = { x: (wv1.x + wv2.x + wv3.x)/3, y: (wv1.y + wv2.y + wv3.y)/3 };
+        const vertexToDimers = new Map();
+        for (const dimer of dimers) {
+            for (const [n, j] of getVertexKeys(dimer)) {
+                const key = `${n},${j}`;
+                if (!vertexToDimers.has(key)) vertexToDimers.set(key, []);
+                vertexToDimers.get(key).push(dimer);
+            }
         }
-        return { black: blackCenter, white: whiteCenter };
+
+        const heights = new Map();
+        if (dimers.length === 0) return heights;
+
+        const firstVerts = getVertexKeys(dimers[0]);
+        const startKey = `${firstVerts[0][0]},${firstVerts[0][1]}`;
+        heights.set(startKey, 0);
+
+        const queue = [startKey];
+        const visited = new Set();
+
+        while (queue.length > 0) {
+            const currentKey = queue.shift();
+            if (visited.has(currentKey)) continue;
+            visited.add(currentKey);
+
+            const currentH = heights.get(currentKey);
+            const [cn, cj] = currentKey.split(',').map(Number);
+
+            for (const dimer of vertexToDimers.get(currentKey) || []) {
+                const verts = getVertexKeys(dimer);
+                const pattern = getHeightPattern(dimer.t);
+
+                let myIdx = -1;
+                for (let i = 0; i < 4; i++) {
+                    if (verts[i][0] === cn && verts[i][1] === cj) { myIdx = i; break; }
+                }
+
+                if (myIdx >= 0) {
+                    for (let i = 0; i < 4; i++) {
+                        const [vn, vj] = verts[i];
+                        const nkey = `${vn},${vj}`;
+                        if (!heights.has(nkey)) {
+                            heights.set(nkey, currentH + (pattern[i] - pattern[myIdx]));
+                            queue.push(nkey);
+                        }
+                    }
+                }
+            }
+        }
+        return heights;
     }
 
-    function drawDoubleDimer(dimers1, dimers2) {
+    // Diverging colormap: blue (negative) -> white (zero) -> red (positive)
+    function valueToColor(val, absMax) {
+        if (absMax === 0) return 'rgb(255, 255, 255)';
+        const t = Math.max(-1, Math.min(1, val / absMax));
+        const gamma = 0.5;
+        if (t < 0) {
+            const s = Math.pow(-t, gamma);
+            return `rgb(${Math.round(255 * (1 - s))}, ${Math.round(255 * (1 - s))}, 255)`;
+        } else {
+            const s = Math.pow(t, gamma);
+            return `rgb(255, ${Math.round(255 * (1 - s))}, ${Math.round(255 * (1 - s))})`;
+        }
+    }
+
+    function drawGFF(dimers1, dimers2) {
         const ctx = canvas.getContext('2d');
         const w = canvas.width, h = canvas.height;
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, w, h);
 
-        // Get all centers for bounds
-        const allCenters = [];
-        for (const d of [...dimers1, ...dimers2]) {
-            const c = getDimerCenters(d);
-            allCenters.push(c.black, c.white);
+        const h1 = computeHeightFunction(dimers1);
+        const h2 = computeHeightFunction(dimers2);
+
+        const fluctuations = new Map();
+        for (const [key, val1] of h1) {
+            const val2 = h2.get(key);
+            if (val2 !== undefined) {
+                fluctuations.set(key, (val1 - val2) / sqrt2);
+            }
         }
 
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        for (const c of allCenters) {
-            minX = Math.min(minX, c.x); maxX = Math.max(maxX, c.x);
-            minY = Math.min(minY, c.y); maxY = Math.max(maxY, c.y);
+        for (const tri of [...shapeData.blackTriangles, ...shapeData.whiteTriangles]) {
+            for (const v of tri.verts) {
+                minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+                minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+            }
         }
 
-        const scale = Math.min(w / (maxX - minX), h / (maxY - minY)) * 0.85;
+        const scale = Math.min(w / (maxX - minX), h / (maxY - minY)) * 0.9;
         const cx = w / 2 - ((minX + maxX) / 2) * scale;
         const cy = h / 2 + ((minY + maxY) / 2) * scale;
 
         function tx(x) { return cx + x * scale; }
         function ty(y) { return cy - y * scale; }
 
-        // Build edge sets
-        const edges1 = new Set(dimers1.map(dimerEdgeKey));
-        const edges2 = new Set(dimers2.map(dimerEdgeKey));
-
-        // Draw edges only in sample 1 (blue)
-        ctx.strokeStyle = '#2E86AB';
-        ctx.lineWidth = 2;
-        for (const d of dimers1) {
-            const key = dimerEdgeKey(d);
-            if (!edges2.has(key)) {
-                const c = getDimerCenters(d);
-                ctx.beginPath();
-                ctx.moveTo(tx(c.black.x), ty(c.black.y));
-                ctx.lineTo(tx(c.white.x), ty(c.white.y));
-                ctx.stroke();
-            }
+        let absMax = 0;
+        for (const [, val] of fluctuations) {
+            absMax = Math.max(absMax, Math.abs(val));
         }
 
-        // Draw edges only in sample 2 (orange)
-        ctx.strokeStyle = '#E57200';
-        ctx.lineWidth = 2;
-        for (const d of dimers2) {
-            const key = dimerEdgeKey(d);
-            if (!edges1.has(key)) {
-                const c = getDimerCenters(d);
-                ctx.beginPath();
-                ctx.moveTo(tx(c.black.x), ty(c.black.y));
-                ctx.lineTo(tx(c.white.x), ty(c.white.y));
-                ctx.stroke();
-            }
+        function getFluctValue(n, j) {
+            return fluctuations.get(`${n},${j}`) || 0;
         }
 
-        // Draw shared edges (gray, thin)
-        ctx.strokeStyle = '#cccccc';
-        ctx.lineWidth = 1;
-        for (const d of dimers1) {
-            const key = dimerEdgeKey(d);
-            if (edges2.has(key)) {
-                const c = getDimerCenters(d);
-                ctx.beginPath();
-                ctx.moveTo(tx(c.black.x), ty(c.black.y));
-                ctx.lineTo(tx(c.white.x), ty(c.white.y));
-                ctx.stroke();
-            }
+        for (const tri of shapeData.blackTriangles) {
+            const { n, j, verts } = tri;
+            const avgVal = (getFluctValue(n, j) + getFluctValue(n, j-1) + getFluctValue(n+1, j-1)) / 3;
+            ctx.beginPath();
+            ctx.moveTo(tx(verts[0].x), ty(verts[0].y));
+            ctx.lineTo(tx(verts[1].x), ty(verts[1].y));
+            ctx.lineTo(tx(verts[2].x), ty(verts[2].y));
+            ctx.closePath();
+            ctx.fillStyle = valueToColor(avgVal, absMax);
+            ctx.fill();
+        }
+
+        for (const tri of shapeData.whiteTriangles) {
+            const { n, j, verts } = tri;
+            const avgVal = (getFluctValue(n, j) + getFluctValue(n+1, j) + getFluctValue(n+1, j-1)) / 3;
+            ctx.beginPath();
+            ctx.moveTo(tx(verts[0].x), ty(verts[0].y));
+            ctx.lineTo(tx(verts[1].x), ty(verts[1].y));
+            ctx.lineTo(tx(verts[2].x), ty(verts[2].y));
+            ctx.closePath();
+            ctx.fillStyle = valueToColor(avgVal, absMax);
+            ctx.fill();
         }
     }
 
-    const triangles = generateHexTriangles(12);
     let initialized = false;
+    let sampling = false;
+
+    // GPU CFTP sampling
+    async function sampleGPU() {
+        sampleBtn.textContent = 'Sampling...';
+        sampleBtn.disabled = true;
+
+        // Initialize WASM CFTP to get extremal states
+        const initPtr = initCFTPWasm();
+        freeString(initPtr);
+
+        const bounds = getGridBounds();
+        const minGridData = getCFTPMinRawGridData(bounds);
+        const maxGridData = getCFTPMaxRawGridData(bounds);
+
+        if (!minGridData || !maxGridData) {
+            console.error('Failed to get extremal states');
+            sampleBtn.textContent = 'Re-sample GFF';
+            sampleBtn.disabled = false;
+            return;
+        }
+
+        // Initialize GPU fluctuations CFTP
+        const gpuOk = await gpuEngine.initFluctuationsCFTP(minGridData, maxGridData);
+        if (!gpuOk) {
+            console.warn('GPU CFTP init failed, falling back to WASM');
+            gpuEngine.destroyFluctuationsCFTP();
+            const dimers1 = sampleCFTPWasm();
+            const dimers2 = sampleCFTPWasm();
+            drawGFF(dimers1, dimers2);
+            sampleBtn.textContent = 'Re-sample GFF';
+            sampleBtn.disabled = false;
+            return;
+        }
+
+        // Set uniform weights (q=1)
+        gpuEngine.setFluctuationsWeights(null, 1, false, 1.0);
+
+        // GPU CFTP loop with epoch doubling
+        let T = 1;
+        const maxT = 1073741824;
+        const stepsPerBatch = 1000;
+        const checkInterval = 1000;
+
+        let totalStepsAllEpochs = 0;
+
+        async function gpuFluctStep() {
+            gpuEngine.resetFluctuationsChains();
+
+            let totalStepsRun = 0;
+            let coalesced = [false, false];
+
+            while (totalStepsRun < T && !(coalesced[0] && coalesced[1])) {
+                const batchSize = Math.min(stepsPerBatch, T - totalStepsRun);
+                const result = await gpuEngine.stepFluctuationsCFTP(batchSize, checkInterval);
+                totalStepsRun += result.stepsRun;
+                coalesced = result.coalesced;
+
+                // Update progress
+                const c0 = coalesced[0] ? '✓' : '○';
+                const c1 = coalesced[1] ? '✓' : '○';
+                const kSteps = Math.round((totalStepsAllEpochs + totalStepsRun) / 1000);
+                sampleBtn.textContent = `T=${T} ${kSteps}k [${c0}${c1}]`;
+                await new Promise(r => setTimeout(r, 0)); // yield for UI
+            }
+            totalStepsAllEpochs += totalStepsRun;
+
+            const finalCoalesced = await gpuEngine.checkFluctuationsCoalescence();
+
+            if (finalCoalesced[0] && finalCoalesced[1]) {
+                const samples = await gpuEngine.getFluctuationsSamples(shapeData.blackTriangles);
+                gpuEngine.destroyFluctuationsCFTP();
+                drawGFF(samples.sample0, samples.sample1);
+                sampleBtn.textContent = 'Re-sample GFF';
+                sampleBtn.disabled = false;
+                sampling = false;
+            } else if (T >= maxT) {
+                gpuEngine.destroyFluctuationsCFTP();
+                sampleBtn.textContent = 'Timeout';
+                sampleBtn.disabled = false;
+                sampling = false;
+            } else {
+                T *= 2;
+                setTimeout(gpuFluctStep, 0);
+            }
+        }
+
+        setTimeout(gpuFluctStep, 10);
+    }
+
+    // WASM CFTP sampling (fallback)
+    function sampleWASM() {
+        sampleBtn.textContent = 'Sampling...';
+        sampleBtn.disabled = true;
+
+        setTimeout(() => {
+            const dimers1 = sampleCFTPWasm();
+            const dimers2 = sampleCFTPWasm();
+            drawGFF(dimers1, dimers2);
+            sampleBtn.textContent = 'Re-sample GFF';
+            sampleBtn.disabled = false;
+            sampling = false;
+        }, 10);
+    }
 
     async function sample() {
+        if (sampling) return;
+        sampling = true;
+
         if (!initialized) {
-            initRegion(triangles);
+            sampleBtn.textContent = 'Loading...';
+            shapeData = await loadShapeData();
+            initRegion();
+            await initGpuEngine();
             initialized = true;
         }
 
-        // Get two independent samples
-        const dimers1 = sampleCFTP();
-        const dimers2 = sampleCFTP();
-
-        drawDoubleDimer(dimers1, dimers2);
+        if (gpuAvailable) {
+            await sampleGPU();
+        } else {
+            sampleWASM();
+        }
     }
 
     sampleBtn.addEventListener('click', sample);
