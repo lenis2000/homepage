@@ -670,22 +670,85 @@ window.addEventListener('wasm-loaded', async function() {
         return dimers;
     }
 
-    // ===== THREE.JS RENDERING =====
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a2e);
+    // ===== THREE.JS RENDERING (LAZY LOADED) =====
+    let scene = null;
+    let renderer = null;
+    let camera = null;
+    let controls = null;
+    let meshGroup = null;
+    let aspect = 1;
 
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    function initThreeJS() {
+        if (renderer) return;
 
-    let aspect = canvas.clientWidth / canvas.clientHeight;
-    const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 5000);
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
 
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = false;
-    controls.enablePan = true;
-    controls.enableZoom = true;
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        aspect = canvas.clientWidth / canvas.clientHeight || 1;
+        camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 5000);
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = false;
+        controls.enablePan = true;
+        controls.enableZoom = true;
+
+        // Lighting
+        scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+        const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.25);
+        hemi.position.set(0, 20, 0);
+        scene.add(hemi);
+        const directional = new THREE.DirectionalLight(0xffffff, 1.2);
+        directional.position.set(15, 20, 5);
+        scene.add(directional);
+        const fill = new THREE.DirectionalLight(0xffffff, 0.3);
+        fill.position.set(-10, 5, -5);
+        scene.add(fill);
+
+        meshGroup = new THREE.Group();
+        scene.add(meshGroup);
+
+        camera.position.set(10.2, -110.4, -10.8);
+        controls.target.set(-13.4, -89.2, 12.4);
+        controls.update();
+
+        // Listen for controls changes
+        controls.addEventListener('change', () => {
+            if (!isRunning && !isCameraAnimating && renderer) renderer.render(scene, camera);
+        });
+
+        resize();
+    }
+
+    function disposeThreeJS() {
+        if (!renderer) return;
+
+        if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+        if (cameraAnimationId) { cancelAnimationFrame(cameraAnimationId); cameraAnimationId = null; }
+        isRunning = false;
+        isCameraAnimating = false;
+
+        if (meshGroup) {
+            while (meshGroup.children.length > 0) {
+                const child = meshGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+                meshGroup.remove(child);
+            }
+        }
+
+        renderer.dispose();
+        renderer = null;
+        scene = null;
+        camera = null;
+        controls = null;
+        meshGroup = null;
+    }
 
     function resize() {
+        if (!renderer || !camera) return;
         const w = canvas.clientWidth, h = canvas.clientHeight;
         if (w === 0 || h === 0) return;
         renderer.setSize(w, h, false);
@@ -693,27 +756,7 @@ window.addEventListener('wasm-loaded', async function() {
         camera.aspect = aspect;
         camera.updateProjectionMatrix();
     }
-    resize();
     window.addEventListener('resize', resize);
-
-    // Lighting
-    scene.add(new THREE.AmbientLight(0xffffff, 0.35));
-    const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.25);
-    hemi.position.set(0, 20, 0);
-    scene.add(hemi);
-    const directional = new THREE.DirectionalLight(0xffffff, 1.2);
-    directional.position.set(15, 20, 5);
-    scene.add(directional);
-    const fill = new THREE.DirectionalLight(0xffffff, 0.3);
-    fill.position.set(-10, 5, -5);
-    scene.add(fill);
-
-    const meshGroup = new THREE.Group();
-    scene.add(meshGroup);
-
-    camera.position.set(10.2, -110.4, -10.8);
-    controls.target.set(-13.4, -89.2, 12.4);
-    controls.update();
 
     const colors = ['#FFFFFF', '#FFFFFF', '#FFFFFF'];
     let isRunning = false;
@@ -738,6 +781,8 @@ window.addEventListener('wasm-loaded', async function() {
     }
 
     function buildGeometry() {
+        if (!meshGroup) return;
+
         while (meshGroup.children.length > 0) {
             const child = meshGroup.children[0];
             if (child.geometry) child.geometry.dispose();
@@ -830,13 +875,11 @@ window.addEventListener('wasm-loaded', async function() {
         }
     }
 
-    // Initialize
+    // Initialize hexagon shape (not Three.js - that's lazy loaded)
     initHexagon();
-    buildGeometry();
-    renderer.render(scene, camera);
 
     function animate() {
-        if (!isRunning) return;
+        if (!isRunning || !renderer || !controls) return;
         glauberSteps(15000);
         buildGeometry();
         controls.update();
@@ -859,7 +902,7 @@ window.addEventListener('wasm-loaded', async function() {
         if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
         updatePlayBtn();
         buildGeometry();
-        renderer.render(scene, camera);
+        if (renderer) renderer.render(scene, camera);
     }
 
     function toggle() {
@@ -871,10 +914,6 @@ window.addEventListener('wasm-loaded', async function() {
         toggle();
     });
 
-    controls.addEventListener('change', () => {
-        if (!isRunning && !isCameraAnimating) renderer.render(scene, camera);
-    });
-
     // Camera animation (end is 2x farther from target)
     const cameraStart = { x: 10.2, y: -110.4, z: -10.8 };
     const cameraEnd = { x: 39.6, y: -140.4, z: 39.6 };
@@ -882,11 +921,13 @@ window.addEventListener('wasm-loaded', async function() {
     let cameraAnimationId = null;
 
     function animateCamera(duration = 3000) {
+        if (!camera || !controls || !renderer) return;
         const startTime = performance.now();
         const startPos = { ...cameraStart };
         isCameraAnimating = true;
 
         function tick() {
+            if (!camera || !controls || !renderer) { isCameraAnimating = false; return; }
             const elapsed = performance.now() - startTime;
             const t = Math.min(elapsed / duration, 1);
             // Smooth easing (ease-in-out)
@@ -910,6 +951,7 @@ window.addEventListener('wasm-loaded', async function() {
     function resetCamera() {
         if (cameraAnimationId) cancelAnimationFrame(cameraAnimationId);
         isCameraAnimating = false;
+        if (!camera || !controls || !renderer) return;
         camera.position.set(cameraStart.x, cameraStart.y, cameraStart.z);
         controls.update();
         renderer.render(scene, camera);
@@ -921,14 +963,21 @@ window.addEventListener('wasm-loaded', async function() {
     window.slideEngine.registerSimulation('nature-builds', {
         start, pause, steps: 4,
         onSlideEnter() {
+            // Lazy init WebGL to avoid context limit
+            initThreeJS();
             setTimeout(() => {
                 resize();
-                renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+                if (renderer) renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
                 buildGeometry();
-                controls.update();
-                renderer.render(scene, camera);
-                requestAnimationFrame(() => { resize(); renderer.render(scene, camera); });
+                if (controls) controls.update();
+                if (renderer) renderer.render(scene, camera);
+                requestAnimationFrame(() => { resize(); if (renderer) renderer.render(scene, camera); });
             }, 50);
+        },
+        onSlideLeave() {
+            // Dispose WebGL context to free resources
+            disposeThreeJS();
+            questionEl.style.opacity = '0';
         },
         onStep(step) {
             if (step === 1) { start(); }
@@ -2806,12 +2855,13 @@ window.addEventListener('wasm-loaded', async function() {
                 <canvas id="bridge-3d-canvas" style="width: 100%; height: 100%;"></canvas>
             </div>
             <div id="bridge-description" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; line-height: 1.6; margin-top: 2vh;">
-                surface in <span id="bridge-box-size">1 × 12 × 9</span> box
+                surface in <span id="bridge-box-size">1 × 12 × 9</span> box = 2D path in 12 × 9 rectangle
             </div>
             <div id="macmahon-text" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; line-height: 1.5; margin-top: 1vh; opacity: 0; transition: opacity 0.3s;">
                 <div>number of surfaces in \(a \times b \times c\) box is \(\displaystyle\prod_{i=1}^{a}\prod_{j=1}^{b}\prod_{k=1}^{c}\frac{i+j+k-1}{i+j+k-2}\)</div>
                 <div style="margin-top: 0.5vh;">[MacMahon, c. 1900]</div>
                 <div style="margin-top: 1vh;">For 9 × 12 × 9: <span style="font-family: monospace; font-size: clamp(1.4rem, 2.5vw, 2rem); font-weight: bold; color: #E57200;">1,340,992,301,315,806,672,824,460,528,012,500</span></div>
+                <div style="margin-top: 1vh;">... and we <strong>pick one at random from this collection</strong></div>
             </div>
         </div>
         <!-- Right pane: snowflake -->
@@ -2962,28 +3012,108 @@ window.addEventListener('wasm-loaded', async function() {
         currentDimers = parsed.dimers || [];
     }
 
-    // ===== THREE.JS RENDERING =====
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xffffff);
-
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-    // Orthographic camera for clean 2D-like projection
+    // ===== THREE.JS RENDERING (LAZY LOADED) =====
+    let scene = null;
+    let renderer = null;
+    let camera = null;
+    let controls = null;
+    let meshGroup = null;
+    let rotationLights = [];
     const frustumSize = 30;
-    let aspect = canvas.clientWidth / canvas.clientHeight || 1;
-    const camera = new THREE.OrthographicCamera(
-        -frustumSize * aspect / 2, frustumSize * aspect / 2,
-        frustumSize / 2, -frustumSize / 2,
-        0.1, 1000
-    );
+    let aspect = 1;
 
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = false;
-    controls.enablePan = true;
-    controls.enableZoom = true;
+    function initThreeJS() {
+        if (renderer) return;
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff);
+
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        // Orthographic camera for clean 2D-like projection
+        aspect = canvas.clientWidth / canvas.clientHeight || 1;
+        camera = new THREE.OrthographicCamera(
+            -frustumSize * aspect / 2, frustumSize * aspect / 2,
+            frustumSize / 2, -frustumSize / 2,
+            0.1, 1000
+        );
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = false;
+        controls.enablePan = true;
+        controls.enableZoom = true;
+
+        // Lighting
+        scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+        const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.25);
+        hemi.position.set(0, 20, 0);
+        scene.add(hemi);
+        const directional = new THREE.DirectionalLight(0xffffff, 1.2);
+        directional.position.set(15, 20, 5);
+        scene.add(directional);
+        const fill = new THREE.DirectionalLight(0xffffff, 0.3);
+        fill.position.set(-10, 5, -5);
+        scene.add(fill);
+
+        // Extra lights for rotation mode (from 4 more sides)
+        rotationLights = [];
+        const lightPositions = [
+            [20, 10, 20], [-20, 10, 20], [20, 10, -20], [-20, 10, -20]
+        ];
+        for (const pos of lightPositions) {
+            const light = new THREE.DirectionalLight(0xffffff, 0.4);
+            light.position.set(pos[0], pos[1], pos[2]);
+            light.visible = false;
+            scene.add(light);
+            rotationLights.push(light);
+        }
+
+        meshGroup = new THREE.Group();
+        scene.add(meshGroup);
+
+        // Camera for a×12×9 hexagon (ortho view)
+        camera.position.set(40.2, -28.6, -17.5);
+        camera.zoom = 1.432;
+        camera.updateProjectionMatrix();
+        controls.target.set(2.3, -7.8, 0.8);
+        controls.update();
+
+        // Listen for controls changes to render when paused
+        controls.addEventListener('change', () => {
+            if (!isRunning && renderer) renderer.render(scene, camera);
+        });
+
+        resize();
+    }
+
+    function disposeThreeJS() {
+        if (!renderer) return;
+
+        stopAutoRotate();
+        if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+        isRunning = false;
+
+        if (meshGroup) {
+            while (meshGroup.children.length > 0) {
+                const child = meshGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+                meshGroup.remove(child);
+            }
+        }
+
+        renderer.dispose();
+        renderer = null;
+        scene = null;
+        camera = null;
+        controls = null;
+        meshGroup = null;
+        rotationLights = [];
+    }
 
     function resize() {
+        if (!renderer || !camera) return;
         const w = canvas.clientWidth, h = canvas.clientHeight;
         if (w === 0 || h === 0) return;
         renderer.setSize(w, h, false);
@@ -2994,43 +3124,7 @@ window.addEventListener('wasm-loaded', async function() {
         camera.bottom = -frustumSize / 2;
         camera.updateProjectionMatrix();
     }
-    resize();
     window.addEventListener('resize', resize);
-
-    // Lighting
-    scene.add(new THREE.AmbientLight(0xffffff, 0.35));
-    const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.25);
-    hemi.position.set(0, 20, 0);
-    scene.add(hemi);
-    const directional = new THREE.DirectionalLight(0xffffff, 1.2);
-    directional.position.set(15, 20, 5);
-    scene.add(directional);
-    const fill = new THREE.DirectionalLight(0xffffff, 0.3);
-    fill.position.set(-10, 5, -5);
-    scene.add(fill);
-
-    // Extra lights for rotation mode (from 4 more sides)
-    const rotationLights = [];
-    const lightPositions = [
-        [20, 10, 20], [-20, 10, 20], [20, 10, -20], [-20, 10, -20]
-    ];
-    for (const pos of lightPositions) {
-        const light = new THREE.DirectionalLight(0xffffff, 0.4);
-        light.position.set(pos[0], pos[1], pos[2]);
-        light.visible = false;
-        scene.add(light);
-        rotationLights.push(light);
-    }
-
-    const meshGroup = new THREE.Group();
-    scene.add(meshGroup);
-
-    // Camera for a×12×9 hexagon (ortho view)
-    camera.position.set(40.2, -28.6, -17.5);
-    camera.zoom = 1.432;
-    camera.updateProjectionMatrix();
-    controls.target.set(2.3, -7.8, 0.8);
-    controls.update();
 
     // Vertex and height helpers
     function getVertexKeys(dimer) {
@@ -3051,6 +3145,8 @@ window.addEventListener('wasm-loaded', async function() {
     }
 
     function buildGeometry() {
+        if (!meshGroup) return;
+
         while (meshGroup.children.length > 0) {
             const child = meshGroup.children[0];
             if (child.geometry) child.geometry.dispose();
@@ -3060,7 +3156,7 @@ window.addEventListener('wasm-loaded', async function() {
 
         if (currentDimers.length === 0) return;
 
-        // Build vertex-to-dimer map and calculate heights via BFS
+        // Build height function via BFS (geometric-bridge)
         const vertexToDimers = new Map();
         for (const dimer of currentDimers) {
             for (const [n, j] of getVertexKeys(dimer)) {
@@ -3150,12 +3246,16 @@ window.addEventListener('wasm-loaded', async function() {
         sampleHexagon(currentA, B, C);
         buildGeometry();
         // Update description
-        descEl.innerHTML = `surface in <span id="bridge-box-size">${currentA} × 12 × 9</span> box`;
-        renderer.render(scene, camera);
+        if (currentA === 1) {
+            descEl.innerHTML = `surface in <span id="bridge-box-size">1 × 12 × 9</span> box = 2D path in 12 × 9 rectangle`;
+        } else {
+            descEl.innerHTML = `uniformly random surface in <span id="bridge-box-size">${currentA} × 12 × 9</span> box`;
+        }
+        if (renderer) renderer.render(scene, camera);
     }
 
     function animate() {
-        if (!isRunning) return;
+        if (!isRunning || !renderer || !camera || !controls) return;
 
         if (autoRotate) {
             // Rotate camera around its up vector (visual vertical)
@@ -3188,7 +3288,7 @@ window.addEventListener('wasm-loaded', async function() {
     function startAutoRotate() {
         autoRotate = true;
         // Turn on extra lights
-        for (const light of rotationLights) light.visible = true;
+        for (const light of rotationLights) if (light) light.visible = true;
         // Make material matte
         if (currentMaterial) currentMaterial.metalness = 0;
         if (!isRunning) start();
@@ -3197,7 +3297,7 @@ window.addEventListener('wasm-loaded', async function() {
     function stopAutoRotate() {
         autoRotate = false;
         // Turn off extra lights
-        for (const light of rotationLights) light.visible = false;
+        for (const light of rotationLights) if (light) light.visible = false;
         // Restore metallic material
         if (currentMaterial) currentMaterial.metalness = 0.5;
     }
@@ -3207,14 +3307,6 @@ window.addEventListener('wasm-loaded', async function() {
         regenerate();
     }
 
-    // Listen for controls changes to render when paused
-    controls.addEventListener('change', () => {
-        if (!isRunning) renderer.render(scene, camera);
-    });
-
-    // Initial render
-    regenerate();
-
     // Register with slide engine
     function waitForSlideEngine() {
         if (window.slideEngine) {
@@ -3223,17 +3315,23 @@ window.addEventListener('wasm-loaded', async function() {
                 pause,
                 steps: 12,
                 onSlideEnter() {
+                    // Lazy init WebGL to avoid context limit
+                    initThreeJS();
+
                     // Reset camera to default position
-                    camera.position.set(40.2, -28.6, -17.5);
-                    camera.zoom = 1.432;
-                    camera.updateProjectionMatrix();
-                    controls.target.set(2.3, -7.8, 0.8);
-                    controls.update();
+                    if (camera && controls) {
+                        camera.position.set(40.2, -28.6, -17.5);
+                        camera.zoom = 1.432;
+                        camera.updateProjectionMatrix();
+                        controls.target.set(2.3, -7.8, 0.8);
+                        controls.update();
+                    }
                     stopAutoRotate();
 
                     setTimeout(() => {
                         resize();
-                        renderer.render(scene, camera);
+                        regenerate();
+                        if (renderer) renderer.render(scene, camera);
                         if (window.bridgeSnowflake) {
                             window.bridgeSnowflake.resize();
                             window.bridgeSnowflake.render();
@@ -3244,6 +3342,8 @@ window.addEventListener('wasm-loaded', async function() {
                 onSlideLeave() {
                     stopAutoRotate();
                     pause();
+                    // Dispose WebGL context to free resources
+                    disposeThreeJS();
                 },
                 onStep(step) {
                     const macmahonEl = document.getElementById('macmahon-text');
@@ -3266,10 +3366,10 @@ window.addEventListener('wasm-loaded', async function() {
                     } else if (step === 12 && window.bridgeSnowflake) {
                         // CFTP sample the snowflake
                         const descEl = document.getElementById('snowflake-description');
-                        if (descEl) descEl.textContent = 'sampling...';
+                        if (descEl) descEl.textContent = 'picking one uniformly at random...';
                         setTimeout(() => {
                             window.bridgeSnowflake.regenerate();
-                            if (descEl) descEl.textContent = 'sampling... done';
+                            if (descEl) descEl.textContent = 'picking one uniformly at random... done';
                         }, 50);
                     }
                 },
@@ -3511,13 +3611,452 @@ window.addEventListener('wasm-loaded', async function() {
 })();
 </script>
 
-<section class="slide slide-center" id="hexagon-cube" data-title="Hexagon = Cube">
-    <h2 class="slide-title">The Visual Trick</h2>
-    <p class="fragment" style="margin-top: 1.5rem;">A single hexagon...</p>
-    <p class="fragment">...tiled by 3 rhombi...</p>
-    <p class="fragment">...looks exactly like a cube!</p>
-    <p class="fragment" style="margin-top: 2rem;">[Image: Hexagon with 3 lozenges = cube]</p>
+<section class="slide slide-center" id="hexagon-cube" data-title="Limit Shape">
+    <h2 class="slide-title">The Limit Shape</h2>
+    <div style="position: relative; width: 70vw; height: 60vh;">
+        <canvas id="limit-shape-canvas" style="width: 100%; height: 100%;"></canvas>
+    </div>
+    <div id="limit-shape-status" style="font-size: clamp(1rem, 1.8vw, 1.4rem); margin-top: 1vh;">
+    </div>
 </section>
+
+<script>
+// Limit Shape 3D Visualization
+(async function() {
+    'use strict';
+
+    const canvas = document.getElementById('limit-shape-canvas');
+    const statusEl = document.getElementById('limit-shape-status');
+    if (!canvas) return;
+
+    // Wait for LozengeModule
+    while (typeof LozengeModule === 'undefined') {
+        await new Promise(r => setTimeout(r, 50));
+    }
+
+    // Create separate WASM instance
+    const wasm = await LozengeModule();
+    const initFromTriangles = wasm.cwrap('initFromTriangles', 'number', ['number', 'number']);
+    const runCFTP = wasm.cwrap('runCFTP', 'number', []);
+    const exportDimersWasm = wasm.cwrap('exportDimers', 'number', []);
+    const freeString = wasm.cwrap('freeString', null, ['number']);
+
+    // Load shape triangles
+    let shapeTriangles = null;
+    try {
+        const resp = await fetch('/letters/shape_for_arctic.json');
+        const data = await resp.json();
+        shapeTriangles = data.triangles;
+    } catch (e) {
+        return;
+    }
+
+    let currentDimers = [];
+    const colors = ['#E57200', '#232D4B', '#F9DCBF'];
+
+    // Three.js setup - LAZY LOADED to avoid WebGL context limit
+    let renderer = null;
+    let scene = null;
+    let camera = null;
+    let controls = null;
+    let meshGroup = null;
+    let rotationLights = [];
+    const frustumSize = 80;
+    let aspect = 1;
+
+    function initThreeJS() {
+        if (renderer) return; // Already initialized
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff);
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        aspect = canvas.clientWidth / canvas.clientHeight || 1;
+        camera = new THREE.OrthographicCamera(
+            -frustumSize * aspect / 2, frustumSize * aspect / 2,
+            frustumSize / 2, -frustumSize / 2,
+            0.1, 1000
+        );
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = false;
+        controls.enablePan = true;
+        controls.enableZoom = true;
+
+        // Lighting
+        scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+        const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.25);
+        hemi.position.set(0, 20, 0);
+        scene.add(hemi);
+        const directional = new THREE.DirectionalLight(0xffffff, 1.2);
+        directional.position.set(15, 20, 5);
+        scene.add(directional);
+        const fill = new THREE.DirectionalLight(0xffffff, 0.3);
+        fill.position.set(-10, 5, -5);
+        scene.add(fill);
+
+        // Extra lights for rotation
+        rotationLights = [];
+        const rotationLightPositions = [[30, 10, 30], [-30, 10, 30], [30, 10, -30], [-30, 10, -30]];
+        for (const pos of rotationLightPositions) {
+            const light = new THREE.DirectionalLight(0xffffff, 0.4);
+            light.position.set(pos[0], pos[1], pos[2]);
+            light.visible = false;
+            scene.add(light);
+            rotationLights.push(light);
+        }
+
+        meshGroup = new THREE.Group();
+        scene.add(meshGroup);
+
+        // Initial camera position
+        camera.position.set(40, -30, -20);
+        camera.zoom = 1.0;
+        camera.updateProjectionMatrix();
+        controls.target.set(0, 0, 0);
+        controls.update();
+
+        resize();
+    }
+
+    function disposeThreeJS() {
+        if (!renderer) return;
+
+        stopAutoRotate();
+
+        // Dispose meshes
+        if (meshGroup) {
+            while (meshGroup.children.length > 0) {
+                const child = meshGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+                meshGroup.remove(child);
+            }
+        }
+
+        // Dispose renderer (releases WebGL context)
+        renderer.dispose();
+        renderer = null;
+        scene = null;
+        camera = null;
+        controls = null;
+        meshGroup = null;
+        rotationLights = [];
+    }
+
+    function resize() {
+        if (!renderer || !camera) return;
+        const w = canvas.clientWidth, h = canvas.clientHeight;
+        if (w === 0 || h === 0) return;
+        renderer.setSize(w, h, false);
+        aspect = w / h;
+        camera.left = -frustumSize * aspect / 2;
+        camera.right = frustumSize * aspect / 2;
+        camera.top = frustumSize / 2;
+        camera.bottom = -frustumSize / 2;
+        camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', resize);
+
+    // Vertex and height helpers (limit-shape)
+    function getVertexKeys(dimer) {
+        const { bn, bj, t } = dimer;
+        if (t === 0) return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+        if (t === 1) return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+        return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+    }
+
+    function getHeightPattern(t) {
+        if (t === 0) return [0, 0, 0, 0];
+        if (t === 1) return [1, 0, 0, 1];
+        return [1, 1, 0, 0];
+    }
+
+    function to3D(n, j, h) {
+        return { x: h, y: -n - h, z: j - h };
+    }
+
+    function buildGeometry() {
+        if (!meshGroup) return;
+        while (meshGroup.children.length > 0) {
+            const child = meshGroup.children[0];
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+            meshGroup.remove(child);
+        }
+
+        if (currentDimers.length === 0) return;
+
+        // Build vertex-to-dimer map and calculate heights via BFS
+        const vertexToDimers = new Map();
+        for (const dimer of currentDimers) {
+            for (const [n, j] of getVertexKeys(dimer)) {
+                const key = `${n},${j}`;
+                if (!vertexToDimers.has(key)) vertexToDimers.set(key, []);
+                vertexToDimers.get(key).push(dimer);
+            }
+        }
+
+        const heights = new Map();
+        const firstVerts = getVertexKeys(currentDimers[0]);
+        const startKey = `${firstVerts[0][0]},${firstVerts[0][1]}`;
+        heights.set(startKey, 0);
+
+        const queue = [startKey];
+        const visited = new Set();
+
+        while (queue.length > 0) {
+            const currentKey = queue.shift();
+            if (visited.has(currentKey)) continue;
+            visited.add(currentKey);
+
+            const currentH = heights.get(currentKey);
+            const [cn, cj] = currentKey.split(',').map(Number);
+
+            for (const dimer of vertexToDimers.get(currentKey) || []) {
+                const verts = getVertexKeys(dimer);
+                const pattern = getHeightPattern(dimer.t);
+                const myIdx = verts.findIndex(([vn, vj]) => vn === cn && vj === cj);
+                if (myIdx >= 0) {
+                    for (let i = 0; i < 4; i++) {
+                        const vkey = `${verts[i][0]},${verts[i][1]}`;
+                        if (!heights.has(vkey)) {
+                            heights.set(vkey, currentH + (pattern[i] - pattern[myIdx]));
+                            queue.push(vkey);
+                        }
+                    }
+                }
+            }
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [], normals = [], vertexColors = [], indices = [];
+
+        function addQuad(v1, v2, v3, v4, color) {
+            const baseIndex = vertices.length / 3;
+            vertices.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z, v4.x, v4.y, v4.z);
+            const edge1 = { x: v2.x - v1.x, y: v2.y - v1.y, z: v2.z - v1.z };
+            const edge2 = { x: v4.x - v1.x, y: v4.y - v1.y, z: v4.z - v1.z };
+            const nx = edge1.y * edge2.z - edge1.z * edge2.y;
+            const ny = edge1.z * edge2.x - edge1.x * edge2.z;
+            const nz = edge1.x * edge2.y - edge1.y * edge2.x;
+            const len = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1;
+            for (let i = 0; i < 4; i++) normals.push(nx/len, ny/len, nz/len);
+            const clr = new THREE.Color(color);
+            for (let i = 0; i < 4; i++) vertexColors.push(clr.r, clr.g, clr.b);
+            indices.push(baseIndex, baseIndex+1, baseIndex+2, baseIndex, baseIndex+2, baseIndex+3);
+        }
+
+        for (const dimer of currentDimers) {
+            const verts = getVertexKeys(dimer);
+            const v3d = verts.map(([n, j]) => to3D(n, j, heights.get(`${n},${j}`) || 0));
+            addQuad(v3d[0], v3d[1], v3d[2], v3d[3], colors[dimer.t]);
+        }
+
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
+        geometry.setIndex(indices);
+
+        currentMaterial = new THREE.MeshStandardMaterial({
+            vertexColors: true, side: THREE.DoubleSide, flatShading: true, roughness: 0.3, metalness: autoRotate ? 0 : 0.5
+        });
+        meshGroup.add(new THREE.Mesh(geometry, currentMaterial));
+
+        const edgesGeometry = new THREE.EdgesGeometry(geometry, 10);
+        meshGroup.add(new THREE.LineSegments(edgesGeometry, new THREE.LineBasicMaterial({ color: 0x222222, opacity: 0.4, transparent: true })));
+
+        // Center camera on geometry
+        if (controls) {
+            const box = new THREE.Box3().setFromObject(meshGroup);
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            controls.target.copy(center);
+            controls.update();
+        }
+    }
+
+    // Sampling functions
+    function getMinimalTiling() {
+        if (!shapeTriangles) { currentDimers = []; return; }
+
+        const triArr = [];
+        for (const tri of shapeTriangles) {
+            triArr.push(tri.n, tri.j, tri.type);
+        }
+
+        const ptr = wasm._malloc(triArr.length * 4);
+        for (let i = 0; i < triArr.length; i++) {
+            wasm.setValue(ptr + i * 4, triArr[i], 'i32');
+        }
+
+        initFromTriangles(ptr, triArr.length);
+        wasm._free(ptr);
+
+        const strPtr = exportDimersWasm();
+        const jsonStr = wasm.UTF8ToString(strPtr);
+        freeString(strPtr);
+
+        try {
+            const parsed = JSON.parse(jsonStr);
+            currentDimers = Array.isArray(parsed.dimers) ? parsed.dimers : [];
+        } catch (e) {
+            currentDimers = [];
+        }
+    }
+
+    function sampleCFTP() {
+        if (!shapeTriangles) { currentDimers = []; return; }
+
+        runCFTP();
+
+        const strPtr = exportDimersWasm();
+        const jsonStr = wasm.UTF8ToString(strPtr);
+        freeString(strPtr);
+
+        try {
+            const parsed = JSON.parse(jsonStr);
+            currentDimers = Array.isArray(parsed.dimers) ? parsed.dimers : [];
+        } catch (e) {
+            currentDimers = [];
+        }
+    }
+
+    let isRunning = false;
+    let animationId = null;
+    let autoRotate = false;
+    const rotateSpeed = 0.008;
+    let currentMaterial = null;
+    let hasSampled = false;
+
+    function animate() {
+        if (!isRunning || !renderer || !camera || !controls) return;
+
+        if (autoRotate) {
+            const axis = camera.up.clone().normalize();
+            const offset = camera.position.clone().sub(controls.target);
+            offset.applyAxisAngle(axis, rotateSpeed);
+            camera.position.copy(controls.target).add(offset);
+            camera.lookAt(controls.target);
+        }
+
+        controls.update();
+        renderer.render(scene, camera);
+        animationId = requestAnimationFrame(animate);
+    }
+
+    function start() {
+        if (isRunning) return;
+        isRunning = true;
+        animate();
+    }
+
+    function pause() {
+        isRunning = false;
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+        }
+    }
+
+    function startAutoRotate() {
+        autoRotate = true;
+        for (const light of rotationLights) if (light) light.visible = true;
+        if (currentMaterial) currentMaterial.metalness = 0;
+        if (!isRunning) start();
+    }
+
+    function stopAutoRotate() {
+        autoRotate = false;
+        for (const light of rotationLights) if (light) light.visible = false;
+        if (currentMaterial) currentMaterial.metalness = 0.5;
+    }
+
+    function clear() {
+        if (meshGroup) {
+            while (meshGroup.children.length > 0) {
+                const child = meshGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+                meshGroup.remove(child);
+            }
+        }
+        currentDimers = [];
+        hasSampled = false;
+        if (statusEl) statusEl.textContent = '';
+        if (renderer) renderer.render(scene, camera);
+    }
+
+    // Register with slide engine
+    function waitForSlideEngine() {
+        if (window.slideEngine) {
+            window.slideEngine.registerSimulation('hexagon-cube', {
+                start,
+                pause,
+                steps: 2,
+                onSlideEnter() {
+                    // Lazy init WebGL to avoid context limit
+                    initThreeJS();
+                    if (camera && controls) {
+                        camera.position.set(40, -30, -20);
+                        camera.zoom = 1.0;
+                        camera.updateProjectionMatrix();
+                        controls.target.set(0, 0, 0);
+                        controls.update();
+                        // Listen for controls changes
+                        controls.addEventListener('change', () => {
+                            if (!isRunning && renderer) renderer.render(scene, camera);
+                        });
+                    }
+                    stopAutoRotate();
+                    setTimeout(() => {
+                        resize();
+                        if (renderer) renderer.render(scene, camera);
+                    }, 50);
+                    start();
+                },
+                onSlideLeave() {
+                    stopAutoRotate();
+                    pause();
+                    // Dispose WebGL context to free resources
+                    disposeThreeJS();
+                    currentDimers = [];
+                    hasSampled = false;
+                    if (statusEl) statusEl.textContent = '';
+                },
+                onStep(step) {
+                    if (step === 1) {
+                        // First show minimal, then CFTP
+                        if (statusEl) statusEl.textContent = 'sampling...';
+                        setTimeout(() => {
+                            getMinimalTiling();
+                            sampleCFTP();
+                            buildGeometry();
+                            if (statusEl) statusEl.textContent = 'sampling... done';
+                            hasSampled = true;
+                            if (renderer) renderer.render(scene, camera);
+                        }, 50);
+                    } else if (step === 2) {
+                        startAutoRotate();
+                    }
+                },
+                onStepBack(step) {
+                    if (step === 0) {
+                        clear();
+                        stopAutoRotate();
+                    } else if (step === 1) {
+                        stopAutoRotate();
+                    }
+                }
+            }, 0);
+        } else {
+            setTimeout(waitForSlideEngine, 50);
+        }
+    }
+    waitForSlideEngine();
+})();
+</script>
 
 <section class="slide slide-center" id="slices" data-title="Slices = Paths">
     <h2 class="slide-title">Connecting to Part 1</h2>

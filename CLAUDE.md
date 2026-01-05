@@ -271,6 +271,92 @@ onSlideEnter() {
 **Legacy approach (single shared Module):**
 If using non-modularized WASM with global `Module`, reinit at moment of use and re-export data after reinit. See `/talk/visual/` history for examples.
 
+**Lazy WebGL Loading (required for 3+ Three.js slides):**
+
+Browsers limit WebGL contexts to ~8-16. Creating renderers at load time exhausts this limit. Use lazy loading to create context on slide enter and dispose on leave:
+
+```javascript
+// ===== THREE.JS (LAZY LOADED) =====
+let scene = null;
+let renderer = null;
+let camera = null;
+let controls = null;
+let meshGroup = null;
+
+function initThreeJS() {
+    if (renderer) return;  // Already initialized
+
+    scene = new THREE.Scene();
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 5000);
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    meshGroup = new THREE.Group();
+    scene.add(meshGroup);
+    // ... add lights, set camera position, etc.
+
+    controls.addEventListener('change', () => {
+        if (!isRunning && renderer) renderer.render(scene, camera);
+    });
+}
+
+function disposeThreeJS() {
+    if (!renderer) return;
+
+    // Cancel any animations
+    if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+    isRunning = false;
+
+    // Dispose meshes
+    if (meshGroup) {
+        while (meshGroup.children.length > 0) {
+            const child = meshGroup.children[0];
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+            meshGroup.remove(child);
+        }
+    }
+
+    // Release WebGL context
+    renderer.dispose();
+    renderer = null;
+    scene = null;
+    camera = null;
+    controls = null;
+    meshGroup = null;
+}
+
+// Add guards to all functions that use Three.js objects
+function animate() {
+    if (!isRunning || !renderer || !camera || !controls) return;
+    // ... animation logic
+    renderer.render(scene, camera);
+    animationId = requestAnimationFrame(animate);
+}
+
+function buildGeometry() {
+    if (!meshGroup) return;
+    // ... geometry building
+}
+
+// Register with slide engine
+window.slideEngine.registerSimulation('my-slide', {
+    start, pause,
+    onSlideEnter() {
+        initThreeJS();  // Create WebGL context
+        // ... reset camera, render
+    },
+    onSlideLeave() {
+        disposeThreeJS();  // Release WebGL context
+    }
+}, 0);
+```
+
+**Key points:**
+- Only 1 WebGL context active at a time (or 2-3 for adjacent slides)
+- Scales to unlimited Three.js slides
+- Must add guards (`if (!renderer) return;`) to all functions using Three.js
+- Don't create renderer at script load time - wait for `onSlideEnter`
+
 **Keyboard shortcuts:**
 - Arrow keys, Space, PageDown/Up for next/prev
 - Cmd+Left/Right (Mac) or Home/End for first/last slide
