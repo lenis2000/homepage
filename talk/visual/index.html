@@ -3265,29 +3265,39 @@ window.addEventListener('wasm-loaded', async function() {
                         window.bridgeSnowflake.showRegion();
                     } else if (step === 12 && window.bridgeSnowflake) {
                         // CFTP sample the snowflake
-                        window.bridgeSnowflake.regenerate();
+                        const descEl = document.getElementById('snowflake-description');
+                        if (descEl) descEl.textContent = 'sampling...';
+                        setTimeout(() => {
+                            window.bridgeSnowflake.regenerate();
+                            if (descEl) descEl.textContent = 'sampling... done';
+                        }, 50);
                     }
                 },
                 onStepBack(step) {
                     const macmahonEl = document.getElementById('macmahon-text');
                     const snowflakeTitleEl = document.getElementById('snowflake-title');
+                    const snowflakeDescEl = document.getElementById('snowflake-description');
                     if (step <= 8) {
                         stopAutoRotate();
                         setLayerCount(step + 1);
                         if (macmahonEl) macmahonEl.style.opacity = '0';
                         if (snowflakeTitleEl) snowflakeTitleEl.style.opacity = '0';
+                        if (snowflakeDescEl) snowflakeDescEl.textContent = '';
                         if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
                     } else if (step === 9) {
                         startAutoRotate();
                         if (macmahonEl) macmahonEl.style.opacity = '0';
                         if (snowflakeTitleEl) snowflakeTitleEl.style.opacity = '0';
+                        if (snowflakeDescEl) snowflakeDescEl.textContent = '';
                         if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
                     } else if (step === 10) {
                         if (macmahonEl) macmahonEl.style.opacity = '1';
                         if (snowflakeTitleEl) snowflakeTitleEl.style.opacity = '0';
+                        if (snowflakeDescEl) snowflakeDescEl.textContent = '';
                         if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
                     } else if (step === 11 && window.bridgeSnowflake) {
                         if (snowflakeTitleEl) snowflakeTitleEl.style.opacity = '1';
+                        if (snowflakeDescEl) snowflakeDescEl.textContent = '';
                         window.bridgeSnowflake.showRegion();
                     }
                 }
