@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy
+.PHONY: serve invalidate deploy autodeploy
 
 serve:
 	bundle exec jekyll serve --incremental
@@ -32,3 +32,12 @@ deploy:
 	@echo "Creating CloudFront invalidations..."
 	@$(MAKE) invalidate
 	@echo "Deployment complete!"
+
+autodeploy:
+	@echo "Auto-deploying..."
+	@git add -A
+	@git commit -m "autodeploy" --signoff || echo "No changes to commit"
+	@echo "Pushing to remote..."
+	@git push
+	@$(MAKE) invalidate
+	@echo "Auto-deployment complete!"

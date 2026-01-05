@@ -3270,11 +3270,14 @@ window.addEventListener('wasm-loaded', async function() {
                         stopAutoRotate();
                         setLayerCount(step + 1);
                         if (macmahonEl) macmahonEl.style.opacity = '0';
+                        if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
                     } else if (step === 9) {
                         startAutoRotate();
                         if (macmahonEl) macmahonEl.style.opacity = '0';
+                        if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
                     } else if (step === 10) {
                         if (macmahonEl) macmahonEl.style.opacity = '1';
+                        if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
                     } else if (step === 11 && window.bridgeSnowflake) {
                         window.bridgeSnowflake.showRegion();
                     }
@@ -3538,11 +3541,23 @@ window.addEventListener('wasm-loaded', async function() {
     // Show placeholder initially
     renderer.render(scene, camera);
 
+    function clear() {
+        while (meshGroup.children.length > 0) {
+            const child = meshGroup.children[0];
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+            meshGroup.remove(child);
+        }
+        hasSampled = false;
+        renderer.render(scene, camera);
+    }
+
     // Expose for step control from main script
     window.bridgeSnowflake = {
         showRegion,
         regenerate,
         resize,
+        clear,
         render: () => renderer.render(scene, camera),
         hasSampled: () => hasSampled
     };
