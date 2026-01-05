@@ -42,6 +42,29 @@ Use `vh`, `vw`, and `clamp()` for consistent sizing across all slides. No manual
 | Grid gaps | `clamp(0.5rem, 1vw, 1rem)` | |
 | Margins | `margin-top: 2vh` | Use vh/vw |
 
+**Shaded content panes (for theorems, definitions, callouts):**
+```html
+<div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+    <strong style="color: var(--slide-accent);">Theorem [Author Year]:</strong><br>
+    Statement text here with <strong>emphasis</strong> as needed.
+</div>
+```
+- Light gray background (`#f5f5f5`)
+- Orange accent border on left (`4px solid var(--slide-accent)`)
+- Standard body text size
+- Left-justified text
+- For multiple panes side-by-side, use grid:
+```html
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; text-align: left;">
+    <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+        Left pane content
+    </div>
+    <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+        Right pane content
+    </div>
+</div>
+```
+
 **Navigation:**
 - Arrow keys, Space, PageDown/Up for next/prev
 - G to open jump menu (type number + Enter to jump)
