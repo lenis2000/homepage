@@ -4795,13 +4795,22 @@ window.addEventListener('wasm-loaded', async function() {
         const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
         meshGroup.add(edges);
 
-        // Center camera on geometry (only if resetCamera is true)
-        if (resetCamera && geometry.boundingSphere) {
+        // Update camera to follow geometry
+        if (geometry.boundingSphere) {
             const center = geometry.boundingSphere.center;
             const radius = geometry.boundingSphere.radius;
-            controls.target.copy(center);
-            camera.position.set(center.x + radius, center.y + radius * 0.8, center.z + radius);
-            camera.lookAt(center);
+
+            if (resetCamera) {
+                // Full reset: position camera at default angle
+                controls.target.copy(center);
+                camera.position.set(center.x + radius, center.y + radius * 0.8, center.z + radius);
+                camera.lookAt(center);
+            } else {
+                // Preserve angle: move camera relative to new center
+                const offset = new THREE.Vector3().subVectors(camera.position, controls.target);
+                controls.target.copy(center);
+                camera.position.copy(center).add(offset);
+            }
             controls.update();
         }
 
@@ -5004,6 +5013,7 @@ window.addEventListener('wasm-loaded', async function() {
                 onSlideLeave() {
                     stopAutoRotate();
                     disposeThreeJS();
+                    initialSampleDone = false;  // Reset so re-entering slide will resample
                 }
             }, 0);
         } else {
