@@ -4264,7 +4264,7 @@ window.addEventListener('wasm-loaded', async function() {
 <section class="slide slide-top" id="energy" data-title="Energy">
     <h2 class="slide-title">Energy</h2>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
+    <div style="display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 2vw; margin-top: 1vh; width: 100%;">
         <!-- Left: Text explanation -->
         <div style="display: flex; flex-direction: column; gap: 1.5vh; padding-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
             <!-- CKP 2000 -->
@@ -4289,20 +4289,20 @@ window.addEventListener('wasm-loaded', async function() {
             </div>
         </div>
 
-        <!-- Right: Two canvases stacked - 3D viz and 2D tiling -->
+        <!-- Right: 3D tiling canvas -->
         <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 1vh;">
             <!-- Controls at top -->
-            <div id="energy-controls" style="display: flex; gap: 2vw; align-items: center; flex-wrap: wrap; font-size: clamp(1.5rem, 3vw, 2.2rem);">
-                <label style="display: flex; align-items: center; gap: 0.5vw;">
-                    A: <input type="number" id="gradient-a" min="-5" max="5" step="0.1" value="-0.2" style="width: 4em; font-size: inherit; padding: 0.3em;">
+            <div id="energy-controls" style="display: flex; gap: 1vw; align-items: center; flex-wrap: wrap; font-size: clamp(0.75rem, 1.5vw, 1.1rem);">
+                <label style="display: flex; align-items: center; gap: 0.3vw;">
+                    A: <input type="number" id="gradient-a" min="-5" max="5" step="0.1" value="-0.2" style="width: 4em; font-size: inherit; padding: 0.2em;">
                 </label>
-                <label style="display: flex; align-items: center; gap: 0.5vw;">
-                    B: <input type="number" id="gradient-b" min="-5" max="5" step="0.1" value="0.3" style="width: 4em; font-size: inherit; padding: 0.3em;">
+                <label style="display: flex; align-items: center; gap: 0.3vw;">
+                    B: <input type="number" id="gradient-b" min="-5" max="5" step="0.1" value="0.3" style="width: 4em; font-size: inherit; padding: 0.2em;">
                 </label>
-                <button id="energy-sample" style="padding: 0.5em 1em; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px; font-size: inherit;">Sample</button>
+                <button id="energy-sample" style="padding: 0.3em 0.6em; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px; font-size: inherit;">Sample</button>
             </div>
             <!-- 3D tiling canvas (main) -->
-            <canvas id="energy-tiling-canvas" width="800" height="600" style="height: 55vh; width: auto; border: 1px solid #ccc;"></canvas>
+            <canvas id="energy-tiling-canvas" width="1200" height="1000" style="height: 77vh; width: auto; border: 1px solid #ccc;"></canvas>
         </div>
     </div>
 </section>
@@ -4321,7 +4321,7 @@ window.addEventListener('wasm-loaded', async function() {
     let renderer = null;
     let controls = null;
     let meshGroup = null;
-    const frustumSize = 60;
+    const frustumSize = 35;  // Smaller = more zoom
 
     function initThreeJS() {
         if (renderer) return;  // Already initialized
@@ -4933,16 +4933,47 @@ window.addEventListener('wasm-loaded', async function() {
     // Register with slide engine for lazy WebGL loading
     function waitForSlideEngine() {
         if (typeof window.slideEngine !== 'undefined') {
+            // Presets for stepping through (preset 0 is pre-sampled on slide enter)
+            const presets = [
+                { A: -0.2, B: 0.3 },   // preset 0: pre-sampled
+                { A: -0.2, B: 0 },     // preset 1: step 1
+                { A: -0.8, B: 0.05 },  // preset 2: step 2
+                { A: 0, B: 0 }         // preset 3: step 3
+            ];
+            let currentPreset = 0;
+
+            function applyPreset(idx) {
+                if (idx < 0 || idx >= presets.length) return;
+                currentPreset = idx;
+                const { A, B } = presets[idx];
+                document.getElementById('gradient-a').value = A;
+                document.getElementById('gradient-b').value = B;
+                sample(A, B);
+            }
+
             window.slideEngine.registerSimulation('energy', {
                 start() { startAutoRotate(); },
                 pause() { stopAutoRotate(); },
+                steps: presets.length - 1,  // 3 steps (presets 1, 2, 3)
+                onStep(step) {
+                    // step 1 -> preset 1, step 2 -> preset 2, step 3 -> preset 3
+                    if (step >= 1 && step < presets.length) {
+                        applyPreset(step);
+                    }
+                },
+                onStepBack(step) {
+                    // step 0 -> preset 0, step 1 -> preset 1, step 2 -> preset 2
+                    if (step >= 0 && step < presets.length) {
+                        applyPreset(step);
+                    }
+                },
                 onSlideEnter() {
                     // Wait for Three.js then initialize
                     const initWhenReady = () => {
                         if (typeof THREE !== 'undefined' && typeof THREE.OrbitControls !== 'undefined') {
                             initThreeJS();
                             if (!initialSampleDone) {
-                                sample(-0.2, 0.3);  // Pre-sample with A=-0.2, B=0.3
+                                applyPreset(0);  // Pre-sample with first preset
                                 initialSampleDone = true;
                             } else if (renderer) {
                                 renderer.render(scene, camera);
