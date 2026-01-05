@@ -4278,234 +4278,597 @@ window.addEventListener('wasm-loaded', async function() {
             </div>
         </div>
 
-        <!-- Right: CFTP simulation at fixed slope -->
-        <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
-            <canvas id="energy-canvas" width="1200" height="900" style="height: 50vh; width: auto; border: 1px solid #ccc;"></canvas>
-            <div id="energy-controls" style="display: flex; gap: 0.5vw; margin-top: 1vh;">
-                <button class="energy-slope-btn" data-slope="0" style="padding: 0.5vh 1vw; font-size: clamp(0.9rem, 1.5vw, 1.1rem); cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px;">(0,0)</button>
-                <button class="energy-slope-btn" data-slope="1" style="padding: 0.5vh 1vw; font-size: clamp(0.9rem, 1.5vw, 1.1rem); cursor: pointer; border: 2px solid var(--slide-accent); background: white; color: var(--slide-accent); border-radius: 4px;">(⅓,0)</button>
-                <button class="energy-slope-btn" data-slope="2" style="padding: 0.5vh 1vw; font-size: clamp(0.9rem, 1.5vw, 1.1rem); cursor: pointer; border: 2px solid var(--slide-accent); background: white; color: var(--slide-accent); border-radius: 4px;">(0,⅓)</button>
-                <button class="energy-slope-btn" data-slope="3" style="padding: 0.5vh 1vw; font-size: clamp(0.9rem, 1.5vw, 1.1rem); cursor: pointer; border: 2px solid var(--slide-accent); background: white; color: var(--slide-accent); border-radius: 4px;">(⅓,⅓)</button>
+        <!-- Right: Two canvases stacked - 3D viz and 2D tiling -->
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 1vh;">
+            <!-- Controls at top -->
+            <div id="energy-controls" style="display: flex; gap: 1vw; align-items: center; flex-wrap: wrap; font-size: clamp(0.9rem, 1.5vw, 1.1rem);">
+                <label style="display: flex; align-items: center; gap: 0.3vw;">
+                    A: <input type="range" id="gradient-a" min="-1" max="1" step="0.05" value="0.3" style="width: 80px;">
+                    <span id="gradient-a-val" style="min-width: 2.5em;">0.3</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.3vw;">
+                    B: <input type="range" id="gradient-b" min="-1" max="1" step="0.05" value="0.3" style="width: 80px;">
+                    <span id="gradient-b-val" style="min-width: 2.5em;">0.3</span>
+                </label>
+                <button id="energy-sample" style="padding: 0.5vh 1vw; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px;">Sample</button>
             </div>
-            <p style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted); margin-top: 0.5vh;">Slope (t,s) controls torus boundary conditions</p>
+            <!-- Two canvases side by side -->
+            <div style="display: flex; gap: 1vw; align-items: flex-start;">
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <canvas id="energy-3d-canvas" width="600" height="450" style="height: 38vh; width: auto; border: 1px solid #ccc;"></canvas>
+                    <p style="font-size: clamp(0.7rem, 0.9vw, 0.9rem); color: var(--slide-muted); margin-top: 0.3vh;">3D: Stepped boundary on cylinder</p>
+                </div>
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <canvas id="energy-2d-canvas" width="600" height="450" style="height: 38vh; width: auto; border: 1px solid #ccc; background: #fafafa;"></canvas>
+                    <p style="font-size: clamp(0.7rem, 0.9vw, 0.9rem); color: var(--slide-muted); margin-top: 0.3vh;">2D: CFTP sampled tiling</p>
+                </div>
+            </div>
         </div>
     </div>
 </section>
 
-<!-- Energy slide simulation -->
+<!-- Energy slide 3D visualization -->
+<script>
+(function() {
+    'use strict';
+    console.log('[Energy3D] Starting...');
+
+    const canvas = document.getElementById('energy-3d-canvas');
+    if (!canvas) { console.log('[Energy3D] No canvas'); return; }
+
+    let scene, camera, renderer, controls;
+    let dynamicGroup;  // Group for objects that change with A,B
+
+    function init() {
+        console.log('[Energy3D] init()');
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf8f8f8);
+
+        const w = canvas.clientWidth || 600;
+        const h = canvas.clientHeight || 450;
+        camera = new THREE.PerspectiveCamera(50, w/h, 1, 500);
+        // In Three.js: Y is up. We want to view the XZ plane (our mathematical XY)
+        // with mathematical Z going up (Three.js Y)
+        camera.position.set(40, 35, 40);
+
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setSize(w, h);
+        console.log('[Energy3D] Renderer size:', w, h);
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.target.set(10, 5, 10);
+        controls.update();
+
+        // Axes: X=red, Y=green (up in Three.js = Z in math), Z=blue
+        scene.add(new THREE.AxesHelper(25));
+
+        // Grid on the "ground" (XZ plane in Three.js = XY in math, at height 0)
+        const grid = new THREE.GridHelper(40, 20, 0xaaaaaa, 0xdddddd);
+        grid.position.set(10, 0, 10);
+        scene.add(grid);
+
+        // Cylinder wireframe: 20x20 in XZ (math XY), height in Y (math Z)
+        // Vertical edges
+        const addLine = (x1,y1,z1, x2,y2,z2, color) => {
+            const g = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(x1,y1,z1), new THREE.Vector3(x2,y2,z2)
+            ]);
+            scene.add(new THREE.Line(g, new THREE.LineBasicMaterial({color})));
+        };
+        // Vertical edges of cylinder (mathematical Z = Three.js Y)
+        addLine(0,-15,0, 0,25,0, 0x666666);
+        addLine(20,-15,0, 20,25,0, 0x666666);
+        addLine(20,-15,20, 20,25,20, 0x666666);
+        addLine(0,-15,20, 0,25,20, 0x666666);
+        // Bottom square
+        addLine(0,-15,0, 20,-15,0, 0x666666);
+        addLine(20,-15,0, 20,-15,20, 0x666666);
+        addLine(20,-15,20, 0,-15,20, 0x666666);
+        addLine(0,-15,20, 0,-15,0, 0x666666);
+        // Top square
+        addLine(0,25,0, 20,25,0, 0x666666);
+        addLine(20,25,0, 20,25,20, 0x666666);
+        addLine(20,25,20, 0,25,20, 0x666666);
+        addLine(0,25,20, 0,25,0, 0x666666);
+
+        dynamicGroup = new THREE.Group();
+        scene.add(dynamicGroup);
+
+        updateVisualization(0.3, 0.3);
+        animate();
+        console.log('[Energy3D] init complete');
+    }
+
+    // Three.js coordinate mapping: math (x,y,z) -> Three.js (x, z, y)
+    // i.e., math Z (height) becomes Three.js Y (up)
+    function mathToThree(x, y, z) {
+        return new THREE.Vector3(x, z, y);
+    }
+
+    // STEP 1: Generate DISCRETIZED stepped boundary on cylinder
+    // Walk around the 20x20 square, at each lattice point compute h = round(A*x + B*y)
+    // When h changes, add vertical step
+    function generateSteppedPath(N, A, B) {
+        const path = []; // Array of {x, y, z} points in 3D
+
+        // Helper: add point and vertical step if height changed
+        function addPoint(x, y, h, prevH) {
+            if (path.length > 0 && h !== prevH) {
+                // Add vertical step at current (x,y)
+                // Go from prevH to h
+                const lastPt = path[path.length - 1];
+                if (h > prevH) {
+                    for (let hh = prevH + 1; hh <= h; hh++) {
+                        path.push({ x: lastPt.x, y: lastPt.y, z: hh });
+                    }
+                } else {
+                    for (let hh = prevH - 1; hh >= h; hh--) {
+                        path.push({ x: lastPt.x, y: lastPt.y, z: hh });
+                    }
+                }
+            }
+            path.push({ x, y, z: h });
+            return h;
+        }
+
+        let prevH = Math.round(A * 0 + B * 0);
+        path.push({ x: 0, y: 0, z: prevH });
+
+        // Bottom edge: y=0, x goes 0→N
+        for (let x = 1; x <= N; x++) {
+            const h = Math.round(A * x + B * 0);
+            prevH = addPoint(x, 0, h, prevH);
+        }
+
+        // Right edge: x=N, y goes 0→N
+        for (let y = 1; y <= N; y++) {
+            const h = Math.round(A * N + B * y);
+            prevH = addPoint(N, y, h, prevH);
+        }
+
+        // Top edge: y=N, x goes N→0
+        for (let x = N - 1; x >= 0; x--) {
+            const h = Math.round(A * x + B * N);
+            prevH = addPoint(x, N, h, prevH);
+        }
+
+        // Left edge: x=0, y goes N→0
+        for (let y = N - 1; y >= 1; y--) {
+            const h = Math.round(A * 0 + B * y);
+            prevH = addPoint(0, y, h, prevH);
+        }
+
+        // Close: back to (0,0)
+        const h0 = Math.round(A * 0 + B * 0);
+        if (h0 !== prevH) {
+            addPoint(0, 0, h0, prevH);
+        }
+
+        return path;
+    }
+
+    function updateVisualization(A, B) {
+        const N = 20;
+
+        // Clear dynamic group
+        while (dynamicGroup.children.length > 0) {
+            const child = dynamicGroup.children[0];
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+            dynamicGroup.remove(child);
+        }
+
+        // Create tilted plane z = A*x + B*y (semi-transparent blue)
+        const planeGeo = new THREE.BufferGeometry();
+        const planeVerts = new Float32Array([
+            -5, A*(-5) + B*(-5), -5,
+            25, A*25 + B*(-5), -5,
+            25, A*25 + B*25, 25,
+            -5, A*(-5) + B*25, 25
+        ]);
+        planeGeo.setAttribute('position', new THREE.BufferAttribute(planeVerts, 3));
+        planeGeo.setIndex([0, 1, 2, 0, 2, 3]);
+        planeGeo.computeVertexNormals();
+        dynamicGroup.add(new THREE.Mesh(planeGeo, new THREE.MeshBasicMaterial({
+            color: 0x4488ff,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide
+        })));
+
+        // STEP 1: Generate discretized stepped path on cylinder
+        const steppedPath = generateSteppedPath(N, A, B);
+        console.log('[Energy3D] Stepped path has', steppedPath.length, 'points');
+
+        // Draw stepped path on cylinder (orange, thick)
+        const steppedPoints = steppedPath.map(p => mathToThree(p.x, p.y, p.z));
+        steppedPoints.push(steppedPoints[0].clone()); // Close loop
+        const steppedGeo = new THREE.BufferGeometry().setFromPoints(steppedPoints);
+        dynamicGroup.add(new THREE.Line(steppedGeo, new THREE.LineBasicMaterial({ color: 0xff6600 })));
+
+        // Orange spheres at lattice corners (every point where x,y are both integers on boundary)
+        const corners = steppedPath.filter(p =>
+            (p.x === 0 || p.x === N) && (p.y === 0 || p.y === N)
+        );
+        corners.forEach(c => {
+            const sphereGeo = new THREE.SphereGeometry(0.5, 16, 16);
+            const sphereMat = new THREE.MeshBasicMaterial({ color: 0xff6600 });
+            const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+            sphere.position.copy(mathToThree(c.x, c.y, c.z));
+            dynamicGroup.add(sphere);
+        });
+
+        // STEP 2: Project stepped path to x+y+z=0 plane
+        const projectedPath = steppedPath.map(p => {
+            const t = (p.x + p.y + p.z) / 3;
+            return { x: p.x - t, y: p.y - t, z: p.z - t };
+        });
+
+        // Draw projected path (green)
+        const projPoints = projectedPath.map(p => mathToThree(p.x, p.y, p.z));
+        projPoints.push(projPoints[0].clone());
+        const projGeo = new THREE.BufferGeometry().setFromPoints(projPoints);
+        dynamicGroup.add(new THREE.Line(projGeo, new THREE.LineBasicMaterial({ color: 0x00cc00 })));
+
+        // Green spheres at projected corners
+        const projCorners = corners.map(c => {
+            const t = (c.x + c.y + c.z) / 3;
+            return { x: c.x - t, y: c.y - t, z: c.z - t };
+        });
+        projCorners.forEach(c => {
+            const sphereGeo = new THREE.SphereGeometry(0.4, 16, 16);
+            const sphereMat = new THREE.MeshBasicMaterial({ color: 0x00cc00 });
+            const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+            sphere.position.copy(mathToThree(c.x, c.y, c.z));
+            dynamicGroup.add(sphere);
+        });
+
+        // Draw the x+y+z=0 plane as semi-transparent green triangle
+        const lpGeo = new THREE.BufferGeometry();
+        const lpVerts = new Float32Array([
+            30, -20, -10,
+            -10, -20, 30,
+            -10, 20, -10
+        ]);
+        lpGeo.setAttribute('position', new THREE.BufferAttribute(lpVerts, 3));
+        lpGeo.setIndex([0, 1, 2]);
+        dynamicGroup.add(new THREE.Mesh(lpGeo, new THREE.MeshBasicMaterial({
+            color: 0x88ff88,
+            transparent: true,
+            opacity: 0.12,
+            side: THREE.DoubleSide
+        })));
+
+        // Log info
+        const cornerHeights = [
+            Math.round(A * 0 + B * 0),
+            Math.round(A * N + B * 0),
+            Math.round(A * N + B * N),
+            Math.round(A * 0 + B * N)
+        ];
+        console.log('[Energy3D] A=' + A + ', B=' + B);
+        console.log('[Energy3D] Corner heights (0,0), (N,0), (N,N), (0,N):', cornerHeights);
+
+        renderer.render(scene, camera);
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+
+    function onResize() {
+        const w = canvas.clientWidth, h = canvas.clientHeight;
+        if (w === 0 || h === 0) return;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+    }
+
+    window.addEventListener('resize', onResize);
+
+    // Wait for Three.js
+    function waitForThree() {
+        if (typeof THREE !== 'undefined' && typeof THREE.OrbitControls !== 'undefined') {
+            init();
+
+            // Set up controls
+            const sliderA = document.getElementById('gradient-a');
+            const sliderB = document.getElementById('gradient-b');
+            const valA = document.getElementById('gradient-a-val');
+            const valB = document.getElementById('gradient-b-val');
+            const btn = document.getElementById('energy-sample');
+
+            if (sliderA && sliderB) {
+                sliderA.addEventListener('input', () => {
+                    valA.textContent = sliderA.value;
+                    updateVisualization(parseFloat(sliderA.value), parseFloat(sliderB.value));
+                });
+                sliderB.addEventListener('input', () => {
+                    valB.textContent = sliderB.value;
+                    updateVisualization(parseFloat(sliderA.value), parseFloat(sliderB.value));
+                });
+                if (btn) {
+                    btn.addEventListener('click', () => {
+                        updateVisualization(parseFloat(sliderA.value), parseFloat(sliderB.value));
+                    });
+                }
+            }
+        } else {
+            setTimeout(waitForThree, 50);
+        }
+    }
+    waitForThree();
+})();
+</script>
+
+<!-- Energy slide 2D CFTP sampling -->
 <script>
 (async function() {
     'use strict';
+    console.log('[Energy2D] Starting...');
 
-    const canvas = document.getElementById('energy-canvas');
-    if (!canvas) return;
+    const canvas = document.getElementById('energy-2d-canvas');
+    if (!canvas) { console.log('[Energy2D] No canvas'); return; }
     const ctx = canvas.getContext('2d');
 
     // Wait for LozengeModule
     while (typeof LozengeModule === 'undefined') {
         await new Promise(r => setTimeout(r, 50));
     }
-
-    // Create separate WASM instance
     const wasm = await LozengeModule();
+    console.log('[Energy2D] WASM loaded');
+
     const initFromTriangles = wasm.cwrap('initFromTriangles', 'number', ['number', 'number']);
     const runCFTP = wasm.cwrap('runCFTP', 'number', []);
     const exportDimersWasm = wasm.cwrap('exportDimers', 'number', []);
     const freeString = wasm.cwrap('freeString', null, ['number']);
 
-    let currentDimers = [];
-    let currentSlope = 0;
-    const colors = ['#E57200', '#232D4B', '#F9DCBF'];
+    const N = 20;
+    const colors = ['#E57200', '#232D4B', '#F9DCBF']; // UVA colors
 
-    // Triangular lattice helpers
-    const slopeConst = 1 / Math.sqrt(3);
-    const deltaC = 2 / Math.sqrt(3);
-    function getVertex(n, j) { return { x: n, y: slopeConst * n + j * deltaC }; }
+    // Generate stepped path on cylinder (same as 3D viz)
+    function generateSteppedPath(A, B) {
+        const path = [];
+        function addPoint(x, y, h, prevH) {
+            if (path.length > 0 && h !== prevH) {
+                const lastPt = path[path.length - 1];
+                if (h > prevH) {
+                    for (let hh = prevH + 1; hh <= h; hh++) {
+                        path.push({ x: lastPt.x, y: lastPt.y, z: hh });
+                    }
+                } else {
+                    for (let hh = prevH - 1; hh >= h; hh--) {
+                        path.push({ x: lastPt.x, y: lastPt.y, z: hh });
+                    }
+                }
+            }
+            path.push({ x, y, z: h });
+            return h;
+        }
 
-    function getRightTriangleCentroid(n, j) {
-        const v1 = getVertex(n, j), v2 = getVertex(n, j - 1), v3 = getVertex(n + 1, j - 1);
-        return { x: (v1.x + v2.x + v3.x) / 3, y: (v1.y + v2.y + v3.y) / 3 };
+        let prevH = Math.round(A * 0 + B * 0);
+        path.push({ x: 0, y: 0, z: prevH });
+
+        for (let x = 1; x <= N; x++) {
+            prevH = addPoint(x, 0, Math.round(A * x + B * 0), prevH);
+        }
+        for (let y = 1; y <= N; y++) {
+            prevH = addPoint(N, y, Math.round(A * N + B * y), prevH);
+        }
+        for (let x = N - 1; x >= 0; x--) {
+            prevH = addPoint(x, N, Math.round(A * x + B * N), prevH);
+        }
+        for (let y = N - 1; y >= 1; y--) {
+            prevH = addPoint(0, y, Math.round(A * 0 + B * y), prevH);
+        }
+        const h0 = Math.round(A * 0 + B * 0);
+        if (h0 !== prevH) {
+            addPoint(0, 0, h0, prevH);
+        }
+        return path;
     }
-    function getLeftTriangleCentroid(n, j) {
-        const v1 = getVertex(n, j), v2 = getVertex(n + 1, j), v3 = getVertex(n + 1, j - 1);
-        return { x: (v1.x + v2.x + v3.x) / 3, y: (v1.y + v2.y + v3.y) / 3 };
+
+    // Project to x+y+z=0 plane: (x,y,z) -> (x-t, y-t, z-t) where t=(x+y+z)/3
+    function projectToLattice(path) {
+        return path.map(p => {
+            const t = (p.x + p.y + p.z) / 3;
+            return { x: p.x - t, y: p.y - t, z: p.z - t };
+        });
     }
 
-    function pointInPolygon(x, y, polygon) {
-        if (polygon.length < 3) return false;
+    // Convert projected 3D coords to 2D triangular lattice coords
+    // On x+y+z=0 plane, we use (u,v) where u = x-z, v = y-z (or similar)
+    function to2DLattice(p3d) {
+        // Standard projection: u = x - z, v = y - z
+        return { u: p3d.x - p3d.z, v: p3d.y - p3d.z };
+    }
+
+    // Point-in-polygon test (ray casting)
+    function pointInPolygon(px, py, polygon) {
         let inside = false;
-        for (let i = 0, pj = polygon.length - 1; i < polygon.length; pj = i++) {
-            const xi = polygon[i].x, yi = polygon[i].y;
-            const xj = polygon[pj].x, yj = polygon[pj].y;
-            if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const xi = polygon[i].u, yi = polygon[i].v;
+            const xj = polygon[j].u, yj = polygon[j].v;
+            if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
                 inside = !inside;
             }
         }
         return inside;
     }
 
-    // Get lozenge vertices
-    function getLozengeVerts(dimer) {
-        const { bn, bj, t } = dimer;
-        if (t === 0) {
-            return [getVertex(bn, bj), getVertex(bn+1, bj), getVertex(bn+1, bj-1), getVertex(bn, bj-1)];
-        } else if (t === 1) {
-            return [getVertex(bn, bj), getVertex(bn+1, bj-1), getVertex(bn+1, bj-2), getVertex(bn, bj-1)];
-        } else {
-            return [getVertex(bn-1, bj), getVertex(bn, bj), getVertex(bn+1, bj-1), getVertex(bn, bj-1)];
-        }
-    }
+    // Generate triangles inside the projected boundary
+    function generateTriangles(A, B) {
+        const steppedPath = generateSteppedPath(A, B);
+        const projected3D = projectToLattice(steppedPath);
+        const polygon2D = projected3D.map(to2DLattice);
 
-    // Generate torus fundamental domain with jagged (lattice-following) boundary
-    // Parallelogram spanned by v1 = (W, 0) and v2 = (shearT, H + shearS)
-    // This gives 2D slope (t, s) where t ~ shearT/H, s ~ shearS/W
-    function generateTorusTriangles(W, H, shearT, shearS) {
-        const triangleArr = [];
+        // Get bounding box
+        const uVals = polygon2D.map(p => p.u);
+        const vVals = polygon2D.map(p => p.v);
+        const minU = Math.floor(Math.min(...uVals)) - 2;
+        const maxU = Math.ceil(Math.max(...uVals)) + 2;
+        const minV = Math.floor(Math.min(...vVals)) - 2;
+        const maxV = Math.ceil(Math.max(...vVals)) + 2;
 
-        for (let j = 0; j < H; j++) {
-            const nShift = Math.round(j * shearT / H);
-            for (let n = 0; n < W; n++) {
-                const jShift = Math.round(n * shearS / W);
-                const actualN = n + nShift;
-                const actualJ = j + jShift;
-                triangleArr.push(actualN, actualJ, 1);  // type=1 (black/right)
-                triangleArr.push(actualN, actualJ, 2);  // type=2 (white/left)
+        const triangles = [];
+
+        // For each lattice cell (n, j), check black and white triangles
+        // Black (right-pointing) centroid: (n + 2/3, j + 1/3) in (u,v) coords
+        // White (left-pointing) centroid: (n + 1/3, j + 2/3)
+        for (let n = minU; n <= maxU; n++) {
+            for (let j = minV; j <= maxV; j++) {
+                // Black triangle centroid
+                const blackU = n + 2/3, blackV = j + 1/3;
+                if (pointInPolygon(blackU, blackV, polygon2D)) {
+                    triangles.push(n, j, 1);
+                }
+                // White triangle centroid
+                const whiteU = n + 1/3, whiteV = j + 2/3;
+                if (pointInPolygon(whiteU, whiteV, polygon2D)) {
+                    triangles.push(n, j, 2);
+                }
             }
         }
-        return triangleArr;
+
+        return triangles;
     }
 
-    // Different 2D slopes (t, s)
-    function getTorusParams(slopeType) {
-        const size = 18;
-        const params = [
-            { W: size, H: size, shearT: 0, shearS: 0 },       // (t,s) = (0, 0)
-            { W: size, H: size, shearT: 6, shearS: 0 },       // (t,s) ~ (1/3, 0)
-            { W: size, H: size, shearT: 0, shearS: 6 },       // (t,s) ~ (0, 1/3)
-            { W: size, H: size, shearT: 6, shearS: 6 }        // (t,s) ~ (1/3, 1/3)
-        ];
-        return params[slopeType] || params[0];
-    }
+    // Draw lozenges from dimers array (each dimer has {bn, bj, t})
+    function drawFromDimers(dimers, triangleArr) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    function resize() {
-        const w = canvas.clientWidth, h = canvas.clientHeight;
-        if (w === 0 || h === 0) return;
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        canvas.width = w * dpr;
-        canvas.height = h * dpr;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-    resize();
-    window.addEventListener('resize', () => { resize(); draw(); });
-
-    // Compute bounding box
-    function computeBounds() {
-        if (currentDimers.length === 0) return { minX: -10, maxX: 10, minY: -10, maxY: 10 };
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        for (const d of currentDimers) {
-            const verts = getLozengeVerts(d);
-            for (const v of verts) {
-                if (v.x < minX) minX = v.x;
-                if (v.x > maxX) maxX = v.x;
-                if (v.y < minY) minY = v.y;
-                if (v.y > maxY) maxY = v.y;
-            }
-        }
-        return { minX, maxX, minY, maxY };
-    }
-
-    function draw() {
-        const w = canvas.clientWidth, h = canvas.clientHeight;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, w, h);
-
-        if (currentDimers.length === 0) {
-            ctx.fillStyle = '#999';
-            ctx.font = '16px sans-serif';
+        if (!dimers || dimers.length === 0) {
+            ctx.fillStyle = '#c00';
+            ctx.font = '14px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('Click a slope button to sample', w/2, h/2);
+            ctx.fillText('No dimers returned', canvas.width/2, canvas.height/2);
             return;
         }
 
-        const bounds = computeBounds();
-        const worldW = bounds.maxX - bounds.minX;
-        const worldH = bounds.maxY - bounds.minY;
-        const padding = 0.1;
-        const scale = Math.min(w / (worldW * (1 + padding)), h / (worldH * (1 + padding)));
-        const centerX = w / 2 - (bounds.minX + bounds.maxX) / 2 * scale;
-        const centerY = h / 2 + (bounds.minY + bounds.maxY) / 2 * scale;
+        console.log('[Energy2D] Drawing', dimers.length, 'dimers');
 
-        // Draw lozenges
-        for (const d of currentDimers) {
-            const verts = getLozengeVerts(d);
-            const canvasVerts = verts.map(v => [centerX + v.x * scale, centerY - v.y * scale]);
+        // Get bounds from triangles
+        const triCoords = [];
+        for (let i = 0; i < triangleArr.length; i += 3) {
+            triCoords.push({ n: triangleArr[i], j: triangleArr[i+1] });
+        }
+        if (triCoords.length === 0) return;
 
-            ctx.fillStyle = colors[d.t];
+        const nVals = triCoords.map(t => t.n);
+        const jVals = triCoords.map(t => t.j);
+        const minN = Math.min(...nVals), maxN = Math.max(...nVals);
+        const minJ = Math.min(...jVals), maxJ = Math.max(...jVals);
+
+        const sqrt3 = Math.sqrt(3);
+        const rangeN = maxN - minN + 2;
+        const rangeJ = maxJ - minJ + 2;
+        const scale = Math.min(canvas.width / (rangeN * 1.2), canvas.height / (rangeJ * sqrt3 / 2 * 1.2));
+        const centerN = (minN + maxN) / 2;
+        const centerJ = (minJ + maxJ) / 2;
+
+        function toCanvas(n, j) {
+            const x = (n - centerN) + (j - centerJ) * 0.5;
+            const y = (j - centerJ) * sqrt3 / 2;
+            return { x: canvas.width/2 + x * scale, y: canvas.height/2 - y * scale };
+        }
+
+        // Draw each lozenge using {bn, bj, t} format
+        for (const d of dimers) {
+            const bn = d.bn, bj = d.bj, t = d.t;
+            let verts;
+
+            // Vertex calculation based on lozenge type
+            if (t === 0) { // horizontal
+                verts = [toCanvas(bn, bj), toCanvas(bn + 1, bj), toCanvas(bn + 1, bj - 1), toCanvas(bn, bj - 1)];
+            } else if (t === 1) { // NE-SW diagonal
+                verts = [toCanvas(bn, bj), toCanvas(bn + 1, bj - 1), toCanvas(bn + 1, bj - 2), toCanvas(bn, bj - 1)];
+            } else { // NW-SE diagonal (t === 2)
+                verts = [toCanvas(bn - 1, bj), toCanvas(bn, bj), toCanvas(bn + 1, bj - 1), toCanvas(bn, bj - 1)];
+            }
+
             ctx.beginPath();
-            ctx.moveTo(canvasVerts[0][0], canvasVerts[0][1]);
-            for (let i = 1; i < canvasVerts.length; i++) {
-                ctx.lineTo(canvasVerts[i][0], canvasVerts[i][1]);
+            ctx.moveTo(verts[0].x, verts[0].y);
+            for (let v = 1; v < verts.length; v++) {
+                ctx.lineTo(verts[v].x, verts[v].y);
             }
             ctx.closePath();
+            ctx.fillStyle = colors[t];
             ctx.fill();
-
-            ctx.strokeStyle = '#333333';
-            ctx.lineWidth = 0.5;
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 0.8;
             ctx.stroke();
         }
     }
 
-    async function sampleAtSlope(slopeType) {
-        currentSlope = slopeType;
+    // Sample function
+    async function sample(A, B) {
+        console.log('[Energy2D] Sampling A=' + A + ', B=' + B);
 
-        // Update button styles
-        document.querySelectorAll('.energy-slope-btn').forEach(btn => {
-            const isActive = parseInt(btn.dataset.slope) === slopeType;
-            btn.style.background = isActive ? 'var(--slide-accent)' : 'white';
-            btn.style.color = isActive ? 'white' : 'var(--slide-accent)';
-        });
+        const triangles = generateTriangles(A, B);
+        console.log('[Energy2D] Generated', triangles.length / 3, 'triangles');
 
-        // Generate torus fundamental domain with jagged boundary at given 2D slope (t,s)
-        const { W, H, shearT, shearS } = getTorusParams(slopeType);
-        const triArr = generateTorusTriangles(W, H, shearT, shearS);
+        // Count black/white
+        let black = 0, white = 0;
+        for (let i = 2; i < triangles.length; i += 3) {
+            if (triangles[i] === 1) black++;
+            else white++;
+        }
+        console.log('[Energy2D] Black:', black, 'White:', white);
 
-        const ptr = wasm._malloc(triArr.length * 4);
-        for (let i = 0; i < triArr.length; i++) {
-            wasm.setValue(ptr + i * 4, triArr[i], 'i32');
+        if (black !== white) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#c00';
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Invalid: ' + black + ' black ≠ ' + white + ' white triangles', canvas.width/2, canvas.height/2);
+            return;
         }
 
-        try {
-            initFromTriangles(ptr, triArr.length);
-            wasm._free(ptr);
-
-            // Run CFTP
-            runCFTP();
-
-            // Export dimers
-            const strPtr = exportDimersWasm();
-            const jsonStr = wasm.UTF8ToString(strPtr);
-            freeString(strPtr);
-
-            const parsed = JSON.parse(jsonStr);
-            currentDimers = Array.isArray(parsed.dimers) ? parsed.dimers : [];
-        } catch (e) {
-            console.error('Energy CFTP error:', e);
-            currentDimers = [];
-            wasm._free(ptr);
+        // Pass to WASM
+        const dataPtr = wasm._malloc(triangles.length * 4);
+        for (let i = 0; i < triangles.length; i++) {
+            wasm.setValue(dataPtr + i * 4, triangles[i], 'i32');
         }
+        const initPtr = initFromTriangles(dataPtr, triangles.length);
+        freeString(initPtr);
+        wasm._free(dataPtr);
 
-        draw();
+        // Run CFTP
+        const cftpPtr = runCFTP();
+        const cftpResult = wasm.UTF8ToString(cftpPtr);
+        freeString(cftpPtr);
+        console.log('[Energy2D] CFTP result:', cftpResult);
+
+        // Export dimers as JSON
+        const dimersPtr = exportDimersWasm();
+        const dimersJson = wasm.UTF8ToString(dimersPtr);
+        freeString(dimersPtr);
+
+        const parsed = JSON.parse(dimersJson);
+        const dimers = parsed.dimers || [];
+        console.log('[Energy2D] Got', dimers.length, 'dimers');
+
+        // Draw result
+        drawFromDimers(dimers, triangles);
     }
 
-    // Set up button handlers
-    document.querySelectorAll('.energy-slope-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            sampleAtSlope(parseInt(btn.dataset.slope));
-        });
-    });
+    // Wire up Sample button
+    const btn = document.getElementById('energy-sample');
+    const sliderA = document.getElementById('gradient-a');
+    const sliderB = document.getElementById('gradient-b');
 
-    // Initial sample
-    sampleAtSlope(0);
+    if (btn && sliderA && sliderB) {
+        btn.addEventListener('click', () => {
+            sample(parseFloat(sliderA.value), parseFloat(sliderB.value));
+        });
+
+        // Initial sample
+        sample(0.3, 0.3);
+    }
+
+    console.log('[Energy2D] Ready');
 })();
 </script>
 
