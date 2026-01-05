@@ -4278,7 +4278,7 @@ window.addEventListener('wasm-loaded', async function() {
                 <strong style="color: var(--slide-accent);">How to get limit shape?</strong>
                 <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
                     <li>Approximate any surface by piecewise-planar patches</li>
-                    <li>Figure out how many configurations approximate a given continuous slope \((A,B)\)</li>
+                    <li>Count configurations approximating a given slope \((A,B)\)</li>
                     <li>Integrate and maximize to get the typical shape</li>
                 </ul>
             </div>
@@ -4304,7 +4304,7 @@ window.addEventListener('wasm-loaded', async function() {
             <!-- KOS 2006 -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-accent);">Generalization [Kenyon-Okounkov-Sheffield 2006]</strong><br>
-                Our surfaces are formed from \(1\times 1\) squares in three coordinate directions.
+                Our surfaces use \(1\times 1\) squares in three coordinate directions.
                 The theory of limit shapes generalizes
                 to surfaces from plaquettes of other shapes, possibly weighted.
                 Local energy expressed through <b>algebraic geometry</b> of the plaquettes.
@@ -4324,6 +4324,7 @@ window.addEventListener('wasm-loaded', async function() {
                     B: <input type="number" id="gradient-b" min="-5" max="5" step="0.1" value="0.3" style="width: 4em; font-size: inherit; padding: 0.2em;">
                 </label>
                 <button id="energy-sample" style="padding: 0.3em 0.6em; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px; font-size: inherit;">Sample</button>
+                <span style="color: #888; margin-left: 0.5vw;">plane z=Ax+By</span>
             </div>
         </div>
     </div>
@@ -5032,16 +5033,504 @@ window.addEventListener('wasm-loaded', async function() {
 </script>
 
 <!-- ==================== Q-volume deformations ==================== -->
-<section class="slide slide-center" id="q-volume" data-title="Q-volume deformations">
-    <h2 style="font-size: clamp(2.5rem, 4vw, 4rem);">Q-volume deformations</h2>
-    <p style="font-size: clamp(1.5rem, 2.5vw, 2rem); color: var(--slide-muted); margin-top: 3vh;">[Content coming soon]</p>
+<section class="slide slide-top" id="q-volume" data-title="Q-volume deformations">
+    <h2 class="slide-title">Q-volume deformations</h2>
+    <div style="display: grid; grid-template-columns: 0.4fr 0.6fr; gap: 2vw; margin-top: 1vh; width: 100%; align-items: start;">
+        <!-- Left: Text explanation -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">q-weighted measure</strong><br>
+                Weight each tiling by \(q^{\text{volume}}\)<br>
+                where volume = 3D volume under stepped surface
+            </div>
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Effect of q</strong><br>
+                \(q > 1\): favor flatter tilings (more volume)<br>
+                \(q < 1\): favor tilted tilings (less volume)<br>
+                \(q = 1\): uniform measure
+            </div>
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Limit shapes change</strong><br>
+                Different q → different variational problem<br>
+                → different frozen/liquid boundaries
+            </div>
+        </div>
+        <!-- Right: Three tilings side by side -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
+            <div style="display: flex; gap: 1vw; justify-content: center;">
+                <div style="text-align: center;">
+                    <canvas id="qvol-canvas-low" width="400" height="400" style="width: 18vw; height: 18vw; border: 1px solid #ccc;"></canvas>
+                    <div style="font-size: clamp(0.9rem, 1.5vw, 1.2rem); margin-top: 0.5vh;">q = 0.7 (tilted)</div>
+                </div>
+                <div style="text-align: center;">
+                    <canvas id="qvol-canvas-mid" width="400" height="400" style="width: 18vw; height: 18vw; border: 1px solid #ccc;"></canvas>
+                    <div style="font-size: clamp(0.9rem, 1.5vw, 1.2rem); margin-top: 0.5vh;">q = 1 (uniform)</div>
+                </div>
+                <div style="text-align: center;">
+                    <canvas id="qvol-canvas-high" width="400" height="400" style="width: 18vw; height: 18vw; border: 1px solid #ccc;"></canvas>
+                    <div style="font-size: clamp(0.9rem, 1.5vw, 1.2rem); margin-top: 0.5vh;">q = 1.4 (flat)</div>
+                </div>
+            </div>
+            <button id="qvol-sample-btn" style="padding: 0.5em 1.5em; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px; font-size: clamp(0.9rem, 1.5vw, 1.2rem);">Re-sample All</button>
+        </div>
+    </div>
 </section>
 
+<!-- Q-volume slide script -->
+<script>
+(async function() {
+    'use strict';
+
+    const canvasLow = document.getElementById('qvol-canvas-low');
+    const canvasMid = document.getElementById('qvol-canvas-mid');
+    const canvasHigh = document.getElementById('qvol-canvas-high');
+    const sampleBtn = document.getElementById('qvol-sample-btn');
+    if (!canvasLow || !canvasMid || !canvasHigh) return;
+
+    // Wait for LozengeModule
+    while (typeof LozengeModule === 'undefined') {
+        await new Promise(r => setTimeout(r, 50));
+    }
+
+    // Create three separate WASM instances
+    const wasmLow = await LozengeModule();
+    const wasmMid = await LozengeModule();
+    const wasmHigh = await LozengeModule();
+
+    function setupWasm(wasm) {
+        return {
+            wasm,
+            initFromTriangles: wasm.cwrap('initFromTriangles', 'number', ['number', 'number']),
+            performGlauberSteps: wasm.cwrap('performGlauberSteps', 'number', ['number']),
+            exportDimers: wasm.cwrap('exportDimers', 'number', []),
+            freeString: wasm.cwrap('freeString', null, ['number']),
+            setQBias: wasm.cwrap('setQBias', null, ['number']),
+            setUseRandomSweeps: wasm.cwrap('setUseRandomSweeps', null, ['number'])
+        };
+    }
+
+    const simLow = setupWasm(wasmLow);
+    const simMid = setupWasm(wasmMid);
+    const simHigh = setupWasm(wasmHigh);
+
+    const colors = ['#E57200', '#232D4B', '#F9DCBF'];
+    const slope = 1 / Math.sqrt(3);
+    const deltaC = 2 / Math.sqrt(3);
+
+    function getVertex(n, j) { return { x: n, y: slope * n + j * deltaC }; }
+
+    // Generate 8×8×8 hexagon triangles
+    function generateHexTriangles(size) {
+        const a = size, b = size, c = size;
+        const directions = [[1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1]];
+        const sideLengths = [a, b, c, a, b, c];
+        const boundary = [];
+        let bn = 0, bj = 0;
+        for (let side = 0; side < 6; side++) {
+            const [dn, dj] = directions[side];
+            for (let i = 0; i < sideLengths[side]; i++) {
+                boundary.push({ x: getVertex(bn, bj).x, y: getVertex(bn, bj).y });
+                bn += dn; bj += dj;
+            }
+        }
+
+        function pointInPolygon(px, py, poly) {
+            let inside = false;
+            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                const xi = poly[i].x, yi = poly[i].y;
+                const xj = poly[j].x, yj = poly[j].y;
+                if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        }
+
+        const triangles = [];
+        for (let n = -size; n <= 2 * size; n++) {
+            for (let j = -size; j <= 2 * size; j++) {
+                // Black triangle centroid
+                const v1 = getVertex(n, j), v2 = getVertex(n, j-1), v3 = getVertex(n+1, j-1);
+                const bcx = (v1.x + v2.x + v3.x) / 3, bcy = (v1.y + v2.y + v3.y) / 3;
+                if (pointInPolygon(bcx, bcy, boundary)) triangles.push(n, j, 1);
+                // White triangle centroid
+                const w1 = getVertex(n, j), w2 = getVertex(n+1, j), w3 = getVertex(n+1, j-1);
+                const wcx = (w1.x + w2.x + w3.x) / 3, wcy = (w1.y + w2.y + w3.y) / 3;
+                if (pointInPolygon(wcx, wcy, boundary)) triangles.push(n, j, 2);
+            }
+        }
+        return triangles;
+    }
+
+    function initSim(sim, triangles) {
+        const dataPtr = sim.wasm._malloc(triangles.length * 4);
+        for (let i = 0; i < triangles.length; i++) {
+            sim.wasm.setValue(dataPtr + i * 4, triangles[i], 'i32');
+        }
+        const ptr = sim.initFromTriangles(dataPtr, triangles.length);
+        sim.freeString(ptr);
+        sim.wasm._free(dataPtr);
+        sim.setUseRandomSweeps(1);
+    }
+
+    function runGlauber(sim, steps) {
+        const ptr = sim.performGlauberSteps(steps);
+        sim.freeString(ptr);
+    }
+
+    function getDimers(sim) {
+        const ptr = sim.exportDimers();
+        const json = sim.wasm.UTF8ToString(ptr);
+        sim.freeString(ptr);
+        const parsed = JSON.parse(json);
+        return parsed.dimers || [];
+    }
+
+    function drawTiling(canvas, dimers) {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width, h = canvas.height;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+
+        if (!dimers || dimers.length === 0) return;
+
+        // Compute bounds
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const d of dimers) {
+            const verts = getLozengeVerts(d);
+            for (const v of verts) {
+                minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+                minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+            }
+        }
+        const scale = Math.min(w / (maxX - minX), h / (maxY - minY)) * 0.9;
+        const cx = w / 2 - ((minX + maxX) / 2) * scale;
+        const cy = h / 2 + ((minY + maxY) / 2) * scale;
+
+        for (const d of dimers) {
+            const verts = getLozengeVerts(d);
+            ctx.beginPath();
+            ctx.moveTo(cx + verts[0].x * scale, cy - verts[0].y * scale);
+            for (let i = 1; i < 4; i++) ctx.lineTo(cx + verts[i].x * scale, cy - verts[i].y * scale);
+            ctx.closePath();
+            ctx.fillStyle = colors[d.t];
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        }
+    }
+
+    function getLozengeVerts(d) {
+        const { bn, bj, t } = d;
+        if (t === 0) return [getVertex(bn, bj), getVertex(bn+1, bj), getVertex(bn+1, bj-1), getVertex(bn, bj-1)];
+        if (t === 1) return [getVertex(bn, bj), getVertex(bn+1, bj-1), getVertex(bn+1, bj-2), getVertex(bn, bj-1)];
+        return [getVertex(bn-1, bj), getVertex(bn, bj), getVertex(bn+1, bj-1), getVertex(bn, bj-1)];
+    }
+
+    const triangles = generateHexTriangles(8);
+    let initialized = false;
+
+    async function sampleAll() {
+        if (!initialized) {
+            initSim(simLow, triangles);
+            initSim(simMid, triangles);
+            initSim(simHigh, triangles);
+            initialized = true;
+        }
+
+        simLow.setQBias(0.7);
+        simMid.setQBias(1.0);
+        simHigh.setQBias(1.4);
+
+        // Run enough steps for mixing
+        runGlauber(simLow, 50000);
+        runGlauber(simMid, 50000);
+        runGlauber(simHigh, 50000);
+
+        drawTiling(canvasLow, getDimers(simLow));
+        drawTiling(canvasMid, getDimers(simMid));
+        drawTiling(canvasHigh, getDimers(simHigh));
+    }
+
+    sampleBtn.addEventListener('click', sampleAll);
+
+    // Register with slide engine
+    function waitForSlideEngine() {
+        if (window.slideEngine) {
+            window.slideEngine.registerSimulation('q-volume', {
+                start() {},
+                pause() {},
+                onSlideEnter() { if (!initialized) sampleAll(); },
+                onSlideLeave() {}
+            }, 0);
+        } else {
+            setTimeout(waitForSlideEngine, 50);
+        }
+    }
+    waitForSlideEngine();
+})();
+</script>
+
 <!-- ==================== Fluctuations ==================== -->
-<section class="slide slide-center" id="fluctuations" data-title="Fluctuations">
-    <h2 style="font-size: clamp(2.5rem, 4vw, 4rem);">Fluctuations</h2>
-    <p style="font-size: clamp(1.5rem, 2.5vw, 2rem); color: var(--slide-muted); margin-top: 3vh;">[Content coming soon]</p>
+<section class="slide slide-top" id="fluctuations" data-title="Fluctuations">
+    <h2 class="slide-title">Fluctuations & 2D Models</h2>
+    <div style="display: grid; grid-template-columns: 0.45fr 0.55fr; gap: 2vw; margin-top: 1vh; width: 100%; align-items: start;">
+        <!-- Left: Text explanation -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Double dimer model</strong><br>
+                Superimpose two independent tilings<br>
+                → union of edges forms loops
+            </div>
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Height fluctuations</strong><br>
+                Difference of two height functions:<br>
+                \(\displaystyle\frac{h_1 - h_2}{\sqrt{2}} \to \text{GFF}\) (Gaussian Free Field)
+            </div>
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Back to 2D</strong><br>
+                3D surfaces → 2D height function<br>
+                Fluctuations governed by conformal field theory<br>
+                Loop statistics ↔ SLE curves
+            </div>
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Universal behavior</strong><br>
+                Same GFF appears in many 2D models:<br>
+                dimers, spanning trees, Ising, ...
+            </div>
+        </div>
+        <!-- Right: Double dimer visualization -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
+            <canvas id="double-dimer-canvas" width="800" height="700" style="width: 45vw; height: 70vh; border: 1px solid #ccc;"></canvas>
+            <button id="double-dimer-btn" style="padding: 0.5em 1.5em; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px; font-size: clamp(0.9rem, 1.5vw, 1.2rem);">Re-sample Double Dimer</button>
+        </div>
+    </div>
 </section>
+
+<!-- Fluctuations slide script -->
+<script>
+(async function() {
+    'use strict';
+
+    const canvas = document.getElementById('double-dimer-canvas');
+    const sampleBtn = document.getElementById('double-dimer-btn');
+    if (!canvas) return;
+
+    // Wait for LozengeModule
+    while (typeof LozengeModule === 'undefined') {
+        await new Promise(r => setTimeout(r, 50));
+    }
+
+    const wasm = await LozengeModule();
+
+    const initFromTriangles = wasm.cwrap('initFromTriangles', 'number', ['number', 'number']);
+    const runCFTP = wasm.cwrap('runCFTP', 'number', []);
+    const exportDimers = wasm.cwrap('exportDimers', 'number', []);
+    const freeString = wasm.cwrap('freeString', null, ['number']);
+
+    const slope = 1 / Math.sqrt(3);
+    const deltaC = 2 / Math.sqrt(3);
+    function getVertex(n, j) { return { x: n, y: slope * n + j * deltaC }; }
+
+    // Generate hexagon triangles
+    function generateHexTriangles(size) {
+        const a = size, b = size, c = size;
+        const directions = [[1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1]];
+        const sideLengths = [a, b, c, a, b, c];
+        const boundary = [];
+        let bn = 0, bj = 0;
+        for (let side = 0; side < 6; side++) {
+            const [dn, dj] = directions[side];
+            for (let i = 0; i < sideLengths[side]; i++) {
+                boundary.push({ x: getVertex(bn, bj).x, y: getVertex(bn, bj).y });
+                bn += dn; bj += dj;
+            }
+        }
+
+        function pointInPolygon(px, py, poly) {
+            let inside = false;
+            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                const xi = poly[i].x, yi = poly[i].y;
+                const xj = poly[j].x, yj = poly[j].y;
+                if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        }
+
+        const triangles = [];
+        for (let n = -size; n <= 2 * size; n++) {
+            for (let j = -size; j <= 2 * size; j++) {
+                const v1 = getVertex(n, j), v2 = getVertex(n, j-1), v3 = getVertex(n+1, j-1);
+                const bcx = (v1.x + v2.x + v3.x) / 3, bcy = (v1.y + v2.y + v3.y) / 3;
+                if (pointInPolygon(bcx, bcy, boundary)) triangles.push(n, j, 1);
+                const w1 = getVertex(n, j), w2 = getVertex(n+1, j), w3 = getVertex(n+1, j-1);
+                const wcx = (w1.x + w2.x + w3.x) / 3, wcy = (w1.y + w2.y + w3.y) / 3;
+                if (pointInPolygon(wcx, wcy, boundary)) triangles.push(n, j, 2);
+            }
+        }
+        return triangles;
+    }
+
+    function initRegion(triangles) {
+        const dataPtr = wasm._malloc(triangles.length * 4);
+        for (let i = 0; i < triangles.length; i++) {
+            wasm.setValue(dataPtr + i * 4, triangles[i], 'i32');
+        }
+        const ptr = initFromTriangles(dataPtr, triangles.length);
+        freeString(ptr);
+        wasm._free(dataPtr);
+    }
+
+    function sampleCFTP() {
+        const ptr = runCFTP();
+        freeString(ptr);
+        const dimPtr = exportDimers();
+        const json = wasm.UTF8ToString(dimPtr);
+        freeString(dimPtr);
+        return JSON.parse(json).dimers || [];
+    }
+
+    // Get dimer edge as string key
+    function dimerEdgeKey(d) {
+        const { bn, bj, t } = d;
+        // Return the edge connecting black to white triangle centers
+        if (t === 0) return `${bn},${bj}-${bn},${bj-1}`;  // horizontal
+        if (t === 1) return `${bn},${bj}-${bn+1},${bj-1}`;  // NE-SW
+        return `${bn-1},${bj}-${bn},${bj-1}`;  // NW-SE
+    }
+
+    // Get the two triangle centers for a dimer
+    function getDimerCenters(d) {
+        const { bn, bj, t } = d;
+        // Black triangle center (right-pointing)
+        const blackV1 = getVertex(bn, bj), blackV2 = getVertex(bn, bj-1), blackV3 = getVertex(bn+1, bj-1);
+        const blackCenter = { x: (blackV1.x + blackV2.x + blackV3.x)/3, y: (blackV1.y + blackV2.y + blackV3.y)/3 };
+
+        // White triangle center depends on type
+        let whiteCenter;
+        if (t === 0) {
+            const wv1 = getVertex(bn, bj-1), wv2 = getVertex(bn+1, bj-1), wv3 = getVertex(bn+1, bj-2);
+            whiteCenter = { x: (wv1.x + wv2.x + wv3.x)/3, y: (wv1.y + wv2.y + wv3.y)/3 };
+        } else if (t === 1) {
+            const wv1 = getVertex(bn+1, bj), wv2 = getVertex(bn+1, bj-1), wv3 = getVertex(bn+2, bj-1);
+            whiteCenter = { x: (wv1.x + wv2.x + wv3.x)/3, y: (wv1.y + wv2.y + wv3.y)/3 };
+        } else {
+            const wv1 = getVertex(bn-1, bj-1), wv2 = getVertex(bn, bj-1), wv3 = getVertex(bn, bj-2);
+            whiteCenter = { x: (wv1.x + wv2.x + wv3.x)/3, y: (wv1.y + wv2.y + wv3.y)/3 };
+        }
+        return { black: blackCenter, white: whiteCenter };
+    }
+
+    function drawDoubleDimer(dimers1, dimers2) {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width, h = canvas.height;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+
+        // Get all centers for bounds
+        const allCenters = [];
+        for (const d of [...dimers1, ...dimers2]) {
+            const c = getDimerCenters(d);
+            allCenters.push(c.black, c.white);
+        }
+
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const c of allCenters) {
+            minX = Math.min(minX, c.x); maxX = Math.max(maxX, c.x);
+            minY = Math.min(minY, c.y); maxY = Math.max(maxY, c.y);
+        }
+
+        const scale = Math.min(w / (maxX - minX), h / (maxY - minY)) * 0.85;
+        const cx = w / 2 - ((minX + maxX) / 2) * scale;
+        const cy = h / 2 + ((minY + maxY) / 2) * scale;
+
+        function tx(x) { return cx + x * scale; }
+        function ty(y) { return cy - y * scale; }
+
+        // Build edge sets
+        const edges1 = new Set(dimers1.map(dimerEdgeKey));
+        const edges2 = new Set(dimers2.map(dimerEdgeKey));
+
+        // Draw edges only in sample 1 (blue)
+        ctx.strokeStyle = '#2E86AB';
+        ctx.lineWidth = 2;
+        for (const d of dimers1) {
+            const key = dimerEdgeKey(d);
+            if (!edges2.has(key)) {
+                const c = getDimerCenters(d);
+                ctx.beginPath();
+                ctx.moveTo(tx(c.black.x), ty(c.black.y));
+                ctx.lineTo(tx(c.white.x), ty(c.white.y));
+                ctx.stroke();
+            }
+        }
+
+        // Draw edges only in sample 2 (orange)
+        ctx.strokeStyle = '#E57200';
+        ctx.lineWidth = 2;
+        for (const d of dimers2) {
+            const key = dimerEdgeKey(d);
+            if (!edges1.has(key)) {
+                const c = getDimerCenters(d);
+                ctx.beginPath();
+                ctx.moveTo(tx(c.black.x), ty(c.black.y));
+                ctx.lineTo(tx(c.white.x), ty(c.white.y));
+                ctx.stroke();
+            }
+        }
+
+        // Draw shared edges (gray, thin)
+        ctx.strokeStyle = '#cccccc';
+        ctx.lineWidth = 1;
+        for (const d of dimers1) {
+            const key = dimerEdgeKey(d);
+            if (edges2.has(key)) {
+                const c = getDimerCenters(d);
+                ctx.beginPath();
+                ctx.moveTo(tx(c.black.x), ty(c.black.y));
+                ctx.lineTo(tx(c.white.x), ty(c.white.y));
+                ctx.stroke();
+            }
+        }
+    }
+
+    const triangles = generateHexTriangles(12);
+    let initialized = false;
+
+    async function sample() {
+        if (!initialized) {
+            initRegion(triangles);
+            initialized = true;
+        }
+
+        // Get two independent samples
+        const dimers1 = sampleCFTP();
+        const dimers2 = sampleCFTP();
+
+        drawDoubleDimer(dimers1, dimers2);
+    }
+
+    sampleBtn.addEventListener('click', sample);
+
+    // Register with slide engine
+    function waitForSlideEngine() {
+        if (window.slideEngine) {
+            window.slideEngine.registerSimulation('fluctuations', {
+                start() {},
+                pause() {},
+                onSlideEnter() { if (!initialized) sample(); },
+                onSlideLeave() {}
+            }, 0);
+        } else {
+            setTimeout(waitForSlideEngine, 50);
+        }
+    }
+    waitForSlideEngine();
+})();
+</script>
 
 <!-- ==================== PART 3: Algorithmic Magic ==================== -->
 
