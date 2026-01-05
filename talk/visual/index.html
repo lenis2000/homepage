@@ -2467,20 +2467,24 @@ window.addEventListener('wasm-loaded', async function() {
                 </span>
             </div>
 
-            <!-- Block 2: Energy Functional -->
+            <!-- Block 2: How to get limit shape -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
-                <strong style="color: var(--slide-accent);">Variational principle for shape \(y=f(x)\):</strong><br>
+                <strong style="color: var(--slide-accent);">How to get limit shape?</strong><br>
+                <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
+                    <li>Approximate any curve by a piecewise-linear trajectory</li>
+                    <li>Locally, we know how many configurations approximate a given line</li>
+                    <li>Integrate and maximize to get the typical shape</li>
+                </ul>
+            </div>
+
+            <!-- Block 3: Energy Functional -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Variational principle for the limit shape \(y=f(x)\):</strong><br>
                 Maximize
 <span style="color: #232D4B; font-weight: 800; font-size: 1.15em; letter-spacing: 0.01em;">energy − γ·area</span>
 								= <br>
-                \(\int \sigma(f'(x)) \, dx - \gamma \cdot \int f(x) \, dx\);<br>
+                \(\displaystyle \int \sigma(f'(x)) \, dx - \gamma \cdot \int f(x) \, dx\);<br>
                 <span style="font-size: 0.85em;">\(\sigma(s) = \lim \frac{1}{N}\log \binom{N(s+1)}{N}\) = energy.<br>The binomial coefficient is the number of paths having slope \(s\); we get the limit $\sigma(s) = (s+1)\log(s+1) - s\log(s)$.</span>
-            </div>
-
-            <!-- Block 3: Fluctuations -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
-                <strong style="color: var(--slide-accent);">Fluctuations:</strong> Random curve − limit shape<br>
-                <canvas id="fluctuations-canvas" width="800" height="300" style="width: 100%; height: 15vh; margin-top: 0.5vh;"></canvas>
             </div>
 
         </div>
@@ -2488,16 +2492,21 @@ window.addEventListener('wasm-loaded', async function() {
         <!-- Right: Simulation canvas -->
         <div style="display: flex; flex-direction: column; align-items: center;">
             <!-- gamma slider -->
-            <div style="display: flex; align-items: center; gap: 1vw; margin-bottom: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <div style="display: flex; align-items: center; gap: 1vw; margin-bottom: 0.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
                 <label for="gamma-slider" style="font-weight: bold;">γ = </label>
                 <input type="range" id="gamma-slider" min="-50" max="50" step="0.01" value="3.6" style="width: 12vw;">
                 <span id="gamma-value" style="font-weight: bold; min-width: 3em;">3.6</span>
                 <span style="margin-left: 1vw;">(q = <span id="q-limit-value">0.990</span>)</span>
                 <button id="q-limit-resample" style="padding: 0.5vh 1vw; cursor: pointer;">Resample</button>
             </div>
-            <canvas id="q-limit-canvas" width="1200" height="900" style="height: 70vh; width: auto;"></canvas>
-            <div style="font-size: clamp(0.9rem, 1.5vw, 1.1rem); color: var(--slide-muted); margin-top: 0.5vh;">
+            <div style="font-size: clamp(0.9rem, 1.5vw, 1.1rem); color: var(--slide-muted); margin-bottom: 0.5vh;">
                 <span>a = 360, b = 270</span> · <span id="q-limit-status">Loading...</span>
+            </div>
+            <canvas id="q-limit-canvas" width="1200" height="900" style="height: 55vh; width: auto;"></canvas>
+            <!-- Fluctuations block -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.5vh 1vw; margin-top: 1vh; width: 100%; box-sizing: border-box;">
+                <strong style="color: var(--slide-accent); font-size: clamp(1rem, 1.8vw, 1.4rem);">Fluctuations:</strong> <span style="font-size: clamp(1rem, 1.8vw, 1.4rem);">Random curve − limit shape</span><br>
+                <canvas id="fluctuations-canvas" width="800" height="200" style="width: 100%; height: 10vh; margin-top: 0.3vh;"></canvas>
             </div>
         </div>
     </div>
@@ -4345,17 +4354,25 @@ window.addEventListener('wasm-loaded', async function() {
             if (renderer) renderer.render(scene, camera);
         });
 
-        // Lighting (same as limit-shape)
-        scene.add(new THREE.AmbientLight(0xffffff, 0.35));
-        const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.25);
+        // Lighting - stronger for visibility during rotation
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));  // Stronger ambient
+        const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.3);
         hemi.position.set(0, 20, 0);
         scene.add(hemi);
-        const directional = new THREE.DirectionalLight(0xffffff, 1.2);
+        // Main key light
+        const directional = new THREE.DirectionalLight(0xffffff, 1.0);
         directional.position.set(15, 20, 5);
         scene.add(directional);
-        const fill = new THREE.DirectionalLight(0xffffff, 0.3);
-        fill.position.set(-10, 5, -5);
-        scene.add(fill);
+        // Fill lights from multiple angles for rotation visibility
+        const fill1 = new THREE.DirectionalLight(0xffffff, 0.6);
+        fill1.position.set(-15, 15, 10);
+        scene.add(fill1);
+        const fill2 = new THREE.DirectionalLight(0xffffff, 0.6);
+        fill2.position.set(10, 15, -15);
+        scene.add(fill2);
+        const fill3 = new THREE.DirectionalLight(0xffffff, 0.5);
+        fill3.position.set(-10, 10, -15);
+        scene.add(fill3);
 
         meshGroup = new THREE.Group();
         scene.add(meshGroup);
