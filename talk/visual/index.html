@@ -4281,339 +4281,116 @@ window.addEventListener('wasm-loaded', async function() {
         <!-- Right: Two canvases stacked - 3D viz and 2D tiling -->
         <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 1vh;">
             <!-- Controls at top -->
-            <div id="energy-controls" style="display: flex; gap: 1vw; align-items: center; flex-wrap: wrap; font-size: clamp(0.9rem, 1.5vw, 1.1rem);">
-                <label style="display: flex; align-items: center; gap: 0.3vw;">
-                    A: <input type="number" id="gradient-a" min="-5" max="5" step="0.1" value="0.3" style="width: 60px;">
+            <div id="energy-controls" style="display: flex; gap: 2vw; align-items: center; flex-wrap: wrap; font-size: clamp(1.5rem, 3vw, 2.2rem);">
+                <label style="display: flex; align-items: center; gap: 0.5vw;">
+                    A: <input type="number" id="gradient-a" min="-5" max="5" step="0.1" value="-0.2" style="width: 4em; font-size: inherit; padding: 0.3em;">
                 </label>
-                <label style="display: flex; align-items: center; gap: 0.3vw;">
-                    B: <input type="number" id="gradient-b" min="-5" max="5" step="0.1" value="0.3" style="width: 60px;">
+                <label style="display: flex; align-items: center; gap: 0.5vw;">
+                    B: <input type="number" id="gradient-b" min="-5" max="5" step="0.1" value="0.3" style="width: 4em; font-size: inherit; padding: 0.3em;">
                 </label>
-                <button id="energy-sample" style="padding: 0.5vh 1vw; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px;">Sample</button>
+                <button id="energy-sample" style="padding: 0.5em 1em; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px; font-size: inherit;">Sample</button>
             </div>
-            <!-- Two canvases side by side -->
-            <div style="display: flex; gap: 1vw; align-items: flex-start;">
-                <div style="display: flex; flex-direction: column; align-items: center;">
-                    <canvas id="energy-3d-canvas" width="600" height="450" style="height: 38vh; width: auto; border: 1px solid #ccc;"></canvas>
-                    <p style="font-size: clamp(0.7rem, 0.9vw, 0.9rem); color: var(--slide-muted); margin-top: 0.3vh;">3D: Stepped boundary on cylinder</p>
-                </div>
-                <div style="display: flex; flex-direction: column; align-items: center;">
-                    <canvas id="energy-2d-canvas" width="600" height="450" style="height: 38vh; width: auto; border: 1px solid #ccc; background: #fafafa;"></canvas>
-                    <p style="font-size: clamp(0.7rem, 0.9vw, 0.9rem); color: var(--slide-muted); margin-top: 0.3vh;">2D: CFTP sampled tiling</p>
-                </div>
-            </div>
+            <!-- 3D tiling canvas (main) -->
+            <canvas id="energy-tiling-canvas" width="800" height="600" style="height: 55vh; width: auto; border: 1px solid #ccc;"></canvas>
         </div>
     </div>
 </section>
 
-<!-- Energy slide 3D visualization -->
-<script>
-(function() {
-    'use strict';
-    console.log('[Energy3D] Starting...');
-
-    const canvas = document.getElementById('energy-3d-canvas');
-    if (!canvas) { console.log('[Energy3D] No canvas'); return; }
-
-    let scene, camera, renderer, controls;
-    let dynamicGroup;  // Group for objects that change with A,B
-
-    function init() {
-        console.log('[Energy3D] init()');
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xf8f8f8);
-
-        const w = canvas.clientWidth || 600;
-        const h = canvas.clientHeight || 450;
-        camera = new THREE.PerspectiveCamera(50, w/h, 1, 1000);
-        // In Three.js: Y is up. We want to view the XZ plane (our mathematical XY)
-        // with mathematical Z going up (Three.js Y)
-        camera.position.set(100, 80, 100);
-
-        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-        renderer.setSize(w, h);
-        console.log('[Energy3D] Renderer size:', w, h);
-
-        controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.target.set(25, 10, 25);
-        controls.update();
-
-        // Axes: X=red, Y=green (up in Three.js = Z in math), Z=blue
-        scene.add(new THREE.AxesHelper(60));
-
-        // Grid on the "ground" (XZ plane in Three.js = XY in math, at height 0)
-        const grid = new THREE.GridHelper(100, 20, 0xaaaaaa, 0xdddddd);
-        grid.position.set(25, 0, 25);
-        scene.add(grid);
-
-        // Cylinder wireframe: 50x50 in XZ (math XY), height in Y (math Z)
-        const SZ = 50;
-        const addLine = (x1,y1,z1, x2,y2,z2, color) => {
-            const g = new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(x1,y1,z1), new THREE.Vector3(x2,y2,z2)
-            ]);
-            scene.add(new THREE.Line(g, new THREE.LineBasicMaterial({color})));
-        };
-        // Vertical edges of cylinder (mathematical Z = Three.js Y)
-        addLine(0,-50,0, 0,50,0, 0x666666);
-        addLine(SZ,-50,0, SZ,50,0, 0x666666);
-        addLine(SZ,-50,SZ, SZ,50,SZ, 0x666666);
-        addLine(0,-50,SZ, 0,50,SZ, 0x666666);
-        // Bottom square
-        addLine(0,-50,0, SZ,-50,0, 0x666666);
-        addLine(SZ,-50,0, SZ,-50,SZ, 0x666666);
-        addLine(SZ,-50,SZ, 0,-50,SZ, 0x666666);
-        addLine(0,-50,SZ, 0,-50,0, 0x666666);
-        // Top square
-        addLine(0,50,0, SZ,50,0, 0x666666);
-        addLine(SZ,50,0, SZ,50,SZ, 0x666666);
-        addLine(SZ,50,SZ, 0,50,SZ, 0x666666);
-        addLine(0,50,SZ, 0,50,0, 0x666666);
-
-        dynamicGroup = new THREE.Group();
-        scene.add(dynamicGroup);
-
-        updateVisualization(0.3, 0.3);
-        animate();
-        console.log('[Energy3D] init complete');
-    }
-
-    // Three.js coordinate mapping: math (x,y,z) -> Three.js (x, z, y)
-    // i.e., math Z (height) becomes Three.js Y (up)
-    function mathToThree(x, y, z) {
-        return new THREE.Vector3(x, z, y);
-    }
-
-    // STEP 1: Generate DISCRETIZED stepped boundary on cylinder
-    // Walk around the 20x20 square, at each lattice point compute h = round(A*x + B*y)
-    // When h changes, add vertical step
-    function generateSteppedPath(N, A, B) {
-        const path = []; // Array of {x, y, z} points in 3D
-
-        // Helper: add point and vertical step if height changed
-        function addPoint(x, y, h, prevH) {
-            if (path.length > 0 && h !== prevH) {
-                // Add vertical step at current (x,y)
-                // Go from prevH to h
-                const lastPt = path[path.length - 1];
-                if (h > prevH) {
-                    for (let hh = prevH + 1; hh <= h; hh++) {
-                        path.push({ x: lastPt.x, y: lastPt.y, z: hh });
-                    }
-                } else {
-                    for (let hh = prevH - 1; hh >= h; hh--) {
-                        path.push({ x: lastPt.x, y: lastPt.y, z: hh });
-                    }
-                }
-            }
-            path.push({ x, y, z: h });
-            return h;
-        }
-
-        let prevH = Math.round(A * 0 + B * 0);
-        path.push({ x: 0, y: 0, z: prevH });
-
-        // Bottom edge: y=0, x goes 0→N
-        for (let x = 1; x <= N; x++) {
-            const h = Math.round(A * x + B * 0);
-            prevH = addPoint(x, 0, h, prevH);
-        }
-
-        // Right edge: x=N, y goes 0→N
-        for (let y = 1; y <= N; y++) {
-            const h = Math.round(A * N + B * y);
-            prevH = addPoint(N, y, h, prevH);
-        }
-
-        // Top edge: y=N, x goes N→0
-        for (let x = N - 1; x >= 0; x--) {
-            const h = Math.round(A * x + B * N);
-            prevH = addPoint(x, N, h, prevH);
-        }
-
-        // Left edge: x=0, y goes N→0
-        for (let y = N - 1; y >= 1; y--) {
-            const h = Math.round(A * 0 + B * y);
-            prevH = addPoint(0, y, h, prevH);
-        }
-
-        // Close: back to (0,0)
-        const h0 = Math.round(A * 0 + B * 0);
-        if (h0 !== prevH) {
-            addPoint(0, 0, h0, prevH);
-        }
-
-        return path;
-    }
-
-    function updateVisualization(A, B) {
-        const N = 50;
-
-        // Clear dynamic group
-        while (dynamicGroup.children.length > 0) {
-            const child = dynamicGroup.children[0];
-            if (child.geometry) child.geometry.dispose();
-            if (child.material) child.material.dispose();
-            dynamicGroup.remove(child);
-        }
-
-        // Create tilted plane z = A*x + B*y (semi-transparent blue)
-        const planeGeo = new THREE.BufferGeometry();
-        const planeVerts = new Float32Array([
-            -5, A*(-5) + B*(-5), -5,
-            25, A*25 + B*(-5), -5,
-            25, A*25 + B*25, 25,
-            -5, A*(-5) + B*25, 25
-        ]);
-        planeGeo.setAttribute('position', new THREE.BufferAttribute(planeVerts, 3));
-        planeGeo.setIndex([0, 1, 2, 0, 2, 3]);
-        planeGeo.computeVertexNormals();
-        dynamicGroup.add(new THREE.Mesh(planeGeo, new THREE.MeshBasicMaterial({
-            color: 0x4488ff,
-            transparent: true,
-            opacity: 0.3,
-            side: THREE.DoubleSide
-        })));
-
-        // STEP 1: Generate discretized stepped path on cylinder
-        const steppedPath = generateSteppedPath(N, A, B);
-        console.log('[Energy3D] Stepped path has', steppedPath.length, 'points');
-
-        // Draw stepped path on cylinder (orange, thick)
-        const steppedPoints = steppedPath.map(p => mathToThree(p.x, p.y, p.z));
-        steppedPoints.push(steppedPoints[0].clone()); // Close loop
-        const steppedGeo = new THREE.BufferGeometry().setFromPoints(steppedPoints);
-        dynamicGroup.add(new THREE.Line(steppedGeo, new THREE.LineBasicMaterial({ color: 0xff6600 })));
-
-        // Orange spheres at lattice corners (every point where x,y are both integers on boundary)
-        const corners = steppedPath.filter(p =>
-            (p.x === 0 || p.x === N) && (p.y === 0 || p.y === N)
-        );
-        corners.forEach(c => {
-            const sphereGeo = new THREE.SphereGeometry(0.5, 16, 16);
-            const sphereMat = new THREE.MeshBasicMaterial({ color: 0xff6600 });
-            const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-            sphere.position.copy(mathToThree(c.x, c.y, c.z));
-            dynamicGroup.add(sphere);
-        });
-
-        // STEP 2: Project stepped path to x+y+z=0 plane
-        const projectedPath = steppedPath.map(p => {
-            const t = (p.x + p.y + p.z) / 3;
-            return { x: p.x - t, y: p.y - t, z: p.z - t };
-        });
-
-        // Draw projected path (green)
-        const projPoints = projectedPath.map(p => mathToThree(p.x, p.y, p.z));
-        projPoints.push(projPoints[0].clone());
-        const projGeo = new THREE.BufferGeometry().setFromPoints(projPoints);
-        dynamicGroup.add(new THREE.Line(projGeo, new THREE.LineBasicMaterial({ color: 0x00cc00 })));
-
-        // Green spheres at projected corners
-        const projCorners = corners.map(c => {
-            const t = (c.x + c.y + c.z) / 3;
-            return { x: c.x - t, y: c.y - t, z: c.z - t };
-        });
-        projCorners.forEach(c => {
-            const sphereGeo = new THREE.SphereGeometry(0.4, 16, 16);
-            const sphereMat = new THREE.MeshBasicMaterial({ color: 0x00cc00 });
-            const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-            sphere.position.copy(mathToThree(c.x, c.y, c.z));
-            dynamicGroup.add(sphere);
-        });
-
-        // Draw the x+y+z=0 plane as semi-transparent green triangle
-        const lpGeo = new THREE.BufferGeometry();
-        const lpVerts = new Float32Array([
-            30, -20, -10,
-            -10, -20, 30,
-            -10, 20, -10
-        ]);
-        lpGeo.setAttribute('position', new THREE.BufferAttribute(lpVerts, 3));
-        lpGeo.setIndex([0, 1, 2]);
-        dynamicGroup.add(new THREE.Mesh(lpGeo, new THREE.MeshBasicMaterial({
-            color: 0x88ff88,
-            transparent: true,
-            opacity: 0.12,
-            side: THREE.DoubleSide
-        })));
-
-        // Log info
-        const cornerHeights = [
-            Math.round(A * 0 + B * 0),
-            Math.round(A * N + B * 0),
-            Math.round(A * N + B * N),
-            Math.round(A * 0 + B * N)
-        ];
-        console.log('[Energy3D] A=' + A + ', B=' + B);
-        console.log('[Energy3D] Corner heights (0,0), (N,0), (N,N), (0,N):', cornerHeights);
-
-        renderer.render(scene, camera);
-    }
-
-    function animate() {
-        requestAnimationFrame(animate);
-        controls.update();
-        renderer.render(scene, camera);
-    }
-
-    function onResize() {
-        const w = canvas.clientWidth, h = canvas.clientHeight;
-        if (w === 0 || h === 0) return;
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w, h);
-    }
-
-    window.addEventListener('resize', onResize);
-
-    // Wait for Three.js
-    function waitForThree() {
-        if (typeof THREE !== 'undefined' && typeof THREE.OrbitControls !== 'undefined') {
-            init();
-
-            // Set up controls
-            const inputA = document.getElementById('gradient-a');
-            const inputB = document.getElementById('gradient-b');
-            const btn = document.getElementById('energy-sample');
-
-            if (inputA && inputB) {
-                // Update 3D viz on input change
-                inputA.addEventListener('change', () => {
-                    updateVisualization(parseFloat(inputA.value), parseFloat(inputB.value));
-                });
-                inputB.addEventListener('change', () => {
-                    updateVisualization(parseFloat(inputA.value), parseFloat(inputB.value));
-                });
-                if (btn) {
-                    btn.addEventListener('click', () => {
-                        updateVisualization(parseFloat(inputA.value), parseFloat(inputB.value));
-                    });
-                }
-            }
-        } else {
-            setTimeout(waitForThree, 50);
-        }
-    }
-    waitForThree();
-})();
-</script>
-
-<!-- Energy slide 2D CFTP sampling -->
+<!-- Energy slide 3D Tiling (Lazy WebGL loading) -->
 <script>
 (async function() {
     'use strict';
-    console.log('[Energy2D] Starting...');
 
-    const canvas = document.getElementById('energy-2d-canvas');
-    if (!canvas) { console.log('[Energy2D] No canvas'); return; }
-    const ctx = canvas.getContext('2d');
+    const canvas = document.getElementById('energy-tiling-canvas');
+    if (!canvas) return;
+
+    // ===== THREE.JS (LAZY LOADED) =====
+    let scene = null;
+    let camera = null;
+    let renderer = null;
+    let controls = null;
+    let meshGroup = null;
+    const frustumSize = 60;
+
+    function initThreeJS() {
+        if (renderer) return;  // Already initialized
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);  // Dark background like limit-shape
+
+        const w = canvas.clientWidth || canvas.width;
+        const h = canvas.clientHeight || canvas.height;
+        const aspect = w / h;
+        camera = new THREE.OrthographicCamera(
+            -frustumSize * aspect / 2, frustumSize * aspect / 2,
+            frustumSize / 2, -frustumSize / 2, 0.1, 1000
+        );
+        // Y is up (Three.js default) - coordinates transformed to match
+        camera.position.set(50, 50, 40);
+        camera.lookAt(0, 0, 0);
+
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(w, h);
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableRotate = true;
+        controls.enablePan = true;
+        controls.enableZoom = true;
+        // Lock polar angle - only allow horizontal rotation around Y axis
+        const fixedPolarAngle = Math.PI / 3;  // 60 degrees from vertical (nice viewing angle)
+        controls.minPolarAngle = fixedPolarAngle;
+        controls.maxPolarAngle = fixedPolarAngle;
+        controls.addEventListener('change', () => {
+            if (renderer) renderer.render(scene, camera);
+        });
+
+        // Lighting (same as limit-shape)
+        scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+        const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.25);
+        hemi.position.set(0, 20, 0);
+        scene.add(hemi);
+        const directional = new THREE.DirectionalLight(0xffffff, 1.2);
+        directional.position.set(15, 20, 5);
+        scene.add(directional);
+        const fill = new THREE.DirectionalLight(0xffffff, 0.3);
+        fill.position.set(-10, 5, -5);
+        scene.add(fill);
+
+        meshGroup = new THREE.Group();
+        scene.add(meshGroup);
+
+        renderer.render(scene, camera);
+    }
+
+    function disposeThreeJS() {
+        if (!renderer) return;
+
+        // Dispose meshes
+        if (meshGroup) {
+            while (meshGroup.children.length > 0) {
+                const child = meshGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+                meshGroup.remove(child);
+            }
+        }
+
+        // Release WebGL context
+        if (controls) controls.dispose();
+        renderer.dispose();
+        renderer = null;
+        scene = null;
+        camera = null;
+        controls = null;
+        meshGroup = null;
+    }
 
     // Wait for LozengeModule
     while (typeof LozengeModule === 'undefined') {
         await new Promise(r => setTimeout(r, 50));
     }
     const wasm = await LozengeModule();
-    console.log('[Energy2D] WASM loaded');
 
     const initFromTriangles = wasm.cwrap('initFromTriangles', 'number', ['number', 'number']);
     const runCFTP = wasm.cwrap('runCFTP', 'number', []);
@@ -4632,18 +4409,13 @@ window.addEventListener('wasm-loaded', async function() {
 
     async function initGPU() {
         if (gpuEngine) return gpuAvailable;
-        if (typeof WebGPULozengeEngine === 'undefined') {
-            console.log('[Energy2D] WebGPULozengeEngine not available');
-            return false;
-        }
+        if (typeof WebGPULozengeEngine === 'undefined') return false;
         try {
             gpuEngine = new WebGPULozengeEngine();
             await gpuEngine.init();
             gpuAvailable = true;
-            console.log('[Energy2D] GPU CFTP available');
             return true;
         } catch (e) {
-            console.log('[Energy2D] GPU not available:', e.message);
             gpuAvailable = false;
             return false;
         }
@@ -4687,6 +4459,7 @@ window.addEventListener('wasm-loaded', async function() {
 
     const N = 50;
     const colors = ['#E57200', '#232D4B', '#F9DCBF']; // UVA colors
+    let initialSampleDone = false;
 
     // Generate stepped path on cylinder (same as 3D viz)
     function generateSteppedPath(A, B) {
@@ -4795,87 +4568,215 @@ window.addEventListener('wasm-loaded', async function() {
         return triangles;
     }
 
-    // Draw lozenges from dimers array (each dimer has {bn, bj, t})
+    // ========================================================================
+    // HEIGHT FUNCTION COMPUTATION (from ultimate-lozenge.md)
+    // ========================================================================
+    function computeHeightFunction(dimers) {
+        // Vertex keys for each dimer type
+        const getVertexKeys = (dimer) => {
+            const { bn, bj, t } = dimer;
+            if (t === 0) {
+                return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+            } else if (t === 1) {
+                return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+            } else {
+                return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+            }
+        };
+
+        // Height patterns (relative z-heights of the 4 vertices)
+        const getHeightPattern = (t) => {
+            if (t === 0) return [0, 0, 0, 0];
+            if (t === 1) return [1, 0, 0, 1];
+            return [1, 1, 0, 0];
+        };
+
+        // Build Vertex-to-Dimer Map
+        const vertexToDimers = new Map();
+        for (const dimer of dimers) {
+            const verts = getVertexKeys(dimer);
+            for (const [n, j] of verts) {
+                const key = `${n},${j}`;
+                if (!vertexToDimers.has(key)) vertexToDimers.set(key, []);
+                vertexToDimers.get(key).push(dimer);
+            }
+        }
+
+        // BFS to calculate Height Function h(n,j)
+        const heights = new Map();
+        if (dimers.length > 0) {
+            const firstDimer = dimers[0];
+            const firstVerts = getVertexKeys(firstDimer);
+            const startKey = `${firstVerts[0][0]},${firstVerts[0][1]}`;
+            heights.set(startKey, 0);
+
+            const queue = [startKey];
+            const visited = new Set();
+
+            while (queue.length > 0) {
+                const currentKey = queue.shift();
+                if (visited.has(currentKey)) continue;
+                visited.add(currentKey);
+
+                const currentH = heights.get(currentKey);
+                const [cn, cj] = currentKey.split(',').map(Number);
+
+                for (const dimer of vertexToDimers.get(currentKey) || []) {
+                    const verts = getVertexKeys(dimer);
+                    const pattern = getHeightPattern(dimer.t);
+
+                    // Find index of current vertex in this dimer
+                    let myIdx = -1;
+                    for (let i = 0; i < 4; i++) {
+                        if (verts[i][0] === cn && verts[i][1] === cj) {
+                            myIdx = i;
+                            break;
+                        }
+                    }
+
+                    if (myIdx >= 0) {
+                        for (let i = 0; i < 4; i++) {
+                            const [vn, vj] = verts[i];
+                            const vkey = `${vn},${vj}`;
+                            if (!heights.has(vkey)) {
+                                const newH = currentH + (pattern[i] - pattern[myIdx]);
+                                heights.set(vkey, newH);
+                                queue.push(vkey);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return heights;
+    }
+
+    // Draw lozenges as 3D stepped surface
     function drawFromDimers(dimers, triangleArr) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (!meshGroup) return;
+
+        // Clear previous meshes
+        while (meshGroup.children.length > 0) {
+            const child = meshGroup.children[0];
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+            meshGroup.remove(child);
+        }
 
         if (!dimers || dimers.length === 0) {
-            ctx.fillStyle = '#c00';
-            ctx.font = '14px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('No dimers returned', canvas.width/2, canvas.height/2);
+            if (renderer) renderer.render(scene, camera);
             return;
         }
 
-        console.log('[Energy2D] Drawing', dimers.length, 'dimers');
+        // Vertex keys for each dimer type
+        const getVertexKeys = (dimer) => {
+            const { bn, bj, t } = dimer;
+            if (t === 0) return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+            else if (t === 1) return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+            else return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+        };
 
-        // Get bounds from triangles
-        const triCoords = [];
-        for (let i = 0; i < triangleArr.length; i += 3) {
-            triCoords.push({ n: triangleArr[i], j: triangleArr[i+1] });
-        }
-        if (triCoords.length === 0) return;
+        // Compute height function
+        const heights = computeHeightFunction(dimers);
 
-        const nVals = triCoords.map(t => t.n);
-        const jVals = triCoords.map(t => t.j);
-        const minN = Math.min(...nVals), maxN = Math.max(...nVals);
-        const minJ = Math.min(...jVals), maxJ = Math.max(...jVals);
+        // 3D Coordinate Transformation (from ultimate-lozenge.md, with Y as vertical)
+        // Maps abstract lattice (n, j, h) to Cartesian (x, y, z)
+        // Swapped y/z so Y is vertical (Three.js convention for OrbitControls)
+        const to3D = (n, j, h) => ({ x: h, y: j - h, z: -n - h });
 
-        const sqrt3 = Math.sqrt(3);
-        const rangeN = maxN - minN + 2;
-        const rangeJ = maxJ - minJ + 2;
-        const scale = Math.min(canvas.width / (rangeN * 1.2), canvas.height / (rangeJ * sqrt3 / 2 * 1.2));
-        const centerN = (minN + maxN) / 2;
-        const centerJ = (minJ + maxJ) / 2;
+        // White lozenges like limit-shape
+        const lozengeColors = ['#FFFFFF', '#FFFFFF', '#FFFFFF'];
 
-        function toCanvas(n, j) {
-            const x = (n - centerN) + (j - centerJ) * 0.5;
-            const y = (j - centerJ) * sqrt3 / 2;
-            return { x: canvas.width/2 + x * scale, y: canvas.height/2 - y * scale };
-        }
+        // Build single geometry with all quads
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [];
+        const normals = [];
+        const vertexColors = [];
+        const indices = [];
 
-        // Draw each lozenge using {bn, bj, t} format
-        for (const d of dimers) {
-            const bn = d.bn, bj = d.bj, t = d.t;
-            let verts;
+        const addQuad = (v1, v2, v3, v4, color) => {
+            const baseIndex = vertices.length / 3;
+            vertices.push(v1.x, v1.y, v1.z);
+            vertices.push(v2.x, v2.y, v2.z);
+            vertices.push(v3.x, v3.y, v3.z);
+            vertices.push(v4.x, v4.y, v4.z);
 
-            // Vertex calculation based on lozenge type
-            if (t === 0) { // horizontal
-                verts = [toCanvas(bn, bj), toCanvas(bn + 1, bj), toCanvas(bn + 1, bj - 1), toCanvas(bn, bj - 1)];
-            } else if (t === 1) { // NE-SW diagonal
-                verts = [toCanvas(bn, bj), toCanvas(bn + 1, bj - 1), toCanvas(bn + 1, bj - 2), toCanvas(bn, bj - 1)];
-            } else { // NW-SE diagonal (t === 2)
-                verts = [toCanvas(bn - 1, bj), toCanvas(bn, bj), toCanvas(bn + 1, bj - 1), toCanvas(bn, bj - 1)];
+            // Compute flat normal
+            const edge1 = { x: v2.x - v1.x, y: v2.y - v1.y, z: v2.z - v1.z };
+            const edge2 = { x: v4.x - v1.x, y: v4.y - v1.y, z: v4.z - v1.z };
+            const nx = edge1.y * edge2.z - edge1.z * edge2.y;
+            const ny = edge1.z * edge2.x - edge1.x * edge2.z;
+            const nz = edge1.x * edge2.y - edge1.y * edge2.x;
+            const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+
+            for (let i = 0; i < 4; i++) {
+                normals.push(nx / len, ny / len, nz / len);
             }
 
-            ctx.beginPath();
-            ctx.moveTo(verts[0].x, verts[0].y);
-            for (let v = 1; v < verts.length; v++) {
-                ctx.lineTo(verts[v].x, verts[v].y);
+            const c = new THREE.Color(color);
+            for (let i = 0; i < 4; i++) {
+                vertexColors.push(c.r, c.g, c.b);
             }
-            ctx.closePath();
-            ctx.fillStyle = colors[t];
-            ctx.fill();
-            ctx.strokeStyle = '#222';
-            ctx.lineWidth = 0.8;
-            ctx.stroke();
+
+            indices.push(baseIndex, baseIndex + 1, baseIndex + 2);
+            indices.push(baseIndex, baseIndex + 2, baseIndex + 3);
+        };
+
+        // Generate geometry for each dimer
+        for (const dimer of dimers) {
+            const verts = getVertexKeys(dimer);
+            const v3d = verts.map(([n, j]) => {
+                const h = heights.get(`${n},${j}`) || 0;
+                return to3D(n, j, h);
+            });
+            addQuad(v3d[0], v3d[1], v3d[2], v3d[3], lozengeColors[dimer.t]);
         }
+
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
+        geometry.setIndex(indices);
+        geometry.computeBoundingSphere();
+
+        // Create mesh with vertex colors (same material as limit-shape)
+        const material = new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            side: THREE.DoubleSide,
+            flatShading: true,
+            roughness: 0.3,
+            metalness: 0.5
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        meshGroup.add(mesh);
+
+        // Add edge lines (subtle for dark background)
+        const edgesGeometry = new THREE.EdgesGeometry(geometry, 10);
+        const edgesMaterial = new THREE.LineBasicMaterial({
+            color: 0x444466,
+            linewidth: 1,
+            opacity: 0.6,
+            transparent: true
+        });
+        const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+        meshGroup.add(edges);
+
+        // Center camera on geometry
+        if (geometry.boundingSphere) {
+            const center = geometry.boundingSphere.center;
+            const radius = geometry.boundingSphere.radius;
+            controls.target.copy(center);
+            camera.position.set(center.x + radius, center.y + radius * 0.8, center.z + radius);
+            camera.lookAt(center);
+            controls.update();
+        }
+
+        renderer.render(scene, camera);
     }
 
     // Sample function
     async function sample(A, B) {
-        console.log('[Energy2D] Sampling A=' + A + ', B=' + B);
-
         const triangles = generateTriangles(A, B);
-        console.log('[Energy2D] Generated', triangles.length / 3, 'triangles');
-
-        // Count black/white
-        let black = 0, white = 0;
-        for (let i = 2; i < triangles.length; i += 3) {
-            if (triangles[i] === 1) black++;
-            else white++;
-        }
-        console.log('[Energy2D] Black:', black, 'White:', white);
 
         // Pass to WASM
         const dataPtr = wasm._malloc(triangles.length * 4);
@@ -4886,27 +4787,19 @@ window.addEventListener('wasm-loaded', async function() {
         const initResult = wasm.UTF8ToString(initPtr);
         freeString(initPtr);
         wasm._free(dataPtr);
-        console.log('[Energy2D] Init result:', initResult);
 
         // Parse init result to check if valid
         const initParsed = JSON.parse(initResult);
 
         // If invalid (flow < count or black ≠ white), repair the region
         if (initParsed.status === 'invalid') {
-            console.log('[Energy2D] Repairing region (flow=' + initParsed.flow + ', black=' + black + ', white=' + white + ')');
             const repairPtr = repairRegionWasm();
             const repairResult = wasm.UTF8ToString(repairPtr);
             freeString(repairPtr);
-            console.log('[Energy2D] Repair result:', repairResult);
 
             // Check if repair succeeded
             const repairParsed = JSON.parse(repairResult);
             if (repairParsed.status === 'invalid') {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#c00';
-                ctx.font = '14px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('Cannot repair region', canvas.width/2, canvas.height/2);
                 return;
             }
         }
@@ -4920,7 +4813,6 @@ window.addEventListener('wasm-loaded', async function() {
                 // Initialize CFTP on WASM side to create extremal states
                 initCFTPWasm();
                 const bounds = getGridBounds();
-                console.log('[Energy2D] Grid bounds:', bounds);
 
                 const minGridData = getCFTPMinRawGridData(bounds);
                 const maxGridData = getCFTPMaxRawGridData(bounds);
@@ -4947,7 +4839,6 @@ window.addEventListener('wasm-loaded', async function() {
                             const blackTriangles = getBlackTriangles();
                             dimers = gpuEngine.gridToDimers(resultGrid, blackTriangles);
                             gpuEngine.destroyCFTP();
-                            console.log('[Energy2D] GPU CFTP done, T=' + T + ', dimers=' + dimers.length);
                         } else {
                             gpuEngine.destroyCFTP();
                             throw new Error('GPU CFTP did not coalesce');
@@ -4959,7 +4850,6 @@ window.addEventListener('wasm-loaded', async function() {
                     throw new Error('Could not get grid data');
                 }
             } catch (e) {
-                console.log('[Energy2D] GPU failed, using CPU:', e.message);
                 // Fall through to CPU
                 dimers = [];
             }
@@ -4967,11 +4857,9 @@ window.addEventListener('wasm-loaded', async function() {
 
         // CPU fallback
         if (dimers.length === 0) {
-            console.log('[Energy2D] Using CPU CFTP');
             const cftpPtr = runCFTP();
             const cftpResult = wasm.UTF8ToString(cftpPtr);
             freeString(cftpPtr);
-            console.log('[Energy2D] CPU CFTP result:', cftpResult);
 
             const dimersPtr = exportDimersWasm();
             const dimersJson = wasm.UTF8ToString(dimersPtr);
@@ -4981,25 +4869,82 @@ window.addEventListener('wasm-loaded', async function() {
             dimers = parsed.dimers || [];
         }
 
-        console.log('[Energy2D] Got', dimers.length, 'dimers');
         drawFromDimers(dimers, triangles);
     }
 
     // Wire up Sample button
     const btn = document.getElementById('energy-sample');
-    const sliderA = document.getElementById('gradient-a');
-    const sliderB = document.getElementById('gradient-b');
+    const inputA = document.getElementById('gradient-a');
+    const inputB = document.getElementById('gradient-b');
 
-    if (btn && sliderA && sliderB) {
+    if (btn && inputA && inputB) {
         btn.addEventListener('click', () => {
-            sample(parseFloat(sliderA.value), parseFloat(sliderB.value));
+            if (!renderer) return;
+            sample(parseFloat(inputA.value), parseFloat(inputB.value));
         });
-
-        // Initial sample
-        sample(0.3, 0.3);
     }
 
-    console.log('[Energy2D] Ready');
+    // Auto-rotation
+    let autoRotateId = null;
+    function startAutoRotate() {
+        if (autoRotateId) return;
+        const rotateSpeed = 0.0075;
+        function rotate() {
+            if (!controls || !renderer) return;
+            const x = camera.position.x - controls.target.x;
+            const z = camera.position.z - controls.target.z;
+            const cos = Math.cos(rotateSpeed);
+            const sin = Math.sin(rotateSpeed);
+            camera.position.x = controls.target.x + x * cos - z * sin;
+            camera.position.z = controls.target.z + x * sin + z * cos;
+            camera.lookAt(controls.target);
+            renderer.render(scene, camera);
+            autoRotateId = requestAnimationFrame(rotate);
+        }
+        rotate();
+    }
+
+    function stopAutoRotate() {
+        if (autoRotateId) {
+            cancelAnimationFrame(autoRotateId);
+            autoRotateId = null;
+        }
+    }
+
+    // Register with slide engine for lazy WebGL loading
+    function waitForSlideEngine() {
+        if (typeof window.slideEngine !== 'undefined') {
+            window.slideEngine.registerSimulation('energy', {
+                start() { startAutoRotate(); },
+                pause() { stopAutoRotate(); },
+                onSlideEnter() {
+                    // Wait for Three.js then initialize
+                    const initWhenReady = () => {
+                        if (typeof THREE !== 'undefined' && typeof THREE.OrbitControls !== 'undefined') {
+                            initThreeJS();
+                            if (!initialSampleDone) {
+                                sample(-0.2, 0.3);  // Pre-sample with A=-0.2, B=0.3
+                                initialSampleDone = true;
+                            } else if (renderer) {
+                                renderer.render(scene, camera);
+                            }
+                            startAutoRotate();
+                        } else {
+                            setTimeout(initWhenReady, 50);
+                        }
+                    };
+                    initWhenReady();
+                },
+                onSlideLeave() {
+                    stopAutoRotate();
+                    disposeThreeJS();
+                }
+            }, 0);
+        } else {
+            setTimeout(waitForSlideEngine, 50);
+        }
+    }
+    waitForSlideEngine();
 })();
 </script>
 
