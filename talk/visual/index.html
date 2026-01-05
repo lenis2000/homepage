@@ -4283,12 +4283,10 @@ window.addEventListener('wasm-loaded', async function() {
             <!-- Controls at top -->
             <div id="energy-controls" style="display: flex; gap: 1vw; align-items: center; flex-wrap: wrap; font-size: clamp(0.9rem, 1.5vw, 1.1rem);">
                 <label style="display: flex; align-items: center; gap: 0.3vw;">
-                    A: <input type="range" id="gradient-a" min="-1" max="1" step="0.05" value="0.3" style="width: 80px;">
-                    <span id="gradient-a-val" style="min-width: 2.5em;">0.3</span>
+                    A: <input type="number" id="gradient-a" min="-5" max="5" step="0.1" value="0.3" style="width: 60px;">
                 </label>
                 <label style="display: flex; align-items: center; gap: 0.3vw;">
-                    B: <input type="range" id="gradient-b" min="-1" max="1" step="0.05" value="0.3" style="width: 80px;">
-                    <span id="gradient-b-val" style="min-width: 2.5em;">0.3</span>
+                    B: <input type="number" id="gradient-b" min="-5" max="5" step="0.1" value="0.3" style="width: 60px;">
                 </label>
                 <button id="energy-sample" style="padding: 0.5vh 1vw; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px;">Sample</button>
             </div>
@@ -4326,29 +4324,29 @@ window.addEventListener('wasm-loaded', async function() {
 
         const w = canvas.clientWidth || 600;
         const h = canvas.clientHeight || 450;
-        camera = new THREE.PerspectiveCamera(50, w/h, 1, 500);
+        camera = new THREE.PerspectiveCamera(50, w/h, 1, 1000);
         // In Three.js: Y is up. We want to view the XZ plane (our mathematical XY)
         // with mathematical Z going up (Three.js Y)
-        camera.position.set(40, 35, 40);
+        camera.position.set(100, 80, 100);
 
         renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         renderer.setSize(w, h);
         console.log('[Energy3D] Renderer size:', w, h);
 
         controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.target.set(10, 5, 10);
+        controls.target.set(25, 10, 25);
         controls.update();
 
         // Axes: X=red, Y=green (up in Three.js = Z in math), Z=blue
-        scene.add(new THREE.AxesHelper(25));
+        scene.add(new THREE.AxesHelper(60));
 
         // Grid on the "ground" (XZ plane in Three.js = XY in math, at height 0)
-        const grid = new THREE.GridHelper(40, 20, 0xaaaaaa, 0xdddddd);
-        grid.position.set(10, 0, 10);
+        const grid = new THREE.GridHelper(100, 20, 0xaaaaaa, 0xdddddd);
+        grid.position.set(25, 0, 25);
         scene.add(grid);
 
-        // Cylinder wireframe: 20x20 in XZ (math XY), height in Y (math Z)
-        // Vertical edges
+        // Cylinder wireframe: 50x50 in XZ (math XY), height in Y (math Z)
+        const SZ = 50;
         const addLine = (x1,y1,z1, x2,y2,z2, color) => {
             const g = new THREE.BufferGeometry().setFromPoints([
                 new THREE.Vector3(x1,y1,z1), new THREE.Vector3(x2,y2,z2)
@@ -4356,20 +4354,20 @@ window.addEventListener('wasm-loaded', async function() {
             scene.add(new THREE.Line(g, new THREE.LineBasicMaterial({color})));
         };
         // Vertical edges of cylinder (mathematical Z = Three.js Y)
-        addLine(0,-15,0, 0,25,0, 0x666666);
-        addLine(20,-15,0, 20,25,0, 0x666666);
-        addLine(20,-15,20, 20,25,20, 0x666666);
-        addLine(0,-15,20, 0,25,20, 0x666666);
+        addLine(0,-50,0, 0,50,0, 0x666666);
+        addLine(SZ,-50,0, SZ,50,0, 0x666666);
+        addLine(SZ,-50,SZ, SZ,50,SZ, 0x666666);
+        addLine(0,-50,SZ, 0,50,SZ, 0x666666);
         // Bottom square
-        addLine(0,-15,0, 20,-15,0, 0x666666);
-        addLine(20,-15,0, 20,-15,20, 0x666666);
-        addLine(20,-15,20, 0,-15,20, 0x666666);
-        addLine(0,-15,20, 0,-15,0, 0x666666);
+        addLine(0,-50,0, SZ,-50,0, 0x666666);
+        addLine(SZ,-50,0, SZ,-50,SZ, 0x666666);
+        addLine(SZ,-50,SZ, 0,-50,SZ, 0x666666);
+        addLine(0,-50,SZ, 0,-50,0, 0x666666);
         // Top square
-        addLine(0,25,0, 20,25,0, 0x666666);
-        addLine(20,25,0, 20,25,20, 0x666666);
-        addLine(20,25,20, 0,25,20, 0x666666);
-        addLine(0,25,20, 0,25,0, 0x666666);
+        addLine(0,50,0, SZ,50,0, 0x666666);
+        addLine(SZ,50,0, SZ,50,SZ, 0x666666);
+        addLine(SZ,50,SZ, 0,50,SZ, 0x666666);
+        addLine(0,50,SZ, 0,50,0, 0x666666);
 
         dynamicGroup = new THREE.Group();
         scene.add(dynamicGroup);
@@ -4448,7 +4446,7 @@ window.addEventListener('wasm-loaded', async function() {
     }
 
     function updateVisualization(A, B) {
-        const N = 20;
+        const N = 50;
 
         // Clear dynamic group
         while (dynamicGroup.children.length > 0) {
@@ -4574,24 +4572,21 @@ window.addEventListener('wasm-loaded', async function() {
             init();
 
             // Set up controls
-            const sliderA = document.getElementById('gradient-a');
-            const sliderB = document.getElementById('gradient-b');
-            const valA = document.getElementById('gradient-a-val');
-            const valB = document.getElementById('gradient-b-val');
+            const inputA = document.getElementById('gradient-a');
+            const inputB = document.getElementById('gradient-b');
             const btn = document.getElementById('energy-sample');
 
-            if (sliderA && sliderB) {
-                sliderA.addEventListener('input', () => {
-                    valA.textContent = sliderA.value;
-                    updateVisualization(parseFloat(sliderA.value), parseFloat(sliderB.value));
+            if (inputA && inputB) {
+                // Update 3D viz on input change
+                inputA.addEventListener('change', () => {
+                    updateVisualization(parseFloat(inputA.value), parseFloat(inputB.value));
                 });
-                sliderB.addEventListener('input', () => {
-                    valB.textContent = sliderB.value;
-                    updateVisualization(parseFloat(sliderA.value), parseFloat(sliderB.value));
+                inputB.addEventListener('change', () => {
+                    updateVisualization(parseFloat(inputA.value), parseFloat(inputB.value));
                 });
                 if (btn) {
                     btn.addEventListener('click', () => {
-                        updateVisualization(parseFloat(sliderA.value), parseFloat(sliderB.value));
+                        updateVisualization(parseFloat(inputA.value), parseFloat(inputB.value));
                     });
                 }
             }
@@ -4624,8 +4619,73 @@ window.addEventListener('wasm-loaded', async function() {
     const runCFTP = wasm.cwrap('runCFTP', 'number', []);
     const exportDimersWasm = wasm.cwrap('exportDimers', 'number', []);
     const freeString = wasm.cwrap('freeString', null, ['number']);
+    const repairRegionWasm = wasm.cwrap('repairRegion', 'number', []);
+    const initCFTPWasm = wasm.cwrap('initCFTP', 'number', []);
+    const getGridBoundsWasm = wasm.cwrap('getGridBounds', 'number', []);
+    const getCFTPMinGridDataWasm = wasm.cwrap('getCFTPMinGridData', 'number', []);
+    const getCFTPMaxGridDataWasm = wasm.cwrap('getCFTPMaxGridData', 'number', []);
+    const getBlackTrianglesWasm = wasm.cwrap('getBlackTriangles', 'number', []);
 
-    const N = 20;
+    // GPU engine
+    let gpuEngine = null;
+    let gpuAvailable = false;
+
+    async function initGPU() {
+        if (gpuEngine) return gpuAvailable;
+        if (typeof WebGPULozengeEngine === 'undefined') {
+            console.log('[Energy2D] WebGPULozengeEngine not available');
+            return false;
+        }
+        try {
+            gpuEngine = new WebGPULozengeEngine();
+            await gpuEngine.init();
+            gpuAvailable = true;
+            console.log('[Energy2D] GPU CFTP available');
+            return true;
+        } catch (e) {
+            console.log('[Energy2D] GPU not available:', e.message);
+            gpuAvailable = false;
+            return false;
+        }
+    }
+
+    function getGridBounds() {
+        const ptr = getGridBoundsWasm();
+        const jsonStr = wasm.UTF8ToString(ptr);
+        freeString(ptr);
+        return JSON.parse(jsonStr);
+    }
+
+    function getCFTPMinRawGridData(bounds) {
+        const dataPtr = getCFTPMinGridDataWasm();
+        if (!dataPtr) return null;
+        const data = new Int32Array(bounds.size);
+        for (let i = 0; i < bounds.size; i++) {
+            data[i] = wasm.getValue(dataPtr + i * 4, 'i32');
+        }
+        wasm._free(dataPtr);
+        return data;
+    }
+
+    function getCFTPMaxRawGridData(bounds) {
+        const dataPtr = getCFTPMaxGridDataWasm();
+        if (!dataPtr) return null;
+        const data = new Int32Array(bounds.size);
+        for (let i = 0; i < bounds.size; i++) {
+            data[i] = wasm.getValue(dataPtr + i * 4, 'i32');
+        }
+        wasm._free(dataPtr);
+        return data;
+    }
+
+    function getBlackTriangles() {
+        const ptr = getBlackTrianglesWasm();
+        const jsonStr = wasm.UTF8ToString(ptr);
+        freeString(ptr);
+        return JSON.parse(jsonStr);
+    }
+
+    const N = 50;
     const colors = ['#E57200', '#232D4B', '#F9DCBF']; // UVA colors
 
     // Generate stepped path on cylinder (same as 3D viz)
@@ -4817,40 +4877,111 @@ window.addEventListener('wasm-loaded', async function() {
         }
         console.log('[Energy2D] Black:', black, 'White:', white);
 
-        if (black !== white) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#c00';
-            ctx.font = '14px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('Invalid: ' + black + ' black ≠ ' + white + ' white triangles', canvas.width/2, canvas.height/2);
-            return;
-        }
-
         // Pass to WASM
         const dataPtr = wasm._malloc(triangles.length * 4);
         for (let i = 0; i < triangles.length; i++) {
             wasm.setValue(dataPtr + i * 4, triangles[i], 'i32');
         }
         const initPtr = initFromTriangles(dataPtr, triangles.length);
+        const initResult = wasm.UTF8ToString(initPtr);
         freeString(initPtr);
         wasm._free(dataPtr);
+        console.log('[Energy2D] Init result:', initResult);
 
-        // Run CFTP
-        const cftpPtr = runCFTP();
-        const cftpResult = wasm.UTF8ToString(cftpPtr);
-        freeString(cftpPtr);
-        console.log('[Energy2D] CFTP result:', cftpResult);
+        // Parse init result to check if valid
+        const initParsed = JSON.parse(initResult);
 
-        // Export dimers as JSON
-        const dimersPtr = exportDimersWasm();
-        const dimersJson = wasm.UTF8ToString(dimersPtr);
-        freeString(dimersPtr);
+        // If invalid (flow < count or black ≠ white), repair the region
+        if (initParsed.status === 'invalid') {
+            console.log('[Energy2D] Repairing region (flow=' + initParsed.flow + ', black=' + black + ', white=' + white + ')');
+            const repairPtr = repairRegionWasm();
+            const repairResult = wasm.UTF8ToString(repairPtr);
+            freeString(repairPtr);
+            console.log('[Energy2D] Repair result:', repairResult);
 
-        const parsed = JSON.parse(dimersJson);
-        const dimers = parsed.dimers || [];
+            // Check if repair succeeded
+            const repairParsed = JSON.parse(repairResult);
+            if (repairParsed.status === 'invalid') {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#c00';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Cannot repair region', canvas.width/2, canvas.height/2);
+                return;
+            }
+        }
+
+        // Try GPU CFTP first, fall back to CPU
+        let dimers = [];
+        const useGPU = await initGPU();
+
+        if (useGPU && gpuEngine) {
+            try {
+                // Initialize CFTP on WASM side to create extremal states
+                initCFTPWasm();
+                const bounds = getGridBounds();
+                console.log('[Energy2D] Grid bounds:', bounds);
+
+                const minGridData = getCFTPMinRawGridData(bounds);
+                const maxGridData = getCFTPMaxRawGridData(bounds);
+
+                if (minGridData && maxGridData) {
+                    gpuEngine.initFromWasmData(minGridData, bounds.minN, bounds.maxN, bounds.minJ, bounds.maxJ);
+                    const gpuCftpOk = await gpuEngine.initCFTP(minGridData, maxGridData);
+
+                    if (gpuCftpOk) {
+                        let T = 1;
+                        const maxT = 134217728;
+                        let coalesced = false;
+
+                        while (!coalesced && T <= maxT) {
+                            gpuEngine.resetCFTPChains(minGridData, maxGridData);
+                            const result = await gpuEngine.stepCFTP(T, Math.min(T, 10000));
+                            coalesced = result.coalesced;
+                            if (!coalesced) coalesced = await gpuEngine.checkCoalescence();
+                            if (!coalesced) T *= 2;
+                        }
+
+                        if (coalesced) {
+                            const resultGrid = await gpuEngine.getCFTPResult();
+                            const blackTriangles = getBlackTriangles();
+                            dimers = gpuEngine.gridToDimers(resultGrid, blackTriangles);
+                            gpuEngine.destroyCFTP();
+                            console.log('[Energy2D] GPU CFTP done, T=' + T + ', dimers=' + dimers.length);
+                        } else {
+                            gpuEngine.destroyCFTP();
+                            throw new Error('GPU CFTP did not coalesce');
+                        }
+                    } else {
+                        throw new Error('GPU CFTP init failed');
+                    }
+                } else {
+                    throw new Error('Could not get grid data');
+                }
+            } catch (e) {
+                console.log('[Energy2D] GPU failed, using CPU:', e.message);
+                // Fall through to CPU
+                dimers = [];
+            }
+        }
+
+        // CPU fallback
+        if (dimers.length === 0) {
+            console.log('[Energy2D] Using CPU CFTP');
+            const cftpPtr = runCFTP();
+            const cftpResult = wasm.UTF8ToString(cftpPtr);
+            freeString(cftpPtr);
+            console.log('[Energy2D] CPU CFTP result:', cftpResult);
+
+            const dimersPtr = exportDimersWasm();
+            const dimersJson = wasm.UTF8ToString(dimersPtr);
+            freeString(dimersPtr);
+
+            const parsed = JSON.parse(dimersJson);
+            dimers = parsed.dimers || [];
+        }
+
         console.log('[Energy2D] Got', dimers.length, 'dimers');
-
-        // Draw result
         drawFromDimers(dimers, triangles);
     }
 
