@@ -2470,11 +2470,11 @@ window.addEventListener('wasm-loaded', async function() {
             <!-- Block 2: Energy Functional -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
                 <strong style="color: var(--slide-accent);">Variational principle for shape \(y=f(x)\):</strong><br>
-                Maximize 
+                Maximize
 <span style="color: #232D4B; font-weight: 800; font-size: 1.15em; letter-spacing: 0.01em;">energy − γ·area</span>
 								= <br>
                 \(\int \sigma(f'(x)) \, dx - \gamma \cdot \int f(x) \, dx\);<br>
-                <span style="font-size: 0.85em;">\(\sigma(s) = \lim \frac{1}{N}\log \binom{N(s+1)}{N}\) = energy.<br>The binomial coefficient is the number of paths having slope \(s\); $\sigma(s) = (s+1)\log(s+1) - s\log(s)$</span>
+                <span style="font-size: 0.85em;">\(\sigma(s) = \lim \frac{1}{N}\log \binom{N(s+1)}{N}\) = energy.<br>The binomial coefficient is the number of paths having slope \(s\); we get the limit $\sigma(s) = (s+1)\log(s+1) - s\log(s)$.</span>
             </div>
 
             <!-- Block 3: Fluctuations -->
@@ -3624,8 +3624,8 @@ window.addEventListener('wasm-loaded', async function() {
 })();
 </script>
 
-<section class="slide slide-center" id="limit-shape" data-title="Limit Shape">
-    <h2 class="slide-title">The Limit Shape</h2>
+<section class="slide slide-center" id="limit-shape" data-title="Limit Shape in 3D">
+    <h2 class="slide-title">Limit Shape in 3D</h2>
     <div style="position: relative; width: 85vw; height: 52vh;">
         <canvas id="limit-shape-3d-canvas" style="width: 100%; height: 100%;"></canvas>
     </div>
@@ -4282,12 +4282,12 @@ window.addEventListener('wasm-loaded', async function() {
         <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
             <canvas id="energy-canvas" width="1200" height="900" style="height: 50vh; width: auto; border: 1px solid #ccc;"></canvas>
             <div id="energy-controls" style="display: flex; gap: 0.5vw; margin-top: 1vh;">
-                <button class="energy-slope-btn" data-slope="0" style="padding: 0.5vh 1vw; font-size: clamp(0.9rem, 1.5vw, 1.1rem); cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px;">12×12×12</button>
-                <button class="energy-slope-btn" data-slope="1" style="padding: 0.5vh 1vw; font-size: clamp(0.9rem, 1.5vw, 1.1rem); cursor: pointer; border: 2px solid var(--slide-accent); background: white; color: var(--slide-accent); border-radius: 4px;">15×10×10</button>
-                <button class="energy-slope-btn" data-slope="2" style="padding: 0.5vh 1vw; font-size: clamp(0.9rem, 1.5vw, 1.1rem); cursor: pointer; border: 2px solid var(--slide-accent); background: white; color: var(--slide-accent); border-radius: 4px;">18×8×8</button>
-                <button class="energy-slope-btn" data-slope="3" style="padding: 0.5vh 1vw; font-size: clamp(0.9rem, 1.5vw, 1.1rem); cursor: pointer; border: 2px solid var(--slide-accent); background: white; color: var(--slide-accent); border-radius: 4px;">20×6×6</button>
+                <button class="energy-slope-btn" data-slope="0" style="padding: 0.5vh 1vw; font-size: clamp(0.9rem, 1.5vw, 1.1rem); cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px;">(0,0)</button>
+                <button class="energy-slope-btn" data-slope="1" style="padding: 0.5vh 1vw; font-size: clamp(0.9rem, 1.5vw, 1.1rem); cursor: pointer; border: 2px solid var(--slide-accent); background: white; color: var(--slide-accent); border-radius: 4px;">(⅓,0)</button>
+                <button class="energy-slope-btn" data-slope="2" style="padding: 0.5vh 1vw; font-size: clamp(0.9rem, 1.5vw, 1.1rem); cursor: pointer; border: 2px solid var(--slide-accent); background: white; color: var(--slide-accent); border-radius: 4px;">(0,⅓)</button>
+                <button class="energy-slope-btn" data-slope="3" style="padding: 0.5vh 1vw; font-size: clamp(0.9rem, 1.5vw, 1.1rem); cursor: pointer; border: 2px solid var(--slide-accent); background: white; color: var(--slide-accent); border-radius: 4px;">(⅓,⅓)</button>
             </div>
-            <p style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted); margin-top: 0.5vh;">Hexagon aspect ratio controls average lozenge proportions</p>
+            <p style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted); margin-top: 0.5vh;">Slope (t,s) controls torus boundary conditions</p>
         </div>
     </div>
 </section>
@@ -4356,57 +4356,33 @@ window.addEventListener('wasm-loaded', async function() {
         }
     }
 
-    // Generate hexagon triangles for a×b×c hexagon
-    function generateHexagonTriangles(a, b, c) {
-        const directions = [[1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1]];
-        const sideLengths = [a, b, c, a, b, c];
-        const boundary = [];
-        let bn = 0, bj = 0;
-        for (let dir = 0; dir < 6; dir++) {
-            for (let step = 0; step < sideLengths[dir]; step++) {
-                boundary.push(getVertex(bn, bj));
-                bn += directions[dir][0];
-                bj += directions[dir][1];
-            }
-        }
-
-        // Bounding box
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        for (const v of boundary) {
-            minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
-            minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
-        }
-        const searchMinN = Math.floor(minX) - 2;
-        const searchMaxN = Math.ceil(maxX) + 2;
-        const nRange = searchMaxN - searchMinN;
-        const searchMinJ = Math.floor(minY / deltaC) - nRange - 5;
-        const searchMaxJ = Math.ceil(maxY / deltaC) + nRange + 5;
-
-        // Generate triangles inside hexagon
+    // Generate torus fundamental domain with jagged (lattice-following) boundary
+    // Parallelogram spanned by v1 = (W, 0) and v2 = (shearT, H + shearS)
+    // This gives 2D slope (t, s) where t ~ shearT/H, s ~ shearS/W
+    function generateTorusTriangles(W, H, shearT, shearS) {
         const triangleArr = [];
-        for (let n = searchMinN; n <= searchMaxN; n++) {
-            for (let j = searchMinJ; j <= searchMaxJ; j++) {
-                const rc = getRightTriangleCentroid(n, j);
-                if (pointInPolygon(rc.x, rc.y, boundary)) {
-                    triangleArr.push(n, j, 1);  // type=1 (black/right)
-                }
-                const lc = getLeftTriangleCentroid(n, j);
-                if (pointInPolygon(lc.x, lc.y, boundary)) {
-                    triangleArr.push(n, j, 2);  // type=2 (white/left)
-                }
+
+        for (let j = 0; j < H; j++) {
+            const nShift = Math.round(j * shearT / H);
+            for (let n = 0; n < W; n++) {
+                const jShift = Math.round(n * shearS / W);
+                const actualN = n + nShift;
+                const actualJ = j + jShift;
+                triangleArr.push(actualN, actualJ, 1);  // type=1 (black/right)
+                triangleArr.push(actualN, actualJ, 2);  // type=2 (white/left)
             }
         }
         return triangleArr;
     }
 
-    // Different slope types = different hexagon aspect ratios
-    // slopeType: 0=symmetric, 1=slightly asymmetric, 2=more asymmetric, 3=very asymmetric
-    function getHexagonParams(slopeType) {
+    // Different 2D slopes (t, s)
+    function getTorusParams(slopeType) {
+        const size = 18;
         const params = [
-            { a: 12, b: 12, c: 12 },  // Symmetric - equal proportions of all 3 lozenge types
-            { a: 15, b: 10, c: 10 },  // Slightly asymmetric
-            { a: 18, b: 8, c: 8 },    // More asymmetric
-            { a: 20, b: 6, c: 6 }     // Very asymmetric - dominated by one lozenge type
+            { W: size, H: size, shearT: 0, shearS: 0 },       // (t,s) = (0, 0)
+            { W: size, H: size, shearT: 6, shearS: 0 },       // (t,s) ~ (1/3, 0)
+            { W: size, H: size, shearT: 0, shearS: 6 },       // (t,s) ~ (0, 1/3)
+            { W: size, H: size, shearT: 6, shearS: 6 }        // (t,s) ~ (1/3, 1/3)
         ];
         return params[slopeType] || params[0];
     }
@@ -4489,9 +4465,9 @@ window.addEventListener('wasm-loaded', async function() {
             btn.style.color = isActive ? 'white' : 'var(--slide-accent)';
         });
 
-        // Generate hexagon with different aspect ratios for different slopes
-        const { a, b, c } = getHexagonParams(slopeType);
-        const triArr = generateHexagonTriangles(a, b, c);
+        // Generate torus fundamental domain with jagged boundary at given 2D slope (t,s)
+        const { W, H, shearT, shearS } = getTorusParams(slopeType);
+        const triArr = generateTorusTriangles(W, H, shearT, shearS);
 
         const ptr = wasm._malloc(triArr.length * 4);
         for (let i = 0; i < triArr.length; i++) {
