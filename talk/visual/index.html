@@ -2817,7 +2817,7 @@ window.addEventListener('wasm-loaded', async function() {
         <!-- Right pane: snowflake -->
         <div id="bridge-right-pane" style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;">
             <div id="snowflake-title" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; margin-bottom: 1vh; opacity: 0; transition: opacity 0.3s;">
-                More complex shapes:
+                More complex boxes:
             </div>
             <div style="position: relative; width: 100%; flex: 1;">
                 <canvas id="bridge-snowflake-canvas" style="width: 100%; height: 100%;"></canvas>
@@ -3445,7 +3445,8 @@ window.addEventListener('wasm-loaded', async function() {
         }
     }
 
-    function sampleSnowflake() {
+    // Initialize region and get Dinic's minimal tiling (no CFTP)
+    function getMinimalTiling() {
         if (!snowflakeTriangles) {
             currentDimers = [];
             return;
@@ -3465,7 +3466,26 @@ window.addEventListener('wasm-loaded', async function() {
         initFromTriangles(ptr, triArr.length);
         wasm._free(ptr);
 
-        // Run CFTP
+        // Export dimers (Dinic's initial matching, no CFTP)
+        const strPtr = exportDimersWasm();
+        const jsonStr = wasm.UTF8ToString(strPtr);
+        freeString(strPtr);
+
+        try {
+            const parsed = JSON.parse(jsonStr);
+            currentDimers = Array.isArray(parsed.dimers) ? parsed.dimers : [];
+        } catch (e) {
+            currentDimers = [];
+        }
+    }
+
+    function sampleSnowflake() {
+        if (!snowflakeTriangles) {
+            currentDimers = [];
+            return;
+        }
+
+        // Run CFTP (assumes initFromTriangles was already called)
         runCFTP();
 
         // Export dimers
@@ -3488,60 +3508,20 @@ window.addEventListener('wasm-loaded', async function() {
     const deltaC = 2 / Math.sqrt(3);
     function getVertex(n, j) { return { x: n, y: slope * n + j * deltaC }; }
 
-    // Show the region as flat 2D (unsampled)
+    // Show the region with minimal (Dinic) tiling
     function showRegion() {
-        // Clear existing geometry
-        while (meshGroup.children.length > 0) {
-            const child = meshGroup.children[0];
-            if (child.geometry) child.geometry.dispose();
-            if (child.material) child.material.dispose();
-            meshGroup.remove(child);
-        }
-
-        if (!snowflakeTriangles) return;
-
-        const geometry = new THREE.BufferGeometry();
-        const vertices = [], indices = [], vertexColors = [];
-        const baseColor = new THREE.Color('#CCCCCC');
-
-        for (const tri of snowflakeTriangles) {
-            const { n, j, type } = tri;
-            const baseIndex = vertices.length / 3;
-            let v1, v2, v3;
-            if (type === 1) { // right-pointing (black)
-                v1 = getVertex(n, j);
-                v2 = getVertex(n, j - 1);
-                v3 = getVertex(n + 1, j - 1);
-            } else { // left-pointing (white), type === 2
-                v1 = getVertex(n, j);
-                v2 = getVertex(n + 1, j);
-                v3 = getVertex(n + 1, j - 1);
-            }
-            // Flat in x-z plane (y=0), using x->x, y->z
-            vertices.push(v1.x, 0, v1.y, v2.x, 0, v2.y, v3.x, 0, v3.y);
-            for (let i = 0; i < 3; i++) vertexColors.push(baseColor.r, baseColor.g, baseColor.b);
-            indices.push(baseIndex, baseIndex+1, baseIndex+2);
-        }
-
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-        geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
-        geometry.setIndex(indices);
-        geometry.computeVertexNormals();
-
-        const material = new THREE.MeshBasicMaterial({
-            vertexColors: true, side: THREE.DoubleSide
-        });
-        meshGroup.add(new THREE.Mesh(geometry, material));
-
-        geometry.computeBoundingBox();
-        const bb = geometry.boundingBox;
+        getMinimalTiling();
+        buildGeometry();
 
         // Center camera on the geometry
-        const center = new THREE.Vector3();
-        bb.getCenter(center);
-        controls.target.copy(center);
-        camera.position.set(center.x, center.y + 100, center.z);
-        controls.update();
+        if (meshGroup.children.length > 0) {
+            const box = new THREE.Box3().setFromObject(meshGroup);
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            controls.target.copy(center);
+            camera.position.set(center.x, center.y + 100, center.z);
+            controls.update();
+        }
         renderer.render(scene, camera);
     }
 
