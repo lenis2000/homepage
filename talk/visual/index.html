@@ -3665,7 +3665,7 @@ window.addEventListener('wasm-loaded', async function() {
                 <img src="images/hexagon.png" alt="Hexagon" style="max-height: 28vh; max-width: 48%; object-fit: contain;">
             </div>
             <div style="margin-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: #333; text-align: left;">
-                Part of answer: Phases are separated by an inscribed algebraic curve (ellipse for the hexagon)
+                Part of final answer: Phases are separated by an inscribed <strong>algebraic curve</strong> (<strong>ellipse</strong> for the hexagon)
                                 <strong style="color: var(--slide-accent);">[Kenyon-Okounkov 2007]</strong>
             </div>
         </div>
@@ -3899,6 +3899,11 @@ window.addEventListener('wasm-loaded', async function() {
 
     function buildGeometry() {
         if (!meshGroup) return;
+        // Don't rebuild if OBJ is showing
+        if (objLoaded) {
+            console.log('buildGeometry skipped - OBJ loaded');
+            return;
+        }
         while (meshGroup.children.length > 0) {
             const child = meshGroup.children[0];
             if (child.geometry) child.geometry.dispose();
@@ -4036,6 +4041,11 @@ window.addEventListener('wasm-loaded', async function() {
     // GPU CFTP sampling with WASM fallback
     async function sampleCFTP() {
         if (!shapeTriangles) { currentDimers = []; return; }
+        // Don't run CFTP if OBJ is showing
+        if (objLoaded) {
+            console.log('sampleCFTP skipped - OBJ loaded');
+            return;
+        }
 
         // Try GPU CFTP first
         const useGPU = await initGPU();
@@ -4326,35 +4336,44 @@ window.addEventListener('wasm-loaded', async function() {
                     }
                 },
                 onStepBack(step) {
+                    // Only restore zoom and hide label when going back TO steps before OBJ (0, 1, 2)
+                    if (step <= 2) {
+                        if (camera && camera.zoom !== 1.0) {
+                            camera.zoom = 1.0;
+                            camera.updateProjectionMatrix();
+                        }
+                        if (presampledLabel) presampledLabel.style.opacity = '0';
+                    }
+
                     if (step === 0) {
                         clear();
                         stopAutoRotate();
                         objLoaded = false;
+                        // Rebuild minimal tiling for step 0
+                        getMinimalTiling();
+                        buildGeometry();
+                        if (renderer && scene && camera) renderer.render(scene, camera);
                         if (panelsEl) panelsEl.style.opacity = '0';
                         if (curvedTextEl) curvedTextEl.style.opacity = '0';
                         if (rightPanelEl) rightPanelEl.style.opacity = '0';
                         if (subtextEl) subtextEl.style.opacity = '0';
                         if (imagePanelEl) imagePanelEl.style.opacity = '0';
-                        if (presampledLabel) presampledLabel.style.opacity = '0';
                     } else if (step === 1) {
                         stopAutoRotate();
                         objLoaded = false;
+                        // Rebuild sampled geometry
+                        buildGeometry();
+                        if (renderer && scene && camera) renderer.render(scene, camera);
                         if (panelsEl) panelsEl.style.opacity = '0';
                         if (curvedTextEl) curvedTextEl.style.opacity = '0';
                         if (rightPanelEl) rightPanelEl.style.opacity = '0';
                         if (subtextEl) subtextEl.style.opacity = '0';
                         if (imagePanelEl) imagePanelEl.style.opacity = '0';
-                        if (presampledLabel) presampledLabel.style.opacity = '0';
                     } else if (step === 2) {
                         // Back to rotating coarse sample - rebuild coarse geometry
-                        if (presampledLabel) presampledLabel.style.opacity = '0';
                         objLoaded = false;
-                        // Restore zoom for coarse sample
-                        if (camera) {
-                            camera.zoom = 1.0;
-                            camera.updateProjectionMatrix();
-                        }
                         buildGeometry(); // Rebuild from currentDimers
+                        if (renderer && scene && camera) renderer.render(scene, camera);
                         if (panelsEl) panelsEl.style.opacity = '0';
                         if (curvedTextEl) curvedTextEl.style.opacity = '0';
                         if (rightPanelEl) rightPanelEl.style.opacity = '0';
