@@ -2126,8 +2126,7 @@ window.addEventListener('wasm-loaded', async function() {
 
             <!-- Block 2: q-weighting -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
-                <strong style="color: var(--slide-accent);">q-weighting:</strong><br>
-                Weight = \(q^{\text{area}}\), &nbsp; Probability = \(\displaystyle\frac{q^{\text{area}}}{\sum_{\text{paths}} q^{\text{area}}}\)
+                \(\displaystyle\text{Probability} = \frac{q^{\text{area}}}{\sum_{\text{paths}} q^{\text{area}}}\)
             </div>
 
             <!-- Block 3: q-Binomial -->
@@ -3641,6 +3640,7 @@ window.addEventListener('wasm-loaded', async function() {
     <h2 class="slide-title">Limit Shape in 3D</h2>
     <div style="position: relative; width: 85vw; height: 52vh;">
         <canvas id="limit-shape-3d-canvas" style="width: 100%; height: 100%;"></canvas>
+        <div id="limit-shape-presampled-label" style="position: absolute; top: 1vh; right: 1vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.5vh 1vw; border-radius: 4px; font-size: clamp(0.9rem, 1.5vw, 1.2rem); font-weight: bold; opacity: 0; transition: opacity 0.5s;">pre-sampled</div>
     </div>
     <div id="limit-shape-3d-status" style="font-size: clamp(0.9rem, 1.5vw, 1.2rem); margin-top: 0.5vh;"></div>
     <div id="limit-shape-panels" style="opacity: 0; transition: opacity 0.5s; margin-top: 1vh; width: 85vw; display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; text-align: left;">
@@ -3652,11 +3652,21 @@ window.addEventListener('wasm-loaded', async function() {
             <div id="limit-shape-curved-text" style="margin-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); opacity: 0; transition: opacity 0.5s;">
                 In examples we saw, the limit shape is "curved", like for q<sup>area</sup> examples from 2D.
             </div>
+            <div id="limit-shape-right-panel" style="margin-top: 1.5vh; font-size: clamp(1.5rem, 2.8vw, 2.2rem); color: var(--slide-accent); opacity: 0; transition: opacity 0.5s;">
+                What is the variational description?
+                <div id="limit-shape-subtext" style="margin-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: #000; opacity: 0; transition: opacity 0.5s;">
+                    We need to understand examples with flat (sloped) limit shape.
+                </div>
+            </div>
         </div>
-        <div id="limit-shape-right-panel" style="padding: 1vh 1.5vw; font-size: clamp(1.5rem, 2.8vw, 2.2rem); color: var(--slide-accent); opacity: 0; transition: opacity 0.5s;">
-            What is the variational description?
-            <div id="limit-shape-subtext" style="margin-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: #000; opacity: 0; transition: opacity 0.5s;">
-                We need to understand examples with flat (sloped) limit shape.
+        <div id="limit-shape-image-panel" style="display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.5s;">
+            <div style="display: flex; gap: 1vw; align-items: center; justify-content: center;">
+                <img src="images/frozen_sample.png" alt="Frozen sample" style="max-height: 28vh; max-width: 48%; object-fit: contain;">
+                <img src="images/hexagon.png" alt="Hexagon" style="max-height: 28vh; max-width: 48%; object-fit: contain;">
+            </div>
+            <div style="margin-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: #333; text-align: left;">
+                In a projection
+                <strong style="color: var(--slide-accent);">[Kenyon-Okounkov 2007]:</strong> Phases are separated by an inscribed algebraic curve (ellipse for the hexagon)
             </div>
         </div>
     </div>
@@ -3673,6 +3683,8 @@ window.addEventListener('wasm-loaded', async function() {
     const rightPanelEl = document.getElementById('limit-shape-right-panel');
     const curvedTextEl = document.getElementById('limit-shape-curved-text');
     const subtextEl = document.getElementById('limit-shape-subtext');
+    const imagePanelEl = document.getElementById('limit-shape-image-panel');
+    const presampledLabel = document.getElementById('limit-shape-presampled-label');
     if (!canvas) return;
 
     // Wait for LozengeModule
@@ -3749,7 +3761,7 @@ window.addEventListener('wasm-loaded', async function() {
     // Load shape triangles
     let shapeTriangles = null;
     try {
-        const resp = await fetch('/letters/shape_for_arctic.json');
+        const resp = await fetch('/letters/shape_for_arctic_small.json');
         const data = await resp.json();
         shapeTriangles = data.triangles;
     } catch (e) {
@@ -3766,7 +3778,7 @@ window.addEventListener('wasm-loaded', async function() {
     let controls = null;
     let meshGroup = null;
     let rotationLights = [];
-    const frustumSize = 80;
+    const frustumSize = 52;
     let aspect = 1;
 
     function initThreeJS() {
@@ -3781,7 +3793,7 @@ window.addEventListener('wasm-loaded', async function() {
         camera = new THREE.OrthographicCamera(
             -frustumSize * aspect / 2, frustumSize * aspect / 2,
             frustumSize / 2, -frustumSize / 2,
-            0.1, 1000
+            -5000, 6000  // Wider near/far for large OBJ during rotation
         );
 
         controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -4092,6 +4104,78 @@ window.addEventListener('wasm-loaded', async function() {
         }
     }
 
+    // OBJ Loader for pre-sampled mesh
+    let objMesh = null;
+    let objLoaded = false;
+
+    async function loadPresampledOBJ() {
+        if (objLoaded || !meshGroup) return;
+
+        // Load OBJLoader dynamically if not available
+        if (typeof THREE.OBJLoader === 'undefined') {
+            // Use older Three.js version that has non-module OBJLoader
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js';
+                script.onload = resolve;
+                script.onerror = () => {
+                    console.warn('OBJLoader failed to load from CDN');
+                    resolve(); // Don't reject, just continue without
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        if (typeof THREE.OBJLoader === 'undefined') {
+            console.error('OBJLoader not available');
+            return;
+        }
+
+        const loader = new THREE.OBJLoader();
+        try {
+            const obj = await new Promise((resolve, reject) => {
+                loader.load('images/big_shape.obj', resolve, undefined, reject);
+            });
+
+            // Clear existing geometry
+            while (meshGroup.children.length > 0) {
+                const child = meshGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+                meshGroup.remove(child);
+            }
+
+            // Apply same material style as sampled mesh (no vertexColors for OBJ)
+            const objMaterial = new THREE.MeshStandardMaterial({
+                side: THREE.DoubleSide,
+                flatShading: true,
+                roughness: 0.3,
+                metalness: autoRotate ? 0.35 : 0.5,
+                color: 0xddeeff  // Same subtle blue tint
+            });
+
+            obj.traverse((child) => {
+                if (child.isMesh) {
+                    child.material = objMaterial;
+                    meshGroup.add(child.clone());
+                }
+            });
+            currentMaterial = objMaterial;
+
+            // OBJ is 8x larger - zoom out to fit
+            if (camera) {
+                camera.zoom = 0.01;
+                camera.updateProjectionMatrix();
+            }
+
+            objMesh = obj;
+            objLoaded = true;
+            if (renderer && scene && camera) renderer.render(scene, camera);
+        } catch (e) {
+            console.error('Failed to load OBJ:', e);
+        }
+    }
+
     let isRunning = false;
     let animationId = null;
     let autoRotate = false;
@@ -4164,7 +4248,7 @@ window.addEventListener('wasm-loaded', async function() {
             window.slideEngine.registerSimulation('limit-shape', {
                 start,
                 pause,
-                steps: 5,
+                steps: 7,
                 onSlideEnter() {
                     // Lazy init WebGL to avoid context limit
                     initThreeJS();
@@ -4181,6 +4265,8 @@ window.addEventListener('wasm-loaded', async function() {
                     }
                     stopAutoRotate();
                     hasSampled = false;
+                    objLoaded = false;
+                    if (presampledLabel) presampledLabel.style.opacity = '0';
                     // Show minimal tiling (shape outline) on load
                     setTimeout(() => {
                         resize();
@@ -4197,11 +4283,13 @@ window.addEventListener('wasm-loaded', async function() {
                     disposeThreeJS();
                     currentDimers = [];
                     hasSampled = false;
+                    objLoaded = false;
                     if (statusEl) statusEl.textContent = '';
                     if (panelsEl) panelsEl.style.opacity = '0';
                     if (curvedTextEl) curvedTextEl.style.opacity = '0';
                     if (rightPanelEl) rightPanelEl.style.opacity = '0';
                     if (subtextEl) subtextEl.style.opacity = '0';
+                    if (presampledLabel) presampledLabel.style.opacity = '0';
                 },
                 async onStep(step) {
                     if (step === 1) {
@@ -4217,45 +4305,82 @@ window.addEventListener('wasm-loaded', async function() {
                         // Start auto-rotation
                         startAutoRotate();
                     } else if (step === 3) {
+                        // Load pre-sampled OBJ and show label
+                        if (statusEl) statusEl.textContent = 'loading pre-sampled...';
+                        await loadPresampledOBJ();
+                        if (statusEl) statusEl.textContent = '';
+                        if (presampledLabel) presampledLabel.style.opacity = '1';
+                    } else if (step === 4) {
                         // Show theorem panel
                         if (panelsEl) panelsEl.style.opacity = '1';
-                    } else if (step === 4) {
+                    } else if (step === 5) {
                         // Show curved text
                         if (curvedTextEl) curvedTextEl.style.opacity = '1';
-                    } else if (step === 5) {
+                    } else if (step === 6) {
                         // Show question in right panel with subtext
                         if (rightPanelEl) rightPanelEl.style.opacity = '1';
                         if (subtextEl) subtextEl.style.opacity = '1';
+                    } else if (step === 7) {
+                        // Show frozen sample image
+                        if (imagePanelEl) imagePanelEl.style.opacity = '1';
                     }
                 },
                 onStepBack(step) {
                     if (step === 0) {
                         clear();
                         stopAutoRotate();
+                        objLoaded = false;
                         if (panelsEl) panelsEl.style.opacity = '0';
                         if (curvedTextEl) curvedTextEl.style.opacity = '0';
                         if (rightPanelEl) rightPanelEl.style.opacity = '0';
                         if (subtextEl) subtextEl.style.opacity = '0';
+                        if (imagePanelEl) imagePanelEl.style.opacity = '0';
+                        if (presampledLabel) presampledLabel.style.opacity = '0';
                     } else if (step === 1) {
                         stopAutoRotate();
+                        objLoaded = false;
                         if (panelsEl) panelsEl.style.opacity = '0';
                         if (curvedTextEl) curvedTextEl.style.opacity = '0';
                         if (rightPanelEl) rightPanelEl.style.opacity = '0';
                         if (subtextEl) subtextEl.style.opacity = '0';
+                        if (imagePanelEl) imagePanelEl.style.opacity = '0';
+                        if (presampledLabel) presampledLabel.style.opacity = '0';
                     } else if (step === 2) {
+                        // Back to rotating coarse sample - rebuild coarse geometry
+                        if (presampledLabel) presampledLabel.style.opacity = '0';
+                        objLoaded = false;
+                        // Restore zoom for coarse sample
+                        if (camera) {
+                            camera.zoom = 1.0;
+                            camera.updateProjectionMatrix();
+                        }
+                        buildGeometry(); // Rebuild from currentDimers
                         if (panelsEl) panelsEl.style.opacity = '0';
                         if (curvedTextEl) curvedTextEl.style.opacity = '0';
                         if (rightPanelEl) rightPanelEl.style.opacity = '0';
                         if (subtextEl) subtextEl.style.opacity = '0';
+                        if (imagePanelEl) imagePanelEl.style.opacity = '0';
                     } else if (step === 3) {
-                        // At theorem, hide curved text and question
+                        // At pre-sampled, hide panels
+                        if (panelsEl) panelsEl.style.opacity = '0';
                         if (curvedTextEl) curvedTextEl.style.opacity = '0';
                         if (rightPanelEl) rightPanelEl.style.opacity = '0';
                         if (subtextEl) subtextEl.style.opacity = '0';
+                        if (imagePanelEl) imagePanelEl.style.opacity = '0';
                     } else if (step === 4) {
-                        // At curved text, hide question
+                        // At theorem, hide curved text, question and image
+                        if (curvedTextEl) curvedTextEl.style.opacity = '0';
                         if (rightPanelEl) rightPanelEl.style.opacity = '0';
                         if (subtextEl) subtextEl.style.opacity = '0';
+                        if (imagePanelEl) imagePanelEl.style.opacity = '0';
+                    } else if (step === 5) {
+                        // At curved text, hide question and image
+                        if (rightPanelEl) rightPanelEl.style.opacity = '0';
+                        if (subtextEl) subtextEl.style.opacity = '0';
+                        if (imagePanelEl) imagePanelEl.style.opacity = '0';
+                    } else if (step === 6) {
+                        // At question, hide image
+                        if (imagePanelEl) imagePanelEl.style.opacity = '0';
                     }
                 }
             }, 0);
@@ -5033,8 +5158,8 @@ window.addEventListener('wasm-loaded', async function() {
 </script>
 
 <!-- ==================== Q-volume deformations ==================== -->
-<section class="slide slide-top" id="q-volume" data-title="Q-volume deformations">
-    <h2 class="slide-title">Q-volume deformations</h2>
+<section class="slide slide-top" id="q-volume" data-title="Q-volume deformation">
+    <h2 class="slide-title">Q-volume deformation</h2>
     <!-- Top: Five tilings with q inputs -->
     <div style="display: flex; gap: 0.8vw; justify-content: center; margin-top: 1vh;">
         <div style="text-align: center;">
@@ -5064,13 +5189,12 @@ window.addEventListener('wasm-loaded', async function() {
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1.5vh; width: 100%;">
         <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
             <strong style="color: var(--slide-accent);">q-weighted measure</strong><br>
-            \(\displaystyle P(T) = \frac{q^{\mathrm{vol}(T)}}{\sum_{T'} q^{\mathrm{vol}(T')}}\)<br>
-            <span style="font-size: 0.85em;">\(q < 1\): tilted surface &nbsp;|&nbsp; \(q = 1\): uniform &nbsp;|&nbsp; \(q > 1\): flat surface</span>
+            \(\displaystyle \text{Probability} = \frac{q^{\text{volume}}}{\sum_{\text{all surfaces}} q^{\text{volume}}}\)
         </div>
         <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
             <strong style="color: var(--slide-accent);">Variational principle</strong> <span style="font-size: 0.85em;">(\(\gamma = -\log q\))</span><br>
             Maximize <span style="color: #232D4B; font-weight: 800;">entropy − γ·volume</span><br>
-            <span style="font-size: 0.85em;">Entropy favors "typical" shapes; \(\gamma\) tilts the balance toward more/less volume</span>
+            <span style="font-size: 0.85em;">Entropy favors "typical" shapes; \(\gamma\) tilts toward more/less volume</span>
         </div>
     </div>
 </section>
@@ -5387,7 +5511,7 @@ window.addEventListener('wasm-loaded', async function() {
     let shapeData = null;
 
     async function loadShapeData() {
-        const response = await fetch('/letters/shape_for_arctic.json');
+        const response = await fetch('/letters/K.json');
         const json = await response.json();
 
         const triangleArr = [];
