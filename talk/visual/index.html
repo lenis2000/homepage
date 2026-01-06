@@ -5237,7 +5237,7 @@ window.addEventListener('wasm-loaded', async function() {
                 <img src="images/q_1.025.png" alt="q=1.025 sample" style="height: 48vh; width: auto; object-fit: contain;">
                 <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.3vh 0.6vw; border-radius: 3px; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold;">pre-sampled</div>
             </div>
-            <div style="color: #888; font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh;">q = 1.025</div>
+            <div style="color: #888; font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh;">\(q = 1.025\), larger size \(N\)</div>
         </div>
     </div>
 </section>
@@ -5933,18 +5933,29 @@ window.addEventListener('wasm-loaded', async function() {
 
 <!-- ==================== Slide: Thank You ==================== -->
 <section class="slide slide-center" id="thankyou" data-title="Thank You">
-    <div style="display: flex; flex-direction: column; gap: clamp(1rem, 3vh, 3rem); align-items: center; justify-content: center;">
+    <div style="display: flex; flex-direction: column; gap: clamp(0.5rem, 1.5vh, 1.5rem); align-items: center; justify-content: center;">
+        <!-- THANK YOU letters -->
         <div style="display: flex; gap: clamp(0.5rem, 1.5vw, 1.5rem); justify-content: center;">
-            <canvas id="letter-T" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
-            <canvas id="letter-H" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
-            <canvas id="letter-A" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
-            <canvas id="letter-N" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
-            <canvas id="letter-K" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
+            <canvas id="letter-T" width="200" height="260" style="width: 20vh; height: 26vh;"></canvas>
+            <canvas id="letter-H" width="200" height="260" style="width: 20vh; height: 26vh;"></canvas>
+            <canvas id="letter-A" width="200" height="260" style="width: 20vh; height: 26vh;"></canvas>
+            <canvas id="letter-N" width="200" height="260" style="width: 20vh; height: 26vh;"></canvas>
+            <canvas id="letter-K" width="200" height="260" style="width: 20vh; height: 26vh;"></canvas>
         </div>
         <div style="display: flex; gap: clamp(0.5rem, 1.5vw, 1.5rem); justify-content: center;">
-            <canvas id="letter-Y" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
-            <canvas id="letter-O" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
-            <canvas id="letter-U" width="200" height="260" style="width: 24vh; height: 30vh;"></canvas>
+            <canvas id="letter-Y" width="200" height="260" style="width: 20vh; height: 26vh;"></canvas>
+            <canvas id="letter-O" width="200" height="260" style="width: 20vh; height: 26vh;"></canvas>
+            <canvas id="letter-U" width="200" height="260" style="width: 20vh; height: 26vh;"></canvas>
+        </div>
+        <!-- QR code centered below -->
+        <div style="display: flex; align-items: center; gap: 2vw; margin-top: 6vh;">
+            <img src="images/qr-lozenge-draw.png" alt="QR code for lozenge-draw" style="height: 24vh; width: auto;">
+            <div style="text-align: left;">
+                <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: #333;">
+                    draw any shape and stack with boxes!
+                </div>
+                <a href="https://lpetrov.cc/lozenge-draw/" target="_blank" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--slide-accent);">lpetrov.cc/lozenge-draw</a>
+            </div>
         </div>
     </div>
 </section>
