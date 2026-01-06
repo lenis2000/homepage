@@ -3661,8 +3661,14 @@ window.addEventListener('wasm-loaded', async function() {
         </div>
         <div id="limit-shape-image-panel" style="display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.5s;">
             <div style="display: flex; gap: 1vw; align-items: center; justify-content: center;">
-                <img src="images/frozen_sample.png" alt="Frozen sample" style="max-height: 28vh; max-width: 48%; object-fit: contain;">
-                <img src="images/hexagon.png" alt="Hexagon" style="max-height: 28vh; max-width: 48%; object-fit: contain;">
+                <div style="position: relative;">
+                    <img src="images/frozen_sample.png" alt="Frozen sample" style="max-height: 28vh; max-width: 100%; object-fit: contain;">
+                    <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.3vh 0.6vw; border-radius: 3px; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold;">pre-sampled</div>
+                </div>
+                <div style="position: relative;">
+                    <img src="images/hexagon.png" alt="Hexagon" style="max-height: 28vh; max-width: 100%; object-fit: contain;">
+                    <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.3vh 0.6vw; border-radius: 3px; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold;">pre-sampled</div>
+                </div>
             </div>
             <div style="margin-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: #333; text-align: left;">
                 Part of final answer: Phases are separated by an inscribed <strong>algebraic curve</strong> (<strong>ellipse</strong> for the hexagon)
@@ -5204,16 +5210,34 @@ window.addEventListener('wasm-loaded', async function() {
     </div>
     <!-- Resample button under pictures -->
     <button id="qvol-sample-btn" style="margin-top: 1vh; padding: 0.4em 1.2em; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px; font-size: clamp(0.8rem, 1.2vw, 1rem);">Re-sample All</button>
-    <!-- Bottom: Text explanation (2 panes) -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1.5vh; width: 100%;">
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
-            <strong style="color: var(--slide-accent);">q-weighted measure</strong><br>
-            \(\displaystyle \text{Probability} = \frac{q^{\text{volume}}}{\sum_{\text{all surfaces}} q^{\text{volume}}}\)
+    <!-- Bottom: Text explanation (2 columns) -->
+    <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 2vw; margin-top: 1.5vh; width: 100%;">
+        <!-- Left column: stacked panes -->
+        <div style="display: flex; flex-direction: column; gap: 0.8vh;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+                \(\displaystyle \text{Probability} = \frac{q^{\text{volume}}}{\sum_{\text{all surfaces}} q^{\text{volume}}}\)
+            </div>
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+                <strong style="color: var(--slide-accent);">Variational principle</strong> <span style="font-size: 0.85em;">(\(q = e^{-\gamma/N}\))</span><br>
+                Maximize \(\displaystyle \iint \sigma \, dx\,dy - \gamma \iint f \, dx\,dy\)<br>
+                <span style="font-size: 0.85em;">\(\gamma>0\) and \(\gamma<0\) tilts toward less/more volume</span>
+            </div>
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+                <strong style="color: var(--slide-accent);">Entropy vs Energy</strong> <span style="font-size: 0.85em;">(assume \(q < 1\))</span>
+                <ul style="margin: 0.3vh 0 0 1.2em; padding: 0; font-size: 0.85em;">
+                    <li>Most weight when empty (no cubes) — but only 1 configuration</li>
+                    <li>Adding cubes ↑ volume (↓ energy), but also ↑ configurations (↑ entropy)</li>
+                    <li>Balance determines the typical (limit) shape</li>
+                </ul>
+            </div>
         </div>
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
-            <strong style="color: var(--slide-accent);">Variational principle</strong> <span style="font-size: 0.85em;">(\(\gamma = -\log q\))</span><br>
-            Maximize <span style="color: #232D4B; font-weight: 800;">entropy − γ·volume</span><br>
-            <span style="font-size: 0.85em;">Entropy favors "typical" shapes; \(\gamma\) tilts toward more/less volume</span>
+        <!-- Right column: image (appears on next build) -->
+        <div class="fragment" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="position: relative; display: inline-block;">
+                <img src="images/q_1.025.png" alt="q=1.025 sample" style="height: 48vh; width: auto; object-fit: contain;">
+                <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.3vh 0.6vw; border-radius: 3px; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold;">pre-sampled</div>
+            </div>
+            <div style="color: #888; font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh;">q = 1.025</div>
         </div>
     </div>
 </section>
