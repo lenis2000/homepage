@@ -55,6 +55,7 @@ published: true
   #canvas-container {
     position: relative;
     width: 100%;
+    max-width: 800px;
     margin-top: 15px;
     overflow: hidden;
     border: 1px solid #ccc;
@@ -64,7 +65,6 @@ published: true
   #pipe-canvas {
     display: block;
     cursor: grab;
-    transform-origin: 0 0;
   }
 
   #pipe-canvas:active {
@@ -74,21 +74,44 @@ published: true
   #zoom-controls {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     margin-top: 10px;
+    padding: 10px 12px;
+    background: var(--bg-secondary, #F1F1EF);
+    border-radius: 6px;
+    width: fit-content;
   }
 
   #zoom-controls button {
-    width: 36px;
+    min-width: 36px;
     height: 36px;
-    font-size: 18px;
-    font-weight: bold;
+    padding: 0 12px;
+    font-size: 16px;
+    font-weight: 600;
+    border: 1px solid #232D4B;
+    background: #232D4B;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+  }
+
+  #zoom-controls button:hover {
+    background: #e57200;
+    border-color: #e57200;
   }
 
   #zoom-level {
-    min-width: 60px;
+    min-width: 50px;
     text-align: center;
-    font-weight: 500;
+    font-weight: 600;
+    color: var(--text-primary, #212529);
+  }
+
+  #zoom-controls .zoom-hint {
+    margin-left: 8px;
+    color: #666;
+    font-size: 12px;
   }
 
   #stats-panel {
@@ -201,11 +224,11 @@ The output permutation is read from the top edge (left to right) followed by the
   </div>
 
   <div id="zoom-controls">
-    <button id="zoom-out-btn" class="btn btn-secondary">-</button>
+    <button id="zoom-out-btn">−</button>
     <span id="zoom-level">100%</span>
-    <button id="zoom-in-btn" class="btn btn-secondary">+</button>
-    <button id="zoom-reset-btn" class="btn btn-secondary">Reset</button>
-    <span style="margin-left: 10px; color: #666; font-size: 12px;">Scroll to zoom, drag to pan</span>
+    <button id="zoom-in-btn">+</button>
+    <button id="zoom-reset-btn">Reset</button>
+    <span class="zoom-hint">Scroll to zoom, drag to pan</span>
   </div>
 
   <div id="stats-panel">
@@ -304,15 +327,101 @@ function initUI() {
   let isProcessing = false;
   let progressInterval = null;
 
-  // Zoom and pan state
+  // Zoom and pan state (world coordinates)
   let zoom = 1;
-  let panX = 0;
-  let panY = 0;
+  let panX = 0;  // World X offset
+  let panY = 0;  // World Y offset
   let isDragging = false;
   let dragStartX = 0;
   let dragStartY = 0;
-  let lastPanX = 0;
-  let lastPanY = 0;
+
+  // Display dimensions
+  const displayWidth = 800;
+  const displayHeight = 800;
+  canvas.width = displayWidth;
+  canvas.height = displayHeight;
+
+  // Get transform for drawing
+  function getTransform() {
+    if (!currentData) return { scale: 1, offsetX: 0, offsetY: 0 };
+    const N = currentData.N;
+    const M = currentData.M;
+
+    // Base scale: fit the grid in the canvas
+    const baseScale = Math.min(displayWidth / M, displayHeight / N) * 0.95;
+    const scale = baseScale * zoom;
+
+    // Center the grid, adjusted by pan
+    const offsetX = displayWidth / 2 - (M / 2 - panX) * scale;
+    const offsetY = displayHeight / 2 - (N / 2 - panY) * scale;
+
+    return { scale, offsetX, offsetY };
+  }
+
+  // Convert world coords to canvas coords
+  function toCanvasX(col) {
+    const { scale, offsetX } = getTransform();
+    return offsetX + col * scale;
+  }
+
+  function toCanvasY(row) {
+    const { scale, offsetY } = getTransform();
+    return offsetY + row * scale;
+  }
+
+  // Convert canvas coords to world coords
+  function toWorldX(canvasX) {
+    const { scale, offsetX } = getTransform();
+    return (canvasX - offsetX) / scale;
+  }
+
+  function toWorldY(canvasY) {
+    const { scale, offsetY } = getTransform();
+    return (canvasY - offsetY) / scale;
+  }
+
+  // Zoom centered on a canvas point
+  function zoomAt(canvasX, canvasY, factor) {
+    // Get world coords under mouse before zoom
+    const worldX = toWorldX(canvasX);
+    const worldY = toWorldY(canvasY);
+
+    // Apply zoom
+    const newZoom = Math.max(0.5, Math.min(20, zoom * factor));
+    zoom = newZoom;
+
+    // Adjust pan so worldX,worldY stays at canvasX,canvasY
+    const { scale } = getTransform();
+    panX = worldX - (canvasX - displayWidth / 2) / scale - currentData.M / 2;
+    panY = worldY - (canvasY - displayHeight / 2) / scale - currentData.N / 2;
+
+    // Negate because pan is subtracted
+    panX = -panX;
+    panY = -panY;
+
+    updateZoomDisplay();
+    redraw();
+  }
+
+  // Pan by canvas delta
+  function pan(deltaCanvasX, deltaCanvasY) {
+    const { scale } = getTransform();
+    panX += deltaCanvasX / scale;
+    panY += deltaCanvasY / scale;
+    redraw();
+  }
+
+  function resetView() {
+    zoom = 1;
+    panX = 0;
+    panY = 0;
+    updateZoomDisplay();
+    redraw();
+  }
+
+  function updateZoomDisplay() {
+    zoomLevelSpan.textContent = Math.round(zoom * 100) + '%';
+  }
 
   generateBtn.addEventListener('click', generate);
   resampleBtn.addEventListener('click', resample);
@@ -325,26 +434,23 @@ function initUI() {
   demazureCheckbox.addEventListener('change', generate);
 
   // Zoom controls
-  zoomInBtn.addEventListener('click', () => setZoom(zoom * 1.25));
-  zoomOutBtn.addEventListener('click', () => setZoom(zoom / 1.25));
-  zoomResetBtn.addEventListener('click', resetZoom);
+  zoomInBtn.addEventListener('click', () => {
+    zoomAt(displayWidth / 2, displayHeight / 2, 1.25);
+  });
+  zoomOutBtn.addEventListener('click', () => {
+    zoomAt(displayWidth / 2, displayHeight / 2, 0.8);
+  });
+  zoomResetBtn.addEventListener('click', resetView);
 
   // Mouse wheel zoom
-  canvasContainer.addEventListener('wheel', (e) => {
+  canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const rect = canvasContainer.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = (e.clientX - rect.left) * (displayWidth / rect.width);
+    const mouseY = (e.clientY - rect.top) * (displayHeight / rect.height);
 
-    const oldZoom = zoom;
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    const newZoom = Math.max(0.1, Math.min(10, zoom * delta));
-
-    // Zoom towards mouse position
-    panX = mouseX - (mouseX - panX) * (newZoom / oldZoom);
-    panY = mouseY - (mouseY - panY) * (newZoom / oldZoom);
-
-    setZoom(newZoom);
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    zoomAt(mouseX, mouseY, factor);
   }, { passive: false });
 
   // Pan with mouse drag
@@ -352,35 +458,39 @@ function initUI() {
     isDragging = true;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
-    lastPanX = panX;
-    lastPanY = panY;
+    canvas.style.cursor = 'grabbing';
   });
 
   document.addEventListener('mousemove', (e) => {
     if (!isDragging) return;
-    panX = lastPanX + (e.clientX - dragStartX);
-    panY = lastPanY + (e.clientY - dragStartY);
-    clampPan();
-    applyTransform();
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+
+    // Scale delta by canvas display ratio
+    const rect = canvas.getBoundingClientRect();
+    pan(dx * (displayWidth / rect.width), dy * (displayHeight / rect.height));
   });
 
   document.addEventListener('mouseup', () => {
-    isDragging = false;
+    if (isDragging) {
+      isDragging = false;
+      canvas.style.cursor = 'grab';
+    }
   });
 
   // Touch support for mobile
-  let touchStartX = 0;
-  let touchStartY = 0;
   let touchStartDist = 0;
   let touchStartZoom = 1;
+  let lastTouchX = 0;
+  let lastTouchY = 0;
 
   canvas.addEventListener('touchstart', (e) => {
     if (e.touches.length === 1) {
       isDragging = true;
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-      lastPanX = panX;
-      lastPanY = panY;
+      lastTouchX = e.touches[0].clientX;
+      lastTouchY = e.touches[0].clientY;
     } else if (e.touches.length === 2) {
       isDragging = false;
       touchStartDist = Math.hypot(
@@ -394,58 +504,34 @@ function initUI() {
   canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
     if (e.touches.length === 1 && isDragging) {
-      panX = lastPanX + (e.touches[0].clientX - touchStartX);
-      panY = lastPanY + (e.touches[0].clientY - touchStartY);
-      clampPan();
-      applyTransform();
+      const dx = e.touches[0].clientX - lastTouchX;
+      const dy = e.touches[0].clientY - lastTouchY;
+      lastTouchX = e.touches[0].clientX;
+      lastTouchY = e.touches[0].clientY;
+
+      const rect = canvas.getBoundingClientRect();
+      pan(dx * (displayWidth / rect.width), dy * (displayHeight / rect.height));
     } else if (e.touches.length === 2) {
       const dist = Math.hypot(
         e.touches[1].clientX - e.touches[0].clientX,
         e.touches[1].clientY - e.touches[0].clientY
       );
-      setZoom(touchStartZoom * (dist / touchStartDist));
+      const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      const rect = canvas.getBoundingClientRect();
+
+      zoom = touchStartZoom;  // Reset to start zoom
+      zoomAt(
+        (centerX - rect.left) * (displayWidth / rect.width),
+        (centerY - rect.top) * (displayHeight / rect.height),
+        dist / touchStartDist
+      );
     }
   }, { passive: false });
 
   canvas.addEventListener('touchend', () => {
     isDragging = false;
   });
-
-  function setZoom(newZoom) {
-    // Minimum zoom is 1 so image always fills container
-    zoom = Math.max(1, Math.min(10, newZoom));
-    zoomLevelSpan.textContent = Math.round(zoom * 100) + '%';
-    clampPan();
-    applyTransform();
-  }
-
-  function resetZoom() {
-    zoom = 1;
-    panX = 0;
-    panY = 0;
-    zoomLevelSpan.textContent = '100%';
-    applyTransform();
-  }
-
-  function clampPan() {
-    // Clamp pan so image edges don't go past container edges
-    const containerW = canvasContainer.clientWidth;
-    const containerH = canvasContainer.clientHeight;
-    const scaledW = canvas.width * zoom;
-    const scaledH = canvas.height * zoom;
-
-    // Max pan is 0 (left/top edge at container left/top)
-    // Min pan is container size - scaled size (right/bottom edge at container right/bottom)
-    const minPanX = Math.min(0, containerW - scaledW);
-    const minPanY = Math.min(0, containerH - scaledH);
-
-    panX = Math.max(minPanX, Math.min(0, panX));
-    panY = Math.max(minPanY, Math.min(0, panY));
-  }
-
-  function applyTransform() {
-    canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
-  }
 
   async function generate() {
     if (isProcessing) return;
@@ -476,7 +562,7 @@ function initUI() {
         throw new Error(currentData.error);
       }
 
-      resetZoom();
+      resetView();
       updateStats();
       redraw();
 
@@ -583,30 +669,22 @@ function initUI() {
     const showGrid = showGridCheckbox.checked;
     const pipeSkip = parseInt(pipeSkipInput.value) || 1;
 
-    // Get container width for full-width rendering
-    const containerWidth = canvasContainer.clientWidth || 800;
+    const { scale, offsetX, offsetY } = getTransform();
 
-    // Calculate cell size to span full width
-    const cellSize = Math.max(2, Math.floor(containerWidth / M));
-    const imgW = M * cellSize;
-    const imgH = N * cellSize;
-
-    canvas.width = imgW;
-    canvas.height = imgH;
-
-    // Update container height to match aspect ratio
-    canvasContainer.style.height = imgH + 'px';
+    // Helper to convert grid coords to canvas coords
+    const toX = (col) => offsetX + col * scale;
+    const toY = (row) => offsetY + row * scale;
 
     // White background
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, imgW, imgH);
+    ctx.fillRect(0, 0, displayWidth, displayHeight);
 
     // Draw forced bumps as gray cells
     ctx.fillStyle = '#c8c8c8';
     for (let row = 0; row < N; row++) {
       for (let col = 0; col < M; col++) {
         if (currentData.forcedBumps[row * M + col]) {
-          ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+          ctx.fillRect(toX(col), toY(row), scale, scale);
         }
       }
     }
@@ -616,15 +694,17 @@ function initUI() {
       ctx.strokeStyle = '#dcdcdc';
       ctx.lineWidth = 1;
       for (let row = 0; row <= N; row++) {
+        const y = toY(row);
         ctx.beginPath();
-        ctx.moveTo(0, row * cellSize);
-        ctx.lineTo(imgW, row * cellSize);
+        ctx.moveTo(toX(0), y);
+        ctx.lineTo(toX(M), y);
         ctx.stroke();
       }
       for (let col = 0; col <= M; col++) {
+        const x = toX(col);
         ctx.beginPath();
-        ctx.moveTo(col * cellSize, 0);
-        ctx.lineTo(col * cellSize, imgH);
+        ctx.moveTo(x, toY(0));
+        ctx.lineTo(x, toY(N));
         ctx.stroke();
       }
     }
@@ -632,7 +712,7 @@ function initUI() {
     // Draw pipes
     if (showPipes) {
       const totalPipes = N + M;
-      const lineWidth = Math.max(1, Math.floor(cellSize / 5));
+      const lineWidth = Math.max(1, scale / 5);
       ctx.lineWidth = lineWidth;
       ctx.lineCap = 'round';
 
@@ -646,12 +726,12 @@ function initUI() {
 
           if (!drawH && !drawV) continue;
 
-          const cx = col * cellSize + cellSize / 2;
-          const cy = row * cellSize + cellSize / 2;
-          const left = col * cellSize;
-          const right = (col + 1) * cellSize;
-          const top = row * cellSize;
-          const bot = (row + 1) * cellSize;
+          const cx = toX(col + 0.5);
+          const cy = toY(row + 0.5);
+          const left = toX(col);
+          const right = toX(col + 1);
+          const top = toY(row);
+          const bot = toY(row + 1);
 
           const isCross = currentData.grid[row * M + col] === 1;
           const wasForced = currentData.forcedBumps[row * M + col] === 1;
