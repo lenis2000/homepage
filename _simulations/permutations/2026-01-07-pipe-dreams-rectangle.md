@@ -1,11 +1,11 @@
 ---
 title: Pipe Dreams in a Rectangle
-model: misc
+model: permutations
 author: 'Leonid Petrov'
 code:
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2026-01-07-pipe-dreams-rectangle.md'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2026-01-07-pipe-dreams-rectangle.md'
     txt: 'This simulation is interactive, written in JavaScript/WASM'
-  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2026-01-07-pipe-dreams-rectangle.cpp'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2026-01-07-pipe-dreams-rectangle.cpp'
     txt: 'C++ source code compiled to WebAssembly'
 papers:
   - title: "Colin Defant. Permutons from Demazure Products"
@@ -215,6 +215,8 @@ The output permutation is read from the top edge (left to right) followed by the
     </div>
     <h4>Output Permutation</h4>
     <div id="permutation-display">-</div>
+    <h4 style="margin-top: 15px;">Permutation Matrix</h4>
+    <canvas id="perm-matrix-canvas" width="400" height="400" style="border: 1px solid #ddd; max-width: 100%;"></canvas>
   </div>
 </div>
 
@@ -291,6 +293,8 @@ function initUI() {
   const canvasContainer = document.getElementById('canvas-container');
   const statsContent = document.getElementById('stats-content');
   const permutationDisplay = document.getElementById('permutation-display');
+  const permMatrixCanvas = document.getElementById('perm-matrix-canvas');
+  const permMatrixCtx = permMatrixCanvas.getContext('2d');
   const zoomInBtn = document.getElementById('zoom-in-btn');
   const zoomOutBtn = document.getElementById('zoom-out-btn');
   const zoomResetBtn = document.getElementById('zoom-reset-btn');
@@ -315,6 +319,10 @@ function initUI() {
   showPipesCheckbox.addEventListener('change', redraw);
   showGridCheckbox.addEventListener('change', redraw);
   pipeSkipInput.addEventListener('change', redraw);
+
+  // Regenerate when these options change
+  probInput.addEventListener('change', generate);
+  demazureCheckbox.addEventListener('change', generate);
 
   // Zoom controls
   zoomInBtn.addEventListener('click', () => setZoom(zoom * 1.25));
@@ -352,6 +360,7 @@ function initUI() {
     if (!isDragging) return;
     panX = lastPanX + (e.clientX - dragStartX);
     panY = lastPanY + (e.clientY - dragStartY);
+    clampPan();
     applyTransform();
   });
 
@@ -387,13 +396,14 @@ function initUI() {
     if (e.touches.length === 1 && isDragging) {
       panX = lastPanX + (e.touches[0].clientX - touchStartX);
       panY = lastPanY + (e.touches[0].clientY - touchStartY);
+      clampPan();
       applyTransform();
     } else if (e.touches.length === 2) {
       const dist = Math.hypot(
         e.touches[1].clientX - e.touches[0].clientX,
         e.touches[1].clientY - e.touches[0].clientY
       );
-      setZoom(Math.max(0.1, Math.min(10, touchStartZoom * (dist / touchStartDist))));
+      setZoom(touchStartZoom * (dist / touchStartDist));
     }
   }, { passive: false });
 
@@ -402,8 +412,10 @@ function initUI() {
   });
 
   function setZoom(newZoom) {
-    zoom = Math.max(0.1, Math.min(10, newZoom));
+    // Minimum zoom is 1 so image always fills container
+    zoom = Math.max(1, Math.min(10, newZoom));
     zoomLevelSpan.textContent = Math.round(zoom * 100) + '%';
+    clampPan();
     applyTransform();
   }
 
@@ -411,7 +423,24 @@ function initUI() {
     zoom = 1;
     panX = 0;
     panY = 0;
-    setZoom(1);
+    zoomLevelSpan.textContent = '100%';
+    applyTransform();
+  }
+
+  function clampPan() {
+    // Clamp pan so image edges don't go past container edges
+    const containerW = canvasContainer.clientWidth;
+    const containerH = canvasContainer.clientHeight;
+    const scaledW = canvas.width * zoom;
+    const scaledH = canvas.height * zoom;
+
+    // Max pan is 0 (left/top edge at container left/top)
+    // Min pan is container size - scaled size (right/bottom edge at container right/bottom)
+    const minPanX = Math.min(0, containerW - scaledW);
+    const minPanY = Math.min(0, containerH - scaledH);
+
+    panX = Math.max(minPanX, Math.min(0, panX));
+    panY = Math.max(minPanY, Math.min(0, panY));
   }
 
   function applyTransform() {
@@ -510,6 +539,39 @@ function initUI() {
     // Output permutation
     const perm = [...currentData.topOutputs, ...currentData.rightOutputs];
     permutationDisplay.textContent = '[' + perm.join(', ') + ']';
+
+    // Draw permutation matrix
+    drawPermutationMatrix(perm);
+  }
+
+  function drawPermutationMatrix(perm) {
+    const n = perm.length;
+    const size = 400;
+    const margin = 10;
+    permMatrixCanvas.width = size;
+    permMatrixCanvas.height = size;
+
+    // White background
+    permMatrixCtx.fillStyle = '#ffffff';
+    permMatrixCtx.fillRect(0, 0, size, size);
+
+    // Draw dots for permutation (Grothendieck shenanigans convention)
+    const chartSize = size - 2 * margin;
+    const dotRadius = Math.max(1.5, Math.min(chartSize / n / 2, 3));
+
+    permMatrixCtx.fillStyle = '#00204E'; // Dark navy blue
+
+    for (let i = 0; i < n; i++) {
+      const outputPos = perm[i] - 1; // 0-indexed
+      // x: column i, scaled to chart area
+      const x = margin + (i + 0.5) * chartSize / n;
+      // y: row outputPos, scaled to chart area (top to bottom)
+      const y = margin + (outputPos + 0.5) * chartSize / n;
+
+      permMatrixCtx.beginPath();
+      permMatrixCtx.arc(x, y, dotRadius, 0, 2 * Math.PI);
+      permMatrixCtx.fill();
+    }
   }
 
   function redraw() {
@@ -641,8 +703,7 @@ function initUI() {
     if (currentData) redraw();
   });
 
-  // Initial message
-  progressIndicator.textContent = 'Ready. Click "Generate" to create a pipe dream.';
-  setTimeout(() => { progressIndicator.textContent = ''; }, 3000);
+  // Auto-generate on load
+  generate();
 }
 </script>
