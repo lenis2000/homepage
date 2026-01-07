@@ -55,7 +55,6 @@ published: true
   #canvas-container {
     position: relative;
     width: 100%;
-    max-width: 800px;
     margin-top: 15px;
     overflow: hidden;
     border: 1px solid #ccc;
@@ -64,6 +63,8 @@ published: true
 
   #pipe-canvas {
     display: block;
+    width: 100%;
+    height: auto;
     cursor: grab;
   }
 
