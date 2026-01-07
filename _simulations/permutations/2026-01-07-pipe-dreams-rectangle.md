@@ -178,11 +178,11 @@ The output permutation is read from the top edge (left to right) followed by the
   <div class="controls-row">
     <div class="control-group">
       <label for="rows-input">Rows (N):</label>
-      <input type="number" id="rows-input" value="50" min="1" max="500" />
+      <input type="number" id="rows-input" value="50" min="1" max="10000" />
     </div>
     <div class="control-group">
       <label for="cols-input">Cols (M):</label>
-      <input type="number" id="cols-input" value="50" min="1" max="500" />
+      <input type="number" id="cols-input" value="50" min="1" max="10000" />
     </div>
     <div class="control-group">
       <label for="prob-input">Prob (p):</label>
@@ -296,9 +296,18 @@ wasmScript.onerror = function() {
 document.head.appendChild(wasmScript);
 
 function initUI() {
-  const generatePipeDream = Module.cwrap('generatePipeDream', 'number',
+  // Binary API - much faster than JSON
+  const generatePipeDreamBinary = Module.cwrap('generatePipeDreamBinary', 'number',
       ['number', 'number', 'number', 'number', 'number'], {async: true});
-  const freeResult = Module.cwrap('freeResult', null, ['number']);
+  const getN = Module.cwrap('getN', 'number', []);
+  const getM = Module.cwrap('getM', 'number', []);
+  const getGridPtr = Module.cwrap('getGridPtr', 'number', []);
+  const getForcedPtr = Module.cwrap('getForcedPtr', 'number', []);
+  const getHPipesPtr = Module.cwrap('getHPipesPtr', 'number', []);
+  const getVPipesPtr = Module.cwrap('getVPipesPtr', 'number', []);
+  const getTopOutputsPtr = Module.cwrap('getTopOutputsPtr', 'number', []);
+  const getRightOutputsPtr = Module.cwrap('getRightOutputsPtr', 'number', []);
+  const getForcedCount = Module.cwrap('getForcedCount', 'number', []);
   const getProgress = Module.cwrap('getProgress', 'number', []);
 
   const rowsInput = document.getElementById('rows-input');
@@ -553,15 +562,39 @@ function initUI() {
     startProgressMonitoring();
 
     try {
-      const resultPtr = await generatePipeDream(N, M, p, demazure, seed);
-      const jsonStr = Module.UTF8ToString(resultPtr);
-      freeResult(resultPtr);
-
-      currentData = JSON.parse(jsonStr);
-
-      if (currentData.error) {
-        throw new Error(currentData.error);
+      // Use binary API - no JSON overhead
+      const result = await generatePipeDreamBinary(N, M, p, demazure, seed);
+      if (result !== 0) {
+        throw new Error("Generation failed");
       }
+
+      // Read dimensions
+      const actualN = getN();
+      const actualM = getM();
+
+      // Read data directly from WASM heap (copy to JS arrays)
+      const gridPtr = getGridPtr();
+      const forcedPtr = getForcedPtr();
+      const hPipesPtr = getHPipesPtr();
+      const vPipesPtr = getVPipesPtr();
+      const topPtr = getTopOutputsPtr();
+      const rightPtr = getRightOutputsPtr();
+
+      // Copy from WASM heap to JS arrays
+      // Access WASM memory buffer directly
+      const wasmMemory = Module.HEAPU8 ? Module.HEAPU8.buffer : Module.wasmMemory.buffer;
+
+      currentData = {
+        N: actualN,
+        M: actualM,
+        grid: new Uint8Array(wasmMemory, gridPtr, actualN * actualM).slice(),
+        forcedBumps: new Uint8Array(wasmMemory, forcedPtr, actualN * actualM).slice(),
+        hPipes: new Uint16Array(wasmMemory, hPipesPtr, actualN * (actualM + 1)).slice(),
+        vPipes: new Uint16Array(wasmMemory, vPipesPtr, (actualN + 1) * actualM).slice(),
+        topOutputs: new Uint16Array(wasmMemory, topPtr, actualM).slice(),
+        rightOutputs: new Uint16Array(wasmMemory, rightPtr, actualN).slice(),
+        forcedCount: getForcedCount()
+      };
 
       resetView();
       updateStats();

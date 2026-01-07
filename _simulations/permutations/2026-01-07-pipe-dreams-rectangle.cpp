@@ -1,292 +1,329 @@
 /*
 emcc 2026-01-07-pipe-dreams-rectangle.cpp -o ../../js/2026-01-07-pipe-dreams-rectangle.js \
- -s WASM=1 \
- -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_generatePipeDream','_freeResult','_getProgress']" \
- -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
- -s ALLOW_MEMORY_GROWTH=1 \
- -s INITIAL_MEMORY=64MB \
- -s ENVIRONMENT=web \
- -s SINGLE_FILE=1 \
- -O3 -ffast-math
+  -s WASM=1 \
+  -s ASYNCIFY=1 \
+  -s "EXPORTED_FUNCTIONS=['_generatePipeDreamBinary','_getN','_getM','_getGridPtr','_getForcedPtr','_getHPipesPtr','_getVPipesPtr','_getTopOutputsPtr','_getRightOutputsPtr','_getForcedCount','_freeResultBinary','_getProgress']" \
+  -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','wasmMemory']" \
+  -s ALLOW_MEMORY_GROWTH=1 \
+  -s INITIAL_MEMORY=256MB \
+  -s ENVIRONMENT=web \
+  -s SINGLE_FILE=1 \
+  -O3 -ffast-math -flto
 
-Pipe Dreams in a Rectangle Sampler
+Pipe Dreams in a Rectangle Sampler (Optimized Binary API)
 - Generates random pipe dreams on an N x M grid
 - Each cell is cross (prob p) or bump (prob 1-p)
 - Optional Demazure reduction: if two pipes try to cross but already crossed, force bump
-- Returns grid data, pipe routes, forced bumps, and output permutation as JSON
+- Binary data transfer via direct WASM heap access (no JSON overhead)
 */
 
 #include <emscripten.h>
-#include <vector>
-#include <string>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <random>
-#include <sstream>
 
-using namespace std;
+// Fast xorshift128+ RNG (much faster than mt19937)
+struct XorShift128Plus {
+    uint64_t s[2];
 
-// Global progress counter (0 to 100)
-volatile int progressCounter = 0;
-
-struct PipeDreamResult {
-    int N, M;
-    vector<uint8_t> grid;           // N*M, 1=cross, 0=bump
-    vector<uint16_t> h_pipes;       // N*(M+1) - horizontal pipe labels
-    vector<uint16_t> v_pipes;       // (N+1)*M - vertical pipe labels
-    vector<uint8_t> forced_bumps;   // N*M, 1=forced, 0=not forced
-    vector<uint16_t> top_outputs;   // M - pipe labels at top edge
-    vector<uint16_t> right_outputs; // N - pipe labels at right edge
-    int forced_count;
-
-    PipeDreamResult(int n, int m) : N(n), M(m), forced_count(0) {
-        grid.resize(N * M);
-        h_pipes.resize(N * (M + 1));
-        v_pipes.resize((N + 1) * M);
-        forced_bumps.resize(N * M, 0);
-        top_outputs.resize(M);
-        right_outputs.resize(N);
+    inline void seed(uint64_t seed) {
+        s[0] = seed;
+        s[1] = seed ^ 0x5555555555555555ULL;
+        // Warm up
+        for (int i = 0; i < 16; i++) next();
     }
 
-    inline uint8_t& at_grid(int row, int col) {
-        return grid[row * M + col];
+    inline uint64_t next() {
+        uint64_t s1 = s[0];
+        const uint64_t s0 = s[1];
+        s[0] = s0;
+        s1 ^= s1 << 23;
+        s[1] = s1 ^ s0 ^ (s1 >> 18) ^ (s0 >> 5);
+        return s[1] + s0;
     }
 
-    inline uint16_t& at_h(int row, int col) {
-        return h_pipes[row * (M + 1) + col];
-    }
-
-    inline uint16_t& at_v(int row, int col) {
-        return v_pipes[row * M + col];
-    }
-
-    inline uint8_t& at_forced(int row, int col) {
-        return forced_bumps[row * M + col];
+    // Returns value in [0, 1)
+    inline double nextDouble() {
+        return (next() >> 11) * (1.0 / 9007199254740992.0);
     }
 };
 
-void generate_random(PipeDreamResult& pd, double p, uint32_t seed) {
-    mt19937 rng(seed);
-    uniform_real_distribution<double> dist(0.0, 1.0);
+// Global result storage (avoids malloc/free overhead)
+struct PipeDreamResult {
+    int N, M;
+    uint8_t* grid;           // N*M, 1=cross, 0=bump
+    uint16_t* h_pipes;       // N*(M+1) - horizontal pipe labels
+    uint16_t* v_pipes;       // (N+1)*M - vertical pipe labels
+    uint8_t* forced_bumps;   // N*M, 1=forced, 0=not forced
+    uint16_t* top_outputs;   // M - pipe labels at top edge
+    uint16_t* right_outputs; // N - pipe labels at right edge
+    int forced_count;
 
-    for (int i = 0; i < pd.N * pd.M; i++) {
-        pd.grid[i] = (dist(rng) < p) ? 1 : 0;
+    PipeDreamResult() : N(0), M(0), grid(nullptr), h_pipes(nullptr),
+                        v_pipes(nullptr), forced_bumps(nullptr),
+                        top_outputs(nullptr), right_outputs(nullptr),
+                        forced_count(0) {}
+
+    void allocate(int n, int m) {
+        // Free previous if different size
+        if (N != n || M != m) {
+            deallocate();
+            N = n;
+            M = m;
+            grid = new uint8_t[N * M]();
+            h_pipes = new uint16_t[N * (M + 1)]();
+            v_pipes = new uint16_t[(N + 1) * M]();
+            forced_bumps = new uint8_t[N * M]();
+            top_outputs = new uint16_t[M]();
+            right_outputs = new uint16_t[N]();
+        } else {
+            // Same size - just zero out
+            memset(grid, 0, N * M);
+            memset(h_pipes, 0, N * (M + 1) * sizeof(uint16_t));
+            memset(v_pipes, 0, (N + 1) * M * sizeof(uint16_t));
+            memset(forced_bumps, 0, N * M);
+            memset(top_outputs, 0, M * sizeof(uint16_t));
+            memset(right_outputs, 0, N * sizeof(uint16_t));
+        }
+        forced_count = 0;
+    }
+
+    void deallocate() {
+        delete[] grid; grid = nullptr;
+        delete[] h_pipes; h_pipes = nullptr;
+        delete[] v_pipes; v_pipes = nullptr;
+        delete[] forced_bumps; forced_bumps = nullptr;
+        delete[] top_outputs; top_outputs = nullptr;
+        delete[] right_outputs; right_outputs = nullptr;
+        N = M = 0;
+    }
+
+    ~PipeDreamResult() {
+        deallocate();
+    }
+};
+
+// Global instance
+static PipeDreamResult g_result;
+static volatile int progressCounter = 0;
+
+// Inline accessors for better performance
+#define AT_GRID(row, col) g_result.grid[(row) * g_result.M + (col)]
+#define AT_H(row, col) g_result.h_pipes[(row) * (g_result.M + 1) + (col)]
+#define AT_V(row, col) g_result.v_pipes[(row) * g_result.M + (col)]
+#define AT_FORCED(row, col) g_result.forced_bumps[(row) * g_result.M + (col)]
+
+static void generate_random(double p, uint32_t seed) {
+    XorShift128Plus rng;
+    rng.seed(seed);
+
+    const int N = g_result.N;
+    const int M = g_result.M;
+    uint8_t* __restrict__ grid = g_result.grid;
+
+    // Generate in cache-friendly order
+    for (int i = 0; i < N * M; i++) {
+        grid[i] = (rng.nextDouble() < p) ? 1 : 0;
     }
 }
 
-void init_pipes(PipeDreamResult& pd) {
+static void init_pipes() {
+    const int N = g_result.N;
+    const int M = g_result.M;
+
     // Left edge: row 0 (top) = 1, row N-1 (bottom) = N
-    for (int row = 0; row < pd.N; row++) {
-        pd.at_h(row, 0) = row + 1;
+    for (int row = 0; row < N; row++) {
+        AT_H(row, 0) = row + 1;
     }
 
     // Bottom edge: col 0 = N+1, col M-1 = N+M
-    for (int col = 0; col < pd.M; col++) {
-        pd.at_v(pd.N, col) = pd.N + 1 + col;
+    for (int col = 0; col < M; col++) {
+        AT_V(N, col) = N + 1 + col;
     }
 }
 
-void compute_demazure(PipeDreamResult& pd) {
-    init_pipes(pd);
-    pd.forced_count = 0;
+static void compute_demazure() {
+    init_pipes();
+    g_result.forced_count = 0;
 
-    int total_diagonals = pd.N + pd.M - 1;
+    const int N = g_result.N;
+    const int M = g_result.M;
+    const int total_diagonals = N + M - 1;
+
+    // Determine sleep frequency based on grid size
+    const int sleep_freq = (N + M > 2000) ? 500 : ((N + M > 500) ? 200 : 50);
 
     // Process diagonals: d = col - row + (N-1)
-    // d=0 is bottom-left, d=N+M-2 is top-right
     for (int d = 0; d < total_diagonals; d++) {
-        // Update progress
-        progressCounter = (d * 100) / total_diagonals;
-        emscripten_sleep(0);
+        // Update progress less frequently
+        if (d % sleep_freq == 0) {
+            progressCounter = (d * 100) / total_diagonals;
+            emscripten_sleep(0);
+        }
 
         // Cells on same diagonal are independent
-        for (int col = 0; col < pd.M; col++) {
-            int row = col - d + (pd.N - 1);
-            if (row >= 0 && row < pd.N) {
-                uint16_t pipe_h = pd.at_h(row, col);      // from left (a)
-                uint16_t pipe_v = pd.at_v(row + 1, col);  // from below (b)
+        for (int col = 0; col < M; col++) {
+            const int row = col - d + (N - 1);
+            if (row >= 0 && row < N) {
+                const uint16_t pipe_h = AT_H(row, col);      // from left
+                const uint16_t pipe_v = AT_V(row + 1, col);  // from below
 
-                bool is_cross = pd.at_grid(row, col);
+                const bool is_cross = AT_GRID(row, col);
 
                 if (is_cross && pipe_h > pipe_v) {
                     // Force cross to bump (pipes already crossed)
-                    pd.at_forced(row, col) = 1;
-                    pd.forced_count++;
-                    // Bump routing: left->top, below->right
-                    pd.at_h(row, col + 1) = pipe_v;
-                    pd.at_v(row, col) = pipe_h;
+                    AT_FORCED(row, col) = 1;
+                    g_result.forced_count++;
+                    // Bump routing
+                    AT_H(row, col + 1) = pipe_v;
+                    AT_V(row, col) = pipe_h;
                 } else if (is_cross) {
-                    // Valid cross: left->right, below->top
-                    pd.at_h(row, col + 1) = pipe_h;
-                    pd.at_v(row, col) = pipe_v;
+                    // Valid cross
+                    AT_H(row, col + 1) = pipe_h;
+                    AT_V(row, col) = pipe_v;
                 } else {
-                    // Bump: left->top, below->right
-                    pd.at_h(row, col + 1) = pipe_v;
-                    pd.at_v(row, col) = pipe_h;
+                    // Bump
+                    AT_H(row, col + 1) = pipe_v;
+                    AT_V(row, col) = pipe_h;
                 }
             }
         }
     }
 
     // Collect outputs
-    for (int row = 0; row < pd.N; row++) {
-        pd.right_outputs[row] = pd.at_h(row, pd.M);
+    for (int row = 0; row < N; row++) {
+        g_result.right_outputs[row] = AT_H(row, M);
     }
-    for (int col = 0; col < pd.M; col++) {
-        pd.top_outputs[col] = pd.at_v(0, col);
+    for (int col = 0; col < M; col++) {
+        g_result.top_outputs[col] = AT_V(0, col);
     }
 }
 
-void compute_no_demazure(PipeDreamResult& pd) {
-    init_pipes(pd);
+static void compute_no_demazure() {
+    init_pipes();
 
-    int total_diagonals = pd.N + pd.M - 1;
+    const int N = g_result.N;
+    const int M = g_result.M;
+    const int total_diagonals = N + M - 1;
+
+    const int sleep_freq = (N + M > 2000) ? 500 : ((N + M > 500) ? 200 : 50);
 
     for (int d = 0; d < total_diagonals; d++) {
-        progressCounter = (d * 100) / total_diagonals;
-        emscripten_sleep(0);
+        if (d % sleep_freq == 0) {
+            progressCounter = (d * 100) / total_diagonals;
+            emscripten_sleep(0);
+        }
 
-        for (int col = 0; col < pd.M; col++) {
-            int row = col - d + (pd.N - 1);
-            if (row >= 0 && row < pd.N) {
-                uint16_t pipe_h = pd.at_h(row, col);
-                uint16_t pipe_v = pd.at_v(row + 1, col);
+        for (int col = 0; col < M; col++) {
+            const int row = col - d + (N - 1);
+            if (row >= 0 && row < N) {
+                const uint16_t pipe_h = AT_H(row, col);
+                const uint16_t pipe_v = AT_V(row + 1, col);
 
-                bool is_cross = pd.at_grid(row, col);
-
-                if (is_cross) {
-                    // Cross: left->right, below->top
-                    pd.at_h(row, col + 1) = pipe_h;
-                    pd.at_v(row, col) = pipe_v;
+                if (AT_GRID(row, col)) {
+                    // Cross
+                    AT_H(row, col + 1) = pipe_h;
+                    AT_V(row, col) = pipe_v;
                 } else {
-                    // Bump: left->top, below->right
-                    pd.at_h(row, col + 1) = pipe_v;
-                    pd.at_v(row, col) = pipe_h;
+                    // Bump
+                    AT_H(row, col + 1) = pipe_v;
+                    AT_V(row, col) = pipe_h;
                 }
             }
         }
     }
 
     // Collect outputs
-    for (int row = 0; row < pd.N; row++) {
-        pd.right_outputs[row] = pd.at_h(row, pd.M);
+    for (int row = 0; row < N; row++) {
+        g_result.right_outputs[row] = AT_H(row, M);
     }
-    for (int col = 0; col < pd.M; col++) {
-        pd.top_outputs[col] = pd.at_v(0, col);
+    for (int col = 0; col < M; col++) {
+        g_result.top_outputs[col] = AT_V(0, col);
     }
-}
-
-string result_to_json(const PipeDreamResult& pd) {
-    stringstream json;
-    json << "{";
-
-    // Dimensions
-    json << "\"N\":" << pd.N << ",";
-    json << "\"M\":" << pd.M << ",";
-
-    // Grid (1=cross, 0=bump)
-    json << "\"grid\":[";
-    for (int i = 0; i < pd.N * pd.M; i++) {
-        if (i > 0) json << ",";
-        json << (int)pd.grid[i];
-    }
-    json << "],";
-
-    // Forced bumps
-    json << "\"forcedBumps\":[";
-    for (int i = 0; i < pd.N * pd.M; i++) {
-        if (i > 0) json << ",";
-        json << (int)pd.forced_bumps[i];
-    }
-    json << "],";
-
-    // Horizontal pipes (for drawing)
-    json << "\"hPipes\":[";
-    for (int i = 0; i < pd.N * (pd.M + 1); i++) {
-        if (i > 0) json << ",";
-        json << pd.h_pipes[i];
-    }
-    json << "],";
-
-    // Vertical pipes (for drawing)
-    json << "\"vPipes\":[";
-    for (int i = 0; i < (pd.N + 1) * pd.M; i++) {
-        if (i > 0) json << ",";
-        json << pd.v_pipes[i];
-    }
-    json << "],";
-
-    // Output permutation: top edge (left to right), then right edge (top to bottom)
-    json << "\"topOutputs\":[";
-    for (int i = 0; i < pd.M; i++) {
-        if (i > 0) json << ",";
-        json << pd.top_outputs[i];
-    }
-    json << "],";
-
-    json << "\"rightOutputs\":[";
-    for (int i = 0; i < pd.N; i++) {
-        if (i > 0) json << ",";
-        json << pd.right_outputs[i];
-    }
-    json << "],";
-
-    // Forced count
-    json << "\"forcedCount\":" << pd.forced_count;
-
-    json << "}";
-    return json.str();
 }
 
 extern "C" {
 
+// Generate pipe dream, store in global result
+// Returns 0 on success, -1 on error
 EMSCRIPTEN_KEEPALIVE
-char* generatePipeDream(int N, int M, double p, int demazure, uint32_t seed) {
-    try {
-        progressCounter = 0;
+int generatePipeDreamBinary(int N, int M, double p, int demazure, uint32_t seed) {
+    progressCounter = 0;
 
-        // Validate inputs
-        if (N < 1 || N > 2000) N = 100;
-        if (M < 1 || M > 2000) M = 100;
-        if (p < 0.0 || p > 1.0) p = 0.5;
+    // Validate and clamp inputs
+    if (N < 1) N = 1;
+    if (N > 10000) N = 10000;
+    if (M < 1) M = 1;
+    if (M > 10000) M = 10000;
+    if (p < 0.0) p = 0.0;
+    if (p > 1.0) p = 1.0;
 
-        PipeDreamResult pd(N, M);
+    // Allocate/reuse storage
+    g_result.allocate(N, M);
 
-        generate_random(pd, p, seed);
+    // Generate random grid
+    generate_random(p, seed);
 
-        if (demazure) {
-            compute_demazure(pd);
-        } else {
-            compute_no_demazure(pd);
-        }
-
-        progressCounter = 100;
-
-        string resultJson = result_to_json(pd);
-
-        char* result = (char*)malloc(resultJson.size() + 1);
-        if (!result) {
-            throw runtime_error("Failed to allocate memory");
-        }
-        strcpy(result, resultJson.c_str());
-        return result;
+    // Compute pipe routes
+    if (demazure) {
+        compute_demazure();
+    } else {
+        compute_no_demazure();
     }
-    catch (const exception& e) {
-        string errorJson = "{\"error\":\"" + string(e.what()) + "\"}";
-        char* result = (char*)malloc(errorJson.size() + 1);
-        if (result) {
-            strcpy(result, errorJson.c_str());
-        }
-        progressCounter = 100;
-        return result;
-    }
+
+    progressCounter = 100;
+    return 0;
+}
+
+// Accessor functions - return pointers to global result data
+EMSCRIPTEN_KEEPALIVE
+int getN() {
+    return g_result.N;
 }
 
 EMSCRIPTEN_KEEPALIVE
-void freeResult(char* str) {
-    free(str);
+int getM() {
+    return g_result.M;
+}
+
+EMSCRIPTEN_KEEPALIVE
+uint8_t* getGridPtr() {
+    return g_result.grid;
+}
+
+EMSCRIPTEN_KEEPALIVE
+uint8_t* getForcedPtr() {
+    return g_result.forced_bumps;
+}
+
+EMSCRIPTEN_KEEPALIVE
+uint16_t* getHPipesPtr() {
+    return g_result.h_pipes;
+}
+
+EMSCRIPTEN_KEEPALIVE
+uint16_t* getVPipesPtr() {
+    return g_result.v_pipes;
+}
+
+EMSCRIPTEN_KEEPALIVE
+uint16_t* getTopOutputsPtr() {
+    return g_result.top_outputs;
+}
+
+EMSCRIPTEN_KEEPALIVE
+uint16_t* getRightOutputsPtr() {
+    return g_result.right_outputs;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int getForcedCount() {
+    return g_result.forced_count;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void freeResultBinary() {
+    g_result.deallocate();
 }
 
 EMSCRIPTEN_KEEPALIVE
