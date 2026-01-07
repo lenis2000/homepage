@@ -1196,7 +1196,6 @@ Cmd-click: complete lasso</div>
     Module.onRuntimeInitialized = function() {
         wasmReady = true;
         sim = new DominoSampler();
-        console.log('WASM module loaded');
         draw();
 
         // Initialize WebGPU engine if available
@@ -1211,7 +1210,6 @@ Cmd-click: complete lasso</div>
                     await Promise.race([initPromise, timeoutPromise]);
                     if (gpuEngine.isReady) {
                         useWebGPU = true;
-                        console.log('WebGPU Domino Engine ready');
                         // Show GPU indicator
                         const gpuIndicator = document.getElementById('gpuIndicator');
                         if (gpuIndicator) gpuIndicator.style.display = '';
@@ -2762,23 +2760,6 @@ Cmd-click: complete lasso</div>
         // Get extremal tilings from CPU
         const minState = sim.getCFTPMinState();
         const maxState = sim.getCFTPMaxState();
-        console.log('[JS GPU-CFTP] minState edges:', minState.edges?.length || 0);
-        console.log('[JS GPU-CFTP] maxState edges:', maxState.edges?.length || 0);
-        if (minState.edges && maxState.edges) {
-            const minHoriz = minState.edges.filter(e => e.y1 === e.y2).length;
-            const minVert = minState.edges.filter(e => e.x1 === e.x2).length;
-            const maxHoriz = maxState.edges.filter(e => e.y1 === e.y2).length;
-            const maxVert = maxState.edges.filter(e => e.x1 === e.x2).length;
-            console.log(`[JS GPU-CFTP] MIN: horiz=${minHoriz}, vert=${minVert}`);
-            console.log(`[JS GPU-CFTP] MAX: horiz=${maxHoriz}, vert=${maxVert}`);
-            if (minState.edges.length === maxState.edges.length) {
-                const same = minState.edges.every((e, i) => {
-                    const m = maxState.edges[i];
-                    return e.x1 === m.x1 && e.y1 === m.y1 && e.x2 === m.x2 && e.y2 === m.y2;
-                });
-                console.log(`[JS GPU-CFTP] MIN == MAX? ${same}`);
-            }
-        }
         if (!minState.edges || !maxState.edges) {
             console.error('Failed to get extremal tilings from CPU');
             el.cftpSteps.textContent = 'error';
@@ -2842,25 +2823,10 @@ Cmd-click: complete lasso</div>
         let lastDrawnBlock = -1;
 
         const initResult = sim.initCFTP();
-        console.log('[JS CPU-CFTP] initResult:', initResult);
         if (initResult.status === 'error') {
             console.error('CFTP init error:', initResult.reason);
             el.cftpSteps.textContent = 'error';
             return false;
-        }
-
-        // Log extremal tilings info
-        const minState = sim.getCFTPMinState();
-        const maxState = sim.getCFTPMaxState();
-        console.log('[JS CPU-CFTP] minState edges:', minState.edges?.length || 0);
-        console.log('[JS CPU-CFTP] maxState edges:', maxState.edges?.length || 0);
-        if (minState.edges && maxState.edges) {
-            const minHoriz = minState.edges.filter(e => e.y1 === e.y2).length;
-            const minVert = minState.edges.filter(e => e.x1 === e.x2).length;
-            const maxHoriz = maxState.edges.filter(e => e.y1 === e.y2).length;
-            const maxVert = maxState.edges.filter(e => e.x1 === e.x2).length;
-            console.log(`[JS CPU-CFTP] MIN: horiz=${minHoriz}, vert=${minVert}`);
-            console.log(`[JS CPU-CFTP] MAX: horiz=${maxHoriz}, vert=${maxVert}`);
         }
 
         el.cftpSteps.textContent = 'T=' + initResult.T;
@@ -3628,7 +3594,7 @@ Cmd-click: complete lasso</div>
             }
 
             if (allLoops.length === 0) {
-                console.log('No loops found, falling back to 2x2');
+                // No loops found, fall back to 2x2
                 const newCells = new Map();
                 for (const [key, cell] of activeCells) {
                     const nx = cell.x * 2, ny = cell.y * 2;
@@ -3713,13 +3679,6 @@ Cmd-click: complete lasso</div>
                 }
 
                 // Count segment types
-                let staircaseRuns = 0, cornerRuns = 0, flatRuns = 0;
-                for (const seg of segments) {
-                    if (seg.type === 'staircase') staircaseRuns += seg.runs.length;
-                    else if (seg.type === 'corner') cornerRuns += seg.runs.length;
-                    else flatRuns += seg.runs.length;
-                }
-                console.log(`Loop ${loopIdx}: ${loop.length} edges → ${runs.length} runs (${staircaseRuns} staircase, ${cornerRuns} corner, ${flatRuns} flat)`);
 
                 // Generate scaled polygon
                 const scaledPoly = [];
@@ -3765,7 +3724,6 @@ Cmd-click: complete lasso</div>
                     }
                 }
 
-                console.log(`Loop ${loopIdx}: scaled to ${scaledPoly.length} vertices`);
                 return scaledPoly;
             });
 
@@ -3805,13 +3763,8 @@ Cmd-click: complete lasso</div>
                 }
             }
 
-            console.log('Smooth scale:', allLoops.length, 'boundary loops');
-            console.log('Original cells:', originalCellCount, '→ New cells:', activeCells.size);
-            console.log('Ratio:', (activeCells.size / originalCellCount).toFixed(2), '(should be ~4.00)');
-
             // Make tileable after scaling
             doRepair();
-            console.log('After repair:', activeCells.size, 'cells');
 
             updateRegion();
             resetView();
@@ -3876,7 +3829,6 @@ Cmd-click: complete lasso</div>
                 const verticesArray = Array.from(activeCells.values());
                 const initResult = sim.initFromVertices(verticesArray);
                 if (initResult.status === 'valid') {
-                    if (totalAdded > 0) console.log('Repair: added', totalAdded, 'cells');
                     return;
                 }
                 const result = sim.repair();
@@ -3904,12 +3856,10 @@ Cmd-click: complete lasso</div>
                         if (addedAny) break;
                     }
                     if (!addedAny) {
-                        console.log('Repair stuck after adding', totalAdded, 'cells');
                         return;
                     }
                 }
             }
-            console.log('Repair max iterations, added', totalAdded, 'cells');
         }
 
         el.repairBtn.addEventListener('click', () => {
