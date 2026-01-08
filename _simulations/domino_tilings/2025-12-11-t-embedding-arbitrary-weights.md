@@ -3836,9 +3836,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const beta = params.beta || 0.25;
 
       if (isHorizontal) {
-        // α edge = bottom of black face → black face is ABOVE the edge
+        // α edge = TOP of black face → black face is BELOW the edge
         const faceX = Math.round(midX);
-        const faceY = Math.ceil(midY);  // Face ABOVE the horizontal edge
+        const faceY = Math.floor(midY);  // Face BELOW the horizontal edge
         const isBlack = ((faceX + faceY) % 2) !== 0;
         const isInterior = Math.abs(faceX) + Math.abs(faceY) < N;
         if (isBlack && isInterior) {
@@ -3865,9 +3865,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const gammaW = params.gammaWeights || [[1, 1], [1, 1]];
 
       if (isHorizontal) {
-        // Alpha edge (bottom of black face) → black face is ABOVE the edge
+        // Alpha edge (TOP of black face) → black face is BELOW the edge
         const faceX = Math.round(midX);
-        const faceY = Math.ceil(midY);  // Face ABOVE the horizontal edge
+        const faceY = Math.floor(midY);  // Face BELOW the horizontal edge
         const isBlack = ((faceX + faceY) % 2) !== 0;
         const isInterior = Math.abs(faceX) + Math.abs(faceY) < N;
         if (isBlack && isInterior) {
