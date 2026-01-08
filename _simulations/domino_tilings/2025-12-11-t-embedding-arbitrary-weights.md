@@ -864,7 +864,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 
 <!-- T-graph Section (T-embedding + Origami) -->
 <details id="tgraph-section" style="margin-top: 15px;">
-  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e0f2f1; border: 1px solid #009688;" aria-label="T-graph visualization section">
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8eef5; border: 1px solid #232D4B;" aria-label="T-graph visualization section">
     📐 T-graph (T + Origami)
   </summary>
   <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
@@ -904,10 +904,10 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
     <div style="margin-top: 12px; padding: 10px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
       <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">💾 Export T-graph</div>
       <div style="display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;" role="group" aria-label="T-graph export options">
-        <button id="tgraph-export-pdf-btn" style="padding: 6px 14px; background: #009688; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export T-graph as PDF">PDF</button>
+        <button id="tgraph-export-pdf-btn" style="padding: 6px 14px; background: #232D4B; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export T-graph as PDF">PDF</button>
         <span style="color: #dee2e6;">|</span>
         <div style="display: flex; align-items: center; gap: 6px;">
-          <button id="tgraph-export-png-btn" style="padding: 6px 14px; background: #00796b; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export T-graph as PNG">PNG</button>
+          <button id="tgraph-export-png-btn" style="padding: 6px 14px; background: #002f6c; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export T-graph as PNG">PNG</button>
           <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
             <span>Quality:</span>
             <input type="range" id="tgraph-png-quality" min="1" max="100" value="85" style="width: 70px;" aria-label="PNG quality">
@@ -6933,7 +6933,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     // Draw T-graph edges in teal
-    ctx.strokeStyle = '#009688';
+    ctx.strokeStyle = '#000000';
     ctx.lineWidth = uniformEdgeWidth;
 
     // Interior edges (same structure as T-embedding)
@@ -6972,7 +6972,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     // Draw T-graph vertices in teal
-    ctx.fillStyle = '#009688';
+    ctx.fillStyle = '#000000';
     const radius = Math.max(vertexSizeControl, scale / 200 * vertexSizeControl);
     for (const v of tgraphVertices) {
       const x = centerX + (v.re - centerRe) * scale;
@@ -6984,7 +6984,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     // Draw label
     ctx.font = 'bold 12px sans-serif';
-    ctx.fillStyle = '#009688';
+    ctx.fillStyle = '#000000';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText(`T-graph (k=${k})`, 10, 10);
@@ -7184,7 +7184,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     // Draw edges
-    ctx.strokeStyle = '#009688';
+    ctx.strokeStyle = '#000000';
     ctx.lineWidth = uniformEdgeWidth;
 
     for (let i = -k; i <= k; i++) {
@@ -7208,7 +7208,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     // Draw vertices
-    ctx.fillStyle = '#009688';
+    ctx.fillStyle = '#000000';
     const radius = Math.max(vertexSizeControl, scale / 200 * vertexSizeControl);
     for (const v of tgraphVertices) {
       const x = centerX + (v.re - centerRe) * scale;
