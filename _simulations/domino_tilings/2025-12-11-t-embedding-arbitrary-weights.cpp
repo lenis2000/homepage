@@ -3985,11 +3985,12 @@ void applyExternalWeights(double* weightBuffer, int bufferSize) {
         double midY = (y1 + y2) / 2.0;
 
         // Map to matrix indices using 2x multiplier
+        // Use i from X (horizontal) and j from Y (vertical) to match T-embedding face coordinate convention
         // This preserves half-integer vs integer distinction:
-        //   midY = 5.5 -> floor(2*11.5) = 23
-        //   midY = 5.0 -> floor(2*11.0) = 22
-        int i = static_cast<int>(std::floor(2.0 * (midY + N)));
-        int j = static_cast<int>(std::floor(2.0 * (midX + N)));
+        //   midX = 5.5 -> floor(2*11.5) = 23
+        //   midX = 5.0 -> floor(2*11.0) = 22
+        int i = static_cast<int>(std::floor(2.0 * (midX + N)));
+        int j = static_cast<int>(std::floor(2.0 * (midY + N)));
 
         // Clamp to valid range
         if (i < 0) i = 0;

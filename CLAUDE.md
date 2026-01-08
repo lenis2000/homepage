@@ -390,3 +390,50 @@ window.slideEngine.registerSimulation('my-slide', {
 - Direct arrows (◀ ▶) in footer skip fragments/sims
 
 **Demo:** `/talk/demo/` shows all features
+
+## Domino Tiling Simulations
+
+**EKLP Matrix Edge Weight Convention:**
+The EKLP matrix for Aztec diamond is 2N × 2N. For gamma-distributed weights (Duits-Van Peski model):
+- Even rows (i % 2 == 0), even cols (j % 2 == 0) → Γ(β)
+- Even rows (i % 2 == 0), odd cols (j % 2 == 1) → Γ(α)
+- Odd rows → 1.0
+
+**Edge type mapping:**
+- `alpha` edges → even row, odd col → Γ(α)
+- `beta` edges → even row, even col → Γ(β)
+- `gamma`, `delta` edges → odd rows → 1.0
+
+**Critical: Alpha edges are TOP of black face (black face BELOW the edge), not bottom:**
+```javascript
+// CORRECT - alpha edge detection
+const faceY = Math.floor(midY);  // Face BELOW the horizontal edge
+const isBlack = ((faceX + faceY) % 2) !== 0;
+```
+Reference working implementation: `_simulations/domino_tilings/2025-11-18-double-dimer-gamma.cpp`
+
+**Double dimer height function:** The XOR loops of two tilings are exactly the level curves where height difference h₁ - h₂ = 0.
+
+## Three.js in Simulations
+
+**Container visibility timing:** When showing a hidden container, use `setTimeout(fn, 50)` before initializing Three.js - `clientWidth/clientHeight` are 0 immediately after `display: block`.
+
+**Animation loop required:** OrbitControls need a render loop to work properly:
+```javascript
+function animate() {
+    if (!animating) return;
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+```
+
+**Grid step detection:** Domino height functions have vertex grids with step 2, not 1. Detect actual step from coordinates:
+```javascript
+const xCoords = [...new Set(vertices.map(v => v.gx))].sort((a, b) => a - b);
+let stepX = 2;
+for (let i = 1; i < xCoords.length; i++) {
+    const diff = xCoords[i] - xCoords[i-1];
+    if (diff > 0) stepX = Math.min(stepX, diff);
+}
+```
