@@ -858,6 +858,64 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         <span id="gif-progress" style="display: none; font-size: 12px; color: #6B4C9A; font-weight: 600; background: #f0ebf5; padding: 4px 10px; border-radius: 4px;"></span>
       </div>
     </div>
+
+  </div>
+</details>
+
+<!-- T-graph Section (T-embedding + Origami) -->
+<details id="tgraph-section" style="margin-top: 15px;">
+  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e0f2f1; border: 1px solid #009688;" aria-label="T-graph visualization section">
+    📐 T-graph (T + Origami)
+  </summary>
+  <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+    <!-- Display Controls -->
+    <div style="margin-bottom: 12px; padding: 12px 14px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 5px;">
+      <div style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center;">
+        <label style="display: flex; align-items: center; gap: 5px;">
+          <span style="font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.3px;">Vertex</span>
+          <input type="number" id="tgraph-vertex-size" value="3" min="0.6" max="20" step="0.1" style="width: 50px; padding: 4px 6px; font-size: 12px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="T-graph vertex size">
+        </label>
+        <label style="display: flex; align-items: center; gap: 5px;">
+          <span style="font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.3px;">Edge</span>
+          <input type="number" id="tgraph-edge-thickness" value="2" min="0.3" max="10" step="0.1" style="width: 50px; padding: 4px 6px; font-size: 12px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="T-graph edge thickness">
+        </label>
+      </div>
+    </div>
+
+    <!-- Canvas container with floating buttons -->
+    <div id="tgraph-canvas-wrapper" style="position: relative;">
+      <!-- Floating view controls -->
+      <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; flex-wrap: wrap; gap: 4px; max-width: 300px;" role="toolbar" aria-label="T-graph view controls">
+        <button id="tgraph-zoom-out-btn"
+                style="padding: 6px 12px; font-weight: bold; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Zoom out" title="Zoom out">−</button>
+        <button id="tgraph-zoom-reset-btn"
+                style="padding: 6px 12px; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Reset zoom" title="Reset zoom">⟲</button>
+        <button id="tgraph-zoom-in-btn"
+                style="padding: 6px 12px; font-weight: bold; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+                aria-label="Zoom in" title="Zoom in">+</button>
+      </div>
+
+      <canvas id="tgraph-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa;"></canvas>
+    </div>
+
+    <!-- Export Controls -->
+    <div style="margin-top: 12px; padding: 10px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+      <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">💾 Export T-graph</div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;" role="group" aria-label="T-graph export options">
+        <button id="tgraph-export-pdf-btn" style="padding: 6px 14px; background: #009688; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export T-graph as PDF">PDF</button>
+        <span style="color: #dee2e6;">|</span>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button id="tgraph-export-png-btn" style="padding: 6px 14px; background: #00796b; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export T-graph as PNG">PNG</button>
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
+            <span>Quality:</span>
+            <input type="range" id="tgraph-png-quality" min="1" max="100" value="85" style="width: 70px;" aria-label="PNG quality">
+            <span id="tgraph-png-quality-value" style="font-family: monospace; min-width: 30px;">85</span>
+          </label>
+        </div>
+      </div>
+    </div>
   </div>
 </details>
 
@@ -887,6 +945,11 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
             <input type="number" id="sample-min-loop-length" value="2" min="0" max="100" style="width: 60px;" aria-label="Minimum loop length">
           </label>
         </span>
+        <button id="height-function-btn"
+                style="display: none; padding: 6px 14px; background: #6A0572; color: white; border: none; border-radius: 4px; font-weight: 500; cursor: pointer;"
+                aria-label="Show height function graph">
+          Height Function
+        </button>
         <button id="sample-btn"
                 style="padding: 8px 20px; font-weight: bold; background: #232D4B; color: white; border: none; border-radius: 4px; cursor: pointer;"
                 aria-label="Generate random domino tiling">
@@ -929,6 +992,17 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       </div>
       <canvas id="sample-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa;" aria-label="Domino tiling visualization canvas"></canvas>
       <div id="sample-3d-container"></div>
+    </div>
+
+    <!-- Height Function Pane (for double dimer) -->
+    <div id="height-function-container" style="display: none; margin-top: 15px; border: 1px solid #6A0572; border-radius: 4px; overflow: hidden;">
+      <div style="background: #6A0572; color: white; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: bold;">Height Function Difference (h&#8321; &#8722; h&#8322;)</span>
+        <button id="height-function-close-btn" style="background: transparent; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0 8px;">&times;</button>
+      </div>
+      <div id="height-function-canvas-wrapper" style="position: relative; background: #fafafa;">
+        <div id="height-function-3d-container" style="width: 100%; height: 40vh;"></div>
+      </div>
     </div>
 
     <!-- Display and Export Controls -->
@@ -2504,6 +2578,15 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let samplePanX = 0, samplePanY = 0;
   let samplePaletteIndex = 0;  // Default to first palette
 
+  // Height function visualization for double dimer
+  let heightFunctionScene = null;
+  let heightFunctionCamera = null;
+  let heightFunctionRenderer = null;
+  let heightFunctionControls = null;
+  let heightFunctionGroup = null;
+  let heightFunctionActive = false;
+  let heightFunctionAnimating = false;
+
   // Cached IID weights - precomputed to avoid regenerating on each render
   let cachedIIDWeights = null;
   let cachedIIDKey = null;  // Key to check if cache is valid
@@ -2858,6 +2941,311 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       }
     }
     return heights;
+  }
+
+  // Compute height function difference for double dimer
+  function computeDoubleDimerHeightDifference(config1, config2) {
+    const h1 = calculateSampleHeightFunction(config1);
+    const h2 = calculateSampleHeightFunction(config2);
+    const diff = new Map();
+
+    // Get all vertex keys from both maps
+    const allKeys = new Set([...h1.keys(), ...h2.keys()]);
+
+    for (const key of allKeys) {
+      const v1 = h1.get(key) || 0;
+      const v2 = h2.get(key) || 0;
+      diff.set(key, v1 - v2);
+    }
+
+    return diff;
+  }
+
+  // Initialize height function 3D visualization
+  function initHeightFunction3D(container) {
+    if (!container || heightFunctionRenderer) return;
+
+    const width = container.clientWidth || 600;
+    const height = container.clientHeight || 400;
+
+    heightFunctionScene = new THREE.Scene();
+    heightFunctionScene.background = new THREE.Color(0xfafafa);
+
+    // Orthographic camera for top-down view
+    const aspect = width / height;
+    const frustumSize = 100;
+    heightFunctionCamera = new THREE.OrthographicCamera(
+      -frustumSize * aspect / 2, frustumSize * aspect / 2,
+      frustumSize / 2, -frustumSize / 2,
+      0.1, 2000
+    );
+    heightFunctionCamera.position.set(50, 150, 50);
+    heightFunctionCamera.lookAt(0, 0, 0);
+
+    heightFunctionRenderer = new THREE.WebGLRenderer({ antialias: true });
+    heightFunctionRenderer.setSize(width, height);
+    heightFunctionRenderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(heightFunctionRenderer.domElement);
+
+    // Orbit controls
+    heightFunctionControls = new THREE.OrbitControls(heightFunctionCamera, heightFunctionRenderer.domElement);
+    heightFunctionControls.enableDamping = true;
+    heightFunctionControls.dampingFactor = 0.1;
+    heightFunctionControls.addEventListener('change', () => {
+      if (heightFunctionRenderer && heightFunctionScene && heightFunctionCamera) {
+        heightFunctionRenderer.render(heightFunctionScene, heightFunctionCamera);
+      }
+    });
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    heightFunctionScene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(50, 100, 50);
+    heightFunctionScene.add(directionalLight);
+
+    // Group for height function mesh
+    heightFunctionGroup = new THREE.Group();
+    heightFunctionScene.add(heightFunctionGroup);
+
+    // Start animation loop
+    if (!heightFunctionAnimating) {
+      heightFunctionAnimating = true;
+      animateHeightFunction();
+    }
+
+    // Handle resize
+    const resizeObserver = new ResizeObserver(() => {
+      if (!heightFunctionRenderer || !container) return;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      heightFunctionRenderer.setSize(w, h);
+      const newAspect = w / h;
+      heightFunctionCamera.left = -frustumSize * newAspect / 2;
+      heightFunctionCamera.right = frustumSize * newAspect / 2;
+      heightFunctionCamera.updateProjectionMatrix();
+      heightFunctionRenderer.render(heightFunctionScene, heightFunctionCamera);
+    });
+    resizeObserver.observe(container);
+  }
+
+  function animateHeightFunction() {
+    if (!heightFunctionAnimating) return;
+    requestAnimationFrame(animateHeightFunction);
+    if (heightFunctionControls) heightFunctionControls.update();
+    if (heightFunctionRenderer && heightFunctionScene && heightFunctionCamera) {
+      heightFunctionRenderer.render(heightFunctionScene, heightFunctionCamera);
+    }
+  }
+
+  // Get color for height value (diverging colormap: blue -> gray -> red)
+  function getHeightColor(h, maxAbsH) {
+    const t = maxAbsH > 0 ? Math.tanh(h / (maxAbsH * 0.5)) : 0;
+    const gray = 0.75;
+    let r, g, b;
+    if (t < 0) {
+      const s = -t;
+      r = gray * (1 - s);
+      g = gray * (1 - s);
+      b = gray + s * (1 - gray);
+    } else {
+      const s = t;
+      r = gray + s * (1 - gray);
+      g = gray * (1 - s);
+      b = gray * (1 - s);
+    }
+    return new THREE.Color(r, g, b);
+  }
+
+  // Render height function difference as 3D surface
+  function renderHeightFunctionSurface(heightDiff) {
+    if (!heightFunctionGroup) return;
+
+    // Clear existing meshes
+    while (heightFunctionGroup.children.length > 0) {
+      const m = heightFunctionGroup.children[0];
+      heightFunctionGroup.remove(m);
+      if (m.geometry) m.geometry.dispose();
+      if (m.material) m.material.dispose();
+    }
+
+    if (!heightDiff || heightDiff.size === 0) return;
+
+    // Parse vertex keys and find bounds
+    const vertices = [];
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    let maxAbsH = 0;
+
+    for (const [key, h] of heightDiff) {
+      const [gx, gy] = key.split(',').map(Number);
+      vertices.push({ gx, gy, h });
+      minX = Math.min(minX, gx);
+      maxX = Math.max(maxX, gx);
+      minY = Math.min(minY, gy);
+      maxY = Math.max(maxY, gy);
+      maxAbsH = Math.max(maxAbsH, Math.abs(h));
+    }
+
+    // Create a map for quick lookup
+    const heightMap = new Map();
+    for (const v of vertices) {
+      heightMap.set(`${v.gx},${v.gy}`, v.h);
+    }
+
+    // Determine grid step by looking at actual vertex positions
+    const xCoords = [...new Set(vertices.map(v => v.gx))].sort((a, b) => a - b);
+    const yCoords = [...new Set(vertices.map(v => v.gy))].sort((a, b) => a - b);
+
+    // Find minimum step size (usually 2 for domino tilings)
+    let stepX = 2, stepY = 2;
+    if (xCoords.length > 1) {
+      for (let i = 1; i < xCoords.length; i++) {
+        const diff = xCoords[i] - xCoords[i-1];
+        if (diff > 0) stepX = Math.min(stepX, diff);
+      }
+    }
+    if (yCoords.length > 1) {
+      for (let i = 1; i < yCoords.length; i++) {
+        const diff = yCoords[i] - yCoords[i-1];
+        if (diff > 0) stepY = Math.min(stepY, diff);
+      }
+    }
+
+    // Create triangulated surface
+    const positions = [];
+    const colors = [];
+    const indices = [];
+
+    const scale = 60 / Math.max(maxX - minX, maxY - minY, 1);
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const heightScale = 3; // Scale factor for height visualization
+
+    // Build triangles for each grid cell using the detected step size
+    for (let gx = minX; gx < maxX; gx += stepX) {
+      for (let gy = minY; gy < maxY; gy += stepY) {
+        const k00 = `${gx},${gy}`;
+        const k10 = `${gx+stepX},${gy}`;
+        const k01 = `${gx},${gy+stepY}`;
+        const k11 = `${gx+stepX},${gy+stepY}`;
+
+        // Check if all 4 corners exist
+        if (heightMap.has(k00) && heightMap.has(k10) &&
+            heightMap.has(k01) && heightMap.has(k11)) {
+          const h00 = heightMap.get(k00);
+          const h10 = heightMap.get(k10);
+          const h01 = heightMap.get(k01);
+          const h11 = heightMap.get(k11);
+
+          const idx = positions.length / 3;
+
+          // Add 4 vertices
+          const x0 = (gx - centerX) * scale;
+          const x1 = (gx + stepX - centerX) * scale;
+          const y0 = (gy - centerY) * scale;
+          const y1 = (gy + stepY - centerY) * scale;
+
+          positions.push(x0, h00 * heightScale, y0);
+          positions.push(x1, h10 * heightScale, y0);
+          positions.push(x0, h01 * heightScale, y1);
+          positions.push(x1, h11 * heightScale, y1);
+
+          // Colors based on height
+          const c00 = getHeightColor(h00, maxAbsH);
+          const c10 = getHeightColor(h10, maxAbsH);
+          const c01 = getHeightColor(h01, maxAbsH);
+          const c11 = getHeightColor(h11, maxAbsH);
+
+          colors.push(c00.r, c00.g, c00.b);
+          colors.push(c10.r, c10.g, c10.b);
+          colors.push(c01.r, c01.g, c01.b);
+          colors.push(c11.r, c11.g, c11.b);
+
+          // Two triangles per quad
+          indices.push(idx, idx+1, idx+2);
+          indices.push(idx+1, idx+3, idx+2);
+        }
+      }
+    }
+
+    if (positions.length === 0) return;
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+
+    const material = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      side: THREE.DoubleSide,
+      flatShading: true
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    heightFunctionGroup.add(mesh);
+
+    // Reset camera view
+    if (heightFunctionCamera) {
+      heightFunctionCamera.position.set(50, 150, 50);
+      heightFunctionCamera.lookAt(0, 0, 0);
+      if (heightFunctionControls) {
+        heightFunctionControls.target.set(0, 0, 0);
+        heightFunctionControls.update();
+      }
+    }
+
+    if (heightFunctionRenderer && heightFunctionScene && heightFunctionCamera) {
+      heightFunctionRenderer.render(heightFunctionScene, heightFunctionCamera);
+    }
+  }
+
+  // Show height function pane
+  function showHeightFunctionPane() {
+    const container = document.getElementById('height-function-container');
+    const threeContainer = document.getElementById('height-function-3d-container');
+    if (!container || !threeContainer) return;
+
+    container.style.display = 'block';
+    heightFunctionActive = true;
+
+    // Wait for layout to be computed before initializing Three.js
+    setTimeout(() => {
+      // Initialize Three.js if needed
+      if (!heightFunctionRenderer) {
+        initHeightFunction3D(threeContainer);
+      }
+
+      // Compute and render height function difference
+      if (sampleDominoes.length > 0 && sampleDominoes2.length > 0) {
+        const heightDiff = computeDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
+        renderHeightFunctionSurface(heightDiff);
+      }
+    }, 50);
+  }
+
+  // Hide height function pane
+  function hideHeightFunctionPane() {
+    const container = document.getElementById('height-function-container');
+    if (container) {
+      container.style.display = 'none';
+    }
+    heightFunctionActive = false;
+  }
+
+  // Update height function button visibility
+  function updateHeightFunctionButtonVisibility() {
+    const btn = document.getElementById('height-function-btn');
+    if (!btn) return;
+
+    // Show button only when double dimer mode is active and we have both configs
+    if (doubleDimerMode && sampleDominoes.length > 0 && sampleDominoes2.length > 0) {
+      btn.style.display = 'inline-block';
+    } else {
+      btn.style.display = 'none';
+      hideHeightFunctionPane();
+    }
   }
 
   // Create domino face (from domino.md)
@@ -3855,6 +4243,15 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       resetSampleView();
       renderSample();
       updateSample3DView();
+
+      // Update height function button visibility
+      updateHeightFunctionButtonVisibility();
+
+      // Update height function pane if visible
+      if (heightFunctionActive && doubleDimerMode) {
+        const heightDiff = computeDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
+        renderHeightFunctionSurface(heightDiff);
+      }
 
     } catch (e) {
       console.error('Shuffling error:', e);
@@ -4962,6 +5359,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         if (doubleDimerOptions) {
           doubleDimerOptions.style.display = this.checked ? 'inline' : 'none';
         }
+        // Hide height function button/pane immediately when double dimer mode is turned off
+        if (!this.checked) {
+          updateHeightFunctionButtonVisibility();
+        }
         // Re-sample when toggling double dimer mode (need to get two configs)
         generateRandomSample();
       });
@@ -4972,6 +5373,18 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         minLoopLength = parseInt(this.value) || 2;
         renderSample();
       });
+    }
+
+    // Height function button event handlers
+    const heightFunctionBtn = document.getElementById('height-function-btn');
+    const heightFunctionCloseBtn = document.getElementById('height-function-close-btn');
+
+    if (heightFunctionBtn) {
+      heightFunctionBtn.addEventListener('click', showHeightFunctionPane);
+    }
+
+    if (heightFunctionCloseBtn) {
+      heightFunctionCloseBtn.addEventListener('click', hideHeightFunctionPane);
     }
 
     // Clear status message when N input changes
@@ -5398,6 +5811,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         renderMain3D();
       } else {
         renderMain2DTemb();
+      }
+
+      // Also render T-graph if section is open
+      if (document.getElementById('tgraph-section').open) {
+        renderTgraph();
       }
 
       // Display compute time
@@ -6358,6 +6776,446 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const imSign = v.im >= 0 ? '+' : '-';
       const imAbs = Math.abs(v.im).toFixed(4);
       ctx.fillText(`T(${v.i},${v.j}) = ${v.re.toFixed(4)} ${imSign} ${imAbs}i`, 15, 15);
+    }
+  }
+
+  // ========== T-GRAPH RENDERING (T + Origami) ==========
+  // T-graph: TG(i,j) = T(i,j) + O(i,j) as complex numbers
+
+  let tgraphZoom = 1.0;
+  let tgraphPanX = 0;
+  let tgraphPanY = 0;
+
+  function renderTgraph() {
+    const canvas = document.getElementById('tgraph-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const n = currentSimulationN;
+
+    // Handle DPI scaling
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+
+    // Skip if canvas has no dimensions (hidden or not yet laid out)
+    if (rect.width === 0 || rect.height === 0) return;
+
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    ctx.fillStyle = '#fafafa';
+    ctx.fillRect(0, 0, rect.width, rect.height);
+
+    if (!wasmReady || !getTembeddingLevelJSON || !getOrigamiLevelJSON) {
+      ctx.fillStyle = '#666';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Loading...', rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    const finalK = Math.max(0, n - 2);
+
+    // Get T-embedding data
+    let ptr = getTembeddingLevelJSON(finalK);
+    let json = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    let tembData;
+    try {
+      tembData = JSON.parse(json);
+    } catch (e) {
+      ctx.fillStyle = '#888';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Error parsing T-embedding data', rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    // Get origami data
+    ptr = getOrigamiLevelJSON(finalK);
+    json = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    let origamiData;
+    try {
+      origamiData = JSON.parse(json);
+    } catch (e) {
+      ctx.fillStyle = '#888';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Error parsing origami data', rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    if (!tembData.vertices || tembData.vertices.length === 0 ||
+        !origamiData.vertices || origamiData.vertices.length === 0) {
+      ctx.fillStyle = '#888';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No data. Click "Compute".', rect.width / 2, rect.height / 2);
+      return;
+    }
+
+    const k = tembData.k;
+
+    // Build vertex maps
+    const tembMap = new Map();
+    for (const v of tembData.vertices) {
+      tembMap.set(`${v.i},${v.j}`, v);
+    }
+    const origamiMap = new Map();
+    for (const v of origamiData.vertices) {
+      origamiMap.set(`${v.i},${v.j}`, v);
+    }
+
+    // Compute T-graph vertices: TG(i,j) = T(i,j) + O(i,j)
+    const tgraphVertices = [];
+    for (const tv of tembData.vertices) {
+      const ov = origamiMap.get(`${tv.i},${tv.j}`);
+      if (ov) {
+        tgraphVertices.push({
+          i: tv.i,
+          j: tv.j,
+          re: tv.re + ov.re,
+          im: tv.im + ov.im
+        });
+      }
+    }
+
+    // Compute bounds
+    let minRe = Infinity, maxRe = -Infinity;
+    let minIm = Infinity, maxIm = -Infinity;
+    for (const v of tgraphVertices) {
+      minRe = Math.min(minRe, v.re);
+      maxRe = Math.max(maxRe, v.re);
+      minIm = Math.min(minIm, v.im);
+      maxIm = Math.max(maxIm, v.im);
+    }
+
+    const padding = 20;
+    const rangeRe = maxRe - minRe || 1;
+    const rangeIm = maxIm - minIm || 1;
+    const baseScale = Math.min(
+      (rect.width - 2 * padding) / rangeRe,
+      (rect.height - 2 * padding) / rangeIm
+    );
+    const scale = baseScale * tgraphZoom;
+
+    const centerX = rect.width / 2 + tgraphPanX;
+    const centerY = rect.height / 2 + tgraphPanY;
+    const centerRe = (minRe + maxRe) / 2;
+    const centerIm = (minIm + maxIm) / 2;
+
+    // Build T-graph vertex map
+    const tgraphMap = new Map();
+    for (const v of tgraphVertices) {
+      tgraphMap.set(`${v.i},${v.j}`, v);
+    }
+
+    // Get T-graph-specific size controls
+    const edgeThicknessControl = parseFloat(document.getElementById('tgraph-edge-thickness').value) || 2;
+    const vertexSizeControl = parseFloat(document.getElementById('tgraph-vertex-size').value) || 3;
+    const uniformEdgeWidth = Math.max(edgeThicknessControl, scale / 300 * edgeThicknessControl);
+
+    // Helper to draw T-graph edge
+    function drawTgraphEdge(i1, j1, i2, j2) {
+      const v1 = tgraphMap.get(`${i1},${j1}`);
+      const v2 = tgraphMap.get(`${i2},${j2}`);
+      if (v1 && v2) {
+        const x1 = centerX + (v1.re - centerRe) * scale;
+        const y1 = centerY - (v1.im - centerIm) * scale;
+        const x2 = centerX + (v2.re - centerRe) * scale;
+        const y2 = centerY - (v2.im - centerIm) * scale;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+    }
+
+    // Draw T-graph edges in teal
+    ctx.strokeStyle = '#009688';
+    ctx.lineWidth = uniformEdgeWidth;
+
+    // Interior edges (same structure as T-embedding)
+    for (let i = -k; i <= k; i++) {
+      for (let j = -k; j <= k; j++) {
+        if (Math.abs(i) + Math.abs(j) > k) continue;
+        // Right neighbor
+        if (Math.abs(i+1) + Math.abs(j) <= k) {
+          drawTgraphEdge(i, j, i+1, j);
+        }
+        // Up neighbor
+        if (Math.abs(i) + Math.abs(j+1) <= k) {
+          drawTgraphEdge(i, j, i, j+1);
+        }
+      }
+    }
+
+    // Boundary edges (rhombus)
+    drawTgraphEdge(k+1, 0, 0, k+1);
+    drawTgraphEdge(0, k+1, -(k+1), 0);
+    drawTgraphEdge(-(k+1), 0, 0, -(k+1));
+    drawTgraphEdge(0, -(k+1), k+1, 0);
+
+    // External corners to alpha
+    drawTgraphEdge(k+1, 0, k, 0);
+    drawTgraphEdge(-(k+1), 0, -k, 0);
+    drawTgraphEdge(0, k+1, 0, k);
+    drawTgraphEdge(0, -(k+1), 0, -k);
+
+    // Diagonal boundary edges
+    for (let s = 0; s < k; s++) {
+      drawTgraphEdge(k-s, s, k-s-1, s+1);       // NE
+      drawTgraphEdge(-s, k-s, -(s+1), k-s-1);   // NW
+      drawTgraphEdge(-(k-s), -s, -(k-s-1), -(s+1)); // SW
+      drawTgraphEdge(s, -(k-s), s+1, -(k-s-1)); // SE
+    }
+
+    // Draw T-graph vertices in teal
+    ctx.fillStyle = '#009688';
+    const radius = Math.max(vertexSizeControl, scale / 200 * vertexSizeControl);
+    for (const v of tgraphVertices) {
+      const x = centerX + (v.re - centerRe) * scale;
+      const y = centerY - (v.im - centerIm) * scale;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+
+    // Draw label
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = '#009688';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`T-graph (k=${k})`, 10, 10);
+  }
+
+  // Set up T-graph canvas pan/zoom
+  function setupTgraphCanvasInteraction() {
+    const canvas = document.getElementById('tgraph-canvas');
+    if (!canvas) return;
+
+    let isDragging = false;
+    let lastX, lastY;
+
+    canvas.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      canvas.style.cursor = 'grabbing';
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      tgraphPanX += dx;
+      tgraphPanY += dy;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      renderTgraph();
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      isDragging = false;
+      canvas.style.cursor = 'grab';
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      isDragging = false;
+      canvas.style.cursor = 'grab';
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+      tgraphZoom *= zoomFactor;
+      tgraphZoom = Math.max(0.1, Math.min(tgraphZoom, 20));
+      renderTgraph();
+    });
+
+    canvas.style.cursor = 'grab';
+  }
+
+  // T-graph PNG export
+  function exportTgraphPNG() {
+    const canvas = document.getElementById('tgraph-canvas');
+    if (!canvas) return;
+
+    const quality = parseInt(document.getElementById('tgraph-png-quality').value) / 100;
+    const n = currentSimulationN;
+
+    // Create a temporary high-res canvas for export
+    const exportCanvas = document.createElement('canvas');
+    const scale = 2; // 2x resolution for crisp export
+    const rect = canvas.getBoundingClientRect();
+    exportCanvas.width = rect.width * scale;
+    exportCanvas.height = rect.height * scale;
+
+    const ctx = exportCanvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    // Render T-graph to export canvas
+    renderTgraphToContext(ctx, rect.width, rect.height);
+
+    // Download
+    const link = document.createElement('a');
+    link.download = `tgraph-n${n}.png`;
+    link.href = exportCanvas.toDataURL('image/png', quality);
+    link.click();
+  }
+
+  // T-graph PDF export (using jsPDF if available, else PNG fallback)
+  function exportTgraphPDF() {
+    const canvas = document.getElementById('tgraph-canvas');
+    if (!canvas) return;
+
+    const n = currentSimulationN;
+
+    // Create high-res canvas for PDF
+    const exportCanvas = document.createElement('canvas');
+    const scale = 3;
+    const rect = canvas.getBoundingClientRect();
+    exportCanvas.width = rect.width * scale;
+    exportCanvas.height = rect.height * scale;
+
+    const ctx = exportCanvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    // White background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, rect.width, rect.height);
+
+    // Render T-graph
+    renderTgraphToContext(ctx, rect.width, rect.height);
+
+    // Check if jsPDF is available
+    if (typeof jspdf !== 'undefined' && jspdf.jsPDF) {
+      const { jsPDF } = jspdf;
+      const pdf = new jsPDF({
+        orientation: rect.width > rect.height ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [rect.width, rect.height]
+      });
+      pdf.addImage(exportCanvas.toDataURL('image/png'), 'PNG', 0, 0, rect.width, rect.height);
+      pdf.save(`tgraph-n${n}.pdf`);
+    } else {
+      // Fallback to PNG
+      const link = document.createElement('a');
+      link.download = `tgraph-n${n}.png`;
+      link.href = exportCanvas.toDataURL('image/png');
+      link.click();
+    }
+  }
+
+  // Helper: render T-graph to a given context (for export)
+  function renderTgraphToContext(ctx, width, height) {
+    const n = currentSimulationN;
+    const finalK = Math.max(0, n - 2);
+
+    if (!wasmReady || !getTembeddingLevelJSON || !getOrigamiLevelJSON) return;
+
+    // Get T-embedding data
+    let ptr = getTembeddingLevelJSON(finalK);
+    let json = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    let tembData;
+    try { tembData = JSON.parse(json); } catch (e) { return; }
+
+    // Get origami data
+    ptr = getOrigamiLevelJSON(finalK);
+    json = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    let origamiData;
+    try { origamiData = JSON.parse(json); } catch (e) { return; }
+
+    if (!tembData.vertices || !origamiData.vertices) return;
+
+    const k = tembData.k;
+
+    // Build vertex maps
+    const tembMap = new Map();
+    for (const v of tembData.vertices) tembMap.set(`${v.i},${v.j}`, v);
+    const origamiMap = new Map();
+    for (const v of origamiData.vertices) origamiMap.set(`${v.i},${v.j}`, v);
+
+    // Compute T-graph vertices
+    const tgraphVertices = [];
+    for (const tv of tembData.vertices) {
+      const ov = origamiMap.get(`${tv.i},${tv.j}`);
+      if (ov) {
+        tgraphVertices.push({ i: tv.i, j: tv.j, re: tv.re + ov.re, im: tv.im + ov.im });
+      }
+    }
+
+    // Compute bounds
+    let minRe = Infinity, maxRe = -Infinity, minIm = Infinity, maxIm = -Infinity;
+    for (const v of tgraphVertices) {
+      minRe = Math.min(minRe, v.re); maxRe = Math.max(maxRe, v.re);
+      minIm = Math.min(minIm, v.im); maxIm = Math.max(maxIm, v.im);
+    }
+
+    const padding = 20;
+    const rangeRe = maxRe - minRe || 1;
+    const rangeIm = maxIm - minIm || 1;
+    const baseScale = Math.min((width - 2 * padding) / rangeRe, (height - 2 * padding) / rangeIm);
+    const scale = baseScale * tgraphZoom;
+
+    const centerX = width / 2 + tgraphPanX;
+    const centerY = height / 2 + tgraphPanY;
+    const centerRe = (minRe + maxRe) / 2;
+    const centerIm = (minIm + maxIm) / 2;
+
+    const tgraphMap = new Map();
+    for (const v of tgraphVertices) tgraphMap.set(`${v.i},${v.j}`, v);
+
+    const edgeThicknessControl = parseFloat(document.getElementById('tgraph-edge-thickness').value) || 2;
+    const vertexSizeControl = parseFloat(document.getElementById('tgraph-vertex-size').value) || 3;
+    const uniformEdgeWidth = Math.max(edgeThicknessControl, scale / 300 * edgeThicknessControl);
+
+    function drawEdge(i1, j1, i2, j2) {
+      const v1 = tgraphMap.get(`${i1},${j1}`), v2 = tgraphMap.get(`${i2},${j2}`);
+      if (v1 && v2) {
+        ctx.beginPath();
+        ctx.moveTo(centerX + (v1.re - centerRe) * scale, centerY - (v1.im - centerIm) * scale);
+        ctx.lineTo(centerX + (v2.re - centerRe) * scale, centerY - (v2.im - centerIm) * scale);
+        ctx.stroke();
+      }
+    }
+
+    // Draw edges
+    ctx.strokeStyle = '#009688';
+    ctx.lineWidth = uniformEdgeWidth;
+
+    for (let i = -k; i <= k; i++) {
+      for (let j = -k; j <= k; j++) {
+        if (Math.abs(i) + Math.abs(j) > k) continue;
+        if (Math.abs(i+1) + Math.abs(j) <= k) drawEdge(i, j, i+1, j);
+        if (Math.abs(i) + Math.abs(j+1) <= k) drawEdge(i, j, i, j+1);
+      }
+    }
+
+    drawEdge(k+1, 0, 0, k+1); drawEdge(0, k+1, -(k+1), 0);
+    drawEdge(-(k+1), 0, 0, -(k+1)); drawEdge(0, -(k+1), k+1, 0);
+    drawEdge(k+1, 0, k, 0); drawEdge(-(k+1), 0, -k, 0);
+    drawEdge(0, k+1, 0, k); drawEdge(0, -(k+1), 0, -k);
+
+    for (let s = 0; s < k; s++) {
+      drawEdge(k-s, s, k-s-1, s+1);
+      drawEdge(-s, k-s, -(s+1), k-s-1);
+      drawEdge(-(k-s), -s, -(k-s-1), -(s+1));
+      drawEdge(s, -(k-s), s+1, -(k-s-1));
+    }
+
+    // Draw vertices
+    ctx.fillStyle = '#009688';
+    const radius = Math.max(vertexSizeControl, scale / 200 * vertexSizeControl);
+    for (const v of tgraphVertices) {
+      const x = centerX + (v.re - centerRe) * scale;
+      const y = centerY - (v.im - centerIm) * scale;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      ctx.fill();
     }
   }
 
@@ -7927,6 +8785,62 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   document.getElementById('show-face-weights-chk').addEventListener('change', renderAztecGraph);
   document.getElementById('show-origami-chk').addEventListener('change', renderMain2DTemb);
   document.getElementById('show-checkerboard-chk').addEventListener('change', renderMain2DTemb);
+
+  // T-graph section toggle - render when opened
+  let tgraphSetup = false;
+  document.getElementById('tgraph-section').addEventListener('toggle', function() {
+    if (this.open) {
+      if (!tgraphSetup) {
+        setupTgraphCanvasInteraction();
+        tgraphSetup = true;
+      }
+      // Wait for layout to update before rendering
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          renderTgraph();
+        });
+      });
+    }
+  });
+
+  // T-graph zoom buttons
+  document.getElementById('tgraph-zoom-in-btn').addEventListener('click', () => {
+    tgraphZoom = Math.min(20, tgraphZoom * 1.25);
+    renderTgraph();
+  });
+  document.getElementById('tgraph-zoom-out-btn').addEventListener('click', () => {
+    tgraphZoom = Math.max(0.1, tgraphZoom / 1.25);
+    renderTgraph();
+  });
+  document.getElementById('tgraph-zoom-reset-btn').addEventListener('click', () => {
+    tgraphZoom = 1.0;
+    tgraphPanX = 0;
+    tgraphPanY = 0;
+    renderTgraph();
+  });
+
+  // T-graph size controls
+  document.getElementById('tgraph-vertex-size').addEventListener('input', () => {
+    if (document.getElementById('tgraph-section').open) renderTgraph();
+  });
+  document.getElementById('tgraph-edge-thickness').addEventListener('input', () => {
+    if (document.getElementById('tgraph-section').open) renderTgraph();
+  });
+
+  // T-graph PNG quality slider
+  document.getElementById('tgraph-png-quality').addEventListener('input', function() {
+    document.getElementById('tgraph-png-quality-value').textContent = this.value;
+  });
+
+  // T-graph PDF export
+  document.getElementById('tgraph-export-pdf-btn').addEventListener('click', () => {
+    exportTgraphPDF();
+  });
+
+  // T-graph PNG export
+  document.getElementById('tgraph-export-png-btn').addEventListener('click', () => {
+    exportTgraphPNG();
+  });
 
   // Double dimer on T-graph
   const doubleDimerTembBtn = document.getElementById('sample-double-dimer-temb-btn');
