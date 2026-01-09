@@ -863,55 +863,61 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 </details>
 
 <!-- T-graph Section (T-embedding + Origami) -->
-<details id="tgraph-section" style="margin-top: 15px;">
-  <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #e8eef5; border: 1px solid #232D4B;" aria-label="T-graph visualization section">
+<details id="tgraph-section" style="margin-top: 15px; border: 1px solid #232D4B; border-radius: 8px; overflow: hidden;">
+  <summary style="cursor: pointer; font-weight: bold; padding: 8px 12px; background: linear-gradient(135deg, #232D4B 0%, #002f6c 100%); color: white; user-select: none;" aria-label="T-graph visualization section">
     📐 T-graph (T + Origami)
   </summary>
-  <div style="margin-top: 10px; padding: 10px; border: 1px solid #ccc; background: #f9f9f9;">
+  <div style="padding: 12px; background: #f9f9f9;">
     <!-- Display Controls -->
-    <div style="margin-bottom: 12px; padding: 12px 14px; background: #fafafa; border: 1px solid #e0e0e0; border-radius: 5px;">
+    <div style="margin-bottom: 12px; padding: 12px 14px; background: #fff; border: 1px solid #dee2e6; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
       <div style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center;">
         <label style="display: flex; align-items: center; gap: 5px;">
-          <span style="font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.3px;">Vertex</span>
-          <input type="number" id="tgraph-vertex-size" value="3" min="0.6" max="20" step="0.1" style="width: 50px; padding: 4px 6px; font-size: 12px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="T-graph vertex size">
+          <span style="font-size: 11px; font-weight: 600; color: #232D4B; text-transform: uppercase; letter-spacing: 0.3px;">Vertex</span>
+          <input type="number" id="tgraph-vertex-size" value="1" min="0.2" max="10" step="0.1" style="width: 55px; padding: 5px 8px; font-size: 12px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; transition: border-color 0.15s;" aria-label="T-graph vertex size">
         </label>
         <label style="display: flex; align-items: center; gap: 5px;">
-          <span style="font-size: 11px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.3px;">Edge</span>
-          <input type="number" id="tgraph-edge-thickness" value="2" min="0.3" max="10" step="0.1" style="width: 50px; padding: 4px 6px; font-size: 12px; font-family: monospace; border: 1px solid #ccc; border-radius: 3px;" aria-label="T-graph edge thickness">
+          <span style="font-size: 11px; font-weight: 600; color: #232D4B; text-transform: uppercase; letter-spacing: 0.3px;">Edge</span>
+          <input type="number" id="tgraph-edge-thickness" value="0.7" min="0.1" max="5" step="0.1" style="width: 55px; padding: 5px 8px; font-size: 12px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; transition: border-color 0.15s;" aria-label="T-graph edge thickness">
         </label>
+        <div style="display: inline-flex; background: #f0f0f0; border-radius: 5px; padding: 3px; gap: 2px;">
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 5px 10px; border-radius: 4px; transition: all 0.15s;" class="overlay-toggle" data-for="tgraph-checkerboard-chk">
+            <input type="checkbox" id="tgraph-checkerboard-chk" style="display: none;" checked aria-label="Checkerboard coloring">
+            <span style="font-size: 11px; font-weight: 600; color: #555; letter-spacing: 0.02em; user-select: none;">Checkerboard</span>
+          </label>
+        </div>
       </div>
     </div>
 
     <!-- Canvas container with floating buttons -->
-    <div id="tgraph-canvas-wrapper" style="position: relative;">
+    <div id="tgraph-canvas-wrapper" style="position: relative; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
       <!-- Floating view controls -->
-      <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; flex-wrap: wrap; gap: 4px; max-width: 300px;" role="toolbar" aria-label="T-graph view controls">
-        <button id="tgraph-zoom-out-btn"
-                style="padding: 6px 12px; font-weight: bold; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+      <div style="position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; gap: 4px;" role="toolbar" aria-label="T-graph view controls">
+        <button id="tgraph-zoom-out-btn" class="tgraph-zoom-btn"
+                style="padding: 6px 12px; font-weight: bold; background: rgba(255,255,255,0.95); border: 1px solid #232D4B; border-radius: 4px; cursor: pointer; min-width: 36px; color: #232D4B; transition: all 0.15s;"
                 aria-label="Zoom out" title="Zoom out">−</button>
-        <button id="tgraph-zoom-reset-btn"
-                style="padding: 6px 12px; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+        <button id="tgraph-zoom-reset-btn" class="tgraph-zoom-btn"
+                style="padding: 6px 10px; background: rgba(255,255,255,0.95); border: 1px solid #232D4B; border-radius: 4px; cursor: pointer; min-width: 36px; color: #232D4B; font-size: 14px; transition: all 0.15s;"
                 aria-label="Reset zoom" title="Reset zoom">⟲</button>
-        <button id="tgraph-zoom-in-btn"
-                style="padding: 6px 12px; font-weight: bold; background: rgba(255,255,255,0.95); border: 1px solid #999; border-radius: 4px; cursor: pointer; min-width: 40px;"
+        <button id="tgraph-zoom-in-btn" class="tgraph-zoom-btn"
+                style="padding: 6px 12px; font-weight: bold; background: rgba(255,255,255,0.95); border: 1px solid #232D4B; border-radius: 4px; cursor: pointer; min-width: 36px; color: #232D4B; transition: all 0.15s;"
                 aria-label="Zoom in" title="Zoom in">+</button>
       </div>
 
-      <canvas id="tgraph-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa;"></canvas>
+      <canvas id="tgraph-canvas" style="width: 100%; height: 50vh; border: 1px solid #dee2e6; background: #fafafa; cursor: grab;"></canvas>
     </div>
 
     <!-- Export Controls -->
-    <div style="margin-top: 12px; padding: 10px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
-      <div style="font-weight: bold; margin-bottom: 8px; font-size: 13px;">💾 Export T-graph</div>
+    <div style="margin-top: 12px; padding: 12px; background: #fff; border: 1px solid #dee2e6; border-radius: 6px;">
+      <div style="font-weight: 600; margin-bottom: 10px; font-size: 13px; color: #232D4B;">💾 Export T-graph</div>
       <div style="display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;" role="group" aria-label="T-graph export options">
-        <button id="tgraph-export-pdf-btn" style="padding: 6px 14px; background: #232D4B; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export T-graph as PDF">PDF</button>
-        <span style="color: #dee2e6;">|</span>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <button id="tgraph-export-png-btn" style="padding: 6px 14px; background: #002f6c; color: white; border: none; border-radius: 4px; font-weight: 500;" aria-label="Export T-graph as PNG">PNG</button>
-          <label style="display: flex; align-items: center; gap: 4px; font-size: 12px;">
+        <button id="tgraph-export-pdf-btn" style="padding: 7px 16px; background: #E57200; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; transition: background 0.15s;" aria-label="Export T-graph as PDF">PDF</button>
+        <span style="color: #dee2e6; font-size: 18px;">|</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button id="tgraph-export-png-btn" style="padding: 7px 16px; background: #232D4B; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; transition: background 0.15s;" aria-label="Export T-graph as PNG">PNG</button>
+          <label style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: #555;">
             <span>Quality:</span>
-            <input type="range" id="tgraph-png-quality" min="1" max="100" value="85" style="width: 70px;" aria-label="PNG quality">
-            <span id="tgraph-png-quality-value" style="font-family: monospace; min-width: 30px;">85</span>
+            <input type="range" id="tgraph-png-quality" min="1" max="100" value="85" style="width: 70px; accent-color: #E57200;" aria-label="PNG quality">
+            <span id="tgraph-png-quality-value" style="font-family: monospace; min-width: 28px; color: #232D4B; font-weight: 500;">85</span>
           </label>
         </div>
       </div>
@@ -1175,6 +1181,28 @@ button:disabled {
   background: #232D4B !important;
   color: white !important;
   filter: none;
+}
+
+/* T-graph zoom buttons */
+.tgraph-zoom-btn:hover {
+  background: #E57200 !important;
+  border-color: #E57200 !important;
+  color: white !important;
+  filter: none;
+}
+
+/* T-graph export buttons */
+#tgraph-export-pdf-btn:hover {
+  background: #c45f00 !important;
+}
+#tgraph-export-png-btn:hover {
+  background: #1a2235 !important;
+}
+
+/* T-graph input focus */
+#tgraph-vertex-size:focus, #tgraph-edge-thickness:focus {
+  border-color: #E57200;
+  box-shadow: 0 0 0 2px rgba(229, 114, 0, 0.15);
 }
 
 /* Input field refinements */
@@ -6912,9 +6940,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     // Get T-graph-specific size controls
-    const edgeThicknessControl = parseFloat(document.getElementById('tgraph-edge-thickness').value) || 2;
-    const vertexSizeControl = parseFloat(document.getElementById('tgraph-vertex-size').value) || 3;
-    const uniformEdgeWidth = Math.max(edgeThicknessControl, scale / 300 * edgeThicknessControl);
+    // Scale sizes based on n for better visibility: larger n = smaller features
+    const edgeThicknessControl = parseFloat(document.getElementById('tgraph-edge-thickness').value) || 0.7;
+    const vertexSizeControl = parseFloat(document.getElementById('tgraph-vertex-size').value) || 1;
+    const nFactor = Math.max(0.3, Math.min(1.5, 8 / Math.max(1, n)));  // Scale down for large n
+    const uniformEdgeWidth = edgeThicknessControl * nFactor;
 
     // Helper to draw T-graph edge
     function drawTgraphEdge(i1, j1, i2, j2) {
@@ -6929,6 +6959,53 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
         ctx.stroke();
+      }
+    }
+
+    // Draw checkerboard faces if enabled
+    const showCheckerboard = document.getElementById('tgraph-checkerboard-chk')?.checked;
+    if (showCheckerboard) {
+      // Helper to draw a T-graph face (quadrilateral)
+      function drawTgraphFace(i1, j1, i2, j2, i3, j3, i4, j4, color) {
+        const v1 = tgraphMap.get(`${i1},${j1}`);
+        const v2 = tgraphMap.get(`${i2},${j2}`);
+        const v3 = tgraphMap.get(`${i3},${j3}`);
+        const v4 = tgraphMap.get(`${i4},${j4}`);
+        if (v1 && v2 && v3 && v4) {
+          const x1 = centerX + (v1.re - centerRe) * scale;
+          const y1 = centerY - (v1.im - centerIm) * scale;
+          const x2 = centerX + (v2.re - centerRe) * scale;
+          const y2 = centerY - (v2.im - centerIm) * scale;
+          const x3 = centerX + (v3.re - centerRe) * scale;
+          const y3 = centerY - (v3.im - centerIm) * scale;
+          const x4 = centerX + (v4.re - centerRe) * scale;
+          const y4 = centerY - (v4.im - centerIm) * scale;
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.lineTo(x3, y3);
+          ctx.lineTo(x4, y4);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      // Interior faces: squares at (i, j) where |i|+|j| < k
+      // Black faces: (i+j+k) % 2 == 1
+      for (let i = -k; i < k; i++) {
+        for (let j = -k; j < k; j++) {
+          // Face is interior if all 4 corners are within |i|+|j| <= k
+          if (Math.abs(i) + Math.abs(j) >= k) continue;
+          if (Math.abs(i+1) + Math.abs(j) > k) continue;
+          if (Math.abs(i) + Math.abs(j+1) > k) continue;
+          if (Math.abs(i+1) + Math.abs(j+1) > k) continue;
+
+          const isBlack = (i + j + k) % 2 === 1;
+          if (isBlack) {
+            drawTgraphFace(i, j, i+1, j, i+1, j+1, i, j+1, 'rgba(0, 0, 0, 0.1)');
+          }
+        }
       }
     }
 
@@ -6971,9 +7048,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       drawTgraphEdge(s, -(k-s), s+1, -(k-s-1)); // SE
     }
 
-    // Draw T-graph vertices in teal
+    // Draw T-graph vertices
     ctx.fillStyle = '#000000';
-    const radius = Math.max(vertexSizeControl, scale / 200 * vertexSizeControl);
+    const radius = vertexSizeControl * nFactor;
     for (const v of tgraphVertices) {
       const x = centerX + (v.re - centerRe) * scale;
       const y = centerY - (v.im - centerIm) * scale;
@@ -7028,11 +7105,57 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-      tgraphZoom *= zoomFactor;
-      tgraphZoom = Math.max(0.1, Math.min(tgraphZoom, 20));
+      const factor = e.deltaY > 0 ? 0.9 : 1.1;
+      tgraphZoom = Math.max(0.02, Math.min(50, tgraphZoom * factor));
       renderTgraph();
-    });
+    }, { passive: false });
+
+    // Touch handlers for iOS/mobile
+    let tgraphTouchStartDist = 0;
+    let tgraphTouchStartZoom = 1;
+    let tgraphTouchLastX = 0;
+    let tgraphTouchLastY = 0;
+    let tgraphTouchIsPanning = false;
+
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        tgraphTouchIsPanning = true;
+        tgraphTouchLastX = e.touches[0].clientX;
+        tgraphTouchLastY = e.touches[0].clientY;
+      } else if (e.touches.length === 2) {
+        tgraphTouchIsPanning = false;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        tgraphTouchStartDist = Math.sqrt(dx * dx + dy * dy);
+        tgraphTouchStartZoom = tgraphZoom;
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1 && tgraphTouchIsPanning) {
+        const dx = e.touches[0].clientX - tgraphTouchLastX;
+        const dy = e.touches[0].clientY - tgraphTouchLastY;
+        tgraphPanX += dx;
+        tgraphPanY += dy;
+        tgraphTouchLastX = e.touches[0].clientX;
+        tgraphTouchLastY = e.touches[0].clientY;
+        renderTgraph();
+      } else if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (tgraphTouchStartDist > 0) {
+          tgraphZoom = Math.max(0.02, Math.min(50, tgraphTouchStartZoom * (dist / tgraphTouchStartDist)));
+          renderTgraph();
+        }
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => {
+      tgraphTouchIsPanning = false;
+      tgraphTouchStartDist = 0;
+    }, { passive: true });
 
     canvas.style.cursor = 'grab';
   }
@@ -7169,9 +7292,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     const tgraphMap = new Map();
     for (const v of tgraphVertices) tgraphMap.set(`${v.i},${v.j}`, v);
 
-    const edgeThicknessControl = parseFloat(document.getElementById('tgraph-edge-thickness').value) || 2;
-    const vertexSizeControl = parseFloat(document.getElementById('tgraph-vertex-size').value) || 3;
-    const uniformEdgeWidth = Math.max(edgeThicknessControl, scale / 300 * edgeThicknessControl);
+    const edgeThicknessControl = parseFloat(document.getElementById('tgraph-edge-thickness').value) || 0.7;
+    const vertexSizeControl = parseFloat(document.getElementById('tgraph-vertex-size').value) || 1;
+    const nFactor = Math.max(0.3, Math.min(1.5, 8 / Math.max(1, n)));
+    const uniformEdgeWidth = edgeThicknessControl * nFactor;
 
     function drawEdge(i1, j1, i2, j2) {
       const v1 = tgraphMap.get(`${i1},${j1}`), v2 = tgraphMap.get(`${i2},${j2}`);
@@ -7180,6 +7304,40 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         ctx.moveTo(centerX + (v1.re - centerRe) * scale, centerY - (v1.im - centerIm) * scale);
         ctx.lineTo(centerX + (v2.re - centerRe) * scale, centerY - (v2.im - centerIm) * scale);
         ctx.stroke();
+      }
+    }
+
+    // Draw checkerboard faces if enabled
+    const showCheckerboard = document.getElementById('tgraph-checkerboard-chk')?.checked;
+    if (showCheckerboard) {
+      function drawFace(i1, j1, i2, j2, i3, j3, i4, j4, color) {
+        const v1 = tgraphMap.get(`${i1},${j1}`);
+        const v2 = tgraphMap.get(`${i2},${j2}`);
+        const v3 = tgraphMap.get(`${i3},${j3}`);
+        const v4 = tgraphMap.get(`${i4},${j4}`);
+        if (v1 && v2 && v3 && v4) {
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.moveTo(centerX + (v1.re - centerRe) * scale, centerY - (v1.im - centerIm) * scale);
+          ctx.lineTo(centerX + (v2.re - centerRe) * scale, centerY - (v2.im - centerIm) * scale);
+          ctx.lineTo(centerX + (v3.re - centerRe) * scale, centerY - (v3.im - centerIm) * scale);
+          ctx.lineTo(centerX + (v4.re - centerRe) * scale, centerY - (v4.im - centerIm) * scale);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      for (let i = -k; i < k; i++) {
+        for (let j = -k; j < k; j++) {
+          if (Math.abs(i) + Math.abs(j) >= k) continue;
+          if (Math.abs(i+1) + Math.abs(j) > k) continue;
+          if (Math.abs(i) + Math.abs(j+1) > k) continue;
+          if (Math.abs(i+1) + Math.abs(j+1) > k) continue;
+          const isBlack = (i + j + k) % 2 === 1;
+          if (isBlack) {
+            drawFace(i, j, i+1, j, i+1, j+1, i, j+1, 'rgba(0, 0, 0, 0.1)');
+          }
+        }
       }
     }
 
@@ -7209,7 +7367,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     // Draw vertices
     ctx.fillStyle = '#000000';
-    const radius = Math.max(vertexSizeControl, scale / 200 * vertexSizeControl);
+    const radius = vertexSizeControl * nFactor;
     for (const v of tgraphVertices) {
       const x = centerX + (v.re - centerRe) * scale;
       const y = centerY - (v.im - centerIm) * scale;
@@ -8805,11 +8963,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   // T-graph zoom buttons
   document.getElementById('tgraph-zoom-in-btn').addEventListener('click', () => {
-    tgraphZoom = Math.min(20, tgraphZoom * 1.25);
+    tgraphZoom = Math.min(50, tgraphZoom * 1.25);
     renderTgraph();
   });
   document.getElementById('tgraph-zoom-out-btn').addEventListener('click', () => {
-    tgraphZoom = Math.max(0.1, tgraphZoom / 1.25);
+    tgraphZoom = Math.max(0.02, tgraphZoom / 1.25);
     renderTgraph();
   });
   document.getElementById('tgraph-zoom-reset-btn').addEventListener('click', () => {
@@ -8824,6 +8982,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     if (document.getElementById('tgraph-section').open) renderTgraph();
   });
   document.getElementById('tgraph-edge-thickness').addEventListener('input', () => {
+    if (document.getElementById('tgraph-section').open) renderTgraph();
+  });
+
+  // T-graph checkerboard toggle
+  document.getElementById('tgraph-checkerboard-chk').addEventListener('change', () => {
     if (document.getElementById('tgraph-section').open) renderTgraph();
   });
 
