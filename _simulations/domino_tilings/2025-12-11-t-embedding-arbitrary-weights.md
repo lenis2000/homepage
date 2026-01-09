@@ -7105,8 +7105,23 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const factor = e.deltaY > 0 ? 0.9 : 1.1;
-      tgraphZoom = Math.max(0.02, Math.min(50, tgraphZoom * factor));
+      // 3x slower zoom (0.97/1.03 instead of 0.9/1.1)
+      const factor = e.deltaY > 0 ? 0.97 : 1.03;
+      const newZoom = Math.max(0.02, Math.min(50, tgraphZoom * factor));
+
+      // Zoom around mouse pointer
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+
+      // Adjust pan so the point under mouse stays fixed
+      const zoomRatio = newZoom / tgraphZoom;
+      tgraphPanX = mouseX - centerX - (mouseX - centerX - tgraphPanX) * zoomRatio;
+      tgraphPanY = mouseY - centerY - (mouseY - centerY - tgraphPanY) * zoomRatio;
+
+      tgraphZoom = newZoom;
       renderTgraph();
     }, { passive: false });
 
@@ -8961,13 +8976,13 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
   });
 
-  // T-graph zoom buttons
+  // T-graph zoom buttons (slower zoom: 1.15 instead of 1.25)
   document.getElementById('tgraph-zoom-in-btn').addEventListener('click', () => {
-    tgraphZoom = Math.min(50, tgraphZoom * 1.25);
+    tgraphZoom = Math.min(50, tgraphZoom * 1.15);
     renderTgraph();
   });
   document.getElementById('tgraph-zoom-out-btn').addEventListener('click', () => {
-    tgraphZoom = Math.max(0.02, tgraphZoom / 1.25);
+    tgraphZoom = Math.max(0.02, tgraphZoom / 1.15);
     renderTgraph();
   });
   document.getElementById('tgraph-zoom-reset-btn').addEventListener('click', () => {
