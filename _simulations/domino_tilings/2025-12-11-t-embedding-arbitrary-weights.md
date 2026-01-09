@@ -119,7 +119,7 @@ code:
 <h5>Random Domino Sampler</h5>
 <p>The <strong>🎲 Sample</strong> button generates random domino tilings of the Aztec diamond using the domino shuffling algorithm with the currently selected edge weights.</p>
 <ul>
-  <li><strong>Size (N)</strong>: The Aztec diamond size (supports up to N = 300).</li>
+  <li><strong>Size (N)</strong>: The Aztec diamond size (supports up to N = 500).</li>
   <li><strong>Border</strong>: Gap between dominoes for visual clarity.</li>
   <li><strong>Double Dimer</strong>: When checked, samples two independent dimer configurations and displays their symmetric difference as colored loops. Dominoes shared by both configurations are hidden; the remaining dominoes form disjoint closed loops.</li>
   <li><strong>Min loop</strong>: Filter to show only loops of at least this length (useful for hiding short loops).</li>
@@ -929,7 +929,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px;">
         <label style="display: flex; align-items: center; gap: 6px;">
           <strong>Size (N):</strong>
-          <input type="number" id="sample-N-input" value="6" min="1" max="300" style="width: 70px;" aria-label="Domino tiling size">
+          <input type="number" id="sample-N-input" value="6" min="1" max="500" style="width: 70px;" aria-label="Domino tiling size">
         </label>
         <label style="display: flex; align-items: center; gap: 6px;">
           <strong>Border:</strong>
@@ -3208,16 +3208,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     const mesh = new THREE.Mesh(geometry, material);
     heightFunctionGroup.add(mesh);
 
-    // Reset camera view
-    if (heightFunctionCamera) {
-      heightFunctionCamera.position.set(50, 150, 50);
-      heightFunctionCamera.lookAt(0, 0, 0);
-      if (heightFunctionControls) {
-        heightFunctionControls.target.set(0, 0, 0);
-        heightFunctionControls.update();
-      }
-    }
-
     if (heightFunctionRenderer && heightFunctionScene && heightFunctionCamera) {
       heightFunctionRenderer.render(heightFunctionScene, heightFunctionCamera);
     }
@@ -4222,11 +4212,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     const timeSpan = document.getElementById('sample-time');
 
     // Hard limit (memory constraint: algorithm uses O(N³) memory)
-    if (N > 300) {
-      N = 300;
-      document.getElementById('sample-N-input').value = 300;
-      timeSpan.textContent = 'N capped to 300 (memory limit). Sampling...';
-    } else if (N > 200) {
+    if (N > 500) {
+      N = 500;
+      document.getElementById('sample-N-input').value = 500;
+      timeSpan.textContent = 'N capped to 500 (memory limit). Sampling...';
+    } else if (N > 300) {
       // Warning for large N
       timeSpan.textContent = 'Sampling (large N, may be slow)...';
     } else {
@@ -7054,7 +7044,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       e.preventDefault();
       // 3x slower zoom (0.97/1.03 instead of 0.9/1.1)
       const factor = e.deltaY > 0 ? 0.97 : 1.03;
-      const newZoom = Math.max(0.02, Math.min(50, tgraphZoom * factor));
+      const newZoom = Math.max(0.02, Math.min(500, tgraphZoom * factor));
 
       // Zoom around mouse pointer
       const rect = canvas.getBoundingClientRect();
@@ -7108,7 +7098,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (tgraphTouchStartDist > 0) {
-          tgraphZoom = Math.max(0.02, Math.min(50, tgraphTouchStartZoom * (dist / tgraphTouchStartDist)));
+          tgraphZoom = Math.max(0.02, Math.min(500, tgraphTouchStartZoom * (dist / tgraphTouchStartDist)));
           renderTgraph();
         }
       }
@@ -8891,7 +8881,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   // T-graph zoom buttons (slower zoom: 1.15 instead of 1.25)
   document.getElementById('tgraph-zoom-in-btn').addEventListener('click', () => {
-    tgraphZoom = Math.min(50, tgraphZoom * 1.15);
+    tgraphZoom = Math.min(500, tgraphZoom * 1.15);
     renderTgraph();
   });
   document.getElementById('tgraph-zoom-out-btn').addEventListener('click', () => {
