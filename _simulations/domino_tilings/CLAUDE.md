@@ -127,3 +127,23 @@ Different simulation types require different exported functions:
 ```
 
 Always check the base simulation's exports when creating a new simulation.
+
+## Compilation Workflow
+
+**Always use the preamble**: Each `.cpp` file contains its compile command in the top comment block. Use that command directly rather than constructing one manually.
+
+**Limits must match**: When changing limits (like max N), update both:
+1. The JavaScript/HTML (input max, cap checks, UI messages)
+2. The C++ code (hard limits in each exported function)
+3. Then recompile the WASM
+
+## 3D View Best Practices
+
+**Preserve camera on updates**: When updating 3D visualizations (like height function surfaces), don't reset camera position/zoom. Users expect their view orientation to persist when resampling data. Only set initial camera position in the `init` function, not in render/update functions.
+
+## UI Feature Removal
+
+When removing a UI feature (like checkerboard coloring), be precise about scope:
+- Ask clarifying questions if the feature exists in multiple sections (e.g., T-graph vs T-embedding)
+- "Remove from T-graph" ≠ "Remove from everywhere"
+- Features may have: checkbox UI, event listeners, rendering code, export code (PDF/PNG/GIF/SVG)
