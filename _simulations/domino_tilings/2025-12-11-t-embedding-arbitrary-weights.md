@@ -3937,9 +3937,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     for (const edge of edges) {
       const midX = (edge.x1 + edge.x2) / 2;
       const midY = (edge.y1 + edge.y2) / 2;
-      // Use i from X (horizontal) and j from Y (vertical) to match T-embedding face coordinate convention
-      const i = Math.floor(2 * (midX + N));
-      const j = Math.floor(2 * (midY + N));
+      const i = Math.floor(2 * (midY + N));
+      const j = Math.floor(2 * (midX + N));
       if (i >= 0 && i < dim && j >= 0 && j < dim) {
         weights[i * dim + j] = edge.weight;
       }
@@ -6974,7 +6973,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     // Draw T-graph vertices in teal
     ctx.fillStyle = '#000000';
-    const radius = Math.max(vertexSizeControl, scale / 800 * vertexSizeControl);  // Same scaling as T-embedding
+    const radius = Math.max(vertexSizeControl, scale / 200 * vertexSizeControl);
     for (const v of tgraphVertices) {
       const x = centerX + (v.re - centerRe) * scale;
       const y = centerY - (v.im - centerIm) * scale;
@@ -7210,7 +7209,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     // Draw vertices
     ctx.fillStyle = '#000000';
-    const radius = Math.max(vertexSizeControl, scale / 800 * vertexSizeControl);  // Same scaling as T-embedding
+    const radius = Math.max(vertexSizeControl, scale / 200 * vertexSizeControl);
     for (const v of tgraphVertices) {
       const x = centerX + (v.re - centerRe) * scale;
       const y = centerY - (v.im - centerIm) * scale;
@@ -8705,12 +8704,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
           const masterWeights = new Float64Array(dim * dim).fill(1.0);
 
           // Convert edge weights to matrix format for applyExternalWeights
-          // Use i from X (horizontal) and j from Y (vertical) to match T-embedding face coordinate convention
           aztecEdges.forEach(e => {
             const midX = (e.x1 + e.x2) / 2;
             const midY = (e.y1 + e.y2) / 2;
-            const matI = Math.floor(2 * (midX + N));
-            const matJ = Math.floor(2 * (midY + N));
+            const matI = Math.floor(2 * (midY + N));
+            const matJ = Math.floor(2 * (midX + N));
             if (matI >= 0 && matI < dim && matJ >= 0 && matJ < dim) {
               masterWeights[matI * dim + matJ] = e.weight;
             }
