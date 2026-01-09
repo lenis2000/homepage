@@ -363,7 +363,7 @@ EMSCRIPTEN_KEEPALIVE
 char* simulateAztecIIDDirect(int n, double* edgeWeights) {
     try {
         progressCounter = 0;
-        if (n > 300) n = 300;
+        if (n > 500) n = 500;
 
         // Generate edge weight matrix from pre-generated random values
         MatrixDouble A1a = generateIIDEdgeWeights(n, edgeWeights);
@@ -437,8 +437,8 @@ char* simulateAztecPeriodicDirect(int n, int k, int l,
     try {
         progressCounter = 0;
 
-        // Hard limit: N <= 300
-        if (n > 300) n = 300;
+        // Hard limit: N <= 500
+        if (n > 500) n = 500;
 
         // Generate periodic edge weights
         MatrixDouble A1a = generatePeriodicEdgeWeights(n, k, l, alphaWeights, betaWeights, gammaWeights);
@@ -511,8 +511,8 @@ char* simulateAztecGammaDirect(int n, double alpha, double beta) {
     try {
         progressCounter = 0;
 
-        // Hard limit: N <= 300
-        if (n > 300) n = 300;
+        // Hard limit: N <= 500
+        if (n > 500) n = 500;
 
         // Generate Gamma edge weights (ab_gamma pattern)
         MatrixDouble A1a = generateGammaEdgeWeights(n, alpha, beta);
@@ -585,7 +585,7 @@ EMSCRIPTEN_KEEPALIVE
 char* simulateAztecDoubleDimer(int n, double* edgeWeights) {
     try {
         progressCounter = 0;
-        if (n > 300) n = 300;
+        if (n > 500) n = 500;
 
         int dim = 2 * n;
 
@@ -675,9 +675,9 @@ char* simulateAztecWithWeightMatrix(int n, double* weights) {
     try {
         progressCounter = 0;
 
-        // Hard limit: N <= 300 (enforced in JS, but cap here as safety)
+        // Hard limit: N <= 500 (enforced in JS, but cap here as safety)
         // Memory constraint: algorithm uses O(N³) memory
-        if (n > 300) n = 300;
+        if (n > 500) n = 500;
 
         int dim = 2 * n;
 
