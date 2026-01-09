@@ -24,6 +24,21 @@ where R, T, L, B are the 4 neighbors and gamma is the face weight.
 
 Note: For boundary-adjacent faces (|j|+|k| = n-1), some neighbors are alpha/beta vertices.
 
+### T-embedding / Origami Map Consistency
+
+**Critical**: The T-graph is defined as `T_k + O_k`. Both `computeTk` and `computeOk` must use the **exact same recurrence formulas** including identical swap flag logic. When they differ, the T-graph becomes degenerate/self-intersecting.
+
+**Swap Flags for Bipartite Coloring**:
+The code uses swap flags to handle bipartite coloring symmetries:
+- Alpha: `g_alphaSwapR`, `g_alphaSwapL`, `g_alphaSwapT`, `g_alphaSwapB`
+- Beta: `g_betaSwapUR`, `g_betaSwapLR`, `g_betaSwapUL`, `g_betaSwapLL`
+
+These flags determine which term gets weighted in the recurrence:
+- `swap=false`: `(outer + α·inner)/(α+1)`
+- `swap=true`: `(α·outer + inner)/(α+1)`
+
+**Common Bug Pattern**: When implementing parallel computations (T and O), hardcoding formulas in one function while making the other conditional creates subtle geometric bugs. Always verify both functions use identical conditional logic.
+
 ## Project Structure
 - Source files are stored in: `/Users/leo/Homepage/_simulations/domino_tilings/`
 - Compiled JS files are moved to: `/Users/leo/Homepage/js/`

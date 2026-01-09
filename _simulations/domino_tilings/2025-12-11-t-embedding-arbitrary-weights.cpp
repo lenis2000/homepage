@@ -3164,11 +3164,33 @@ static void computeOk(int k) {
     setOcurr(0, k+1, Oprev(0, k));
     setOcurr(0, -(k+1), Oprev(0, -k));
 
-    // Rule 2: Alpha vertices (same formulas as T-embedding)
-    setOcurr(k, 0, (Oprev(k, 0) + alpha_right * Oprev(k-1, 0)) / (alpha_right + mp_real(1)));
-    setOcurr(-k, 0, (Oprev(-k, 0) + alpha_left * Oprev(-(k-1), 0)) / (alpha_left + mp_real(1)));
-    setOcurr(0, k, (Oprev(0, k) + alpha_top * Oprev(0, k-1)) / (alpha_top + mp_real(1)));
-    setOcurr(0, -k, (Oprev(0, -k) + alpha_bottom * Oprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
+    // Rule 2: Alpha vertices (same formulas as T-embedding, with swap flags)
+    // swap=false: (outer + α·inner)/(α+1), swap=true: (α·outer + inner)/(α+1)
+
+    // Right: (k, 0) uses alpha_right
+    if (g_alphaSwapR) {
+        setOcurr(k, 0, (alpha_right * Oprev(k, 0) + Oprev(k-1, 0)) / (alpha_right + mp_real(1)));
+    } else {
+        setOcurr(k, 0, (Oprev(k, 0) + alpha_right * Oprev(k-1, 0)) / (alpha_right + mp_real(1)));
+    }
+    // Left: (-k, 0) uses alpha_left
+    if (g_alphaSwapL) {
+        setOcurr(-k, 0, (alpha_left * Oprev(-k, 0) + Oprev(-(k-1), 0)) / (alpha_left + mp_real(1)));
+    } else {
+        setOcurr(-k, 0, (Oprev(-k, 0) + alpha_left * Oprev(-(k-1), 0)) / (alpha_left + mp_real(1)));
+    }
+    // Top: (0, k) uses alpha_top
+    if (g_alphaSwapT) {
+        setOcurr(0, k, (alpha_top * Oprev(0, k) + Oprev(0, k-1)) / (alpha_top + mp_real(1)));
+    } else {
+        setOcurr(0, k, (Oprev(0, k) + alpha_top * Oprev(0, k-1)) / (alpha_top + mp_real(1)));
+    }
+    // Bottom: (0, -k) uses alpha_bottom
+    if (g_alphaSwapB) {
+        setOcurr(0, -k, (alpha_bottom * Oprev(0, -k) + Oprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
+    } else {
+        setOcurr(0, -k, (Oprev(0, -k) + alpha_bottom * Oprev(0, -(k-1))) / (alpha_bottom + mp_real(1)));
+    }
 
     // Helper lambda to get beta weight for position (i, j) - same as T-embedding
     // First check beta edge ratios (from double edges), then fall back to stored face weights
