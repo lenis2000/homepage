@@ -879,12 +879,6 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           <span style="font-size: 11px; font-weight: 600; color: #232D4B; text-transform: uppercase; letter-spacing: 0.3px;">Edge</span>
           <input type="number" id="tgraph-edge-thickness" value="0.7" min="0.1" max="5" step="0.1" style="width: 55px; padding: 5px 8px; font-size: 12px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px; transition: border-color 0.15s;" aria-label="T-graph edge thickness">
         </label>
-        <div style="display: inline-flex; background: #f0f0f0; border-radius: 5px; padding: 3px; gap: 2px;">
-          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; padding: 5px 10px; border-radius: 4px; transition: all 0.15s;" class="overlay-toggle" data-for="tgraph-checkerboard-chk">
-            <input type="checkbox" id="tgraph-checkerboard-chk" style="display: none;" checked aria-label="Checkerboard coloring">
-            <span style="font-size: 11px; font-weight: 600; color: #555; letter-spacing: 0.02em; user-select: none;">Checkerboard</span>
-          </label>
-        </div>
       </div>
     </div>
 
@@ -6962,53 +6956,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       }
     }
 
-    // Draw checkerboard faces if enabled
-    const showCheckerboard = document.getElementById('tgraph-checkerboard-chk')?.checked;
-    if (showCheckerboard) {
-      // Helper to draw a T-graph face (quadrilateral)
-      function drawTgraphFace(i1, j1, i2, j2, i3, j3, i4, j4, color) {
-        const v1 = tgraphMap.get(`${i1},${j1}`);
-        const v2 = tgraphMap.get(`${i2},${j2}`);
-        const v3 = tgraphMap.get(`${i3},${j3}`);
-        const v4 = tgraphMap.get(`${i4},${j4}`);
-        if (v1 && v2 && v3 && v4) {
-          const x1 = centerX + (v1.re - centerRe) * scale;
-          const y1 = centerY - (v1.im - centerIm) * scale;
-          const x2 = centerX + (v2.re - centerRe) * scale;
-          const y2 = centerY - (v2.im - centerIm) * scale;
-          const x3 = centerX + (v3.re - centerRe) * scale;
-          const y3 = centerY - (v3.im - centerIm) * scale;
-          const x4 = centerX + (v4.re - centerRe) * scale;
-          const y4 = centerY - (v4.im - centerIm) * scale;
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.lineTo(x2, y2);
-          ctx.lineTo(x3, y3);
-          ctx.lineTo(x4, y4);
-          ctx.closePath();
-          ctx.fill();
-        }
-      }
-
-      // Interior faces: squares at (i, j) where |i|+|j| < k
-      // Black faces: (i+j+k) % 2 == 1
-      for (let i = -k; i < k; i++) {
-        for (let j = -k; j < k; j++) {
-          // Face is interior if all 4 corners are within |i|+|j| <= k
-          if (Math.abs(i) + Math.abs(j) >= k) continue;
-          if (Math.abs(i+1) + Math.abs(j) > k) continue;
-          if (Math.abs(i) + Math.abs(j+1) > k) continue;
-          if (Math.abs(i+1) + Math.abs(j+1) > k) continue;
-
-          const isBlack = (i + j + k) % 2 === 1;
-          if (isBlack) {
-            drawTgraphFace(i, j, i+1, j, i+1, j+1, i, j+1, 'rgba(0, 0, 0, 0.1)');
-          }
-        }
-      }
-    }
-
     // Draw T-graph edges in teal
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = uniformEdgeWidth;
@@ -7319,40 +7266,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         ctx.moveTo(centerX + (v1.re - centerRe) * scale, centerY - (v1.im - centerIm) * scale);
         ctx.lineTo(centerX + (v2.re - centerRe) * scale, centerY - (v2.im - centerIm) * scale);
         ctx.stroke();
-      }
-    }
-
-    // Draw checkerboard faces if enabled
-    const showCheckerboard = document.getElementById('tgraph-checkerboard-chk')?.checked;
-    if (showCheckerboard) {
-      function drawFace(i1, j1, i2, j2, i3, j3, i4, j4, color) {
-        const v1 = tgraphMap.get(`${i1},${j1}`);
-        const v2 = tgraphMap.get(`${i2},${j2}`);
-        const v3 = tgraphMap.get(`${i3},${j3}`);
-        const v4 = tgraphMap.get(`${i4},${j4}`);
-        if (v1 && v2 && v3 && v4) {
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.moveTo(centerX + (v1.re - centerRe) * scale, centerY - (v1.im - centerIm) * scale);
-          ctx.lineTo(centerX + (v2.re - centerRe) * scale, centerY - (v2.im - centerIm) * scale);
-          ctx.lineTo(centerX + (v3.re - centerRe) * scale, centerY - (v3.im - centerIm) * scale);
-          ctx.lineTo(centerX + (v4.re - centerRe) * scale, centerY - (v4.im - centerIm) * scale);
-          ctx.closePath();
-          ctx.fill();
-        }
-      }
-
-      for (let i = -k; i < k; i++) {
-        for (let j = -k; j < k; j++) {
-          if (Math.abs(i) + Math.abs(j) >= k) continue;
-          if (Math.abs(i+1) + Math.abs(j) > k) continue;
-          if (Math.abs(i) + Math.abs(j+1) > k) continue;
-          if (Math.abs(i+1) + Math.abs(j+1) > k) continue;
-          const isBlack = (i + j + k) % 2 === 1;
-          if (isBlack) {
-            drawFace(i, j, i+1, j, i+1, j+1, i, j+1, 'rgba(0, 0, 0, 0.1)');
-          }
-        }
       }
     }
 
@@ -9000,10 +8913,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     if (document.getElementById('tgraph-section').open) renderTgraph();
   });
 
-  // T-graph checkerboard toggle
-  document.getElementById('tgraph-checkerboard-chk').addEventListener('change', () => {
-    if (document.getElementById('tgraph-section').open) renderTgraph();
-  });
 
   // T-graph PNG quality slider
   document.getElementById('tgraph-png-quality').addEventListener('input', function() {
