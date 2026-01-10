@@ -1240,8 +1240,8 @@ void saveDominoPNG(const string& filename,
 
     // Calculate pixel scale
     int pixelScale = userScale > 0 ? userScale : max(4, 2000 / max(gridW, gridH));
-    int imgW = gridW * pixelScale + 3 * pixelScale;  // +1.5 step (left + right)
-    int imgH = gridH * pixelScale + 3 * pixelScale;  // +1.5 step (down)
+    int imgW = gridW * pixelScale + 3 * pixelScale + userBorder * 2;  // +1.5 step + border margin
+    int imgH = gridH * pixelScale + 3 * pixelScale + userBorder * 2;  // +1.5 step + border margin
 
     if (verbose) {
         cerr << "Grid bounds: X=[" << minGX << "," << maxGX << "], Y=[" << minGY << "," << maxGY << "]" << endl;
@@ -1262,8 +1262,8 @@ void saveDominoPNG(const string& filename,
 
         // Domino bounds in pixels - same position, 2x fatter
         // Vertical dominoes (red, yellow) shifted up by 1/2 domino height
-        int x0 = (d.gx - minGX) * pixelScale + pixelScale;  // +1/2 step for left margin
-        int y0 = imgH - (d.gy - minGY + (d.orient == 1 ? 2 : 1)) * pixelScale - 2 * pixelScale;  // shift all up 1 step
+        int x0 = (d.gx - minGX) * pixelScale + pixelScale + border;  // +1/2 step for left margin + border
+        int y0 = imgH - (d.gy - minGY + (d.orient == 1 ? 2 : 1)) * pixelScale - 2 * pixelScale - border;  // shift all up 1 step + border
         if (d.orient == 1) y0 -= pixelScale;  // shift vertical dominoes up by additional 1/2
         int w = (d.orient == 0 ? 2 : 1) * pixelScale * 2;  // 2x fatter
         int h = (d.orient == 1 ? 2 : 1) * pixelScale * 2;  // 2x fatter
