@@ -119,7 +119,7 @@ code:
 <h5>Random Domino Sampler</h5>
 <p>The <strong>🎲 Sample</strong> button generates random domino tilings of the Aztec diamond using the domino shuffling algorithm with the currently selected edge weights.</p>
 <ul>
-  <li><strong>Size (N)</strong>: The Aztec diamond size (supports up to N = 500).</li>
+  <li><strong>Size (N)</strong>: The Aztec diamond size (supports up to N = 330).</li>
   <li><strong>Border</strong>: Gap between dominoes for visual clarity.</li>
   <li><strong>Double Dimer</strong>: When checked, samples two independent dimer configurations and displays their symmetric difference as colored loops. Dominoes shared by both configurations are hidden; the remaining dominoes form disjoint closed loops.</li>
   <li><strong>Min loop</strong>: Filter to show only loops of at least this length (useful for hiding short loops).</li>
@@ -326,7 +326,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 12px;">
     <label style="display: flex; align-items: center; gap: 6px;">
       <strong>Size (n):</strong>
-      <input id="n-input" type="number" value="6" min="1" max="500" style="width: 70px;" aria-label="Aztec diamond size">
+      <input id="n-input" type="number" value="6" min="1" max="330" style="width: 70px;" aria-label="Aztec diamond size">
     </label>
 
     <label style="display: flex; align-items: center; gap: 6px;">
@@ -929,7 +929,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px;">
         <label style="display: flex; align-items: center; gap: 6px;">
           <strong>Size (N):</strong>
-          <input type="number" id="sample-N-input" value="6" min="1" max="500" style="width: 70px;" aria-label="Domino tiling size">
+          <input type="number" id="sample-N-input" value="6" min="1" max="330" style="width: 70px;" aria-label="Domino tiling size">
         </label>
         <label style="display: flex; align-items: center; gap: 6px;">
           <strong>Border:</strong>
@@ -3658,7 +3658,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       case 4: {
         const w1 = parseFloat(document.getElementById('layered4-w1').value) || 2;
         const w2 = parseFloat(document.getElementById('layered4-w2').value) || 0.5;
-        return diag % 2 === 0 ? w1 : w2;
+        // diagIndex is always odd (since only edges on black faces are weighted, and black has faceX+faceY odd)
+        // Use floor(diag/2) & 1 to alternate between consecutive odd diagonals
+        return (Math.floor(diag / 2) & 1) === 0 ? w1 : w2;
       }
       case 5: {
         const a = parseFloat(document.getElementById('layered5-min').value) || 0.5;
@@ -4212,10 +4214,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     const timeSpan = document.getElementById('sample-time');
 
     // Hard limit (memory constraint: algorithm uses O(N³) memory)
-    if (N > 500) {
-      N = 500;
-      document.getElementById('sample-N-input').value = 500;
-      timeSpan.textContent = 'N capped to 500 (memory limit). Sampling...';
+    if (N > 330) {
+      N = 330;
+      document.getElementById('sample-N-input').value = 330;
+      timeSpan.textContent = 'N capped to 330 (memory limit). Sampling...';
     } else if (N > 300) {
       // Warning for large N
       timeSpan.textContent = 'Sampling (large N, may be slow)...';

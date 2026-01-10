@@ -52,7 +52,7 @@ struct PairHash64 {
 // GLOBAL STATE
 // =============================================================================
 
-static const int MAX_N = 500;  // Maximum supported n value (change this to increase limit)
+static const int MAX_N = 330;  // Maximum supported n value (change this to increase limit)
 
 static double g_totalComputeTimeMs = 0.0;  // Cumulative computation time in milliseconds
 
