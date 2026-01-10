@@ -1,5 +1,5 @@
 /*
-Double Dimer CLI - Standalone C++ tool for sampling double dimers from Aztec diamonds
+Aztec Diamond CLI - Fast sampling of domino tilings, double dimers, and height fluctuations
 
 HIGH-PERFORMANCE OPTIMIZATIONS:
 - Xoshiro256++ RNG (state-of-art, fits in registers, replaces slow mt19937)
@@ -1444,7 +1444,7 @@ struct Args {
 
 void printHelp() {
     cerr << R"(
-Double Dimer CLI - Sample double dimers from Aztec diamonds
+Aztec Diamond CLI - Fast sampling of domino tilings, double dimers, and height fluctuations
 
 Usage: ./double_dimer [N] [options]
 
