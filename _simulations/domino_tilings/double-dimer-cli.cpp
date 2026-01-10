@@ -1243,6 +1243,12 @@ Modes:
   annealed-double-dimer  Resample weights for EACH tiling, then show h1 - h2
   annealed-fluctuation   Resample weights for EACH sample, show h - E[h]
 
+Note on quenched vs annealed (relevant for random edge weights):
+  The web simulation at https://lpetrov.cc/simulations/2025-12-11-t-embedding-arbitrary-weights/
+  uses QUENCHED disorder: both tilings share the same random weights (like double-dimer mode).
+  Its Height Function Difference [h1 - h2] visualization is also quenched.
+  Use annealed-* modes to resample weights independently for each tiling/sample.
+
 Options:
   -n, --size <N>        Aztec diamond order (default: 50)
   -m, --mode <type>     Output mode (default: double-dimer)

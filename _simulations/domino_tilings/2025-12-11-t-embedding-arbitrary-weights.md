@@ -940,6 +940,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         <label style="cursor: pointer; display: flex; align-items: center; gap: 6px;" id="double-dimer-controls">
           <input type="checkbox" id="sample-double-dimer-chk" aria-label="Enable double dimer mode">
           <span style="font-weight: 500;">Double Dimer</span>
+          <span style="font-size: 11px; color: #666;" title="Quenched: both tilings use the same random weights">(quenched)</span>
         </label>
         <span id="double-dimer-options" style="display: none;">
           <label style="display: flex; align-items: center; gap: 6px;">
@@ -999,7 +1000,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
     <!-- Height Function Pane (for double dimer) -->
     <div id="height-function-container" style="display: none; margin-top: 15px; border: 1px solid #6A0572; border-radius: 4px; overflow: hidden;">
       <div style="background: #6A0572; color: white; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: bold;">Height Function Difference (h&#8321; &#8722; h&#8322;)</span>
+        <span style="font-weight: bold;">Height Function Difference (h&#8321; &#8722; h&#8322;) <span style="font-weight: normal; font-size: 12px; opacity: 0.85;">&mdash; quenched</span></span>
         <button id="height-function-close-btn" style="background: transparent; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0 8px;">&times;</button>
       </div>
       <div id="height-function-canvas-wrapper" style="position: relative; background: #fafafa;">
