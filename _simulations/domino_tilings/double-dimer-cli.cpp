@@ -333,6 +333,47 @@ MatrixDouble generate2x2PeriodicWeights(int dim, double a, double b) {
     return weights;
 }
 
+// IID random weight functions (matching web simulation)
+MatrixDouble generateIIDUniformWeights(int dim, double a, double b) {
+    MatrixDouble weights(dim, dim);
+    for (int i = 0; i < dim; i++) {
+        for (int j = 0; j < dim; j++) {
+            weights.at(i, j) = a + rng.next_double() * (b - a);
+        }
+    }
+    return weights;
+}
+
+MatrixDouble generateIIDExponentialWeights(int dim) {
+    MatrixDouble weights(dim, dim);
+    for (int i = 0; i < dim; i++) {
+        for (int j = 0; j < dim; j++) {
+            weights.at(i, j) = -log(1.0 - rng.next_double());
+        }
+    }
+    return weights;
+}
+
+MatrixDouble generateIIDParetoWeights(int dim, double alpha, double xmin) {
+    MatrixDouble weights(dim, dim);
+    for (int i = 0; i < dim; i++) {
+        for (int j = 0; j < dim; j++) {
+            weights.at(i, j) = xmin / pow(1.0 - rng.next_double(), 1.0 / alpha);
+        }
+    }
+    return weights;
+}
+
+MatrixDouble generateIIDGeometricWeights(int dim, double p) {
+    MatrixDouble weights(dim, dim);
+    for (int i = 0; i < dim; i++) {
+        for (int j = 0; j < dim; j++) {
+            weights.at(i, j) = floor(log(1.0 - rng.next_double()) / log(1.0 - p)) + 1;
+        }
+    }
+    return weights;
+}
+
 // Layered weight functions
 MatrixDouble generateDiagonalLayeredWeights(int dim, double val1, double val2, double p1, double p2) {
     MatrixDouble weights(dim, dim, 1.0);
@@ -1436,6 +1477,10 @@ struct Args {
     double w2 = 0.5;
     double a = 0.5;
     double b = 2.0;
+    // IID distribution parameters
+    double pareto_alpha = 2.0;
+    double pareto_xmin = 1.0;
+    double geom_p = 0.5;
     int seed = -1;
     string colormap = "viridis";
     bool verbose = false;
@@ -1479,6 +1524,13 @@ Weight Presets:
   uniform               All edge weights = 1
   bernoulli             Random IID: v1 with prob p, else v2
                         Params: --v1, --v2, --prob
+  iid-uniform           Random IID: Uniform[a,b] for each edge
+                        Params: --a, --b
+  iid-exponential       Random IID: Exp(1) for each edge
+  iid-pareto            Random IID: Pareto(alpha, xmin) for each edge
+                        Params: --pareto-alpha, --pareto-xmin
+  iid-geometric         Random IID: Geometric(p) for each edge, X >= 1
+                        Params: --geom-p
   gaussian              Log-normal: exp(beta * X), X ~ N(0,1)
                         Params: --beta
   gamma                 Gamma(alpha) on alpha-edges, Gamma(beta) on beta-edges
@@ -1515,7 +1567,10 @@ Parameter Defaults:
   --prob 0.5            Bernoulli probability
   --p1 0.5, --p2 0.5    Layered probabilities (even/odd layers)
   --w1 2.0, --w2 0.5    Periodic weight values
-  --a 0.5, --b 2.0      2x2periodic / uniform range
+  --a 0.5, --b 2.0      IID uniform / 2x2periodic range
+  --pareto-alpha 2.0    Pareto shape parameter
+  --pareto-xmin 1.0     Pareto scale parameter
+  --geom-p 0.5          Geometric probability
 
 Examples:
   # Single domino tiling (colored dominoes)
@@ -1590,6 +1645,12 @@ Args parseArgs(int argc, char* argv[]) {
             args.a = stod(argv[++i]);
         } else if (arg == "--b" && i + 1 < argc) {
             args.b = stod(argv[++i]);
+        } else if (arg == "--pareto-alpha" && i + 1 < argc) {
+            args.pareto_alpha = stod(argv[++i]);
+        } else if (arg == "--pareto-xmin" && i + 1 < argc) {
+            args.pareto_xmin = stod(argv[++i]);
+        } else if (arg == "--geom-p" && i + 1 < argc) {
+            args.geom_p = stod(argv[++i]);
         } else if (arg == "--seed" && i + 1 < argc) {
             args.seed = stoi(argv[++i]);
         } else if (arg == "--colormap" && i + 1 < argc) {
@@ -1615,6 +1676,14 @@ MatrixDouble generateWeightsFromPreset(const Args& args, int dim) {
         return generateUniformWeights(dim);
     } else if (args.preset == "bernoulli") {
         return generateBernoulliWeights(dim, args.v1, args.v2, args.prob);
+    } else if (args.preset == "iid-uniform") {
+        return generateIIDUniformWeights(dim, args.a, args.b);
+    } else if (args.preset == "iid-exponential") {
+        return generateIIDExponentialWeights(dim);
+    } else if (args.preset == "iid-pareto") {
+        return generateIIDParetoWeights(dim, args.pareto_alpha, args.pareto_xmin);
+    } else if (args.preset == "iid-geometric") {
+        return generateIIDGeometricWeights(dim, args.geom_p);
     } else if (args.preset == "gaussian") {
         return generateGaussianWeights(dim, args.beta);
     } else if (args.preset == "gamma") {
@@ -1688,6 +1757,18 @@ int main(int argc, char* argv[]) {
         weights = generateUniformWeights(dim);
     } else if (args.preset == "bernoulli") {
         weights = generateBernoulliWeights(dim, args.v1, args.v2, args.prob);
+    } else if (args.preset == "iid-uniform") {
+        weights = generateIIDUniformWeights(dim, args.a, args.b);
+        if (args.verbose) cerr << "  IID Uniform: a=" << args.a << ", b=" << args.b << endl;
+    } else if (args.preset == "iid-exponential") {
+        weights = generateIIDExponentialWeights(dim);
+        if (args.verbose) cerr << "  IID Exponential(1)" << endl;
+    } else if (args.preset == "iid-pareto") {
+        weights = generateIIDParetoWeights(dim, args.pareto_alpha, args.pareto_xmin);
+        if (args.verbose) cerr << "  IID Pareto: alpha=" << args.pareto_alpha << ", xmin=" << args.pareto_xmin << endl;
+    } else if (args.preset == "iid-geometric") {
+        weights = generateIIDGeometricWeights(dim, args.geom_p);
+        if (args.verbose) cerr << "  IID Geometric: p=" << args.geom_p << endl;
     } else if (args.preset == "gaussian") {
         weights = generateGaussianWeights(dim, args.beta);
     } else if (args.preset == "gamma") {
