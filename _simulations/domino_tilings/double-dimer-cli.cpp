@@ -706,6 +706,98 @@ unordered_map<int64_t, int> computeHeightFunction(const vector<Domino>& dominoes
 // PNG Output (OPTIMIZED: cache-friendly loops, no string parsing)
 // ============================================================================
 
+// Simple 5x7 bitmap font for digits and symbols
+const int FONT_W = 5;
+const int FONT_H = 7;
+
+// Each character is 5 columns, 7 rows (stored as 7 bytes, each byte is a row)
+const unsigned char FONT_GLYPHS[16][7] = {
+    // '0'
+    {0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110},
+    // '1'
+    {0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110},
+    // '2'
+    {0b01110, 0b10001, 0b00001, 0b00110, 0b01000, 0b10000, 0b11111},
+    // '3'
+    {0b01110, 0b10001, 0b00001, 0b00110, 0b00001, 0b10001, 0b01110},
+    // '4'
+    {0b00010, 0b00110, 0b01010, 0b10010, 0b11111, 0b00010, 0b00010},
+    // '5'
+    {0b11111, 0b10000, 0b11110, 0b00001, 0b00001, 0b10001, 0b01110},
+    // '6'
+    {0b00110, 0b01000, 0b10000, 0b11110, 0b10001, 0b10001, 0b01110},
+    // '7'
+    {0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000},
+    // '8'
+    {0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110},
+    // '9'
+    {0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b01100},
+    // '-' (index 10)
+    {0b00000, 0b00000, 0b00000, 0b11111, 0b00000, 0b00000, 0b00000},
+    // '.' (index 11)
+    {0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00100},
+    // ' ' (index 12)
+    {0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000},
+    // '+' (index 13)
+    {0b00000, 0b00100, 0b00100, 0b11111, 0b00100, 0b00100, 0b00000},
+    // 'e' (index 14)
+    {0b00000, 0b00000, 0b01110, 0b10001, 0b11111, 0b10000, 0b01110},
+    // Reserved
+    {0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000}
+};
+
+int charToFontIndex(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c == '-') return 10;
+    if (c == '.') return 11;
+    if (c == ' ') return 12;
+    if (c == '+') return 13;
+    if (c == 'e' || c == 'E') return 14;
+    return 12;  // space for unknown
+}
+
+void drawText(vector<unsigned char>& pixels, int imgW, int imgH,
+              const string& text, int x, int y, RGB color, int scale = 1) {
+    int cursorX = x;
+    for (char c : text) {
+        int idx = charToFontIndex(c);
+        const unsigned char* glyph = FONT_GLYPHS[idx];
+
+        for (int row = 0; row < FONT_H; row++) {
+            for (int col = 0; col < FONT_W; col++) {
+                if ((glyph[row] >> (FONT_W - 1 - col)) & 1) {
+                    // Draw scaled pixel
+                    for (int sy = 0; sy < scale; sy++) {
+                        for (int sx = 0; sx < scale; sx++) {
+                            int px = cursorX + col * scale + sx;
+                            int py = y + row * scale + sy;
+                            if (px >= 0 && px < imgW && py >= 0 && py < imgH) {
+                                int pidx = (py * imgW + px) * 3;
+                                pixels[pidx] = color.r;
+                                pixels[pidx + 1] = color.g;
+                                pixels[pidx + 2] = color.b;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        cursorX += (FONT_W + 1) * scale;  // character width + spacing
+    }
+}
+
+string formatValue(double val) {
+    char buf[32];
+    if (abs(val) < 0.01 || abs(val) >= 1000) {
+        snprintf(buf, sizeof(buf), "%.1e", val);
+    } else if (abs(val) < 10) {
+        snprintf(buf, sizeof(buf), "%.2f", val);
+    } else {
+        snprintf(buf, sizeof(buf), "%.1f", val);
+    }
+    return string(buf);
+}
+
 void savePNG(const string& filename,
              const unordered_map<int64_t, int>& heights1,
              const unordered_map<int64_t, int>& heights2,
@@ -803,11 +895,14 @@ void savePNG(const string& filename,
         }
     }
 
-    // Simple legend (no text rendering needed for comparison)
+    // Draw legend bar with numeric labels
     int barX = dataW + 10;
     int barTop = imgH / 10;
     int barBottom = imgH - imgH / 10;
-    int barWidth = 20;
+    int barWidth = max(20, imgH / 50);
+    int textScale = max(1, imgH / 400);  // Scale font with image size
+    int textX = barX + barWidth + 5;
+    RGB textColor = {0, 0, 0};  // Black text
 
     for (int y = barTop; y < barBottom; y++) {
         double t = 1.0 - (double)(y - barTop) / (barBottom - barTop);
@@ -819,6 +914,16 @@ void savePNG(const string& filename,
             pixels[idx + 1] = color.g;
             pixels[idx + 2] = color.b;
         }
+    }
+
+    // Draw 5 labels: max, 75%, 50%, 25%, min
+    int fontH = FONT_H * textScale;
+    int barH = barBottom - barTop;
+    double vals[5] = {(double)maxH, 0.75*maxH + 0.25*minH, 0.5*maxH + 0.5*minH, 0.25*maxH + 0.75*minH, (double)minH};
+    int ypos[5] = {barTop, barTop + barH/4, barTop + barH/2, barTop + 3*barH/4, barBottom - fontH};
+    for (int i = 0; i < 5; i++) {
+        string label = (abs(vals[i]) < 0.01) ? "0" : formatValue(vals[i]);
+        drawText(pixels, imgW, imgH, label, textX, ypos[i] - (i < 4 ? fontH/2 : 0), textColor, textScale);
     }
 
     if (stbi_write_png(filename.c_str(), imgW, imgH, 3, pixels.data(), imgW * 3)) {
@@ -920,11 +1025,14 @@ void saveFluctuationPNG(const string& filename,
         }
     }
 
-    // Draw legend bar (symmetric: -absMax to +absMax)
+    // Draw legend bar with numeric labels (symmetric: -absMax to +absMax)
     int barX = dataW + 10;
     int barTop = imgH / 10;
     int barBottom = imgH - imgH / 10;
-    int barWidth = 20;
+    int barWidth = max(20, imgH / 50);
+    int textScale = max(1, imgH / 400);  // Scale font with image size
+    int textX = barX + barWidth + 5;
+    RGB textColor = {0, 0, 0};  // Black text
 
     for (int y = barTop; y < barBottom; y++) {
         double t = 1.0 - (double)(y - barTop) / (barBottom - barTop);
@@ -936,6 +1044,16 @@ void saveFluctuationPNG(const string& filename,
             pixels[idx + 1] = color.g;
             pixels[idx + 2] = color.b;
         }
+    }
+
+    // Draw 5 labels: +absMax, +absMax/2, 0, -absMax/2, -absMax
+    int fontH = FONT_H * textScale;
+    int barH = barBottom - barTop;
+    double vals[5] = {absMax, absMax/2, 0, -absMax/2, -absMax};
+    int ypos[5] = {barTop, barTop + barH/4, barTop + barH/2, barTop + 3*barH/4, barBottom - fontH};
+    for (int i = 0; i < 5; i++) {
+        string label = (abs(vals[i]) < 0.01) ? "0" : formatValue(vals[i]);
+        drawText(pixels, imgW, imgH, label, textX, ypos[i] - (i < 4 ? fontH/2 : 0), textColor, textScale);
     }
 
     if (stbi_write_png(filename.c_str(), imgW, imgH, 3, pixels.data(), imgW * 3)) {
