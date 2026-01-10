@@ -150,15 +150,15 @@ When removing a UI feature (like checkerboard coloring), be precise about scope:
 
 ## Standalone C++ CLI Tool (double-dimer-cli.cpp)
 
-A standalone C++ command-line tool for fast double dimer sampling with PNG output.
+Aztec Diamond CLI - Fast sampling of domino tilings, double dimers, and height fluctuations.
 
 ### Compilation
 ```bash
-# With OpenMP and aggressive optimization (macOS requires homebrew GCC):
-/opt/homebrew/bin/g++-15 -std=c++17 -O3 -mcpu=native -ffast-math -funroll-loops -flto -fopenmp -o double_dimer double-dimer-cli.cpp
+# With OpenMP and maximum aggressive optimization (macOS requires homebrew GCC):
+/opt/homebrew/bin/g++-15 -std=c++17 -Ofast -mcpu=native -funroll-loops -flto -fopenmp -DNDEBUG -fno-exceptions -fno-rtti -fomit-frame-pointer -ftree-vectorize -o double_dimer double-dimer-cli.cpp
 
 # Without OpenMP (single-threaded):
-g++ -std=c++17 -O3 -o double_dimer double-dimer-cli.cpp
+g++ -std=c++17 -Ofast -ffast-math -funroll-loops -DNDEBUG -fno-exceptions -fno-rtti -o double_dimer double-dimer-cli.cpp
 ```
 
 **Notes:**
@@ -182,21 +182,46 @@ g++ -std=c++17 -O3 -o double_dimer double-dimer-cli.cpp
 | 300 | ~860 ms |
 | 500 | ~3.5 s |
 
+### Modes
+- `tiling` - Single domino tiling with colored dominoes (yellow/green/blue/red)
+- `double-dimer` - Height difference h1-h2 between two tilings (default)
+- `fluctuation` - Sample N tilings, show h - E[h]
+- `annealed-double-dimer` - Resample weights for each tiling
+- `annealed-fluctuation` - Resample weights for each sample
+
 ### Usage Examples
 ```bash
+# Single domino tiling with colored dominoes:
+./double_dimer 300 --mode tiling --preset diagonal-critical -o tiling.png
+
 # Double dimer mode (h1 - h2) - QUENCHED (same weights for both tilings):
-./double_dimer 200 --preset gamma --alpha 2.0 -o output.png
+./double_dimer 200 --preset gamma -o output.png
 
 # Fluctuation mode (h - E[h], parallelized) - QUENCHED:
-./double_dimer 200 --mode fluctuation --samples 10 -o fluctuation.png
+./double_dimer 200 --mode fluctuation --samples 2000 -o fluctuation.png
 
 # ANNEALED modes (resample weights for each tiling/sample):
 ./double_dimer 200 --mode annealed-double-dimer --preset gamma -o annealed.png
 ./double_dimer 200 --mode annealed-fluctuation --samples 20 --preset gamma -o annealed_fluct.png
 
+# Critical scaling preset (weights depend on N):
+./double_dimer 300 --preset diagonal-critical -o critical.png
+
 # Show weights as SVG with numbers on edges:
 ./double_dimer 6 --show-weights --preset diagonal-periodic -o weights.svg
 ```
+
+### Weight Presets
+- `uniform` - All weights = 1
+- `gamma` - Gamma(α) on alpha-edges, Gamma(β) on beta-edges (defaults: α=0.2, β=0.25)
+- `bernoulli` - Random IID: v1 with prob p, else v2
+- `gaussian` - Log-normal: exp(β * X), X ~ N(0,1)
+- `2x2periodic` - Checkerboard 4×4 block pattern
+- `diagonal-layered` / `straight-layered` - Bernoulli by diagonal/row
+- `diagonal-periodic` / `straight-periodic` - Deterministic alternating by diagonal/row
+- `diagonal-uniform` / `straight-uniform` - Uniform[a,b] random by diagonal/row
+- `diagonal-critical` / `straight-critical` - Critical scaling: v1+2/√N or v2-1/√N, Bernoulli (defaults: v1=1, v2=1)
+- `diagonal-critical-periodic` / `straight-critical-periodic` - Critical scaling, deterministic alternating
 
 ### Quenched vs Annealed Disorder
 - **Quenched** (`double-dimer`, `fluctuation`): Same random weights for all tilings

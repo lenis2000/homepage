@@ -14,10 +14,10 @@ Compilation:
   curl -O https://raw.githubusercontent.com/nothings/stb/master/stb_image_write.h
 
   # Compile with aggressive optimization (OpenMP for parallel fluctuation mode):
-  /opt/homebrew/bin/g++-15 -std=c++17 -O3 -mcpu=native -ffast-math -funroll-loops -flto -fopenmp -o double_dimer double-dimer-cli.cpp
+  /opt/homebrew/bin/g++-15 -std=c++17 -Ofast -mcpu=native -funroll-loops -flto -fopenmp -DNDEBUG -fno-exceptions -fno-rtti -fomit-frame-pointer -ftree-vectorize -o double_dimer double-dimer-cli.cpp
 
   # Or without OpenMP (single-threaded):
-  g++ -std=c++17 -O3 -ffast-math -funroll-loops -o double_dimer double-dimer-cli.cpp
+  g++ -std=c++17 -Ofast -ffast-math -funroll-loops -DNDEBUG -fno-exceptions -fno-rtti -o double_dimer double-dimer-cli.cpp
 
 Usage:
   ./double_dimer -n 100 -o height_diff.png
@@ -1422,7 +1422,7 @@ struct Args {
     string output = "height_diff.png";
     string mode = "double-dimer";
     int samples = 20;
-    int threads = 20;
+    int threads = 6;
     int scale = 0;
     int border = 0;  // Border width for tiling mode (0 = touching dominoes)
     double alpha = 0.2;
@@ -1465,7 +1465,7 @@ Options:
   -n, --size <N>        Aztec diamond order (default: 50)
   -m, --mode <type>     Output mode (default: double-dimer)
   --samples <N>         Number of samples for fluctuation mode (default: 20)
-  -t, --threads <N>     Number of OpenMP threads (default: 20)
+  -t, --threads <N>     Number of OpenMP threads (default: 6)
   -p, --preset <type>   Weight preset (default: uniform)
   -o, --output <file>   Output PNG filename (default: height_diff.png)
   --scale <N>           Pixel scale (default: auto)
