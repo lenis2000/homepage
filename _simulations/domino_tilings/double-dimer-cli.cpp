@@ -1485,6 +1485,7 @@ struct Args {
     string colormap = "viridis";
     bool verbose = false;
     bool help = false;
+    bool noOutput = false;  // Skip picture generation for stats-only runs
 };
 
 void printHelp() {
@@ -1517,6 +1518,7 @@ Options:
   --border <N>          Border width in pixels for tiling mode (default: 0)
   --seed <val>          Random seed (default: random)
   --colormap <name>     viridis, plasma, coolwarm, grayscale (default: viridis)
+  --no-output           Skip picture generation (stats-only mode, faster)
   -v, --verbose         Verbose output
   -h, --help            Show this help message
 
@@ -1655,6 +1657,8 @@ Args parseArgs(int argc, char* argv[]) {
             args.seed = stoi(argv[++i]);
         } else if (arg == "--colormap" && i + 1 < argc) {
             args.colormap = argv[++i];
+        } else if (arg == "--no-output") {
+            args.noOutput = true;
         }
     }
 
@@ -1842,10 +1846,12 @@ int main(int argc, char* argv[]) {
 
         if (args.verbose) {
             cerr << "  " << dominoes.size() << " dominoes" << endl;
-            cerr << "Generating PNG..." << endl;
         }
 
-        saveDominoPNG(args.output, dominoes, args.n, args.scale, args.border, args.verbose);
+        if (!args.noOutput) {
+            if (args.verbose) cerr << "Generating PNG..." << endl;
+            saveDominoPNG(args.output, dominoes, args.n, args.scale, args.border, args.verbose);
+        }
 
     } else if (args.mode == "double-dimer") {
         // QUENCHED: Same weights for both tilings
@@ -1871,10 +1877,12 @@ int main(int argc, char* argv[]) {
         if (args.verbose) {
             cerr << "  Heights 1: " << heights1.size() << " vertices" << endl;
             cerr << "  Heights 2: " << heights2.size() << " vertices" << endl;
-            cerr << "Generating PNG..." << endl;
         }
 
-        savePNG(args.output, heights1, heights2, colormap, args.n, args.scale, args.verbose);
+        if (!args.noOutput) {
+            if (args.verbose) cerr << "Generating PNG..." << endl;
+            savePNG(args.output, heights1, heights2, colormap, args.n, args.scale, args.verbose);
+        }
 
     } else if (args.mode == "annealed-double-dimer") {
         // ANNEALED: Resample weights independently for each tiling
@@ -1906,10 +1914,12 @@ int main(int argc, char* argv[]) {
         if (args.verbose) {
             cerr << "  Heights 1: " << heights1.size() << " vertices" << endl;
             cerr << "  Heights 2: " << heights2.size() << " vertices" << endl;
-            cerr << "Generating PNG..." << endl;
         }
 
-        savePNG(args.output, heights1, heights2, colormap, args.n, args.scale, args.verbose);
+        if (!args.noOutput) {
+            if (args.verbose) cerr << "Generating PNG..." << endl;
+            savePNG(args.output, heights1, heights2, colormap, args.n, args.scale, args.verbose);
+        }
 
     } else if (args.mode == "annealed-fluctuation") {
         // ANNEALED FLUCTUATION: Resample weights for each sample
@@ -1955,11 +1965,10 @@ int main(int argc, char* argv[]) {
             fluctuation[key] = h - mean;
         }
 
-        if (args.verbose) {
-            cerr << "Generating PNG..." << endl;
+        if (!args.noOutput) {
+            if (args.verbose) cerr << "Generating PNG..." << endl;
+            saveFluctuationPNG(args.output, fluctuation, colormap, args.n, args.scale, args.verbose);
         }
-
-        saveFluctuationPNG(args.output, fluctuation, colormap, args.n, args.scale, args.verbose);
 
     } else {
         // QUENCHED FLUCTUATION: Same weights for all samples
@@ -2032,17 +2041,16 @@ int main(int argc, char* argv[]) {
             fluctuation[key] = h - mean;
         }
 
-        if (args.verbose) {
-            cerr << "Generating PNG..." << endl;
+        if (!args.noOutput) {
+            if (args.verbose) cerr << "Generating PNG..." << endl;
+            saveFluctuationPNG(args.output, fluctuation, colormap, args.n, args.scale, args.verbose);
         }
-
-        saveFluctuationPNG(args.output, fluctuation, colormap, args.n, args.scale, args.verbose);
     }
 
     auto endTime = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::milliseconds>(endTime - startTime);
 
-    if (args.verbose) {
+    if (args.verbose || args.noOutput) {
         cerr << "Total time: " << duration.count() << " ms" << endl;
     }
 
