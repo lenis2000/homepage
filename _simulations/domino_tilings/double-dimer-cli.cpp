@@ -37,6 +37,8 @@ Repository: https://github.com/lenis2000/homepage
 #include <algorithm>
 #include <chrono>
 #include <unordered_map>
+#include <map>
+#include <set>
 #include <queue>
 #include <tuple>
 #include <mutex>
@@ -962,6 +964,258 @@ unordered_map<int64_t, int> computeHeightFunction(const vector<Domino>& dominoes
 }
 
 // ============================================================================
+// Loop Counting for Double-Dimer Model
+// ============================================================================
+
+// Count TOPOLOGICAL number of loops surrounding a point.
+// This is the UNSIGNED count - each XOR loop surrounding the point counts as +1.
+//
+// In the dimer model:
+// - Each domino covers ONE edge of the dual lattice (connecting two adjacent face centers)
+// - XOR of two tilings = edges covered in exactly one tiling
+// - These XOR edges form closed loops
+// - We count how many such loops contain the target point
+//
+int countLoopsSurroundingPoint(const vector<Domino>& dominoes1,
+                               const vector<Domino>& dominoes2,
+                               int targetX, int targetY,
+                               bool debug = false) {
+    // Each domino covers an edge on the dual lattice.
+    // Dual lattice vertices = centers of unit squares (faces)
+    // A domino covering two adjacent squares corresponds to an edge between their centers.
+    //
+    // Domino coordinates (gx, gy) with orient:
+    //   Horizontal (orient=0): covers faces at (gx, gy) and (gx+1, gy)
+    //                          -> dual edge from (gx+0.5, gy+0.5) to (gx+1.5, gy+0.5)
+    //   Vertical (orient=1):   covers faces at (gx, gy) and (gx, gy+1)
+    //                          -> dual edge from (gx+0.5, gy+0.5) to (gx+0.5, gy+1.5)
+    //
+    // We use integer coords *2 to avoid floating point: (2*gx+1, 2*gy+1) for centers
+
+    auto makeEdgeKey = [](int x1, int y1, int x2, int y2) -> tuple<int,int,int,int> {
+        if (x1 > x2 || (x1 == x2 && y1 > y2)) {
+            return {x2, y2, x1, y1};
+        }
+        return {x1, y1, x2, y2};
+    };
+
+    // Get dimer edges (internal edges, not boundaries)
+    // COORDINATE SYSTEM: Must match the height function!
+    // Height function uses x = gx*2, with vertices at x, x+4, x+8 (step of 4)
+    // Face centers are at gx*2+2 and gx*2+6 for a horizontal domino
+    // (i.e., offset +2 from left vertex, spacing of 4 between adjacent face centers)
+    auto getDimerEdges = [&](const vector<Domino>& dominoes) {
+        set<tuple<int,int,int,int>> edges;
+        for (const auto& d : dominoes) {
+            // Face center coordinates matching height function scale
+            // Horizontal domino at (gx, gy): faces at (gx*2+2, gy*2+2) and (gx*2+6, gy*2+2)
+            // Vertical domino at (gx, gy): faces at (gx*2+2, gy*2+2) and (gx*2+2, gy*2+6)
+            int cx1 = d.gx * 2 + 2;  // center of first face (was: 2*gx+1, off by 1)
+            int cy1 = d.gy * 2 + 2;
+            int cx2, cy2;
+            if (d.orient == 0) {  // Horizontal: second face is to the right
+                cx2 = cx1 + 4;    // spacing is 4, not 2
+                cy2 = cy1;
+            } else {  // Vertical: second face is above
+                cx2 = cx1;
+                cy2 = cy1 + 4;    // spacing is 4, not 2
+            }
+            edges.insert(makeEdgeKey(cx1, cy1, cx2, cy2));
+        }
+        return edges;
+    };
+
+    auto edges1 = getDimerEdges(dominoes1);
+    auto edges2 = getDimerEdges(dominoes2);
+
+    if (debug) {
+        cerr << "DEBUG: Tiling 1 has " << dominoes1.size() << " dominoes, " << edges1.size() << " edges" << endl;
+        cerr << "DEBUG: Tiling 2 has " << dominoes2.size() << " dominoes, " << edges2.size() << " edges" << endl;
+    }
+
+    // XOR: edges in exactly one of the two sets
+    set<tuple<int,int,int,int>> xorEdges;
+    for (const auto& e : edges1) {
+        if (edges2.find(e) == edges2.end()) {
+            xorEdges.insert(e);
+        }
+    }
+    for (const auto& e : edges2) {
+        if (edges1.find(e) == edges1.end()) {
+            xorEdges.insert(e);
+        }
+    }
+
+    if (xorEdges.empty()) {
+        if (debug) cerr << "DEBUG: No XOR edges found" << endl;
+        return 0;
+    }
+
+    if (debug) {
+        cerr << "DEBUG: Found " << xorEdges.size() << " XOR edges" << endl;
+        cerr << "DEBUG: Target point (height vertex): (" << (2*targetX) << ", " << (2*targetY) << ")" << endl;
+        cerr << "DEBUG: Loop edge coords use face centers at gx*2+2 (offset by 2 from vertices)" << endl;
+        cerr << "DEBUG: First few XOR edges:" << endl;
+        int count = 0;
+        for (const auto& [x1, y1, x2, y2] : xorEdges) {
+            if (count++ < 5) cerr << "  (" << x1 << "," << y1 << ") - (" << x2 << "," << y2 << ")" << endl;
+        }
+    }
+
+    // Build adjacency graph from XOR edges
+    map<pair<int,int>, vector<pair<int,int>>> adj;
+    for (const auto& [x1, y1, x2, y2] : xorEdges) {
+        adj[{x1, y1}].push_back({x2, y2});
+        adj[{x2, y2}].push_back({x1, y1});
+    }
+
+    // Debug: verify vertex degrees (should all be 2 for XOR of perfect matchings)
+    if (debug) {
+        int deg1Count = 0, deg2Count = 0, otherDegCount = 0;
+        for (const auto& [v, neighbors] : adj) {
+            if (neighbors.size() == 1) {
+                deg1Count++;
+                if (deg1Count <= 3) {
+                    cerr << "DEBUG WARNING: vertex (" << v.first << "," << v.second
+                         << ") has degree 1 (impossible for XOR of perfect matchings!)" << endl;
+                }
+            } else if (neighbors.size() == 2) {
+                deg2Count++;
+            } else {
+                otherDegCount++;
+            }
+        }
+        cerr << "DEBUG: Vertex degrees - deg2: " << deg2Count << ", deg1: " << deg1Count
+             << ", other: " << otherDegCount << endl;
+    }
+
+    // Find all loops by tracing. Each vertex in XOR graph has degree 2, so we get simple cycles.
+    set<pair<int,int>> visited;
+    vector<vector<pair<int,int>>> loops;
+
+    int traceCount = 0;
+    for (const auto& [startVertex, neighbors] : adj) {
+        if (visited.count(startVertex)) continue;
+
+        vector<pair<int,int>> loop;
+        pair<int,int> current = startVertex;
+        pair<int,int> prev = {INT_MIN, INT_MIN};
+
+        if (debug && traceCount < 3) {
+            cerr << "DEBUG: Starting trace from (" << startVertex.first << "," << startVertex.second << ")"
+                 << " with " << neighbors.size() << " neighbors" << endl;
+        }
+
+        while (true) {
+            if (visited.count(current) && !loop.empty()) {
+                if (debug && traceCount < 3) {
+                    cerr << "  Stopped: current (" << current.first << "," << current.second << ") already visited" << endl;
+                }
+                break;
+            }
+            visited.insert(current);
+            loop.push_back(current);
+
+            pair<int,int> next = {INT_MIN, INT_MIN};
+            auto& currentNeighbors = adj[current];
+            if (debug && traceCount < 3 && loop.size() <= 5) {
+                cerr << "  At (" << current.first << "," << current.second << ") with "
+                     << currentNeighbors.size() << " neighbors, prev=(" << prev.first << "," << prev.second << ")" << endl;
+            }
+
+            for (const auto& neighbor : currentNeighbors) {
+                if (neighbor != prev) {
+                    if (!visited.count(neighbor) || neighbor == startVertex) {
+                        next = neighbor;
+                        break;
+                    }
+                }
+            }
+
+            if (next.first == INT_MIN) {
+                if (debug && traceCount < 3) {
+                    cerr << "  Stopped: no valid next vertex found. Neighbors were:" << endl;
+                    for (const auto& n : currentNeighbors) {
+                        cerr << "    (" << n.first << "," << n.second << ") "
+                             << (n == prev ? "= prev" : "")
+                             << (visited.count(n) ? "visited" : "")
+                             << (n == startVertex ? "= start" : "") << endl;
+                    }
+                }
+                break;
+            }
+            prev = current;
+            current = next;
+        }
+
+        if (debug && traceCount < 3) {
+            cerr << "  Loop size: " << loop.size() << (loop.size() >= 3 ? " (keeping)" : " (discarding)") << endl;
+        }
+
+        if (loop.size() >= 3) {
+            loops.push_back(loop);
+        }
+        traceCount++;
+    }
+
+    if (debug) {
+        cerr << "DEBUG: Found " << loops.size() << " loops" << endl;
+        for (size_t i = 0; i < loops.size() && i < 3; i++) {
+            cerr << "  Loop " << i << " has " << loops[i].size() << " vertices" << endl;
+            // Find bounding box
+            int minX = INT_MAX, maxX = INT_MIN, minY = INT_MAX, maxY = INT_MIN;
+            for (const auto& [x, y] : loops[i]) {
+                minX = min(minX, x); maxX = max(maxX, x);
+                minY = min(minY, y); maxY = max(maxY, y);
+            }
+            cerr << "    Bounding box: x=[" << minX << "," << maxX << "], y=[" << minY << "," << maxY << "]" << endl;
+        }
+    }
+
+    // Count loops containing the target point using ray casting (point-in-polygon)
+    // The user's targetX, targetY are "graph coordinates" matching the height function.
+    // Height function vertices are at domino corners.
+    // For the ray casting, we test if the HEIGHT FUNCTION VERTEX is inside the loop.
+    // In 2x coords, this vertex is at (2*targetX, 2*targetY).
+
+    int loopCount = 0;
+    double px = 2.0 * targetX;
+    double py = 2.0 * targetY;
+
+    if (debug) {
+        cerr << "DEBUG: Testing point (" << px << ", " << py << ") against loops" << endl;
+    }
+
+    for (size_t loopIdx = 0; loopIdx < loops.size(); loopIdx++) {
+        const auto& loop = loops[loopIdx];
+        int crossings = 0;
+        int n = loop.size();
+        for (int i = 0; i < n; i++) {
+            double x1 = loop[i].first;
+            double y1 = loop[i].second;
+            double x2 = loop[(i+1) % n].first;
+            double y2 = loop[(i+1) % n].second;
+
+            // Ray casting: ray from (px, py) going right (+x direction)
+            if ((y1 <= py && y2 > py) || (y2 <= py && y1 > py)) {
+                double xIntersect = x1 + (py - y1) / (y2 - y1) * (x2 - x1);
+                if (xIntersect > px) {
+                    crossings++;
+                }
+            }
+        }
+        if (debug && loopIdx < 3) {
+            cerr << "  Loop " << loopIdx << ": " << crossings << " crossings" << endl;
+        }
+        if (crossings % 2 == 1) {
+            loopCount++;
+        }
+    }
+
+    return loopCount;
+}
+
+// ============================================================================
 // PNG Output (OPTIMIZED: cache-friendly loops, no string parsing)
 // ============================================================================
 
@@ -1188,6 +1442,188 @@ void savePNG(const string& filename,
     if (stbi_write_png(filename.c_str(), imgW, imgH, 3, pixels.data(), imgW * 3)) {
         if (verbose) {
             cerr << "Saved to " << filename << endl;
+        }
+    } else {
+        cerr << "Error: Failed to write PNG to " << filename << endl;
+    }
+}
+
+// Save PNG with a marked point (for stats mode)
+void savePNGWithMarker(const string& filename,
+                       const unordered_map<int64_t, int>& heights1,
+                       const unordered_map<int64_t, int>& heights2,
+                       const vector<RGB>& colormap,
+                       int N, int userScale, bool verbose,
+                       int markX, int markY) {
+
+    // Compute height difference at each vertex
+    unordered_map<int64_t, int> heightDiff;
+    int minH = INT_MAX, maxH = INT_MIN;
+    int minGX = INT_MAX, maxGX = INT_MIN;
+    int minGY = INT_MAX, maxGY = INT_MIN;
+
+    for (const auto& [key, h1] : heights1) {
+        auto it2 = heights2.find(key);
+        if (it2 != heights2.end()) {
+            int diff = h1 - it2->second;
+            heightDiff[key] = diff;
+            minH = min(minH, diff);
+            maxH = max(maxH, diff);
+
+            auto [gx, gy] = decodeCoord(key);
+            minGX = min(minGX, gx);
+            maxGX = max(maxGX, gx);
+            minGY = min(minGY, gy);
+            maxGY = max(maxGY, gy);
+        }
+    }
+
+    if (heightDiff.empty()) {
+        cerr << "Error: No common vertices between the two configurations" << endl;
+        return;
+    }
+
+    int gridStep = 4;
+    int gridW = (maxGX - minGX) / gridStep + 1;
+    int gridH = (maxGY - minGY) / gridStep + 1;
+
+    int pixelScale = userScale > 0 ? userScale : max(4, 2000 / max(gridW, gridH));
+    int dataW = gridW * pixelScale;
+    int dataH = gridH * pixelScale;
+
+    int legendW = max(80, dataW / 10);
+    int imgW = dataW + legendW;
+    int imgH = dataH;
+
+    vector<uint8_t> pixels(imgW * imgH * 3, 255);
+
+    // Fill data area with gray
+    for (int y = 0; y < imgH; y++) {
+        int rowBase = y * imgW * 3;
+        for (int x = 0; x < dataW; x++) {
+            int idx = rowBase + x * 3;
+            pixels[idx] = 128;
+            pixels[idx + 1] = 128;
+            pixels[idx + 2] = 128;
+        }
+    }
+
+    double range = (maxH == minH) ? 1.0 : (maxH - minH);
+
+    for (const auto& [key, diff] : heightDiff) {
+        auto [gx, gy] = decodeCoord(key);
+
+        int px = ((gx - minGX) / gridStep) * pixelScale;
+        int py = imgH - 1 - ((gy - minGY) / gridStep) * pixelScale;
+
+        double t = (diff - minH) / range;
+        RGB color = interpolateColor(colormap, t);
+
+        int startY = max(0, py);
+        int endY = min(imgH, py + pixelScale);
+        int startX = max(0, px);
+        int endX = min(dataW, px + pixelScale);
+
+        for (int iy = startY; iy < endY; iy++) {
+            int rowBase = iy * imgW * 3;
+            for (int ix = startX; ix < endX; ix++) {
+                int idx = rowBase + ix * 3;
+                pixels[idx] = color.r;
+                pixels[idx + 1] = color.g;
+                pixels[idx + 2] = color.b;
+            }
+        }
+    }
+
+    // Draw marker at the specified point - large red circle with white border
+    // Convert graph coords to pixel coords
+    // markX, markY are in "graph coordinates" (vertex coordinates / 2)
+    // Height function uses gx = vertex_x * 2, so markX corresponds to gx = markX * 4
+    int markerGX = markX * 4;
+    int markerGY = markY * 4;
+    int markerPX = ((markerGX - minGX) / gridStep) * pixelScale + pixelScale / 2;
+    int markerPY = imgH - 1 - ((markerGY - minGY) / gridStep) * pixelScale - pixelScale / 2;
+
+    // Draw concentric circles: white outer, red inner
+    int outerRadius = max(15, pixelScale * 3);
+    int innerRadius = max(10, pixelScale * 2);
+    RGB white = {255, 255, 255};
+    RGB red = {255, 0, 0};
+
+    for (int dy = -outerRadius; dy <= outerRadius; dy++) {
+        for (int dx = -outerRadius; dx <= outerRadius; dx++) {
+            int dist2 = dx * dx + dy * dy;
+            int px = markerPX + dx;
+            int py = markerPY + dy;
+            if (px >= 0 && px < dataW && py >= 0 && py < imgH) {
+                int idx = py * imgW * 3 + px * 3;
+                if (dist2 <= outerRadius * outerRadius && dist2 > innerRadius * innerRadius) {
+                    pixels[idx] = white.r;
+                    pixels[idx + 1] = white.g;
+                    pixels[idx + 2] = white.b;
+                } else if (dist2 <= innerRadius * innerRadius) {
+                    pixels[idx] = red.r;
+                    pixels[idx + 1] = red.g;
+                    pixels[idx + 2] = red.b;
+                }
+            }
+        }
+    }
+
+    // Draw crosshairs
+    int crossLen = outerRadius + 10;
+    for (int d = -crossLen; d <= crossLen; d++) {
+        // Horizontal
+        int px = markerPX + d;
+        if (px >= 0 && px < dataW && markerPY >= 0 && markerPY < imgH) {
+            int idx = markerPY * imgW * 3 + px * 3;
+            pixels[idx] = white.r;
+            pixels[idx + 1] = white.g;
+            pixels[idx + 2] = white.b;
+        }
+        // Vertical
+        int py = markerPY + d;
+        if (markerPX >= 0 && markerPX < dataW && py >= 0 && py < imgH) {
+            int idx = py * imgW * 3 + markerPX * 3;
+            pixels[idx] = white.r;
+            pixels[idx + 1] = white.g;
+            pixels[idx + 2] = white.b;
+        }
+    }
+
+    // Draw legend bar
+    int barX = dataW + 10;
+    int barTop = imgH / 10;
+    int barBottom = imgH - imgH / 10;
+    int barWidth = max(20, imgH / 50);
+    int textScale = max(1, imgH / 400);
+    int textX = barX + barWidth + 5;
+    RGB textColor = {0, 0, 0};
+
+    for (int y = barTop; y < barBottom; y++) {
+        double t = 1.0 - (double)(y - barTop) / (barBottom - barTop);
+        RGB color = interpolateColor(colormap, t);
+        int rowBase = y * imgW * 3;
+        for (int x = barX; x < barX + barWidth && x < imgW; x++) {
+            int idx = rowBase + x * 3;
+            pixels[idx] = color.r;
+            pixels[idx + 1] = color.g;
+            pixels[idx + 2] = color.b;
+        }
+    }
+
+    int fontH = FONT_H * textScale;
+    int barH = barBottom - barTop;
+    double vals[5] = {(double)maxH, 0.75*maxH + 0.25*minH, 0.5*maxH + 0.5*minH, 0.25*maxH + 0.75*minH, (double)minH};
+    int ypos[5] = {barTop, barTop + barH/4, barTop + barH/2, barTop + 3*barH/4, barBottom - fontH};
+    for (int i = 0; i < 5; i++) {
+        string label = (abs(vals[i]) < 0.01) ? "0" : formatValue(vals[i]);
+        drawText(pixels, imgW, imgH, label, textX, ypos[i] - (i < 4 ? fontH/2 : 0), textColor, textScale);
+    }
+
+    if (stbi_write_png(filename.c_str(), imgW, imgH, 3, pixels.data(), imgW * 3)) {
+        if (verbose) {
+            cerr << "Saved marked sample to " << filename << endl;
         }
     } else {
         cerr << "Error: Failed to write PNG to " << filename << endl;
@@ -1486,6 +1922,13 @@ struct Args {
     bool verbose = false;
     bool help = false;
     bool noOutput = false;  // Skip picture generation for stats-only runs
+    // Stats/histogram mode
+    int runs = 100;         // Number of runs for stats mode
+    int pointX = 0;         // X coordinate for stats point (graph coords)
+    int pointY = 0;         // Y coordinate for stats point (graph coords)
+    bool useCenter = true;  // Auto-detect center (default true, false if user specifies --point-x/--point-y)
+    bool markSample = false; // Generate one PNG with marked point
+    bool debugLoops = false; // Debug output for loop counting
 };
 
 void printHelp() {
@@ -1500,6 +1943,14 @@ Modes:
   fluctuation            Sample N tilings, show h - E[h] for last sample
   annealed-double-dimer  Resample weights for EACH tiling, then show h1 - h2
   annealed-fluctuation   Resample weights for EACH sample, show h - E[h]
+  stats                  Run many double-dimers, collect loop count histogram at a point (quenched)
+  annealed-stats         Run many double-dimers, collect loop count histogram at a point (annealed)
+
+Stats mode output:
+  - ONE PNG with the measurement point marked (red circle with crosshairs)
+  - Histogram of height differences h1 - h2 at the point
+  - Histogram of TOPOLOGICAL loop count (# of XOR loops surrounding the point)
+  - Statistics: mean, variance, stddev for both quantities
 
 Note on quenched vs annealed (relevant for random edge weights):
   The web simulation at https://lpetrov.cc/simulations/2025-12-11-t-embedding-arbitrary-weights/
@@ -1518,7 +1969,11 @@ Options:
   --border <N>          Border width in pixels for tiling mode (default: 0)
   --seed <val>          Random seed (default: random)
   --colormap <name>     viridis, plasma, coolwarm, grayscale (default: viridis)
-  --no-output           Skip picture generation (stats-only mode, faster)
+  --no-output           Skip picture generation (faster, for stats only)
+  --runs <N>            Number of runs for stats mode (default: 100)
+  --point-x <X>         X coord for stats point in graph coords (auto-centers if not specified)
+  --point-y <Y>         Y coord for stats point in graph coords (auto-centers if not specified)
+  --center              Explicitly use auto-detected center (default if no point specified)
   -v, --verbose         Verbose output
   -h, --help            Show this help message
 
@@ -1596,6 +2051,16 @@ Examples:
   ./double_dimer 200 --mode annealed-double-dimer --preset gamma -o annealed.png
   ./double_dimer 200 --mode annealed-fluctuation --samples 20 --preset gamma -o annealed_fluct.png
 
+  # Stats mode - loop count histogram at origin (parallelized)
+  ./double_dimer 100 --mode stats --preset gamma --runs 100 -o marked.png
+  ./double_dimer 200 --mode stats --preset uniform --runs 200 -o marked.png
+
+  # Stats mode - custom point, no picture output
+  ./double_dimer 100 --mode stats --preset gamma --runs 500 --point-x 10 --point-y 5 --no-output
+
+  # Annealed stats
+  ./double_dimer 100 --mode annealed-stats --preset gamma --runs 100 -o annealed_marked.png
+
 )";
 }
 
@@ -1659,6 +2124,20 @@ Args parseArgs(int argc, char* argv[]) {
             args.colormap = argv[++i];
         } else if (arg == "--no-output") {
             args.noOutput = true;
+        } else if (arg == "--runs" && i + 1 < argc) {
+            args.runs = stoi(argv[++i]);
+        } else if (arg == "--point-x" && i + 1 < argc) {
+            args.pointX = stoi(argv[++i]);
+            args.useCenter = false;  // User specified explicit point
+        } else if (arg == "--point-y" && i + 1 < argc) {
+            args.pointY = stoi(argv[++i]);
+            args.useCenter = false;  // User specified explicit point
+        } else if (arg == "--center") {
+            args.useCenter = true;   // Explicitly request auto-center
+        } else if (arg == "--mark-sample") {
+            args.markSample = true;
+        } else if (arg == "--debug-loops") {
+            args.debugLoops = true;
         }
     }
 
@@ -1747,7 +2226,8 @@ int main(int argc, char* argv[]) {
     }
 
     if (args.mode != "tiling" && args.mode != "double-dimer" && args.mode != "fluctuation" &&
-        args.mode != "annealed-double-dimer" && args.mode != "annealed-fluctuation") {
+        args.mode != "annealed-double-dimer" && args.mode != "annealed-fluctuation" &&
+        args.mode != "stats" && args.mode != "annealed-stats") {
         cerr << "Unknown mode: " << args.mode << endl;
         return 1;
     }
@@ -1968,6 +2448,277 @@ int main(int argc, char* argv[]) {
         if (!args.noOutput) {
             if (args.verbose) cerr << "Generating PNG..." << endl;
             saveFluctuationPNG(args.output, fluctuation, colormap, args.n, args.scale, args.verbose);
+        }
+
+    } else if (args.mode == "stats" || args.mode == "annealed-stats") {
+        // Stats mode: run many double-dimers, collect histogram at a point
+        bool isAnnealedStats = (args.mode == "annealed-stats");
+        int numRuns = args.runs;
+
+        // The point to measure (in graph coordinates)
+        int ptX = args.pointX;
+        int ptY = args.pointY;
+
+        // Auto-detect center if requested (default behavior)
+        if (args.useCenter) {
+            // Generate one sample to find height function bounds
+            MatrixInt sampleConfig = aztecgen(probs);
+            vector<Domino> sampleDominoes = extractDominoes(sampleConfig, args.n);
+            auto sampleHeights = computeHeightFunction(sampleDominoes);
+
+            // Find coordinate bounds (height function uses 4x coords)
+            int minX4 = INT_MAX, maxX4 = INT_MIN;
+            int minY4 = INT_MAX, maxY4 = INT_MIN;
+            for (const auto& [key, h] : sampleHeights) {
+                auto [x4, y4] = decodeCoord(key);
+                minX4 = min(minX4, x4);
+                maxX4 = max(maxX4, x4);
+                minY4 = min(minY4, y4);
+                maxY4 = max(maxY4, y4);
+            }
+
+            // Center in graph coordinates (divide 4x coords by 4)
+            ptX = (minX4 + maxX4) / 8;  // Average then divide by 4
+            ptY = (minY4 + maxY4) / 8;
+
+            cerr << "Auto-detected center: (" << ptX << ", " << ptY << ")" << endl;
+            cerr << "  Height function range in graph coords: x=[" << minX4/4 << ", " << maxX4/4
+                 << "], y=[" << minY4/4 << ", " << maxY4/4 << "]" << endl;
+        }
+
+        // Height function key: coordinates are multiplied by 4
+        int64_t targetKey = encodeCoord(ptX * 4, ptY * 4);
+
+        vector<int> heightDiffs(numRuns);
+        vector<int> loopCounts(numRuns);
+        vector<bool> validRun(numRuns, false);
+
+        // For marked sample output (from run 0)
+        unordered_map<int64_t, int> firstHeights1, firstHeights2;
+        vector<Domino> firstDominoes1, firstDominoes2;
+
+        // Debug run: generate one sample and output detailed loop info
+        if (args.debugLoops) {
+            cerr << "\n=== DEBUG: Running one sample with loop tracing ===" << endl;
+            MatrixInt dbgConfig1 = aztecgen(probs);
+            MatrixInt dbgConfig2 = aztecgen(probs);
+            vector<Domino> dbgDominoes1 = extractDominoes(dbgConfig1, args.n);
+            vector<Domino> dbgDominoes2 = extractDominoes(dbgConfig2, args.n);
+            auto dbgHeights1 = computeHeightFunction(dbgDominoes1);
+            auto dbgHeights2 = computeHeightFunction(dbgDominoes2);
+
+            auto it1 = dbgHeights1.find(targetKey);
+            auto it2 = dbgHeights2.find(targetKey);
+            if (it1 != dbgHeights1.end() && it2 != dbgHeights2.end()) {
+                int hDiff = it1->second - it2->second;
+                cerr << "DEBUG: Height difference at target: " << hDiff << endl;
+            } else {
+                cerr << "DEBUG: Target point not found in height function!" << endl;
+            }
+
+            int dbgLoops = countLoopsSurroundingPoint(dbgDominoes1, dbgDominoes2, ptX, ptY, true);
+            cerr << "DEBUG: Loop count result: " << dbgLoops << endl;
+            cerr << "=== END DEBUG ===" << endl << endl;
+        }
+
+#ifdef _OPENMP
+        omp_set_num_threads(args.threads);
+        int numThreads = omp_get_max_threads();
+        cerr << "Stats mode (" << (isAnnealedStats ? "annealed" : "quenched") << "): "
+             << numRuns << " runs at point (" << ptX << ", " << ptY << ") with "
+             << numThreads << " threads" << endl;
+
+        int completedRuns = 0;
+        mutex progressMutex;
+
+        #pragma omp parallel
+        {
+            int tid = omp_get_thread_num();
+            rng.seed(args.seed >= 0 ? args.seed + tid * 1000 : random_device{}() + tid);
+
+            #pragma omp for schedule(dynamic)
+            for (int r = 0; r < numRuns; r++) {
+                vector<MatrixDouble> runProbs;
+                if (isAnnealedStats) {
+                    MatrixDouble w1 = generateWeightsFromPreset(args, dim);
+                    runProbs = probsslim(w1);
+                } else {
+                    runProbs = probs;
+                }
+
+                MatrixInt config1 = aztecgen(runProbs);
+
+                if (isAnnealedStats) {
+                    MatrixDouble w2 = generateWeightsFromPreset(args, dim);
+                    runProbs = probsslim(w2);
+                }
+
+                MatrixInt config2 = aztecgen(runProbs);
+
+                vector<Domino> dominoes1 = extractDominoes(config1, args.n);
+                vector<Domino> dominoes2 = extractDominoes(config2, args.n);
+
+                auto heights1 = computeHeightFunction(dominoes1);
+                auto heights2 = computeHeightFunction(dominoes2);
+
+                // Save first sample for marked PNG (thread-safe, only run 0)
+                if (r == 0) {
+                    #pragma omp critical
+                    {
+                        firstHeights1 = heights1;
+                        firstHeights2 = heights2;
+                        firstDominoes1 = dominoes1;
+                        firstDominoes2 = dominoes2;
+                    }
+                }
+
+                auto it1 = heights1.find(targetKey);
+                auto it2 = heights2.find(targetKey);
+                if (it1 != heights1.end() && it2 != heights2.end()) {
+                    heightDiffs[r] = it1->second - it2->second;
+                    loopCounts[r] = countLoopsSurroundingPoint(dominoes1, dominoes2, ptX, ptY);
+                    validRun[r] = true;
+                }
+
+                if (args.verbose) {
+                    lock_guard<mutex> lock(progressMutex);
+                    completedRuns++;
+                    if (completedRuns % 10 == 0 || completedRuns == numRuns) {
+                        cerr << "  Completed " << completedRuns << "/" << numRuns << " runs" << endl;
+                    }
+                }
+            }
+        }
+#else
+        cerr << "Stats mode (" << (isAnnealedStats ? "annealed" : "quenched") << "): "
+             << numRuns << " runs at point (" << ptX << ", " << ptY << ") (single-threaded)" << endl;
+
+        for (int r = 0; r < numRuns; r++) {
+            if (args.verbose && ((r + 1) % 10 == 0 || r == 0)) {
+                cerr << "  Run " << (r + 1) << "/" << numRuns << endl;
+            }
+
+            vector<MatrixDouble> runProbs;
+            if (isAnnealedStats) {
+                MatrixDouble w1 = generateWeightsFromPreset(args, dim);
+                runProbs = probsslim(w1);
+            } else {
+                runProbs = probs;
+            }
+
+            MatrixInt config1 = aztecgen(runProbs);
+
+            if (isAnnealedStats) {
+                MatrixDouble w2 = generateWeightsFromPreset(args, dim);
+                runProbs = probsslim(w2);
+            }
+
+            MatrixInt config2 = aztecgen(runProbs);
+
+            vector<Domino> dominoes1 = extractDominoes(config1, args.n);
+            vector<Domino> dominoes2 = extractDominoes(config2, args.n);
+
+            auto heights1 = computeHeightFunction(dominoes1);
+            auto heights2 = computeHeightFunction(dominoes2);
+
+            if (r == 0) {
+                firstHeights1 = heights1;
+                firstHeights2 = heights2;
+                firstDominoes1 = dominoes1;
+                firstDominoes2 = dominoes2;
+            }
+
+            auto it1 = heights1.find(targetKey);
+            auto it2 = heights2.find(targetKey);
+            if (it1 != heights1.end() && it2 != heights2.end()) {
+                heightDiffs[r] = it1->second - it2->second;
+                loopCounts[r] = countLoopsSurroundingPoint(dominoes1, dominoes2, ptX, ptY);
+                validRun[r] = true;
+            }
+        }
+#endif
+
+        // Collect valid results
+        vector<int> validHeightDiffs;
+        vector<int> validLoopCounts;
+        validHeightDiffs.reserve(numRuns);
+        validLoopCounts.reserve(numRuns);
+        for (int r = 0; r < numRuns; r++) {
+            if (validRun[r]) {
+                validHeightDiffs.push_back(heightDiffs[r]);
+                validLoopCounts.push_back(loopCounts[r]);
+            }
+        }
+
+        // Always output marked sample PNG for stats mode (unless --no-output)
+        if (!args.noOutput && !firstHeights1.empty()) {
+            savePNGWithMarker(args.output, firstHeights1, firstHeights2, colormap,
+                             args.n, args.scale, args.verbose, ptX, ptY);
+        }
+
+        // Compute and output statistics
+        if (validHeightDiffs.empty()) {
+            cerr << "Error: Point (" << ptX << ", " << ptY << ") not found in any sample" << endl;
+        } else {
+            // Output raw values
+            cerr << "\n=== Height Difference Values (h1 - h2) at (" << ptX << ", " << ptY << ") ===" << endl;
+            cerr << "Raw values: ";
+            for (size_t i = 0; i < validHeightDiffs.size(); i++) {
+                cerr << validHeightDiffs[i];
+                if (i < validHeightDiffs.size() - 1) cerr << ", ";
+            }
+            cerr << endl;
+
+            // Build histogram of height differences
+            map<int, int> histogram;
+            double sum = 0, sum2 = 0;
+            for (int h : validHeightDiffs) {
+                histogram[h]++;
+                sum += h;
+                sum2 += h * h;
+            }
+            double mean = sum / validHeightDiffs.size();
+            double variance = sum2 / validHeightDiffs.size() - mean * mean;
+
+            cerr << "\n=== Histogram of h1 - h2 ===" << endl;
+            for (const auto& [val, count] : histogram) {
+                cerr << "  " << val << ": " << count << " ("
+                     << (100.0 * count / validHeightDiffs.size()) << "%)" << endl;
+            }
+
+            // Topological loop count histogram (actual XOR loops surrounding the point)
+            cerr << "\n=== Topological Loop Count (# XOR loops surrounding point) ===" << endl;
+            cerr << "Raw loop counts: ";
+            for (size_t i = 0; i < validLoopCounts.size(); i++) {
+                cerr << validLoopCounts[i];
+                if (i < validLoopCounts.size() - 1) cerr << ", ";
+            }
+            cerr << endl;
+
+            map<int, int> loopHist;
+            double loopSum = 0, loopSum2 = 0;
+            for (int lc : validLoopCounts) {
+                loopHist[lc]++;
+                loopSum += lc;
+                loopSum2 += lc * lc;
+            }
+            double loopMean = loopSum / validLoopCounts.size();
+            double loopVar = loopSum2 / validLoopCounts.size() - loopMean * loopMean;
+
+            cerr << "\n=== Loop Count Histogram ===" << endl;
+            for (const auto& [loops, count] : loopHist) {
+                cerr << "  " << loops << " loops: " << count << " ("
+                     << (100.0 * count / validLoopCounts.size()) << "%)" << endl;
+            }
+
+            cerr << "\n=== Statistics ===" << endl;
+            cerr << "  N = " << validHeightDiffs.size() << endl;
+            cerr << "  Mean(h1-h2) = " << mean << endl;
+            cerr << "  Var(h1-h2) = " << variance << endl;
+            cerr << "  StdDev(h1-h2) = " << sqrt(variance) << endl;
+            cerr << "  Mean(loop count) = " << loopMean << endl;
+            cerr << "  Var(loop count) = " << loopVar << endl;
+            cerr << "  StdDev(loop count) = " << sqrt(loopVar) << endl;
         }
 
     } else {
