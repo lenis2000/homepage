@@ -5,9 +5,12 @@ Compilation:
   # Download stb_image_write.h first (one time):
   curl -O https://raw.githubusercontent.com/nothings/stb/master/stb_image_write.h
 
-  # Compile:
+  # Compile (with OpenMP for parallel fluctuation mode):
+  g++ -std=c++17 -O3 -fopenmp -o double_dimer double-dimer-cli.cpp
+  # or: clang++ -std=c++17 -O3 -fopenmp -o double_dimer double-dimer-cli.cpp
+
+  # Without OpenMP (fluctuation mode will be single-threaded):
   g++ -std=c++17 -O3 -o double_dimer double-dimer-cli.cpp
-  # or: clang++ -std=c++17 -O3 -o double_dimer double-dimer-cli.cpp
 
 Usage:
   # Double dimer mode (h1 - h2):
@@ -45,6 +48,7 @@ Repository: https://github.com/lenis2000/homepage
 #include <fstream>
 #include <vector>
 #include <cmath>
+#include <climits>
 #include <random>
 #include <string>
 #include <cstring>
@@ -52,6 +56,11 @@ Repository: https://github.com/lenis2000/homepage
 #include <chrono>
 #include <unordered_map>
 #include <queue>
+#include <mutex>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 // Check for stb_image_write.h
 #if __has_include("stb_image_write.h")
@@ -100,10 +109,10 @@ public:
 };
 
 // ============================================================================
-// Global RNG
+// Global RNG (thread_local for OpenMP safety)
 // ============================================================================
 
-static mt19937 rng;
+static thread_local mt19937 rng;
 
 // ============================================================================
 // Color Maps
@@ -992,6 +1001,139 @@ void saveWeightsPNG(const string& filename, const MatrixDouble& weights,
     }
 }
 
+// Draw a simple digit (0-9, minus sign) at position using basic pixel font
+// Returns width of character drawn
+int drawDigit(vector<uint8_t>& pixels, int imgW, int imgH, int x, int y, char c, int scale = 1) {
+    // Simple 3x5 pixel font for digits and minus
+    static const uint8_t font[12][5] = {
+        {0b111, 0b101, 0b101, 0b101, 0b111},  // 0
+        {0b010, 0b110, 0b010, 0b010, 0b111},  // 1
+        {0b111, 0b001, 0b111, 0b100, 0b111},  // 2
+        {0b111, 0b001, 0b111, 0b001, 0b111},  // 3
+        {0b101, 0b101, 0b111, 0b001, 0b001},  // 4
+        {0b111, 0b100, 0b111, 0b001, 0b111},  // 5
+        {0b111, 0b100, 0b111, 0b101, 0b111},  // 6
+        {0b111, 0b001, 0b001, 0b001, 0b001},  // 7
+        {0b111, 0b101, 0b111, 0b101, 0b111},  // 8
+        {0b111, 0b101, 0b111, 0b001, 0b111},  // 9
+        {0b000, 0b000, 0b111, 0b000, 0b000},  // - (minus)
+        {0b000, 0b000, 0b010, 0b000, 0b000},  // . (period)
+    };
+
+    int idx = -1;
+    if (c >= '0' && c <= '9') idx = c - '0';
+    else if (c == '-') idx = 10;
+    else if (c == '.') idx = 11;
+    else return 0;
+
+    for (int row = 0; row < 5; row++) {
+        for (int col = 0; col < 3; col++) {
+            if (font[idx][row] & (1 << (2 - col))) {
+                for (int sy = 0; sy < scale; sy++) {
+                    for (int sx = 0; sx < scale; sx++) {
+                        int px = x + col * scale + sx;
+                        int py = y + row * scale + sy;
+                        if (px >= 0 && px < imgW && py >= 0 && py < imgH) {
+                            int pidx = (py * imgW + px) * 3;
+                            pixels[pidx] = 0;
+                            pixels[pidx + 1] = 0;
+                            pixels[pidx + 2] = 0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return 3 * scale + scale;  // char width + spacing
+}
+
+// Draw a number string at position
+void drawNumber(vector<uint8_t>& pixels, int imgW, int imgH, int x, int y, const string& text, int scale = 1) {
+    int curX = x;
+    for (char c : text) {
+        curX += drawDigit(pixels, imgW, imgH, curX, y, c, scale);
+    }
+}
+
+// Format number for legend display
+string formatLegendNumber(double val) {
+    if (abs(val) < 0.01 && val != 0) {
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%.1e", val);
+        return string(buf);
+    }
+    if (abs(val - round(val)) < 0.001) {
+        return to_string((int)round(val));
+    }
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%.1f", val);
+    return string(buf);
+}
+
+// Draw color legend on the right side of the image
+void drawLegend(vector<uint8_t>& pixels, int imgW, int imgH, int legendX, int legendW,
+                const vector<RGB>& colormap, double minVal, double maxVal, int fontScale) {
+    int margin = 10;
+    int barWidth = max(20, legendW / 3);
+    int barX = legendX + margin;
+    int barTop = imgH / 10;
+    int barBottom = imgH - imgH / 10;
+    int barHeight = barBottom - barTop;
+
+    // Draw color gradient bar
+    for (int y = barTop; y < barBottom; y++) {
+        double t = 1.0 - (double)(y - barTop) / barHeight;  // Top is max, bottom is min
+        RGB color = interpolateColor(colormap, t);
+        for (int x = barX; x < barX + barWidth; x++) {
+            if (x < imgW) {
+                int idx = (y * imgW + x) * 3;
+                pixels[idx] = color.r;
+                pixels[idx + 1] = color.g;
+                pixels[idx + 2] = color.b;
+            }
+        }
+    }
+
+    // Draw border around bar
+    for (int y = barTop - 1; y <= barBottom; y++) {
+        for (int bx : {barX - 1, barX + barWidth}) {
+            if (bx >= 0 && bx < imgW && y >= 0 && y < imgH) {
+                int idx = (y * imgW + bx) * 3;
+                pixels[idx] = 0; pixels[idx + 1] = 0; pixels[idx + 2] = 0;
+            }
+        }
+    }
+    for (int x = barX - 1; x <= barX + barWidth; x++) {
+        for (int by : {barTop - 1, barBottom}) {
+            if (x >= 0 && x < imgW && by >= 0 && by < imgH) {
+                int idx = (by * imgW + x) * 3;
+                pixels[idx] = 0; pixels[idx + 1] = 0; pixels[idx + 2] = 0;
+            }
+        }
+    }
+
+    // Draw tick marks and labels
+    int numTicks = 5;
+    int textX = barX + barWidth + 8;
+    for (int i = 0; i <= numTicks; i++) {
+        double t = (double)i / numTicks;
+        double val = minVal + t * (maxVal - minVal);
+        int y = barBottom - (int)(t * barHeight);
+
+        // Draw tick mark
+        for (int tx = barX + barWidth; tx < barX + barWidth + 5; tx++) {
+            if (tx < imgW && y >= 0 && y < imgH) {
+                int idx = (y * imgW + tx) * 3;
+                pixels[idx] = 0; pixels[idx + 1] = 0; pixels[idx + 2] = 0;
+            }
+        }
+
+        // Draw label
+        string label = formatLegendNumber(val);
+        drawNumber(pixels, imgW, imgH, textX, y - 2 * fontScale, label, fontScale);
+    }
+}
+
 void savePNG(const string& filename,
              const unordered_map<string, int>& heights1,
              const unordered_map<string, int>& heights2,
@@ -1039,15 +1181,33 @@ void savePNG(const string& filename,
 
     // Scale to produce nice large images (target ~2000px, or use user scale)
     int pixelScale = userScale > 0 ? userScale : max(4, 2000 / max(gridW, gridH));
-    int imgW = gridW * pixelScale;
-    int imgH = gridH * pixelScale;
+    int dataW = gridW * pixelScale;
+    int dataH = gridH * pixelScale;
+
+    // Add space for legend on the right
+    int legendW = max(80, dataW / 10);
+    int imgW = dataW + legendW;
+    int imgH = dataH;
+
+    // Font scale based on image size
+    int fontScale = max(1, imgH / 400);
 
     if (verbose) {
-        cerr << "Image size: " << imgW << " x " << imgH << " pixels" << endl;
+        cerr << "Image size: " << imgW << " x " << imgH << " pixels (data: " << dataW << "x" << dataH << ", legend: " << legendW << ")" << endl;
     }
 
-    // Create pixel buffer
-    vector<uint8_t> pixels(imgW * imgH * 3, 128);  // Gray background
+    // Create pixel buffer - white background for legend area
+    vector<uint8_t> pixels(imgW * imgH * 3, 255);
+
+    // Fill data area with gray initially
+    for (int y = 0; y < imgH; y++) {
+        for (int x = 0; x < dataW; x++) {
+            int idx = (y * imgW + x) * 3;
+            pixels[idx] = 128;
+            pixels[idx + 1] = 128;
+            pixels[idx + 2] = 128;
+        }
+    }
 
     // Fill pixels based on height difference
     double range = (maxH == minH) ? 1.0 : (maxH - minH);
@@ -1070,7 +1230,7 @@ void savePNG(const string& filename,
             for (int dx = 0; dx < pixelScale; dx++) {
                 int ix = px + dx;
                 int iy = py + dy;
-                if (ix >= 0 && ix < imgW && iy >= 0 && iy < imgH) {
+                if (ix >= 0 && ix < dataW && iy >= 0 && iy < imgH) {
                     int idx = (iy * imgW + ix) * 3;
                     pixels[idx] = color.r;
                     pixels[idx + 1] = color.g;
@@ -1079,6 +1239,9 @@ void savePNG(const string& filename,
             }
         }
     }
+
+    // Draw legend
+    drawLegend(pixels, imgW, imgH, dataW, legendW, colormap, (double)minH, (double)maxH, fontScale);
 
     // Write PNG
     if (stbi_write_png(filename.c_str(), imgW, imgH, 3, pixels.data(), imgW * 3)) {
@@ -1187,7 +1350,7 @@ struct Args {
     string preset = "uniform";
     string output = "height_diff.png";
     string mode = "double-dimer";  // "double-dimer" or "fluctuation"
-    int samples = 20;  // Number of samples for fluctuation mode
+    int samples = 10;  // Number of samples for fluctuation mode
     int scale = 0;  // Pixel scale (0 = auto: 4 pixels per vertex)
     double alpha = 2.0;
     double beta = 1.0;
@@ -1218,7 +1381,7 @@ Options:
   -m, --mode <type>     Output mode (default: double-dimer)
                         double-dimer: show h1 - h2 between two tilings
                         fluctuation: show h - E[h] from multiple samples
-  --samples <N>         Number of samples for fluctuation mode (default: 20)
+  --samples <N>         Number of samples for fluctuation mode (default: 10)
   -p, --preset <type>   Weight preset (default: uniform)
                         Basic: uniform, bernoulli, gaussian, gamma, biased-gamma, 2x2periodic
                         Layered: diagonal-layered, straight-layered,
@@ -1478,33 +1641,72 @@ int main(int argc, char* argv[]) {
         savePNG(args.output, heights1, heights2, colormap, args.n, args.scale, args.verbose);
 
     } else {
-        // ===== FLUCTUATION MODE =====
+        // ===== FLUCTUATION MODE (OpenMP parallelized) =====
+        int numSamples = args.samples;
+
+#ifdef _OPENMP
+        int numThreads = omp_get_max_threads();
         if (args.verbose) {
-            cerr << "Fluctuation mode: sampling " << args.samples << " tilings..." << endl;
+            cerr << "Fluctuation mode: sampling " << numSamples << " tilings with "
+                 << numThreads << " threads..." << endl;
         }
+#else
+        if (args.verbose) {
+            cerr << "Fluctuation mode: sampling " << numSamples << " tilings (single-threaded)..." << endl;
+        }
+#endif
 
-        // Sample multiple tilings and accumulate heights
-        unordered_map<string, double> heightSum;
-        unordered_map<string, int> heightCount;
-        unordered_map<string, int> lastHeight;
+        // Store all height maps (one per sample)
+        vector<unordered_map<string, int>> allHeights(numSamples);
+        int completedSamples = 0;
+        mutex progressMutex;
 
-        for (int s = 0; s < args.samples; s++) {
-            if (args.verbose && (s + 1) % 5 == 0) {
-                cerr << "  Sample " << (s + 1) << "/" << args.samples << endl;
-            }
+#ifdef _OPENMP
+        #pragma omp parallel
+        {
+            // Seed thread-local RNG differently per thread
+            int tid = omp_get_thread_num();
+            rng.seed(args.seed >= 0 ? args.seed + tid * 1000 : random_device{}() + tid);
 
-            MatrixInt config = aztecgen(probs);
-            vector<Domino> dominoes = extractDominoes(config, args.n);
-            auto heights = computeHeightFunction(dominoes);
+            #pragma omp for schedule(dynamic)
+            for (int s = 0; s < numSamples; s++) {
+                MatrixInt config = aztecgen(probs);
+                vector<Domino> dominoes = extractDominoes(config, args.n);
+                allHeights[s] = computeHeightFunction(dominoes);
 
-            for (const auto& [key, h] : heights) {
-                heightSum[key] += h;
-                heightCount[key]++;
-                if (s == args.samples - 1) {
-                    lastHeight[key] = h;  // Keep last sample
+                if (args.verbose) {
+                    lock_guard<mutex> lock(progressMutex);
+                    completedSamples++;
+                    if (completedSamples % 5 == 0 || completedSamples == numSamples) {
+                        cerr << "  Completed " << completedSamples << "/" << numSamples << " samples" << endl;
+                    }
                 }
             }
         }
+#else
+        for (int s = 0; s < numSamples; s++) {
+            if (args.verbose && (s + 1) % 5 == 0) {
+                cerr << "  Sample " << (s + 1) << "/" << numSamples << endl;
+            }
+            MatrixInt config = aztecgen(probs);
+            vector<Domino> dominoes = extractDominoes(config, args.n);
+            allHeights[s] = computeHeightFunction(dominoes);
+        }
+#endif
+
+        // Accumulate heights from all samples
+        unordered_map<string, double> heightSum;
+        unordered_map<string, int> heightCount;
+
+        for (int s = 0; s < numSamples; s++) {
+            for (const auto& [key, h] : allHeights[s]) {
+                heightSum[key] += h;
+                heightCount[key]++;
+            }
+        }
+
+        // Use last sample for h - E[h]
+        const auto& lastHeight = allHeights[numSamples - 1];
 
         // Compute h - E[h] for last sample
         unordered_map<string, double> fluctuation;
