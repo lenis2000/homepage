@@ -1,24 +1,25 @@
 /*
-Double Dimer CLI (OPTIMIZED) - Standalone C++ tool for sampling double dimers from Aztec diamonds
+Double Dimer CLI - Standalone C++ tool for sampling double dimers from Aztec diamonds
 
-Key optimizations over original:
-1. Integer-based coordinate encoding instead of strings (30-40% faster height computation)
-2. Vector pre-allocation with reserve() and move semantics (15-20% less allocation overhead)
-3. Cache-friendly pixel loop order (5-15% faster PNG generation)
+Optimizations:
+- Integer-based coordinate encoding (no string allocations in height function)
+- Vector pre-allocation with reserve() and move semantics
+- Cache-friendly pixel loop order (row-major access)
 
 Compilation:
   # Download stb_image_write.h first (one time):
   curl -O https://raw.githubusercontent.com/nothings/stb/master/stb_image_write.h
 
-  # Compile (with OpenMP for parallel fluctuation mode):
-  /opt/homebrew/bin/g++-15 -std=c++17 -O3 -fopenmp -o double_dimer_opt double-dimer-cli-optimized.cpp
-  # or without OpenMP:
-  g++ -std=c++17 -O3 -o double_dimer_opt double-dimer-cli-optimized.cpp
+  # Compile with aggressive optimization (OpenMP for parallel fluctuation mode):
+  /opt/homebrew/bin/g++-15 -std=c++17 -O3 -mcpu=native -ffast-math -funroll-loops -flto -fopenmp -o double_dimer double-dimer-cli.cpp
+
+  # Or without OpenMP (single-threaded):
+  g++ -std=c++17 -O3 -ffast-math -funroll-loops -o double_dimer double-dimer-cli.cpp
 
 Usage:
-  ./double_dimer_opt -n 100 -o height_diff.png
-  ./double_dimer_opt -n 200 --preset gamma --alpha 2.0 -o gamma_sample.png
-  ./double_dimer_opt -n 100 --mode fluctuation --samples 20 -o fluctuation.png
+  ./double_dimer -n 100 -o height_diff.png
+  ./double_dimer -n 200 --preset gamma --alpha 2.0 -o gamma_sample.png
+  ./double_dimer -n 100 --mode fluctuation --samples 20 -o fluctuation.png
 
 Repository: https://github.com/lenis2000/homepage
 */
@@ -943,7 +944,7 @@ struct Args {
 
 void printHelp() {
     cerr << R"(
-Double Dimer CLI (OPTIMIZED) - Sample double dimers from Aztec diamonds
+Double Dimer CLI - Sample double dimers from Aztec diamonds
 
 Usage: ./double_dimer_opt [options]
 
@@ -1040,7 +1041,7 @@ int main(int argc, char* argv[]) {
     auto startTime = chrono::high_resolution_clock::now();
 
     if (args.verbose) {
-        cerr << "Double Dimer CLI (OPTIMIZED)" << endl;
+        cerr << "Double Dimer CLI" << endl;
         cerr << "  N = " << args.n << endl;
         cerr << "  Mode = " << args.mode << endl;
         cerr << "  Preset = " << args.preset << endl;
