@@ -147,3 +147,62 @@ When removing a UI feature (like checkerboard coloring), be precise about scope:
 - Ask clarifying questions if the feature exists in multiple sections (e.g., T-graph vs T-embedding)
 - "Remove from T-graph" ≠ "Remove from everywhere"
 - Features may have: checkbox UI, event listeners, rendering code, export code (PDF/PNG/GIF/SVG)
+
+## Standalone C++ CLI Tool (double-dimer-cli.cpp)
+
+A standalone C++ command-line tool for fast double dimer sampling with PNG output.
+
+### Compilation
+```bash
+# With OpenMP (macOS requires homebrew GCC):
+/opt/homebrew/bin/g++-15 -std=c++17 -O3 -fopenmp -o double_dimer double-dimer-cli.cpp
+
+# Without OpenMP (single-threaded):
+g++ -std=c++17 -O3 -o double_dimer double-dimer-cli.cpp
+```
+
+Note: macOS clang doesn't support `-fopenmp` natively. Use homebrew GCC.
+
+### Usage Examples
+```bash
+# Double dimer mode (h1 - h2):
+./double_dimer 200 --preset gamma --alpha 2.0 -o output.png
+
+# Fluctuation mode (h - E[h], parallelized):
+./double_dimer 200 --mode fluctuation --samples 10 -o fluctuation.png
+
+# Show weights as SVG with numbers on edges:
+./double_dimer 6 --show-weights --preset diagonal-periodic -o weights.svg
+```
+
+### Weight Visualization
+For verifying weight patterns, use `--show-weights` which outputs SVG with actual numeric values on edges:
+- Blue: beta edges (right of black face)
+- Red: alpha edges (top of black face)
+- Convert to PDF: `rsvg-convert -f pdf -o output.pdf input.svg`
+
+## EKLP Matrix Coordinate Mapping
+
+For layered weight presets, the mapping between graph coordinates and EKLP matrix indices:
+
+**Black face at (faceX, faceY) in graph coordinates:**
+- `diagI = (faceX + faceY + N) / 2`
+- `diagJ = (faceX - faceY + N) / 2`
+- EKLP 2×2 block starts at `(2*diagI, 2*diagJ)`
+
+**Edge types in EKLP matrix:**
+- Alpha (top of black): even row, odd col → `(2*diagI, 2*diagJ + 1)`
+- Beta (right of black): even row, even col → `(2*diagI, 2*diagJ)`
+- Gamma (left): odd row, odd col
+- Delta (bottom): odd row, even col
+
+**Layered weight layer indices:**
+- Diagonal layered: `faceX - faceY = 2*diagJ - N` → varies with EKLP column j
+- Straight layered: `faceY = diagI - diagJ` → varies with `(i - j) / 2`
+
+## OpenMP Thread Safety
+
+When parallelizing with OpenMP:
+- Use `thread_local` for global RNG: `static thread_local mt19937 rng;`
+- Seed each thread differently: `rng.seed(base_seed + omp_get_thread_num() * 1000)`
+- GCC requires `<climits>` for `INT_MAX`/`INT_MIN` (not needed with clang)
