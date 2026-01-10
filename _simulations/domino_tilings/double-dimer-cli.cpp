@@ -1,9 +1,12 @@
 /*
 Double Dimer CLI - Standalone C++ tool for sampling double dimers from Aztec diamonds
 
-Optimizations:
-- Integer-based coordinate encoding (no string allocations in height function)
-- Vector pre-allocation with reserve() and move semantics
+HIGH-PERFORMANCE OPTIMIZATIONS:
+- Xoshiro256++ RNG (state-of-art, fits in registers, replaces slow mt19937)
+- Ping-pong buffer allocation (zero allocations in sampling loop)
+- In-place delslide (reuses pre-allocated matrix)
+- Direct 2D array addressing for height function (no unordered_map overhead)
+- Integer-based coordinate encoding (no string allocations)
 - Cache-friendly pixel loop order (row-major access)
 
 Compilation:
@@ -25,17 +28,17 @@ Repository: https://github.com/lenis2000/homepage
 */
 
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <cmath>
 #include <climits>
-#include <random>
+#include <random>       // For gamma_distribution, normal_distribution
 #include <string>
 #include <cstring>
 #include <algorithm>
 #include <chrono>
 #include <unordered_map>
 #include <queue>
+#include <tuple>
 #include <mutex>
 
 #ifdef _OPENMP
@@ -112,13 +115,91 @@ public:
     int size() const { return rows_; }
     int rows() const { return rows_; }
     int cols() const { return cols_; }
+
+    // OPTIMIZATION: Reset to new size without reallocation if possible
+    void reset(int rows, int cols, int val = 0) {
+        int needed = rows * cols;
+        if ((int)data.size() < needed) {
+            data.resize(needed);
+        }
+        rows_ = rows;
+        cols_ = cols;
+        std::fill(data.begin(), data.begin() + needed, val);
+    }
+
+    // OPTIMIZATION: Swap contents with another matrix
+    void swap(MatrixInt& other) {
+        std::swap(rows_, other.rows_);
+        std::swap(cols_, other.cols_);
+        data.swap(other.data);
+    }
 };
 
 // ============================================================================
-// Global RNG (thread_local for OpenMP safety)
+// Fast RNG: Xoshiro256++ (state-of-the-art, fits in registers)
+// Much faster than std::mt19937 which has 624 words of state
 // ============================================================================
 
-static thread_local mt19937 rng;
+struct Xoshiro256pp {
+    using result_type = uint64_t;
+
+    uint64_t s[4];
+
+    Xoshiro256pp(uint64_t seed = 0) {
+        // Seeding using SplitMix64
+        uint64_t z = seed + 0x9e3779b97f4a7c15ULL;
+        z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
+        z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
+        s[0] = z ^ (z >> 31);
+        z = (s[0] + 0x9e3779b97f4a7c15ULL);
+        z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
+        z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
+        s[1] = z ^ (z >> 31);
+        z = (s[1] + 0x9e3779b97f4a7c15ULL);
+        z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
+        z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
+        s[2] = z ^ (z >> 31);
+        z = (s[2] + 0x9e3779b97f4a7c15ULL);
+        z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
+        z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
+        s[3] = z ^ (z >> 31);
+    }
+
+    void seed(uint64_t seed) {
+        *this = Xoshiro256pp(seed);
+    }
+
+    // URNG interface for std::distributions
+    static constexpr uint64_t min() { return 0; }
+    static constexpr uint64_t max() { return UINT64_MAX; }
+    uint64_t operator()() { return next(); }
+
+    inline uint64_t rotl(const uint64_t x, int k) const {
+        return (x << k) | (x >> (64 - k));
+    }
+
+    inline uint64_t next() {
+        const uint64_t result = rotl(s[0] + s[3], 23) + s[0];
+        const uint64_t t = s[1] << 17;
+        s[2] ^= s[0];
+        s[3] ^= s[1];
+        s[1] ^= s[2];
+        s[0] ^= s[3];
+        s[2] ^= t;
+        s[3] = rotl(s[3], 45);
+        return result;
+    }
+
+    // Fast double in [0, 1) using IEEE 754 bit manipulation
+    inline double next_double() {
+        const uint64_t v = (next() >> 12) | 0x3FF0000000000000ULL;
+        double d;
+        memcpy(&d, &v, sizeof(d));
+        return d - 1.0;
+    }
+};
+
+static thread_local Xoshiro256pp rng;
 
 // ============================================================================
 // Color Maps
@@ -184,10 +265,9 @@ MatrixDouble generateUniformWeights(int dim) {
 
 MatrixDouble generateBernoulliWeights(int dim, double v1, double v2, double prob) {
     MatrixDouble weights(dim, dim);
-    uniform_real_distribution<> dis(0.0, 1.0);
     for (int i = 0; i < dim; i++) {
         for (int j = 0; j < dim; j++) {
-            weights.at(i, j) = (dis(rng) < prob) ? v1 : v2;
+            weights.at(i, j) = (rng.next_double() < prob) ? v1 : v2;
         }
     }
     return weights;
@@ -256,12 +336,11 @@ MatrixDouble generate2x2PeriodicWeights(int dim, double a, double b) {
 // Layered weight functions
 MatrixDouble generateDiagonalLayeredWeights(int dim, double val1, double val2, double p1, double p2) {
     MatrixDouble weights(dim, dim, 1.0);
-    uniform_real_distribution<> dis(0.0, 1.0);
     int N = dim / 2;
     vector<double> diagWeight(N);
     for (int d = 0; d < N; d++) {
         double p = (d % 2 == 0) ? p1 : p2;
-        diagWeight[d] = (dis(rng) < p) ? val1 : val2;
+        diagWeight[d] = (rng.next_double() < p) ? val1 : val2;
     }
     for (int i = 0; i < dim; i += 2) {
         for (int j = 0; j < dim; j += 2) {
@@ -274,12 +353,11 @@ MatrixDouble generateDiagonalLayeredWeights(int dim, double val1, double val2, d
 
 MatrixDouble generateStraightLayeredWeights(int dim, double val1, double val2, double p1, double p2) {
     MatrixDouble weights(dim, dim, 1.0);
-    uniform_real_distribution<> dis(0.0, 1.0);
     int N = dim / 2;
     vector<double> rowWeight(2 * N);
     for (int r = 0; r < 2 * N; r++) {
         double p = (r % 2 == 0) ? p1 : p2;
-        rowWeight[r] = (dis(rng) < p) ? val1 : val2;
+        rowWeight[r] = (rng.next_double() < p) ? val1 : val2;
     }
     for (int i = 0; i < dim; i += 2) {
         for (int j = 0; j < dim; j += 2) {
@@ -318,11 +396,10 @@ MatrixDouble generateStraightPeriodicWeights(int dim, double w1, double w2) {
 
 MatrixDouble generateDiagonalUniformWeights(int dim, double a, double b) {
     MatrixDouble weights(dim, dim, 1.0);
-    uniform_real_distribution<> dis(0.0, 1.0);
     int N = dim / 2;
     vector<double> diagWeight(N);
     for (int d = 0; d < N; d++) {
-        diagWeight[d] = a + (b - a) * dis(rng);
+        diagWeight[d] = a + (b - a) * rng.next_double();
     }
     for (int i = 0; i < dim; i += 2) {
         for (int j = 0; j < dim; j += 2) {
@@ -335,11 +412,10 @@ MatrixDouble generateDiagonalUniformWeights(int dim, double a, double b) {
 
 MatrixDouble generateStraightUniformWeights(int dim, double a, double b) {
     MatrixDouble weights(dim, dim, 1.0);
-    uniform_real_distribution<> dis(0.0, 1.0);
     int N = dim / 2;
     vector<double> rowWeight(2 * N);
     for (int r = 0; r < 2 * N; r++) {
-        rowWeight[r] = a + (b - a) * dis(rng);
+        rowWeight[r] = a + (b - a) * rng.next_double();
     }
     for (int i = 0; i < dim; i += 2) {
         for (int j = 0; j < dim; j += 2) {
@@ -462,14 +538,19 @@ vector<MatrixDouble> probsslim(const MatrixDouble& x1) {
     return A;
 }
 
-MatrixInt delslide(const MatrixInt& x1) {
+// OPTIMIZATION: In-place delslide that reuses pre-allocated buffer
+void delslideInPlace(MatrixInt& a0, const MatrixInt& x1) {
     int n = x1.size();
-    MatrixInt a0(n + 2, n + 2, 0);
+    int newSize = n + 2;
+    a0.reset(newSize, newSize, 0);
+
+    // Copy with offset
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             a0.at(i + 1, j + 1) = x1.at(i, j);
         }
     }
+
     int half = n / 2;
     // Deletion
     for (int i = 0; i < half; i++) {
@@ -503,13 +584,12 @@ MatrixInt delslide(const MatrixInt& x1) {
             }
         }
     }
-    return a0;
 }
 
-MatrixInt createStep(MatrixInt x0, const MatrixDouble& p) {
+// OPTIMIZATION: In-place createStep
+void createStepInPlace(MatrixInt& x0, const MatrixDouble& p) {
     int n = x0.size();
     int half = n / 2;
-    uniform_real_distribution<> dis(0.0, 1.0);
     for (int i = 0; i < half; i++) {
         for (int j = 0; j < half; j++) {
             int i2 = i << 1, j2 = j << 1;
@@ -525,7 +605,7 @@ MatrixInt createStep(MatrixInt x0, const MatrixDouble& p) {
                 if (i < half - 1)
                     a4 = (x0.at(i2 + 2, j2) == 0) && (x0.at(i2 + 2, j2 + 1) == 0);
                 if (a1 && a2 && a3 && a4) {
-                    if (dis(rng) < p.at(i, j)) {
+                    if (rng.next_double() < p.at(i, j)) {
                         x0.at(i2, j2) = 1;
                         x0.at(i2 + 1, j2 + 1) = 1;
                     } else {
@@ -536,27 +616,40 @@ MatrixInt createStep(MatrixInt x0, const MatrixDouble& p) {
             }
         }
     }
-    return x0;
 }
 
+// OPTIMIZATION: Ping-pong buffer version - zero allocations in main loop
 MatrixInt aztecgen(const vector<MatrixDouble>& x0) {
     int n = (int)x0.size();
-    uniform_real_distribution<> dis(0.0, 1.0);
+    int maxSize = 2 * n + 4;
 
-    MatrixInt a1(2, 2);
-    if (dis(rng) < x0[0].at(0, 0)) {
-        a1.at(0, 0) = 1; a1.at(0, 1) = 0;
-        a1.at(1, 0) = 0; a1.at(1, 1) = 1;
+    // Pre-allocate ping-pong buffers
+    MatrixInt buf1(maxSize, maxSize, 0);
+    MatrixInt buf2(maxSize, maxSize, 0);
+
+    // Initial 2x2 configuration
+    buf1.reset(2, 2, 0);
+    if (rng.next_double() < x0[0].at(0, 0)) {
+        buf1.at(0, 0) = 1;
+        buf1.at(1, 1) = 1;
     } else {
-        a1.at(0, 0) = 0; a1.at(0, 1) = 1;
-        a1.at(1, 0) = 1; a1.at(1, 1) = 0;
+        buf1.at(0, 1) = 1;
+        buf1.at(1, 0) = 1;
     }
+
+    MatrixInt* curr = &buf1;
+    MatrixInt* next = &buf2;
 
     for (int i = 0; i < n - 1; i++) {
-        a1 = delslide(a1);
-        a1 = createStep(a1, x0[i + 1]);
+        // Delslide: curr -> next
+        delslideInPlace(*next, *curr);
+        // CreateStep: in-place on next
+        createStepInPlace(*next, x0[i + 1]);
+        // Swap pointers
+        std::swap(curr, next);
     }
-    return a1;
+
+    return std::move(*curr);
 }
 
 // ============================================================================
@@ -615,16 +708,60 @@ vector<Domino> extractDominoes(const MatrixInt& config, int N) {
 }
 
 // ============================================================================
-// Height Function Computation (OPTIMIZED: int64_t keys instead of strings)
+// Height Function Computation (OPTIMIZED: Direct 2D array addressing)
 // ============================================================================
 
-unordered_map<int64_t, int> computeHeightFunction(const vector<Domino>& dominoes) {
-    // OPTIMIZATION: Use int64_t keys instead of string keys
-    unordered_map<int64_t, vector<pair<int64_t, int>>> adj;
+// Direct 2D height array - faster than unordered_map for BFS
+struct HeightGrid {
+    vector<int> data;
+    vector<bool> visited;
+    int offsetX, offsetY;
+    int width, height;
 
-    auto addEdge = [&](int64_t v1, int64_t v2, int dh) {
-        adj[v1].push_back({v2, dh});
-        adj[v2].push_back({v1, -dh});
+    static constexpr int UNSET = INT_MIN;
+
+    HeightGrid(int minX, int maxX, int minY, int maxY) {
+        offsetX = -minX;
+        offsetY = -minY;
+        width = maxX - minX + 1;
+        height = maxY - minY + 1;
+        data.resize(width * height, UNSET);
+        visited.resize(width * height, false);
+    }
+
+    inline int& at(int x, int y) {
+        return data[(y + offsetY) * width + (x + offsetX)];
+    }
+
+    inline bool isVisited(int x, int y) const {
+        return visited[(y + offsetY) * width + (x + offsetX)];
+    }
+
+    inline void setVisited(int x, int y) {
+        visited[(y + offsetY) * width + (x + offsetX)] = true;
+    }
+};
+
+unordered_map<int64_t, int> computeHeightFunction(const vector<Domino>& dominoes) {
+    if (dominoes.empty()) return {};
+
+    // First pass: collect all vertices and find bounds
+    int minX = INT_MAX, maxX = INT_MIN;
+    int minY = INT_MAX, maxY = INT_MIN;
+
+    // Adjacency stored as vector of (neighbor_x, neighbor_y, dh)
+    unordered_map<int64_t, vector<tuple<int, int, int>>> adj;
+    adj.reserve(dominoes.size() * 6);
+
+    auto addEdge = [&](int x1, int y1, int x2, int y2, int dh) {
+        int64_t k1 = encodeCoord(x1, y1);
+        int64_t k2 = encodeCoord(x2, y2);
+        adj[k1].emplace_back(x2, y2, dh);
+        adj[k2].emplace_back(x1, y1, -dh);
+        minX = min(minX, min(x1, x2));
+        maxX = max(maxX, max(x1, x2));
+        minY = min(minY, min(y1, y2));
+        maxY = max(maxY, max(y1, y2));
     };
 
     for (const auto& d : dominoes) {
@@ -634,68 +771,68 @@ unordered_map<int64_t, int> computeHeightFunction(const vector<Domino>& dominoes
 
         if (d.orient == 0) {
             // Horizontal domino
-            int64_t TL = encodeCoord(x, y + 4);
-            int64_t TM = encodeCoord(x + 4, y + 4);
-            int64_t TR = encodeCoord(x + 8, y + 4);
-            int64_t BL = encodeCoord(x, y);
-            int64_t BM = encodeCoord(x + 4, y);
-            int64_t BR = encodeCoord(x + 8, y);
-
-            addEdge(TL, TM, -s);
-            addEdge(TM, TR, s);
-            addEdge(BL, BM, s);
-            addEdge(BM, BR, -s);
-            addEdge(TL, BL, s);
-            addEdge(TM, BM, 3*s);
-            addEdge(TR, BR, s);
+            addEdge(x, y + 4, x + 4, y + 4, -s);
+            addEdge(x + 4, y + 4, x + 8, y + 4, s);
+            addEdge(x, y, x + 4, y, s);
+            addEdge(x + 4, y, x + 8, y, -s);
+            addEdge(x, y + 4, x, y, s);
+            addEdge(x + 4, y + 4, x + 4, y, 3*s);
+            addEdge(x + 8, y + 4, x + 8, y, s);
         } else {
             // Vertical domino
-            int64_t TL = encodeCoord(x, y + 8);
-            int64_t TR = encodeCoord(x + 4, y + 8);
-            int64_t ML = encodeCoord(x, y + 4);
-            int64_t MR = encodeCoord(x + 4, y + 4);
-            int64_t BL = encodeCoord(x, y);
-            int64_t BR = encodeCoord(x + 4, y);
-
-            addEdge(TL, TR, -s);
-            addEdge(ML, MR, -3*s);
-            addEdge(BL, BR, -s);
-            addEdge(TL, ML, s);
-            addEdge(ML, BL, -s);
-            addEdge(TR, MR, -s);
-            addEdge(MR, BR, s);
+            addEdge(x, y + 8, x + 4, y + 8, -s);
+            addEdge(x, y + 4, x + 4, y + 4, -3*s);
+            addEdge(x, y, x + 4, y, -s);
+            addEdge(x, y + 8, x, y + 4, s);
+            addEdge(x, y + 4, x, y, -s);
+            addEdge(x + 4, y + 8, x + 4, y + 4, -s);
+            addEdge(x + 4, y + 4, x + 4, y, s);
         }
     }
 
     if (adj.empty()) return {};
 
-    // Find lowest-leftmost vertex as root
-    int64_t root = 0;
-    int minX = INT_MAX, minY = INT_MAX;
+    // Find root (lowest-leftmost vertex)
+    int rootX = minX, rootY = maxY;
     for (const auto& [key, _] : adj) {
         auto [gx, gy] = decodeCoord(key);
-        if (gy < minY || (gy == minY && gx < minX)) {
-            minX = gx;
-            minY = gy;
-            root = key;
+        if (gy < rootY || (gy == rootY && gx < rootX)) {
+            rootX = gx;
+            rootY = gy;
         }
     }
 
-    // BFS to compute heights
-    unordered_map<int64_t, int> H;
-    H.reserve(adj.size());
-    H[root] = 0;
-    queue<int64_t> q;
-    q.push(root);
+    // OPTIMIZATION: Use direct 2D array for BFS instead of unordered_map
+    HeightGrid grid(minX, maxX, minY, maxY);
+
+    // BFS using coordinates directly
+    queue<pair<int, int>> q;
+    grid.at(rootX, rootY) = 0;
+    grid.setVisited(rootX, rootY);
+    q.push({rootX, rootY});
 
     while (!q.empty()) {
-        int64_t v = q.front();
+        auto [vx, vy] = q.front();
         q.pop();
-        for (const auto& [w, dh] : adj[v]) {
-            if (H.find(w) == H.end()) {
-                H[w] = H[v] + dh;
-                q.push(w);
+        int64_t vkey = encodeCoord(vx, vy);
+        int vh = grid.at(vx, vy);
+
+        for (const auto& [wx, wy, dh] : adj[vkey]) {
+            if (!grid.isVisited(wx, wy)) {
+                grid.at(wx, wy) = vh + dh;
+                grid.setVisited(wx, wy);
+                q.push({wx, wy});
             }
+        }
+    }
+
+    // Convert back to unordered_map for compatibility with existing code
+    unordered_map<int64_t, int> H;
+    H.reserve(adj.size());
+    for (const auto& [key, _] : adj) {
+        auto [gx, gy] = decodeCoord(key);
+        if (grid.isVisited(gx, gy)) {
+            H[key] = grid.at(gx, gy);
         }
     }
 
@@ -1101,8 +1238,10 @@ Double Dimer CLI - Sample double dimers from Aztec diamonds
 Usage: ./double_dimer [N] [options]
 
 Modes:
-  double-dimer    Show height difference h1 - h2 between two tilings (default)
-  fluctuation     Sample N tilings, show h - E[h] for last sample
+  double-dimer           Show height difference h1 - h2 between two tilings (default)
+  fluctuation            Sample N tilings, show h - E[h] for last sample
+  annealed-double-dimer  Resample weights for EACH tiling, then show h1 - h2
+  annealed-fluctuation   Resample weights for EACH sample, show h - E[h]
 
 Options:
   -n, --size <N>        Aztec diamond order (default: 50)
