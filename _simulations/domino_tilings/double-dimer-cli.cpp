@@ -1307,6 +1307,10 @@ Examples:
   ./double_dimer 200 --mode fluctuation --samples 20 -o fluct.png
   ./double_dimer 300 --mode fluctuation --samples 50 --preset gamma -o fluct_gamma.png
 
+  # Annealed modes (resample weights for each tiling)
+  ./double_dimer 200 --mode annealed-double-dimer --preset gamma -o annealed.png
+  ./double_dimer 200 --mode annealed-fluctuation --samples 20 --preset gamma -o annealed_fluct.png
+
 )";
 }
 
@@ -1366,6 +1370,39 @@ Args parseArgs(int argc, char* argv[]) {
 }
 
 // ============================================================================
+// Weight Generation Helper (for annealed modes that resample weights)
+// ============================================================================
+
+MatrixDouble generateWeightsFromPreset(const Args& args, int dim) {
+    if (args.preset == "uniform") {
+        return generateUniformWeights(dim);
+    } else if (args.preset == "bernoulli") {
+        return generateBernoulliWeights(dim, args.v1, args.v2, args.prob);
+    } else if (args.preset == "gaussian") {
+        return generateGaussianWeights(dim, args.beta);
+    } else if (args.preset == "gamma") {
+        return generateGammaWeights(dim, args.alpha);
+    } else if (args.preset == "biased-gamma") {
+        return generateBiasedGammaWeights(dim, args.alpha, args.beta);
+    } else if (args.preset == "2x2periodic") {
+        return generate2x2PeriodicWeights(dim, args.a, args.b);
+    } else if (args.preset == "diagonal-layered") {
+        return generateDiagonalLayeredWeights(dim, args.v1, args.v2, args.p1, args.p2);
+    } else if (args.preset == "straight-layered") {
+        return generateStraightLayeredWeights(dim, args.v1, args.v2, args.p1, args.p2);
+    } else if (args.preset == "diagonal-periodic") {
+        return generateDiagonalPeriodicWeights(dim, args.w1, args.w2);
+    } else if (args.preset == "straight-periodic") {
+        return generateStraightPeriodicWeights(dim, args.w1, args.w2);
+    } else if (args.preset == "diagonal-uniform") {
+        return generateDiagonalUniformWeights(dim, args.a, args.b);
+    } else if (args.preset == "straight-uniform") {
+        return generateStraightUniformWeights(dim, args.a, args.b);
+    }
+    return generateUniformWeights(dim);  // fallback
+}
+
+// ============================================================================
 // Main
 // ============================================================================
 
@@ -1393,10 +1430,13 @@ int main(int argc, char* argv[]) {
         cerr << "  Output = " << args.output << endl;
     }
 
-    if (args.mode != "double-dimer" && args.mode != "fluctuation") {
+    if (args.mode != "double-dimer" && args.mode != "fluctuation" &&
+        args.mode != "annealed-double-dimer" && args.mode != "annealed-fluctuation") {
         cerr << "Unknown mode: " << args.mode << endl;
         return 1;
     }
+
+    bool isAnnealed = (args.mode == "annealed-double-dimer" || args.mode == "annealed-fluctuation");
 
     int dim = 2 * args.n;
     MatrixDouble weights;
@@ -1434,13 +1474,17 @@ int main(int argc, char* argv[]) {
 
     vector<RGB> colormap = getColormap(args.colormap);
 
-    if (args.verbose) {
-        cerr << "Computing probabilities..." << endl;
+    // For non-annealed modes, compute probs once
+    vector<MatrixDouble> probs;
+    if (!isAnnealed) {
+        if (args.verbose) {
+            cerr << "Computing probabilities..." << endl;
+        }
+        probs = probsslim(weights);
     }
 
-    vector<MatrixDouble> probs = probsslim(weights);
-
     if (args.mode == "double-dimer") {
+        // QUENCHED: Same weights for both tilings
         if (args.verbose) cerr << "Sampling first tiling..." << endl;
         MatrixInt config1 = aztecgen(probs);
 
@@ -1468,7 +1512,93 @@ int main(int argc, char* argv[]) {
 
         savePNG(args.output, heights1, heights2, colormap, args.n, args.scale, args.verbose);
 
+    } else if (args.mode == "annealed-double-dimer") {
+        // ANNEALED: Resample weights independently for each tiling
+        if (args.verbose) cerr << "Generating weights for first tiling..." << endl;
+        MatrixDouble weights1 = generateWeightsFromPreset(args, dim);
+        vector<MatrixDouble> probs1 = probsslim(weights1);
+        if (args.verbose) cerr << "Sampling first tiling..." << endl;
+        MatrixInt config1 = aztecgen(probs1);
+
+        if (args.verbose) cerr << "Generating weights for second tiling..." << endl;
+        MatrixDouble weights2 = generateWeightsFromPreset(args, dim);
+        vector<MatrixDouble> probs2 = probsslim(weights2);
+        if (args.verbose) cerr << "Sampling second tiling..." << endl;
+        MatrixInt config2 = aztecgen(probs2);
+
+        if (args.verbose) cerr << "Extracting dominoes..." << endl;
+        vector<Domino> dominoes1 = extractDominoes(config1, args.n);
+        vector<Domino> dominoes2 = extractDominoes(config2, args.n);
+
+        if (args.verbose) {
+            cerr << "Computing height functions..." << endl;
+            cerr << "  Config 1: " << dominoes1.size() << " dominoes" << endl;
+            cerr << "  Config 2: " << dominoes2.size() << " dominoes" << endl;
+        }
+
+        auto heights1 = computeHeightFunction(dominoes1);
+        auto heights2 = computeHeightFunction(dominoes2);
+
+        if (args.verbose) {
+            cerr << "  Heights 1: " << heights1.size() << " vertices" << endl;
+            cerr << "  Heights 2: " << heights2.size() << " vertices" << endl;
+            cerr << "Generating PNG..." << endl;
+        }
+
+        savePNG(args.output, heights1, heights2, colormap, args.n, args.scale, args.verbose);
+
+    } else if (args.mode == "annealed-fluctuation") {
+        // ANNEALED FLUCTUATION: Resample weights for each sample
+        int numSamples = args.samples;
+
+        if (args.verbose) {
+            cerr << "Annealed fluctuation mode: sampling " << numSamples
+                 << " tilings (resampling weights each time)..." << endl;
+        }
+
+        vector<unordered_map<int64_t, int>> allHeights(numSamples);
+
+        // Note: Annealed mode is sequential because each sample needs fresh weights
+        for (int s = 0; s < numSamples; s++) {
+            if (args.verbose && ((s + 1) % 5 == 0 || s == 0)) {
+                cerr << "  Sample " << (s + 1) << "/" << numSamples << " (generating weights + sampling)..." << endl;
+            }
+
+            // Resample weights for this sample
+            MatrixDouble sampleWeights = generateWeightsFromPreset(args, dim);
+            vector<MatrixDouble> sampleProbs = probsslim(sampleWeights);
+
+            MatrixInt config = aztecgen(sampleProbs);
+            vector<Domino> dominoes = extractDominoes(config, args.n);
+            allHeights[s] = computeHeightFunction(dominoes);
+        }
+
+        unordered_map<int64_t, double> heightSum;
+        unordered_map<int64_t, int> heightCount;
+
+        for (int s = 0; s < numSamples; s++) {
+            for (const auto& [key, h] : allHeights[s]) {
+                heightSum[key] += h;
+                heightCount[key]++;
+            }
+        }
+
+        const auto& lastHeight = allHeights[numSamples - 1];
+
+        unordered_map<int64_t, double> fluctuation;
+        for (const auto& [key, h] : lastHeight) {
+            double mean = heightSum[key] / heightCount[key];
+            fluctuation[key] = h - mean;
+        }
+
+        if (args.verbose) {
+            cerr << "Generating PNG..." << endl;
+        }
+
+        saveFluctuationPNG(args.output, fluctuation, colormap, args.n, args.scale, args.verbose);
+
     } else {
+        // QUENCHED FLUCTUATION: Same weights for all samples
         int numSamples = args.samples;
 
 #ifdef _OPENMP
