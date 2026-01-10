@@ -1344,8 +1344,8 @@ struct Args {
     int threads = 20;
     int scale = 0;
     int border = 0;  // Border width for tiling mode (0 = touching dominoes)
-    double alpha = 2.0;
-    double beta = 1.0;
+    double alpha = 0.2;
+    double beta = 0.25;
     double v1 = 2.0;
     double v2 = 0.5;
     double prob = 0.5;
@@ -1400,10 +1400,8 @@ Weight Presets:
                         Params: --v1, --v2, --prob
   gaussian              Log-normal: exp(beta * X), X ~ N(0,1)
                         Params: --beta
-  gamma                 Gamma(alpha) on even rows, 1 on odd rows
-                        Params: --alpha
-  biased-gamma          Gamma(alpha) on alpha-edges, Gamma(beta) on beta-edges
-                        Params: --alpha, --beta
+  gamma                 Gamma(alpha) on alpha-edges, Gamma(beta) on beta-edges
+                        Params: --alpha (default 0.2), --beta (default 0.25)
   2x2periodic           Checkerboard 4x4 block pattern
                         Params: --a, --b
 
@@ -1421,8 +1419,8 @@ Weight Presets:
                         Params: --a, --b
 
 Parameter Defaults:
-  --alpha 2.0           Gamma shape parameter
-  --beta 1.0            Gamma shape / Gaussian scale
+  --alpha 0.2           Gamma shape parameter for alpha-edges
+  --beta 0.25           Gamma shape parameter for beta-edges / Gaussian scale
   --v1 2.0, --v2 0.5    Bernoulli/layered weight values
   --prob 0.5            Bernoulli probability
   --p1 0.5, --p2 0.5    Layered probabilities (even/odd layers)
@@ -1436,10 +1434,8 @@ Examples:
 
   # Basic double dimer
   ./double_dimer 200 -o output.png
-  ./double_dimer -n 300 --preset gamma --alpha 2.0 -o gamma.png
-
-  # Biased gamma (Duits-Van Peski model)
-  ./double_dimer 300 --preset biased-gamma --alpha 0.2 --beta 0.25 -o biased.png
+  ./double_dimer -n 300 --preset gamma -o gamma.png
+  ./double_dimer 300 --preset gamma --alpha 0.2 --beta 0.25 -o biased.png
 
   # Layered weights
   ./double_dimer 200 --preset diagonal-layered --v1 2 --v2 0.5 -o diag.png
@@ -1525,8 +1521,6 @@ MatrixDouble generateWeightsFromPreset(const Args& args, int dim) {
     } else if (args.preset == "gaussian") {
         return generateGaussianWeights(dim, args.beta);
     } else if (args.preset == "gamma") {
-        return generateGammaWeights(dim, args.alpha);
-    } else if (args.preset == "biased-gamma") {
         return generateBiasedGammaWeights(dim, args.alpha, args.beta);
     } else if (args.preset == "2x2periodic") {
         return generate2x2PeriodicWeights(dim, args.a, args.b);
@@ -1592,11 +1586,8 @@ int main(int argc, char* argv[]) {
     } else if (args.preset == "gaussian") {
         weights = generateGaussianWeights(dim, args.beta);
     } else if (args.preset == "gamma") {
-        weights = generateGammaWeights(dim, args.alpha);
-        if (args.verbose) cerr << "  Gamma: alpha=" << args.alpha << endl;
-    } else if (args.preset == "biased-gamma") {
         weights = generateBiasedGammaWeights(dim, args.alpha, args.beta);
-        if (args.verbose) cerr << "  Biased Gamma: alpha=" << args.alpha << ", beta=" << args.beta << endl;
+        if (args.verbose) cerr << "  Gamma: alpha=" << args.alpha << ", beta=" << args.beta << endl;
     } else if (args.preset == "2x2periodic") {
         weights = generate2x2PeriodicWeights(dim, args.a, args.b);
     } else if (args.preset == "diagonal-layered") {
