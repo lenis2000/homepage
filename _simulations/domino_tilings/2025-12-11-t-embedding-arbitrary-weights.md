@@ -7,6 +7,8 @@ code:
     txt: 'JavaScript implementation'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-12-11-t-embedding-arbitrary-weights.cpp'
     txt: 'C++ source (WASM)'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/double-dimer-cli.cpp'
+    txt: 'Standalone C++ CLI for double dimer sampling'
 ---
 
 <details style="margin-bottom: 15px;">
