@@ -154,14 +154,22 @@ A standalone C++ command-line tool for fast double dimer sampling with PNG outpu
 
 ### Compilation
 ```bash
-# With OpenMP (macOS requires homebrew GCC):
-/opt/homebrew/bin/g++-15 -std=c++17 -O3 -fopenmp -o double_dimer double-dimer-cli.cpp
+# With OpenMP and aggressive optimization (macOS requires homebrew GCC):
+/opt/homebrew/bin/g++-15 -std=c++17 -O3 -mcpu=native -ffast-math -funroll-loops -flto -fopenmp -o double_dimer double-dimer-cli.cpp
 
 # Without OpenMP (single-threaded):
 g++ -std=c++17 -O3 -o double_dimer double-dimer-cli.cpp
 ```
 
-Note: macOS clang doesn't support `-fopenmp` natively. Use homebrew GCC.
+**Notes:**
+- macOS clang doesn't support `-fopenmp` natively. Use homebrew GCC.
+- Use `-mcpu=native` instead of `-march=native` on ARM Macs.
+
+### Performance Optimizations Applied
+- **int64_t coordinate encoding**: Replaced `unordered_map<string, ...>` with `unordered_map<int64_t, ...>` for ~1.5x speedup
+- **Vector pre-allocation**: Use `reserve()` before `push_back()` loops
+- **Move semantics**: Use `std::move()` for matrix transfers
+- **Cache-friendly loops**: Row-major order (outer=y, inner=x) for pixel rendering
 
 ### Usage Examples
 ```bash
@@ -180,6 +188,12 @@ For verifying weight patterns, use `--show-weights` which outputs SVG with actua
 - Blue: beta edges (right of black face)
 - Red: alpha edges (top of black face)
 - Convert to PDF: `rsvg-convert -f pdf -o output.pdf input.svg`
+
+### PNG Legend with Numeric Values
+The PNG output includes a color bar legend with 5 numeric labels (max, 75%, 50%, 25%, min).
+- **Font scaling**: `textScale = max(1, imgH / 400)` - scales with image size
+- **Simple bitmap font**: 5×7 pixel glyphs for digits 0-9, minus, decimal, 'e' for scientific notation
+- **formatValue()**: Formats doubles appropriately (scientific notation for very small/large values)
 
 ## EKLP Matrix Coordinate Mapping
 
