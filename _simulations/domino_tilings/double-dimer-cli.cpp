@@ -860,6 +860,7 @@ void saveFluctuationPNG(const string& filename,
         cerr << "Grid bounds: X=[" << minGX << "," << maxGX << "], Y=[" << minGY << "," << maxGY << "]" << endl;
     }
 
+    // Use symmetric range for fluctuations (centered at 0)
     double absMax = max(abs(minF), abs(maxF));
     if (absMax < 1e-9) absMax = 1.0;
 
@@ -868,16 +869,31 @@ void saveFluctuationPNG(const string& filename,
     int gridH = (maxGY - minGY) / gridStep + 1;
 
     int pixelScale = userScale > 0 ? userScale : max(4, 2000 / max(gridW, gridH));
-    int imgW = gridW * pixelScale;
-    int imgH = gridH * pixelScale;
+    int dataW = gridW * pixelScale;
+    int dataH = gridH * pixelScale;
+
+    // Add space for legend
+    int legendW = max(80, dataW / 10);
+    int imgW = dataW + legendW;
+    int imgH = dataH;
 
     if (verbose) {
         cerr << "Image size: " << imgW << " x " << imgH << " pixels" << endl;
     }
 
-    vector<uint8_t> pixels(imgW * imgH * 3, 128);
+    // White background for legend, gray for data area
+    vector<uint8_t> pixels(imgW * imgH * 3, 255);
+    for (int y = 0; y < imgH; y++) {
+        int rowBase = y * imgW * 3;
+        for (int x = 0; x < dataW; x++) {
+            int idx = rowBase + x * 3;
+            pixels[idx] = 128;
+            pixels[idx + 1] = 128;
+            pixels[idx + 2] = 128;
+        }
+    }
 
-    // OPTIMIZATION: Cache-friendly rendering
+    // Render fluctuation data
     for (const auto& [key, f] : fluctuation) {
         auto [gx, gy] = decodeCoord(key);
 
@@ -891,9 +907,8 @@ void saveFluctuationPNG(const string& filename,
         int startY = max(0, py);
         int endY = min(imgH, py + pixelScale);
         int startX = max(0, px);
-        int endX = min(imgW, px + pixelScale);
+        int endX = min(dataW, px + pixelScale);
 
-        // OPTIMIZATION: Row-major order
         for (int iy = startY; iy < endY; iy++) {
             int rowBase = iy * imgW * 3;
             for (int ix = startX; ix < endX; ix++) {
@@ -902,6 +917,24 @@ void saveFluctuationPNG(const string& filename,
                 pixels[idx + 1] = color.g;
                 pixels[idx + 2] = color.b;
             }
+        }
+    }
+
+    // Draw legend bar (symmetric: -absMax to +absMax)
+    int barX = dataW + 10;
+    int barTop = imgH / 10;
+    int barBottom = imgH - imgH / 10;
+    int barWidth = 20;
+
+    for (int y = barTop; y < barBottom; y++) {
+        double t = 1.0 - (double)(y - barTop) / (barBottom - barTop);
+        RGB color = interpolateColor(colormap, t);
+        int rowBase = y * imgW * 3;
+        for (int x = barX; x < barX + barWidth && x < imgW; x++) {
+            int idx = rowBase + x * 3;
+            pixels[idx] = color.r;
+            pixels[idx + 1] = color.g;
+            pixels[idx + 2] = color.b;
         }
     }
 
@@ -923,7 +956,8 @@ struct Args {
     string preset = "uniform";
     string output = "height_diff.png";
     string mode = "double-dimer";
-    int samples = 10;
+    int samples = 20;
+    int threads = 20;
     int scale = 0;
     double alpha = 2.0;
     double beta = 1.0;
@@ -946,24 +980,76 @@ void printHelp() {
     cerr << R"(
 Double Dimer CLI - Sample double dimers from Aztec diamonds
 
-Usage: ./double_dimer_opt [options]
+Usage: ./double_dimer [N] [options]
+
+Modes:
+  double-dimer    Show height difference h1 - h2 between two tilings (default)
+  fluctuation     Sample N tilings, show h - E[h] for last sample
 
 Options:
   -n, --size <N>        Aztec diamond order (default: 50)
-  -m, --mode <type>     Output mode: double-dimer, fluctuation
-  --samples <N>         Number of samples for fluctuation mode (default: 10)
-  -p, --preset <type>   Weight preset (uniform, gamma, biased-gamma, etc.)
-  -o, --output <file>   Output PNG filename
-  --alpha, --beta       Parameters for gamma presets
-  --seed <val>          Random seed
-  --colormap <name>     Color map: viridis, plasma, coolwarm, grayscale
+  -m, --mode <type>     Output mode (default: double-dimer)
+  --samples <N>         Number of samples for fluctuation mode (default: 20)
+  -t, --threads <N>     Number of OpenMP threads (default: 20)
+  -p, --preset <type>   Weight preset (default: uniform)
+  -o, --output <file>   Output PNG filename (default: height_diff.png)
+  --scale <N>           Pixel scale (default: auto)
+  --seed <val>          Random seed (default: random)
+  --colormap <name>     viridis, plasma, coolwarm, grayscale (default: viridis)
   -v, --verbose         Verbose output
   -h, --help            Show this help message
 
+Weight Presets:
+  uniform               All edge weights = 1
+  bernoulli             Random IID: v1 with prob p, else v2
+                        Params: --v1, --v2, --prob
+  gaussian              Log-normal: exp(beta * X), X ~ N(0,1)
+                        Params: --beta
+  gamma                 Gamma(alpha) on even rows, 1 on odd rows
+                        Params: --alpha
+  biased-gamma          Gamma(alpha) on alpha-edges, Gamma(beta) on beta-edges
+                        Params: --alpha, --beta
+  2x2periodic           Checkerboard 4x4 block pattern
+                        Params: --a, --b
+
+  diagonal-layered      Bernoulli by diagonal (faceX - faceY direction)
+                        Params: --v1, --v2, --p1, --p2
+  straight-layered      Bernoulli by row (faceY direction)
+                        Params: --v1, --v2, --p1, --p2
+  diagonal-periodic     Deterministic periodic w1/w2 by diagonal
+                        Params: --w1, --w2
+  straight-periodic     Deterministic periodic w1/w2 by row
+                        Params: --w1, --w2
+  diagonal-uniform      Uniform[a,b] random by diagonal
+                        Params: --a, --b
+  straight-uniform      Uniform[a,b] random by row
+                        Params: --a, --b
+
+Parameter Defaults:
+  --alpha 2.0           Gamma shape parameter
+  --beta 1.0            Gamma shape / Gaussian scale
+  --v1 2.0, --v2 0.5    Bernoulli/layered weight values
+  --prob 0.5            Bernoulli probability
+  --p1 0.5, --p2 0.5    Layered probabilities (even/odd layers)
+  --w1 2.0, --w2 0.5    Periodic weight values
+  --a 0.5, --b 2.0      2x2periodic / uniform range
+
 Examples:
-  ./double_dimer_opt -n 200 -o output.png
-  ./double_dimer_opt -n 300 --preset gamma --alpha 2.0 -o gamma.png
-  ./double_dimer_opt -n 200 --mode fluctuation --samples 10 -o fluct.png
+  # Basic double dimer
+  ./double_dimer 200 -o output.png
+  ./double_dimer -n 300 --preset gamma --alpha 2.0 -o gamma.png
+
+  # Biased gamma (Duits-Van Peski model)
+  ./double_dimer 300 --preset biased-gamma --alpha 0.2 --beta 0.25 -o biased.png
+
+  # Layered weights
+  ./double_dimer 200 --preset diagonal-layered --v1 2 --v2 0.5 -o diag.png
+  ./double_dimer 200 --preset straight-periodic --w1 2.0 --w2 0.5 -o straight.png
+
+  # Fluctuation mode (h - E[h])
+  ./double_dimer 200 --mode fluctuation --samples 20 -o fluct.png
+  ./double_dimer 300 --mode fluctuation --samples 50 --preset gamma -o fluct_gamma.png
+
 )";
 }
 
@@ -983,6 +1069,8 @@ Args parseArgs(int argc, char* argv[]) {
             args.mode = argv[++i];
         } else if (arg == "--samples" && i + 1 < argc) {
             args.samples = stoi(argv[++i]);
+        } else if ((arg == "-t" || arg == "--threads") && i + 1 < argc) {
+            args.threads = stoi(argv[++i]);
         } else if (arg == "--scale" && i + 1 < argc) {
             args.scale = stoi(argv[++i]);
         } else if ((arg == "-p" || arg == "--preset") && i + 1 < argc) {
@@ -1127,6 +1215,7 @@ int main(int argc, char* argv[]) {
         int numSamples = args.samples;
 
 #ifdef _OPENMP
+        omp_set_num_threads(args.threads);
         int numThreads = omp_get_max_threads();
         if (args.verbose) {
             cerr << "Fluctuation mode: sampling " << numSamples << " tilings with "
