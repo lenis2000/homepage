@@ -1203,6 +1203,135 @@ void saveFluctuationPNG(const string& filename,
 }
 
 // ============================================================================
+// Save Domino Tiling PNG (colored dominoes like web visualization)
+// ============================================================================
+
+// Web-matching domino colors: yellow=#FFCD00, green=#228B22, blue=#0057B7, red=#DC143C
+RGB getDominoColor(const string& colorName) {
+    if (colorName == "yellow") return {255, 205, 0};
+    if (colorName == "green") return {34, 139, 34};
+    if (colorName == "blue") return {0, 87, 183};
+    if (colorName == "red") return {220, 20, 60};
+    return {128, 128, 128};  // gray fallback
+}
+
+void saveDominoPNG(const string& filename,
+                   const vector<Domino>& dominoes,
+                   int N, int userScale, int userBorder, bool verbose) {
+
+    if (dominoes.empty()) {
+        cerr << "Error: No dominoes" << endl;
+        return;
+    }
+
+    // Find grid bounds (domino coordinates, not pixel)
+    int minGX = INT_MAX, maxGX = INT_MIN;
+    int minGY = INT_MAX, maxGY = INT_MIN;
+
+    for (const auto& d : dominoes) {
+        minGX = min(minGX, d.gx);
+        maxGX = max(maxGX, d.gx + (d.orient == 0 ? 2 : 1));
+        minGY = min(minGY, d.gy);
+        maxGY = max(maxGY, d.gy + (d.orient == 1 ? 2 : 1));
+    }
+
+    int gridW = maxGX - minGX;
+    int gridH = maxGY - minGY;
+
+    // Calculate pixel scale
+    int pixelScale = userScale > 0 ? userScale : max(4, 2000 / max(gridW, gridH));
+    int imgW = gridW * pixelScale + 3 * pixelScale;  // +1.5 step (left + right)
+    int imgH = gridH * pixelScale + 3 * pixelScale;  // +1.5 step (down)
+
+    if (verbose) {
+        cerr << "Grid bounds: X=[" << minGX << "," << maxGX << "], Y=[" << minGY << "," << maxGY << "]" << endl;
+        cerr << "Image size: " << imgW << " x " << imgH << " pixels" << endl;
+    }
+
+    // White background
+    vector<uint8_t> pixels(imgW * imgH * 3, 255);
+
+    // Border width (user-specified, default 0 = touching dominoes)
+    int border = userBorder;
+
+    // Render each domino
+    // Note: The gx/gy coordinates have gaps - dominoes are on a sparse grid.
+    // Scale domino dimensions by 2 to fill the grid cells completely.
+    for (const auto& d : dominoes) {
+        RGB color = getDominoColor(d.color);
+
+        // Domino bounds in pixels - same position, 2x fatter
+        // Vertical dominoes (red, yellow) shifted up by 1/2 domino height
+        int x0 = (d.gx - minGX) * pixelScale + pixelScale;  // +1/2 step for left margin
+        int y0 = imgH - (d.gy - minGY + (d.orient == 1 ? 2 : 1)) * pixelScale - 2 * pixelScale;  // shift all up 1 step
+        if (d.orient == 1) y0 -= pixelScale;  // shift vertical dominoes up by additional 1/2
+        int w = (d.orient == 0 ? 2 : 1) * pixelScale * 2;  // 2x fatter
+        int h = (d.orient == 1 ? 2 : 1) * pixelScale * 2;  // 2x fatter
+
+        // Fill domino interior (leaving border)
+        for (int py = y0 + border; py < y0 + h - border && py < imgH; py++) {
+            if (py < 0) continue;
+            int rowBase = py * imgW * 3;
+            for (int px = x0 + border; px < x0 + w - border && px < imgW; px++) {
+                if (px < 0) continue;
+                int idx = rowBase + px * 3;
+                pixels[idx] = color.r;
+                pixels[idx + 1] = color.g;
+                pixels[idx + 2] = color.b;
+            }
+        }
+
+        // Draw black border
+        RGB black = {0, 0, 0};
+        // Top and bottom edges
+        for (int px = x0; px < x0 + w && px < imgW; px++) {
+            if (px < 0) continue;
+            for (int b = 0; b < border && b < h; b++) {
+                // Top edge
+                int ty = y0 + b;
+                if (ty >= 0 && ty < imgH) {
+                    int idx = ty * imgW * 3 + px * 3;
+                    pixels[idx] = black.r; pixels[idx + 1] = black.g; pixels[idx + 2] = black.b;
+                }
+                // Bottom edge
+                int by = y0 + h - 1 - b;
+                if (by >= 0 && by < imgH) {
+                    int idx = by * imgW * 3 + px * 3;
+                    pixels[idx] = black.r; pixels[idx + 1] = black.g; pixels[idx + 2] = black.b;
+                }
+            }
+        }
+        // Left and right edges
+        for (int py = y0; py < y0 + h && py < imgH; py++) {
+            if (py < 0) continue;
+            int rowBase = py * imgW * 3;
+            for (int b = 0; b < border && b < w; b++) {
+                // Left edge
+                int lx = x0 + b;
+                if (lx >= 0 && lx < imgW) {
+                    int idx = rowBase + lx * 3;
+                    pixels[idx] = black.r; pixels[idx + 1] = black.g; pixels[idx + 2] = black.b;
+                }
+                // Right edge
+                int rx = x0 + w - 1 - b;
+                if (rx >= 0 && rx < imgW) {
+                    int idx = rowBase + rx * 3;
+                    pixels[idx] = black.r; pixels[idx + 1] = black.g; pixels[idx + 2] = black.b;
+                }
+            }
+        }
+    }
+
+    if (stbi_write_png(filename.c_str(), imgW, imgH, 3, pixels.data(), imgW * 3)) {
+        if (verbose) {
+            cerr << "Saved to " << filename << endl;
+        }
+    } else {
+        cerr << "Error: Failed to write PNG to " << filename << endl;
+    }
+}
+
+// ============================================================================
 // CLI Argument Parsing
 // ============================================================================
 
@@ -1214,6 +1343,7 @@ struct Args {
     int samples = 20;
     int threads = 20;
     int scale = 0;
+    int border = 0;  // Border width for tiling mode (0 = touching dominoes)
     double alpha = 2.0;
     double beta = 1.0;
     double v1 = 2.0;
@@ -1238,6 +1368,7 @@ Double Dimer CLI - Sample double dimers from Aztec diamonds
 Usage: ./double_dimer [N] [options]
 
 Modes:
+  tiling                 Sample a single domino tiling with colored dominoes
   double-dimer           Show height difference h1 - h2 between two tilings (default)
   fluctuation            Sample N tilings, show h - E[h] for last sample
   annealed-double-dimer  Resample weights for EACH tiling, then show h1 - h2
@@ -1257,6 +1388,7 @@ Options:
   -p, --preset <type>   Weight preset (default: uniform)
   -o, --output <file>   Output PNG filename (default: height_diff.png)
   --scale <N>           Pixel scale (default: auto)
+  --border <N>          Border width in pixels for tiling mode (default: 0)
   --seed <val>          Random seed (default: random)
   --colormap <name>     viridis, plasma, coolwarm, grayscale (default: viridis)
   -v, --verbose         Verbose output
@@ -1298,6 +1430,10 @@ Parameter Defaults:
   --a 0.5, --b 2.0      2x2periodic / uniform range
 
 Examples:
+  # Single domino tiling (colored dominoes)
+  ./double_dimer 50 --mode tiling -o tiling.png
+  ./double_dimer 100 --mode tiling --preset gamma --alpha 2.0 -o tiling_gamma.png
+
   # Basic double dimer
   ./double_dimer 200 -o output.png
   ./double_dimer -n 300 --preset gamma --alpha 2.0 -o gamma.png
@@ -1340,6 +1476,8 @@ Args parseArgs(int argc, char* argv[]) {
             args.threads = stoi(argv[++i]);
         } else if (arg == "--scale" && i + 1 < argc) {
             args.scale = stoi(argv[++i]);
+        } else if (arg == "--border" && i + 1 < argc) {
+            args.border = stoi(argv[++i]);
         } else if ((arg == "-p" || arg == "--preset") && i + 1 < argc) {
             args.preset = argv[++i];
         } else if ((arg == "-o" || arg == "--output") && i + 1 < argc) {
@@ -1436,7 +1574,7 @@ int main(int argc, char* argv[]) {
         cerr << "  Output = " << args.output << endl;
     }
 
-    if (args.mode != "double-dimer" && args.mode != "fluctuation" &&
+    if (args.mode != "tiling" && args.mode != "double-dimer" && args.mode != "fluctuation" &&
         args.mode != "annealed-double-dimer" && args.mode != "annealed-fluctuation") {
         cerr << "Unknown mode: " << args.mode << endl;
         return 1;
@@ -1489,7 +1627,22 @@ int main(int argc, char* argv[]) {
         probs = probsslim(weights);
     }
 
-    if (args.mode == "double-dimer") {
+    if (args.mode == "tiling") {
+        // Single domino tiling with colored dominoes
+        if (args.verbose) cerr << "Sampling tiling..." << endl;
+        MatrixInt config = aztecgen(probs);
+
+        if (args.verbose) cerr << "Extracting dominoes..." << endl;
+        vector<Domino> dominoes = extractDominoes(config, args.n);
+
+        if (args.verbose) {
+            cerr << "  " << dominoes.size() << " dominoes" << endl;
+            cerr << "Generating PNG..." << endl;
+        }
+
+        saveDominoPNG(args.output, dominoes, args.n, args.scale, args.border, args.verbose);
+
+    } else if (args.mode == "double-dimer") {
         // QUENCHED: Same weights for both tilings
         if (args.verbose) cerr << "Sampling first tiling..." << endl;
         MatrixInt config1 = aztecgen(probs);

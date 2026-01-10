@@ -166,22 +166,42 @@ g++ -std=c++17 -O3 -o double_dimer double-dimer-cli.cpp
 - Use `-mcpu=native` instead of `-march=native` on ARM Macs.
 
 ### Performance Optimizations Applied
-- **int64_t coordinate encoding**: Replaced `unordered_map<string, ...>` with `unordered_map<int64_t, ...>` for ~1.5x speedup
+- **Xoshiro256++ RNG**: Replaced `std::mt19937` (624 words state) with fast 4×uint64_t RNG that fits in registers
+- **Ping-pong buffers**: Pre-allocate 2 matrices, swap pointers instead of N allocations per sample
+- **In-place operations**: `delslideInPlace()` and `createStepInPlace()` avoid matrix copies
+- **Direct 2D HeightGrid**: BFS uses `vector<int>` with offset addressing instead of `unordered_map`
+- **int64_t coordinate encoding**: Replaced `unordered_map<string, ...>` with `unordered_map<int64_t, ...>`
 - **Vector pre-allocation**: Use `reserve()` before `push_back()` loops
 - **Move semantics**: Use `std::move()` for matrix transfers
 - **Cache-friendly loops**: Row-major order (outer=y, inner=x) for pixel rendering
 
+### Benchmark Results (M2 Pro)
+| N | Time |
+|---|------|
+| 200 | ~290 ms |
+| 300 | ~860 ms |
+| 500 | ~3.5 s |
+
 ### Usage Examples
 ```bash
-# Double dimer mode (h1 - h2):
+# Double dimer mode (h1 - h2) - QUENCHED (same weights for both tilings):
 ./double_dimer 200 --preset gamma --alpha 2.0 -o output.png
 
-# Fluctuation mode (h - E[h], parallelized):
+# Fluctuation mode (h - E[h], parallelized) - QUENCHED:
 ./double_dimer 200 --mode fluctuation --samples 10 -o fluctuation.png
+
+# ANNEALED modes (resample weights for each tiling/sample):
+./double_dimer 200 --mode annealed-double-dimer --preset gamma -o annealed.png
+./double_dimer 200 --mode annealed-fluctuation --samples 20 --preset gamma -o annealed_fluct.png
 
 # Show weights as SVG with numbers on edges:
 ./double_dimer 6 --show-weights --preset diagonal-periodic -o weights.svg
 ```
+
+### Quenched vs Annealed Disorder
+- **Quenched** (`double-dimer`, `fluctuation`): Same random weights for all tilings
+- **Annealed** (`annealed-double-dimer`, `annealed-fluctuation`): Fresh random weights for each tiling/sample
+- The web simulation at `2025-12-11-t-embedding-arbitrary-weights` uses quenched disorder
 
 ### Weight Visualization
 For verifying weight patterns, use `--show-weights` which outputs SVG with actual numeric values on edges:
@@ -217,6 +237,13 @@ For layered weight presets, the mapping between graph coordinates and EKLP matri
 ## OpenMP Thread Safety
 
 When parallelizing with OpenMP:
-- Use `thread_local` for global RNG: `static thread_local mt19937 rng;`
+- Use `thread_local` for global RNG: `static thread_local Xoshiro256pp rng;`
 - Seed each thread differently: `rng.seed(base_seed + omp_get_thread_num() * 1000)`
 - GCC requires `<climits>` for `INT_MAX`/`INT_MIN` (not needed with clang)
+
+## C++ Raw String Literals
+
+When using `R"(...)"` raw string literals for help text:
+- The sequence `)"` inside the string will terminate it prematurely
+- Avoid `"text (h1 - h2)"` patterns - the `)"`  matches the raw string terminator
+- Use brackets instead: `[h1 - h2]` or use a custom delimiter: `R"HELP(...)HELP"`
