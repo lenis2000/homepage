@@ -285,7 +285,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 <p><strong>Gamma Distribution</strong> <a href="https://arxiv.org/abs/2512.03033">[Duits–Van Peski]</a>:
 Edges on the bottom of each face have weight $\sim \Gamma(\alpha, 1)$; edges on the right of each face have weight $\sim \Gamma(\beta, 1)$.</p>
 
-<p><strong>Layered Weights</strong> <a href="https://arxiv.org/abs/2507.08560">[Bufetov–Petrov–Zografos]</a>:
+<p><strong>Layered Weights</strong> (diagonal: <a href="https://arxiv.org/abs/2507.08560">[Bufetov–Petrov–Zografos]</a>; straight: <a href="https://arxiv.org/abs/2507.11964">[Moulard–Toninelli]</a>):
 Weight depends on layer index (diagonal $i+j$ or row $y$). Five regimes:</p>
 <ul>
   <li><em>Regime 1 (Critical Scaling)</em>: $w = v_1 + 2/\sqrt{n}$ with prob. $p_1$, else $w = v_2 - 1/\sqrt{n}$.</li>
@@ -567,7 +567,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 <div id="straight-layered-params" style="display: none; margin-bottom: 12px; padding: 12px; border: 1px solid #28a745; border-left-width: 4px; background: #f8f9fa; border-radius: 4px;">
   <div style="margin-bottom: 10px; font-weight: bold; font-size: 14px;">
     📏 Straight Layered Weight Regime
-    <span style="font-weight: normal; font-size: 0.85em; color: #666;">(layers at y = const, varying in x-direction)</span>
+    <span style="font-weight: normal; font-size: 0.85em; color: #666;">(layers at y = const, varying in x-direction; Moulard, Toninelli <a href="https://arxiv.org/abs/2507.11964" target="_blank">[arXiv:2507.11964]</a>)</span>
   </div>
 
   <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 10px;">

@@ -351,6 +351,28 @@ MatrixDouble generateDiagonalLayeredWeights(int dim, double val1, double val2, d
     return weights;
 }
 
+// Critical scaling: weights = val1 + 2/sqrt(N) or val2 - 1/sqrt(N)
+MatrixDouble generateCriticalScalingWeights(int dim, double val1, double val2, double p1, double p2) {
+    MatrixDouble weights(dim, dim, 1.0);
+    int N = dim / 2;
+    double sqrtN = sqrt((double)N);
+    double w1 = val1 + 2.0 / sqrtN;
+    double w2 = val2 - 1.0 / sqrtN;
+
+    vector<double> diagWeight(N);
+    for (int d = 0; d < N; d++) {
+        double p = (d % 2 == 0) ? p1 : p2;
+        diagWeight[d] = (rng.next_double() < p) ? w1 : w2;
+    }
+    for (int i = 0; i < dim; i += 2) {
+        for (int j = 0; j < dim; j += 2) {
+            int diagJ = j / 2;
+            weights.at(i, j) = diagWeight[diagJ];
+        }
+    }
+    return weights;
+}
+
 MatrixDouble generateStraightLayeredWeights(int dim, double val1, double val2, double p1, double p2) {
     MatrixDouble weights(dim, dim, 1.0);
     int N = dim / 2;
@@ -358,6 +380,31 @@ MatrixDouble generateStraightLayeredWeights(int dim, double val1, double val2, d
     for (int r = 0; r < 2 * N; r++) {
         double p = (r % 2 == 0) ? p1 : p2;
         rowWeight[r] = (rng.next_double() < p) ? val1 : val2;
+    }
+    for (int i = 0; i < dim; i += 2) {
+        for (int j = 0; j < dim; j += 2) {
+            int faceY = (i - j) / 2;
+            int layerIdx = faceY + N - 1;
+            if (layerIdx >= 0 && layerIdx < 2 * N) {
+                weights.at(i, j) = rowWeight[layerIdx];
+            }
+        }
+    }
+    return weights;
+}
+
+// Critical scaling (straight): weights = val1 + 2/sqrt(N) or val2 - 1/sqrt(N)
+MatrixDouble generateStraightCriticalScalingWeights(int dim, double val1, double val2, double p1, double p2) {
+    MatrixDouble weights(dim, dim, 1.0);
+    int N = dim / 2;
+    double sqrtN = sqrt((double)N);
+    double w1 = val1 + 2.0 / sqrtN;
+    double w2 = val2 - 1.0 / sqrtN;
+
+    vector<double> rowWeight(2 * N);
+    for (int r = 0; r < 2 * N; r++) {
+        double p = (r % 2 == 0) ? p1 : p2;
+        rowWeight[r] = (rng.next_double() < p) ? w1 : w2;
     }
     for (int i = 0; i < dim; i += 2) {
         for (int j = 0; j < dim; j += 2) {
@@ -385,6 +432,40 @@ MatrixDouble generateDiagonalPeriodicWeights(int dim, double w1, double w2) {
 MatrixDouble generateStraightPeriodicWeights(int dim, double w1, double w2) {
     MatrixDouble weights(dim, dim, 1.0);
     int N = dim / 2;
+    for (int i = 0; i < dim; i += 2) {
+        for (int j = 0; j < dim; j += 2) {
+            int faceY = (i - j) / 2;
+            weights.at(i, j) = ((faceY + N) % 2 == 0) ? w1 : w2;
+        }
+    }
+    return weights;
+}
+
+// Critical scaling periodic (diagonal): weights = val1 + 2/sqrt(N) or val2 - 1/sqrt(N), alternating deterministically
+MatrixDouble generateDiagonalCriticalPeriodicWeights(int dim, double val1, double val2) {
+    MatrixDouble weights(dim, dim, 1.0);
+    int N = dim / 2;
+    double sqrtN = sqrt((double)N);
+    double w1 = val1 + 2.0 / sqrtN;
+    double w2 = val2 - 1.0 / sqrtN;
+
+    for (int i = 0; i < dim; i += 2) {
+        for (int j = 0; j < dim; j += 2) {
+            int diagJ = j / 2;
+            weights.at(i, j) = ((diagJ / 2) % 2 == 0) ? w1 : w2;
+        }
+    }
+    return weights;
+}
+
+// Critical scaling periodic (straight): weights = val1 + 2/sqrt(N) or val2 - 1/sqrt(N), alternating deterministically
+MatrixDouble generateStraightCriticalPeriodicWeights(int dim, double val1, double val2) {
+    MatrixDouble weights(dim, dim, 1.0);
+    int N = dim / 2;
+    double sqrtN = sqrt((double)N);
+    double w1 = val1 + 2.0 / sqrtN;
+    double w2 = val2 - 1.0 / sqrtN;
+
     for (int i = 0; i < dim; i += 2) {
         for (int j = 0; j < dim; j += 2) {
             int faceY = (i - j) / 2;
@@ -1418,6 +1499,15 @@ Weight Presets:
   straight-uniform      Uniform[a,b] random by row
                         Params: --a, --b
 
+  diagonal-critical     Critical scaling: v1+2/sqrt(N) or v2-1/sqrt(N), Bernoulli by diagonal
+                        Params: --v1 (default 1), --v2 (default 1), --p1, --p2
+  straight-critical     Critical scaling: v1+2/sqrt(N) or v2-1/sqrt(N), Bernoulli by row
+                        Params: --v1 (default 1), --v2 (default 1), --p1, --p2
+  diagonal-critical-periodic  Critical scaling, deterministic alternating by diagonal
+                        Params: --v1 (default 1), --v2 (default 1)
+  straight-critical-periodic  Critical scaling, deterministic alternating by row
+                        Params: --v1 (default 1), --v2 (default 1)
+
 Parameter Defaults:
   --alpha 0.2           Gamma shape parameter for alpha-edges
   --beta 0.25           Gamma shape parameter for beta-edges / Gaussian scale
@@ -1506,6 +1596,13 @@ Args parseArgs(int argc, char* argv[]) {
             args.colormap = argv[++i];
         }
     }
+
+    // Set default v1=1, v2=1 for critical scaling presets (if not overridden)
+    if (args.preset.find("critical") != string::npos) {
+        if (args.v1 == 2.0) args.v1 = 1.0;
+        if (args.v2 == 0.5) args.v2 = 1.0;
+    }
+
     return args;
 }
 
@@ -1536,6 +1633,14 @@ MatrixDouble generateWeightsFromPreset(const Args& args, int dim) {
         return generateDiagonalUniformWeights(dim, args.a, args.b);
     } else if (args.preset == "straight-uniform") {
         return generateStraightUniformWeights(dim, args.a, args.b);
+    } else if (args.preset == "diagonal-critical") {
+        return generateCriticalScalingWeights(dim, args.v1, args.v2, args.p1, args.p2);
+    } else if (args.preset == "straight-critical") {
+        return generateStraightCriticalScalingWeights(dim, args.v1, args.v2, args.p1, args.p2);
+    } else if (args.preset == "diagonal-critical-periodic") {
+        return generateDiagonalCriticalPeriodicWeights(dim, args.v1, args.v2);
+    } else if (args.preset == "straight-critical-periodic") {
+        return generateStraightCriticalPeriodicWeights(dim, args.v1, args.v2);
     }
     return generateUniformWeights(dim);  // fallback
 }
@@ -1602,6 +1707,34 @@ int main(int argc, char* argv[]) {
         weights = generateDiagonalUniformWeights(dim, args.a, args.b);
     } else if (args.preset == "straight-uniform") {
         weights = generateStraightUniformWeights(dim, args.a, args.b);
+    } else if (args.preset == "diagonal-critical") {
+        weights = generateCriticalScalingWeights(dim, args.v1, args.v2, args.p1, args.p2);
+        if (args.verbose) {
+            double sqrtN = sqrt((double)args.n);
+            cerr << "  Critical scaling (diagonal): w1=" << args.v1 + 2.0/sqrtN
+                 << ", w2=" << args.v2 - 1.0/sqrtN << ", p1=" << args.p1 << ", p2=" << args.p2 << endl;
+        }
+    } else if (args.preset == "straight-critical") {
+        weights = generateStraightCriticalScalingWeights(dim, args.v1, args.v2, args.p1, args.p2);
+        if (args.verbose) {
+            double sqrtN = sqrt((double)args.n);
+            cerr << "  Critical scaling (straight): w1=" << args.v1 + 2.0/sqrtN
+                 << ", w2=" << args.v2 - 1.0/sqrtN << ", p1=" << args.p1 << ", p2=" << args.p2 << endl;
+        }
+    } else if (args.preset == "diagonal-critical-periodic") {
+        weights = generateDiagonalCriticalPeriodicWeights(dim, args.v1, args.v2);
+        if (args.verbose) {
+            double sqrtN = sqrt((double)args.n);
+            cerr << "  Critical scaling periodic (diagonal): w1=" << args.v1 + 2.0/sqrtN
+                 << ", w2=" << args.v2 - 1.0/sqrtN << endl;
+        }
+    } else if (args.preset == "straight-critical-periodic") {
+        weights = generateStraightCriticalPeriodicWeights(dim, args.v1, args.v2);
+        if (args.verbose) {
+            double sqrtN = sqrt((double)args.n);
+            cerr << "  Critical scaling periodic (straight): w1=" << args.v1 + 2.0/sqrtN
+                 << ", w2=" << args.v2 - 1.0/sqrtN << endl;
+        }
     } else {
         cerr << "Unknown preset: " << args.preset << endl;
         return 1;
