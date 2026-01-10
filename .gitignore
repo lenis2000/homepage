@@ -114,3 +114,5 @@ _simulations/domino_tilings/test-headless.js
 _simulations/domino_tilings/double_dimer
 _simulations/domino_tilings/diagonal_disorder_results
 _simulations/domino_tilings/commands.md
+_simulations/domino_tilings/straight_disorder_results
+_simulations/domino_tilings/commands_straight.md
