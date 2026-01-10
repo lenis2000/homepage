@@ -30,6 +30,7 @@ code:
   <li><strong>i.i.d. random</strong>: Independent identically distributed random edge weights. Choose a distribution:
     <ul>
       <li><em>Uniform [a, b]</em>: Uniformly distributed on interval [a, b].</li>
+      <li><em>Bernoulli (p, v₁, v₂)</em>: Weight = v₁ with probability p, otherwise v₂.</li>
       <li><em>Exponential (λ)</em>: Exponential distribution with rate λ.</li>
       <li><em>Pareto (α, x_min)</em>: Pareto distribution with shape α and scale x_min.</li>
       <li><em>Geometric (p)</em>: Geometric distribution with success probability p (integer-valued).</li>
@@ -277,6 +278,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 <p><strong>IID Distributions:</strong> Each edge weight drawn independently from:</p>
 <ul>
   <li><em>Uniform [a, b]</em>: $w \sim \mathrm{Uniform}(a, b)$.</li>
+  <li><em>Bernoulli</em>: $w = v_1$ with prob. $p$, else $w = v_2$.</li>
   <li><em>Exponential</em>: $w \sim \mathrm{Exp}(1)$. (Other rates only scale weights, which doesn't affect T-embeddings.)</li>
   <li><em>Pareto (α, x_min)</em>: $w = x_{\min} \cdot U^{-1/\alpha}$ where $U \sim \mathrm{Uniform}(0,1)$. Heavy-tailed distribution.</li>
   <li><em>Geometric (p)</em>: $w \sim \mathrm{Geom}(p)$ with support $\{1, 2, 3, \ldots\}$. Mean = $1/p$.</li>
@@ -382,6 +384,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       <strong>Distribution:</strong>
       <select id="iid-distribution-select" style="min-width: 140px;" aria-label="Select IID distribution type">
         <option value="uniform" selected>Uniform [a, b]</option>
+        <option value="bernoulli">Bernoulli (p, v₁, v₂)</option>
         <option value="exponential">Exponential (1)</option>
         <option value="pareto">Pareto (α, x_min)</option>
         <option value="geometric">Geometric (p), X≥1</option>
@@ -436,6 +439,25 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       <label style="display: flex; align-items: center; gap: 4px;">
         <span>p:</span>
         <input type="number" id="iid-geom-p" value="0.5" step="0.05" min="0.01" max="0.99" style="width: 70px;" aria-label="Geometric distribution probability">
+      </label>
+    </div>
+  </div>
+
+  <!-- Bernoulli distribution params -->
+  <div id="iid-bernoulli-params" style="display: none; padding: 8px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+    <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Weight = v₁ with prob p, else v₂</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span>p:</span>
+        <input type="number" id="iid-bernoulli-p" value="0.5" step="0.1" min="0" max="1" style="width: 70px;" aria-label="Bernoulli probability">
+      </label>
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span>v₁:</span>
+        <input type="number" id="iid-bernoulli-v1" value="0.5" step="0.1" min="0.001" style="width: 70px;" aria-label="Bernoulli value 1">
+      </label>
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span>v₂:</span>
+        <input type="number" id="iid-bernoulli-v2" value="2.0" step="0.1" min="0.001" style="width: 70px;" aria-label="Bernoulli value 2">
       </label>
     </div>
   </div>
@@ -1312,6 +1334,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 }
 /* Specific panel IDs for reliable dark mode */
 [data-theme="dark"] #iid-uniform-params,
+[data-theme="dark"] #iid-bernoulli-params,
 [data-theme="dark"] #iid-exponential-params,
 [data-theme="dark"] #iid-pareto-params,
 [data-theme="dark"] #iid-geometric-params,
@@ -2624,6 +2647,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const a = parseFloat(document.getElementById('iid-min').value) || 0.5;
       const b = parseFloat(document.getElementById('iid-max').value) || 2.0;
       params = `${a},${b}`;
+    } else if (distType === 'bernoulli') {
+      const p = parseFloat(document.getElementById('iid-bernoulli-p').value) || 0.5;
+      const v1 = parseFloat(document.getElementById('iid-bernoulli-v1').value) || 0.5;
+      const v2 = parseFloat(document.getElementById('iid-bernoulli-v2').value) || 2.0;
+      params = `${p},${v1},${v2}`;
     } else if (distType === 'pareto') {
       const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
       const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
@@ -2653,6 +2681,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         const a = parseFloat(document.getElementById('iid-min').value) || 0.5;
         const b = parseFloat(document.getElementById('iid-max').value) || 2.0;
         edgeWeights[i] = a + rng() * (b - a);
+      } else if (distType === 'bernoulli') {
+        const p = parseFloat(document.getElementById('iid-bernoulli-p').value) || 0.5;
+        const v1 = parseFloat(document.getElementById('iid-bernoulli-v1').value) || 0.5;
+        const v2 = parseFloat(document.getElementById('iid-bernoulli-v2').value) || 2.0;
+        edgeWeights[i] = rng() < p ? v1 : v2;
       } else if (distType === 'exponential') {
         edgeWeights[i] = -Math.log(1 - rng());
       } else if (distType === 'pareto') {
@@ -3625,6 +3658,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const a = parseFloat(document.getElementById('iid-min').value) || 0.5;
       const b = parseFloat(document.getElementById('iid-max').value) || 2.0;
       return a + rng() * (b - a);
+    } else if (distType === 'bernoulli') {
+      const p = parseFloat(document.getElementById('iid-bernoulli-p').value) || 0.5;
+      const v1 = parseFloat(document.getElementById('iid-bernoulli-v1').value) || 0.5;
+      const v2 = parseFloat(document.getElementById('iid-bernoulli-v2').value) || 2.0;
+      return rng() < p ? v1 : v2;
     } else if (distType === 'exponential') {
       return -Math.log(1 - rng());
     } else if (distType === 'pareto') {
@@ -8326,6 +8364,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   function updateIIDDistributionParams() {
     const dist = iidDistributionSelect.value;
     document.getElementById('iid-uniform-params').style.display = (dist === 'uniform') ? 'block' : 'none';
+    document.getElementById('iid-bernoulli-params').style.display = (dist === 'bernoulli') ? 'block' : 'none';
     document.getElementById('iid-exponential-params').style.display = (dist === 'exponential') ? 'block' : 'none';
     document.getElementById('iid-pareto-params').style.display = (dist === 'pareto') ? 'block' : 'none';
     document.getElementById('iid-geometric-params').style.display = (dist === 'geometric') ? 'block' : 'none';
@@ -9666,6 +9705,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         const a = document.getElementById('iid-min').value;
         const b = document.getElementById('iid-max').value;
         weightStr = `iid-uniform-${a}-${b}`;
+      } else if (distType === 'bernoulli') {
+        const p = document.getElementById('iid-bernoulli-p').value;
+        const v1 = document.getElementById('iid-bernoulli-v1').value;
+        const v2 = document.getElementById('iid-bernoulli-v2').value;
+        weightStr = `iid-bernoulli-${p}-${v1}-${v2}`;
       } else if (distType === 'exponential') {
         weightStr = `iid-exp1`;
       } else if (distType === 'pareto') {
@@ -10957,6 +11001,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
           const distType = document.getElementById('iid-distribution-select').value;
           if (distType === 'uniform') {
             weightStr = `iid-uniform-${document.getElementById('iid-min').value}-${document.getElementById('iid-max').value}`;
+          } else if (distType === 'bernoulli') {
+            weightStr = `iid-bernoulli-${document.getElementById('iid-bernoulli-p').value}-${document.getElementById('iid-bernoulli-v1').value}-${document.getElementById('iid-bernoulli-v2').value}`;
           } else if (distType === 'exponential') {
             weightStr = `iid-exp1`;
           } else if (distType === 'pareto') {
