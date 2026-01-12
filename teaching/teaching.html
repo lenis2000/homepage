@@ -29,10 +29,14 @@ nav_weight: 5
                 href="{{site.url}}{{post.url}}"
                 class="highlighted-item"
                 >{% endunless %}{{post.title}}{% unless post.no-page %}</a
-            >{% endunless %} {% if post.syllabus %} &bull;
+            >{% endunless %} {% if post.syllabus-html %} &bull;
+            <a
+                href="{{post.syllabus-html | replace: '__STORAGE_URL__', site.storage_url }}"
+                >Syllabus</a
+            >{% endif %} {% if post.syllabus %} &bull;
             <a
                 href="{{post.syllabus | replace: '__STORAGE_URL__', site.storage_url }}"
-                >Syllabus</a
+                >{% if post.syllabus-html %}(PDF for printing){% else %}Syllabus{% endif %}</a
             >{% endif %} {% if post.web-course-github %} &bull;
             <a
                 href="{{ post.web-course-github | replace: '__SITE_URL__', site.url }}"
