@@ -15,7 +15,7 @@ image-alt: The Young-Fibonacci lattice and cotransition weights defined by an ar
 show-date: true
 pdf: 47-random-fibonacci-words.pdf
 post-pdf: true
-pages: 71
+pages: 92
 cv-number: 47
 published: true
 simulations: simulations/2025-03-12-yf-branching/
