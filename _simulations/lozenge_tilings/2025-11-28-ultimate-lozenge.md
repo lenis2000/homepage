@@ -586,9 +586,11 @@ code:
 <script>
 // Dynamic WASM loader: use threaded version if SharedArrayBuffer is available
 window.LOZENGE_THREADED = typeof SharedArrayBuffer !== 'undefined';
-window.LOZENGE_WEBGPU = !!navigator.gpu;
+// Detect Firefox - force CPU due to WebGPU IPC overhead issues (Bug 1870699)
+const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+window.LOZENGE_WEBGPU = !isFirefox && !!navigator.gpu;
 console.log('Will load WASM:', window.LOZENGE_THREADED ? 'threaded' : 'non-threaded');
-console.log('WebGPU:', window.LOZENGE_WEBGPU ? 'available' : 'unavailable');
+console.log('WebGPU:', window.LOZENGE_WEBGPU ? 'available' : 'unavailable', isFirefox ? '(Firefox: forced CPU)' : '');
 </script>
 <script>
 // Load appropriate WASM module
