@@ -306,6 +306,21 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   </div>
 </div>
 
+<div class="control-group" id="fractal-dim-group" style="display: none;">
+  <div class="control-group-title">Loop Fractal Dimension</div>
+  <div style="margin-bottom: 6px; font-size: 12px; color: #555;">
+    Click near any loop to select it. Fractal dimension D computed via box-counting at discrete scales (from loop diameter/2 down to diameter/64): fit log N(ε) vs log(1/ε), where N(ε) = boxes of size ε covering the loop. Smooth curves: D≈1, space-filling: D→2.
+  </div>
+  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+    <button id="btn-select-loop" class="tool-btn" style="width:auto; padding: 0 8px;">Select Loop</button>
+    <button id="btn-clear-loop" class="tool-btn" style="width:auto; padding: 0 8px;">Clear</button>
+    <span id="selected-loop-coords" style="font-size: 11px; font-family: monospace; color: #666;">(Click to select)</span>
+  </div>
+  <div id="fractal-output" style="font-family: monospace; font-size: 11px; border: 1px solid #ddd; background: white; padding: 4px; border-radius: 4px;">
+    Loop: - | Edges: - | Diameter: - | Fractal dim: -
+  </div>
+</div>
+
 <div class="control-group">
   <div class="control-group-title">Periodic Edge Weights</div>
   <label style="display: inline-flex; align-items: center; gap: 4px;">
@@ -412,6 +427,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     let sampleInterval = 1000;  // Sample every N Glauber steps
     let stepsSinceLastSample = 0;
 
+    // Fractal dimension state
+    let selectingLoop = false;
+    let selectedLoopIndex = -1;
+    let selectedLoopPoint = null; // {n, j} - clicked point
+
     // Initialize default weights for k=2, l=1
     function initDefaultWeights(k, l) {
         const weights = [];
@@ -495,6 +515,73 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     }
 
     // ========================================================================
+    // FRACTAL DIMENSION FUNCTIONS
+    // ========================================================================
+    function updateFractalDimUI() {
+        const coordsSpan = document.getElementById('selected-loop-coords');
+        if (selectedLoopPoint) {
+            const formatCoord = (c) => Number.isInteger(c) ? c : c.toFixed(2);
+            coordsSpan.textContent = `Point: (${formatCoord(selectedLoopPoint.n)}, ${formatCoord(selectedLoopPoint.j)})`;
+        } else {
+            coordsSpan.textContent = '(Click to select)';
+        }
+    }
+
+    function updateFractalDimDisplay() {
+        const outputDiv = document.getElementById('fractal-output');
+        if (selectedLoopIndex < 0) {
+            if (selectedLoopPoint) {
+                outputDiv.textContent = 'No loop found near clicked point (try running longer or click closer to a loop)';
+            } else {
+                outputDiv.textContent = 'Loop: - | Edges: - | Diameter: - | Fractal dim: -';
+            }
+            return;
+        }
+
+        if (!wasmReady) return;
+
+        const infoPtr = wasmModule._getLoopInfo(selectedLoopIndex);
+        if (!infoPtr) {
+            outputDiv.textContent = 'Error getting loop info';
+            return;
+        }
+
+        try {
+            const info = JSON.parse(infoPtr);
+            if (info.error) {
+                outputDiv.textContent = info.error;
+                return;
+            }
+            const dim = info.fractalDim >= 0 ? info.fractalDim.toFixed(3) : '- (loop too small)';
+            outputDiv.textContent = `Loop #${info.index} | Edges: ${info.edges} | Diam: ${info.diameter.toFixed(2)} | Fractal dim: ${dim}`;
+        } catch (e) {
+            outputDiv.textContent = 'Error parsing loop info';
+        }
+    }
+
+    function selectLoopAtPoint(n, j) {
+        if (!wasmReady) return;
+
+        selectedLoopPoint = { n, j };
+        updateFractalDimUI();
+
+        // Find the loop containing this point
+        selectedLoopIndex = wasmModule._findLoopContainingPoint(n, j);
+        updateFractalDimDisplay();
+        draw();  // Redraw to highlight the selected loop
+    }
+
+    function clearSelectedLoop() {
+        selectedLoopIndex = -1;
+        selectedLoopPoint = null;
+        selectingLoop = false;
+        document.getElementById('btn-select-loop').classList.remove('active');
+        updateFractalDimUI();
+        updateFractalDimDisplay();
+        draw();
+    }
+
+    // ========================================================================
     // CANVAS SETUP
     // ========================================================================
     const canvas = document.getElementById('dimer-canvas');
@@ -528,6 +615,16 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         const j = y / SQRT3_2;
         const n = x - 0.5 * j;
         return { n: Math.round(n), j: Math.round(j) };
+    }
+
+    // Return floating-point lattice coordinates (for finding nearest edge)
+    function screenToLatticeFloat(sx, sy) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (sx - rect.width / 2) / viewScale + viewOffsetX;
+        const y = viewOffsetY - (sy - rect.height / 2) / viewScale;
+        const j = y / SQRT3_2;
+        const n = x - 0.5 * j;
+        return { n, j };
     }
 
     // Find the nearest triangle center to a screen position
@@ -735,6 +832,22 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 
         drawProbe(probeA, 'A');
         drawProbe(probeB, 'B');
+
+        // Draw selected loop point marker
+        if (selectedLoopPoint) {
+            const p = latticeToScreen(selectedLoopPoint.n, selectedLoopPoint.j);
+            // Draw green marker for selected loop point
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, probeRadius * 1.2, 0, Math.PI * 2);
+            ctx.fillStyle = '#00FF00';
+            ctx.fill();
+            ctx.strokeStyle = '#006600';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            // Draw label
+            ctx.fillStyle = '#006600';
+            ctx.fillText('L', p.x, p.y - probeRadius * 1.2 - 2);
+        }
     }
 
     function drawGrid() {
@@ -997,7 +1110,24 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             }
         }
 
+        // Get selected loop edges for highlighting
+        let selectedLoopIndices0 = null;
+        let selectedLoopIndices1 = null;
+        if (doubleDimerEnabled && wasmReady && selectedLoopIndex >= 0) {
+            const loopResult = wasmModule._getLoopEdgeIndices(selectedLoopIndex);
+            if (loopResult) {
+                try {
+                    const parsed = JSON.parse(loopResult);
+                    selectedLoopIndices0 = new Set(parsed.indices0);
+                    selectedLoopIndices1 = new Set(parsed.indices1);
+                } catch (e) {
+                    // Ignore parse errors
+                }
+            }
+        }
+
         const separatingColor = '#FFD700';  // Gold for separating loops
+        const selectedLoopColor = '#00FF00';  // Bright green for selected loop
         const defaultLineWidth = ctx.lineWidth;
 
         for (let i = 0; i < currentDimers.length; i++) {
@@ -1009,7 +1139,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             const p2 = latticeToScreen(d.n2, d.j2);
 
             const isSeparating = separatingIndices0 && separatingIndices0.has(i);
-            if (isSeparating) {
+            const isSelectedLoop = selectedLoopIndices0 && selectedLoopIndices0.has(i);
+            if (isSelectedLoop) {
+                ctx.strokeStyle = selectedLoopColor;
+                ctx.lineWidth = defaultLineWidth * 2.5;
+            } else if (isSeparating) {
                 ctx.strokeStyle = separatingColor;
                 ctx.lineWidth = defaultLineWidth * 2;
             } else if (doubleDimerEnabled) {
@@ -1043,7 +1177,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 const p2 = latticeToScreen(d.n2, d.j2);
 
                 const isSeparating = separatingIndices1 && separatingIndices1.has(i);
-                if (isSeparating) {
+                const isSelectedLoop = selectedLoopIndices1 && selectedLoopIndices1.has(i);
+                if (isSelectedLoop) {
+                    ctx.strokeStyle = selectedLoopColor;
+                    ctx.lineWidth = defaultLineWidth * 2.5;
+                } else if (isSeparating) {
                     ctx.strokeStyle = separatingColor;
                     ctx.lineWidth = defaultLineWidth * 2;
                 } else {
@@ -1362,7 +1500,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 _getSeparationCount: Module.cwrap('getSeparationCount', 'number', []),
                 _getSeparatingLoopEdges: Module.cwrap('getSeparatingLoopEdges', 'string', []),
                 _getLoopCount: Module.cwrap('getLoopCount', 'number', []),
-                _getProbeDebugInfo: Module.cwrap('getProbeDebugInfo', 'string', [])
+                _getProbeDebugInfo: Module.cwrap('getProbeDebugInfo', 'string', []),
+                _findLoopContainingPoint: Module.cwrap('findLoopContainingPoint', 'number', ['number', 'number']),
+                _computeLoopFractalDimension: Module.cwrap('computeLoopFractalDimension', 'number', ['number']),
+                _getLoopInfo: Module.cwrap('getLoopInfo', 'string', ['number']),
+                _getLoopEdgeIndices: Module.cwrap('getLoopEdgeIndices', 'string', ['number'])
             };
             // Seed RNG with random value so each page load is different
             const randomSeed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
@@ -1586,6 +1728,15 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             return;
         }
 
+        // Handle loop selection for fractal dimension (use float coords to find nearest edge)
+        if (selectingLoop) {
+            const coords = screenToLatticeFloat(lastMouseX, lastMouseY);
+            selectLoopAtPoint(coords.n, coords.j);
+            selectingLoop = false;
+            document.getElementById('btn-select-loop').classList.remove('active');
+            return;
+        }
+
         if (currentTool === 'pan') {
             isPanning = true;
         } else if (currentTool === 'draw' || currentTool === 'erase') {
@@ -1718,6 +1869,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         const doubleDimerEnabled = document.getElementById('double-dimer').checked;
         document.getElementById('min-loop-container').style.display = doubleDimerEnabled ? '' : 'none';
         document.getElementById('topo-stats-group').style.display = doubleDimerEnabled ? '' : 'none';
+        document.getElementById('fractal-dim-group').style.display = doubleDimerEnabled ? '' : 'none';
         if (wasmReady && isValid) {
             if (doubleDimerEnabled) {
                 // Start fresh second config from current first config
@@ -1729,8 +1881,9 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 currentDimers2 = [];
             }
         }
-        // Reset stats when toggling double dimer mode
+        // Reset stats and clear selected loop when toggling double dimer mode
         resetStats();
+        clearSelectedLoop();
         draw();
     });
     document.getElementById('min-loop-size').addEventListener('change', draw);
@@ -1766,6 +1919,22 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 
     document.getElementById('sample-interval-input').addEventListener('change', (e) => {
         updateSampleIntervalFromInput(e.target.value);
+    });
+
+    // Fractal dimension event handlers
+    document.getElementById('btn-select-loop').addEventListener('click', () => {
+        selectingLoop = !selectingLoop;
+        document.getElementById('btn-select-loop').classList.toggle('active', selectingLoop);
+        // Deactivate probe selection when selecting loop
+        if (selectingLoop) {
+            selectingProbe = null;
+            document.getElementById('btn-set-p1').classList.remove('active');
+            document.getElementById('btn-set-p2').classList.remove('active');
+        }
+    });
+
+    document.getElementById('btn-clear-loop').addEventListener('click', () => {
+        clearSelectedLoop();
     });
 
     // ========================================================================

@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-08-triangular-dimers.cpp -o 2025-12-08-triangular-dimers.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getLozengeFlips','_getTriangleFlips','_getButterflyFlips','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_setSeed','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_getDebugWeights','_setProbePoints','_getSeparationCount','_getSeparatingLoopEdges','_getLoopCount','_getProbeDebugInfo','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getLozengeFlips','_getTriangleFlips','_getButterflyFlips','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_setSeed','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_getDebugWeights','_setProbePoints','_getSeparationCount','_getSeparatingLoopEdges','_getLoopCount','_getProbeDebugInfo','_findLoopContainingPoint','_computeLoopFractalDimension','_getLoopInfo','_getLoopEdgeIndices','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -1876,6 +1876,259 @@ const char* getProbeDebugInfo() {
 EMSCRIPTEN_KEEPALIVE
 int getLoopCount() {
     return (int)distinctCycles.size();
+}
+
+// ============================================================================
+// FRACTAL DIMENSION COMPUTATION
+// ============================================================================
+
+// Convert lattice coordinates to Cartesian for distance calculations
+inline void latticeToCartesian(double n, double j, double& x, double& y) {
+    x = n + 0.5 * j;
+    y = j * 0.8660254037844386;  // sqrt(3)/2
+}
+
+// Compute squared distance from point (px, py) to line segment (x1,y1)-(x2,y2)
+inline double pointToSegmentDistSq(double px, double py, double x1, double y1, double x2, double y2) {
+    double dx = x2 - x1;
+    double dy = y2 - y1;
+    double lenSq = dx * dx + dy * dy;
+
+    if (lenSq < 1e-10) {
+        // Degenerate segment
+        return (px - x1) * (px - x1) + (py - y1) * (py - y1);
+    }
+
+    // Project point onto line, clamp to segment
+    double t = std::max(0.0, std::min(1.0, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+    double projX = x1 + t * dx;
+    double projY = y1 + t * dy;
+
+    return (px - projX) * (px - projX) + (py - projY) * (py - projY);
+}
+
+// Find the index of the loop nearest to a given point (finds loop passing through/near the point)
+// Returns -1 if no loops exist
+EMSCRIPTEN_KEEPALIVE
+int findLoopContainingPoint(double n, double j) {
+    if (dimerPartner2.empty()) return -1;  // Double dimer not active
+
+    buildLoops();
+
+    if (distinctCycles.empty()) return -1;
+
+    // Convert clicked point to Cartesian
+    double px, py;
+    latticeToCartesian(n, j, px, py);
+
+    // Find the loop with the closest edge to the clicked point
+    int bestIdx = -1;
+    double bestDistSq = 1e30;
+
+    for (size_t i = 0; i < distinctCycles.size(); i++) {
+        const auto& loop = distinctCycles[i];
+
+        for (const auto& edge : loop) {
+            double x1, y1, x2, y2;
+            latticeToCartesian(edge[0], edge[1], x1, y1);
+            latticeToCartesian(edge[2], edge[3], x2, y2);
+
+            double distSq = pointToSegmentDistSq(px, py, x1, y1, x2, y2);
+
+            if (distSq < bestDistSq) {
+                bestDistSq = distSq;
+                bestIdx = (int)i;
+            }
+        }
+    }
+
+    return bestIdx;
+}
+
+// Compute fractal dimension of a loop using box counting
+// Returns the fractal dimension, or -1 if invalid
+EMSCRIPTEN_KEEPALIVE
+double computeLoopFractalDimension(int loopIndex) {
+    if (loopIndex < 0 || loopIndex >= (int)distinctCycles.size()) return -1.0;
+
+    const auto& loop = distinctCycles[loopIndex];
+    if (loop.size() < 4) return -1.0;  // Too small for meaningful dimension
+
+    // Collect all vertices in the loop (converted to Cartesian)
+    std::vector<std::pair<double, double>> cartPoints;
+    for (const auto& edge : loop) {
+        double x1, y1, x2, y2;
+        latticeToCartesian(edge[0], edge[1], x1, y1);
+        latticeToCartesian(edge[2], edge[3], x2, y2);
+        cartPoints.push_back({x1, y1});
+        cartPoints.push_back({x2, y2});
+    }
+
+    // Find bounding box
+    double minX = cartPoints[0].first, maxX = cartPoints[0].first;
+    double minY = cartPoints[0].second, maxY = cartPoints[0].second;
+    for (const auto& p : cartPoints) {
+        minX = std::min(minX, p.first);
+        maxX = std::max(maxX, p.first);
+        minY = std::min(minY, p.second);
+        maxY = std::max(maxY, p.second);
+    }
+
+    double width = maxX - minX;
+    double height = maxY - minY;
+    double maxDim = std::max(width, height);
+
+    if (maxDim < 1e-6) return -1.0;
+
+    // Box counting at multiple scales
+    // We'll use 6 different box sizes from maxDim/2 down to maxDim/64
+    std::vector<double> logEpsilon;
+    std::vector<double> logN;
+
+    for (int scale = 1; scale <= 6; scale++) {
+        double boxSize = maxDim / (1 << scale);  // maxDim/2, maxDim/4, ..., maxDim/64
+        if (boxSize < 0.1) break;  // Don't go too small
+
+        // Count boxes that contain at least one edge
+        std::unordered_set<long long> occupiedBoxes;
+
+        // For each edge, mark all boxes it passes through
+        for (const auto& edge : loop) {
+            double x1, y1, x2, y2;
+            latticeToCartesian(edge[0], edge[1], x1, y1);
+            latticeToCartesian(edge[2], edge[3], x2, y2);
+
+            // Sample points along the edge
+            int numSamples = std::max(2, (int)(std::sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)) / boxSize * 2));
+            for (int s = 0; s <= numSamples; s++) {
+                double t = (double)s / numSamples;
+                double x = x1 + t * (x2 - x1);
+                double y = y1 + t * (y2 - y1);
+
+                int bx = (int)std::floor((x - minX) / boxSize);
+                int by = (int)std::floor((y - minY) / boxSize);
+                long long boxKey = ((long long)bx << 20) | by;
+                occupiedBoxes.insert(boxKey);
+            }
+        }
+
+        if (occupiedBoxes.size() > 1) {
+            logEpsilon.push_back(std::log(boxSize));
+            logN.push_back(std::log((double)occupiedBoxes.size()));
+        }
+    }
+
+    // Linear regression: log(N) = -D * log(epsilon) + c
+    // D = -slope of log(N) vs log(epsilon)
+    if (logEpsilon.size() < 3) return -1.0;
+
+    int n = (int)logEpsilon.size();
+    double sumX = 0, sumY = 0, sumXX = 0, sumXY = 0;
+    for (int i = 0; i < n; i++) {
+        sumX += logEpsilon[i];
+        sumY += logN[i];
+        sumXX += logEpsilon[i] * logEpsilon[i];
+        sumXY += logEpsilon[i] * logN[i];
+    }
+
+    double slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+
+    // Fractal dimension is the negative of the slope
+    return -slope;
+}
+
+// Get detailed info about a specific loop
+EMSCRIPTEN_KEEPALIVE
+const char* getLoopInfo(int loopIndex) {
+    static std::string result;
+    result.clear();
+
+    if (loopIndex < 0 || loopIndex >= (int)distinctCycles.size()) {
+        result = "{\"error\":\"Invalid loop index\"}";
+        return result.c_str();
+    }
+
+    const auto& loop = distinctCycles[loopIndex];
+
+    // Compute diameter (max distance between any two vertices)
+    std::vector<std::pair<double, double>> cartPoints;
+    for (const auto& edge : loop) {
+        double x1, y1, x2, y2;
+        latticeToCartesian(edge[0], edge[1], x1, y1);
+        latticeToCartesian(edge[2], edge[3], x2, y2);
+        cartPoints.push_back({x1, y1});
+    }
+
+    double maxDist = 0;
+    for (size_t i = 0; i < cartPoints.size(); i++) {
+        for (size_t j = i + 1; j < cartPoints.size(); j++) {
+            double dx = cartPoints[i].first - cartPoints[j].first;
+            double dy = cartPoints[i].second - cartPoints[j].second;
+            double dist = std::sqrt(dx * dx + dy * dy);
+            maxDist = std::max(maxDist, dist);
+        }
+    }
+
+    // Compute center of mass
+    double cx = 0, cy = 0;
+    for (const auto& p : cartPoints) {
+        cx += p.first;
+        cy += p.second;
+    }
+    cx /= cartPoints.size();
+    cy /= cartPoints.size();
+
+    // Compute fractal dimension
+    double fractalDim = computeLoopFractalDimension(loopIndex);
+
+    // Build JSON result
+    result = "{";
+    result += "\"index\":" + std::to_string(loopIndex) + ",";
+    result += "\"edges\":" + std::to_string(loop.size()) + ",";
+    result += "\"diameter\":" + std::to_string(maxDist) + ",";
+    result += "\"centerX\":" + std::to_string(cx) + ",";
+    result += "\"centerY\":" + std::to_string(cy) + ",";
+    result += "\"fractalDim\":" + std::to_string(fractalDim);
+    result += "}";
+
+    return result.c_str();
+}
+
+// Get edge indices for a specific loop
+EMSCRIPTEN_KEEPALIVE
+const char* getLoopEdgeIndices(int loopIndex) {
+    static std::string result;
+
+    if (loopIndex < 0 || loopIndex >= (int)distinctCycleIndices.size()) {
+        result = "{\"indices0\":[],\"indices1\":[]}";
+        return result.c_str();
+    }
+
+    const auto& indices = distinctCycleIndices[loopIndex];
+    size_t n0 = loopDimers0.size();
+
+    std::vector<size_t> idx0, idx1;
+    for (size_t idx : indices) {
+        if (idx < n0) {
+            idx0.push_back(idx);
+        } else {
+            idx1.push_back(idx - n0);
+        }
+    }
+
+    result = "{\"indices0\":[";
+    for (size_t i = 0; i < idx0.size(); i++) {
+        if (i > 0) result += ",";
+        result += std::to_string(idx0[i]);
+    }
+    result += "],\"indices1\":[";
+    for (size_t i = 0; i < idx1.size(); i++) {
+        if (i > 0) result += ",";
+        result += std::to_string(idx1[i]);
+    }
+    result += "]}";
+
+    return result.c_str();
 }
 
 } // extern "C"

@@ -414,6 +414,78 @@ Reference working implementation: `_simulations/domino_tilings/2025-11-18-double
 
 **Double dimer height function:** The XOR loops of two tilings are exactly the level curves where height difference h₁ - h₂ = 0.
 
+## Triangular Lattice Dimer Simulations
+
+**Coordinate system:**
+- Vertex (n, j) maps to Cartesian: x = n + 0.5 * j, y = j * sqrt(3)/2
+- 6 neighbors per vertex: directions 0-5 with `dir_dn = [1, 0, -1, -1, 0, 1]`, `dir_dj = [0, 1, 1, 0, -1, -1]`
+
+**Triangle centers (for probe points):**
+- Type A (up triangles): (n + 1/3, j + 1/3)
+- Type B (down triangles): (n + 2/3, j + 2/3)
+- Use `screenToTriangleCenter()` for snapping clicks to triangle centers
+
+**Double dimer loop analysis:**
+- `distinctCycles` stores alternating cycles from XOR of two configurations
+- Ray casting (`isPointInsideLoop`) tests point containment in loops
+- Loops traced by alternating between config0 and config1 edges
+
+**Fractal dimension via box counting:**
+```cpp
+// Use 6 scales from maxDim/2 to maxDim/64
+// Linear regression: log(N) = -D * log(epsilon) + c
+// Fractal dimension D = -slope
+double slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+return -slope;
+```
+
+**Key WASM functions for loop analysis:**
+- `_findLoopContainingPoint(n, j)` - returns index of loop with nearest edge to point
+- `_getLoopInfo(index)` - returns JSON with edges, diameter, centerX/Y, fractalDim
+- `_getLoopEdgeIndices(index)` - returns edge indices for highlighting
+- `_computeLoopFractalDimension(index)` - returns fractal dimension
+
+**Loop selection: nearest edge algorithm** (not point-inside-polygon):
+```cpp
+// Point to segment distance (clamped to segment endpoints)
+double t = std::max(0.0, std::min(1.0, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+double projX = x1 + t * dx;
+double projY = y1 + t * dy;
+return (px - projX) * (px - projX) + (py - projY) * (py - projY);
+```
+
+Reference: `_simulations/misc/2025-12-08-triangular-dimers.cpp`
+
+## WASM Integration Patterns
+
+**Non-modularized WASM with cwrap (common pattern in simulations):**
+
+When using `Module.onRuntimeInitialized`, manually bind ALL exported functions:
+```javascript
+Module.onRuntimeInitialized = function() {
+    wasmReady = true;
+    wasmModule = {
+        _myFunction: Module.cwrap('myFunction', 'number', ['number', 'number']),
+        _anotherFunc: Module.cwrap('anotherFunc', 'string', ['number']),
+        // ... ALL functions must be listed here!
+    };
+};
+```
+
+**Common bug:** Adding new C++ functions but forgetting to add them to the `wasmModule` object causes "not a function" errors at runtime.
+
+**Float coordinates for click handling:**
+Use floating-point lattice coordinates when finding nearest edges (not snapped integers):
+```javascript
+function screenToLatticeFloat(sx, sy) {
+    const x = (sx - rect.width / 2) / viewScale + viewOffsetX;
+    const y = viewOffsetY - (sy - rect.height / 2) / viewScale;
+    const j = y / SQRT3_2;
+    const n = x - 0.5 * j;
+    return { n, j };  // No rounding!
+}
+```
+
 ## Three.js in Simulations
 
 **Container visibility timing:** When showing a hidden container, use `setTimeout(fn, 50)` before initializing Three.js - `clientWidth/clientHeight` are 0 immediately after `display: block`.
