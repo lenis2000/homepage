@@ -2293,14 +2293,14 @@ window.addEventListener('wasm-loaded', async function() {
         localCtx.fillStyle = '#fff';
         localCtx.fillRect(0, 0, w, h);
 
+        const padding = 60;
+        const availW = w - 2 * padding;
+        const availH = h - 2 * padding - 40;
+
         if (currentPath.length === 0) return;
 
         const segment = currentPath.slice(highlightStart, highlightStart + highlightLen);
         if (segment.length === 0) return;
-
-        const padding = 60;
-        const availW = w - 2 * padding;
-        const availH = h - 2 * padding - 40;
 
         let segR = 0, segU = 0;
         for (const m of segment) {
@@ -2449,7 +2449,7 @@ window.addEventListener('wasm-loaded', async function() {
                 } else if (step === 3) {
                     // Extreme q < 1 - breaks universality, path hugs bottom then right
                     setQDirect(0.7);
-                    highlightStart = N + M - highlightLen;  // Zoom at end - upper-right corner
+                    highlightStart = 130;
                     insightEl.style.opacity = '0';
                     explanationEl.style.opacity = '0';
                     await runCFTP();
