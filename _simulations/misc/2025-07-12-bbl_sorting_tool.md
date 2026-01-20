@@ -109,6 +109,7 @@ code:
 </div>
 
 <script>
+{% raw %}
 // Bibliography sorting functions (based on Python implementation)
 
 function getLastName(str) {
@@ -494,4 +495,5 @@ document.getElementById('inputArea').addEventListener('input', updateStats);
 
 // Initialize
 updateStats();
+{% endraw %}
 </script>

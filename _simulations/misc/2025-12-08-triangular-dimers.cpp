@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-08-triangular-dimers.cpp -o 2025-12-08-triangular-dimers.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getLozengeFlips','_getTriangleFlips','_getButterflyFlips','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_setSeed','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_getDebugWeights','_setProbePoints','_getSeparationCount','_getSeparatingLoopEdges','_getLoopCount','_getProbeDebugInfo','_findLoopContainingPoint','_computeLoopFractalDimension','_getLoopInfo','_getLoopEdgeIndices','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getLozengeFlips','_getTriangleFlips','_getButterflyFlips','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_setSeed','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_getDebugWeights','_setProbePoints','_getSeparationCount','_getSeparatingLoopEdges','_getLoopCount','_getProbeDebugInfo','_findLoopContainingPoint','_computeLoopFractalDimension','_getLoopInfo','_getLoopEdgeIndices','_startFractalAveraging','_sampleFractalDimension','_getFractalAverage','_resetFractalSamples','_getFractalSamples','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -243,6 +243,10 @@ std::vector<std::vector<size_t>> distinctCycleIndices;
 // Probe points for topological stats (triangle centers, so fractional coords)
 double probeN1 = -10000, probeJ1 = -10000;
 double probeN2 = -10000, probeJ2 = -10000;
+
+// Fractal dimension averaging - fixed probe point
+double fractalProbeN = -10000, fractalProbeJ = -10000;
+std::vector<double> fractalSamples;  // accumulated fractal dimension samples
 
 // ============================================================================
 // OPTIMIZED DATA STRUCTURES (O(1) lookups)
@@ -2035,6 +2039,83 @@ double computeLoopFractalDimension(int loopIndex) {
 
     // Fractal dimension is the negative of the slope
     return -slope;
+}
+
+// ============================================================================
+// FRACTAL DIMENSION AVERAGING (fixed probe point over time)
+// ============================================================================
+
+// Set the probe point for fractal averaging and reset samples
+EMSCRIPTEN_KEEPALIVE
+void startFractalAveraging(double n, double j) {
+    fractalProbeN = n;
+    fractalProbeJ = j;
+    fractalSamples.clear();
+}
+
+// Sample fractal dimension of the loop through the fixed probe point
+// Call this periodically during dynamics. Returns the sampled dimension, or -1 if invalid.
+EMSCRIPTEN_KEEPALIVE
+double sampleFractalDimension() {
+    if (fractalProbeN < -9000) return -1.0;
+    if (dimerPartner2.empty()) return -1.0;
+
+    // Find the loop nearest to the probe point
+    int loopIdx = findLoopContainingPoint(fractalProbeN, fractalProbeJ);
+    if (loopIdx < 0) return -1.0;
+
+    // Compute its fractal dimension
+    double dim = computeLoopFractalDimension(loopIdx);
+    if (dim > 0) {
+        fractalSamples.push_back(dim);
+    }
+    return dim;
+}
+
+// Get the averaged fractal dimension and sample count
+// Returns JSON: {"average": X, "count": N, "stddev": S}
+EMSCRIPTEN_KEEPALIVE
+const char* getFractalAverage() {
+    static std::string result;
+
+    if (fractalSamples.empty()) {
+        result = "{\"average\":-1,\"count\":0,\"stddev\":0}";
+        return result.c_str();
+    }
+
+    // Compute mean
+    double sum = 0;
+    for (double d : fractalSamples) sum += d;
+    double mean = sum / fractalSamples.size();
+
+    // Compute stddev
+    double sumSq = 0;
+    for (double d : fractalSamples) sumSq += (d - mean) * (d - mean);
+    double stddev = fractalSamples.size() > 1 ? std::sqrt(sumSq / (fractalSamples.size() - 1)) : 0;
+
+    result = "{\"average\":" + std::to_string(mean) +
+             ",\"count\":" + std::to_string(fractalSamples.size()) +
+             ",\"stddev\":" + std::to_string(stddev) + "}";
+    return result.c_str();
+}
+
+// Reset fractal averaging (keep probe point, clear samples)
+EMSCRIPTEN_KEEPALIVE
+void resetFractalSamples() {
+    fractalSamples.clear();
+}
+
+// Get individual samples as JSON array (for histogram/analysis)
+EMSCRIPTEN_KEEPALIVE
+const char* getFractalSamples() {
+    static std::string result;
+    result = "[";
+    for (size_t i = 0; i < fractalSamples.size(); i++) {
+        if (i > 0) result += ",";
+        result += std::to_string(fractalSamples[i]);
+    }
+    result += "]";
+    return result.c_str();
 }
 
 // Get detailed info about a specific loop

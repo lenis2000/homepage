@@ -309,7 +309,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 <div class="control-group" id="fractal-dim-group" style="display: none;">
   <div class="control-group-title">Loop Fractal Dimension</div>
   <div style="margin-bottom: 6px; font-size: 12px; color: #555;">
-    Click near any loop to select it. Fractal dimension D computed via box-counting at discrete scales (from loop diameter/2 down to diameter/64): fit log N(ε) vs log(1/ε), where N(ε) = boxes of size ε covering the loop. Smooth curves: D≈1, space-filling: D→2.
+    Click near any loop to select it. Fractal dimension D computed via box-counting at scales diameter/8 to diameter/128: fit log N(ε) vs log(1/ε). Smooth curves: D≈1, space-filling: D→2.
   </div>
   <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
     <button id="btn-select-loop" class="tool-btn" style="width:auto; padding: 0 8px;">Select Loop</button>
@@ -318,6 +318,24 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   </div>
   <div id="fractal-output" style="font-family: monospace; font-size: 11px; border: 1px solid #ddd; background: white; padding: 4px; border-radius: 4px;">
     Loop: - | Edges: - | Diameter: - | Fractal dim: -
+  </div>
+  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">
+    <div style="font-weight: bold; font-size: 12px; margin-bottom: 4px;">Average Over Dynamics</div>
+    <div style="font-size: 11px; color: #555; margin-bottom: 6px;">
+      Fix a probe point and sample the fractal dimension of the loop through it during Glauber dynamics.
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+      <button id="btn-set-fractal-probe" class="tool-btn" style="width:auto; padding: 0 8px;">Set Probe Point</button>
+      <button id="btn-start-fractal-avg" class="tool-btn" style="width:auto; padding: 0 8px;" disabled>Start Sampling</button>
+      <button id="btn-stop-fractal-avg" class="tool-btn" style="width:auto; padding: 0 8px; display: none;">Stop</button>
+      <button id="btn-reset-fractal-avg" class="tool-btn" style="width:auto; padding: 0 8px;" disabled>Reset</button>
+      <span style="font-size: 12px; margin-left: 8px;">Sample every:</span>
+      <input type="range" id="fractal-sample-interval-slider" min="0" max="100" value="38" style="width: 80px;">
+      <input type="number" id="fractal-sample-interval-input" class="param-input" value="1000" min="1" max="100000000" style="width: 70px;">
+    </div>
+    <div id="fractal-avg-output" style="font-family: monospace; font-size: 11px; border: 1px solid #ddd; background: white; padding: 4px; border-radius: 4px;">
+      Probe: (not set) | Avg D: - | Samples: 0 | StdDev: -
+    </div>
   </div>
 </div>
 
@@ -498,6 +516,19 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         document.getElementById('sample-interval-slider').value = sampleIntervalToSlider(sampleInterval);
     }
 
+    // Fractal sample interval uses the same log scale conversion
+    function updateFractalSampleIntervalFromSlider(sliderVal) {
+        fractalSampleInterval = sliderToSampleInterval(sliderVal);
+        document.getElementById('fractal-sample-interval-slider').value = sliderVal;
+        document.getElementById('fractal-sample-interval-input').value = fractalSampleInterval;
+    }
+
+    function updateFractalSampleIntervalFromInput(val) {
+        fractalSampleInterval = Math.max(1, Math.min(100000000, parseInt(val) || 1000));
+        document.getElementById('fractal-sample-interval-input').value = fractalSampleInterval;
+        document.getElementById('fractal-sample-interval-slider').value = sampleIntervalToSlider(fractalSampleInterval);
+    }
+
     function updateStatsDisplay(separationL, loopCount) {
         const statsDiv = document.getElementById('stats-output');
         if (statsCount === 0) {
@@ -579,6 +610,103 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         updateFractalDimUI();
         updateFractalDimDisplay();
         draw();
+    }
+
+    // ========================================================================
+    // FRACTAL DIMENSION AVERAGING
+    // ========================================================================
+    let fractalProbePoint = null;  // { n, j } - fixed probe point for averaging
+    let fractalSampling = false;   // Whether we're actively sampling during dynamics
+    let settingFractalProbe = false;  // Whether we're in "set probe" click mode
+    let fractalSampleInterval = 1000; // Sample every N Glauber steps
+    let stepsSinceLastFractalSample = 0;
+
+    function updateFractalAvgUI() {
+        const outputDiv = document.getElementById('fractal-avg-output');
+        const startBtn = document.getElementById('btn-start-fractal-avg');
+        const stopBtn = document.getElementById('btn-stop-fractal-avg');
+        const resetBtn = document.getElementById('btn-reset-fractal-avg');
+        const setProbeBtn = document.getElementById('btn-set-fractal-probe');
+
+        if (!fractalProbePoint) {
+            outputDiv.textContent = 'Probe: (not set) | Avg D: - | Samples: 0 | StdDev: -';
+            startBtn.disabled = true;
+            resetBtn.disabled = true;
+            return;
+        }
+
+        // Update probe display
+        const formatCoord = (c) => Number.isInteger(c) ? c : c.toFixed(2);
+        let probeStr = `Probe: (${formatCoord(fractalProbePoint.n)}, ${formatCoord(fractalProbePoint.j)})`;
+
+        if (!wasmReady) {
+            outputDiv.textContent = probeStr + ' | Avg D: - | Samples: 0 | StdDev: -';
+            return;
+        }
+
+        // Get current average from WASM
+        try {
+            const avgData = JSON.parse(wasmModule._getFractalAverage());
+            const avgStr = avgData.average >= 0 ? avgData.average.toFixed(4) : '-';
+            const stdStr = avgData.count > 1 ? avgData.stddev.toFixed(4) : '-';
+            outputDiv.textContent = `${probeStr} | Avg D: ${avgStr} | Samples: ${avgData.count} | StdDev: ${stdStr}`;
+            startBtn.disabled = false;
+            resetBtn.disabled = avgData.count === 0;
+        } catch (e) {
+            outputDiv.textContent = probeStr + ' | Error reading average';
+        }
+
+        // Update button visibility
+        if (fractalSampling) {
+            startBtn.style.display = 'none';
+            stopBtn.style.display = '';
+            setProbeBtn.disabled = true;
+        } else {
+            startBtn.style.display = '';
+            stopBtn.style.display = 'none';
+            setProbeBtn.disabled = false;
+        }
+    }
+
+    function setFractalProbePoint(n, j) {
+        fractalProbePoint = { n, j };
+        settingFractalProbe = false;
+        document.getElementById('btn-set-fractal-probe').classList.remove('active');
+
+        if (wasmReady) {
+            wasmModule._startFractalAveraging(n, j);
+        }
+        updateFractalAvgUI();
+        draw();
+    }
+
+    function startFractalSampling() {
+        if (!fractalProbePoint || !wasmReady) return;
+        fractalSampling = true;
+        updateFractalAvgUI();
+    }
+
+    function stopFractalSampling() {
+        fractalSampling = false;
+        updateFractalAvgUI();
+    }
+
+    function resetFractalSampling() {
+        if (wasmReady && fractalProbePoint) {
+            wasmModule._resetFractalSamples();
+        }
+        updateFractalAvgUI();
+    }
+
+    // Called periodically during Glauber dynamics to sample fractal dimension
+    function maybeSampleFractalDim(stepsSinceLastSample) {
+        if (!fractalSampling || !wasmReady || !fractalProbePoint) return 0;
+        if (stepsSinceLastSample < fractalSampleInterval) return stepsSinceLastSample;
+
+        // Sample the fractal dimension
+        wasmModule._sampleFractalDimension();
+        updateFractalAvgUI();
+        return 0;  // Reset counter
     }
 
     // ========================================================================
@@ -847,6 +975,22 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             // Draw label
             ctx.fillStyle = '#006600';
             ctx.fillText('L', p.x, p.y - probeRadius * 1.2 - 2);
+        }
+
+        // Draw fractal averaging probe point marker
+        if (fractalProbePoint) {
+            const p = latticeToScreen(fractalProbePoint.n, fractalProbePoint.j);
+            // Draw magenta/purple marker for fractal probe
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, probeRadius * 1.3, 0, Math.PI * 2);
+            ctx.fillStyle = '#FF00FF';
+            ctx.fill();
+            ctx.strokeStyle = '#800080';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            // Draw label
+            ctx.fillStyle = '#800080';
+            ctx.fillText('F', p.x, p.y - probeRadius * 1.3 - 2);
         }
     }
 
@@ -1504,7 +1648,13 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 _findLoopContainingPoint: Module.cwrap('findLoopContainingPoint', 'number', ['number', 'number']),
                 _computeLoopFractalDimension: Module.cwrap('computeLoopFractalDimension', 'number', ['number']),
                 _getLoopInfo: Module.cwrap('getLoopInfo', 'string', ['number']),
-                _getLoopEdgeIndices: Module.cwrap('getLoopEdgeIndices', 'string', ['number'])
+                _getLoopEdgeIndices: Module.cwrap('getLoopEdgeIndices', 'string', ['number']),
+                // Fractal dimension averaging
+                _startFractalAveraging: Module.cwrap('startFractalAveraging', null, ['number', 'number']),
+                _sampleFractalDimension: Module.cwrap('sampleFractalDimension', 'number', []),
+                _getFractalAverage: Module.cwrap('getFractalAverage', 'string', []),
+                _resetFractalSamples: Module.cwrap('resetFractalSamples', null, []),
+                _getFractalSamples: Module.cwrap('getFractalSamples', 'string', [])
             };
             // Seed RNG with random value so each page load is different
             const randomSeed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
@@ -1654,6 +1804,16 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             }
         }
 
+        // Sample fractal dimension if averaging is active (requires double dimer mode)
+        if (fractalSampling && doubleDimerEnabled && fractalProbePoint) {
+            stepsSinceLastFractalSample += stepsThisFrame;
+            if (stepsSinceLastFractalSample >= fractalSampleInterval) {
+                stepsSinceLastFractalSample = 0;
+                wasmModule._sampleFractalDimension();
+                updateFractalAvgUI();
+            }
+        }
+
         draw();
         animationId = requestAnimationFrame(animate);
     }
@@ -1734,6 +1894,13 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             selectLoopAtPoint(coords.n, coords.j);
             selectingLoop = false;
             document.getElementById('btn-select-loop').classList.remove('active');
+            return;
+        }
+
+        // Handle fractal averaging probe point selection
+        if (settingFractalProbe) {
+            const coords = screenToLatticeFloat(lastMouseX, lastMouseY);
+            setFractalProbePoint(coords.n, coords.j);
             return;
         }
 
@@ -1921,6 +2088,14 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         updateSampleIntervalFromInput(e.target.value);
     });
 
+    document.getElementById('fractal-sample-interval-slider').addEventListener('input', (e) => {
+        updateFractalSampleIntervalFromSlider(parseInt(e.target.value));
+    });
+
+    document.getElementById('fractal-sample-interval-input').addEventListener('change', (e) => {
+        updateFractalSampleIntervalFromInput(e.target.value);
+    });
+
     // Fractal dimension event handlers
     document.getElementById('btn-select-loop').addEventListener('click', () => {
         selectingLoop = !selectingLoop;
@@ -1935,6 +2110,32 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 
     document.getElementById('btn-clear-loop').addEventListener('click', () => {
         clearSelectedLoop();
+    });
+
+    // Fractal dimension averaging event handlers
+    document.getElementById('btn-set-fractal-probe').addEventListener('click', () => {
+        settingFractalProbe = !settingFractalProbe;
+        document.getElementById('btn-set-fractal-probe').classList.toggle('active', settingFractalProbe);
+        // Deactivate other click modes
+        if (settingFractalProbe) {
+            selectingLoop = false;
+            selectingProbe = null;
+            document.getElementById('btn-select-loop').classList.remove('active');
+            document.getElementById('btn-set-p1').classList.remove('active');
+            document.getElementById('btn-set-p2').classList.remove('active');
+        }
+    });
+
+    document.getElementById('btn-start-fractal-avg').addEventListener('click', () => {
+        startFractalSampling();
+    });
+
+    document.getElementById('btn-stop-fractal-avg').addEventListener('click', () => {
+        stopFractalSampling();
+    });
+
+    document.getElementById('btn-reset-fractal-avg').addEventListener('click', () => {
+        resetFractalSampling();
     });
 
     // ========================================================================
