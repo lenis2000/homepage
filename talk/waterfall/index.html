@@ -2242,7 +2242,7 @@ window.addEventListener('wasm-loaded', async function() {
         // Draw path
         if (currentPath.length > 0) {
             ctx.strokeStyle = colors[0];
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 5;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.beginPath();
@@ -2269,14 +2269,27 @@ window.addEventListener('wasm-loaded', async function() {
                 }
                 const endX = hx, endY = hy;
 
-                const boxPad = 6;
+                // Redraw path segment inside box thicker
+                ctx.strokeStyle = colors[0];
+                ctx.lineWidth = 8;
+                ctx.beginPath();
+                let px = startX, py = startY;
+                ctx.moveTo(baseX + px * scaleX, baseY + gridH - py * scaleY);
+                for (let i = highlightStart; i < highlightStart + highlightLen && i < currentPath.length; i++) {
+                    if (currentPath[i] === 'R') px++;
+                    else py++;
+                    ctx.lineTo(baseX + px * scaleX, baseY + gridH - py * scaleY);
+                }
+                ctx.stroke();
+
+                const boxPad = 8;
                 const boxX1 = baseX + startX * scaleX - boxPad;
                 const boxY1 = baseY + gridH - endY * scaleY - boxPad;
                 const boxX2 = baseX + endX * scaleX + boxPad;
                 const boxY2 = baseY + gridH - startY * scaleY + boxPad;
 
                 ctx.strokeStyle = colors[0];
-                ctx.lineWidth = 3;
+                ctx.lineWidth = 5;
                 ctx.setLineDash([]);
                 ctx.strokeRect(boxX1, boxY1, boxX2 - boxX1, boxY2 - boxY1);
             }
@@ -2339,7 +2352,8 @@ window.addEventListener('wasm-loaded', async function() {
             const fromPy = baseY - y * step;
             if (move === 'R') {
                 localCtx.strokeStyle = '#E57200';
-                localCtx.lineWidth = 6;
+                localCtx.lineWidth = 10;
+                localCtx.lineCap = 'round';
                 localCtx.beginPath();
                 localCtx.moveTo(fromPx, fromPy);
                 localCtx.lineTo(fromPx + step, fromPy);
@@ -2347,7 +2361,8 @@ window.addEventListener('wasm-loaded', async function() {
                 x++;
             } else {
                 localCtx.strokeStyle = '#232D4B';
-                localCtx.lineWidth = 6;
+                localCtx.lineWidth = 10;
+                localCtx.lineCap = 'round';
                 localCtx.beginPath();
                 localCtx.moveTo(fromPx, fromPy);
                 localCtx.lineTo(fromPx, fromPy - step);
@@ -2360,13 +2375,13 @@ window.addEventListener('wasm-loaded', async function() {
         localCtx.fillStyle = '#232D4B';
         x = 0; y = 0;
         localCtx.beginPath();
-        localCtx.arc(baseX, baseY, 4, 0, Math.PI * 2);
+        localCtx.arc(baseX, baseY, 6, 0, Math.PI * 2);
         localCtx.fill();
         for (const move of segment) {
             if (move === 'R') x++;
             else y++;
             localCtx.beginPath();
-            localCtx.arc(baseX + x * step, baseY - y * step, 4, 0, Math.PI * 2);
+            localCtx.arc(baseX + x * step, baseY - y * step, 6, 0, Math.PI * 2);
             localCtx.fill();
         }
 
@@ -2448,13 +2463,13 @@ window.addEventListener('wasm-loaded', async function() {
                     draw();
                 } else if (step === 3) {
                     // Extreme q < 1 - breaks universality, path hugs bottom then right
-                    setQDirect(0.7);
+                    setQDirect(0.6);
                     highlightStart = 130;
                     insightEl.style.opacity = '0';
                     explanationEl.style.opacity = '0';
                     await runCFTP();
                 } else if (step === 4) {
-                    insightEl.innerHTML = '<strong style="color: #c00; font-size: 1.2em;">Universality BROKEN at extreme q!</strong><br>When q is too extreme (q = 0.7), the path becomes <strong>deterministic</strong>—always hugs the corner.';
+                    insightEl.innerHTML = '<strong style="color: #c00; font-size: 1.2em;">Universality BROKEN at extreme q!</strong><br>When q is too extreme (q = 0.6), most of the path goes either up or right, and around the corner it is a finite perturbation of the boundary.';
                     insightEl.style.opacity = '1';
                     draw();
                 }
