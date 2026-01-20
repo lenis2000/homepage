@@ -258,9 +258,9 @@
         if (Math.abs(q - 1) < 0.01) {
             formulaDisplay.textContent = 'q = 1: ordinary binomial (35 paths)';
         } else if (q < 1) {
-            formulaDisplay.innerHTML = `q = ${q.toFixed(2)} < 1: favors <strong>small area</strong> (low paths)`;
+            formulaDisplay.innerHTML = `q = ${q.toFixed(2)} < 1`;
         } else {
-            formulaDisplay.innerHTML = `q = ${q.toFixed(2)} > 1: favors <strong>large area</strong> (high paths)`;
+            formulaDisplay.innerHTML = `q = ${q.toFixed(2)} > 1`;
         }
     }
 

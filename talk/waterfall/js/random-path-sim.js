@@ -244,7 +244,8 @@
 
         // Draw annotation
         localCtx.fillStyle = '#666';
-        localCtx.font = '18px sans-serif';
+        const localFontSize = Math.round(window.innerHeight * 0.025);
+        localCtx.font = `${localFontSize}px sans-serif`;
         localCtx.textAlign = 'center';
         localCtx.textBaseline = 'top';
         localCtx.fillText('Each step: independent Bernoulli trial', w / 2, baseY + 20);
@@ -297,9 +298,10 @@
 
         // Label
         bridgeCtx.fillStyle = '#232D4B';
-        bridgeCtx.font = '16px sans-serif';
+        const fontSize = Math.round(window.innerHeight * 0.025);
+        bridgeCtx.font = `${fontSize}px sans-serif`;
         bridgeCtx.textAlign = 'center';
-        bridgeCtx.fillText('path − diagonal', w / 2, h - 8);
+        bridgeCtx.fillText('path minus diagonal', w / 2, h - 8);
     }
 
     function resample() {
