@@ -1,7 +1,7 @@
 /*
 emcc 2025-12-08-triangular-dimers.cpp -o 2025-12-08-triangular-dimers.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getLozengeFlips','_getTriangleFlips','_getButterflyFlips','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_setSeed','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_getDebugWeights','_setProbePoints','_getSeparationCount','_getSeparatingLoopEdges','_getLoopCount','_getProbeDebugInfo','_findLoopContainingPoint','_computeLoopFractalDimension','_getLoopInfo','_getLoopEdgeIndices','_startFractalAveraging','_sampleFractalDimension','_getFractalAverage','_resetFractalSamples','_getFractalSamples','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromVertices','_performGlauberSteps','_performGlauberSteps2','_exportDimers','_exportDimers2','_resetDimers2','_clearDimers2','_getTotalSteps','_getFlipCount','_getLozengeFlips','_getTriangleFlips','_getButterflyFlips','_getAcceptRate','_setWeight','_setPeriodicEdgeWeights','_setUsePeriodicWeights','_getUsePeriodicWeights','_getPeriodicK','_getPeriodicL','_setSeed','_getVertexCount','_getEdgeCount','_freeString','_filterLoopsBySize','_getDebugWeights','_setProbePoints','_getSeparationCount','_getSeparatingLoopEdges','_getLoopCount','_getProbeDebugInfo','_findLoopContainingPoint','_computeLoopFractalDimension','_getLoopInfo','_getLoopEdgeIndices','_startFractalAveraging','_sampleFractalDimension','_getFractalAverage','_resetFractalSamples','_getFractalSamples','_setHolesInConfig2','_clearHolesInConfig2','_getHole1','_getHole2','_getHolePath','_computeHolePathFractalDimension','_sampleHolePathFractalDimension','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -116,6 +116,12 @@ inline long long loopEdgeKey(int n1, int j1, int n2, int j2) {
            ((long long)(n2 + 32768) << 16) | ((long long)(j2 + 32768));
 }
 
+// Convert lattice coordinates to Cartesian for distance calculations
+inline void latticeToCartesian(double n, double j, double& x, double& y) {
+    x = n + 0.5 * j;
+    y = j * 0.8660254037844386;  // sqrt(3)/2
+}
+
 // ============================================================================
 // DATA STRUCTURES
 // ============================================================================
@@ -137,6 +143,10 @@ std::unordered_map<long long, int> vertexMap; // key -> index (used only during 
 std::vector<int> dimerPartnerInit; // Initial matching (base config)
 std::vector<int> dimerPartner;  // First dimer configuration
 std::vector<int> dimerPartner2; // Second dimer configuration (for double dimer model)
+
+// Forced interface (holes) - vertex indices for holes in config 2
+int holeVertex1 = -1;  // First hole vertex index (-1 = no hole)
+int holeVertex2 = -1;  // Second hole vertex index (-1 = no hole)
 
 // Statistics
 long long totalSteps = 0;
@@ -954,8 +964,39 @@ void performOneStep() {
 // SECOND CONFIGURATION (for double dimer model)
 // ============================================================================
 
+// Helper: check if any vertex is a hole
+inline bool involvesHole(int v0, int v1, int v2, int v3) {
+    return v0 == holeVertex1 || v0 == holeVertex2 ||
+           v1 == holeVertex1 || v1 == holeVertex2 ||
+           v2 == holeVertex1 || v2 == holeVertex2 ||
+           v3 == holeVertex1 || v3 == holeVertex2;
+}
+
+inline bool involvesHole6(int v0, int v1, int v2, int v3, int v4, int v5) {
+    return v0 == holeVertex1 || v0 == holeVertex2 ||
+           v1 == holeVertex1 || v1 == holeVertex2 ||
+           v2 == holeVertex1 || v2 == holeVertex2 ||
+           v3 == holeVertex1 || v3 == holeVertex2 ||
+           v4 == holeVertex1 || v4 == holeVertex2 ||
+           v5 == holeVertex1 || v5 == holeVertex2;
+}
+
+inline bool involvesHole8(int v0, int v1, int v2, int v3, int v4, int v5, int v6, int v7) {
+    return v0 == holeVertex1 || v0 == holeVertex2 ||
+           v1 == holeVertex1 || v1 == holeVertex2 ||
+           v2 == holeVertex1 || v2 == holeVertex2 ||
+           v3 == holeVertex1 || v3 == holeVertex2 ||
+           v4 == holeVertex1 || v4 == holeVertex2 ||
+           v5 == holeVertex1 || v5 == holeVertex2 ||
+           v6 == holeVertex1 || v6 == holeVertex2 ||
+           v7 == holeVertex1 || v7 == holeVertex2;
+}
+
 // Lozenge flip for second configuration
 bool tryLozengeFlip2(int v0, int v1, int v2, int v3) {
+    // Skip moves involving hole vertices
+    if (involvesHole(v0, v1, v2, v3)) return false;
+
     const Vertex& V0 = vertices[v0];
     const Vertex& V1 = vertices[v1];
     const Vertex& V2 = vertices[v2];
@@ -1011,6 +1052,9 @@ bool tryTriangleFlip0_2(int n, int j) {
         return false;
     }
 
+    // Skip moves involving hole vertices
+    if (involvesHole6(v0, v1, v2, v3, v4, v5)) return false;
+
     if (dimerPartner2[v0] == v1 && dimerPartner2[v2] == v3 && dimerPartner2[v4] == v5) {
         if (usePeriodicWeights) {
             double w_old = getEdgeWeightFromCoords(n, j, n+1, j)
@@ -1065,6 +1109,9 @@ bool tryTriangleFlip1_2(int n, int j) {
         return false;
     }
 
+    // Skip moves involving hole vertices
+    if (involvesHole6(v0, v1, v2, v3, v4, v5)) return false;
+
     if (dimerPartner2[v0] == v1 && dimerPartner2[v2] == v3 && dimerPartner2[v4] == v5) {
         if (usePeriodicWeights) {
             double w_old = getEdgeWeightFromCoords(n, j, n+1, j)
@@ -1110,6 +1157,9 @@ bool tryTriangleFlip1_2(int n, int j) {
 bool tryButterflyFlip2_config(int v0, int v1, int v2, int v3, int v4, int v5, int v6, int v7,
                                int n0, int j0, int n1, int j1, int n2, int j2, int n3, int j3,
                                int n4, int j4, int n5, int j5, int n6, int j6, int n7, int j7) {
+    // Skip moves involving hole vertices
+    if (involvesHole8(v0, v1, v2, v3, v4, v5, v6, v7)) return false;
+
     if (dimerPartner2[v0] == v1 && dimerPartner2[v2] == v3 &&
         dimerPartner2[v4] == v5 && dimerPartner2[v6] == v7) {
         if (usePeriodicWeights) {
@@ -1511,12 +1561,104 @@ void performGlauberSteps2(int numSteps) {
     }
 }
 
+// Helper: find augmenting path for dimerPartner2, avoiding hole vertices
+bool findAugmentingPath2(int start, std::vector<int>& parent) {
+    std::queue<int> q;
+    std::vector<bool> visited(vertices.size(), false);
+    parent.assign(vertices.size(), -1);
+
+    q.push(start);
+    visited[start] = true;
+
+    while (!q.empty()) {
+        int u = q.front();
+        q.pop();
+
+        for (int v : adjacency[u]) {
+            if (visited[v]) continue;
+            // Skip hole vertices
+            if (v == holeVertex1 || v == holeVertex2) continue;
+
+            visited[v] = true;
+            parent[v] = u;
+
+            if (dimerPartner2[v] == -1) {
+                // Found augmenting path to unmatched vertex
+                return true;
+            }
+
+            // Continue through the matched edge
+            int w = dimerPartner2[v];
+            if (w >= 0 && !visited[w]) {
+                visited[w] = true;
+                parent[w] = v;
+                q.push(w);
+            }
+        }
+    }
+    return false;
+}
+
+// Helper: augment matching along path for dimerPartner2
+void augmentPath2(int end, const std::vector<int>& parent) {
+    int v = end;
+    while (parent[v] != -1) {
+        int u = parent[v];
+        int prev = parent[u];
+
+        // Match u-v
+        dimerPartner2[u] = v;
+        dimerPartner2[v] = u;
+
+        if (prev == -1) break;
+        v = prev;
+    }
+}
+
 EMSCRIPTEN_KEEPALIVE
 void resetDimers2() {
-    // Start fresh: copy initial base config to second
-    dimerPartner2 = dimerPartnerInit;
     totalSteps2 = 0;
     flipCount2 = 0;
+
+    // If no holes, just copy the initial matching
+    if (holeVertex1 < 0 && holeVertex2 < 0) {
+        dimerPartner2 = dimerPartnerInit;
+        return;
+    }
+
+    // Start with the perfect matching
+    dimerPartner2 = dimerPartnerInit;
+
+    // Get the partners of hole vertices in the original matching
+    int p1 = dimerPartner2[holeVertex1];
+    int p2 = dimerPartner2[holeVertex2];
+
+    // Unmatch the hole vertices
+    dimerPartner2[holeVertex1] = -2;  // -2 = hole (permanently unmatched)
+    dimerPartner2[holeVertex2] = -2;
+
+    // Unmatch their former partners (they are now "dangling")
+    if (p1 >= 0) dimerPartner2[p1] = -1;
+    if (p2 >= 0) dimerPartner2[p2] = -1;
+
+    // If p1 == p2, both holes were matched to the same vertex (shouldn't happen in valid matching)
+    // If p1 or p2 is a hole vertex, we have overlapping holes
+    if (p1 == p2 || p1 == holeVertex2 || p2 == holeVertex1) {
+        // Edge case: holes are neighbors or same - just leave as is
+        return;
+    }
+
+    // Now find an augmenting path from p1 to p2 and flip it to repair the matching
+    // This leaves only the two hole vertices unmatched
+    if (p1 >= 0 && p2 >= 0) {
+        std::vector<int> parent;
+        if (findAugmentingPath2(p1, parent)) {
+            // Trace back from p2 if it was reached
+            if (parent[p2] != -1 || p1 == p2) {
+                augmentPath2(p2, parent);
+            }
+        }
+    }
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -1524,6 +1666,297 @@ void clearDimers2() {
     dimerPartner2.clear();
     totalSteps2 = 0;
     flipCount2 = 0;
+}
+
+// Set hole vertices by coordinates (n, j) and reinit config2
+EMSCRIPTEN_KEEPALIVE
+void setHolesInConfig2(int n1, int j1, int n2, int j2) {
+    // Look up vertex indices
+    holeVertex1 = getVertexFromGrid(n1, j1);
+    holeVertex2 = getVertexFromGrid(n2, j2);
+
+    // Reinitialize config2 with the holes
+    resetDimers2();
+}
+
+// Clear holes and reinit config2
+EMSCRIPTEN_KEEPALIVE
+void clearHolesInConfig2() {
+    holeVertex1 = -1;
+    holeVertex2 = -1;
+    resetDimers2();
+}
+
+// Get hole vertex indices (for debugging/display)
+EMSCRIPTEN_KEEPALIVE
+int getHole1() {
+    return holeVertex1;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int getHole2() {
+    return holeVertex2;
+}
+
+// Get the path between two holes as XOR edges (alternating config1/config2)
+// Returns edges as "n1,j1,n2,j2;..." format
+EMSCRIPTEN_KEEPALIVE
+const char* getHolePath() {
+    static std::string result;
+    result.clear();
+
+    if (holeVertex1 < 0 || holeVertex2 < 0) return result.c_str();
+    if (dimerPartner.empty() || dimerPartner2.empty()) return result.c_str();
+
+    // Build XOR edge set: edges in config1 XOR config2
+    // For each vertex, track which config(s) it's matched in
+    std::unordered_set<long long> xorEdges;  // edges that differ
+
+    auto makeKey = [](int a, int b) -> long long {
+        if (a > b) std::swap(a, b);
+        return ((long long)a << 20) | b;
+    };
+
+    // Add config1 edges
+    std::unordered_set<long long> config1Edges;
+    for (size_t i = 0; i < vertices.size(); i++) {
+        int p = dimerPartner[i];
+        if (p > (int)i) {
+            config1Edges.insert(makeKey(i, p));
+        }
+    }
+
+    // Add config2 edges, tracking XOR
+    for (size_t i = 0; i < vertices.size(); i++) {
+        int p = dimerPartner2[i];
+        if (p > (int)i && p >= 0) {  // Skip holes (-2)
+            long long key = makeKey(i, p);
+            if (config1Edges.count(key)) {
+                // Edge in both configs - not in XOR
+                config1Edges.erase(key);
+            } else {
+                // Edge only in config2
+                xorEdges.insert(key);
+            }
+        }
+    }
+    // Remaining config1 edges are only in config1
+    for (long long key : config1Edges) {
+        xorEdges.insert(key);
+    }
+
+    // Build adjacency for XOR subgraph
+    std::unordered_map<int, std::vector<int>> xorAdj;
+    for (long long key : xorEdges) {
+        int a = key >> 20;
+        int b = key & 0xFFFFF;
+        xorAdj[a].push_back(b);
+        xorAdj[b].push_back(a);
+    }
+
+    // Iterative path tracing (avoids stack overflow for long paths)
+    std::vector<int> path;
+    std::unordered_set<int> visited;
+
+    path.push_back(holeVertex1);
+    visited.insert(holeVertex1);
+
+    bool found = false;
+    while (!path.empty()) {
+        int current = path.back();
+        if (current == holeVertex2) {
+            found = true;
+            break;
+        }
+
+        int nextVertex = -1;
+        for (int neighbor : xorAdj[current]) {
+            if (!visited.count(neighbor)) {
+                nextVertex = neighbor;
+                break;
+            }
+        }
+
+        if (nextVertex >= 0) {
+            path.push_back(nextVertex);
+            visited.insert(nextVertex);
+        } else {
+            path.pop_back();
+        }
+    }
+
+    if (!found) {
+        return result.c_str();  // No path found
+    }
+
+    // Convert path to edge list
+    for (size_t i = 0; i + 1 < path.size(); i++) {
+        int v1 = path[i];
+        int v2 = path[i + 1];
+        if (!result.empty()) result += ";";
+        result += std::to_string(vertices[v1].n) + "," + std::to_string(vertices[v1].j);
+        result += ",";
+        result += std::to_string(vertices[v2].n) + "," + std::to_string(vertices[v2].j);
+    }
+
+    return result.c_str();
+}
+
+// Compute fractal dimension of hole path using box counting
+EMSCRIPTEN_KEEPALIVE
+double computeHolePathFractalDimension() {
+    if (holeVertex1 < 0 || holeVertex2 < 0) return -1.0;
+    if (dimerPartner.empty() || dimerPartner2.empty()) return -1.0;
+
+    // Build the hole path (same logic as getHolePath)
+    std::unordered_set<long long> xorEdges;
+    auto makeKey = [](int a, int b) -> long long {
+        if (a > b) std::swap(a, b);
+        return ((long long)a << 20) | b;
+    };
+
+    std::unordered_set<long long> config1Edges;
+    for (size_t i = 0; i < vertices.size(); i++) {
+        int p = dimerPartner[i];
+        if (p > (int)i) config1Edges.insert(makeKey(i, p));
+    }
+
+    for (size_t i = 0; i < vertices.size(); i++) {
+        int p = dimerPartner2[i];
+        if (p > (int)i && p >= 0) {
+            long long key = makeKey(i, p);
+            if (config1Edges.count(key)) {
+                config1Edges.erase(key);
+            } else {
+                xorEdges.insert(key);
+            }
+        }
+    }
+    for (long long key : config1Edges) xorEdges.insert(key);
+
+    // Build adjacency and trace path
+    std::unordered_map<int, std::vector<int>> xorAdj;
+    for (long long key : xorEdges) {
+        int a = key >> 20;
+        int b = key & 0xFFFFF;
+        xorAdj[a].push_back(b);
+        xorAdj[b].push_back(a);
+    }
+
+    // Iterative path tracing (avoids stack overflow for long paths)
+    // The XOR between a perfect matching and a near-perfect matching with 2 holes
+    // forms a single path connecting the holes, so we can just walk along it
+    std::vector<int> path;
+    std::unordered_set<int> visited;
+
+    path.push_back(holeVertex1);
+    visited.insert(holeVertex1);
+
+    bool found = false;
+    while (!path.empty()) {
+        int current = path.back();
+        if (current == holeVertex2) {
+            found = true;
+            break;
+        }
+
+        // Find an unvisited neighbor
+        int nextVertex = -1;
+        for (int neighbor : xorAdj[current]) {
+            if (!visited.count(neighbor)) {
+                nextVertex = neighbor;
+                break;
+            }
+        }
+
+        if (nextVertex >= 0) {
+            path.push_back(nextVertex);
+            visited.insert(nextVertex);
+        } else {
+            // Dead end - backtrack
+            path.pop_back();
+        }
+    }
+
+    if (!found || path.size() < 4) return -1.0;
+
+    // Convert path to edges in Cartesian coordinates
+    std::vector<std::array<double, 4>> cartEdges;  // x1, y1, x2, y2
+    for (size_t i = 0; i + 1 < path.size(); i++) {
+        double x1, y1, x2, y2;
+        latticeToCartesian(vertices[path[i]].n, vertices[path[i]].j, x1, y1);
+        latticeToCartesian(vertices[path[i+1]].n, vertices[path[i+1]].j, x2, y2);
+        cartEdges.push_back({x1, y1, x2, y2});
+    }
+
+    // Find bounding box
+    double minX = cartEdges[0][0], maxX = cartEdges[0][0];
+    double minY = cartEdges[0][1], maxY = cartEdges[0][1];
+    for (const auto& e : cartEdges) {
+        minX = std::min({minX, e[0], e[2]});
+        maxX = std::max({maxX, e[0], e[2]});
+        minY = std::min({minY, e[1], e[3]});
+        maxY = std::max({maxY, e[1], e[3]});
+    }
+
+    double width = maxX - minX;
+    double height = maxY - minY;
+    double maxDim = std::max(width, height);
+    if (maxDim < 1e-6) return -1.0;
+
+    // Box counting at multiple scales
+    std::vector<double> logEpsilon;
+    std::vector<double> logN;
+
+    for (int scale = 1; scale <= 6; scale++) {
+        double boxSize = maxDim / (1 << scale);
+        if (boxSize < 0.1) break;
+
+        std::unordered_set<long long> occupiedBoxes;
+
+        for (const auto& edge : cartEdges) {
+            int numSamples = std::max(2, (int)(std::sqrt((edge[2]-edge[0])*(edge[2]-edge[0]) +
+                                                          (edge[3]-edge[1])*(edge[3]-edge[1])) / boxSize * 2));
+            for (int s = 0; s <= numSamples; s++) {
+                double t = (double)s / numSamples;
+                double px = edge[0] + t * (edge[2] - edge[0]);
+                double py = edge[1] + t * (edge[3] - edge[1]);
+                long long bx = (long long)((px - minX) / boxSize);
+                long long by = (long long)((py - minY) / boxSize);
+                occupiedBoxes.insert((bx << 20) | by);
+            }
+        }
+
+        if (occupiedBoxes.size() > 0) {
+            logEpsilon.push_back(std::log(boxSize));
+            logN.push_back(std::log((double)occupiedBoxes.size()));
+        }
+    }
+
+    if (logEpsilon.size() < 3) return -1.0;
+
+    // Linear regression
+    int n = logEpsilon.size();
+    double sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+    for (int i = 0; i < n; i++) {
+        sumX += logEpsilon[i];
+        sumY += logN[i];
+        sumXY += logEpsilon[i] * logN[i];
+        sumXX += logEpsilon[i] * logEpsilon[i];
+    }
+
+    double slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+    return -slope;
+}
+
+// Sample hole path fractal dimension (adds to fractalSamples)
+EMSCRIPTEN_KEEPALIVE
+double sampleHolePathFractalDimension() {
+    double dim = computeHolePathFractalDimension();
+    if (dim > 0) {
+        fractalSamples.push_back(dim);
+    }
+    return dim;
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -1885,12 +2318,6 @@ int getLoopCount() {
 // ============================================================================
 // FRACTAL DIMENSION COMPUTATION
 // ============================================================================
-
-// Convert lattice coordinates to Cartesian for distance calculations
-inline void latticeToCartesian(double n, double j, double& x, double& y) {
-    x = n + 0.5 * j;
-    y = j * 0.8660254037844386;  // sqrt(3)/2
-}
 
 // Compute squared distance from point (px, py) to line segment (x1,y1)-(x2,y2)
 inline double pointToSegmentDistSq(double px, double py, double x1, double y1, double x2, double y2) {

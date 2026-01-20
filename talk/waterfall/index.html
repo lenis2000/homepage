@@ -1019,21 +1019,17 @@ window.addEventListener('wasm-loaded', async function() {
             <canvas id="grid-demo-canvas" width="400" height="400" style="width: 30vw; height: 30vw; max-width: 350px; max-height: 350px; margin-bottom: 2vh;"></canvas>
             <p style="font-size: clamp(1.2rem, 2.2vw, 1.8rem);">Start at (0, 0), end at (a, b)</p>
             <p style="font-size: clamp(1.2rem, 2.2vw, 1.8rem);">Move only right (R) or up (U)</p>
-            <p style="margin-top: 2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">How many paths exist?</p>
-            <div id="grid-paths-answer" style="margin-top: 3vh; opacity: 0; transition: opacity 0.3s;">
+            <div id="grid-paths-answer" style="margin-top: 2vh;">
                 <p style="font-size: clamp(1.5rem, 2.5vw, 2rem); color: var(--uva-orange);">
-                    \(\displaystyle\binom{a+b}{a} = \frac{(a+b)!}{a!\, b!}\)
-                </p>
-                <p style="font-size: clamp(1rem, 1.8vw, 1.4rem); color: var(--slide-muted); margin-top: 1vh;">
-                    \(n! = n \times (n-1) \times \cdots \times 2 \times 1\)
+                    \(\displaystyle\binom{a+b}{a} = \frac{(a+b)!}{a!\, b!}\) paths
                 </p>
             </div>
         </div>
-        <!-- Right column: simulation -->
-        <div id="grid-paths-sim" style="opacity: 0; transition: opacity 0.3s;">
+        <!-- Right column: simulation (always visible) -->
+        <div id="grid-paths-sim">
             <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1vh;">
-                <label style="font-size: clamp(0.9rem, 1.5vw, 1.1rem);">a = <input type="number" id="path-a" value="2" min="1" max="7" style="width: 3rem; font-size: 1rem;"></label>
-                <label style="font-size: clamp(0.9rem, 1.5vw, 1.1rem);">b = <input type="number" id="path-b" value="2" min="1" max="7" style="width: 3rem; font-size: 1rem;"></label>
+                <label style="font-size: clamp(0.9rem, 1.5vw, 1.1rem);">a = <input type="number" id="path-a" value="4" min="1" max="7" style="width: 3rem; font-size: 1rem;"></label>
+                <label style="font-size: clamp(0.9rem, 1.5vw, 1.1rem);">b = <input type="number" id="path-b" value="3" min="1" max="7" style="width: 3rem; font-size: 1rem;"></label>
                 <span id="path-count" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--uva-orange); margin-left: 1rem;"></span>
             </div>
             <canvas id="paths-canvas" width="700" height="500" style="width: 100%; height: auto;"></canvas>
@@ -1049,8 +1045,6 @@ window.addEventListener('wasm-loaded', async function() {
     const inputA = document.getElementById('path-a');
     const inputB = document.getElementById('path-b');
     const countSpan = document.getElementById('path-count');
-    const simDiv = document.getElementById('grid-paths-sim');
-    const answerDiv = document.getElementById('grid-paths-answer');
 
     // Draw grid demo in left column
     const gridCanvas = document.getElementById('grid-demo-canvas');
@@ -1219,7 +1213,8 @@ window.addEventListener('wasm-loaded', async function() {
     // Initial draw
     drawPaths();
 
-    // Register with slideEngine for step-based reveal
+    // No steps needed - everything visible on load
+    // Register with slideEngine just for slide enter/leave hooks
     function waitForSlideEngine() {
         if (!window.slideEngine) {
             setTimeout(waitForSlideEngine, 50);
@@ -1228,93 +1223,81 @@ window.addEventListener('wasm-loaded', async function() {
         window.slideEngine.registerSimulation('grid-paths', {
             start() {},
             pause() {},
-            steps: 3,
-            onStep(step) {
-                simDiv.style.opacity = '1';
-                if (step === 1) {
-                    inputA.value = 2;
-                    inputB.value = 2;
-                    drawPaths();
-                } else if (step === 2) {
-                    inputA.value = 4;
-                    inputB.value = 3;
-                    drawPaths();
-                } else if (step === 3) {
-                    answerDiv.style.opacity = '1';
-                }
-            },
-            onStepBack(step) {
-                // Mirror forward steps exactly
-                answerDiv.style.opacity = '0';
-                if (step === 0) {
-                    simDiv.style.opacity = '0';
-                } else {
-                    simDiv.style.opacity = '1';
-                    if (step === 1) {
-                        inputA.value = 2;
-                        inputB.value = 2;
-                        drawPaths();
-                    } else if (step === 2) {
-                        inputA.value = 4;
-                        inputB.value = 3;
-                        drawPaths();
-                    }
-                }
-            },
             onSlideEnter() {
-                simDiv.style.opacity = '0';
-                answerDiv.style.opacity = '0';
-                inputA.value = 2;
-                inputB.value = 2;
+                inputA.value = 4;
+                inputB.value = 3;
                 drawPaths();
             }
-        }, 1);
+        }, 0);
     }
     waitForSlideEngine();
 })();
 </script>
 
-<section class="slide slide-center" id="random-path" data-title="Random Path">
-    <h2 class="slide-title">Pick one path at random</h2>
+<section class="slide slide-top" id="random-path" data-title="Local Bernoulli">
+    <h2 class="slide-title">Random path: local structure</h2>
 
-    <p style="font-size: clamp(1.8rem, 3.5vw, 2.8rem); margin-top: 2vh;">
-        <span id="random-path-text1">Pick one path at random from \(\displaystyle\binom{a+b}{a}\) possible ones.</span>
-        <span id="random-path-question" style="color: var(--slide-accent);"> How does it look like?</span>
-    </p>
-
-    <div id="random-path-sim" style="opacity: 0; transition: opacity 0.3s; margin-top: 2vh; display: flex; flex-direction: column; align-items: center;">
-        <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 1vh;">
-            <span id="random-path-formula"></span>
+    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
+        <!-- Left: Full path with highlighted region -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 0.5vh;">
+                Random path in <span id="random-path-size">100 × 60</span> grid <span style="color: var(--slide-muted);">(click to resample)</span>
+            </div>
+            <canvas id="random-path-canvas" width="1000" height="600" style="height: 42vh; width: auto; cursor: pointer;"></canvas>
         </div>
-        <canvas id="random-path-canvas" width="1200" height="900" style="height: 65vh; width: auto;"></canvas>
+        <!-- Right: Enlarged local view OR Brownian bridge -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div id="local-view-container">
+                <div id="local-view-title" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 0.5vh; opacity: 0; transition: opacity 0.3s;">
+                    Zoomed in: local segment
+                </div>
+                <canvas id="local-view-canvas" width="600" height="500" style="height: 35vh; width: auto; opacity: 0; transition: opacity 0.3s;"></canvas>
+            </div>
+            <div id="brownian-container" style="opacity: 0; transition: opacity 0.3s; display: flex; flex-direction: column; align-items: center;">
+                <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 0.5vh;">
+                    Fluctuations → Brownian bridge
+                </div>
+                <canvas id="brownian-bridge-canvas" width="600" height="300" style="height: 20vh; width: auto; border: 1px solid #ccc;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bernoulli explanation -->
+    <div id="bernoulli-explanation" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left; margin-top: 2vh; opacity: 0; transition: opacity 0.3s;">
+        <strong style="color: var(--slide-accent);">Local structure is Bernoulli:</strong>
+        At each step, choose <span style="color: #E57200; font-weight: bold;">R</span> with prob. \(\frac{a}{a+b}\), <span style="color: #232D4B; font-weight: bold;">U</span> with prob. \(\frac{b}{a+b}\) — independent trials!
+    </div>
+
+    <!-- Global observation -->
+    <div id="global-observation" style="background: #f5f5f5; border-left: 4px solid #232D4B; padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left; margin-top: 1vh; opacity: 0; transition: opacity 0.3s;">
+        <strong style="color: #232D4B;">Globally:</strong>
+        Path follows the diagonal (LLN). Fluctuations converge to <strong>Brownian bridge</strong>.
     </div>
 </section>
+
 <script>
 (function() {
-    const text1 = document.getElementById('random-path-text1');
-    const question = document.getElementById('random-path-question');
-    const simDiv = document.getElementById('random-path-sim');
+    'use strict';
+
     const canvas = document.getElementById('random-path-canvas');
     const ctx = canvas.getContext('2d');
-    const formulaSpan = document.getElementById('random-path-formula');
+    const localCanvas = document.getElementById('local-view-canvas');
+    const localCtx = localCanvas.getContext('2d');
+    const bridgeCanvas = document.getElementById('brownian-bridge-canvas');
+    const bridgeCtx = bridgeCanvas.getContext('2d');
+    const sizeSpan = document.getElementById('random-path-size');
+    const localTitle = document.getElementById('local-view-title');
+    const localViewContainer = document.getElementById('local-view-container');
+    const brownianContainer = document.getElementById('brownian-container');
+    const bernoulliEl = document.getElementById('bernoulli-explanation');
+    const globalEl = document.getElementById('global-observation');
 
-    let currentA = 4;
-    let currentB = 3;
+    const A = 100, B = 60;  // Grid size
     let currentPath = null;
-    let showPath = true;
-
-    function binomial(n, k) {
-        if (k > n) return 0;
-        if (k === 0 || k === n) return 1;
-        let result = 1;
-        for (let i = 0; i < k; i++) {
-            result = result * (n - i) / (i + 1);
-        }
-        return Math.round(result);
-    }
+    let highlightLen = 16;     // Length of highlighted region
+    let highlightStart = Math.floor((A + B) / 2 - highlightLen / 2);  // Always middle
 
     function generateRandomPath(a, b) {
-        // Generate a random path: a R's and b U's
         const moves = [];
         let remainingR = a;
         let remainingU = b;
@@ -1326,7 +1309,6 @@ window.addEventListener('wasm-loaded', async function() {
                 moves.push('R');
                 remainingR--;
             } else {
-                // Choose R with probability remainingR / (remainingR + remainingU)
                 if (Math.random() < remainingR / (remainingR + remainingU)) {
                     moves.push('R');
                     remainingR--;
@@ -1339,79 +1321,41 @@ window.addEventListener('wasm-loaded', async function() {
         return moves;
     }
 
-    function updateDisplay() {
-        const n = currentA + currentB;
-        const count = binomial(n, currentA);
-        // Use KaTeX for rendering
-        formulaSpan.innerHTML = `\\(a = ${currentA},\\; b = ${currentB} \\quad \\displaystyle\\binom{${n}}{${currentA}} =\\) <strong style="color: var(--slide-accent);">${count.toLocaleString()}</strong> paths`;
-        if (window.renderMathInElement) {
-            renderMathInElement(formulaSpan, {
-                delimiters: [
-                    {left: "\\(", right: "\\)", display: false},
-                    {left: "$$", right: "$$", display: true}
-                ]
-            });
-        }
-    }
-
-    function drawPath() {
-        const a = currentA;
-        const b = currentB;
-
+    function drawMainPath(showHighlight = false) {
+        const w = canvas.width, h = canvas.height;
         ctx.fillStyle = '#fff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, w, h);
 
-        if (!showPath) {
-            // For large a,b, just show a big sad face
-            ctx.font = `${Math.round(canvas.height * 0.6)}px sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('😢', canvas.width / 2, canvas.height / 2);
-            return;
+        if (!currentPath) {
+            currentPath = generateRandomPath(A, B);
         }
 
-        // Generate random path if needed
-        if (!currentPath || currentPath.length !== a + b) {
-            currentPath = generateRandomPath(a, b);
-        }
-
-        const padding = 80;
-        const gridW = canvas.width - 2 * padding;
-        const gridH = canvas.height - 2 * padding;
-        const stepX = gridW / a;
-        const stepY = gridH / b;
+        const padding = 50;
+        const gridW = w - 2 * padding;
+        const gridH = h - 2 * padding;
+        const stepX = gridW / A;
+        const stepY = gridH / B;
         const baseX = padding;
         const baseY = padding;
 
-        // Draw grid lines
-        ctx.strokeStyle = '#999';
+        // Draw bounding box
+        ctx.strokeStyle = '#232D4B';
         ctx.lineWidth = 2;
-        for (let i = 0; i <= a; i++) {
-            ctx.beginPath();
-            ctx.moveTo(baseX + i * stepX, baseY);
-            ctx.lineTo(baseX + i * stepX, baseY + gridH);
-            ctx.stroke();
-        }
-        for (let j = 0; j <= b; j++) {
-            ctx.beginPath();
-            ctx.moveTo(baseX, baseY + gridH - j * stepY);
-            ctx.lineTo(baseX + gridW, baseY + gridH - j * stepY);
-            ctx.stroke();
-        }
+        ctx.strokeRect(baseX, baseY, gridW, gridH);
 
-        // Draw grid dots
-        ctx.fillStyle = '#232D4B';
-        for (let i = 0; i <= a; i++) {
-            for (let j = 0; j <= b; j++) {
-                ctx.beginPath();
-                ctx.arc(baseX + i * stepX, baseY + gridH - j * stepY, 5, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
+        // Draw diagonal (limit shape)
+        ctx.strokeStyle = '#232D4B';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 4]);
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY + gridH);
+        ctx.lineTo(baseX + gridW, baseY);
+        ctx.stroke();
+        ctx.setLineDash([]);
 
         // Draw path
         ctx.strokeStyle = '#E57200';
-        ctx.lineWidth = 16;
+        ctx.lineWidth = 4;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -1424,34 +1368,252 @@ window.addEventListener('wasm-loaded', async function() {
         }
         ctx.stroke();
 
-        // Label endpoints
+        // Draw highlighted region box if enabled
+        if (showHighlight) {
+            // Find coordinates at start and end of highlight region
+            let hx = 0, hy = 0;
+            for (let i = 0; i < highlightStart; i++) {
+                if (currentPath[i] === 'R') hx++;
+                else hy++;
+            }
+            const startX = hx, startY = hy;
+            for (let i = highlightStart; i < highlightStart + highlightLen && i < currentPath.length; i++) {
+                if (currentPath[i] === 'R') hx++;
+                else hy++;
+            }
+            const endX = hx, endY = hy;
+
+            // Draw orange box around highlighted region
+            const boxPad = 8;
+            const boxX1 = baseX + startX * stepX - boxPad;
+            const boxY1 = baseY + gridH - endY * stepY - boxPad;
+            const boxX2 = baseX + endX * stepX + boxPad;
+            const boxY2 = baseY + gridH - startY * stepY + boxPad;
+
+            ctx.strokeStyle = '#E57200';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([]);
+            ctx.strokeRect(boxX1, boxY1, boxX2 - boxX1, boxY2 - boxY1);
+
+            // Draw the highlighted segment thicker
+            ctx.strokeStyle = '#E57200';
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            let sx = 0, sy = 0;
+            for (let i = 0; i < highlightStart; i++) {
+                if (currentPath[i] === 'R') sx++;
+                else sy++;
+            }
+            ctx.moveTo(baseX + sx * stepX, baseY + gridH - sy * stepY);
+            for (let i = highlightStart; i < highlightStart + highlightLen && i < currentPath.length; i++) {
+                if (currentPath[i] === 'R') sx++;
+                else sy++;
+                ctx.lineTo(baseX + sx * stepX, baseY + gridH - sy * stepY);
+            }
+            ctx.stroke();
+        }
+
+        // Labels
         ctx.fillStyle = '#232D4B';
-        ctx.font = `bold ${Math.round(canvas.height * 0.031)}px sans-serif`;
-        ctx.textAlign = 'center';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
-        ctx.fillText('(0,0)', baseX, baseY + gridH + Math.round(canvas.height * 0.011));
+        ctx.fillText('(0,0)', baseX, baseY + gridH + 5);
+        ctx.textAlign = 'right';
         ctx.textBaseline = 'bottom';
-        ctx.fillText('(' + a + ',' + b + ')', baseX + gridW, baseY - Math.round(canvas.height * 0.011));
+        ctx.fillText(`(${A},${B})`, baseX + gridW, baseY - 5);
     }
 
-    function setParams(a, b, draw = true) {
-        currentA = a;
-        currentB = b;
-        showPath = (a <= 15 && b <= 15);
-        currentPath = null;
-        updateDisplay();
-        if (draw) drawPath();
+    function drawLocalView() {
+        const w = localCanvas.width, h = localCanvas.height;
+        localCtx.fillStyle = '#fff';
+        localCtx.fillRect(0, 0, w, h);
+
+        if (!currentPath) return;
+
+        // Extract the highlighted segment
+        const segment = currentPath.slice(highlightStart, highlightStart + highlightLen);
+        const segLen = segment.length;
+        if (segLen === 0) return;
+
+        const padding = 80;
+        const availW = w - 2 * padding;
+        const availH = h - 2 * padding - 50;
+
+        // Count R's and U's in segment
+        let segR = 0, segU = 0;
+        for (const m of segment) {
+            if (m === 'R') segR++;
+            else segU++;
+        }
+        if (segR === 0) segR = 1;
+        if (segU === 0) segU = 1;
+
+        // Use same step size for both directions (square grid cells)
+        const step = Math.min(availW / segR, availH / segU);
+        const gridW = segR * step;
+        const gridH = segU * step;
+        const baseX = padding + (availW - gridW) / 2;
+        const baseY = padding + availH - (availH - gridH) / 2;
+
+        // Draw grid
+        localCtx.strokeStyle = '#ddd';
+        localCtx.lineWidth = 1;
+        for (let i = 0; i <= segR; i++) {
+            localCtx.beginPath();
+            localCtx.moveTo(baseX + i * step, baseY - gridH);
+            localCtx.lineTo(baseX + i * step, baseY);
+            localCtx.stroke();
+        }
+        for (let j = 0; j <= segU; j++) {
+            localCtx.beginPath();
+            localCtx.moveTo(baseX, baseY - j * step);
+            localCtx.lineTo(baseX + gridW, baseY - j * step);
+            localCtx.stroke();
+        }
+
+        // Draw path segments - track x,y in grid coordinates
+        let x = 0, y = 0;
+
+        for (let i = 0; i < segment.length; i++) {
+            const move = segment[i];
+            const fromPx = baseX + x * step;
+            const fromPy = baseY - y * step;
+
+            if (move === 'R') {
+                // Draw R segment in orange (horizontal)
+                localCtx.strokeStyle = '#E57200';
+                localCtx.lineWidth = 6;
+                localCtx.beginPath();
+                localCtx.moveTo(fromPx, fromPy);
+                localCtx.lineTo(fromPx + step, fromPy);
+                localCtx.stroke();
+                x++;
+            } else {
+                // Draw U segment in navy (vertical)
+                localCtx.strokeStyle = '#232D4B';
+                localCtx.lineWidth = 6;
+                localCtx.beginPath();
+                localCtx.moveTo(fromPx, fromPy);
+                localCtx.lineTo(fromPx, fromPy - step);
+                localCtx.stroke();
+                y++;
+            }
+        }
+
+        // Draw dots at vertices
+        localCtx.fillStyle = '#232D4B';
+        x = 0; y = 0;
+        localCtx.beginPath();
+        localCtx.arc(baseX, baseY, 5, 0, Math.PI * 2);
+        localCtx.fill();
+        for (const move of segment) {
+            if (move === 'R') x++;
+            else y++;
+            localCtx.beginPath();
+            localCtx.arc(baseX + x * step, baseY - y * step, 5, 0, Math.PI * 2);
+            localCtx.fill();
+        }
+
+        // Draw annotation
+        localCtx.fillStyle = '#666';
+        localCtx.font = '18px sans-serif';
+        localCtx.textAlign = 'center';
+        localCtx.textBaseline = 'top';
+        localCtx.fillText('Each step: independent Bernoulli trial', w / 2, baseY + 20);
+    }
+
+    function drawBrownianBridge() {
+        if (!currentPath) return;
+
+        const w = bridgeCanvas.width, h = bridgeCanvas.height;
+        bridgeCtx.fillStyle = '#fff';
+        bridgeCtx.fillRect(0, 0, w, h);
+
+        const padding = 30;
+        const drawW = w - 2 * padding;
+        const drawH = h - 2 * padding;
+
+        // Compute fluctuations: y - (B/A)*x at each point
+        const points = [];
+        let x = 0, y = 0;
+        points.push({ x: 0, y: 0, diff: 0 });
+        for (const move of currentPath) {
+            if (move === 'R') x++;
+            else y++;
+            const expectedY = (B / A) * x;
+            points.push({ x, y, diff: y - expectedY });
+        }
+
+        const maxDiff = Math.max(...points.map(p => Math.abs(p.diff)), 3);
+
+        // Draw zero line
+        const zeroY = padding + drawH / 2;
+        bridgeCtx.strokeStyle = '#ccc';
+        bridgeCtx.lineWidth = 1;
+        bridgeCtx.beginPath();
+        bridgeCtx.moveTo(padding, zeroY);
+        bridgeCtx.lineTo(padding + drawW, zeroY);
+        bridgeCtx.stroke();
+
+        // Draw fluctuation curve
+        bridgeCtx.strokeStyle = '#E57200';
+        bridgeCtx.lineWidth = 3;
+        bridgeCtx.beginPath();
+        for (let i = 0; i < points.length; i++) {
+            const px = padding + (points[i].x / A) * drawW;
+            const py = zeroY - (points[i].diff / maxDiff) * (drawH / 2) * 0.9;
+            if (i === 0) bridgeCtx.moveTo(px, py);
+            else bridgeCtx.lineTo(px, py);
+        }
+        bridgeCtx.stroke();
+
+        // Label
+        bridgeCtx.fillStyle = '#232D4B';
+        bridgeCtx.font = '16px sans-serif';
+        bridgeCtx.textAlign = 'center';
+        bridgeCtx.fillText('path − diagonal', w / 2, h - 8);
+    }
+
+    function resample() {
+        currentPath = generateRandomPath(A, B);
+        // Keep highlight in the middle
     }
 
     // Click to resample
     canvas.addEventListener('click', () => {
-        if (showPath) {
-            currentPath = generateRandomPath(currentA, currentB);
-            drawPath();
-        }
+        resample();
+        drawAll();
     });
 
-    // Register with slideEngine for step-based reveal
+    let currentStep = 0;
+
+    function drawAll() {
+        // Show highlight box only on step 3+
+        const showHighlight = currentStep >= 3;
+        drawMainPath(showHighlight);
+        if (currentStep >= 3) {
+            drawLocalView();
+        }
+        if (currentStep >= 5) {
+            drawBrownianBridge();
+        }
+    }
+
+    function reset() {
+        currentStep = 0;
+        currentPath = null;
+        localCanvas.style.opacity = '0';
+        localTitle.style.opacity = '0';
+        brownianContainer.style.opacity = '0';
+        bernoulliEl.style.opacity = '0';
+        globalEl.style.opacity = '0';
+        resample();
+        drawMainPath(false);
+    }
+
+    // Register with slideEngine
+    // Steps: 0=initial, 1=resample, 2=resample, 3=show zoom+resample, 4=resample w/zoom, 5=Bernoulli, 6=global+bridge
     function waitForSlideEngine() {
         if (!window.slideEngine) {
             setTimeout(waitForSlideEngine, 50);
@@ -1460,658 +1622,66 @@ window.addEventListener('wasm-loaded', async function() {
         window.slideEngine.registerSimulation('random-path', {
             start() {},
             pause() {},
-            steps: 5,
+            steps: 6,
             onStep(step) {
-                simDiv.style.opacity = '1';
-                if (step === 1) {
-                    setParams(4, 3);
-                } else if (step === 2) {
-                    setParams(12, 9);
-                } else if (step === 3 || step === 4) {
-                    // Resample - setParams ensures grid size is correct
-                    setParams(12, 9);
+                currentStep = step;
+                if (step === 1 || step === 2) {
+                    // Resample without zoom
+                    resample();
+                    drawMainPath(false);
+                } else if (step === 3) {
+                    // Show zoom inset + resample
+                    resample();
+                    localCanvas.style.opacity = '1';
+                    localTitle.style.opacity = '1';
+                    drawAll();
+                } else if (step === 4) {
+                    // Resample with zoom showing
+                    resample();
+                    drawAll();
                 } else if (step === 5) {
-                    setParams(120, 90);
+                    // Show Bernoulli explanation
+                    bernoulliEl.style.opacity = '1';
+                    drawAll();
+                } else if (step === 6) {
+                    // Show global observation + Brownian bridge
+                    globalEl.style.opacity = '1';
+                    brownianContainer.style.opacity = '1';
+                    drawAll();
                 }
             },
             onStepBack(step) {
-                // Each step must fully set state and redraw
-                if (step === 0) {
-                    simDiv.style.opacity = '0';
-                } else {
-                    simDiv.style.opacity = '1';
-                    if (step === 1) {
-                        setParams(4, 3);  // 4x3 grid with new random path
-                    } else if (step === 2 || step === 3 || step === 4) {
-                        // All these steps show 12x9 grid - setParams handles everything
-                        setParams(12, 9);
-                    }
+                currentStep = step;
+                if (step === 0 || step === 1 || step === 2) {
+                    // Hide zoom panel
+                    localCanvas.style.opacity = '0';
+                    localTitle.style.opacity = '0';
+                    bernoulliEl.style.opacity = '0';
+                    globalEl.style.opacity = '0';
+                    brownianContainer.style.opacity = '0';
+                    resample();
+                    drawMainPath(false);
+                } else if (step === 3 || step === 4) {
+                    bernoulliEl.style.opacity = '0';
+                    globalEl.style.opacity = '0';
+                    brownianContainer.style.opacity = '0';
+                    resample();
+                    drawAll();
+                } else if (step === 5) {
+                    globalEl.style.opacity = '0';
+                    brownianContainer.style.opacity = '0';
+                    drawAll();
                 }
             },
             onSlideEnter() {
-                simDiv.style.opacity = '0';
-                // Reset to initial state
-                currentA = 4;
-                currentB = 3;
-                currentPath = null;
-                showPath = true;
+                reset();
             },
             onSlideLeave() {
-                simDiv.style.opacity = '0';
-                currentA = 4;
-                currentB = 3;
-                currentPath = null;
-                showPath = true;
+                reset();
             }
-        }, 1);
+        }, 0);
     }
     waitForSlideEngine();
-})();
-</script>
-
-<section class="slide slide-center" id="limit-shape-2d" data-title="Limit Shape">
-    <h2 class="slide-title">Limit shape and fluctuations</h2>
-
-    <p style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-top: 1vh;">
-        Sample a <strong style="color: var(--slide-accent);">uniformly random path</strong> in a large box: <span id="limit-shape-formula" style="display: inline;"></span>
-    </p>
-
-    <div style="margin-top: 1vh; display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; align-items: start; width: 95%;">
-        <!-- Left: Path overlay -->
-        <div style="display: flex; flex-direction: column; align-items: center;">
-            <canvas id="limit-shape-canvas" width="1200" height="700" style="height: 45vh; width: auto;"></canvas>
-            <div id="limit-shape-status" style="margin-top: 0.5vh; font-size: clamp(0.75rem, 1vw, 1rem); font-style: italic; color: var(--slide-muted);">Ready</div>
-        </div>
-        <!-- Right: Histogram (hidden initially) -->
-        <div id="histogram-container" style="opacity: 0; transition: opacity 0.3s; display: flex; flex-direction: column; align-items: center;">
-            <canvas id="histogram-canvas" width="800" height="700" style="height: 45vh; width: auto;"></canvas>
-            <div id="histogram-stats" style="margin-top: 0.5vh; font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted);">
-                <span id="histogram-count">0</span> samples
-            </div>
-            <!-- Mobile placeholder -->
-            <div id="histogram-mobile-placeholder" style="display: none; height: 45vh; width: 35vw; background: rgba(35, 45, 75, 0.05); border-radius: 8px; justify-content: center; align-items: center; text-align: center; padding: 2vw;">
-                <p style="font-size: clamp(1rem, 1.8vw, 1.4rem); color: var(--slide-muted);">Histogram available<br>on desktop only</p>
-            </div>
-        </div>
-    </div>
-
-    <p id="limit-shape-observation" style="opacity: 0; transition: opacity 0.3s; font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-top: 1vh;">
-        The path follows the <strong style="color: #232D4B;">diagonal</strong> — this is the <strong>Law of Large Numbers</strong> (Limit Shape phenomenon).
-    </p>
-
-    <p id="limit-shape-question" style="opacity: 0; transition: opacity 0.3s; font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-top: 1vh; color: var(--slide-accent);">
-        What does the histogram of the fluctuations resemble?
-    </p>
-
-    <div id="limit-shape-answer" style="opacity: 0; transition: opacity 0.3s; margin-top: 1vh; display: flex; align-items: center; gap: 2vw;">
-        <p style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); flex: 1;">
-            The distribution at the middle point has the familiar <strong>Bell-shape histogram</strong><br>(also called Gaussian / normal distribution).<br>
-            The whole random curve minus the diagonal converges to the <strong>Brownian bridge</strong>.
-        </p>
-        <div style="flex-shrink: 0;">
-            <canvas id="brownian-bridge-canvas" width="400" height="200" style="height: 15vh; width: auto; border: 1px solid #ccc;"></canvas>
-        </div>
-    </div>
-</section>
-
-<script src="/talk/visual/sim/q-partition-cftp.js"></script>
-<script src="/js/webgpu-qpartition-engine.js"></script>
-<script>
-(async function() {
-    'use strict';
-
-    // Wait for QPartitionModule to be available
-    if (typeof QPartitionModule === 'undefined') {
-        console.error('QPartitionModule not loaded');
-        return;
-    }
-
-    // Detect mobile
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-    // Initialize GPU engine if WebGPU available (skip on mobile)
-    let gpuEngine = null;
-    if (!isMobile && WebGPUQPartitionEngine.isAvailable()) {
-        try {
-            gpuEngine = new WebGPUQPartitionEngine();
-            await gpuEngine.init();
-            console.log('WebGPU engine ready');
-        } catch (e) {
-            console.warn('WebGPU init failed, using CPU fallback:', e);
-            gpuEngine = null;
-        }
-    } else {
-        console.log(isMobile ? 'Mobile: simple mode' : 'WebGPU not available, using CPU');
-    }
-
-    // Path canvas (left)
-    const canvas = document.getElementById('limit-shape-canvas');
-    const ctx = canvas.getContext('2d');
-
-    // Histogram canvas (right)
-    const histCanvas = document.getElementById('histogram-canvas');
-    const histCtx = histCanvas.getContext('2d');
-    const histContainer = document.getElementById('histogram-container');
-    const histCountEl = document.getElementById('histogram-count');
-    const histStats = document.getElementById('histogram-stats');
-    const histPlaceholder = document.getElementById('histogram-mobile-placeholder');
-
-    // On mobile: hide canvas, show placeholder
-    if (isMobile) {
-        histCanvas.style.display = 'none';
-        histStats.style.display = 'none';
-        histPlaceholder.style.display = 'flex';
-    }
-
-    // Other elements
-    const statusEl = document.getElementById('limit-shape-status');
-    const formulaEl = document.getElementById('limit-shape-formula');
-    const observationEl = document.getElementById('limit-shape-observation');
-    const questionEl = document.getElementById('limit-shape-question');
-    const answerEl = document.getElementById('limit-shape-answer');
-    const bridgeCanvas = document.getElementById('brownian-bridge-canvas');
-    const bridgeCtx = bridgeCanvas.getContext('2d');
-
-    // Fixed size: 210 x 120 (matching previous slide)
-    const N = 210;
-    const M = 120;
-    const midX = Math.floor(N / 2);  // x = 105, expected y ≈ 60
-
-    // Create isolated WASM instance
-    const wasm = await QPartitionModule();
-    const initSimulation = wasm.cwrap('initSimulation', null, ['number', 'number', 'number']);
-    const runCFTPBatch = wasm.cwrap('runCFTPBatch', 'number', []);
-    const getPartitionPath = wasm.cwrap('getPartitionPath', 'number', []);
-    const freeString = wasm.cwrap('freeString', null, ['number']);
-
-    let samples = [];      // Store full paths for overlay
-    let middleYs = [];     // Store y-values at x = N/2 for histogram
-    let isRunning = false;
-    let cachedInitialBits = null;  // Cache the initial path bits after first CFTP
-
-    function updateFormula() {
-        const count = middleYs.length;  // Use histogram sample count
-        if (count === 0) {
-            formulaEl.innerHTML = `\\(a = ${N},\\; b = ${M}\\)`;
-        } else if (count === 1) {
-            formulaEl.innerHTML = `\\(a = ${N},\\; b = ${M}\\) — <strong style="color: var(--slide-accent);">1 sample</strong>`;
-        } else {
-            formulaEl.innerHTML = `\\(a = ${N},\\; b = ${M}\\) — <strong style="color: var(--slide-accent);">${count} samples</strong>`;
-        }
-        if (window.renderMathInElement) {
-            renderMathInElement(formulaEl, {
-                delimiters: [
-                    {left: "\\(", right: "\\)", display: false},
-                    {left: "$$", right: "$$", display: true}
-                ]
-            });
-        }
-    }
-
-    function drawPathCanvas() {
-        const padding = 60;
-        const gridW = canvas.width - 2 * padding;
-        const gridH = canvas.height - 2 * padding;
-        const scaleX = gridW / N;
-        const scaleY = gridH / M;
-        const baseX = padding;
-        const baseY = padding;
-
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Draw bounding box
-        ctx.strokeStyle = '#232D4B';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(baseX, baseY, gridW, gridH);
-
-        // Draw grid dots at corners only
-        ctx.fillStyle = '#232D4B';
-        const dotRadius = 6;
-        ctx.beginPath();
-        ctx.arc(baseX, baseY + gridH, dotRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(baseX + gridW, baseY, dotRadius, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Draw diagonal (limit shape) - dashed dark blue line
-        ctx.strokeStyle = '#232D4B';
-        ctx.lineWidth = 3;
-        ctx.setLineDash([12, 6]);
-        ctx.beginPath();
-        ctx.moveTo(baseX, baseY + gridH);
-        ctx.lineTo(baseX + gridW, baseY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Draw vertical line at x = N/2 (where we measure y)
-        if (middleYs.length > 0) {
-            const midCanvasX = baseX + midX * scaleX;
-            ctx.strokeStyle = 'rgba(35, 45, 75, 0.3)';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(midCanvasX, baseY);
-            ctx.lineTo(midCanvasX, baseY + gridH);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-
-        // Draw all stored samples (oldest faded, newest bold)
-        for (let i = 0; i < samples.length; i++) {
-            const path = samples[i];
-            const isLast = (i === samples.length - 1);
-            ctx.strokeStyle = isLast ? '#E57200' : 'rgba(229, 114, 0, 0.25)';
-            ctx.lineWidth = isLast ? 4 : 2;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.beginPath();
-            for (let j = 0; j < path.length; j++) {
-                const [x, y] = path[j];
-                const canvasX = baseX + x * scaleX;
-                const canvasY = baseY + gridH - y * scaleY;
-                if (j === 0) ctx.moveTo(canvasX, canvasY);
-                else ctx.lineTo(canvasX, canvasY);
-            }
-            ctx.stroke();
-        }
-
-        // Coordinate labels
-        ctx.fillStyle = '#232D4B';
-        ctx.font = `bold ${Math.round(canvas.height * 0.022)}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText('(0, 0)', baseX, baseY + gridH + Math.round(canvas.height * 0.01));
-        ctx.textBaseline = 'bottom';
-        ctx.fillText(`(${N}, ${M})`, baseX + gridW, baseY - Math.round(canvas.height * 0.01));
-    }
-
-    function drawHistogram() {
-        const padding = { top: 40, right: 40, bottom: 60, left: 70 };
-        const w = histCanvas.width - padding.left - padding.right;
-        const h = histCanvas.height - padding.top - padding.bottom;
-
-        histCtx.fillStyle = '#fff';
-        histCtx.fillRect(0, 0, histCanvas.width, histCanvas.height);
-
-        if (middleYs.length === 0) return;
-
-        // Compute histogram bins - use fixed bin width of 2 for smooth Gaussian look
-        const minY = Math.min(...middleYs);
-        const maxY = Math.max(...middleYs);
-        const range = Math.max(maxY - minY, 10);
-        const binCount = Math.max(10, Math.min(20, Math.ceil(range / 2)));  // ~2 units per bin
-        const binWidth = range / binCount;
-        const bins = new Array(binCount).fill(0);
-
-        for (const y of middleYs) {
-            const binIdx = Math.min(binCount - 1, Math.floor((y - minY) / binWidth));
-            bins[binIdx]++;
-        }
-        const maxBin = Math.max(...bins);
-
-        // Draw axes
-        histCtx.strokeStyle = '#232D4B';
-        histCtx.lineWidth = 2;
-        histCtx.beginPath();
-        histCtx.moveTo(padding.left, padding.top);
-        histCtx.lineTo(padding.left, padding.top + h);
-        histCtx.lineTo(padding.left + w, padding.top + h);
-        histCtx.stroke();
-
-        // Draw bars
-        const barW = w / binCount;
-        for (let i = 0; i < binCount; i++) {
-            const barH = (bins[i] / maxBin) * h * 0.9;
-            const x = padding.left + i * barW;
-            const y = padding.top + h - barH;
-
-            histCtx.fillStyle = '#E57200';
-            histCtx.fillRect(x + 1, y, barW - 2, barH);
-            histCtx.strokeStyle = '#232D4B';
-            histCtx.lineWidth = 1;
-            histCtx.strokeRect(x + 1, y, barW - 2, barH);
-        }
-
-
-        // X-axis labels
-        histCtx.fillStyle = '#232D4B';
-        histCtx.font = `${Math.round(histCanvas.height * 0.026)}px sans-serif`;
-        histCtx.textAlign = 'center';
-        histCtx.textBaseline = 'top';
-        histCtx.fillText(`${Math.round(minY)}`, padding.left, padding.top + h + 8);
-        histCtx.fillText(`${Math.round(maxY)}`, padding.left + w, padding.top + h + 8);
-        histCtx.fillText(`y at x=${midX}`, padding.left + w / 2, padding.top + h + 30);
-
-        // Y-axis label
-        histCtx.save();
-        histCtx.translate(20, padding.top + h / 2);
-        histCtx.rotate(-Math.PI / 2);
-        histCtx.textAlign = 'center';
-        histCtx.fillText('frequency', 0, 0);
-        histCtx.restore();
-
-        // Update sample count
-        histCountEl.textContent = middleYs.length;
-    }
-
-    // Extract y-value at x = N/2 from a path
-    function getMiddleY(path) {
-        // Path is array of [x, y] pairs, find the one where x = midX
-        for (let i = 0; i < path.length; i++) {
-            if (path[i][0] === midX) {
-                return path[i][1];
-            }
-        }
-        // Fallback: interpolate
-        for (let i = 0; i < path.length - 1; i++) {
-            if (path[i][0] <= midX && path[i + 1][0] > midX) {
-                return path[i][1];
-            }
-        }
-        return M / 2;
-    }
-
-    async function runCFTP() {
-        if (isRunning) return null;
-        isRunning = true;
-
-        initSimulation(N, M, 1.0);  // q=1 for uniform
-        statusEl.textContent = 'Sampling...';
-        statusEl.style.color = '#E57200';
-
-        return new Promise((resolve) => {
-            function step() {
-                const done = runCFTPBatch();
-
-                if (done) {
-                    const ptr = getPartitionPath();
-                    const str = wasm.UTF8ToString(ptr);
-                    freeString(ptr);
-                    const path = JSON.parse(str);
-                    samples.push(path);
-                    middleYs.push(getMiddleY(path));
-                    // Cache the bits for future Glauber sampling
-                    cachedInitialBits = pathToBits(path);
-                    statusEl.textContent = `${samples.length} sample${samples.length > 1 ? 's' : ''}`;
-                    statusEl.style.color = 'var(--slide-muted)';
-                    updateFormula();
-                    drawPathCanvas();
-                    isRunning = false;
-                    resolve(path);
-                } else {
-                    requestAnimationFrame(step);
-                }
-            }
-            step();
-        });
-    }
-
-    // Convert coordinate path [[x,y], ...] to bit array (0=right, 1=up)
-    function pathToBits(coordPath) {
-        const bits = [];
-        for (let i = 1; i < coordPath.length; i++) {
-            const dx = coordPath[i][0] - coordPath[i-1][0];
-            const dy = coordPath[i][1] - coordPath[i-1][1];
-            bits.push(dy > 0 ? 1 : 0);  // 1 = up, 0 = right
-        }
-        return bits;
-    }
-
-    async function collectSamplesGPU(count) {
-        if (!gpuEngine) return collectSamplesCPU(count);
-
-        try {
-            // Use cached bits, or run CFTP if needed
-            if (!cachedInitialBits) {
-                statusEl.textContent = 'Getting initial sample...';
-                statusEl.style.color = '#E57200';
-                const initialPath = await runCFTP();
-                if (!initialPath) return collectSamplesCPU(count);
-            }
-
-            const initialBits = cachedInitialBits;
-
-            // Run GPU Glauber chains in batches of 5k (20k = 4 batches)
-            const batchSize = 5000;
-            let remaining = count;
-            while (remaining > 0) {
-                const thisBatch = Math.min(batchSize, remaining);
-                statusEl.textContent = `GPU: ${middleYs.length}/${count + middleYs.length - remaining} samples...`;
-
-                // Add timeout for GPU operations (10 seconds)
-                const gpuPromise = gpuEngine.sample(N, M, thisBatch, initialBits, 1000000);
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('GPU timeout')), 10000)
-                );
-
-                const gpuMiddleYs = await Promise.race([gpuPromise, timeoutPromise]);
-
-                for (let i = 0; i < gpuMiddleYs.length; i++) {
-                    middleYs.push(gpuMiddleYs[i]);
-                }
-
-                remaining -= thisBatch;
-                drawHistogram();
-                await new Promise(r => setTimeout(r, 0));  // Yield to UI
-            }
-
-            statusEl.textContent = `${middleYs.length} samples (GPU)`;
-            statusEl.style.color = 'var(--slide-muted)';
-            updateFormula();
-            drawPathCanvas();
-            drawHistogram();
-        } catch (e) {
-            console.error('GPU sampling failed, falling back to CPU:', e);
-            gpuEngine = null;  // Disable GPU for future calls
-            return collectSamplesCPU(count);
-        }
-    }
-
-    // WASM Glauber wrappers
-    const setPath = wasm.cwrap('setPath', null, ['number', 'number']);
-    const runGlauberAndGetMiddleY = wasm.cwrap('runGlauberAndGetMiddleY', 'number', ['number']);
-
-    function runGlauberWASM(initialBits, steps) {
-        // Copy bits to WASM memory
-        const len = initialBits.length;
-        const ptr = wasm._malloc(len * 4);  // int array
-        for (let i = 0; i < len; i++) {
-            wasm.setValue(ptr + i * 4, initialBits[i], 'i32');
-        }
-        setPath(ptr, len);
-        wasm._free(ptr);
-
-        // Run Glauber and get result
-        return runGlauberAndGetMiddleY(steps);
-    }
-
-    async function collectSamplesCPU(count) {
-        // Use cached bits, or run CFTP if needed
-        if (!cachedInitialBits) {
-            statusEl.textContent = 'Getting initial sample...';
-            statusEl.style.color = '#E57200';
-            const initialPath = await runCFTP();
-            if (!initialPath) return;
-        }
-
-        const initialBits = cachedInitialBits;
-        const stepsPerSample = 1000000;  // 1M steps per sample
-
-        for (let i = 0; i < count; i++) {
-            const y = runGlauberWASM(initialBits, stepsPerSample);
-            middleYs.push(y);
-            statusEl.textContent = `${middleYs.length} samples (CPU)`;
-            drawHistogram();
-            await new Promise(r => setTimeout(r, 0));  // Yield to UI after each sample
-        }
-        statusEl.textContent = `${middleYs.length} samples`;
-        statusEl.style.color = 'var(--slide-muted)';
-        updateFormula();
-        drawHistogram();
-    }
-
-    async function collectSamples(count) {
-        if (gpuEngine) {
-            await collectSamplesGPU(count);
-        } else {
-            await collectSamplesCPU(count);
-        }
-    }
-
-    // Draw the difference between path and diagonal (Brownian bridge visualization)
-    function drawBrownianBridge() {
-        if (samples.length === 0) return;
-
-        const path = samples[samples.length - 1];  // Use last sample
-        const w = bridgeCanvas.width;
-        const h = bridgeCanvas.height;
-        const padding = 20;
-
-        bridgeCtx.fillStyle = '#fff';
-        bridgeCtx.fillRect(0, 0, w, h);
-
-        // Compute differences: y - (M/N)*x at each point
-        const diffs = [];
-        for (let i = 0; i < path.length; i++) {
-            const x = path[i][0];
-            const y = path[i][1];
-            const expectedY = (M / N) * x;
-            diffs.push(y - expectedY);
-        }
-
-        const maxDiff = Math.max(...diffs.map(Math.abs), 5);
-        const scaleX = (w - 2 * padding) / N;
-        const scaleY = (h - 2 * padding) / (2 * maxDiff);
-
-        // Draw zero line
-        bridgeCtx.strokeStyle = '#ccc';
-        bridgeCtx.lineWidth = 1;
-        bridgeCtx.beginPath();
-        bridgeCtx.moveTo(padding, h / 2);
-        bridgeCtx.lineTo(w - padding, h / 2);
-        bridgeCtx.stroke();
-
-        // Draw difference curve
-        bridgeCtx.strokeStyle = '#E57200';
-        bridgeCtx.lineWidth = 2;
-        bridgeCtx.beginPath();
-        for (let i = 0; i < path.length; i++) {
-            const px = padding + path[i][0] * scaleX;
-            const py = h / 2 - diffs[i] * scaleY;
-            if (i === 0) bridgeCtx.moveTo(px, py);
-            else bridgeCtx.lineTo(px, py);
-        }
-        bridgeCtx.stroke();
-
-        // Labels
-        bridgeCtx.fillStyle = '#232D4B';
-        bridgeCtx.font = `${Math.round(h * 0.18)}px sans-serif`;
-        bridgeCtx.textAlign = 'center';
-        bridgeCtx.fillText('path minus diagonal', w / 2, h - Math.round(h * 0.05));
-    }
-
-    function reset() {
-        samples = [];
-        middleYs = [];
-        cachedInitialBits = null;
-        observationEl.style.opacity = '0';
-        questionEl.style.opacity = '0';
-        answerEl.style.opacity = '0';
-        histContainer.style.opacity = '0';
-        statusEl.textContent = 'Ready';
-        statusEl.style.color = 'var(--slide-muted)';
-        histCountEl.textContent = '0';
-        updateFormula();
-        drawPathCanvas();
-    }
-
-    // Register with slide engine
-    function waitForSlideEngine() {
-        if (window.slideEngine) {
-            window.slideEngine.registerSimulation('limit-shape-2d', {
-                start() {},
-                pause() {},
-                steps: 5,
-                async onStep(step) {
-                    console.log('limit-shape-2d step:', step, 'isMobile:', isMobile);
-                    if (isMobile) {
-                        // Mobile: simple mode - just CFTP samples, no histogram
-                        if (step === 1) {
-                            samples = [];
-                            middleYs = [];
-                            await runCFTP();
-                            observationEl.style.opacity = '1';
-                        } else if (step === 2) {
-                            // Run 4 more CFTP samples (5 total)
-                            for (let i = 0; i < 4; i++) {
-                                await runCFTP();
-                            }
-                            histContainer.style.opacity = '1';  // Shows placeholder
-                        } else if (step === 3) {
-                            // Skip on mobile
-                        } else if (step === 4) {
-                            questionEl.style.opacity = '1';
-                        } else if (step === 5) {
-                            answerEl.style.opacity = '1';
-                            drawBrownianBridge();
-                        }
-                    } else {
-                        // Desktop: full experience
-                        if (step === 1) {
-                            samples = [];
-                            middleYs = [];
-                            await runCFTP();
-                            observationEl.style.opacity = '1';
-                            drawHistogram();
-                        } else if (step === 2) {
-                            histContainer.style.opacity = '1';
-                            drawHistogram();
-                            await collectSamples(19);
-                        } else if (step === 3) {
-                            const count = gpuEngine ? 20000 : 200;
-                            await collectSamples(count);
-                        } else if (step === 4) {
-                            questionEl.style.opacity = '1';
-                        } else if (step === 5) {
-                            answerEl.style.opacity = '1';
-                            drawBrownianBridge();
-                        }
-                    }
-                },
-                onStepBack(step) {
-                    // Always reset to step 0 on any back motion
-                    reset();
-                    // Also reset the slide engine's step counter for this slide
-                    if (window.slideEngine) {
-                        window.slideEngine.currentSimStep = 0;
-                        window.slideEngine.slideHistory.set('limit-shape-2d', { fragment: 0, simStep: 0 });
-                    }
-                },
-                onSlideEnter() {
-                    // Always reset to step 0 when entering (whether forward or back)
-                    reset();
-                    histContainer.style.opacity = '0';
-                    observationEl.style.opacity = '0';
-                    questionEl.style.opacity = '0';
-                    answerEl.style.opacity = '0';
-                    // Reset the slide engine's step counter
-                    if (window.slideEngine) {
-                        window.slideEngine.currentSimStep = 0;
-                        window.slideEngine.slideHistory.set('limit-shape-2d', { fragment: 0, simStep: 0 });
-                    }
-                }
-            }, 1);
-        } else {
-            setTimeout(waitForSlideEngine, 50);
-        }
-    }
-    waitForSlideEngine();
-
-    // Initial draw
-    updateFormula();
-    drawPathCanvas();
 })();
 </script>
 
@@ -2136,16 +1706,11 @@ window.addEventListener('wasm-loaded', async function() {
                 \(\displaystyle\text{Probability} = \frac{q^{\text{area}}}{\sum_{\text{paths}} q^{\text{area}}}\)
             </div>
 
-            <!-- Block 3: q-Binomial -->
+            <!-- Block 3: q-Binomial with example -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
                 <strong style="color: var(--slide-accent);">q-Binomial coefficient:</strong><br>
-                \(\displaystyle\binom{a+b}{a}_q = \sum_{\text{paths}} q^{\text{area}}\)
-            </div>
-
-            <!-- Block 4: Example -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
-                <strong style="color: var(--slide-accent);">Example (a=4, b=3):</strong><br>
-                <span id="q-binomial-formula"></span>
+                \(\displaystyle\binom{a+b}{a}_q = \sum_{\text{paths}} q^{\text{area}}\)<br>
+                <span style="font-size: 0.9em; color: var(--slide-muted);">At \(q=1\): ordinary binomial (35 paths)</span>
             </div>
         </div>
 
@@ -2171,7 +1736,6 @@ window.addEventListener('wasm-loaded', async function() {
     const areaCtx = areaCanvas.getContext('2d');
     const slider = document.getElementById('q-slider');
     const qValueSpan = document.getElementById('q-value');
-    const qBinomialEl = document.getElementById('q-binomial-formula');
 
     const A = 4, B = 3;
 
@@ -2225,22 +1789,6 @@ window.addEventListener('wasm-loaded', async function() {
         return sum;
     }
 
-    function updateQBinomialFormula(q) {
-        const val = evalQBinomial(q);
-        if (Math.abs(q - 1) < 0.01) {
-            qBinomialEl.innerHTML = `\\(\\displaystyle\\binom{7}{4}_q = 1 + q + 2q^2 + 3q^3 + 4q^4 + 4q^5 + 5q^6\\)<br>\\(\\phantom{\\binom{7}{4}_q =} +\\, 4q^7 + 4q^8 + 3q^9 + 2q^{10} + q^{11} + q^{12}\\)<br>At \\(q=1\\): <strong style="color: var(--slide-accent);">35</strong> paths`;
-        } else {
-            qBinomialEl.innerHTML = `\\(\\displaystyle\\binom{7}{4}_q = 1 + q + 2q^2 + 3q^3 + 4q^4 + 4q^5 + 5q^6\\)<br>\\(\\phantom{\\binom{7}{4}_q =} +\\, 4q^7 + 4q^8 + 3q^9 + 2q^{10} + q^{11} + q^{12}\\)<br>At \\(q=${q.toFixed(2)}\\): <strong style="color: var(--slide-accent);">${val.toFixed(2)}</strong>`;
-        }
-        if (window.renderMathInElement) {
-            renderMathInElement(qBinomialEl, {
-                delimiters: [
-                    {left: "\\(", right: "\\)", display: false},
-                    {left: "$$", right: "$$", display: true}
-                ]
-            });
-        }
-    }
 
     function drawAreaExample() {
         const w = areaCanvas.width, h = areaCanvas.height;
@@ -2409,7 +1957,6 @@ window.addEventListener('wasm-loaded', async function() {
         const q = parseFloat(slider.value);
         qValueSpan.textContent = q.toFixed(2);
         drawAllPaths(q);
-        updateQBinomialFormula(q);
     }
 
     slider.addEventListener('input', update);
@@ -2418,8 +1965,8 @@ window.addEventListener('wasm-loaded', async function() {
     drawAreaExample();
     update();
 
-    // Step q values: stage 0=1, 1=0.9, 2=0.5, 3=0.95, 4=1.2, 5=2
-    const stepQValues = [1, 0.9, 0.5, 0.95, 1.2, 2];
+    // Step q values: step 0=1 (uniform), step 1=0.5 (favor low area), step 2=1.5 (favor high area)
+    const stepQValues = [1, 0.5, 1.5];
 
     function setQ(q) {
         slider.value = q;
@@ -2432,9 +1979,9 @@ window.addEventListener('wasm-loaded', async function() {
             window.slideEngine.registerSimulation('q-deformation', {
                 start() {},
                 pause() {},
-                steps: 5,
+                steps: 2,
                 onStep(step) {
-                    if (step >= 1 && step <= 5) {
+                    if (step >= 1 && step <= 2) {
                         setQ(stepQValues[step]);
                     }
                 },
@@ -2456,407 +2003,406 @@ window.addEventListener('wasm-loaded', async function() {
 })();
 </script>
 
-<section class="slide slide-top" id="q-limit-shape" data-title="q-Limit Shape">
-    <h2 class="slide-title">q-Limit Shape</h2>
+<section class="slide slide-top" id="q-local" data-title="q-Local Bernoulli">
+    <h2 class="slide-title">q-Volume: local structure</h2>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%; height: 85vh;">
-        <!-- Left: Explanation -->
-        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); justify-content: space-between; height: 100%;">
-            <!-- Block 1: Limit Shape -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
-                <strong style="color: var(--slide-accent);">Limit shape [Vershik 1996]</strong><br>
-                As \(N \to \infty\) with \(q = e^{-\gamma/N}\), limit shape:
-                $$A e^{-\gamma y} + B e^{-\gamma x} = 1$$
-                <span style="font-size: 0.85em;">
-                \(\displaystyle A = \frac{1-e^{-\gamma}}{1-e^{-\gamma(1+\alpha)}}\), \(\displaystyle B = \frac{1-e^{-\gamma \alpha}}{1-e^{-\gamma(1+\alpha)}}\)<br>
-                \(\alpha\) = rectangle aspect ratio
-                </span>
+    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
+        <!-- Left: Full q-weighted path -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 0.5vh;">
+                q-weighted path (q = <span id="q-local-value">0.7</span>) <span style="color: var(--slide-muted);">(click to resample)</span>
             </div>
-
-            <!-- Block 2: How to get limit shape -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
-                <strong style="color: var(--slide-accent);">How to get limit shape?</strong><br>
-                <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
-                    <li>Approximate any curve by a piecewise-linear trajectory</li>
-                    <li>Locally, we know how many configurations approximate a given line</li>
-                    <li>Integrate and maximize to get the typical shape</li>
-                </ul>
-            </div>
-
-            <!-- Block 3: Energy Functional -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
-                <strong style="color: var(--slide-accent);">Variational principle for the limit shape \(y=f(x)\):</strong><br>
-                Maximize
-<span style="color: #232D4B; font-weight: 800; font-size: 1.15em; letter-spacing: 0.01em;">energy − γ·area</span>
-								= <br>
-                \(\displaystyle \int \sigma(f'(x)) \, dx - \gamma \cdot \int f(x) \, dx\);<br>
-                <span style="font-size: 0.85em;">\(\sigma(s) = \lim \frac{1}{N}\log \binom{N(s+1)}{N}\) = energy.<br>The binomial coefficient is the number of paths having slope \(s\); we get the limit $\sigma(s) = (s+1)\log(s+1) - s\log(s)$.</span>
-            </div>
-
+            <canvas id="q-local-canvas" width="1000" height="600" style="height: 42vh; width: auto; cursor: pointer;"></canvas>
         </div>
-
-        <!-- Right: Simulation canvas -->
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: space-between; height: 100%;">
-            <!-- Controls at top -->
-            <div>
-                <div style="display: flex; align-items: center; gap: 1vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-                    <label for="gamma-slider" style="font-weight: bold;">γ = </label>
-                    <input type="range" id="gamma-slider" min="-50" max="50" step="0.01" value="3.6" style="width: 12vw;">
-                    <span id="gamma-value" style="font-weight: bold; min-width: 3em;">3.6</span>
-                    <span style="margin-left: 1vw;">(q = <span id="q-limit-value">0.990</span>)</span>
-                    <button id="q-limit-resample" style="padding: 0.5vh 1vw; cursor: pointer;">Resample</button>
-                </div>
-                <div style="font-size: clamp(0.9rem, 1.5vw, 1.1rem); color: var(--slide-muted); text-align: center;">
-                    <span>a = 360, b = 270</span> · <span id="q-limit-status">Loading...</span>
-                </div>
+        <!-- Right: Local zoom view -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div id="q-local-view-title" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 0.5vh; opacity: 0; transition: opacity 0.3s;">
+                Zoomed in: local segment
             </div>
-            <canvas id="q-limit-canvas" width="1200" height="900" style="max-height: 58vh; width: auto;"></canvas>
-            <!-- Fluctuations block -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.5vh 1vw; width: 100%; box-sizing: border-box;">
-                <strong style="color: var(--slide-accent); font-size: clamp(1rem, 1.8vw, 1.4rem);">Fluctuations:</strong> <span style="font-size: clamp(1rem, 1.8vw, 1.4rem);">Random curve minus limit shape</span><br>
-                <canvas id="fluctuations-canvas" width="800" height="200" style="width: 100%; height: 12vh;"></canvas>
-            </div>
+            <canvas id="q-local-view-canvas" width="600" height="450" style="height: 35vh; width: auto; opacity: 0; transition: opacity 0.3s;"></canvas>
         </div>
+    </div>
+
+    <!-- Key insight -->
+    <div id="q-local-insight" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 2vw; font-size: clamp(1.4rem, 2.5vw, 2rem); text-align: left; margin-top: 2vh; opacity: 0; transition: opacity 0.3s;">
+        <strong style="color: var(--slide-accent); font-size: 1.2em;">Still Bernoulli!</strong><br>
+        Even with q-weighting, local structure remains <strong>independent Bernoulli trials</strong>.
+    </div>
+
+    <!-- Explanation -->
+    <div id="q-local-explanation" style="background: #f5f5f5; border-left: 4px solid #232D4B; padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left; margin-top: 1vh; opacity: 0; transition: opacity 0.3s;">
+        <strong style="color: #232D4B;">Key insight:</strong>
+        The q-weighted path locally looks like the configuration that <em>maximizes</em> probability—Bernoulli with position-dependent parameters matching the local limit shape slope.
     </div>
 </section>
 
-<script src="/talk/visual/sim/q-partition-cftp.js"></script>
 <script>
 (function() {
     'use strict';
 
-    const canvas = document.getElementById('q-limit-canvas');
+    const canvas = document.getElementById('q-local-canvas');
     const ctx = canvas.getContext('2d');
-    const flucCanvas = document.getElementById('fluctuations-canvas');
-    const flucCtx = flucCanvas.getContext('2d');
-    const gammaSlider = document.getElementById('gamma-slider');
-    const gammaValueSpan = document.getElementById('gamma-value');
-    const qValueSpan = document.getElementById('q-limit-value');
-    const statusEl = document.getElementById('q-limit-status');
-    const resampleBtn = document.getElementById('q-limit-resample');
+    const localCanvas = document.getElementById('q-local-view-canvas');
+    const localCtx = localCanvas.getContext('2d');
+    const qValueSpan = document.getElementById('q-local-value');
+    const localTitle = document.getElementById('q-local-view-title');
+    const insightEl = document.getElementById('q-local-insight');
+    const explanationEl = document.getElementById('q-local-explanation');
 
-    const N = 360;  // Width (a)
-    const M = 270;  // Height (b)
-    let q = 0.99;
+    const A = 100, B = 60;  // Grid size
+    const q = 0.7;  // q < 1 favors paths with lower area (closer to diagonal)
+    let currentPath = null;
+    let highlightLen = 16;
+    let highlightStart = Math.floor((A + B) / 2 - highlightLen / 2);  // Always middle
 
-    // WASM module
-    let wasm = null;
-    let initSimulation, runCFTPBatch, getCoalesced, getPartitionPath, freeString, getM, getN;
+    // Generate a q-weighted random path using rejection sampling-like approach
+    // For simplicity, we use the exact conditional probabilities
+    function generateQWeightedPath(a, b, qVal) {
+        const moves = [];
+        let remainingR = a;
+        let remainingU = b;
 
-    // Partition path (sequence of 0=right, 1=up)
-    let partitionPath = [];
-    let isRunning = false;
+        while (remainingR + remainingU > 0) {
+            if (remainingR === 0) {
+                moves.push('U');
+                remainingU--;
+            } else if (remainingU === 0) {
+                moves.push('R');
+                remainingR--;
+            } else {
+                // q-weighted probability
+                // P(R) is proportional to [remainingU]_q (q-number)
+                // P(U) is proportional to q^remainingR * [remainingR]_q
+                // For practical purposes: P(R) = qNum(remainingR) / (qNum(remainingR) + q^remainingR * qNum(remainingU))
+                // where qNum(n) = (1-q^n)/(1-q)
 
-    // Colors
-    const colors = ['#E57200', '#232D4B', '#F9DCBF'];
+                const qNumR = (1 - Math.pow(qVal, remainingR)) / (1 - qVal);
+                const qNumU = (1 - Math.pow(qVal, remainingU)) / (1 - qVal);
+                const pR = qNumR / (qNumR + Math.pow(qVal, remainingR) * qNumU);
 
-    async function initWasm() {
-        if (typeof QPartitionModule === 'undefined') {
-            statusEl.textContent = 'WASM not loaded';
-            return false;
+                if (Math.random() < pR) {
+                    moves.push('R');
+                    remainingR--;
+                } else {
+                    moves.push('U');
+                    remainingU--;
+                }
+            }
         }
-        wasm = await QPartitionModule();
-        initSimulation = wasm.cwrap('initSimulation', null, ['number', 'number', 'number']);
-        runCFTPBatch = wasm.cwrap('runCFTPBatch', 'number', []);
-        getCoalesced = wasm.cwrap('getCoalesced', 'number', []);
-        getPartitionPath = wasm.cwrap('getPartitionPath', 'number', []);
-        freeString = wasm.cwrap('freeString', null, ['number']);
-        getM = wasm.cwrap('getM', 'number', []);
-        getN = wasm.cwrap('getN', 'number', []);
-        return true;
+        return moves;
     }
 
-    function getPathFromWasm() {
-        const ptr = getPartitionPath();
-        const str = wasm.UTF8ToString(ptr);
-        freeString(ptr);
-        return JSON.parse(str);
-    }
-
-    async function runCFTP() {
-        if (!wasm || isRunning) return;
-        isRunning = true;
-        statusEl.textContent = 'Sampling...';
-
-        initSimulation(N, M, q);
-
-        let totalSteps = 0;
-        const batchSize = 10000000;  // Hardcoded in WASM
-
-        while (!getCoalesced()) {
-            runCFTPBatch();
-            totalSteps += batchSize;
-            statusEl.textContent = `Sampling... ${(totalSteps / 1e6).toFixed(0)}M steps`;
-            await new Promise(r => setTimeout(r, 1));
+    // Draw the q-Vershik limit shape
+    function drawLimitShape(ctx, baseX, baseY, gridW, gridH, qVal, a, b) {
+        const gamma = -Math.log(qVal);
+        if (Math.abs(gamma) < 1e-6) {
+            // Straight diagonal for q ≈ 1
+            ctx.beginPath();
+            ctx.moveTo(baseX, baseY + gridH);
+            ctx.lineTo(baseX + gridW, baseY);
+            ctx.stroke();
+            return;
         }
 
-        partitionPath = getPathFromWasm();
-        statusEl.textContent = `Sampled in ${(totalSteps / 1e6).toFixed(1)}M steps`;
-        isRunning = false;
-        draw();
+        const aa = b / a;  // aspect ratio
+        const denom = 1 - Math.exp(-gamma * (1 + aa));
+        const A_coef = (1 - Math.exp(-gamma)) / denom;
+        const B_coef = (1 - Math.exp(-gamma * aa)) / denom;
+
+        ctx.beginPath();
+        ctx.moveTo(baseX, baseY + gridH);
+
+        const steps = 100;
+        for (let i = 1; i <= steps; i++) {
+            const x_norm = i / steps;
+            const exp_term = Math.exp(-gamma * x_norm);
+            const inside = (1 - B_coef * exp_term) / A_coef;
+
+            if (inside > 0) {
+                const y_formula = -Math.log(inside) / gamma;
+                const y_scaled = (aa - y_formula) / aa * b;
+                const canvasX = baseX + x_norm * gridW;
+                const canvasY = baseY + gridH - (y_scaled / b) * gridH;
+                ctx.lineTo(canvasX, canvasY);
+            }
+        }
+        ctx.lineTo(baseX + gridW, baseY);
+        ctx.stroke();
     }
 
-    function draw() {
+    function drawMainPath(showHighlight = false) {
         const w = canvas.width, h = canvas.height;
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, w, h);
 
-        const padding = 60;
-        const drawW = w - 2 * padding;
-        const drawH = h - 2 * padding;
+        if (!currentPath) {
+            currentPath = generateQWeightedPath(A, B, q);
+        }
 
-        // Scale to fit M x N rectangle
-        const scaleX = drawW / N;
-        const scaleY = drawH / M;
-        const scale = Math.min(scaleX, scaleY);
+        const padding = 50;
+        const gridW = w - 2 * padding;
+        const gridH = h - 2 * padding;
+        const stepX = gridW / A;
+        const stepY = gridH / B;
+        const baseX = padding;
+        const baseY = padding;
 
-        const offsetX = padding + (drawW - N * scale) / 2;
-        const offsetY = padding + (drawH - M * scale) / 2;
-
-        // Bounding rectangle
-        ctx.strokeStyle = colors[1];
+        // Draw bounding box
+        ctx.strokeStyle = '#232D4B';
         ctx.lineWidth = 2;
-        ctx.strokeRect(offsetX, offsetY, N * scale, M * scale);
+        ctx.strokeRect(baseX, baseY, gridW, gridH);
 
-        // Draw partition (filled region)
-        // partitionPath is [[x,y], [x,y], ...] from (0,0) to (N,M)
-        if (partitionPath.length > 0) {
-            ctx.fillStyle = colors[0] + '60';
-            ctx.beginPath();
-            // Start at bottom-left corner
-            ctx.moveTo(offsetX, offsetY + M * scale);
-
-            // Path goes from (0,0) to (N,M) in math coords
-            // Canvas: x goes right, y goes DOWN, so we flip y
-            for (const [px, py] of partitionPath) {
-                ctx.lineTo(offsetX + px * scale, offsetY + (M - py) * scale);
-            }
-
-            // Close: go to top-left, then back to start
-            ctx.lineTo(offsetX, offsetY);
-            ctx.lineTo(offsetX, offsetY + M * scale);
-            ctx.closePath();
-            ctx.fill();
-
-            // Draw path line
-            ctx.strokeStyle = colors[0];
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            for (let i = 0; i < partitionPath.length; i++) {
-                const [px, py] = partitionPath[i];
-                const cx = offsetX + px * scale;
-                const cy = offsetY + (M - py) * scale;
-                if (i === 0) ctx.moveTo(cx, cy);
-                else ctx.lineTo(cx, cy);
-            }
-            ctx.stroke();
-        }
-
-        // Draw limit shape curve
-        drawLimitShape(offsetX, offsetY, scale);
-
-        // Draw fluctuations
-        drawFluctuations();
-    }
-
-    function drawLimitShape(offsetX, offsetY, scale) {
-        const aa = M / N;  // aspect ratio
-        const gamma = -N * Math.log(q);
-
+        // Draw q-Vershik limit shape (dashed curve)
         ctx.strokeStyle = '#ff0000';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2;
         ctx.setLineDash([8, 4]);
-        ctx.beginPath();
+        drawLimitShape(ctx, baseX, baseY, gridW, gridH, q, A, B);
+        ctx.setLineDash([]);
 
-        // For γ ≈ 0: straight diagonal
-        if (Math.abs(gamma) < 1e-6) {
-            ctx.moveTo(offsetX, offsetY + M * scale);
-            ctx.lineTo(offsetX + N * scale, offsetY);
+        // Draw path
+        ctx.strokeStyle = '#E57200';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        let x = 0, y = 0;
+        ctx.moveTo(baseX + x * stepX, baseY + gridH - y * stepY);
+        for (const move of currentPath) {
+            if (move === 'R') x++;
+            else y++;
+            ctx.lineTo(baseX + x * stepX, baseY + gridH - y * stepY);
+        }
+        ctx.stroke();
+
+        // Draw highlighted region box if enabled
+        if (showHighlight) {
+            let hx = 0, hy = 0;
+            for (let i = 0; i < highlightStart; i++) {
+                if (currentPath[i] === 'R') hx++;
+                else hy++;
+            }
+            const startX = hx, startY = hy;
+            for (let i = highlightStart; i < highlightStart + highlightLen && i < currentPath.length; i++) {
+                if (currentPath[i] === 'R') hx++;
+                else hy++;
+            }
+            const endX = hx, endY = hy;
+
+            const boxPad = 8;
+            const boxX1 = baseX + startX * stepX - boxPad;
+            const boxY1 = baseY + gridH - endY * stepY - boxPad;
+            const boxX2 = baseX + endX * stepX + boxPad;
+            const boxY2 = baseY + gridH - startY * stepY + boxPad;
+
+            ctx.strokeStyle = '#E57200';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(boxX1, boxY1, boxX2 - boxX1, boxY2 - boxY1);
+
+            // Thicker highlighted segment
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            let sx = 0, sy = 0;
+            for (let i = 0; i < highlightStart; i++) {
+                if (currentPath[i] === 'R') sx++;
+                else sy++;
+            }
+            ctx.moveTo(baseX + sx * stepX, baseY + gridH - sy * stepY);
+            for (let i = highlightStart; i < highlightStart + highlightLen && i < currentPath.length; i++) {
+                if (currentPath[i] === 'R') sx++;
+                else sy++;
+                ctx.lineTo(baseX + sx * stepX, baseY + gridH - sy * stepY);
+            }
             ctx.stroke();
-            ctx.setLineDash([]);
-            return;
         }
 
-        // A·e^{-γy} + B·e^{-γx} = 1 with y measured from TOP
-        const denom = 1 - Math.exp(-gamma * (1 + aa));
-        const A = (1 - Math.exp(-gamma)) / denom;
-        const B = (1 - Math.exp(-gamma * aa)) / denom;
+        // Labels
+        ctx.fillStyle = '#232D4B';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText('(0,0)', baseX, baseY + gridH + 5);
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(`(${A},${B})`, baseX + gridW, baseY - 5);
 
-        const steps = 200;
+        // q value label
+        ctx.fillStyle = '#ff0000';
+        ctx.font = 'bold 18px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+        ctx.fillText('q-limit shape', baseX + gridW - 10, baseY + 10);
+    }
 
-        // Start at bottom-left corner
-        ctx.moveTo(offsetX, offsetY + M * scale);
+    function drawLocalView() {
+        const w = localCanvas.width, h = localCanvas.height;
+        localCtx.fillStyle = '#fff';
+        localCtx.fillRect(0, 0, w, h);
 
-        for (let i = 1; i < steps; i++) {
-            const x_norm = i / steps;
-            const exp_neg_cx = Math.exp(-gamma * x_norm);
-            const inside = (1 - B * exp_neg_cx) / A;
+        if (!currentPath) return;
 
-            if (inside > 0) {
-                const y_formula = -Math.log(inside) / gamma;
-                // y_formula goes from aa (at x=0) to 0 (at x=1)
-                // We want y to go from 0 to M as x goes from 0 to N
-                const y_scaled = (aa - y_formula) / aa * M;
+        const segment = currentPath.slice(highlightStart, highlightStart + highlightLen);
+        const segLen = segment.length;
+        if (segLen === 0) return;
 
-                const canvasX = offsetX + x_norm * N * scale;
-                const canvasY = offsetY + (M - y_scaled) * scale;
-                ctx.lineTo(canvasX, canvasY);
+        const padding = 80;
+        const availW = w - 2 * padding;
+        const availH = h - 2 * padding - 50;
+
+        let segR = 0, segU = 0;
+        for (const m of segment) {
+            if (m === 'R') segR++;
+            else segU++;
+        }
+        if (segR === 0) segR = 1;
+        if (segU === 0) segU = 1;
+
+        // Use same step size for both directions (square grid cells)
+        const step = Math.min(availW / segR, availH / segU);
+        const gridW = segR * step;
+        const gridH = segU * step;
+        const baseX = padding + (availW - gridW) / 2;
+        const baseY = padding + availH - (availH - gridH) / 2;
+
+        // Grid
+        localCtx.strokeStyle = '#ddd';
+        localCtx.lineWidth = 1;
+        for (let i = 0; i <= segR; i++) {
+            localCtx.beginPath();
+            localCtx.moveTo(baseX + i * step, baseY - gridH);
+            localCtx.lineTo(baseX + i * step, baseY);
+            localCtx.stroke();
+        }
+        for (let j = 0; j <= segU; j++) {
+            localCtx.beginPath();
+            localCtx.moveTo(baseX, baseY - j * step);
+            localCtx.lineTo(baseX + gridW, baseY - j * step);
+            localCtx.stroke();
+        }
+
+        // Draw path segments
+        let x = 0, y = 0;
+
+        for (let i = 0; i < segment.length; i++) {
+            const move = segment[i];
+            const fromPx = baseX + x * step;
+            const fromPy = baseY - y * step;
+
+            if (move === 'R') {
+                localCtx.strokeStyle = '#E57200';
+                localCtx.lineWidth = 6;
+                localCtx.beginPath();
+                localCtx.moveTo(fromPx, fromPy);
+                localCtx.lineTo(fromPx + step, fromPy);
+                localCtx.stroke();
+                x++;
+            } else {
+                localCtx.strokeStyle = '#232D4B';
+                localCtx.lineWidth = 6;
+                localCtx.beginPath();
+                localCtx.moveTo(fromPx, fromPy);
+                localCtx.lineTo(fromPx, fromPy - step);
+                localCtx.stroke();
+                y++;
             }
         }
 
-        // End at top-right corner
-        ctx.lineTo(offsetX + N * scale, offsetY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-    }
-
-    function getLimitShapeY(x_norm) {
-        // Returns y in [0, 1] range (normalized to M)
-        const aa = M / N;
-        const gamma = -N * Math.log(q);
-        if (Math.abs(gamma) < 1e-6) {
-            return x_norm;  // Straight diagonal: y/M = x/N
-        }
-        const denom = 1 - Math.exp(-gamma * (1 + aa));
-        const A = (1 - Math.exp(-gamma)) / denom;
-        const B = (1 - Math.exp(-gamma * aa)) / denom;
-        const exp_neg_cx = Math.exp(-gamma * x_norm);
-        const inside = (1 - B * exp_neg_cx) / A;
-        if (inside <= 0) return x_norm;
-        const y_formula = -Math.log(inside) / gamma;
-        // y_formula goes from aa to 0 as x goes 0 to 1
-        // We want output in [0, 1] where 0 at x=0 and 1 at x=1
-        return (aa - y_formula) / aa;
-    }
-
-    function drawFluctuations() {
-        const w = flucCanvas.width, h = flucCanvas.height;
-        flucCtx.fillStyle = '#ffffff';
-        flucCtx.fillRect(0, 0, w, h);
-
-        if (partitionPath.length === 0) return;
-
-        const padding = 20;
-        const drawW = w - 2 * padding;
-        const drawH = h - 2 * padding;
-
-        // Compute fluctuations: path_y - limit_shape_y at each x
-        const fluctuations = [];
-        for (const [px, py] of partitionPath) {
-            const x_norm = px / N;
-            const limitY = getLimitShapeY(x_norm) * M;  // Scale to M
-            const diff = py - limitY;
-            fluctuations.push({ x: px, diff: diff, x_norm: x_norm });
+        // Dots at vertices
+        localCtx.fillStyle = '#232D4B';
+        x = 0; y = 0;
+        localCtx.beginPath();
+        localCtx.arc(baseX, baseY, 5, 0, Math.PI * 2);
+        localCtx.fill();
+        for (const move of segment) {
+            if (move === 'R') x++;
+            else y++;
+            localCtx.beginPath();
+            localCtx.arc(baseX + x * step, baseY - y * step, 5, 0, Math.PI * 2);
+            localCtx.fill();
         }
 
-        if (fluctuations.length === 0) return;
-
-        // Find max deviation for scaling
-        let maxDev = 1;
-        for (const f of fluctuations) {
-            maxDev = Math.max(maxDev, Math.abs(f.diff));
-        }
-
-        // Draw zero line
-        const zeroY = padding + drawH / 2;
-        flucCtx.strokeStyle = '#ccc';
-        flucCtx.lineWidth = 1;
-        flucCtx.beginPath();
-        flucCtx.moveTo(padding, zeroY);
-        flucCtx.lineTo(padding + drawW, zeroY);
-        flucCtx.stroke();
-
-        // Draw fluctuation curve
-        flucCtx.strokeStyle = colors[0];
-        flucCtx.lineWidth = 4;
-        flucCtx.beginPath();
-        for (let i = 0; i < fluctuations.length; i++) {
-            const f = fluctuations[i];
-            const cx = padding + f.x_norm * drawW;
-            const cy = zeroY - (f.diff / maxDev) * (drawH / 2) * 0.9;
-            if (i === 0) flucCtx.moveTo(cx, cy);
-            else flucCtx.lineTo(cx, cy);
-        }
-        flucCtx.stroke();
+        localCtx.fillStyle = '#666';
+        localCtx.font = '18px sans-serif';
+        localCtx.textAlign = 'center';
+        localCtx.textBaseline = 'top';
+        localCtx.fillText('Independent Bernoulli at each step!', w / 2, baseY + 20);
     }
 
-    function updateGamma() {
-        const gamma = parseFloat(gammaSlider.value);
-        gammaValueSpan.textContent = gamma.toFixed(1);
-        q = Math.exp(-gamma / N);
-        qValueSpan.textContent = q.toFixed(4);
-        draw();
+    function resample() {
+        currentPath = generateQWeightedPath(A, B, q);
+        // Keep highlight in the middle
     }
 
-    gammaSlider.addEventListener('input', updateGamma);
-    resampleBtn.addEventListener('click', () => runCFTP());
+    canvas.addEventListener('click', () => {
+        resample();
+        drawAll();
+    });
 
-    // Initialize
-    async function init() {
-        const ok = await initWasm();
-        if (ok) {
-            await runCFTP();
-        }
-    }
-
-    // Set gamma programmatically and resample
-    function setGamma(gamma) {
-        gammaSlider.value = gamma;
-        gammaValueSpan.textContent = gamma.toFixed(1);
-        q = Math.exp(-gamma / N);
-        qValueSpan.textContent = q.toFixed(4);
-        draw();  // Update limit shape curve immediately
-        runCFTP();  // Start sampling in background
-    }
-
-    // Step gamma values
-    const stepGammas = [3.6, 1, -8];  // step 0 (initial), step 1, step 2
     let currentStep = 0;
 
-    // Register with slide engine
-    function waitForSlideEngine() {
-        if (window.slideEngine) {
-            window.slideEngine.registerSimulation('q-limit-shape', {
-                start() {},
-                pause() {},
-                steps: 2,
-                onSlideEnter() {
-                    // Restore gamma for current step
-                    const gamma = stepGammas[currentStep];
-                    gammaSlider.value = gamma;
-                    gammaValueSpan.textContent = gamma.toFixed(1);
-                    q = Math.exp(-gamma / N);
-                    qValueSpan.textContent = q.toFixed(4);
-
-                    if (!wasm) {
-                        init();
-                    } else if (partitionPath.length === 0) {
-                        runCFTP();
-                    } else {
-                        draw();
-                    }
-                },
-                onStep(step) {
-                    currentStep = step;
-                    if (step >= 1 && step <= stepGammas.length - 1) {
-                        setGamma(stepGammas[step]);
-                    }
-                },
-                onStepBack(step) {
-                    currentStep = step;
-                    if (step >= 0 && step <= stepGammas.length - 1) {
-                        setGamma(stepGammas[step]);
-                    }
-                }
-            }, 0);
-        } else {
-            setTimeout(waitForSlideEngine, 50);
+    function drawAll() {
+        const showHighlight = currentStep >= 1;
+        drawMainPath(showHighlight);
+        if (currentStep >= 1) {
+            drawLocalView();
         }
     }
-    waitForSlideEngine();
 
-    // Initial draw placeholder
-    draw();
+    function reset() {
+        currentStep = 0;
+        currentPath = null;
+        localCanvas.style.opacity = '0';
+        localTitle.style.opacity = '0';
+        insightEl.style.opacity = '0';
+        explanationEl.style.opacity = '0';
+        resample();
+        drawMainPath(false);
+    }
+
+    function waitForSlideEngine() {
+        if (!window.slideEngine) {
+            setTimeout(waitForSlideEngine, 50);
+            return;
+        }
+        window.slideEngine.registerSimulation('q-local', {
+            start() {},
+            pause() {},
+            steps: 3,
+            onStep(step) {
+                currentStep = step;
+                if (step === 1) {
+                    localCanvas.style.opacity = '1';
+                    localTitle.style.opacity = '1';
+                    drawAll();
+                } else if (step === 2) {
+                    insightEl.style.opacity = '1';
+                    drawAll();
+                } else if (step === 3) {
+                    explanationEl.style.opacity = '1';
+                    drawAll();
+                }
+            },
+            onStepBack(step) {
+                currentStep = step;
+                if (step === 0) {
+                    localCanvas.style.opacity = '0';
+                    localTitle.style.opacity = '0';
+                    insightEl.style.opacity = '0';
+                } else if (step === 1) {
+                    insightEl.style.opacity = '0';
+                } else if (step === 2) {
+                    explanationEl.style.opacity = '0';
+                }
+                drawAll();
+            },
+            onSlideEnter() {
+                reset();
+            },
+            onSlideLeave() {
+                reset();
+            }
+        }, 0);
+    }
+    waitForSlideEngine();
 })();
 </script>
 

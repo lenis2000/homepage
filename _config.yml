@@ -35,6 +35,7 @@ permalink: /:year/:month/:title/
 
 exclude:
   - vendor
+  - "**/CLAUDE.md"
   - "_simulations/**/README.md"
   - "_simulations/domino_tilings/myenv/"
   - ".claude"

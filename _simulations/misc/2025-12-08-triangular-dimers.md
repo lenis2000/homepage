@@ -230,18 +230,6 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 </div>
 
 <div class="control-group">
-  <div class="control-group-title">Simulation</div>
-  <button id="btn-start" class="primary">Start Glauber</button>
-  <button id="btn-stop" disabled>Stop</button>
-  <div style="display: inline-flex; align-items: center; gap: 6px; margin-left: 12px;">
-    <span style="font-size: 12px; color: #666;">Speed</span>
-    <input type="range" id="speed-slider" min="0" max="100" value="25" style="width: 100px;">
-    <input type="number" id="speed-input" class="param-input" value="100" min="1" max="100000000" style="width: 80px;">
-    <span style="font-size: 11px; color: #888;">/s</span>
-  </div>
-</div>
-
-<div class="control-group">
   <div class="control-group-title">Drawing Tools</div>
   <button id="btn-pan" class="tool-btn active">Pan</button>
   <button id="btn-draw" class="tool-btn">Draw</button>
@@ -320,12 +308,37 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     Loop: - | Edges: - | Diameter: - | Fractal dim: -
   </div>
   <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">
-    <div style="font-weight: bold; font-size: 12px; margin-bottom: 4px;">Average Over Dynamics</div>
+    <div style="font-weight: bold; font-size: 12px; margin-bottom: 4px;">Target Selection</div>
     <div style="font-size: 11px; color: #555; margin-bottom: 6px;">
-      Fix a probe point and sample the fractal dimension of the loop through it during Glauber dynamics.
+      Choose what to measure: a loop through a probe point, or the path between two holes (forced interface).
+    </div>
+    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 6px;">
+      <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+        <input type="radio" name="fractal-target" id="target-probe" value="probe" checked>
+        <span style="font-size: 12px;">Probe Point</span>
+      </label>
+      <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+        <input type="radio" name="fractal-target" id="target-holes" value="holes">
+        <span style="font-size: 12px;">Two Holes (Forced Interface)</span>
+      </label>
+    </div>
+    <div id="probe-controls" style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+      <button id="btn-set-fractal-probe" class="tool-btn" style="width:auto; padding: 0 8px;">Set Probe Point</button>
+      <span id="probe-coords" style="font-size: 11px; font-family: monospace; color: #666;">(not set)</span>
+    </div>
+    <div id="holes-controls" style="display: none; align-items: center; gap: 8px; margin-bottom: 6px;">
+      <button id="btn-set-hole1" class="tool-btn" style="width:auto; padding: 0 8px;">Set Hole 1</button>
+      <button id="btn-set-hole2" class="tool-btn" style="width:auto; padding: 0 8px;">Set Hole 2</button>
+      <button id="btn-clear-holes" class="tool-btn" style="width:auto; padding: 0 8px;">Clear</button>
+      <span id="hole-coords" style="font-size: 11px; font-family: monospace; color: #666;">(none)</span>
+    </div>
+  </div>
+  <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">
+    <div style="font-weight: bold; font-size: 12px; margin-bottom: 4px;">Fractal Dimension Sampling</div>
+    <div style="font-size: 11px; color: #555; margin-bottom: 6px;">
+      Sample the fractal dimension of the selected target during Glauber dynamics.
     </div>
     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-      <button id="btn-set-fractal-probe" class="tool-btn" style="width:auto; padding: 0 8px;">Set Probe Point</button>
       <button id="btn-start-fractal-avg" class="tool-btn" style="width:auto; padding: 0 8px;" disabled>Start Sampling</button>
       <button id="btn-stop-fractal-avg" class="tool-btn" style="width:auto; padding: 0 8px; display: none;">Stop</button>
       <button id="btn-reset-fractal-avg" class="tool-btn" style="width:auto; padding: 0 8px;" disabled>Reset</button>
@@ -334,8 +347,9 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
       <input type="number" id="fractal-sample-interval-input" class="param-input" value="1000" min="1" max="100000000" style="width: 70px;">
     </div>
     <div id="fractal-avg-output" style="font-family: monospace; font-size: 11px; border: 1px solid #ddd; background: white; padding: 4px; border-radius: 4px;">
-      Probe: (not set) | Avg D: - | Samples: 0 | StdDev: -
+      Target: (not set) | Avg D: - | Samples: 0 | StdDev: -
     </div>
+    <canvas id="fractal-histogram" width="800" height="300" style="display: none; margin-top: 8px; border: 1px solid #ddd; background: white; border-radius: 4px; width: 100%; max-width: 500px; height: 180px;"></canvas>
   </div>
 </div>
 
@@ -376,6 +390,15 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     </div>
     <div id="weight-diagram" style="display: inline-block;"></div>
   </div>
+</div>
+
+<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+  <button id="btn-start" class="primary" style="height: 32px; padding: 0 16px; font-size: 14px; font-weight: 600;">Start Glauber</button>
+  <button id="btn-stop" disabled style="height: 32px; padding: 0 12px;">Stop</button>
+  <span style="font-size: 12px; color: #666; margin-left: 8px;">Speed:</span>
+  <input type="range" id="speed-slider" min="0" max="100" value="25" style="width: 80px;">
+  <input type="number" id="speed-input" class="param-input" value="100" min="1" max="100000000" style="width: 70px;">
+  <span style="font-size: 11px; color: #888;">/s</span>
 </div>
 
 <canvas id="dimer-canvas"></canvas>
@@ -449,6 +472,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     let selectingLoop = false;
     let selectedLoopIndex = -1;
     let selectedLoopPoint = null; // {n, j} - clicked point
+
+    // Forced interface (hole) state
+    let settingHole = null;  // 1 or 2 when setting
+    let hole1 = null;  // {n, j, idx}
+    let hole2 = null;  // {n, j, idx}
 
     // Initialize default weights for k=2, l=1
     function initDefaultWeights(k, l) {
@@ -628,19 +656,22 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         const resetBtn = document.getElementById('btn-reset-fractal-avg');
         const setProbeBtn = document.getElementById('btn-set-fractal-probe');
 
-        if (!fractalProbePoint) {
-            outputDiv.textContent = 'Probe: (not set) | Avg D: - | Samples: 0 | StdDev: -';
+        // Work with either probe point OR holes
+        const hasProbe = fractalProbePoint !== null;
+        const hasHoles = hole1 !== null && hole2 !== null;
+
+        if (!hasProbe && !hasHoles) {
+            outputDiv.textContent = 'Target: (not set) | Avg D: - | Samples: 0 | StdDev: -';
             startBtn.disabled = true;
             resetBtn.disabled = true;
             return;
         }
 
-        // Update probe display
-        const formatCoord = (c) => Number.isInteger(c) ? c : c.toFixed(2);
-        let probeStr = `Probe: (${formatCoord(fractalProbePoint.n)}, ${formatCoord(fractalProbePoint.j)})`;
+        // Simplified target display - details are in Target Selection pane
+        const targetStr = hasHoles ? 'Target: Hole Path' : 'Target: Probe';
 
         if (!wasmReady) {
-            outputDiv.textContent = probeStr + ' | Avg D: - | Samples: 0 | StdDev: -';
+            outputDiv.textContent = targetStr + ' | Avg D: - | Samples: 0 | StdDev: -';
             return;
         }
 
@@ -649,11 +680,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             const avgData = JSON.parse(wasmModule._getFractalAverage());
             const avgStr = avgData.average >= 0 ? avgData.average.toFixed(4) : '-';
             const stdStr = avgData.count > 1 ? avgData.stddev.toFixed(4) : '-';
-            outputDiv.textContent = `${probeStr} | Avg D: ${avgStr} | Samples: ${avgData.count} | StdDev: ${stdStr}`;
+            outputDiv.textContent = `${targetStr} | Avg D: ${avgStr} | Samples: ${avgData.count} | StdDev: ${stdStr}`;
             startBtn.disabled = false;
             resetBtn.disabled = avgData.count === 0;
         } catch (e) {
-            outputDiv.textContent = probeStr + ' | Error reading average';
+            outputDiv.textContent = targetStr + ' | Error reading average';
         }
 
         // Update button visibility
@@ -666,12 +697,35 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             stopBtn.style.display = 'none';
             setProbeBtn.disabled = false;
         }
+
+        // Update histogram
+        drawFractalHistogram();
     }
 
     function setFractalProbePoint(n, j) {
         fractalProbePoint = { n, j };
         settingFractalProbe = false;
         document.getElementById('btn-set-fractal-probe').classList.remove('active');
+
+        // Update probe coords display
+        const formatCoord = (c) => Number.isInteger(c) ? c : c.toFixed(2);
+        document.getElementById('probe-coords').textContent = `(${formatCoord(n)}, ${formatCoord(j)})`;
+
+        // Ensure probe radio is selected
+        document.getElementById('target-probe').checked = true;
+        document.getElementById('probe-controls').style.display = 'flex';
+        document.getElementById('holes-controls').style.display = 'none';
+
+        // Clear holes when setting probe point (orthogonal modes)
+        if (hole1 || hole2) {
+            hole1 = null;
+            hole2 = null;
+            settingHole = null;
+            updateHoleUI();
+            if (wasmReady) {
+                wasmModule._clearHolesInConfig2();
+            }
+        }
 
         if (wasmReady) {
             wasmModule._startFractalAveraging(n, j);
@@ -681,7 +735,10 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     }
 
     function startFractalSampling() {
-        if (!fractalProbePoint || !wasmReady) return;
+        // Allow starting with either probe OR holes
+        const hasProbe = fractalProbePoint !== null;
+        const hasHoles = hole1 !== null && hole2 !== null;
+        if ((!hasProbe && !hasHoles) || !wasmReady) return;
         fractalSampling = true;
         updateFractalAvgUI();
     }
@@ -692,19 +749,275 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     }
 
     function resetFractalSampling() {
-        if (wasmReady && fractalProbePoint) {
+        // Allow reset with either probe OR holes
+        const hasProbe = fractalProbePoint !== null;
+        const hasHoles = hole1 !== null && hole2 !== null;
+        if (wasmReady && (hasProbe || hasHoles)) {
             wasmModule._resetFractalSamples();
         }
         updateFractalAvgUI();
+        drawFractalHistogram();
+    }
+
+    // Draw histogram of fractal dimension samples
+    function drawFractalHistogram() {
+        const canvas = document.getElementById('fractal-histogram');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        // Use the full canvas resolution
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Clear
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+
+        // Work with either probe point OR holes
+        const hasProbe = fractalProbePoint !== null;
+        const hasHoles = hole1 !== null && hole2 !== null;
+        if (!wasmReady || (!hasProbe && !hasHoles)) {
+            canvas.style.display = 'none';
+            return;
+        }
+
+        // Get samples
+        let samples;
+        try {
+            samples = JSON.parse(wasmModule._getFractalSamples());
+        } catch (e) {
+            canvas.style.display = 'none';
+            return;
+        }
+
+        if (!samples || samples.length < 2) {
+            canvas.style.display = 'none';
+            return;
+        }
+
+        // Show the canvas
+        canvas.style.display = 'block';
+
+        // Compute histogram
+        const numBins = 25;
+        const minVal = Math.min(...samples);
+        const maxVal = Math.max(...samples);
+        const range = maxVal - minVal || 0.1;
+        const binSize = range / numBins;
+
+        const bins = new Array(numBins).fill(0);
+        for (const s of samples) {
+            const binIdx = Math.min(numBins - 1, Math.floor((s - minVal) / binSize));
+            bins[binIdx]++;
+        }
+
+        const maxCount = Math.max(...bins);
+
+        // Compute stats
+        const mean = samples.reduce((a, b) => a + b, 0) / samples.length;
+        const variance = samples.reduce((a, b) => a + (b - mean) ** 2, 0) / samples.length;
+        const stddev = Math.sqrt(variance);
+
+        // Draw histogram with generous padding
+        const padding = { left: 60, right: 20, top: 40, bottom: 50 };
+        const chartWidth = width - padding.left - padding.right;
+        const chartHeight = height - padding.top - padding.bottom;
+        const barWidth = chartWidth / numBins;
+
+        // Background
+        ctx.fillStyle = '#fafafa';
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(padding.left, padding.top, chartWidth, chartHeight);
+
+        // Grid lines
+        ctx.strokeStyle = '#e0e0e0';
+        ctx.lineWidth = 1;
+        for (let i = 1; i <= 4; i++) {
+            const y = padding.top + chartHeight * (1 - i / 4);
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(padding.left + chartWidth, y);
+            ctx.stroke();
+        }
+
+        // Bars with gradient
+        for (let i = 0; i < numBins; i++) {
+            const barHeight = maxCount > 0 ? (bins[i] / maxCount) * chartHeight : 0;
+            if (barHeight > 0) {
+                const x = padding.left + i * barWidth + 2;
+                const y = padding.top + chartHeight - barHeight;
+                const w = barWidth - 4;
+
+                // Bar fill
+                ctx.fillStyle = '#2196F3';
+                ctx.fillRect(x, y, w, barHeight);
+
+                // Bar border
+                ctx.strokeStyle = '#1565C0';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, y, w, barHeight);
+            }
+        }
+
+        // Mean line
+        const meanX = padding.left + ((mean - minVal) / range) * chartWidth;
+        ctx.strokeStyle = '#e53935';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 4]);
+        ctx.beginPath();
+        ctx.moveTo(meanX, padding.top);
+        ctx.lineTo(meanX, padding.top + chartHeight);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Axes
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, padding.top);
+        ctx.lineTo(padding.left, padding.top + chartHeight);
+        ctx.lineTo(padding.left + chartWidth, padding.top + chartHeight);
+        ctx.stroke();
+
+        // X-axis labels
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 18px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(minVal.toFixed(2), padding.left, height - 15);
+        ctx.fillText(maxVal.toFixed(2), padding.left + chartWidth, height - 15);
+
+        // X-axis title
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillText('Fractal Dimension D', padding.left + chartWidth / 2, height - 10);
+
+        // Y-axis labels
+        ctx.font = '16px monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(maxCount.toString(), padding.left - 8, padding.top + 6);
+        ctx.fillText('0', padding.left - 8, padding.top + chartHeight + 5);
+
+        // Y-axis title
+        ctx.save();
+        ctx.translate(18, padding.top + chartHeight / 2);
+        ctx.rotate(-Math.PI / 2);
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText('Count', 0, 0);
+        ctx.restore();
+
+        // Stats box
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillRect(padding.left + 10, padding.top + 5, 200, 28);
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(padding.left + 10, padding.top + 5, 200, 28);
+
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 16px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(`n=${samples.length}`, padding.left + 15, padding.top + 24);
+
+        ctx.fillStyle = '#e53935';
+        ctx.fillText(`μ=${mean.toFixed(3)}`, padding.left + 85, padding.top + 24);
+
+        ctx.fillStyle = '#666';
+        ctx.fillText(`σ=${stddev.toFixed(3)}`, padding.left + 160, padding.top + 24);
+    }
+
+    // ========================================================================
+    // FORCED INTERFACE (TWO HOLES)
+    // ========================================================================
+    function updateHoleUI() {
+        const formatCoord = (c) => Number.isInteger(c) ? c : c.toFixed(2);
+        let text = '';
+        if (hole1) text += `H1:(${formatCoord(hole1.n)},${formatCoord(hole1.j)})`;
+        if (hole1 && hole2) text += ' ';
+        if (hole2) text += `H2:(${formatCoord(hole2.n)},${formatCoord(hole2.j)})`;
+        if (!hole1 && !hole2) text = '(none)';
+        document.getElementById('hole-coords').textContent = text;
+
+        // Update button states
+        document.getElementById('btn-set-hole1').classList.toggle('active', settingHole === 1);
+        document.getElementById('btn-set-hole2').classList.toggle('active', settingHole === 2);
+    }
+
+    function setHole(holeNum, n, j) {
+        // Get vertex index from WASM if available
+        const idx = -1;  // We'll let C++ handle the index lookup
+
+        if (holeNum === 1) {
+            hole1 = { n, j, idx };
+        } else {
+            hole2 = { n, j, idx };
+        }
+
+        settingHole = null;
+        updateHoleUI();
+
+        // Ensure holes radio is selected
+        document.getElementById('target-holes').checked = true;
+        document.getElementById('probe-controls').style.display = 'none';
+        document.getElementById('holes-controls').style.display = 'flex';
+
+        // Clear probe point when setting holes (orthogonal modes)
+        if (fractalProbePoint) {
+            fractalProbePoint = null;
+            settingFractalProbe = false;
+            document.getElementById('btn-set-fractal-probe').classList.remove('active');
+            document.getElementById('probe-coords').textContent = '(not set)';
+        }
+
+        // Reset fractal samples when both holes are set (new target)
+        if (hole1 && hole2 && wasmReady) {
+            wasmModule._resetFractalSamples();
+        }
+
+        // Apply holes to WASM if both are set
+        applyHolesToWasm();
+        updateFractalAvgUI();
+        draw();
+    }
+
+    function applyHolesToWasm() {
+        if (!wasmReady) return;
+
+        if (hole1 && hole2) {
+            wasmModule._setHolesInConfig2(hole1.n, hole1.j, hole2.n, hole2.j);
+        } else {
+            wasmModule._clearHolesInConfig2();
+        }
+    }
+
+    function clearHoles() {
+        hole1 = null;
+        hole2 = null;
+        settingHole = null;
+        updateHoleUI();
+
+        if (wasmReady) {
+            wasmModule._clearHolesInConfig2();
+            wasmModule._resetFractalSamples();
+        }
+        updateFractalAvgUI();
+        draw();
     }
 
     // Called periodically during Glauber dynamics to sample fractal dimension
     function maybeSampleFractalDim(stepsSinceLastSample) {
-        if (!fractalSampling || !wasmReady || !fractalProbePoint) return 0;
+        if (!fractalSampling || !wasmReady) return 0;
+        // Need either a probe point OR both holes set
+        const hasProbe = fractalProbePoint !== null;
+        const hasHoles = hole1 !== null && hole2 !== null;
+        if (!hasProbe && !hasHoles) return 0;
         if (stepsSinceLastSample < fractalSampleInterval) return stepsSinceLastSample;
 
-        // Sample the fractal dimension
-        wasmModule._sampleFractalDimension();
+        // Sample the fractal dimension - use hole path if holes are set, otherwise use probe
+        if (hasHoles) {
+            wasmModule._sampleHolePathFractalDimension();
+        } else {
+            wasmModule._sampleFractalDimension();
+        }
         updateFractalAvgUI();
         return 0;  // Reset counter
     }
@@ -929,8 +1242,41 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             drawEdgeWeights();
         }
 
+        // Draw hole path if holes are set
+        drawHolePath();
+
         // Draw probe points if set
         drawProbePoints();
+    }
+
+    function drawHolePath() {
+        if (!hole1 || !hole2 || !wasmReady) return;
+
+        const pathStr = wasmModule._getHolePath();
+        if (!pathStr || pathStr.length === 0) return;
+
+        const edges = pathStr.split(';');
+
+        // Use same width scaling as dimers
+        const widthSlider = parseInt(document.getElementById('edge-width-slider').value) || 50;
+        const widthMultiplier = Math.pow(10, (widthSlider - 50) / 30);
+        const dimerWidth = Math.max(0.2, Math.min(20, viewScale * 0.15 * widthMultiplier));
+
+        ctx.strokeStyle = '#FFD700';  // Gold
+        ctx.lineWidth = dimerWidth * 2;  // 2x dimer width
+        ctx.lineCap = 'round';
+
+        for (const edge of edges) {
+            const coords = edge.split(',').map(Number);
+            if (coords.length === 4) {
+                const p1 = latticeToScreen(coords[0], coords[1]);
+                const p2 = latticeToScreen(coords[2], coords[3]);
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+            }
+        }
     }
 
     function drawProbePoints() {
@@ -991,6 +1337,41 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
             // Draw label
             ctx.fillStyle = '#800080';
             ctx.fillText('F', p.x, p.y - probeRadius * 1.3 - 2);
+        }
+
+        // Draw hole markers for forced interface
+        if (hole1) {
+            const p = latticeToScreen(hole1.n, hole1.j);
+            // Draw red X marker for hole 1
+            ctx.strokeStyle = '#DC143C';
+            ctx.lineWidth = 3;
+            const sz = probeRadius * 1.5;
+            ctx.beginPath();
+            ctx.moveTo(p.x - sz, p.y - sz);
+            ctx.lineTo(p.x + sz, p.y + sz);
+            ctx.moveTo(p.x + sz, p.y - sz);
+            ctx.lineTo(p.x - sz, p.y + sz);
+            ctx.stroke();
+            // Draw label
+            ctx.fillStyle = '#DC143C';
+            ctx.fillText('H1', p.x + sz + 3, p.y);
+        }
+
+        if (hole2) {
+            const p = latticeToScreen(hole2.n, hole2.j);
+            // Draw red X marker for hole 2
+            ctx.strokeStyle = '#DC143C';
+            ctx.lineWidth = 3;
+            const sz = probeRadius * 1.5;
+            ctx.beginPath();
+            ctx.moveTo(p.x - sz, p.y - sz);
+            ctx.lineTo(p.x + sz, p.y + sz);
+            ctx.moveTo(p.x + sz, p.y - sz);
+            ctx.lineTo(p.x - sz, p.y + sz);
+            ctx.stroke();
+            // Draw label
+            ctx.fillStyle = '#DC143C';
+            ctx.fillText('H2', p.x + sz + 3, p.y);
         }
     }
 
@@ -1654,7 +2035,15 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
                 _sampleFractalDimension: Module.cwrap('sampleFractalDimension', 'number', []),
                 _getFractalAverage: Module.cwrap('getFractalAverage', 'string', []),
                 _resetFractalSamples: Module.cwrap('resetFractalSamples', null, []),
-                _getFractalSamples: Module.cwrap('getFractalSamples', 'string', [])
+                _getFractalSamples: Module.cwrap('getFractalSamples', 'string', []),
+                // Forced interface (holes)
+                _setHolesInConfig2: Module.cwrap('setHolesInConfig2', null, ['number', 'number', 'number', 'number']),
+                _clearHolesInConfig2: Module.cwrap('clearHolesInConfig2', null, []),
+                _getHole1: Module.cwrap('getHole1', 'number', []),
+                _getHole2: Module.cwrap('getHole2', 'number', []),
+                _getHolePath: Module.cwrap('getHolePath', 'string', []),
+                _computeHolePathFractalDimension: Module.cwrap('computeHolePathFractalDimension', 'number', []),
+                _sampleHolePathFractalDimension: Module.cwrap('sampleHolePathFractalDimension', 'number', [])
             };
             // Seed RNG with random value so each page load is different
             const randomSeed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
@@ -1805,11 +2194,19 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         }
 
         // Sample fractal dimension if averaging is active (requires double dimer mode)
-        if (fractalSampling && doubleDimerEnabled && fractalProbePoint) {
+        // Works with either probe point OR holes
+        const hasProbe = fractalProbePoint !== null;
+        const hasHoles = hole1 !== null && hole2 !== null;
+        if (fractalSampling && doubleDimerEnabled && (hasProbe || hasHoles)) {
             stepsSinceLastFractalSample += stepsThisFrame;
             if (stepsSinceLastFractalSample >= fractalSampleInterval) {
                 stepsSinceLastFractalSample = 0;
-                wasmModule._sampleFractalDimension();
+                // Use hole path sampling when holes are set, otherwise use probe
+                if (hasHoles) {
+                    wasmModule._sampleHolePathFractalDimension();
+                } else {
+                    wasmModule._sampleFractalDimension();
+                }
                 updateFractalAvgUI();
             }
         }
@@ -1901,6 +2298,17 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
         if (settingFractalProbe) {
             const coords = screenToLatticeFloat(lastMouseX, lastMouseY);
             setFractalProbePoint(coords.n, coords.j);
+            return;
+        }
+
+        // Handle hole setting for forced interface
+        if (settingHole) {
+            const coords = screenToLattice(lastMouseX, lastMouseY);
+            // Check if vertex is in the active region
+            const key = vertexKey(coords.n, coords.j);
+            if (activeVertices.has(key)) {
+                setHole(settingHole, coords.n, coords.j);
+            }
             return;
         }
 
@@ -2136,6 +2544,72 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 
     document.getElementById('btn-reset-fractal-avg').addEventListener('click', () => {
         resetFractalSampling();
+    });
+
+    // Forced interface (holes) event handlers
+    document.getElementById('btn-set-hole1').addEventListener('click', () => {
+        settingHole = settingHole === 1 ? null : 1;
+        // Deactivate other click modes
+        if (settingHole) {
+            selectingLoop = false;
+            selectingProbe = null;
+            settingFractalProbe = false;
+            document.getElementById('btn-select-loop').classList.remove('active');
+            document.getElementById('btn-set-p1').classList.remove('active');
+            document.getElementById('btn-set-p2').classList.remove('active');
+            document.getElementById('btn-set-fractal-probe').classList.remove('active');
+        }
+        updateHoleUI();
+    });
+
+    document.getElementById('btn-set-hole2').addEventListener('click', () => {
+        settingHole = settingHole === 2 ? null : 2;
+        // Deactivate other click modes
+        if (settingHole) {
+            selectingLoop = false;
+            selectingProbe = null;
+            settingFractalProbe = false;
+            document.getElementById('btn-select-loop').classList.remove('active');
+            document.getElementById('btn-set-p1').classList.remove('active');
+            document.getElementById('btn-set-p2').classList.remove('active');
+            document.getElementById('btn-set-fractal-probe').classList.remove('active');
+        }
+        updateHoleUI();
+    });
+
+    document.getElementById('btn-clear-holes').addEventListener('click', () => {
+        clearHoles();
+    });
+
+    // Target selection radio buttons
+    document.getElementById('target-probe').addEventListener('change', (e) => {
+        if (e.target.checked) {
+            document.getElementById('probe-controls').style.display = 'flex';
+            document.getElementById('holes-controls').style.display = 'none';
+            // Clear holes when switching to probe mode
+            if (hole1 || hole2) {
+                clearHoles();
+            }
+        }
+    });
+
+    document.getElementById('target-holes').addEventListener('change', (e) => {
+        if (e.target.checked) {
+            document.getElementById('probe-controls').style.display = 'none';
+            document.getElementById('holes-controls').style.display = 'flex';
+            // Clear probe when switching to holes mode
+            if (fractalProbePoint) {
+                fractalProbePoint = null;
+                settingFractalProbe = false;
+                document.getElementById('btn-set-fractal-probe').classList.remove('active');
+                document.getElementById('probe-coords').textContent = '(not set)';
+                if (wasmReady) {
+                    wasmModule._resetFractalSamples();
+                }
+                updateFractalAvgUI();
+                draw();
+            }
+        }
     });
 
     // ========================================================================
