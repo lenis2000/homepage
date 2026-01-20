@@ -2072,20 +2072,16 @@ window.addEventListener('wasm-loaded', async function() {
     </div>
 
     <!-- Key insight -->
-    <div id="q-local-insight" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 2vw; font-size: clamp(1.4rem, 2.5vw, 2rem); text-align: left; margin-top: 1vh; opacity: 0; transition: opacity 0.3s;">
-        <strong style="color: var(--slide-accent); font-size: 1.2em;">Universality: still Bernoulli!</strong><br>
-        Even with q-weighting, local structure remains <strong>independent Bernoulli trials</strong>.
+    <div id="q-local-insight" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 2vw; font-size: clamp(1.6rem, 2.8vw, 2.2rem); text-align: left; margin-top: 1vh; opacity: 0; transition: opacity 0.3s;">
+        <strong style="color: var(--slide-accent); font-size: 1.2em;">Local Universality for \(q = e^{-\gamma/N} \approx 1\): still Bernoulli!</strong><br>
+        For <strong style="color: var(--slide-accent);">\(q = e^{-\gamma/N}\) close to 1</strong> (i.e., \(\gamma = O(1)\)), local structure remains <strong>independent Bernoulli trials</strong>.
     </div>
 
     <!-- Explanation -->
     <div id="q-local-explanation" style="background: #f5f5f5; border-left: 4px solid #232D4B; padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left; margin-top: 1vh; opacity: 0; transition: opacity 0.3s;">
-        <strong style="color: #232D4B;">Key insight:</strong>
-        The q-weighted path (computed by
-				<span style="color: var(--slide-muted);">[Vershik 1996]</span>) 
-				locally looks like the configuration that <em>maximizes</em>
-				the total number of configurations around the path.
-				The total number of configurations is approximately the integral
-				of the local entropy over the path.
+        <strong style="color: #232D4B;">Regime \(q \approx 1\):</strong>
+        The q-weighted path <span style="color: var(--slide-muted);">[Vershik 1996]</span>
+        locally maximizes entropy — yielding <strong>IID Bernoulli</strong> structure with position-dependent parameters matching the limit shape slope.
     </div>
 </section>
 
@@ -2423,8 +2419,22 @@ window.addEventListener('wasm-loaded', async function() {
         localTitle.style.opacity = '0';
         insightEl.style.opacity = '0';
         explanationEl.style.opacity = '0';
-        insightEl.innerHTML = '<strong style="color: var(--slide-accent); font-size: 1.2em;">Universality: still Bernoulli!</strong><br>Even with q-weighting, local structure remains <strong>independent Bernoulli trials</strong>.';
+        insightEl.innerHTML = '<strong style="color: var(--slide-accent); font-size: 1.2em;">Local Universality for \\(q = e^{-\\gamma/N} \\approx 1\\): still Bernoulli!</strong><br>For <strong style="color: var(--slide-accent);">\\(q = e^{-\\gamma/N}\\) close to 1</strong> (i.e., \\(\\gamma = O(1)\\)), local structure remains <strong>independent Bernoulli trials</strong>.';
+        renderMath(insightEl);
         setGamma(3);
+    }
+
+    function renderMath(el) {
+        if (window.renderMathInElement) {
+            renderMathInElement(el, {
+                delimiters: [
+                    {left: "\\(", right: "\\)", display: false},
+                    {left: "$$", right: "$$", display: true}
+                ]
+            });
+        } else if (window.MathJax) {
+            MathJax.typeset([el]);
+        }
     }
 
     async function init() {
@@ -2450,7 +2460,7 @@ window.addEventListener('wasm-loaded', async function() {
         window.slideEngine.registerSimulation('q-local', {
             start() {},
             pause() {},
-            steps: 4,
+            steps: 7,
             async onStep(step) {
                 currentStep = step;
                 if (step === 1) {
@@ -2463,15 +2473,18 @@ window.addEventListener('wasm-loaded', async function() {
                     draw();
                 } else if (step === 3) {
                     // Extreme q < 1 - breaks universality, path hugs bottom then right
-                    setQDirect(0.6);
+                    setQDirect(0.67);
                     highlightStart = 130;
                     insightEl.style.opacity = '0';
                     explanationEl.style.opacity = '0';
                     await runCFTP();
                 } else if (step === 4) {
-                    insightEl.innerHTML = '<strong style="color: #c00; font-size: 1.2em;">Universality BROKEN at extreme q!</strong><br>When q is too extreme (q = 0.6), most of the path goes either up or right, and around the corner it is a finite perturbation of the boundary.';
+                    insightEl.innerHTML = '<strong style="color: #c00; font-size: 1.2em;">Universality BROKEN at extreme q!</strong><br>When q is too extreme (q = 0.67), the path becomes deterministic—always hugs the corner.';
                     insightEl.style.opacity = '1';
                     draw();
+                } else if (step === 5 || step === 6 || step === 7) {
+                    // More resamples with same extreme q for effect
+                    await runCFTP();
                 }
             },
             onStepBack(step) {
@@ -2488,10 +2501,14 @@ window.addEventListener('wasm-loaded', async function() {
                 } else if (step === 2) {
                     setGamma(3);
                     highlightStart = Math.floor((N + M) / 2 - highlightLen / 2);  // Back to middle
-                    insightEl.innerHTML = '<strong style="color: var(--slide-accent); font-size: 1.2em;">Universality: still Bernoulli!</strong><br>Even with q-weighting, local structure remains <strong>independent Bernoulli trials</strong>.';
+                    insightEl.innerHTML = '<strong style="color: var(--slide-accent); font-size: 1.2em;">Local Universality for \\(q = e^{-\\gamma/N} \\approx 1\\): still Bernoulli!</strong><br>For <strong style="color: var(--slide-accent);">\\(q = e^{-\\gamma/N}\\) close to 1</strong> (i.e., \\(\\gamma = O(1)\\)), local structure remains <strong>independent Bernoulli trials</strong>.';
+                    renderMath(insightEl);
                     runCFTP();
                 } else if (step === 3) {
                     insightEl.style.opacity = '0';
+                } else if (step === 4 || step === 5 || step === 6) {
+                    // Back from later resample steps - just resample
+                    runCFTP();
                 }
                 draw();
             },
