@@ -1,0 +1,33 @@
+<section class="slide slide-center" id="2to3d" data-title="From Paths to 3D">
+    <h2 class="slide-title">From Paths to 3D</h2>
+    <div style="display: flex; gap: 2vw; align-items: center; width: 95vw; height: 78vh;">
+        <!-- Left pane: 3D view + description -->
+        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;">
+            <div style="position: relative; width: 100%; flex: 1;">
+                <canvas id="bridge-3d-canvas" style="width: 100%; height: 100%;"></canvas>
+            </div>
+            <div id="bridge-description" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; line-height: 1.6; margin-top: 2vh;">
+                surface in <span id="bridge-box-size">1 × 12 × 9</span> box = 2D path in 12 × 9 rectangle
+            </div>
+            <div id="macmahon-text" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left; line-height: 1.5; margin-top: 1vh; opacity: 0; transition: opacity 0.3s;">
+                <strong style="color: var(--slide-accent);">Theorem [MacMahon, c. 1900]:</strong><br>
+                Number of surfaces in \(a \times b \times c\) box is \(\displaystyle\prod_{i=1}^{a}\prod_{j=1}^{b}\prod_{k=1}^{c}\frac{i+j+k-1}{i+j+k-2}\)
+            </div>
+            <div id="macmahon-example" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left; line-height: 1.5; margin-top: 1vh; opacity: 0; transition: opacity 0.3s;">
+                <div>For 9 × 12 × 9: <span style="font-family: monospace; font-size: clamp(1.4rem, 2.5vw, 2rem); font-weight: bold; color: #E57200;">1,340,992,301,315,806,672,824,460,528,012,500</span></div>
+                <div style="margin-top: 1vh;">... and we <strong>pick one at random from this collection</strong></div>
+            </div>
+        </div>
+        <!-- Right pane: snowflake -->
+        <div id="bridge-right-pane" style="flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%;">
+            <div id="snowflake-title" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; margin-bottom: 1vh; opacity: 0; transition: opacity 0.3s;">
+                More complex boxes:
+            </div>
+            <div style="position: relative; width: 100%; flex: 1;">
+                <canvas id="bridge-snowflake-canvas" style="width: 100%; height: 100%;"></canvas>
+            </div>
+            <div id="snowflake-description" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; line-height: 1.6; margin-top: 2vh;">
+            </div>
+        </div>
+    </div>
+</section>

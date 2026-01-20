@@ -285,6 +285,65 @@ emcc simulation.cpp -o simulation.js \
 
 Each slide creates its own instance - completely isolated state, no conflicts.
 
+**Dynamic Loading with Multiple WASM + WebGPU Modules:**
+
+When a talk needs multiple WASM modules and WebGPU engines, use Promise.all and .finally() to ensure everything loads before simulations initialize:
+
+```javascript
+// In index.html <script> block
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+// Load all WASM modules first, then WebGPU engine, then signal ready
+Promise.all([
+    loadScript('/talk/visual/sim/visual-lozenge.js'),  // LozengeModule
+    loadScript('/talk/visual/sim/q-partition-cftp.js') // QPartitionModule
+]).then(() => {
+    loadScript('/js/webgpu-qpartition-engine.js')      // WebGPUQPartitionEngine
+        .catch(e => console.log('WebGPU engine not available'))
+        .finally(() => window.dispatchEvent(new Event('wasm-loaded')));
+});
+```
+
+**Simulation files must wait for wasm-loaded event:**
+```javascript
+function initMySimulation() {
+    (async function() {
+        if (typeof MyWasmModule === 'undefined') {
+            console.error('MyWasmModule not loaded');
+            return;
+        }
+        // Check WebGPU engine exists before using
+        if (typeof WebGPUEngine !== 'undefined' && WebGPUEngine.isAvailable()) {
+            // Use GPU path
+        }
+        // ... rest of simulation
+    })();
+}
+
+// Initialize when WASM is loaded
+if (typeof MyWasmModule !== 'undefined') {
+    initMySimulation();
+} else {
+    window.addEventListener('wasm-loaded', initMySimulation, { once: true });
+}
+```
+
+**Available WASM modules:**
+- `LozengeModule` - 3D lozenge tiling (visual-lozenge.js, visual-lozenge-threaded.js)
+- `QPartitionModule` - 2D lattice path CFTP (q-partition-cftp.js)
+
+**Available WebGPU engines:**
+- `WebGPULozengeEngine` - /js/webgpu-lozenge-engine.js (3D Glauber dynamics)
+- `WebGPUQPartitionEngine` - /js/webgpu-qpartition-engine.js (2D path sampling)
+
 **Non-modularized WASM with cwrap:**
 ```javascript
 Module.onRuntimeInitialized = function() {

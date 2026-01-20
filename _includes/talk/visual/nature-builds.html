@@ -1,0 +1,41 @@
+<section class="slide slide-top" id="nature-builds" data-title="How Nature Makes Shape">
+    <h2 class="slide-title">How Nature Makes Shape?</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1rem, 3vw, 4rem); margin-top: 2vh; align-items: start;">
+        <!-- Left column: Salt crystal images -->
+        <div>
+            <p style="text-align: left; margin-bottom: 2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">Salt — same substance with cubic crystal structure, at different scales and growth conditions</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.5rem, 1vw, 1rem);">
+                <figure style="margin: 0;">
+                    <img src="images/salt-micro-public-domain.jpg" alt="Salt crystals microscopic" style="width: 100%; height: 28vh; object-fit: cover; border-radius: 4px;">
+                    <figcaption><strong style="color: var(--slide-navy);">Microscopic</strong> · Public domain</figcaption>
+                </figure>
+                <figure style="margin: 0;">
+                    <img src="images/salt-halite-doronenko-cc-by-3.jpg" alt="Hopper salt crystal" style="width: 100%; height: 28vh; object-fit: cover; border-radius: 4px;">
+                    <figcaption><strong style="color: var(--slide-navy);">Mesoscopic</strong> · Doronenko, CC BY 3.0</figcaption>
+                </figure>
+                <figure style="margin: 0;">
+                    <img src="images/salt-halite-lavinsky-irocks-cc-by-sa-3.jpg" alt="Halite crystal" style="width: 100%; height: 28vh; object-fit: cover; border-radius: 4px;">
+                    <figcaption><strong style="color: var(--slide-navy);">Mesoscopic</strong> · Lavinsky, CC BY-SA 3.0</figcaption>
+                </figure>
+                <figure style="margin: 0;">
+                    <div style="overflow: hidden; border-radius: 4px; height: 28vh;">
+                        <img src="images/salt-smooth-deadsea-xta11-cc-by-sa-4.jpg" alt="Smooth salt formation" style="width: 100%; height: 100%; object-fit: cover; transform: scale(1.5); transform-origin: right bottom;">
+                    </div>
+                    <figcaption><strong style="color: var(--slide-navy);">Macroscopic</strong> · xta11, CC BY-SA 4.0</figcaption>
+                </figure>
+            </div>
+        </div>
+
+        <!-- Right column: Crystal growth simulation -->
+        <div>
+            <p style="text-align: left; margin-bottom: 2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">Mathematical (random) crystal growth<br><span style="visibility: hidden;">phantom</span></p>
+            <div style="position: relative; display: inline-block; width: 100%;">
+                <canvas id="crystal-growth-canvas" style="width: 100%; height: 62vh; border-radius: 8px;"></canvas>
+                <button id="crystal-play-btn" style="position: absolute; bottom: 1vh; right: 1vh; width: 4vh; height: 4vh; border-radius: 50%; border: none; background: rgba(35, 45, 75, 0.8); color: white; font-size: clamp(0.9rem, 1.5vw, 1.2rem); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.3s;">▶</button>
+            </div>
+        </div>
+    </div>
+
+    <p id="nature-builds-question" style="font-size: clamp(1.5rem, 2.8vw, 2.2rem); margin-top: 3vh; text-align: center; font-style: italic; color: var(--slide-navy); opacity: 0; transition: opacity 0.3s;">When can a random pile of cubes become smooth?</p>
+</section>
