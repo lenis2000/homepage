@@ -10,9 +10,7 @@ function initLimitShapeSim() {
         const canvas = document.getElementById('limit-shape-3d-canvas');
         const statusEl = document.getElementById('limit-shape-3d-status');
         const panelsEl = document.getElementById('limit-shape-panels');
-        const rightPanelEl = document.getElementById('limit-shape-right-panel');
         const curvedTextEl = document.getElementById('limit-shape-curved-text');
-        const subtextEl = document.getElementById('limit-shape-subtext');
         const imagePanelEl = document.getElementById('limit-shape-image-panel');
         const presampledLabel = document.getElementById('limit-shape-presampled-label');
         if (!canvas) return;
@@ -552,7 +550,7 @@ function initLimitShapeSim() {
                 window.slideEngine.registerSimulation('limit-shape', {
                     start,
                     pause,
-                    steps: 7,
+                    steps: 6,
                     onSlideEnter() {
                         initThreeJS();
                         if (camera && controls) {
@@ -587,8 +585,6 @@ function initLimitShapeSim() {
                         if (statusEl) statusEl.textContent = '';
                         if (panelsEl) panelsEl.style.opacity = '0';
                         if (curvedTextEl) curvedTextEl.style.opacity = '0';
-                        if (rightPanelEl) rightPanelEl.style.opacity = '0';
-                        if (subtextEl) subtextEl.style.opacity = '0';
                         if (presampledLabel) presampledLabel.style.opacity = '0';
                     },
                     async onStep(step) {
@@ -612,9 +608,6 @@ function initLimitShapeSim() {
                         } else if (step === 5) {
                             if (curvedTextEl) curvedTextEl.style.opacity = '1';
                         } else if (step === 6) {
-                            if (rightPanelEl) rightPanelEl.style.opacity = '1';
-                            if (subtextEl) subtextEl.style.opacity = '1';
-                        } else if (step === 7) {
                             if (imagePanelEl) imagePanelEl.style.opacity = '1';
                         }
                     },
@@ -636,8 +629,6 @@ function initLimitShapeSim() {
                             if (renderer && scene && camera) renderer.render(scene, camera);
                             if (panelsEl) panelsEl.style.opacity = '0';
                             if (curvedTextEl) curvedTextEl.style.opacity = '0';
-                            if (rightPanelEl) rightPanelEl.style.opacity = '0';
-                            if (subtextEl) subtextEl.style.opacity = '0';
                             if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         } else if (step === 1) {
                             stopAutoRotate();
@@ -646,8 +637,6 @@ function initLimitShapeSim() {
                             if (renderer && scene && camera) renderer.render(scene, camera);
                             if (panelsEl) panelsEl.style.opacity = '0';
                             if (curvedTextEl) curvedTextEl.style.opacity = '0';
-                            if (rightPanelEl) rightPanelEl.style.opacity = '0';
-                            if (subtextEl) subtextEl.style.opacity = '0';
                             if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         } else if (step === 2) {
                             objLoaded = false;
@@ -655,25 +644,15 @@ function initLimitShapeSim() {
                             if (renderer && scene && camera) renderer.render(scene, camera);
                             if (panelsEl) panelsEl.style.opacity = '0';
                             if (curvedTextEl) curvedTextEl.style.opacity = '0';
-                            if (rightPanelEl) rightPanelEl.style.opacity = '0';
-                            if (subtextEl) subtextEl.style.opacity = '0';
                             if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         } else if (step === 3) {
                             if (panelsEl) panelsEl.style.opacity = '0';
                             if (curvedTextEl) curvedTextEl.style.opacity = '0';
-                            if (rightPanelEl) rightPanelEl.style.opacity = '0';
-                            if (subtextEl) subtextEl.style.opacity = '0';
                             if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         } else if (step === 4) {
                             if (curvedTextEl) curvedTextEl.style.opacity = '0';
-                            if (rightPanelEl) rightPanelEl.style.opacity = '0';
-                            if (subtextEl) subtextEl.style.opacity = '0';
                             if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         } else if (step === 5) {
-                            if (rightPanelEl) rightPanelEl.style.opacity = '0';
-                            if (subtextEl) subtextEl.style.opacity = '0';
-                            if (imagePanelEl) imagePanelEl.style.opacity = '0';
-                        } else if (step === 6) {
                             if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         }
                     }
