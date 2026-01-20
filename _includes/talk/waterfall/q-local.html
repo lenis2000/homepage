@@ -1,0 +1,43 @@
+<section class="slide slide-top" id="q-local" data-title="q-Local Bernoulli">
+    <h2 class="slide-title">q-Volume: local structure</h2>
+
+    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
+        <!-- Left: Full q-weighted path with controls -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 1vw; font-size: clamp(1rem, 1.8vw, 1.4rem); margin-bottom: 0.5vh;">
+                <label for="q-local-gamma-slider" style="font-weight: bold;">γ = </label>
+                <input type="range" id="q-local-gamma-slider" min="-5" max="5" step="0.1" value="3.6" style="width: 10vw;">
+                <span id="q-local-gamma-value" style="font-weight: bold; min-width: 2.5em;">3.6</span>
+                <span>(q = <span id="q-local-q-value">0.990</span>)</span>
+                <button id="q-local-resample" style="padding: 0.3vh 0.8vw; cursor: pointer;">Resample</button>
+            </div>
+            <div id="q-local-gamma-explain" style="font-size: clamp(1rem, 1.8vw, 1.4rem); color: var(--slide-muted); margin-bottom: 0.5vh;">
+                \(\text{Prob}(\text{path}) \propto q^{\text{area}}\), where \(q = e^{-\gamma/N}\)
+            </div>
+            <div style="font-size: clamp(0.9rem, 1.5vw, 1.1rem); color: var(--slide-muted); margin-bottom: 0.5vh;">
+                <span>a = 180, b = 135</span> · <span id="q-local-status">Loading...</span>
+            </div>
+            <canvas id="q-local-canvas" width="1200" height="900" style="height: 50vh; width: auto; cursor: pointer;"></canvas>
+        </div>
+        <!-- Right: Local zoom view -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div id="q-local-view-title" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 0.5vh; opacity: 0; transition: opacity 0.3s;">
+                Zoomed in: local segment
+            </div>
+            <canvas id="q-local-view-canvas" width="600" height="450" style="height: 35vh; width: auto; opacity: 0; transition: opacity 0.3s;"></canvas>
+        </div>
+    </div>
+
+    <!-- Key insight -->
+    <div id="q-local-insight" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 2vw; font-size: clamp(1.6rem, 2.8vw, 2.2rem); text-align: left; margin-top: 1vh; opacity: 0; transition: opacity 0.3s;">
+        <strong style="color: var(--slide-accent); font-size: 1.2em;">Local Universality for \(q = e^{-\gamma/N} \approx 1\): still IID Bernoulli!</strong><br>
+        For \(q\) close to \(1\), local structure remains <strong>independent Bernoulli trials</strong>.
+    </div>
+
+    <!-- Explanation -->
+    <div id="q-local-explanation" style="background: #f5f5f5; border-left: 4px solid #232D4B; padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left; margin-top: 1vh; opacity: 0; transition: opacity 0.3s;">
+        <strong style="color: #232D4B;">Regime \(q \approx 1\):</strong>
+        The q-weighted path <span style="color: var(--slide-muted);">[Vershik 1996]</span>
+        locally maximizes entropy — yielding <strong>IID Bernoulli</strong> structure with position-dependent parameters matching the limit shape slope.
+    </div>
+</section>

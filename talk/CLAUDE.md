@@ -376,3 +376,46 @@ this.paths = result.paths;  // Extract .paths from {paths: [...], n, t, s}
 ```
 
 **Demo:** `/talk/demo/` shows all features
+
+## Modular Talk Structure
+
+For talks with many slides, use Jekyll includes and separate JS files:
+
+```
+/talk/my-talk/
+├── index.html          # Skeleton: WASM loader + {% include %} + <script defer>
+├── js/
+│   ├── shared/         # Shared helpers (copy from /talk/visual/js/shared/)
+│   ├── slide1-sim.js
+│   └── slide2-sim.js
+└── images/
+
+/_includes/talk/my-talk/
+├── slide1.html         # Just the <section> HTML
+└── slide2.html
+```
+
+**index.html structure:**
+```html
+---
+layout: slides
+title: "My Talk"
+---
+<script src="/js/three.min.js"></script>
+<script>/* WASM loader with Promise.all */</script>
+
+{% include talk/my-talk/slide1.html %}
+{% include talk/my-talk/slide2.html %}
+
+<script src="js/slide1-sim.js" defer></script>
+<script src="js/slide2-sim.js" defer></script>
+```
+
+**Pitfall: JS overwrites HTML content**
+
+When simulations modify DOM dynamically (e.g., `insightEl.innerHTML = '...'` for different steps), editing the HTML include alone won't show changes. The JS sets content on:
+- `reset()` - restore initial state
+- `onStep(n)` - change content for step n
+- `onStepBack(n)` - restore when going back
+
+Must update the JS file, not just the HTML include

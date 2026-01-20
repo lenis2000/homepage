@@ -1,0 +1,48 @@
+<section class="slide slide-top" id="q-deformation" data-title="q-Deformation">
+    <h2 class="slide-title">q-Deformation</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
+        <!-- Left: Explanation text blocks -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; padding-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <!-- Block 1: Area -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Area above a path:</strong><br>
+                Count unit squares above the path
+                <div style="display: flex; align-items: center; gap: 1vw; margin-top: 0.5vh;">
+                    <canvas id="area-example-canvas" width="300" height="200" style="height: 10vh; width: auto;"></canvas>
+                    <span style="font-weight: bold; font-size: clamp(1.5rem, 2.5vw, 2.2rem);">Area = 8</span>
+                </div>
+            </div>
+
+            <!-- Block 2: q-weighting -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                \(\displaystyle\text{Probability} = \frac{q^{\text{area}}}{\sum_{\text{paths}} q^{\text{area}}}\)
+            </div>
+
+            <!-- Block 3: q-Binomial with example -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">q-Binomial coefficient:</strong><br>
+                \(\displaystyle\binom{a+b}{a}_q = \sum_{\text{paths}} q^{\text{area}}\)
+            </div>
+
+            <!-- Block 4: Polynomial example -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Example (a=4, b=3):</strong><br>
+                <span id="q-binomial-formula"></span>
+            </div>
+        </div>
+
+        <!-- Right: All 35 paths grid -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 0.5vh; display: flex; align-items: center; gap: 1vw;">
+                <label for="q-slider">q = </label>
+                <input type="range" id="q-slider" min="0" max="2" step="0.01" value="1" style="width: 12vw;">
+                <span id="q-value" style="font-weight: bold; min-width: 3em;">1.00</span>
+            </div>
+            <div id="q-formula-display" style="font-size: clamp(1.4rem, 2.5vw, 2rem); margin-bottom: 1vh; font-weight: bold; color: var(--slide-accent);">
+                q = 1: ordinary binomial (35 paths)
+            </div>
+            <canvas id="q-paths-canvas" width="1100" height="900" style="height: 72vh; width: auto;"></canvas>
+        </div>
+    </div>
+</section>
