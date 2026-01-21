@@ -409,15 +409,40 @@ To make canvas narrower: reduce the `width` attribute (e.g., `width="700"`), not
 
 ## Two-Column Layouts
 
-**Simple two-column (preferred):**
+**User preference: Narrow text LEFT, Wide image RIGHT**
+
 ```html
-<div style="display: grid; grid-template-columns: 42vw 52vw; gap: 2vw; margin-top: 2vh;">
-    <div><!-- Left column content --></div>
-    <div><!-- Right column content --></div>
+<div style="display: grid; grid-template-columns: 30vw 62vw; gap: 2vw; margin-top: 2vh;">
+    <div><!-- Left column: NARROW text panes --></div>
+    <div><!-- Right column: WIDE image/figure --></div>
 </div>
 ```
 
+**Long formulas go BELOW the image** (full width), not crammed into narrow columns.
+
 Avoid complex flexbox with `align-items: center` when simple grid alignment works.
+
+## Adaptive Pane Sizing
+
+**Size panes to fit content - don't force uniform grids:**
+- Text-only panes can be NARROW (left column ~30vw)
+- Images get the WIDE column (right ~60vw)
+- Long formulas go BELOW in full-width panes, NOT in narrow side columns
+
+**Example layout:**
+```html
+<!-- Top: narrow text left, wide image right -->
+<div style="grid-template-columns: 30vw 62vw;">
+    <div><!-- text panes stacked vertically --></div>
+    <div><!-- big image --></div>
+</div>
+
+<!-- Bottom: full-width formula panes -->
+<div style="grid-template-columns: 1fr 1fr; margin-top: 2vh;">
+    <div><!-- formula 1 --></div>
+    <div><!-- formula 2 --></div>
+</div>
+```
 
 ## Default 3D Lighting Preset (lpetrov.cc/lozenge style)
 
