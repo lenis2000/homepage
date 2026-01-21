@@ -1,37 +1,37 @@
 <section class="slide slide-top" id="q-racah-measure" data-title="q-Racah Measure">
     <h2 class="slide-title">q-Racah Measure on Lozenge Tilings</h2>
 
-    <div style="display: grid; grid-template-columns: 42vw 52vw; gap: 2vw; margin-top: 1vh;">
+    <div style="display: grid; grid-template-columns: 38vw 48vw; gap: 4vw; margin-top: 3vh; padding: 0 2vw;">
         <!-- Left column: Image -->
-        <div style="display: flex; flex-direction: column; align-items: center;">
-            <img src="images/fig_lozenge_and_paths.png" alt="Lozenge tiling and paths" style="height: 38vh; width: auto;">
-            <p style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted); margin-top: 0.5vh; text-align: center;">
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <img src="images/fig_lozenge_and_paths.svg" alt="Lozenge tiling and paths" style="height: 32vh; width: auto;">
+            <p style="font-size: clamp(1.1rem, 2vw, 1.6rem); color: var(--slide-muted); margin-top: 1.5vh; text-align: center;">
                 Lozenges ↔ noncolliding paths \(x_1(t) < x_2(t) < \cdots < x_N(t)\)
             </p>
         </div>
 
         <!-- Right column: Formulas -->
-        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+        <div style="display: flex; flex-direction: column; gap: 2.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
             <!-- Weight function -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
-                <strong style="color: var(--slide-accent);">Weight function:</strong>
-                <div style="margin-top: 0.5vh; text-align: center;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw;">
+                <strong style="color: var(--slide-accent); font-size: clamp(1.3rem, 2.4vw, 1.9rem);">Weight function:</strong>
+                <div style="margin-top: 0.8vh; text-align: center;">
                     \(\displaystyle \mathrm{w}_{q,\kappa}(j) = \kappa q^{j-(S+1)/2} - \frac{1}{\kappa q^{j-(S+1)/2}}\)
                 </div>
             </div>
 
             <!-- Probability measure -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
-                <strong style="color: var(--slide-accent);">Probability measure:</strong>
-                <div style="margin-top: 0.5vh; text-align: center;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw;">
+                <strong style="color: var(--slide-accent); font-size: clamp(1.3rem, 2.4vw, 1.9rem);">Probability measure:</strong>
+                <div style="margin-top: 0.8vh; text-align: center;">
                     \(\displaystyle \mathbb{P}(\text{tiling}) = \frac{1}{Z} \prod_{\text{horiz. lozenges}} \mathrm{w}_{q,\kappa}(\text{height})\)
                 </div>
             </div>
 
             <!-- Interpolation property -->
-            <div id="qracah-interpolation" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
-                <strong style="color: var(--slide-accent);">Key property:</strong>
-                <div style="margin-top: 0.5vh;">
+            <div id="qracah-interpolation" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
+                <strong style="color: var(--slide-accent); font-size: clamp(1.3rem, 2.4vw, 1.9rem);">Key property:</strong>
+                <div style="margin-top: 0.8vh;">
                     As \(\kappa \to 0\) or \(\kappa \to +\infty\):<br>
                     q-Racah interpolates between <strong>\(q^{+\text{vol}}\)</strong> and <strong>\(q^{-\text{vol}}\)</strong>
                 </div>
@@ -39,24 +39,32 @@
         </div>
     </div>
 
+    <!-- Horizontal divider -->
+    <div style="width: 90%; height: 1px; background: #ddd; margin: 2.5vh auto 2vh auto;"></div>
+
     <!-- Bottom row: Orthogonal polynomials + References -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1.5vh; width: 95%;">
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-            <strong style="color: var(--slide-accent);">Orthogonal polynomials hierarchy:</strong>
-            <div style="margin-top: 0.5vh; text-align: center; line-height: 1.5;">
-                <span style="color: var(--slide-muted);">Uniform tilings</span> ↔ Hahn polynomials
-                <span style="margin: 0 0.5em;">→</span>
-                <strong style="color: var(--slide-accent);">q-Racah measure</strong> ↔ q-Racah polynomials
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 3vw; padding: 0 2vw;">
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; min-height: 8vh; display: flex; flex-direction: column; justify-content: center;">
+            <strong style="color: var(--slide-accent); font-size: clamp(1.3rem, 2.4vw, 1.9rem);">Orthogonal polynomials:</strong>
+            <div style="margin-top: 0.8vh; font-size: clamp(1.1rem, 2vw, 1.6rem); line-height: 1.5;">
+                <span style="color: var(--slide-muted);">Uniform</span> ↔ Hahn
+                <span style="margin: 0 0.3em;">→</span>
+                <strong style="color: var(--slide-accent);">q-Racah</strong> ↔ q-Racah poly.
             </div>
         </div>
 
-        <div id="qracah-refs" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); opacity: 0; transition: opacity 0.3s;">
-            <strong style="color: var(--slide-accent);">References:</strong>
-            <span style="color: var(--slide-muted);">[Borodin-Gorin-Rains 2009], [Gorin-Huang 2022], [Morales-Pak-Panova]</span>
+        <div id="qracah-refs" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; min-height: 8vh; display: flex; flex-direction: column; justify-content: center; opacity: 0; transition: opacity 0.3s;">
+            <strong style="color: var(--slide-accent); font-size: clamp(1.3rem, 2.4vw, 1.9rem);">References:</strong>
+            <div style="margin-top: 0.5vh; font-size: clamp(0.9rem, 1.6vw, 1.3rem); color: #666;">
+                [Borodin-Gorin-Rains 2009], [Dimitrov-Knizel 2019], [Gorin-Huang 2022], [Morales-Pak-Panova 2019]
+            </div>
         </div>
     </div>
 
-    <div id="qracah-question" style="font-size: clamp(1.5rem, 2.8vw, 2.2rem); margin-top: 2vh; text-align: center; font-style: italic; color: var(--slide-navy); opacity: 0; transition: opacity 0.3s;">
-        What happens when \(q\) is fixed (does not go to 1) and \(\kappa\) is imaginary?
+    <!-- Emphasized transition question -->
+    <div id="qracah-question" style="background: #FFF5EB; border-left: 4px solid var(--slide-accent); padding: 1.5vh 2vw; margin: 2.5vh 2vw 0 2vw; opacity: 0; transition: opacity 0.3s;">
+        <div style="font-size: clamp(1.4rem, 2.5vw, 2rem); font-style: italic; color: var(--slide-navy);">
+            What happens when \(q\) is fixed (does not go to 1) and \(\kappa\) is imaginary?
+        </div>
     </div>
 </section>

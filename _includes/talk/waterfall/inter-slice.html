@@ -6,11 +6,11 @@
         <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
             <strong style="color: var(--slide-accent);">2D extended correlation kernel</strong> <span style="color: var(--slide-muted);">[BGR]</span>:
             <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.1rem, 1.8vw, 1.4rem);">
-                \(\displaystyle K(s,x; t,y) = \begin{cases}
+                \[K(s,x; t,y) = \begin{cases}
                 -\frac{\phi_t(y)}{\phi_s(x)}(\mathbb{U}_s \cdots \mathbb{U}_{t-1})_{x,y} & s < t \\[0.5em]
                 \frac{\phi_t(y)}{\phi_s(x)}[K_s]_{x,y} + \mathbf{1}_{x=y} & s = t \\[0.5em]
                 \frac{\phi_t(y)}{\phi_s(x)}(K_s - L_{\text{top}}\mathbb{U}_{t-1}^{-1}\cdots \mathbb{U}_s^{-1})_{x,y} & s > t
-                \end{cases}\)
+                \end{cases}\]
             </div>
         </div>
 
