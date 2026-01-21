@@ -183,6 +183,10 @@
     text-decoration: underline;
 }
 
+.slide strong {
+    font-family: "franklingothic-demi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
 /* Subtitle styling */
 .slide .subtitle {
     font-family: 'Unna', serif;

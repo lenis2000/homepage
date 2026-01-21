@@ -336,7 +336,7 @@ function initQLocalSim() {
             localTitle.style.opacity = '0';
             insightEl.style.opacity = '0';
             explanationEl.style.opacity = '0';
-            insightEl.innerHTML = '<strong style="color: var(--slide-accent); font-size: 1.2em;">Local Universality for \\(q = e^{-\\gamma/N} \\approx 1\\): still IID Bernoulli!</strong><br>For \\(q\\) close to \\(1\\), local structure remains <strong>independent Bernoulli trials</strong>.';
+            insightEl.innerHTML = '<strong style="color: var(--slide-accent); font-size: 1.2em;">Local Universality for \\(q = e^{-\\gamma/N} \\approx 1\\): still IID Bernoulli!</strong><br>For \\(q\\) close to \\(1\\), local structure remains independent Bernoulli trials.';
             renderMath(insightEl);
             setGamma(3);
         }
