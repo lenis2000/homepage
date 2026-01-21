@@ -1,0 +1,53 @@
+<section class="slide slide-top" id="q-racah-large-hexagons" data-title="q-Racah Large Hexagons">
+    <h2 class="slide-title">q-Racah Tilings of Large Hexagons</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 2vh; padding: 0 2vw;">
+        <!-- Left: q = 0.95 -->
+        <div style="text-align: center;">
+            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 1vh;">
+                <strong style="color: var(--slide-accent);">\(q = 0.95\), \(\kappa = 3i\)</strong>
+            </div>
+            <div style="position: relative; display: inline-block;">
+                <canvas id="large-hex-scaling-canvas" width="700" height="600" style="height: 42vh; width: auto; background: #ffffff;"></canvas>
+            </div>
+        </div>
+
+        <!-- Right: q = 0.8 -->
+        <div style="text-align: center;">
+            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 1vh;">
+                <strong style="color: var(--slide-accent);">\(q = 0.8\), \(\kappa = 3i\)</strong>
+            </div>
+            <div style="position: relative; display: inline-block;">
+                <canvas id="large-hex-fixed-canvas" width="700" height="600" style="height: 42vh; width: auto; background: #ffffff;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom: explanation and variational formula -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 2vh; padding: 0 2vw;">
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            When \(q = e^{-\gamma/N} \approx 1\), we get a <strong>curved limit shape</strong>
+            and the <strong>same</strong> universal local fluctuations (pure states governed by the incomplete Beta kernel) as for the
+            uniform and the q-volume measures<br>
+            <span style="color: var(--slide-muted);">[Borodin-Gorin-Rains 2009]</span><br>
+            <span style="margin-top: 0.5vh; display: inline-block;">But since 2009, it was not clear what happens for <strong>fixed \(q\)</strong>.
+                This became known as the <strong>waterfall phenomenon</strong>.</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 1.5vh;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; flex: 1;">
+                <strong style="color: var(--slide-accent); font-size: clamp(1.2rem, 2.2vw, 1.8rem);">Variational principle <span style="color: var(--slide-muted); font-weight: normal;">[BGR 2009]</span>:</strong>
+                <div style="font-size: clamp(1.2rem, 2vw, 1.6rem); margin-top: 0.5vh;">
+                    Regime \(q = e^{-\gamma/N} \approx 1\):
+                </div>
+                <div style="font-size: clamp(1.3rem, 2.2vw, 1.7rem); margin-top: 0.5vh;">
+                    \[\iint \sigma(\nabla h) + \iint h(x,y) \frac{\partial \ln\bigl(\kappa e^{-\gamma(\tilde S/2-u)} -\kappa e^{\gamma(\tilde S/2-u)}\big)}{\partial u} \to \max\]
+                </div>
+            </div>
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); flex: 1;">
+                <strong style="color: var(--slide-accent);">Note on sampling:</strong>
+                Naive local Markov chain converges exponentially slow. Use <strong>hexagon-specific BGR shuffling algorithm</strong>.
+            </div>
+        </div>
+    </div>
+</section>
