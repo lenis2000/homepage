@@ -40,8 +40,14 @@
         </div>
 
         <!-- Right column -->
-        <div>
+        <div style="position: relative;">
             <canvas id="zoom-full-canvas" width="950" height="800" style="height: 60vh; width: auto; background: #ffffff;"></canvas>
+            <!-- Zoom preset buttons -->
+            <div id="zoom-buttons" style="position: absolute; bottom: 5vh; left: 1vw; display: flex; gap: 0.5vw;">
+                <button id="zoom-btn-1" class="zoom-btn" data-zoom="1" style="width: 2.5vw; height: 2.5vw; border: 2px solid #232D4B; border-radius: 4px; background: #fff; color: #232D4B; font-size: clamp(0.9rem, 1.5vw, 1.2rem); font-weight: bold; cursor: pointer; transition: all 0.2s;">1</button>
+                <button id="zoom-btn-2" class="zoom-btn" data-zoom="2" style="width: 2.5vw; height: 2.5vw; border: 2px solid #232D4B; border-radius: 4px; background: #fff; color: #232D4B; font-size: clamp(0.9rem, 1.5vw, 1.2rem); font-weight: bold; cursor: pointer; transition: all 0.2s;">2</button>
+                <button id="zoom-btn-3" class="zoom-btn" data-zoom="3" style="width: 2.5vw; height: 2.5vw; border: 2px solid #232D4B; border-radius: 4px; background: #fff; color: #232D4B; font-size: clamp(0.9rem, 1.5vw, 1.2rem); font-weight: bold; cursor: pointer; transition: all 0.2s;">3</button>
+            </div>
             <div style="font-size: clamp(0.75rem, 1vw, 1rem); color: #666; margin-top: 1vh; text-align: center; font-style: italic;">
                 Local structure at different slopes in the liquid region
             </div>

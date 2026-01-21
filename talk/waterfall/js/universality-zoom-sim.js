@@ -15,6 +15,44 @@
     let currentStep = 0;
     let isAnimating = false;
 
+    // Zoom buttons
+    const zoomBtn1 = document.getElementById('zoom-btn-1');
+    const zoomBtn2 = document.getElementById('zoom-btn-2');
+    const zoomBtn3 = document.getElementById('zoom-btn-3');
+    const zoomButtons = [zoomBtn1, zoomBtn2, zoomBtn3];
+
+    function updateZoomButtons(step) {
+        // step 1 → button 1, step 2 → button 2, step 3 → button 3
+        // step 0 or 4 → no button highlighted
+        zoomButtons.forEach((btn, idx) => {
+            const btnNum = idx + 1; // buttons are 1, 2, 3
+            if (step === btnNum) {
+                btn.style.background = '#E57200';
+                btn.style.color = '#fff';
+                btn.style.borderColor = '#E57200';
+            } else {
+                btn.style.background = '#fff';
+                btn.style.color = '#232D4B';
+                btn.style.borderColor = '#232D4B';
+            }
+        });
+    }
+
+    let buttonsInitialized = false;
+    function setupZoomButtonHandlers() {
+        if (buttonsInitialized) return;
+        buttonsInitialized = true;
+        zoomButtons.forEach((btn, idx) => {
+            const btnNum = idx + 1;
+            btn.addEventListener('click', () => {
+                if (isAnimating) return;
+                currentStep = btnNum;
+                setZoomPosition(btnNum, true);
+                updateZoomButtons(btnNum);
+            });
+        });
+    }
+
     // UVA colors for lozenge types
     const UVA_ORANGE = new THREE.Color('#E57200');
     const UVA_BLUE = new THREE.Color('#232D4B');
@@ -305,16 +343,20 @@
                     // step 1 → position 1, step 2 → position 2, step 3 → position 3, step 4 → position 4
                     currentStep = step;
                     setZoomPosition(step, true); // animate
+                    updateZoomButtons(step);
                 },
                 onStepBack(step) {
                     // step 0 → position 0, step 1 → position 1, etc.
                     currentStep = step;
                     setZoomPosition(step, true); // animate back
+                    updateZoomButtons(step);
                 },
                 onSlideEnter() {
                     initThreeJS();
                     currentStep = 0;
-                    setZoomPosition(0, false); // start at position 1, no animation
+                    setZoomPosition(0, false); // start at position 0, no animation
+                    updateZoomButtons(0);
+                    setupZoomButtonHandlers();
                     loadOBJ();
                     start();
                 },
