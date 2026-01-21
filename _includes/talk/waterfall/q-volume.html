@@ -2,25 +2,25 @@
     <h2 class="slide-title">Q-volume deformation</h2>
     <!-- Top: Five tilings with q inputs -->
     <div style="display: flex; gap: 0.8vw; justify-content: center; margin-top: 1vh;">
-        <div style="text-align: center;">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 16vw;">
             <canvas id="qvol-canvas-0" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
-            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh;">q = <input type="text" id="qvol-input-0" value="0.7" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px;"></div>
+            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-0" value="0.7" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
         </div>
-        <div style="text-align: center;">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 16vw;">
             <canvas id="qvol-canvas-1" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
-            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh;">q = <input type="text" id="qvol-input-1" value="0.9" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px;"></div>
+            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-1" value="0.9" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
         </div>
-        <div style="text-align: center;">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 16vw;">
             <canvas id="qvol-canvas-2" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
-            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh;">q = <input type="text" id="qvol-input-2" value="1" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px;"></div>
+            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-2" value="1" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
         </div>
-        <div style="text-align: center;">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 16vw;">
             <canvas id="qvol-canvas-3" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
-            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh;">q = <input type="text" id="qvol-input-3" value="1.1" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px;"></div>
+            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-3" value="1.1" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
         </div>
-        <div style="text-align: center;">
+        <div style="display: flex; flex-direction: column; align-items: center; width: 16vw;">
             <canvas id="qvol-canvas-4" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
-            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh;">q = <input type="text" id="qvol-input-4" value="1.4" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px;"></div>
+            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-4" value="1.4" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
         </div>
     </div>
 
@@ -50,6 +50,12 @@
                     \(\gamma<0\): tilts toward more volume
                 </div>
             </div>
+            <!-- Local universality -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <div style="font-size: clamp(1.1rem, 2vw, 1.6rem);">
+                    <strong style="color: var(--slide-accent);">Local statistics:</strong> still the <strong>same pure states</strong> determined by slope (as for uniform \(q=1\))
+                </div>
+            </div>
         </div>
 
         <!-- Right column -->
@@ -65,16 +71,10 @@
                     <li>Balance determines the typical (limit) shape</li>
                 </ul>
             </div>
-            <!-- Local universality -->
+            <!-- Limit shape degeneration note -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
                 <div style="font-size: clamp(1.1rem, 2vw, 1.6rem);">
-                    <strong style="color: var(--slide-accent);">Local statistics:</strong> still the <strong>same pure states</strong> determined by slope (as for uniform \(q=1\))
-                </div>
-            </div>
-            <!-- Limit shape degeneration note -->
-            <div style="background: #f5f5f5; border-left: 4px solid #232D4B; padding: 1vh 1.5vw; text-align: left;">
-                <div style="font-size: clamp(1.1rem, 2vw, 1.6rem);">
-                    <strong style="color: #232D4B;">Fixed \(q \neq 1\) as \(N \to \infty\):</strong>
+                    <strong style="color: var(--slide-accent);">Fixed \(q \neq 1\) as \(N \to \infty\):</strong>
                     limit shape degenerates to <em>empty room</em> (\(q<1\)) or <em>full room</em> (\(q>1\))
                 </div>
             </div>
