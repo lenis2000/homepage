@@ -5,7 +5,7 @@
         <!-- Left column: 3D simulation -->
         <div style="display: flex; flex-direction: column; align-items: center;">
             <div style="position: relative; display: inline-block; width: 100%;">
-                <canvas id="waterfall-3d-canvas" style="width: 100%; height: 55vh; border-radius: 8px; background: #1a1a2e;"></canvas>
+                <canvas id="waterfall-3d-canvas" style="width: 100%; height: 48vh; border-radius: 8px; background: #1a1a2e;"></canvas>
                 <div style="position: absolute; bottom: 1vh; left: 1vh; display: flex; gap: 0.5vw; align-items: center;">
                     <button id="waterfall-play-btn" style="width: 4vh; height: 4vh; border-radius: 50%; border: none; background: rgba(35, 45, 75, 0.8); color: white; font-size: clamp(0.9rem, 1.5vw, 1.2rem); cursor: pointer; display: flex; align-items: center; justify-content: center;">▶</button>
                 </div>
@@ -13,9 +13,11 @@
                     q = <span id="waterfall-q-display">0.8</span>, κ = i·<span id="waterfall-kappa-display">3</span>
                 </div>
             </div>
-            <p style="text-align: center; font-size: clamp(0.9rem, 1.4vw, 1.1rem); color: var(--slide-muted); margin-top: 0.5vh;">
-                Fixed q with imaginary κ → "Waterfall" surface
-            </p>
+            <!-- Static images row -->
+            <div id="waterfall-static-images" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1vw; margin-top: 1vh; width: 100%; opacity: 0; transition: opacity 0.3s;">
+                <img src="images/waterfall-3d-1.png" alt="Waterfall tiling 1" style="width: 100%; height: auto; border-radius: 4px;">
+                <img src="images/waterfall-3d-3.png" alt="Waterfall tiling 2" style="width: 100%; height: auto; border-radius: 4px;">
+            </div>
         </div>
 
         <!-- Right column: Description -->
@@ -44,6 +46,14 @@
                 </div>
                 <div style="text-align: center; color: var(--slide-muted); font-size: 0.85em;">
                     (The new slope 1/2 is the "waterfall")
+                </div>
+            </div>
+
+            <div id="waterfall-sampling-note" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 1vh 1.5vw; font-size: clamp(1rem, 1.8vw, 1.4rem); opacity: 0; transition: opacity 0.3s;">
+                <strong style="color: #856404;">Note on sampling:</strong>
+                <div style="margin-top: 0.3vh;">
+                    Naive local Markov chain converges exponentially slow.
+                    Uses hexagon-specific BGR shuffling algorithm.
                 </div>
             </div>
         </div>

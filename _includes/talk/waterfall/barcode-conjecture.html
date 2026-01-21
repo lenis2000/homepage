@@ -1,0 +1,60 @@
+<section class="slide slide-top" id="barcode-conjecture" data-title="Barcode Conjecture">
+    <h2 class="slide-title">Universal Barcode Process Conjecture</h2>
+
+    <div style="display: flex; flex-direction: column; gap: 1.5vh; margin-top: 2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); width: 95%;">
+        <!-- Two-periodic kernel -->
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+            <strong style="color: var(--slide-accent);">Full barcode kernel:</strong>
+            <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.1rem, 1.8vw, 1.4rem);">
+                \(\displaystyle K_{\text{barcode}}(s,t) = \sum_{n} \frac{\mathcal{F}_n(s)\mathcal{F}_n(t)}{\|\mathcal{F}_n\|^2}\) (regularized sum)
+            </div>
+            <div style="margin-top: 0.5vh; color: var(--slide-muted);">
+                This formula is defined only for \(t \geq 1\); for \(t < 1\) we extend by symmetry.<br>
+                The full kernel is <strong>two-periodic</strong> (i.e., \(2 \times 2\) block).
+            </div>
+        </div>
+
+        <!-- Conjecture -->
+        <div id="conjecture-statement" style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1.5vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
+            <strong style="color: var(--slide-navy); font-size: 1.1em;">Conjecture</strong> <span style="color: var(--slide-muted);">[Knizel-P. 2025]</span>:
+            <ol style="margin: 0.5vh 0 0 1.5em; padding: 0;">
+                <li style="margin-bottom: 0.5vh;">
+                    The barcode process is <strong>universal</strong>: depends only on \((q, \kappa)\) and <strong>not</strong> on the geometry of the hexagon (as long as the waterfall develops), or the point of observation inside the waterfall
+                </li>
+                <li>
+                    The \(M\)-limit in \(K_{\text{barcode}}\) <strong>exists</strong> and is equal to the limit of the transversal kernel of the q-Racah lozenge tilings of the hexagon
+                </li>
+            </ol>
+        </div>
+
+        <!-- Evidence -->
+        <div id="conjecture-evidence" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; opacity: 0; transition: opacity 0.3s;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Evidence (numerical):</strong>
+                <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
+                    <li>Batch collected simulation data</li>
+                    <li>Density matching across geometries</li>
+                    <li>Two-point correlation structure</li>
+                </ul>
+            </div>
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Evidence (analytic):</strong>
+                <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
+                    <li>Limits in formulas</li>
+                    <li>Inter-slice operator convergence</li>
+                    <li>Consistent with concentration result</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Open questions -->
+        <div id="conjecture-open" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
+            <strong style="color: #856404;">Open questions:</strong>
+            <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
+                <li>Fluctuations of the height function: <strong>bounded or logarithmic?</strong></li>
+                <li>Two-point correlations: two-periodicity and <strong>exponential decay</strong></li>
+                <li>Behavior at the <strong>edge of the waterfall</strong> (should be q-Gibbs)</li>
+            </ul>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,50 @@
+<section class="slide slide-top" id="qracah-ope" data-title="q-Racah OPE">
+    <h2 class="slide-title">q-Racah Orthogonal Polynomial Ensemble</h2>
+
+    <div style="display: grid; grid-template-columns: 42vw 52vw; gap: 2vw; margin-top: 2vh;">
+        <!-- Left column: Visual -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <img src="images/fig_lozenge_and_paths.png" alt="Lozenge tiling and paths" style="height: 35vh; width: auto;">
+            <p style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted); margin-top: 0.5vh; text-align: center;">
+                Vertical slice → \(N\) noncolliding paths
+            </p>
+        </div>
+
+        <!-- Right column: Math -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Key observation</strong> <span style="color: var(--slide-muted);">[Borodin-Gorin-Rains]</span>
+                <div style="margin-top: 0.5vh;">
+                    The <strong>marginal distribution</strong> of paths on a vertical slice is the <strong style="color: var(--slide-navy);">q-Racah orthogonal polynomial ensemble</strong>
+                </div>
+            </div>
+
+            <div id="ope-formula" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
+                <strong style="color: var(--slide-accent);">Joint density:</strong>
+                <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.2rem, 2vw, 1.6rem);">
+                    \(\displaystyle \mathbb{P}(x_1, \ldots, x_N) \propto \prod_{i<j}(x_j - x_i) \prod_{k=1}^N w(x_k)\)
+                </div>
+                <div style="margin-top: 0.3vh; text-align: center; color: var(--slide-muted); font-size: 0.85em;">
+                    \(w\) is the q-Racah orthogonality weight
+                </div>
+            </div>
+
+            <div id="ope-parameters" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
+                <strong style="color: var(--slide-accent);">Parameters:</strong>
+                <div style="margin-top: 0.5vh;">
+                    Parameters \((\alpha, \beta, \gamma, \delta)\) depend on:
+                    <ul style="margin: 0.3vh 0 0 1.5em; padding: 0;">
+                        <li>Position of the slice</li>
+                        <li>Sides of the hexagon</li>
+                        <li>The value of \(q\)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ope-concentration" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; margin-top: 2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); width: 95%; opacity: 0; transition: opacity 0.3s;">
+        <strong style="color: var(--slide-accent);">Concentration result:</strong>
+        This formula is enough to show <strong>concentration of paths</strong> <span style="color: var(--slide-muted);">[Knizel-P. 2025]</span>
+    </div>
+</section>

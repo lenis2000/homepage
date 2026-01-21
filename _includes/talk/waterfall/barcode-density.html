@@ -1,0 +1,93 @@
+<section class="slide slide-top" id="barcode-density" data-title="Barcode Density">
+    <h2 class="slide-title">The Barcode Density Guess</h2>
+
+    <div style="display: grid; grid-template-columns: 55vw 40vw; gap: 2vw; margin-top: 2vh; align-items: start;">
+        <!-- Left column: Math -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <!-- Formula -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Predicted density:</strong>
+                <div style="margin-top: 0.5vh; text-align: center;">
+                    \(\displaystyle \rho(t) = \mathfrak{a}\left(1-\frac{t}{2}\right) \sum_{n \in \frac{1}{2}\mathbb{Z}_{\geq 0}} \frac{-q^{-n} \mathcal{F}_n^t(0) \mathcal{F}_n^{t-1}(0)}{\|\mathcal{F}_n\|_{\ell^2(\mathbb{Z})}^2}\)
+                </div>
+                <div style="margin-top: 0.3vh; color: var(--slide-muted); font-size: 0.9em; text-align: center;">
+                    (pre-limit) → (sum up to \(M\))
+                </div>
+            </div>
+
+            <!-- Problem -->
+            <div id="density-diverge" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
+                <strong style="color: #856404;">But... this series does not even converge!</strong>
+                <div style="margin-top: 0.5vh;">
+                    Diverges mildly: its tail is \(\sim (-1)^M\)
+                </div>
+                <div style="margin-top: 0.3vh;">
+                    So, it has <strong>two values</strong> for the sum!
+                </div>
+            </div>
+
+            <!-- Numerics -->
+            <div id="density-numerics" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
+                <strong style="color: var(--slide-accent);">Numerical verification:</strong>
+                <div style="margin-top: 0.5vh;">
+                    Get numerics for the barcode process: use batch data collection from exact sampling
+                </div>
+            </div>
+
+            <!-- Two-periodic result -->
+            <div id="density-twoperiodic" style="background: #d4edda; border-left: 4px solid #28a745; padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
+                <strong style="color: #155724;">Result:</strong>
+                <div style="margin-top: 0.5vh;">
+                    The barcode process is indeed <strong style="color: var(--slide-navy);">two-periodic</strong>!
+                </div>
+                <div style="margin-top: 0.3vh;">
+                    The two densities match the two limits (independent of \(M\)):
+                    <div style="text-align: center; margin-top: 0.3vh;">
+                        \(\rho_{\text{even}}\) and \(\rho_{\text{odd}}\)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right column: Table/Visual -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1.5vh;">
+            <div style="background: #f5f5f5; border: 1px solid #ccc; border-radius: 8px; padding: 1vh 1vw; font-size: clamp(0.9rem, 1.4vw, 1.1rem); width: 100%;">
+                <strong style="color: var(--slide-accent);">Sample density values (q = 0.6):</strong>
+                <table style="width: 100%; margin-top: 0.5vh; border-collapse: collapse; text-align: center;">
+                    <tr style="border-bottom: 2px solid var(--slide-accent);">
+                        <th style="padding: 0.3vh 0.5vw;">t</th>
+                        <th style="padding: 0.3vh 0.5vw;">Simulation</th>
+                        <th style="padding: 0.3vh 0.5vw;">Theory (even)</th>
+                        <th style="padding: 0.3vh 0.5vw;">Theory (odd)</th>
+                    </tr>
+                    <tr>
+                        <td>0</td>
+                        <td>0.482</td>
+                        <td style="background: #e8f5e9;">0.481</td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td>1</td>
+                        <td>0.387</td>
+                        <td>—</td>
+                        <td style="background: #e8f5e9;">0.388</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>0.358</td>
+                        <td style="background: #e8f5e9;">0.357</td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>0.319</td>
+                        <td>—</td>
+                        <td style="background: #e8f5e9;">0.320</td>
+                    </tr>
+                </table>
+            </div>
+
+            <canvas id="barcode-density-canvas" width="600" height="400" style="height: 30vh; width: auto; border-radius: 8px; background: #fff; border: 1px solid #ccc;"></canvas>
+        </div>
+    </div>
+</section>

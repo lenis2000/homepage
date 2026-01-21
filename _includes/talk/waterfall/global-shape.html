@@ -2,14 +2,15 @@
     <h2 class="slide-title">Global Shape of the Waterfall</h2>
 
     <div style="display: grid; grid-template-columns: 55vw 38vw; gap: 2vw; margin-top: 1vh; align-items: start;">
-        <!-- Left column: 3D view -->
+        <!-- Left column: 3D images -->
         <div style="display: flex; flex-direction: column; align-items: center;">
-            <div style="position: relative; display: inline-block; width: 100%;">
-                <canvas id="global-shape-canvas" style="width: 100%; height: 55vh; border-radius: 8px; background: #1a1a2e;"></canvas>
-                <div style="position: absolute; bottom: 1vh; left: 1vh; display: flex; gap: 0.5vw; align-items: center;">
-                    <button id="global-shape-play-btn" style="width: 4vh; height: 4vh; border-radius: 50%; border: none; background: rgba(35, 45, 75, 0.8); color: white; font-size: clamp(0.9rem, 1.5vw, 1.2rem); cursor: pointer; display: flex; align-items: center; justify-content: center;">▶</button>
-                </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1vw;">
+                <img src="images/waterfall-3d-1.png" alt="Waterfall tiling wide" style="height: 28vh; width: auto; border-radius: 8px;">
+                <img src="images/waterfall-3d-2.png" alt="Waterfall tiling thin" style="height: 28vh; width: auto; border-radius: 8px;">
             </div>
+            <p style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted); margin-top: 0.5vh; text-align: center;">
+                Different hexagon aspect ratios show waterfall plane
+            </p>
         </div>
 
         <!-- Right column: Weight interpretation -->

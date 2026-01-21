@@ -1,0 +1,56 @@
+<section class="slide slide-top" id="spectral-projection" data-title="Spectral Projection">
+    <h2 class="slide-title">Correlation Kernel as Spectral Projection</h2>
+
+    <div style="display: flex; flex-direction: column; gap: 1.5vh; margin-top: 2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); width: 95%;">
+        <!-- Determinantal -->
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+            <strong style="color: var(--slide-accent);">Determinantal structure:</strong>
+            <div style="margin-top: 0.5vh;">
+                Correlation functions are <strong>determinantal</strong>:
+                \(\rho_k(x_1,\ldots,x_k) = \det[K(x_i, x_j)]_{i,j=1}^k\)
+            </div>
+        </div>
+
+        <!-- Spectral projection -->
+        <div id="spectral-proj-def" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
+            <strong style="color: var(--slide-accent);">Spectral interpretation:</strong>
+            <div style="margin-top: 0.5vh;">
+                The correlation kernel of the q-Racah OPE is an operator in \(\ell^2(\mathbb{Z})\) which is the <strong>orthogonal spectral projection</strong> associated with a three-term <strong>q-difference equation</strong> for the q-Racah polynomials
+            </div>
+            <div style="margin-top: 0.5vh; color: var(--slide-muted); font-size: 0.9em;">
+                [Olshanski 2008] first applied spectral projections to determinantal point processes
+            </div>
+        </div>
+
+        <!-- Spectral interval diagram -->
+        <div id="spectral-interval" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; opacity: 0; transition: opacity 0.3s;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Kernel = projection onto spectral interval</strong>
+                <div style="margin-top: 0.5vh; text-align: center;">
+                    \(K = \mathbf{1}_{[\lambda_{\min}, \lambda_{\max}]}(D_q)\)
+                </div>
+                <div style="color: var(--slide-muted); font-size: 0.85em; text-align: center;">
+                    \(D_q\) = q-difference operator
+                </div>
+            </div>
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Classical limit \(q \to 1\):</strong>
+                <div style="margin-top: 0.5vh;">
+                    Difference operators converge to \(\frac{d^2}{dx^2}\)<br>
+                    Spectral projection → multiplication by \(\mathbf{1}_{[a,b]}\)
+                </div>
+            </div>
+        </div>
+
+        <!-- Discrete sine result -->
+        <div id="discrete-sine" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
+            <strong style="color: var(--slide-accent);">Result</strong> <span style="color: var(--slide-muted);">[BGR 2009]</span>:
+            <div style="margin-top: 0.5vh;">
+                As \(N \to \infty\) with \(q = e^{-\gamma/N} \to 1\), the spectral projections converge.
+                <div style="text-align: center; margin-top: 0.5vh;">
+                    <strong>Inverse Fourier</strong> → <strong style="color: var(--slide-navy);">Discrete sine kernel</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

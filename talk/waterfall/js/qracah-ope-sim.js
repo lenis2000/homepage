@@ -1,6 +1,6 @@
-// Waterfall Theorem slide - step-based reveals (static image version)
+// q-Racah OPE slide - step-based reveals
 (function() {
-    const slideId = 'waterfall-theorem';
+    const slideId = 'qracah-ope';
 
     function showElement(id) {
         const el = document.getElementById(id);
@@ -13,36 +13,33 @@
     }
 
     function reset() {
-        hideElement('theorem-probability');
-        hideElement('theorem-method');
+        hideElement('ope-formula');
+        hideElement('ope-parameters');
+        hideElement('ope-concentration');
     }
 
     function onStep(step) {
-        if (step >= 1) showElement('theorem-probability');
-        if (step >= 2) showElement('theorem-method');
+        if (step >= 1) showElement('ope-formula');
+        if (step >= 2) showElement('ope-parameters');
+        if (step >= 3) showElement('ope-concentration');
     }
 
     function onStepBack(step) {
-        if (step < 2) hideElement('theorem-method');
-        if (step < 1) hideElement('theorem-probability');
+        if (step < 3) hideElement('ope-concentration');
+        if (step < 2) hideElement('ope-parameters');
+        if (step < 1) hideElement('ope-formula');
     }
 
-    // Wait for slide engine
-    function init() {
-        if (!window.slideEngine) {
-            setTimeout(init, 50);
-            return;
-        }
-
+    // Register with slide engine
+    if (window.slideEngine) {
         window.slideEngine.registerSimulation(slideId, {
             start() { },
             pause() { },
-            steps: 2,
+            steps: 3,
             onStep,
             onStepBack,
             onSlideEnter() { reset(); },
             onSlideLeave() { }
         }, 0);
     }
-    init();
 })();

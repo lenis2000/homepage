@@ -1,0 +1,55 @@
+<section class="slide slide-top" id="vertical-slice" data-title="Vertical Slice">
+    <h2 class="slide-title">Spectral Approach on Vertical Slices?</h2>
+
+    <div style="display: grid; grid-template-columns: 55vw 40vw; gap: 2vw; margin-top: 2vh; align-items: start;">
+        <!-- Left column: Question and answer -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Question:</strong>
+                <div style="margin-top: 0.5vh;">
+                    For <strong>fixed \(q\)</strong>, does the kernel converge to the <strong>discrete sine process</strong>?
+                </div>
+            </div>
+
+            <div id="vs-answer" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
+                <strong style="color: var(--slide-accent);">Answer: No.</strong>
+                <div style="margin-top: 0.5vh;">
+                    The correlation kernel converges to <strong>0 or the identity operator</strong><br>
+                    <span style="color: var(--slide-muted); font-size: 0.9em;">Follows from path concentration [Knizel-P. 2025]</span>
+                </div>
+            </div>
+
+            <div id="vs-operators" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
+                <strong style="color: var(--slide-accent);">Limiting q-difference operators:</strong>
+                <div style="margin-top: 0.5vh;">
+                    We compute the limits. "Nice" only <strong>outside the waterfall</strong> and at the central point
+                </div>
+                <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.1rem, 1.8vw, 1.4rem);">
+                    Example: \(\displaystyle (Tf)(x) = c\cdot(1+q^{2x})f(x+1) + (1+q^{-2x})f(x-1) - (1+q^{-1})^2 f(x)\)
+                </div>
+            </div>
+
+            <div id="vs-problem" style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
+                <strong style="color: #856404;">Problem:</strong>
+                <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
+                    <li>Symmetric but <strong>not self-adjoint</strong></li>
+                    <li>Von Neumann deficiency \((1,1)\)</li>
+                    <li>Self-adjoint extension is <strong>not unique</strong>: a 1-dimensional family</li>
+                    <li>Extension may depend on position in slice</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Right column: Visual -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <canvas id="vertical-slice-canvas" width="600" height="700" style="height: 50vh; width: auto; border-radius: 8px; background: #fff; border: 1px solid #ccc;"></canvas>
+            <p style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted); margin-top: 0.5vh;">
+                Vertical slice through the waterfall
+            </p>
+        </div>
+    </div>
+
+    <div id="vs-conclusion" style="font-size: clamp(1.5rem, 2.8vw, 2.2rem); margin-top: 1.5vh; text-align: center; color: var(--slide-navy); opacity: 0; transition: opacity 0.3s;">
+        The interesting <strong>collapsed 1D behavior</strong> happens in the <strong>transversal direction</strong>
+    </div>
+</section>

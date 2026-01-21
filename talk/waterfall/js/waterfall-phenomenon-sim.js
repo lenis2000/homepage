@@ -574,14 +574,18 @@
 
     const observationEl = document.getElementById('waterfall-observation');
     const slopesEl = document.getElementById('waterfall-slopes');
+    const staticImagesEl = document.getElementById('waterfall-static-images');
+    const samplingNoteEl = document.getElementById('waterfall-sampling-note');
 
     function reset() {
         if (observationEl) observationEl.style.opacity = '0';
         if (slopesEl) slopesEl.style.opacity = '0';
+        if (staticImagesEl) staticImagesEl.style.opacity = '0';
+        if (samplingNoteEl) samplingNoteEl.style.opacity = '0';
     }
 
     window.slideEngine.registerSimulation('waterfall-phenomenon', {
-        start, pause, steps: 3,
+        start, pause, steps: 5,
         onSlideEnter() {
             initThreeJS();
             setTimeout(async () => {
@@ -598,13 +602,17 @@
         },
         onStep(step) {
             if (step === 1) { start(); }
-            else if (step === 2 && observationEl) { observationEl.style.opacity = '1'; }
-            else if (step === 3 && slopesEl) { slopesEl.style.opacity = '1'; }
+            if (step >= 2 && observationEl) { observationEl.style.opacity = '1'; }
+            if (step >= 3 && slopesEl) { slopesEl.style.opacity = '1'; }
+            if (step >= 4 && staticImagesEl) { staticImagesEl.style.opacity = '1'; }
+            if (step >= 5 && samplingNoteEl) { samplingNoteEl.style.opacity = '1'; }
         },
         onStepBack(step) {
+            if (step < 5 && samplingNoteEl) { samplingNoteEl.style.opacity = '0'; }
+            if (step < 4 && staticImagesEl) { staticImagesEl.style.opacity = '0'; }
+            if (step < 3 && slopesEl) { slopesEl.style.opacity = '0'; }
+            if (step < 2 && observationEl) { observationEl.style.opacity = '0'; }
             if (step === 0) { pause(); initTilingEmpty(); reset(); }
-            else if (step === 1) { if (observationEl) observationEl.style.opacity = '0'; if (slopesEl) slopesEl.style.opacity = '0'; }
-            else if (step === 2) { if (slopesEl) slopesEl.style.opacity = '0'; }
         }
     }, 1);
 })();

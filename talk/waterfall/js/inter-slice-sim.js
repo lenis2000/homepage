@@ -1,6 +1,6 @@
-// Waterfall Theorem slide - step-based reveals (static image version)
+// Inter-slice simulation - step-based reveals
 (function() {
-    const slideId = 'waterfall-theorem';
+    const slideId = 'inter-slice';
 
     function showElement(id) {
         const el = document.getElementById(id);
@@ -13,36 +13,33 @@
     }
 
     function reset() {
-        hideElement('theorem-probability');
-        hideElement('theorem-method');
+        hideElement('interslice-ops');
+        hideElement('interslice-limit');
+        hideElement('interslice-guess');
     }
 
     function onStep(step) {
-        if (step >= 1) showElement('theorem-probability');
-        if (step >= 2) showElement('theorem-method');
+        if (step >= 1) showElement('interslice-ops');
+        if (step >= 2) showElement('interslice-limit');
+        if (step >= 3) showElement('interslice-guess');
     }
 
     function onStepBack(step) {
-        if (step < 2) hideElement('theorem-method');
-        if (step < 1) hideElement('theorem-probability');
+        if (step < 3) hideElement('interslice-guess');
+        if (step < 2) hideElement('interslice-limit');
+        if (step < 1) hideElement('interslice-ops');
     }
 
-    // Wait for slide engine
-    function init() {
-        if (!window.slideEngine) {
-            setTimeout(init, 50);
-            return;
-        }
-
+    // Register with slide engine
+    if (window.slideEngine) {
         window.slideEngine.registerSimulation(slideId, {
             start() { },
             pause() { },
-            steps: 2,
+            steps: 3,
             onStep,
             onStepBack,
             onSlideEnter() { reset(); },
             onSlideLeave() { }
         }, 0);
     }
-    init();
 })();
