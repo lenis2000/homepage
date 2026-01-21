@@ -377,6 +377,126 @@ this.paths = result.paths;  // Extract .paths from {paths: [...], n, t, s}
 
 **Demo:** `/talk/demo/` shows all features
 
+## Font Sizing Rules (STRICT)
+
+**Always use these standard sizes - do not invent custom sizes:**
+
+| Element | Size | When to use |
+|---------|------|-------------|
+| Body text | `clamp(1.2rem, 2.2vw, 1.8rem)` | Most text, explanations, descriptions |
+| Formula text | `clamp(1.5rem, 2.5vw, 2rem)` | Math formulas (when space allows) |
+| Narrow-column formulas | `clamp(1.2rem, 2vw, 1.6rem)` | Formulas in ≤42vw columns |
+| Captions/labels | `clamp(0.75rem, 1vw, 1rem)` | Figure captions, small annotations |
+| References/citations | `clamp(1.2rem, 2.2vw, 1.8rem)` + `color: var(--slide-muted)` | Bibliography lists |
+
+**Citation styling:**
+- Inline citations: `<span style="color: var(--slide-muted);">[Author Year]</span>`
+- Theorem attributions: `<strong style="color: var(--slide-accent);">[Author Year]</strong>`
+- Reference lists: Standard body font + `var(--slide-muted)` color
+
+## Canvas Element Sizing
+
+**Canvas attributes vs CSS style:**
+- `width="1200" height="800"` - Pixel buffer resolution (ALWAYS pixels, defines drawing quality)
+- `style="height: 60vh; width: auto"` - Display size (use vh/vw for responsive sizing)
+
+**Common pattern:**
+```html
+<canvas id="my-canvas" width="1200" height="800" style="height: 55vh; width: auto;"></canvas>
+```
+
+To make canvas narrower: reduce the `width` attribute (e.g., `width="700"`), not the CSS.
+
+## Two-Column Layouts
+
+**Simple two-column (preferred):**
+```html
+<div style="display: grid; grid-template-columns: 42vw 52vw; gap: 2vw; margin-top: 2vh;">
+    <div><!-- Left column content --></div>
+    <div><!-- Right column content --></div>
+</div>
+```
+
+Avoid complex flexbox with `align-items: center` when simple grid alignment works.
+
+## Default 3D Lighting Preset (lpetrov.cc/lozenge style)
+
+```javascript
+// White background
+scene.background = new THREE.Color(0xffffff);
+
+// Lighting
+scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
+hemiLight.position.set(0, 20, 0);
+scene.add(hemiLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+dirLight.position.set(10, 10, 15);
+scene.add(dirLight);
+
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.25);
+fillLight.position.set(-10, -5, -10);
+scene.add(fillLight);
+
+// Material
+const material = new THREE.MeshStandardMaterial({
+    side: THREE.DoubleSide,
+    flatShading: true,
+    roughness: 0.5,
+    metalness: 0.15,
+    vertexColors: true
+});
+```
+
+## Camera Zoom Animations
+
+**Use ABSOLUTE zoom values, not relative:**
+```javascript
+// GOOD: Absolute zoom level
+const minZoom = 0.5; // Always zoom out to this fixed level
+
+// BAD: Relative calculation (compounds errors)
+const minZoom = Math.min(startZoom, targetZoom) * 0.3;
+```
+
+**Multi-phase zoom animation (zoom out → move → zoom in):**
+```javascript
+function setZoomPosition(idx, animate = false) {
+    const zp = zoomPositions[idx];
+    if (!animate) {
+        // Immediate jump
+        camera.position.set(zp.pos.x, zp.pos.y, zp.pos.z);
+        controls.target.set(zp.target.x, zp.target.y, zp.target.z);
+        camera.zoom = zp.zoom;
+        camera.updateProjectionMatrix();
+        controls.update();
+        return;
+    }
+
+    // Animated: zoom out to absolute 0.5, move, zoom in
+    const minZoom = 0.5; // ABSOLUTE value
+    // ... animation code with three phases
+}
+```
+
+## UVA Colors for Lozenge Types
+
+Color lozenges by face normal direction:
+```javascript
+const UVA_ORANGE = new THREE.Color('#E57200');
+const UVA_BLUE = new THREE.Color('#232D4B');
+const UVA_CREAM = new THREE.Color('#F9DCBF');
+
+// Determine type by dominant normal component
+const absX = Math.abs(nx), absY = Math.abs(ny), absZ = Math.abs(nz);
+let color;
+if (absX >= absY && absX >= absZ) color = UVA_ORANGE;
+else if (absY >= absX && absY >= absZ) color = UVA_BLUE;
+else color = UVA_CREAM;
+```
+
 ## Modular Talk Structure
 
 For talks with many slides, use Jekyll includes and separate JS files:

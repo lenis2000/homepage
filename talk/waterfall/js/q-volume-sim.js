@@ -112,7 +112,7 @@ function initQVolumeSim() {
             return triangleArr;
         }
 
-        const HEXAGON_SIZE = 20;
+        const HEXAGON_SIZE = 25;
 
         function getTrianglesArray() {
             return generateHexagonTriangles(HEXAGON_SIZE, HEXAGON_SIZE, HEXAGON_SIZE);

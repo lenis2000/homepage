@@ -1,9 +1,50 @@
-<section class="slide slide-center" id="universality-zoom" data-title="Universality Zoom">
+<section class="slide slide-top" id="universality-zoom" data-title="Universality Zoom">
     <h2 class="slide-title">Universality: Zoom In</h2>
-    <div style="display: flex; flex-direction: column; align-items: center; margin-top: 2vh;">
-        <canvas id="zoom-full-canvas" width="1200" height="800" style="width: 70vw; height: 47vw; background: #1a1a2e;"></canvas>
-    </div>
-    <div style="margin-top: 2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-        Zoom in around any point in the liquid region → same local statistics
+    <div style="display: grid; grid-template-columns: 42vw 52vw; gap: 2vw; margin-top: 2vh;">
+        <!-- Left column -->
+        <div>
+            <!-- Intro block -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left; margin-bottom: 2vh;">
+                Zoom in around any point in the <strong>liquid region</strong> → same class of universal local statistics determined only by <strong>slope</strong>
+                (ergodic translationally invariant Gibbs measures on tilings of the full plane)
+            </div>
+
+            <!-- Determinantal point process block -->
+            <div style="background: #f5f5f5; border-left: 4px solid #232D4B; padding: 1.5vh 1.5vw; text-align: left; margin-bottom: 2vh;">
+                <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: #232D4B; margin-bottom: 1vh;">
+                    <strong>Determinantal point process in 2D:</strong>
+                </div>
+                <div style="font-size: clamp(1.2rem, 2vw, 1.6rem); text-align: center; margin-bottom: 1vh;">
+                    \[\rho_k\bigl((t_1,x_1),\ldots,(t_k,x_k)\bigr) = \det\bigl[K(t_i,x_i; t_j,x_j)\bigr]_{i,j=1}^{k}\]
+                </div>
+                <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; color: #555;">
+                    = probability to find non-blue lozenges at each \((t_i, x_i)\)
+                </div>
+            </div>
+
+            <!-- Incomplete Beta kernel block -->
+            <div style="background: #f5f5f5; border-left: 4px solid #232D4B; padding: 1.5vh 1.5vw; text-align: left; margin-bottom: 2vh;">
+                <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: #232D4B; margin-bottom: 1vh;">
+                    <strong>Incomplete Beta kernel:</strong>
+                </div>
+                <div style="font-size: clamp(1.2rem, 2vw, 1.6rem); text-align: center;">
+                    \[K_u(t,x;s,y) = -\frac{1}{2\pi\mathbf{i}} \int_{\bar{u}}^{u} (1-z)^{t-s} z^{-(x-y)-1} dz\]
+                </div>
+            </div>
+
+            <!-- References -->
+            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--slide-muted); text-align: left;">
+                [Okounkov–Reshetikhin '01], [Sheffield '03], [Kenyon–Okounkov–Sheffield '03],
+                [Gorin '07], [P. '12], [Gorin–P. '16], [Aggarwal '19]
+            </div>
+        </div>
+
+        <!-- Right column -->
+        <div>
+            <canvas id="zoom-full-canvas" width="950" height="800" style="height: 60vh; width: auto; background: #ffffff;"></canvas>
+            <div style="font-size: clamp(0.75rem, 1vw, 1rem); color: #666; margin-top: 1vh; text-align: center; font-style: italic;">
+                Local structure at different slopes in the liquid region
+            </div>
+        </div>
     </div>
 </section>
