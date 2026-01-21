@@ -1,25 +1,25 @@
 /**
- * Nature Builds Slide - 3D q-Racah lozenge tiling simulation
+ * Waterfall Phenomenon Slide - 3D q-Racah lozenge tiling simulation
  * Uses non-modularized WASM Module with mode 7 (IMAGINARY_Q_RACAH)
  */
 
-(function initCrystalSim() {
+(function initWaterfallSim() {
     if (!window.slideEngine) {
-        setTimeout(initCrystalSim, 50);
+        setTimeout(initWaterfallSim, 50);
         return;
     }
 
-    const canvas = document.getElementById('crystal-growth-canvas');
+    const canvas = document.getElementById('waterfall-3d-canvas');
     if (!canvas) return;
 
     // ===== WASM INTERFACE =====
     let wasmReady = false;
     const wasmInterface = {
         ready: false,
-        N_param: 30,
-        T_param: 60,
+        N_param: 40,
+        T_param: 80,
         S_param: 0,
-        S_target: 30,
+        S_target: 40,
         imaginary_q: 0.8,
         kappa_i: 3.0,
         paths: [],
@@ -99,7 +99,7 @@
             const success = wasmInterface.initialize();
             if (success) {
                 wasmReady = true;
-                console.log('WASM initialized for crystal sim after', wasmInitAttempts, 'attempts');
+                console.log('WASM initialized for waterfall sim after', wasmInitAttempts, 'attempts');
             }
         } else {
             if (wasmInitAttempts < 100) {
@@ -165,9 +165,10 @@
         meshGroup = new THREE.Group();
         scene.add(meshGroup);
 
-        camera.position.set(29.7, -8.5, 3.9);
+        // Different camera angle to show waterfall better
+        camera.position.set(60, -30, 50);
         camera.up.set(0, 0, 1);
-        controls.target.set(17.3, 15.9, 5.8);
+        controls.target.set(25, 20, 10);
         controls.update();
 
         function renderLoop() {
@@ -186,9 +187,7 @@
 
         if (renderLoopId) { cancelAnimationFrame(renderLoopId); renderLoopId = null; }
         if (animationId) { clearTimeout(animationId); animationId = null; }
-        if (cameraAnimationId) { cancelAnimationFrame(cameraAnimationId); cameraAnimationId = null; }
         isRunning = false;
-        isCameraAnimating = false;
 
         if (meshGroup) {
             while (meshGroup.children.length > 0) {
@@ -507,13 +506,13 @@
 
     async function initTilingEmpty() {
         if (!wasmInterface.ready) {
-            console.log('WASM not ready for initTiling, retrying...');
+            console.log('WASM not ready for waterfall initTiling, retrying...');
             setTimeout(initTilingEmpty, 100);
             return;
         }
-        console.log('Starting tiling initialization (empty)...');
+        console.log('Starting waterfall tiling initialization...');
         await wasmInterface.initTiling();
-        console.log('After initTiling, S_param:', wasmInterface.S_param, 'paths:', wasmInterface.paths?.length);
+        console.log('After waterfall initTiling, S_param:', wasmInterface.S_param, 'paths:', wasmInterface.paths?.length);
         buildGeometry();
     }
 
@@ -542,10 +541,12 @@
         doSlowAnimationStep();
     }
 
-    const playBtn = document.getElementById('crystal-play-btn');
+    const playBtn = document.getElementById('waterfall-play-btn');
+    const qDisplay = document.getElementById('waterfall-q-display');
+    const kappaDisplay = document.getElementById('waterfall-kappa-display');
 
     function updatePlayBtn() {
-        playBtn.textContent = isRunning ? '⏸' : '▶';
+        if (playBtn) playBtn.textContent = isRunning ? '⏸' : '▶';
     }
 
     function start() {
@@ -564,64 +565,23 @@
         if (isRunning) pause(); else start();
     }
 
-    playBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggle();
-    });
-
-    // Camera animation
-    const cameraStart = { x: 29.7, y: -8.5, z: 3.9 };
-    const cameraEnd = { x: 53.1, y: -37.2, z: 41.6 };
-    const targetStart = { x: 17.3, y: 15.9, z: 5.8 };
-    const targetEnd = { x: 25.9, y: 12.1, z: 9.8 };
-    let isCameraAnimating = false;
-    let cameraAnimationId = null;
-
-    function animateCamera(duration = 3000) {
-        if (!camera || !controls || !renderer) return;
-        const startTime = performance.now();
-        isCameraAnimating = true;
-
-        function tick() {
-            if (!camera || !controls || !renderer) { isCameraAnimating = false; return; }
-            const elapsed = performance.now() - startTime;
-            const t = Math.min(elapsed / duration, 1);
-            const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-
-            camera.position.x = cameraStart.x + (cameraEnd.x - cameraStart.x) * ease;
-            camera.position.y = cameraStart.y + (cameraEnd.y - cameraStart.y) * ease;
-            camera.position.z = cameraStart.z + (cameraEnd.z - cameraStart.z) * ease;
-
-            controls.target.x = targetStart.x + (targetEnd.x - targetStart.x) * ease;
-            controls.target.y = targetStart.y + (targetEnd.y - targetStart.y) * ease;
-            controls.target.z = targetStart.z + (targetEnd.z - targetStart.z) * ease;
-
-            controls.update();
-
-            if (t < 1) {
-                cameraAnimationId = requestAnimationFrame(tick);
-            } else {
-                isCameraAnimating = false;
-            }
-        }
-        tick();
+    if (playBtn) {
+        playBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggle();
+        });
     }
 
-    function resetCamera() {
-        if (cameraAnimationId) cancelAnimationFrame(cameraAnimationId);
-        isCameraAnimating = false;
-        if (!camera || !controls || !renderer) return;
-        camera.position.set(cameraStart.x, cameraStart.y, cameraStart.z);
-        camera.up.set(0, 0, 1);
-        controls.target.set(17.3, 15.9, 5.8);
-        controls.update();
-        renderer.render(scene, camera);
+    const observationEl = document.getElementById('waterfall-observation');
+    const slopesEl = document.getElementById('waterfall-slopes');
+
+    function reset() {
+        if (observationEl) observationEl.style.opacity = '0';
+        if (slopesEl) slopesEl.style.opacity = '0';
     }
 
-    const questionEl = document.getElementById('nature-builds-question');
-
-    window.slideEngine.registerSimulation('nature-builds', {
-        start, pause, steps: 4,
+    window.slideEngine.registerSimulation('waterfall-phenomenon', {
+        start, pause, steps: 3,
         onSlideEnter() {
             initThreeJS();
             setTimeout(async () => {
@@ -634,19 +594,17 @@
         },
         onSlideLeave() {
             disposeThreeJS();
-            questionEl.style.opacity = '0';
+            reset();
         },
         onStep(step) {
             if (step === 1) { start(); }
-            else if (step === 2) { pause(); }
-            else if (step === 3) { animateCamera(3000); }
-            else if (step === 4) { questionEl.style.opacity = '1'; }
+            else if (step === 2 && observationEl) { observationEl.style.opacity = '1'; }
+            else if (step === 3 && slopesEl) { slopesEl.style.opacity = '1'; }
         },
         onStepBack(step) {
-            if (step === 0) { pause(); initTilingEmpty(); resetCamera(); questionEl.style.opacity = '0'; }
-            else if (step === 1) { start(); questionEl.style.opacity = '0'; }
-            else if (step === 2) { resetCamera(); questionEl.style.opacity = '0'; }
-            else if (step === 3) { questionEl.style.opacity = '0'; }
+            if (step === 0) { pause(); initTilingEmpty(); reset(); }
+            else if (step === 1) { if (observationEl) observationEl.style.opacity = '0'; if (slopesEl) slopesEl.style.opacity = '0'; }
+            else if (step === 2) { if (slopesEl) slopesEl.style.opacity = '0'; }
         }
     }, 1);
 })();
