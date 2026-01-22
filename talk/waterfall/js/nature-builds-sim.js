@@ -99,7 +99,6 @@
             const success = wasmInterface.initialize();
             if (success) {
                 wasmReady = true;
-                console.log('WASM initialized for crystal sim after', wasmInitAttempts, 'attempts');
             }
         } else {
             if (wasmInitAttempts < 100) {
@@ -507,13 +506,10 @@
 
     async function initTilingEmpty() {
         if (!wasmInterface.ready) {
-            console.log('WASM not ready for initTiling, retrying...');
             setTimeout(initTilingEmpty, 100);
             return;
         }
-        console.log('Starting tiling initialization (empty)...');
         await wasmInterface.initTiling();
-        console.log('After initTiling, S_param:', wasmInterface.S_param, 'paths:', wasmInterface.paths?.length);
         buildGeometry();
     }
 

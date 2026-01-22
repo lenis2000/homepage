@@ -127,7 +127,6 @@
         if (typeof Module !== 'undefined' && typeof Module.cwrap === 'function') {
             if (wasmInterface.initialize()) {
                 wasmReady = true;
-                console.log('WASM initialized for large hex after', wasmInitAttempts, 'attempts');
             }
         } else if (wasmInitAttempts < 100) {
             setTimeout(tryInitWasm, 100);

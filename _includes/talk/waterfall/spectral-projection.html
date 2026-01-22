@@ -1,70 +1,62 @@
 <section class="slide slide-top" id="spectral-projection" data-title="Spectral Projection">
-    <h2 class="slide-title">Orthogonal Polynomials and Tilings</h2>
+    <h2 class="slide-title">Spectral Projection Method</h2>
 
-    <div style="display: grid; grid-template-columns: 32vw 62vw; gap: 2vw; margin-top: 1vh;">
-        <!-- Left column: Figure and reference -->
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
-            <img src="images/fig_lozenge_and_paths.svg" alt="Lozenge tiling paths" style="height: 28vh; width: auto;">
-            <div id="spectral-olshanski" style="background: #f5f5f5; padding: 0.8vh 1vw; font-size: clamp(0.9rem, 1.5vw, 1.1rem); color: var(--slide-muted); text-align: center; opacity: 0; transition: opacity 0.3s;">
-                <span style="color: var(--slide-accent);">[Olshanski 2008]</span> first applied spectral projections to determinantal point processes
-            </div>
-        </div>
-
-        <!-- Right column: Main content -->
-        <div style="display: flex; flex-direction: column; gap: 1.2vh; font-size: clamp(1.1rem, 2vw, 1.6rem);">
-            <!-- Determinantal -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
-                <strong style="color: var(--slide-accent);">Determinantal:</strong>
-                Correlation functions are <strong>determinantal</strong>
-            </div>
-
-            <!-- Spectral projection -->
-            <div id="spectral-kernel" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw; opacity: 0; transition: opacity 0.3s;">
-                <strong style="color: var(--slide-accent);">Spectral projection:</strong>
-                The correlation kernel of the q-Racah OPE is an operator in \(\ell^2(\mathbb{Z})\) which is the <strong>orthogonal spectral projection</strong> associated with a three-term <strong>q-difference equation</strong> for the q-Racah polynomials
-                <div style="text-align: center; margin-top: 0.5vh; font-size: 1.1em;">
-                    \(\displaystyle K^{qR}(x, y) = \sum_{n=0}^{N-1} f_n(x) f_n(y)\)
-                </div>
-            </div>
-
-            <!-- Convergence -->
-            <div id="spectral-convergence" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw; opacity: 0; transition: opacity 0.3s;">
-                <strong style="color: var(--slide-accent);">Convergence:</strong>
-                q-difference operators converge coefficient-wise, <strong>then spectral projections converge</strong>
-            </div>
-
-            <!-- KEY POINT: Fixed q -->
-            <div id="spectral-fixedq" style="background: #fff3e0; border-left: 4px solid #E57200; padding: 0.8vh 1.2vw; opacity: 0; transition: opacity 0.3s;">
-                <strong style="color: #E57200;">Key insight for fixed q:</strong>
-                For fixed \(q\), spectral projections converge to <strong style="color: var(--slide-navy);">0 or the identity</strong>
-                <div style="margin-top: 0.3vh; color: var(--slide-muted); font-size: 0.9em;">
-                    → No 2D translation invariant ergodic Gibbs measures in the bulk!
-                </div>
-            </div>
-
-            <!-- Inter-slice transition -->
-            <div id="spectral-interslice" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw; opacity: 0; transition: opacity 0.3s;">
-                <strong style="color: var(--slide-accent);">But:</strong>
-                The <strong>barcode process</strong> relies on <strong style="color: var(--slide-navy);">inter-slice operators</strong>
-            </div>
+    <!-- q-difference operator formula - full width at top -->
+    <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; margin-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+        <strong style="color: var(--slide-navy);">q-Difference operator:</strong>
+        <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.4rem, 2.4vw, 1.9rem);">
+            \(\displaystyle (\mathfrak{D}^{qR}g)(x) := \sqrt{\frac{w^{qR}(x)}{w^{qR}(x+1)}}B(x)\,g(x+1) - [B(x)+D(x)]\,g(x) + \sqrt{\frac{w^{qR}(x)}{w^{qR}(x-1)}}D(x)\,g(x-1)\)
         </div>
     </div>
 
-    <!-- Inter-slice formulas at bottom -->
-    <div id="spectral-interslice-formulas" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1.5vh; opacity: 0; transition: opacity 0.3s;">
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw; font-size: clamp(1rem, 1.8vw, 1.4rem);">
-            <strong style="color: var(--slide-accent);">Inter-slice operator:</strong>
-            <div style="margin-top: 0.5vh; font-size: clamp(0.9rem, 1.5vw, 1.2rem);">
-                \(\displaystyle \mathcal{C}_n^t f_n^{t+1}(x) = \sqrt{\frac{w_t(x-1)}{w_{t+1}(x)}} f_n^t(x-1) a_1^t(x-1) + \sqrt{\frac{w_t(x)}{w_{t+1}(x)}} f_n^t(x) a_0^t(x)\)
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1.5vh;">
+        <!-- Left column -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh;">
+            <!-- Spectral interval -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+                <strong style="color: var(--slide-accent);">Kernel = projection onto spectral interval:</strong>
+                <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.5rem, 2.5vw, 2rem);">
+                    \(\displaystyle \bigl[-q^{-N+1}(1-q^{N-1})(q^{-T-N}-1),\, 0\bigr]\)
+                </div>
+            </div>
+
+            <!-- Limiting behavior -->
+            <div style="background: #fff3e0; border-left: 4px solid #E57200; padding: 0.8vh 1.2vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+                <strong style="color: #E57200;">As \(T,S,N,x,t \to \infty\) proportionally while \(q = e^{-\gamma N} \to 1\):</strong>
+                <div style="margin-top: 0.5vh;">
+                    Coefficients behave nicely. Difference operators converge to
+                </div>
+                <div style="margin-top: 0.3vh; text-align: center; font-size: clamp(1.4rem, 2.4vw, 1.9rem);">
+                    \(\displaystyle f \mapsto \tfrac{1}{2}(f(x+1) + f(x-1)) - c\,f(x)\)
+                </div>
+                <div style="margin-top: 0.3vh;">
+                    Limiting spectral projection (onto \(\geq 0\)) is multiplication by \(\mathbf{1}_{\mathrm{Re}(z) > c}\)
+                </div>
             </div>
         </div>
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw; font-size: clamp(1rem, 1.8vw, 1.4rem);">
-            <strong style="color: var(--slide-accent);">Extended kernel:</strong>
-            <div style="margin-top: 0.5vh; font-size: clamp(0.85rem, 1.4vw, 1.1rem);">
-                \(\displaystyle K(s, x; t, y) = \begin{cases}
-                \sum_{n=0}^{N-1} (\mathcal{C}_n^t \mathcal{C}_n^{t+1} \cdots \mathcal{C}_n^{s-1})^{-1} f_n^s(x) f_n^t(y), & s \geq t \\[0.3em]
-                -\sum_{n \geq N} (\mathcal{C}_n^s \mathcal{C}_n^{s+1} \cdots \mathcal{C}_n^{t-1}) f_n^s(x) f_n^t(y), & s < t
-                \end{cases}\)
+
+        <!-- Right column -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh;">
+            <!-- Discrete sine kernel -->
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.8vh 1.2vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+                <strong style="color: var(--slide-navy);">Inverse Fourier \(\Rightarrow\) discrete sine kernel:</strong>
+                <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.6rem, 2.8vw, 2.2rem);">
+                    \(\displaystyle K^{\mathrm{sine}}_\phi(x; y) = \frac{\sin(\phi(x-y))}{\pi(x-y)}\)
+                </div>
+                <div style="margin-top: 0.5vh;">
+                    Extension to 2d is similar. <span style="color: var(--slide-accent);">[BGR 2009]</span>
+                </div>
+            </div>
+
+            <!-- Key conclusion -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+                <strong style="color: var(--slide-accent);">Then spectral projections (kernels) converge!</strong>
+            </div>
+
+            <!-- References -->
+            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--slide-muted); margin-top: auto;">
+                <div><span style="color: var(--slide-accent);">[Olshanski 2008]</span> spectral projections for determinantal processes</div>
+                <div style="margin-top: 0.3vh;"><span style="color: var(--slide-accent);">[Tao 2011]</span> nonrigorous application to random matrices</div>
             </div>
         </div>
     </div>

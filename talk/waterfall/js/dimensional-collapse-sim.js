@@ -11,10 +11,8 @@
 
     const canvas = document.getElementById('dim-collapse-canvas');
     if (!canvas) {
-        console.log('dim-collapse: canvas not found');
         return;
     }
-    console.log('dim-collapse: canvas found', canvas.clientWidth, canvas.clientHeight);
 
     // Parameters - same as q-racah-large-hexagons fixed q
     const N_param = 80;
@@ -511,14 +509,11 @@
     let isAnimating = false;
 
     async function initAndAnimate() {
-        console.log('dim-collapse: initAndAnimate called, wasmReady=', wasmReady, 'isAnimating=', isAnimating);
         if (!wasmReady || isAnimating) return;
         isAnimating = true;
 
         // Initialize at S=0
-        console.log('dim-collapse: initializing tiling');
         await wasmInterface.initTilingQRacah(Q_VALUE, KAPPA);
-        console.log('dim-collapse: tiling initialized, S=', wasmInterface.S_param, 'paths=', wasmInterface.paths.length);
         pathsTo3D(wasmInterface.paths, N_param, T_param, wasmInterface.S_param);
         setCameraPosition(0);  // Start camera position
         if (renderer) renderer.render(scene, camera);
@@ -578,26 +573,21 @@
 
     window.slideEngine.registerSimulation('dimensional-collapse', {
         start() {
-            console.log('dim-collapse: start');
             startRenderLoop();
         },
         pause() {
-            console.log('dim-collapse: pause');
             stopRenderLoop();
             stopAnimation();
         },
         onSlideEnter() {
-            console.log('dim-collapse: onSlideEnter, wasmReady=', wasmReady);
             initThreeJS();
             startRenderLoop();
             setTimeout(() => initAndAnimate(), 100);
         },
         onSlideLeave() {
-            console.log('dim-collapse: onSlideLeave');
             stopAnimation();
             disposeThreeJS();
         }
     }, 0);
 
-    console.log('dim-collapse: simulation registered');
 })();
