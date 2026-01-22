@@ -243,18 +243,23 @@
         }
     }
 
-    // Register with slide engine
-    if (window.slideEngine) {
-        window.slideEngine.registerSimulation(slideId, {
-            start,
-            pause,
-            steps: 4,
-            onStep,
-            onStepBack,
-            onSlideEnter() { reset(); initThreeJS(); },
-            onSlideLeave() { disposeThreeJS(); }
-        }, 0);
+    // Register with slide engine (with retry for load timing)
+    function registerWithEngine() {
+        if (window.slideEngine) {
+            window.slideEngine.registerSimulation(slideId, {
+                start,
+                pause,
+                steps: 4,
+                onStep,
+                onStepBack,
+                onSlideEnter() { reset(); initThreeJS(); },
+                onSlideLeave() { disposeThreeJS(); }
+            }, 0);
+        } else {
+            setTimeout(registerWithEngine, 50);
+        }
     }
+    registerWithEngine();
 
     // Init on wasm-loaded
     function init() {

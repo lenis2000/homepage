@@ -396,7 +396,7 @@ function initQLocalSim() {
                         explanationEl.style.opacity = '0';
                         await runCFTP();
                     } else if (step === 4) {
-                        insightEl.innerHTML = '<strong style="color: #c00; font-size: 1.2em;">Universality BROKEN at extreme q!</strong><br>When q is too extreme (q = 0.67), the path becomes a finite (random) perturbation of the deterministic path that hugs the corner.';
+                        insightEl.innerHTML = '<strong style="color: #c00; font-size: 1.2em;">Universality BROKEN at extreme q!</strong><br>When q is too extreme (q = 0.67), the path becomes a finite (random) perturbation of the deterministic path that hugs the corner. In other words, the configuration is <strong>frozen</strong>.';
                         insightEl.style.opacity = '1';
                         draw();
                     } else if (step === 5 || step === 6 || step === 7) {

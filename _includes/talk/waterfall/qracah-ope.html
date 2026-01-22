@@ -2,24 +2,30 @@
     <h2 class="slide-title">q-Racah Orthogonal Polynomial Ensemble</h2>
 
     <div style="display: grid; grid-template-columns: 32vw 62vw; gap: 2vw; margin-top: 1vh;">
-        <!-- Left column: Visual and Askey scheme -->
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
-            <img src="images/fig_lozenge_and_paths.svg" alt="Lozenge tiling and paths" style="height: 24vh; width: auto;">
-            <p style="font-size: clamp(0.9rem, 1.5vw, 1.2rem); color: var(--slide-muted); margin-top: 0.3vh; text-align: center;">
+        <!-- Left column: Visual -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <img src="images/fig_lozenge_and_paths.svg" alt="Lozenge tiling and paths" style="height: 38vh; width: auto;">
+            <p style="font-size: clamp(1.2rem, 2vw, 1.6rem); color: var(--slide-muted); margin-top: 0.5vh; text-align: center;">
                 Vertical slice \(\to\) \(N\) noncolliding paths
             </p>
-            <div id="ope-askey" style="display: flex; gap: 1vw; align-items: flex-start; opacity: 0; transition: opacity 0.3s;">
-                <img src="images/askey-book-cover.png" alt="Koekoek-Lesky-Swarttouw" style="height: 14vh; width: auto;">
-                <img src="images/orthogonal-hierarchy.png" alt="q-Askey scheme" style="height: 14vh; width: auto;">
+            <!-- Correlation kernel -->
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.8vh 1.2vw; margin-top: 1vh; width: 100%; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+                <strong style="color: var(--slide-navy);">Correlation kernel:</strong>
+                <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.6rem, 2.8vw, 2.2rem);">
+                    \(\displaystyle K_t(x, y) = \sum_{n=0}^{N-1} f_n^t(x) f_n^t(y)\)
+                </div>
+                <div style="margin-top: 0.5vh;">
+                    \(f_n^t\): <strong>orthonormal q-Racah polynomials</strong> on slice \(t\)
+                </div>
+                <div style="margin-top: 0.3vh;">
+                    \(K_t\): <strong>spectral projection</strong> for q-difference operator
+                </div>
             </div>
-            <p id="ope-askey-caption" style="font-size: clamp(0.75rem, 1.2vw, 1rem); color: var(--slide-muted); text-align: center; margin-top: 0.3vh; opacity: 0; transition: opacity 0.3s;">
-                q-Racah: top of the q-Askey scheme
-            </p>
         </div>
 
         <!-- Right column: Math -->
-        <div style="display: flex; flex-direction: column; gap: 1vh; font-size: clamp(1.1rem, 2vw, 1.5rem);">
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1.2vw;">
+        <div style="display: flex; flex-direction: column; gap: 1.2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
                 <strong style="color: var(--slide-accent);">Key observation</strong> <span style="color: var(--slide-muted);">[Borodin-Gorin-Rains]</span>
                 <div style="margin-top: 0.3vh;">
                     The <strong>marginal distribution</strong> of paths on a vertical slice is the <strong style="color: var(--slide-navy);">q-Racah orthogonal polynomial ensemble</strong>
@@ -27,49 +33,35 @@
             </div>
 
             <!-- Joint density formula -->
-            <div id="ope-formula" style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.6vh 1.2vw; opacity: 0; transition: opacity 0.3s;">
+            <div id="ope-formula" style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.8vh 1.2vw;">
                 <strong style="color: var(--slide-navy);">Joint density:</strong>
-                <div style="margin-top: 0.3vh; text-align: center; font-size: clamp(1rem, 1.8vw, 1.4rem);">
+                <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.2rem, 2vw, 1.6rem);">
                     \(\displaystyle \mathfrak{R}^{qR(N)}_{M,\alpha,\beta,\gamma,\delta}(x_1, \ldots, x_N) = \frac{1}{Z} \prod_{1 \le i < j \le N} (\mu(x_i) - \mu(x_j))^2 \prod_{i=1}^N w^{qR}(x_i)\)
                 </div>
-                <div style="margin-top: 0.3vh; text-align: center; color: var(--slide-muted); font-size: 0.85em;">
+                <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.2rem, 2vw, 1.6rem);">
                     where \(\mu(x) = q^{-x} + \gamma\delta q^{x+1}\)
                 </div>
             </div>
 
             <!-- Weight formula -->
-            <div id="ope-weight" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1.2vw; opacity: 0; transition: opacity 0.3s;">
+            <div id="ope-weight" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
                 <strong style="color: var(--slide-accent);">Weight function:</strong>
-                <div style="margin-top: 0.3vh; text-align: center; font-size: clamp(0.85rem, 1.4vw, 1.1rem);">
+                <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.4rem, 2.5vw, 2rem);">
                     \(\displaystyle w^{qR}(x) := \frac{(\alpha q; q)_x (\beta\delta q; q)_x (\gamma q; q)_x (\gamma\delta q; q)_x}{(q; q)_x (\alpha^{-1}\gamma\delta q; q)_x (\beta^{-1}\gamma q; q)_x (\delta q; q)_x} \cdot \frac{(1 - \gamma\delta q^{2x+1})}{(\alpha\beta q)^x (1 - \gamma\delta q)}\)
+                </div>
+                <div style="margin-top: 0.8vh; text-align: center; font-size: clamp(1.2rem, 2vw, 1.6rem); color: var(--slide-muted);">
+                    \(\displaystyle (a; q)_k := (1-a)(1-aq) \cdots (1-aq^{k-1})\) is the <strong>q-Pochhammer symbol</strong>
                 </div>
             </div>
 
             <!-- Parameters -->
-            <div id="ope-parameters" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1.2vw; opacity: 0; transition: opacity 0.3s;">
+            <div id="ope-parameters" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
                 <strong style="color: var(--slide-accent);">Parameters:</strong>
-                <span style="color: var(--slide-muted); font-size: 0.9em;">\((M; \alpha, \beta, \gamma, \delta; q, \kappa)\), \(\gamma = q^{-M-1}\)</span>
-                <div style="margin-top: 0.3vh; font-size: clamp(0.9rem, 1.5vw, 1.2rem);">
-                    For \(0 \le t \le \min(S-1, T-S-1)\):
-                </div>
-                <div style="text-align: center; font-size: clamp(0.85rem, 1.4vw, 1.1rem); margin-top: 0.3vh;">
+                <span style="color: var(--slide-muted); font-size: 0.85em;">\((M; \alpha, \beta, \gamma, \delta; q, \kappa)\), \(\gamma = q^{-M-1}\)</span>
+                <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(0.9rem, 1.5vw, 1.2rem);">
                     \(\displaystyle M = t + N - 1,\ \alpha = q^{-S-N},\ \beta = q^{S-T-N},\ \gamma = q^{-t-N},\ \delta = \kappa^2 q^{-S+N}\)
                 </div>
             </div>
-
-            <!-- Concentration result -->
-            <div id="ope-concentration" style="background: #fff3e0; border-left: 4px solid #E57200; padding: 0.6vh 1.2vw; opacity: 0; transition: opacity 0.3s;">
-                <strong style="color: #E57200;">Concentration result:</strong>
-                <div style="margin-top: 0.3vh;">
-                    This formula is enough to show <strong>concentration of paths</strong> <span style="color: var(--slide-muted);">[Knizel-P. 2025]</span>
-                </div>
-            </div>
         </div>
-    </div>
-
-    <!-- q-Pochhammer notation -->
-    <div id="ope-notation" style="background: #f5f5f5; padding: 0.5vh 1.2vw; margin-top: 1vh; font-size: clamp(0.9rem, 1.5vw, 1.2rem); opacity: 0; transition: opacity 0.3s;">
-        <strong style="color: var(--slide-muted);">Notation:</strong>
-        \(\displaystyle (a; q)_k := (1-a)(1-aq) \cdots (1-aq^{k-1})\) is the <strong>q-Pochhammer symbol</strong>
     </div>
 </section>

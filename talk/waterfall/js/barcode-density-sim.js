@@ -133,18 +133,22 @@
         }
     }
 
-    // Register with slide engine
-    if (window.slideEngine) {
-        window.slideEngine.registerSimulation(slideId, {
-            start() { draw(); },
-            pause() { },
-            steps: 3,
-            onStep,
-            onStepBack,
-            onSlideEnter() { reset(); draw(); },
-            onSlideLeave() { }
-        }, 0);
-    } else {
-        draw();
+    // Register with slide engine (with retry for load timing)
+    function registerWithEngine() {
+        if (window.slideEngine) {
+            window.slideEngine.registerSimulation(slideId, {
+                start() { draw(); },
+                pause() { },
+                steps: 3,
+                onStep,
+                onStepBack,
+                onSlideEnter() { reset(); draw(); },
+                onSlideLeave() { }
+            }, 0);
+        } else {
+            setTimeout(registerWithEngine, 50);
+        }
     }
+    registerWithEngine();
+    draw(); // Draw immediately too
 })();
