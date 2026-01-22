@@ -13,21 +13,39 @@
     }
 
     function reset() {
-        hideElement('spectral-proj-def');
-        hideElement('spectral-interval');
-        hideElement('discrete-sine');
+        hideElement('spectral-olshanski');
+        hideElement('spectral-kernel');
+        hideElement('spectral-convergence');
+        hideElement('spectral-fixedq');
+        hideElement('spectral-interslice');
+        hideElement('spectral-interslice-formulas');
     }
 
     function onStep(step) {
-        if (step >= 1) showElement('spectral-proj-def');
-        if (step >= 2) showElement('spectral-interval');
-        if (step >= 3) showElement('discrete-sine');
+        // Step 1: Show spectral projection explanation and kernel formula
+        if (step >= 1) {
+            showElement('spectral-kernel');
+            showElement('spectral-olshanski');
+        }
+        // Step 2: Show convergence statement
+        if (step >= 2) showElement('spectral-convergence');
+        // Step 3: KEY INSIGHT - fixed q converges to 0 or identity
+        if (step >= 3) showElement('spectral-fixedq');
+        // Step 4: Transition to inter-slice operators
+        if (step >= 4) showElement('spectral-interslice');
+        // Step 5: Show inter-slice formulas
+        if (step >= 5) showElement('spectral-interslice-formulas');
     }
 
     function onStepBack(step) {
-        if (step < 3) hideElement('discrete-sine');
-        if (step < 2) hideElement('spectral-interval');
-        if (step < 1) hideElement('spectral-proj-def');
+        if (step < 5) hideElement('spectral-interslice-formulas');
+        if (step < 4) hideElement('spectral-interslice');
+        if (step < 3) hideElement('spectral-fixedq');
+        if (step < 2) hideElement('spectral-convergence');
+        if (step < 1) {
+            hideElement('spectral-kernel');
+            hideElement('spectral-olshanski');
+        }
     }
 
     // Register with slide engine
@@ -35,7 +53,7 @@
         window.slideEngine.registerSimulation(slideId, {
             start() { },
             pause() { },
-            steps: 3,
+            steps: 5,
             onStep,
             onStepBack,
             onSlideEnter() { reset(); },

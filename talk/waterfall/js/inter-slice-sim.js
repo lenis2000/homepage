@@ -13,21 +13,32 @@
     }
 
     function reset() {
-        hideElement('interslice-ops');
-        hideElement('interslice-limit');
-        hideElement('interslice-guess');
+        hideElement('interslice-bounded');
+        hideElement('interslice-physics');
+        hideElement('interslice-recurrence');
+        hideElement('interslice-eigenfunction');
+        hideElement('interslice-density');
     }
 
     function onStep(step) {
-        if (step >= 1) showElement('interslice-ops');
-        if (step >= 2) showElement('interslice-limit');
-        if (step >= 3) showElement('interslice-guess');
+        // Step 1: Show "very bounded" / "very unbounded" insight
+        if (step >= 1) showElement('interslice-bounded');
+        // Step 2: Physics approach
+        if (step >= 2) showElement('interslice-physics');
+        // Step 3: Three-term recurrence
+        if (step >= 3) showElement('interslice-recurrence');
+        // Step 4: Eigenfunction formula
+        if (step >= 4) showElement('interslice-eigenfunction');
+        // Step 5: Barcode density formula
+        if (step >= 5) showElement('interslice-density');
     }
 
     function onStepBack(step) {
-        if (step < 3) hideElement('interslice-guess');
-        if (step < 2) hideElement('interslice-limit');
-        if (step < 1) hideElement('interslice-ops');
+        if (step < 5) hideElement('interslice-density');
+        if (step < 4) hideElement('interslice-eigenfunction');
+        if (step < 3) hideElement('interslice-recurrence');
+        if (step < 2) hideElement('interslice-physics');
+        if (step < 1) hideElement('interslice-bounded');
     }
 
     // Register with slide engine
@@ -35,7 +46,7 @@
         window.slideEngine.registerSimulation(slideId, {
             start() { },
             pause() { },
-            steps: 3,
+            steps: 5,
             onStep,
             onStepBack,
             onSlideEnter() { reset(); },
