@@ -42,14 +42,19 @@
         <!-- Inter-slice operators -->
         <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
             <div>Relies on <strong>inter-slice operators</strong> (whose coefficients are explicit and product-form)</div>
-            <div style="margin-top: 1vh; text-align: center; font-size: clamp(1.5rem, 2.5vw, 2rem);">
+            <div style="margin-top: 0.8vh; text-align: center; font-size: clamp(1.4rem, 2.4vw, 1.9rem);">
                 \(\displaystyle \tilde{C}_n^t f_n^{t+1}(x) = \sqrt{\frac{\tilde{w}_t(x-1)}{\tilde{w}_{t+1}(x)}} f_n^t(x-1) a_1^t(x-1) + \sqrt{\frac{\tilde{w}_t(x)}{\tilde{w}_{t+1}(x)}} f_n^t(x) a_0^t(x) =: (U_t f_n^t)(x)\)
             </div>
         </div>
 
         <!-- Inter-slice operators converge -->
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
-            Inter-slice operators \(U_t\) converge (under our scaling of the hexagon, and for fixed \(q\)). Coefficients are <strong>explicit and product-form</strong>.
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+            <div>Inter-slice operators \(U_t\) converge (under our scaling of the hexagon, and for fixed \(q\)), to the following explicit operator on \(\frac12\mathbb{Z}\):</div>
+            <div style="margin-top: 0.8vh; text-align: center; font-size: clamp(1.4rem, 2.4vw, 1.9rem);">
+                \(\displaystyle \mathfrak{a}(x) \mathcal{F}_n\left(x - \tfrac{1}{2}\right) + \mathfrak{a}\left(x + \tfrac{1}{2}\right) \mathcal{F}_n\left(x + \tfrac{1}{2}\right) = -q^n \mathcal{F}_n(x),
+                \qquad \qquad
+                \mathfrak{a}(x) := \left[\frac{-\kappa^2 q^{2x-1}}{(1-\kappa^2 q^{2x})(1-\kappa^2 q^{2x-1})}\right]^{1/2}.\)
+            </div>
         </div>
 
         <!-- Key property: very bounded -->
@@ -57,13 +62,13 @@
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
                 <strong style="color: var(--slide-accent);">Limit operator:</strong>
                 <div style="margin-top: 0.5vh;">
-                    The limit is a "<strong>very bounded</strong>" operator on \(\ell^2(\mathbb{Z})\)
+                    A "<strong>very bounded</strong>" operator on \(\ell^2(\frac12\mathbb{Z})\): coefficients rapidly decay to 0 as \(|x| \to \infty\).
                 </div>
             </div>
             <div style="background: #fff3e0; border-left: 4px solid #E57200; padding: 0.8vh 1.2vw;">
                 <strong style="color: #E57200;">Key obstacle:</strong>
                 <div style="margin-top: 0.5vh;">
-                    Its inverse is "<strong>very unbounded</strong>"
+                    Its inverse (required for the kernel) is "<strong>very unbounded</strong>"
                 </div>
             </div>
         </div>

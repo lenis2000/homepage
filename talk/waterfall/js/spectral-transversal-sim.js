@@ -498,6 +498,7 @@
     }
 
     // ===== 2D HORIZONTAL SLICE VISUALIZATION =====
+    // Draw the path at height z = N/2, rotated 45 degrees clockwise
     function drawHorizontalSlice(sliceData) {
         const canvas = document.getElementById('st-slice-canvas');
         if (!canvas || !sliceData || sliceData.length === 0) return;
@@ -510,43 +511,64 @@
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, height);
 
-        const padding = 40;
+        const padding = 50;
+
+        // sliceData contains {x, y} coordinates of the path at z = N/2
+        // Apply 45 degree clockwise rotation:
+        // rotX = (x + y) / sqrt(2), rotY = (y - x) / sqrt(2)
+        const sqrt2 = Math.sqrt(2);
+        const rotatedData = sliceData.map(d => ({
+            rotX: (d.x + d.y) / sqrt2,
+            rotY: (d.y - d.x) / sqrt2
+        }));
+
+        const maxRotX = Math.max(...rotatedData.map(d => d.rotX));
+        const minRotX = Math.min(...rotatedData.map(d => d.rotX));
+        const maxRotY = Math.max(...rotatedData.map(d => d.rotY));
+        const minRotY = Math.min(...rotatedData.map(d => d.rotY));
+
+        const rangeX = maxRotX - minRotX || 1;
+        const rangeY = maxRotY - minRotY || 1;
+
         const plotWidth = width - 2 * padding;
         const plotHeight = height - 2 * padding;
 
-        const maxY = Math.max(...sliceData.map(d => d.y));
-        const minY = Math.min(...sliceData.map(d => d.y));
-        const rangeY = maxY - minY || 1;
+        // Use uniform scaling to preserve aspect ratio
+        const scale = Math.min(plotWidth / rangeX, plotHeight / rangeY);
+        const offsetX = (width - rangeX * scale) / 2;
+        const offsetY = (height - rangeY * scale) / 2;
 
-        // Draw the slice as connected line segments
+        // Draw the slice as a step function
         ctx.strokeStyle = colors.gray2;  // UVA Blue
         ctx.lineWidth = 5;
         ctx.beginPath();
 
-        for (let i = 0; i < sliceData.length; i++) {
-            const x = padding + sliceData[i].u * plotWidth;
-            const y = height - padding - ((sliceData[i].y - minY) / rangeY) * plotHeight;
+        let started = false;
+        for (let i = 0; i < rotatedData.length; i++) {
+            const canvasX = offsetX + (rotatedData[i].rotX - minRotX) * scale;
+            const canvasY = height - offsetY - (rotatedData[i].rotY - minRotY) * scale;
 
-            if (i === 0) {
-                ctx.moveTo(x, y);
+            if (!started) {
+                ctx.moveTo(canvasX, canvasY);
+                started = true;
             } else {
-                ctx.lineTo(x, y);
+                ctx.lineTo(canvasX, canvasY);
             }
         }
         ctx.stroke();
     }
 
     // Extract horizontal slice at z = N/2 (center height)
-    // This slice goes through the center transversally (along y direction at x = S/2)
+    // This extracts the actual path at that height level from the 3D surface
     function extractHorizontalSlice(paths, S_param) {
         if (!paths || paths.length === 0) return null;
 
         const N = paths.length;
         const T = T_param;
         const S = S_param;
-        const xSlice = Math.floor(S / 2);  // Slice at center x position
+        const zSlice = Math.floor(N / 2);  // Slice at center height
 
-        // Build path triplets
+        // Build path triplets (same as in pathsTo3D)
         const pathTriplets = [];
         for (let i = 0; i < paths.length; i++) {
             const pathCopy = paths[i].slice().reverse();
@@ -573,37 +595,18 @@
             pathTriplets.push(triplets);
         }
 
-        // For each y position (0 to T-S), find the height at x = xSlice
-        // Height = number of paths that are "above" position (xSlice, y)
-        const sliceData = [];
-
-        for (let y = 0; y <= T - S; y++) {
-            // Count paths where, at y position, the x-coordinate is > xSlice
-            let height = 0;
-            for (const path of pathTriplets) {
-                // Find the point on this path at y-coordinate closest to y
-                // Path goes from (0,0) to (S, T-S)
-                // At each step, either x++ or y++
-                // Find x value when path reaches y
-                let xAtY = 0;
-                for (let i = 0; i < path.length; i++) {
-                    if (path[i][1] >= y) {
-                        xAtY = path[i][0];
-                        break;
-                    }
-                    if (i === path.length - 1) {
-                        xAtY = path[i][0];
-                    }
-                }
-                // If path's x at this y is > xSlice, it contributes to height
-                if (xAtY > xSlice) {
-                    height++;
-                }
-            }
-            sliceData.push({ u: y / (T - S), y: height });
+        // Find the path at z = zSlice
+        // pathTriplets[i] has z = N - i, so for z = zSlice, i = N - zSlice
+        const pathIdx = N - zSlice;
+        if (pathIdx < 0 || pathIdx >= pathTriplets.length) {
+            return null;
         }
 
-        return sliceData;
+        const pathAtSlice = pathTriplets[pathIdx];
+
+        // Return the (x, y) coordinates of this path
+        // This is the contour of the 3D surface at height zSlice
+        return pathAtSlice.map(p => ({ x: p[0], y: p[1] }));
     }
 
     // ===== SAMPLING =====
