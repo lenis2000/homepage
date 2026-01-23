@@ -98,6 +98,12 @@
         controls.enablePan = true;
         controls.enableZoom = true;
 
+        // Log 3D camera position on change
+        controls.addEventListener('change', () => {
+            console.log('3D camera pos:', camera.position.x.toFixed(1), camera.position.y.toFixed(1), camera.position.z.toFixed(1),
+                        '| target:', controls.target.x.toFixed(1), controls.target.y.toFixed(1), controls.target.z.toFixed(1));
+        });
+
         // Lighting
         scene.add(new THREE.AmbientLight(0xffffff, 0.4));
         const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
@@ -498,10 +504,78 @@
     }
 
     // ===== 2D HORIZONTAL SLICE VISUALIZATION =====
-    // Draw the path at height z = N/2, rotated 45 degrees clockwise
-    function drawHorizontalSlice(sliceData) {
+    // 2D slice camera/zoom state
+    let slice2D = {
+        scale: 1,
+        offsetX: 0,
+        offsetY: 0,
+        isDragging: false,
+        lastX: 0,
+        lastY: 0
+    };
+
+    // Initialize 2D slice pan/zoom controls
+    function init2DControls() {
         const canvas = document.getElementById('st-slice-canvas');
-        if (!canvas || !sliceData || sliceData.length === 0) return;
+        if (!canvas) return;
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            const newScale = slice2D.scale * zoomFactor;
+
+            // Zoom toward mouse position
+            slice2D.offsetX = mouseX - (mouseX - slice2D.offsetX) * zoomFactor;
+            slice2D.offsetY = mouseY - (mouseY - slice2D.offsetY) * zoomFactor;
+            slice2D.scale = newScale;
+
+            drawHorizontalSlice(sliceData);
+            log2DCamera();
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            slice2D.isDragging = true;
+            slice2D.lastX = e.clientX;
+            slice2D.lastY = e.clientY;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!slice2D.isDragging) return;
+            const dx = e.clientX - slice2D.lastX;
+            const dy = e.clientY - slice2D.lastY;
+            slice2D.offsetX += dx;
+            slice2D.offsetY += dy;
+            slice2D.lastX = e.clientX;
+            slice2D.lastY = e.clientY;
+            drawHorizontalSlice(sliceData);
+            log2DCamera();
+        });
+
+        canvas.addEventListener('mouseup', () => { slice2D.isDragging = false; });
+        canvas.addEventListener('mouseleave', () => { slice2D.isDragging = false; });
+    }
+
+    function log2DCamera() {
+        console.log('2D slice camera - scale:', slice2D.scale.toFixed(3),
+                    '| offsetX:', slice2D.offsetX.toFixed(1),
+                    '| offsetY:', slice2D.offsetY.toFixed(1));
+    }
+
+    function set2DCamera(scale, offsetX, offsetY) {
+        slice2D.scale = scale;
+        slice2D.offsetX = offsetX;
+        slice2D.offsetY = offsetY;
+        drawHorizontalSlice(sliceData);
+    }
+
+    // Draw the path at height z = N/2, rotated 45 degrees clockwise
+    function drawHorizontalSlice(sliceDataArg) {
+        const canvas = document.getElementById('st-slice-canvas');
+        if (!canvas || !sliceDataArg || sliceDataArg.length === 0) return;
 
         const ctx = canvas.getContext('2d');
         const width = canvas.width;
@@ -517,7 +591,7 @@
         // Apply 45 degree clockwise rotation:
         // rotX = (x + y) / sqrt(2), rotY = (y - x) / sqrt(2)
         const sqrt2 = Math.sqrt(2);
-        const rotatedData = sliceData.map(d => ({
+        const rotatedData = sliceDataArg.map(d => ({
             rotX: (d.x + d.y) / sqrt2,
             rotY: (d.y - d.x) / sqrt2
         }));
@@ -534,19 +608,24 @@
         const plotHeight = height - 2 * padding;
 
         // Use uniform scaling to preserve aspect ratio
-        const scale = Math.min(plotWidth / rangeX, plotHeight / rangeY);
-        const offsetX = (width - rangeX * scale) / 2;
-        const offsetY = (height - rangeY * scale) / 2;
+        const baseScale = Math.min(plotWidth / rangeX, plotHeight / rangeY);
+        const baseOffsetX = (width - rangeX * baseScale) / 2;
+        const baseOffsetY = (height - rangeY * baseScale) / 2;
+
+        // Apply 2D camera transform
+        const totalScale = baseScale * slice2D.scale;
+        const totalOffsetX = baseOffsetX * slice2D.scale + slice2D.offsetX;
+        const totalOffsetY = baseOffsetY * slice2D.scale + slice2D.offsetY;
 
         // Draw the slice as a step function
         ctx.strokeStyle = colors.gray2;  // UVA Blue
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 5 * slice2D.scale;
         ctx.beginPath();
 
         let started = false;
         for (let i = 0; i < rotatedData.length; i++) {
-            const canvasX = offsetX + (rotatedData[i].rotX - minRotX) * scale;
-            const canvasY = height - offsetY - (rotatedData[i].rotY - minRotY) * scale;
+            const canvasX = totalOffsetX + (rotatedData[i].rotX - minRotX) * totalScale;
+            const canvasY = height - totalOffsetY - (rotatedData[i].rotY - minRotY) * totalScale;
 
             if (!started) {
                 ctx.moveTo(canvasX, canvasY);
@@ -667,9 +746,30 @@
         if (renderer) renderer.render(scene, camera);
     }
 
+    function showElement(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.opacity = '1';
+    }
+
+    function hideElement(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.opacity = '0';
+    }
+
     function reset() {
+        // Hide step-dependent elements
+        hideElement('st-converge');
+        hideElement('st-bounded');
+        hideElement('st-unbounded');
+
+        // Reset 2D camera
+        slice2D.scale = 1;
+        slice2D.offsetX = 0;
+        slice2D.offsetY = 0;
+
         // Initialize Three.js and start sampling on slide enter
         initThreeJS();
+        init2DControls();
         if (!sampling && !sampled) {
             setTimeout(() => sampleQRacah(), 100);
         } else if (sampled) {
@@ -679,11 +779,41 @@
     }
 
     function onStep(step) {
-        // No build steps for this simulation - it's always visible
+        // Step 1: Picture zoom
+        if (step >= 1) {
+            // Zoom 3D camera
+            if (camera && controls) {
+                camera.position.set(61.7, 35.0, 60.1);
+                controls.target.set(40.0, 40.0, 40.0);
+                controls.update();
+            }
+            // Zoom 2D slice
+            set2DCamera(5.504, -969.0, -697.7);
+        }
+        // Step 2: Show converge pane
+        if (step >= 2) showElement('st-converge');
+        // Step 3: Show bounded pane
+        if (step >= 3) showElement('st-bounded');
+        // Step 4: Show unbounded pane
+        if (step >= 4) showElement('st-unbounded');
     }
 
     function onStepBack(step) {
-        // No build steps
+        if (step < 4) hideElement('st-unbounded');
+        if (step < 3) hideElement('st-bounded');
+        if (step < 2) hideElement('st-converge');
+        if (step < 1) {
+            // Reset to initial camera positions
+            slice2D.scale = 1;
+            slice2D.offsetX = 0;
+            slice2D.offsetY = 0;
+            if (sliceData) drawHorizontalSlice(sliceData);
+            if (camera && controls) {
+                camera.position.set(140, 80, 140);
+                controls.target.set(40, 40, 40);
+                controls.update();
+            }
+        }
     }
 
     // Register with slide engine
@@ -696,7 +826,7 @@
                 pause() {
                     stopRenderLoop();
                 },
-                steps: 0,
+                steps: 4,
                 onStep,
                 onStepBack,
                 onSlideEnter() { reset(); },

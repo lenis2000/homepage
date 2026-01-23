@@ -48,7 +48,7 @@
         </div>
 
         <!-- Inter-slice operators converge -->
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+        <div id="st-converge" style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
             <div>Inter-slice operators \(U_t\) converge (under our scaling of the hexagon, and for fixed \(q\)), to the following explicit operator on \(\frac12\mathbb{Z}\):</div>
             <div style="margin-top: 0.8vh; text-align: center; font-size: clamp(1.4rem, 2.4vw, 1.9rem);">
                 \(\displaystyle \mathfrak{a}(x) \mathcal{F}_n\left(x - \tfrac{1}{2}\right) + \mathfrak{a}\left(x + \tfrac{1}{2}\right) \mathcal{F}_n\left(x + \tfrac{1}{2}\right) = -q^n \mathcal{F}_n(x),
@@ -59,13 +59,13 @@
 
         <!-- Key property: very bounded -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw;">
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
+            <div id="st-bounded" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw; opacity: 0; transition: opacity 0.3s;">
                 <strong style="color: var(--slide-accent);">Limit operator:</strong>
                 <div style="margin-top: 0.5vh;">
                     A "<strong>very bounded</strong>" operator on \(\ell^2(\frac12\mathbb{Z})\): coefficients rapidly decay to 0 as \(|x| \to \infty\).
                 </div>
             </div>
-            <div style="background: #fff3e0; border-left: 4px solid #E57200; padding: 0.8vh 1.2vw;">
+            <div id="st-unbounded" style="background: #fff3e0; border-left: 4px solid #E57200; padding: 0.8vh 1.2vw; opacity: 0; transition: opacity 0.3s;">
                 <strong style="color: #E57200;">Key obstacle:</strong>
                 <div style="margin-top: 0.5vh;">
                     Its inverse (required for the kernel) is "<strong>very unbounded</strong>"
