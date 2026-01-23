@@ -1,4 +1,4 @@
-// Vertical Slice simulation - step-based reveals (no canvas)
+// Vertical Slice simulation - step-based reveals
 (function() {
     const slideId = 'vertical-slice';
 
@@ -14,22 +14,16 @@
 
     function reset() {
         hideElement('vs-answer');
-        hideElement('vs-operators');
-        hideElement('vs-problem');
-        hideElement('vs-conclusion');
+        hideElement('vs-rest');
     }
 
     function onStep(step) {
         if (step >= 1) showElement('vs-answer');
-        if (step >= 2) showElement('vs-operators');
-        if (step >= 3) showElement('vs-problem');
-        if (step >= 4) showElement('vs-conclusion');
+        if (step >= 2) showElement('vs-rest');
     }
 
     function onStepBack(step) {
-        if (step < 4) hideElement('vs-conclusion');
-        if (step < 3) hideElement('vs-problem');
-        if (step < 2) hideElement('vs-operators');
+        if (step < 2) hideElement('vs-rest');
         if (step < 1) hideElement('vs-answer');
     }
 
@@ -39,7 +33,7 @@
             window.slideEngine.registerSimulation(slideId, {
                 start() { },
                 pause() { },
-                steps: 4,
+                steps: 2,
                 onStep,
                 onStepBack,
                 onSlideEnter() { reset(); },

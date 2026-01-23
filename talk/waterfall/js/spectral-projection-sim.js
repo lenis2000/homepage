@@ -1,33 +1,37 @@
-// Spectral Projection slide - step-based reveals + 3D simulation
+// Spectral Projection slide - Two 3D tilings + 2D slices side by side
 (function() {
     const slideId = 'spectral-projection';
 
-    // Parameters for simulation (1.5x larger than q-racah-large-hexagons)
-    const N_param = 120;
-    const T_param = 240;
-    const S_target = 120;
+    // Parameters for simulation
+    const N_param = 40;
+    const T_param = 80;
+    const S_target = 40;
     const KAPPA = 3.0;
-    const Q_VALUE = 0.97;
+
+    // Two simulations with different q values
+    const Q_VALUES = [0.97, 0.8];
 
     // UVA Colors
     const colors = {
         gray1: '#E57200',  // Orange
         gray2: '#232D4B',  // Blue
         gray3: '#F9DCBF',  // Cream
-        border: '#333333'
+        border: '#333333',
+        slicePlane: '#E57200'  // Orange for slice indicator
     };
 
-    // Three.js state
-    let scene = null, renderer = null, camera = null, controls = null, meshGroup = null;
-    let renderLoopId = null;
+    // State for each simulation (indexed 0 and 1)
+    const simStates = [
+        { scene: null, renderer: null, camera: null, controls: null, meshGroup: null, slicePlane: null, renderLoopId: null, sliceData: null, paths: [], S_param: 0, sampling: false, sampled: false },
+        { scene: null, renderer: null, camera: null, controls: null, meshGroup: null, slicePlane: null, renderLoopId: null, sliceData: null, paths: [], S_param: 0, sampling: false, sampled: false }
+    ];
+
     let currentN = 0, currentT = 0, currentS = 0;
 
     // WASM interface
     let wasmReady = false;
     const wasmInterface = {
         ready: false,
-        paths: [],
-        S_param: 0,
 
         initialize() {
             if (typeof Module === 'undefined' || typeof Module.cwrap !== 'function') {
@@ -49,9 +53,10 @@
                     const jsonStr = Module.UTF8ToString(ptr);
                     this.freeString(ptr);
                     const result = JSON.parse(jsonStr);
-                    this.paths = result.paths;
+                    return result.paths;
                 }
             } catch (e) { console.error('Export paths failed:', e); }
+            return [];
         }
     };
 
@@ -68,110 +73,151 @@
     }
     tryInitWasm();
 
-    // Three.js functions
-    function initThreeJS() {
-        const canvas = document.getElementById('sp-sim-canvas');
-        if (!canvas || renderer) return;
+    // ===== THREE.JS 3D VISUALIZATION =====
+    function initThreeJS(simIdx) {
+        const state = simStates[simIdx];
+        const canvas = document.getElementById(`sp-3d-canvas-${simIdx + 1}`);
+        if (!canvas || state.renderer) return;
 
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xffffff);
+        state.scene = new THREE.Scene();
+        state.scene.background = new THREE.Color(0xffffff);
 
-        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        state.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        state.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
         const aspect = canvas.clientWidth / canvas.clientHeight || 1;
-        camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 5000);
+        state.camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 5000);
 
-        controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.1;
-        controls.enablePan = true;
-        controls.enableZoom = true;
+        state.controls = new THREE.OrbitControls(state.camera, state.renderer.domElement);
+        state.controls.enableDamping = true;
+        state.controls.dampingFactor = 0.1;
+        state.controls.enablePan = true;
+        state.controls.enableZoom = true;
 
         // Lighting
-        scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+        state.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
         const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
         hemi.position.set(0, 20, 0);
-        scene.add(hemi);
+        state.scene.add(hemi);
         const directional = new THREE.DirectionalLight(0xffffff, 0.6);
         directional.position.set(10, 10, 15);
-        scene.add(directional);
+        state.scene.add(directional);
         const fill = new THREE.DirectionalLight(0xffffff, 0.25);
         fill.position.set(-10, -5, -10);
-        scene.add(fill);
+        state.scene.add(fill);
 
-        meshGroup = new THREE.Group();
-        scene.add(meshGroup);
+        state.meshGroup = new THREE.Group();
+        state.scene.add(state.meshGroup);
 
-        camera.position.set(63.5, 64.3, 66.2);
-        camera.up.set(0, 0, 1);
-        controls.target.set(41.1, 74.6, 38.9);
-        controls.update();
-
-        // Camera position debugging
-        controls.addEventListener('change', () => {
-            console.log('Camera pos:', camera.position.x.toFixed(1), camera.position.y.toFixed(1), camera.position.z.toFixed(1),
-                        '| Target:', controls.target.x.toFixed(1), controls.target.y.toFixed(1), controls.target.z.toFixed(1));
-        });
+        // Camera position for N=40, T=80, S=40
+        state.camera.position.set(100, 80, 120);
+        state.camera.up.set(0, 0, 1);
+        state.controls.target.set(40, 60, 20);
+        state.controls.update();
 
         const w = canvas.clientWidth, h = canvas.clientHeight;
         if (w > 0 && h > 0) {
-            renderer.setSize(w, h, false);
-            camera.aspect = w / h;
-            camera.updateProjectionMatrix();
+            state.renderer.setSize(w, h, false);
+            state.camera.aspect = w / h;
+            state.camera.updateProjectionMatrix();
         }
     }
 
-    function disposeThreeJS() {
-        if (!renderer) return;
-        if (renderLoopId) { cancelAnimationFrame(renderLoopId); renderLoopId = null; }
-        if (meshGroup) {
-            while (meshGroup.children.length > 0) {
-                const child = meshGroup.children[0];
+    function disposeThreeJS(simIdx) {
+        const state = simStates[simIdx];
+        if (!state.renderer) return;
+        if (state.renderLoopId) { cancelAnimationFrame(state.renderLoopId); state.renderLoopId = null; }
+        if (state.meshGroup) {
+            while (state.meshGroup.children.length > 0) {
+                const child = state.meshGroup.children[0];
                 if (child.geometry) child.geometry.dispose();
                 if (child.material) child.material.dispose();
-                meshGroup.remove(child);
+                state.meshGroup.remove(child);
             }
         }
-        renderer.dispose();
-        renderer = null;
-        scene = null;
-        camera = null;
-        controls = null;
-        meshGroup = null;
+        if (state.slicePlane) {
+            if (state.slicePlane.geometry) state.slicePlane.geometry.dispose();
+            if (state.slicePlane.material) state.slicePlane.material.dispose();
+            state.scene.remove(state.slicePlane);
+            state.slicePlane = null;
+        }
+        state.renderer.dispose();
+        state.renderer = null;
+        state.scene = null;
+        state.camera = null;
+        state.controls = null;
+        state.meshGroup = null;
     }
 
-    function startRenderLoop() {
-        if (renderLoopId) return;
+    function startRenderLoop(simIdx) {
+        const state = simStates[simIdx];
+        if (state.renderLoopId) return;
         function loop() {
-            if (!renderer || !camera || !controls) return;
-            controls.update();
-            renderer.render(scene, camera);
-            renderLoopId = requestAnimationFrame(loop);
+            if (!state.renderer || !state.camera || !state.controls) return;
+            state.controls.update();
+            state.renderer.render(state.scene, state.camera);
+            state.renderLoopId = requestAnimationFrame(loop);
         }
         loop();
     }
 
-    function stopRenderLoop() {
-        if (renderLoopId) {
-            cancelAnimationFrame(renderLoopId);
-            renderLoopId = null;
+    function stopRenderLoop(simIdx) {
+        const state = simStates[simIdx];
+        if (state.renderLoopId) {
+            cancelAnimationFrame(state.renderLoopId);
+            state.renderLoopId = null;
         }
     }
 
-    // Path to 3D conversion (from q-racah-large-hexagons-sim.js)
-    function pathsTo3D(paths, N, T, S) {
-        if (!meshGroup) return;
+    function addSlicePlane(simIdx) {
+        const state = simStates[simIdx];
+        if (!state.scene || state.slicePlane) return;
+
+        const S = currentS;
+        const N = currentN;
+        const T = currentT;
+
+        const geometry = new THREE.BufferGeometry();
+
+        // Quadrilateral through GREEN, BLUE, WHITE, CYAN (exact vertices):
+        const vertices = new Float32Array([
+            0, S, 0,           // GREEN
+            T - S, 0, 0,       // BLUE
+            T - S, 0, N,       // WHITE
+            0, S, N            // CYAN
+        ]);
+
+        const indices = [0, 1, 2, 0, 2, 3];
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+
+        const material = new THREE.MeshBasicMaterial({
+            color: colors.slicePlane,
+            transparent: true,
+            opacity: 0.3,
+            side: THREE.DoubleSide
+        });
+
+        state.slicePlane = new THREE.Mesh(geometry, material);
+        state.scene.add(state.slicePlane);
+    }
+
+    // Path to 3D conversion
+    function pathsTo3D(simIdx, paths, N, T, S) {
+        const state = simStates[simIdx];
+        if (!state.meshGroup) return;
 
         currentN = N;
         currentT = T;
         currentS = S;
 
-        while (meshGroup.children.length > 0) {
-            const child = meshGroup.children[0];
+        while (state.meshGroup.children.length > 0) {
+            const child = state.meshGroup.children[0];
             if (child.geometry) child.geometry.dispose();
             if (child.material) child.material.dispose();
-            meshGroup.remove(child);
+            state.meshGroup.remove(child);
         }
 
         if (!paths || paths.length === 0) return;
@@ -285,7 +331,7 @@
         });
 
         const mesh = new THREE.Mesh(geometry, material);
-        meshGroup.add(mesh);
+        state.meshGroup.add(mesh);
 
         const edgesGeometry = new THREE.EdgesGeometry(geometry, 10);
         const edgesMaterial = new THREE.LineBasicMaterial({
@@ -295,7 +341,10 @@
             transparent: true
         });
         const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
-        meshGroup.add(edges);
+        state.meshGroup.add(edges);
+
+        // Add slice plane indicator
+        addSlicePlane(simIdx);
     }
 
     function extractLastFromIncreasing(list) {
@@ -436,48 +485,184 @@
         }
     }
 
-    // Sampling
-    let sampling = false;
+    // ===== 2D SLICE VISUALIZATION =====
+    function drawSlice(simIdx) {
+        const state = simStates[simIdx];
+        const canvas = document.getElementById(`sp-slice-canvas-${simIdx + 1}`);
+        if (!canvas || !state.sliceData || state.sliceData.length === 0) return;
 
-    async function sampleQRacah() {
-        if (!wasmReady || sampling) return;
-        sampling = true;
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
 
-        wasmInterface.paths = [];
-        wasmInterface.S_param = 0;
+        // Clear
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+
+        const padding = 20;
+        const plotWidth = width - 2 * padding;
+        const plotHeight = height - 2 * padding;
+
+        const maxHeight = Math.max(...state.sliceData.map(d => d.height));
+        const minHeight = Math.min(...state.sliceData.map(d => d.height));
+        const range = maxHeight - minHeight || 1;
+
+        // Draw the slice as connected line segments
+        ctx.strokeStyle = colors.gray2;  // UVA Blue
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        for (let i = 0; i < state.sliceData.length; i++) {
+            const x = padding + state.sliceData[i].u * plotWidth;
+            const y = height - padding - ((state.sliceData[i].height - minHeight) / range) * plotHeight;
+
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.stroke();
+    }
+
+    function extractDiagonalSlice(simIdx) {
+        const state = simStates[simIdx];
+        const paths = state.paths;
+        if (!paths || paths.length === 0) return null;
+
+        const N = paths.length;
+        const T = currentT;
+        const S = currentS;
+
+        // Build path triplets (same transform as pathsTo3D)
+        const pathTriplets = [];
+        for (let i = 0; i < paths.length; i++) {
+            const pathCopy = paths[i].slice().reverse();
+            const firstElement = pathCopy[0];
+            const adjustedPath = pathCopy.map(val => firstElement - val);
+
+            const triplets = [];
+            let x = 0, y = 0;
+            const z = paths.length - i;
+
+            triplets.push([x, y, z]);
+
+            for (let j = 1; j < adjustedPath.length; j++) {
+                const prev = adjustedPath[j-1];
+                const curr = adjustedPath[j];
+
+                if (curr === prev + 1) {
+                    x++;
+                } else if (curr === prev) {
+                    y++;
+                }
+                triplets.push([x, y, z]);
+            }
+            pathTriplets.push(triplets);
+        }
+
+        // Diagonal plane: from (x=S, y=0) to (x=0, y=T-S)
+        // Plane equation: x/S + y/(T-S) = 1
+        // Find where each path crosses this plane
+        const crossings = [];
+
+        for (const path of pathTriplets) {
+            const z = path[0][2];
+
+            for (let i = 0; i < path.length - 1; i++) {
+                const [x1, y1] = path[i];
+                const [x2, y2] = path[i+1];
+
+                // Distance to plane
+                const d1 = (x1 / S) + (y1 / (T - S)) - 1;
+                const d2 = (x2 / S) + (y2 / (T - S)) - 1;
+
+                // Check if segment crosses plane (signs differ or one is zero)
+                if (d1 * d2 <= 0 && !(d1 === 0 && d2 === 0)) {
+                    let crossY;
+                    if (Math.abs(d2 - d1) < 1e-10) {
+                        crossY = (y1 + y2) / 2;
+                    } else {
+                        const t = -d1 / (d2 - d1);
+                        crossY = y1 + t * (y2 - y1);
+                    }
+
+                    // Parameter along diagonal (0=GREEN at S,0; 1=BLUE at 0,T-S)
+                    const u = crossY / (T - S);
+
+                    crossings.push({ u, z });
+                    break;  // Each path crosses once
+                }
+            }
+        }
+
+        // Sort by u (position along diagonal)
+        crossings.sort((a, b) => a.u - b.u);
+
+        // Build step function: height decreases as we cross each path
+        const sliceData = [];
+        let currentHeight = N;
+
+        sliceData.push({ u: 0, height: currentHeight });
+
+        for (const c of crossings) {
+            // Add point just before crossing at current height
+            sliceData.push({ u: c.u, height: currentHeight });
+            // After crossing path at level z, height becomes z-1
+            currentHeight = c.z - 1;
+            sliceData.push({ u: c.u, height: currentHeight });
+        }
+
+        sliceData.push({ u: 1, height: 0 });
+
+        return sliceData;
+    }
+
+    // ===== SAMPLING =====
+    async function sampleQRacah(simIdx) {
+        const state = simStates[simIdx];
+        if (!wasmReady || state.sampling || state.sampled) return;
+        state.sampling = true;
+
+        const qValue = Q_VALUES[simIdx];
 
         // Set q and initialize
-        wasmInterface.setImaginaryQ(Q_VALUE);
+        wasmInterface.setImaginaryQ(qValue);
         const kappasq = KAPPA * KAPPA;
         const ptr = await wasmInterface.initializeTiling(N_param, T_param, 0, 7, -kappasq);
         if (ptr) {
             const jsonStr = Module.UTF8ToString(ptr);
             wasmInterface.freeString(ptr);
             const result = JSON.parse(jsonStr);
-            wasmInterface.S_param = result.s || 0;
+            state.S_param = result.s || 0;
         }
-        await wasmInterface.refreshPaths();
+        state.paths = await wasmInterface.refreshPaths();
 
         // Grow to target
-        while (wasmInterface.S_param < S_target) {
-            wasmInterface.setImaginaryQ(Q_VALUE);
+        while (state.S_param < S_target) {
+            wasmInterface.setImaginaryQ(qValue);
             const ptr = await wasmInterface.performSOperator();
             if (ptr) {
                 const jsonStr = Module.UTF8ToString(ptr);
                 wasmInterface.freeString(ptr);
                 const result = JSON.parse(jsonStr);
-                wasmInterface.S_param = result.s;
-                await wasmInterface.refreshPaths();
+                state.S_param = result.s;
+                state.paths = await wasmInterface.refreshPaths();
             } else {
                 break;
             }
         }
 
-        const pathsCopy = wasmInterface.paths.map(p => [...p]);
-        pathsTo3D(pathsCopy, N_param, T_param, wasmInterface.S_param);
-        if (renderer) renderer.render(scene, camera);
+        // Build 3D and extract diagonal slice
+        const pathsCopy = state.paths.map(p => [...p]);
+        pathsTo3D(simIdx, pathsCopy, N_param, T_param, state.S_param);
+        state.sliceData = extractDiagonalSlice(simIdx);
+        drawSlice(simIdx);
 
-        sampling = false;
+        if (state.renderer) state.renderer.render(state.scene, state.camera);
+
+        state.sampling = false;
+        state.sampled = true;
     }
 
     // Element visibility
@@ -496,32 +681,51 @@
         hideElement('sp-sine');
         hideElement('sp-refs');
         hideElement('sp-sim-container');
+        hideElement('sp-sim-left');
+        hideElement('sp-sim-right');
     }
 
     function onStep(step) {
-        // Step 1: Show limit and sine kernel, start sampling in background
+        // Step 1: Show limit and sine kernel, start sampling both in background
         if (step >= 1) {
             showElement('sp-limit');
             showElement('sp-sine');
-            // Start sampling early so it's ready by step 3
-            initThreeJS();
-            if (!sampling && (!wasmInterface.paths || wasmInterface.paths.length === 0)) {
-                setTimeout(() => sampleQRacah(), 100);
+            // Initialize both Three.js renderers and start sampling
+            initThreeJS(0);
+            initThreeJS(1);
+            if (!simStates[0].sampling && !simStates[0].sampled) {
+                setTimeout(() => sampleQRacah(0), 100);
+            }
+            if (!simStates[1].sampling && !simStates[1].sampled) {
+                setTimeout(() => sampleQRacah(1), 200);  // Slight delay for second
             }
         }
         // Step 2: Show references
         if (step >= 2) showElement('sp-refs');
-        // Step 3: Show simulation (already sampled)
+        // Step 3: Show first simulation (q=0.97)
         if (step >= 3) {
             showElement('sp-sim-container');
-            startRenderLoop();
+            showElement('sp-sim-left');
+            startRenderLoop(0);
+            drawSlice(0);
+        }
+        // Step 4: Show second simulation (q=0.8)
+        if (step >= 4) {
+            showElement('sp-sim-right');
+            startRenderLoop(1);
+            drawSlice(1);
         }
     }
 
     function onStepBack(step) {
+        if (step < 4) {
+            hideElement('sp-sim-right');
+            stopRenderLoop(1);
+        }
         if (step < 3) {
             hideElement('sp-sim-container');
-            stopRenderLoop();
+            hideElement('sp-sim-left');
+            stopRenderLoop(0);
         }
         if (step < 2) hideElement('sp-refs');
         if (step < 1) {
@@ -537,18 +741,29 @@
                 start() {
                     const container = document.getElementById('sp-sim-container');
                     if (container && container.style.opacity === '1') {
-                        startRenderLoop();
+                        if (document.getElementById('sp-sim-left').style.opacity === '1') {
+                            startRenderLoop(0);
+                        }
+                        if (document.getElementById('sp-sim-right').style.opacity === '1') {
+                            startRenderLoop(1);
+                        }
                     }
                 },
                 pause() {
-                    stopRenderLoop();
+                    stopRenderLoop(0);
+                    stopRenderLoop(1);
                 },
-                steps: 3,
+                steps: 4,
                 onStep,
                 onStepBack,
                 onSlideEnter() { reset(); },
                 onSlideLeave() {
-                    disposeThreeJS();
+                    disposeThreeJS(0);
+                    disposeThreeJS(1);
+                    simStates[0].sliceData = null;
+                    simStates[0].sampled = false;
+                    simStates[1].sliceData = null;
+                    simStates[1].sampled = false;
                 }
             }, 0);
         } else {

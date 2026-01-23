@@ -1,6 +1,6 @@
-// Inter-slice simulation - no steps, all content visible at once
+// Spectral Transversal simulation - no steps, all content visible at once
 (function() {
-    const slideId = 'inter-slice';
+    const slideId = 'spectral-transversal';
 
     // Register with slide engine (with retry for load timing)
     function registerWithEngine() {

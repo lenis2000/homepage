@@ -3,7 +3,7 @@
 
     <!-- q-difference operator formula - full width at top -->
     <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; margin-top: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-        <strong style="color: var(--slide-navy);">q-Difference operator:</strong>
+        <strong style="color: var(--slide-navy);">q-Difference operator:</strong> \(B(x), D(x)\) are explicit rational expressions in factors like \((q^T - \kappa^2 q^{x+1})\),
         <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.4rem, 2.4vw, 1.9rem);">
             \(\displaystyle (\mathfrak{D}^{qR}g)(x) := \sqrt{\frac{w^{qR}(x)}{w^{qR}(x+1)}}B(x)\,g(x+1) - [B(x)+D(x)]\,g(x) + \sqrt{\frac{w^{qR}(x)}{w^{qR}(x-1)}}D(x)\,g(x-1)\)
         </div>
@@ -67,12 +67,22 @@
                 </div>
             </div>
 
-            <!-- 3D Simulation -->
-            <div id="sp-sim-container" style="text-align: center; margin-top: auto; opacity: 0; transition: opacity 0.3s;">
-                <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 0.5vh;">
-                    <strong style="color: var(--slide-accent);">\(q = 0.97\), \(\kappa = 3i\)</strong>
+            <!-- Two simulations side by side -->
+            <div id="sp-sim-container" style="display: flex; gap: 1vw; margin-top: auto; opacity: 0; transition: opacity 0.3s; align-items: flex-start; font-size: clamp(1rem, 1.8vw, 1.4rem);">
+                <!-- q=0.97 -->
+                <div id="sp-sim-left" style="text-align: center; opacity: 0; transition: opacity 0.3s;">
+                    <div style="display: flex; gap: 0.5vw;">
+                        <canvas id="sp-3d-canvas-1" width="280" height="240" style="height: 18vh; width: auto; background: #ffffff;"></canvas>
+                        <canvas id="sp-slice-canvas-1" width="280" height="240" style="height: 18vh; width: auto; background: #ffffff;"></canvas>
+                    </div>
                 </div>
-                <canvas id="sp-sim-canvas" width="700" height="500" style="height: 28vh; width: auto; background: #ffffff;"></canvas>
+                <!-- q=0.8 -->
+                <div id="sp-sim-right" style="text-align: center; opacity: 0; transition: opacity 0.3s;">
+                    <div style="display: flex; gap: 0.5vw;">
+                        <canvas id="sp-3d-canvas-2" width="280" height="240" style="height: 18vh; width: auto; background: #ffffff;"></canvas>
+                        <canvas id="sp-slice-canvas-2" width="280" height="240" style="height: 18vh; width: auto; background: #ffffff;"></canvas>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
