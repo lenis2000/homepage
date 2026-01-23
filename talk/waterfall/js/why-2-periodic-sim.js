@@ -1,6 +1,6 @@
 /**
- * Why 2-Periodic slide - Sample N=8, T=16, S=8 waterfall with q=0.5 and show in 2D
- * Shows N non-intersecting paths on a simple rectangular grid
+ * Why 2-Periodic slide - Sample N=8, T=16, S=8 waterfall with q=0.5
+ * 3D visualization with orthographic projection
  */
 
 (function() {
@@ -16,18 +16,23 @@
     const KAPPA = 3.0;
 
     // UVA Colors
-    const pathColors = [
-        '#E57200', '#232D4B', '#E57200', '#232D4B',
-        '#E57200', '#232D4B', '#E57200', '#232D4B'
-    ];  // Alternating orange and blue
-    const gridColor = '#dddddd';
-    const borderColor = '#000000';
-    const backgroundColor = '#ffffff';
+    const colors = {
+        gray1: '#E57200',  // Orange
+        gray2: '#232D4B',  // Blue
+        gray3: '#F9DCBF',  // Cream
+        border: '#333333'
+    };
 
     let canvas = null;
-    let ctx = null;
+    let scene = null;
+    let renderer = null;
+    let camera = null;
+    let controls = null;
+    let meshGroup = null;
+    let renderLoopId = null;
     let paths = null;
     let S_param = 0;
+    let currentN = 0, currentT = 0, currentS = 0;
 
     // WASM interface
     let wasmReady = false;
@@ -74,107 +79,382 @@
     }
     tryInitWasm();
 
-    // Convert raw paths to coordinate sequences
-    function pathsToCoords(rawPaths) {
-        const coordsList = [];
+    function initThreeJS() {
+        if (renderer) return;
 
-        for (let i = 0; i < rawPaths.length; i++) {
-            const pathCopy = rawPaths[i].slice().reverse();
+        canvas = document.getElementById('why-2p-canvas');
+        if (!canvas) return;
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff);
+
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const aspect = canvas.clientWidth / canvas.clientHeight || 1;
+        const frustumSize = 20;
+        camera = new THREE.OrthographicCamera(
+            -frustumSize * aspect / 2,
+            frustumSize * aspect / 2,
+            frustumSize / 2,
+            -frustumSize / 2,
+            0.1,
+            1000
+        );
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.1;
+        controls.enablePan = true;
+        controls.enableZoom = true;
+
+        // Log camera position on change
+        controls.addEventListener('change', () => {
+            console.log('Camera pos:', camera.position.x.toFixed(1), camera.position.y.toFixed(1), camera.position.z.toFixed(1),
+                        '| Target:', controls.target.x.toFixed(1), controls.target.y.toFixed(1), controls.target.z.toFixed(1),
+                        '| Zoom:', camera.zoom.toFixed(2));
+        });
+
+        // Lighting
+        scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+        const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
+        hemi.position.set(0, 20, 0);
+        scene.add(hemi);
+        const directional = new THREE.DirectionalLight(0xffffff, 0.6);
+        directional.position.set(10, 10, 15);
+        scene.add(directional);
+        const fill = new THREE.DirectionalLight(0xffffff, 0.25);
+        fill.position.set(-10, -5, -10);
+        scene.add(fill);
+
+        meshGroup = new THREE.Group();
+        scene.add(meshGroup);
+
+        // Initial camera position
+        camera.position.set(20, 20, 20);
+        camera.up.set(0, 0, 1);
+        controls.target.set(4, 4, 4);
+        camera.zoom = 1;
+        camera.updateProjectionMatrix();
+        controls.update();
+
+        const w = canvas.clientWidth, h = canvas.clientHeight;
+        if (w > 0 && h > 0) {
+            renderer.setSize(w, h, false);
+        }
+    }
+
+    function disposeThreeJS() {
+        if (!renderer) return;
+        if (renderLoopId) { cancelAnimationFrame(renderLoopId); renderLoopId = null; }
+        if (meshGroup) {
+            while (meshGroup.children.length > 0) {
+                const child = meshGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+                meshGroup.remove(child);
+            }
+        }
+        renderer.dispose();
+        renderer = null;
+        scene = null;
+        camera = null;
+        controls = null;
+        meshGroup = null;
+    }
+
+    function startRenderLoop() {
+        if (renderLoopId) return;
+        function loop() {
+            if (!renderer || !camera || !controls) return;
+            controls.update();
+            renderer.render(scene, camera);
+            renderLoopId = requestAnimationFrame(loop);
+        }
+        loop();
+    }
+
+    function stopRenderLoop() {
+        if (renderLoopId) {
+            cancelAnimationFrame(renderLoopId);
+            renderLoopId = null;
+        }
+    }
+
+    function pathsTo3D(pathsData, N, T, S) {
+        if (!meshGroup) return;
+
+        currentN = N;
+        currentT = T;
+        currentS = S;
+
+        while (meshGroup.children.length > 0) {
+            const child = meshGroup.children[0];
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) child.material.dispose();
+            meshGroup.remove(child);
+        }
+
+        if (!pathsData || pathsData.length === 0) return;
+
+        const pathTriplets = [];
+        for (let i = 0; i < pathsData.length; i++) {
+            const pathCopy = pathsData[i].slice().reverse();
             const firstElement = pathCopy[0];
-            const adjustedPath = pathCopy.map(val => firstElement - val);
+            const adjustedPath = pathCopy.map(x => firstElement - x);
 
-            const coords = [];
+            const triplets = [];
             let x = 0, y = 0;
-            coords.push([x, y]);
+            const z = pathsData.length - i;
+
+            triplets.push([x, y, z]);
 
             for (let j = 1; j < adjustedPath.length; j++) {
-                const prev = adjustedPath[j - 1];
+                const prev = adjustedPath[j-1];
                 const curr = adjustedPath[j];
 
                 if (curr === prev + 1) {
-                    x++;  // Right step
+                    x++;
                 } else if (curr === prev) {
-                    y++;  // Up step
+                    y++;
                 }
-                coords.push([x, y]);
+                triplets.push([x, y, z]);
             }
-            coordsList.push(coords);
+            pathTriplets.push(triplets);
         }
 
-        return coordsList;
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [];
+        const normals = [];
+        const vertexColors = [];
+        const indices = [];
+
+        function addSquareFace(v1, v2, v3, v4, color) {
+            const baseIndex = vertices.length / 3;
+
+            vertices.push(v1[1], v1[0], v1[2]);
+            vertices.push(v2[1], v2[0], v2[2]);
+            vertices.push(v3[1], v3[0], v3[2]);
+            vertices.push(v4[1], v4[0], v4[2]);
+
+            const edge1 = [v2[1] - v1[1], v2[0] - v1[0], v2[2] - v1[2]];
+            const edge2 = [v3[1] - v1[1], v3[0] - v1[0], v3[2] - v1[2]];
+            const normal = [
+                edge1[1] * edge2[2] - edge1[2] * edge2[1],
+                edge1[2] * edge2[0] - edge1[0] * edge2[2],
+                edge1[0] * edge2[1] - edge1[1] * edge2[0]
+            ];
+            const len = Math.sqrt(normal[0]**2 + normal[1]**2 + normal[2]**2);
+            if (len > 0) {
+                normal[0] /= len;
+                normal[1] /= len;
+                normal[2] /= len;
+            }
+
+            for (let i = 0; i < 4; i++) {
+                normals.push(normal[0], normal[1], normal[2]);
+            }
+
+            const c = new THREE.Color(color);
+            for (let i = 0; i < 4; i++) {
+                vertexColors.push(c.r, c.g, c.b);
+            }
+
+            indices.push(
+                baseIndex, baseIndex + 1, baseIndex + 2,
+                baseIndex, baseIndex + 2, baseIndex + 3
+            );
+        }
+
+        // Create strips between consecutive paths
+        for (let pathIdx = 1; pathIdx < pathTriplets.length; pathIdx++) {
+            const topPath = pathTriplets[pathIdx];
+            const bottomPath = topPath.map(point => [point[0], point[1], point[2] - 1]);
+
+            for (let i = 0; i < topPath.length - 1; i++) {
+                const topP1 = topPath[i];
+                const topP2 = topPath[i + 1];
+                const bottomP1 = bottomPath[i];
+                const bottomP2 = bottomPath[i + 1];
+
+                let color;
+                if (topP2[0] > topP1[0] && topP2[1] === topP1[1]) {
+                    color = colors.gray2;
+                } else if (topP2[0] === topP1[0] && topP2[1] > topP1[1]) {
+                    color = colors.gray1;
+                } else {
+                    color = colors.gray3;
+                }
+
+                addSquareFace(topP1, topP2, bottomP2, bottomP1, color);
+            }
+        }
+
+        placeAllHorizontalLozenges(pathTriplets, addSquareFace);
+
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
+        geometry.setIndex(indices);
+
+        const material = new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            side: THREE.DoubleSide,
+            flatShading: true,
+            roughness: 0.5,
+            metalness: 0.15
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        meshGroup.add(mesh);
+
+        const edgesGeometry = new THREE.EdgesGeometry(geometry, 10);
+        const edgesMaterial = new THREE.LineBasicMaterial({
+            color: colors.border,
+            linewidth: 1,
+            opacity: 0.4,
+            transparent: true
+        });
+        const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+        meshGroup.add(edges);
     }
 
-    function drawPaths() {
-        if (!ctx || !paths || paths.length === 0) return;
-
-        const w = canvas.width;
-        const h = canvas.height;
-
-        ctx.fillStyle = backgroundColor;
-        ctx.fillRect(0, 0, w, h);
-
-        const coordsList = pathsToCoords(paths);
-        if (coordsList.length === 0) return;
-
-        const N = coordsList.length;
-
-        // Grid dimensions: (T-S) x S = 8 x 8
-        const gridW = T_param - S_param;
-        const gridH = S_param;
-
-        // Calculate scaling with padding
-        const padding = 40;
-        const availW = w - 2 * padding;
-        const availH = h - 2 * padding;
-        const step = Math.min(availW / gridW, availH / gridH);
-        const actualW = gridW * step;
-        const actualH = gridH * step;
-        const baseX = (w - actualW) / 2;
-        const baseY = (h - actualH) / 2;
-
-        // Draw grid
-        ctx.strokeStyle = gridColor;
-        ctx.lineWidth = 1;
-        for (let i = 0; i <= gridW; i++) {
-            ctx.beginPath();
-            ctx.moveTo(baseX + i * step, baseY);
-            ctx.lineTo(baseX + i * step, baseY + actualH);
-            ctx.stroke();
-        }
-        for (let j = 0; j <= gridH; j++) {
-            ctx.beginPath();
-            ctx.moveTo(baseX, baseY + actualH - j * step);
-            ctx.lineTo(baseX + actualW, baseY + actualH - j * step);
-            ctx.stroke();
-        }
-
-        // Draw paths (from top path to bottom, so higher z paths are drawn last/on top)
-        for (let pathIdx = N - 1; pathIdx >= 0; pathIdx--) {
-            const coords = coordsList[pathIdx];
-            if (coords.length === 0) continue;
-
-            const color = pathColors[pathIdx % pathColors.length];
-
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 4;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-
-            ctx.beginPath();
-            const [startX, startY] = coords[0];
-            ctx.moveTo(baseX + startX * step, baseY + actualH - startY * step);
-
-            for (let i = 1; i < coords.length; i++) {
-                const [x, y] = coords[i];
-                ctx.lineTo(baseX + x * step, baseY + actualH - y * step);
+    function extractLastFromIncreasing(list) {
+        const result = [];
+        let i = 0;
+        while (i < list.length) {
+            let j = i;
+            while (j + 1 < list.length && list[j] < list[j + 1]) {
+                j++;
             }
-            ctx.stroke();
+            result.push(list[j]);
+            i = j + 1;
+        }
+        return result;
+    }
+
+    function calculateQFunction(path) {
+        const table = [];
+        for (let i = 0; i < path.length; i++) {
+            const [x, y, z] = path[i];
+            if (x === y) {
+                table.push(y);
+            } else {
+                table.push(x);
+            }
+        }
+        return extractLastFromIncreasing(table);
+    }
+
+    function calculateHorizontalLozengeMatrix(upperPath, lowerPath, S, T) {
+        const matrix = Array(S + 1).fill().map(() => Array(T - S + 1).fill(0));
+
+        const upperQ = calculateQFunction(upperPath);
+        const lowerQ = calculateQFunction(lowerPath);
+
+        for (let a = 0; a <= S; a++) {
+            for (let b = 0; b <= T - S; b++) {
+                const upperVal = upperQ[b] || 0;
+                const lowerVal = lowerQ[b] || 0;
+
+                if (upperVal > a && a >= lowerVal) {
+                    matrix[a][b] = 1;
+                }
+            }
         }
 
-        // Draw border around grid
-        ctx.strokeStyle = borderColor;
-        ctx.lineWidth = 3;
-        ctx.strokeRect(baseX, baseY, actualW, actualH);
+        return matrix;
+    }
+
+    function placeAllHorizontalLozenges(pathTriplets, addSquareFace) {
+        const S = currentS;
+        const T = currentT;
+        const N = currentN;
+
+        // Top boundary
+        if (pathTriplets.length > 0) {
+            const topZ = N;
+            const firstPath = pathTriplets[0];
+
+            const topBoundary = [];
+            for (let i = 0; i <= S; i++) {
+                topBoundary.push([i, 0, topZ]);
+            }
+            for (let i = 1; i <= T - S; i++) {
+                topBoundary.push([S, i, topZ]);
+            }
+
+            const zLevel = topZ - 1;
+            const horizontalMatrix = calculateHorizontalLozengeMatrix(topBoundary, firstPath, S, T);
+
+            for (let a = 0; a <= S; a++) {
+                for (let b = 0; b <= T - S; b++) {
+                    if (a < horizontalMatrix.length && b < horizontalMatrix[a].length && horizontalMatrix[a][b] === 1) {
+                        const square = [
+                            [a, b, zLevel],
+                            [a + 1, b, zLevel],
+                            [a + 1, b + 1, zLevel],
+                            [a, b + 1, zLevel]
+                        ];
+                        addSquareFace(square[0], square[1], square[2], square[3], colors.gray3);
+                    }
+                }
+            }
+        }
+
+        // Middle paths
+        for (let pathIdx = 0; pathIdx < pathTriplets.length - 1; pathIdx++) {
+            const upperPath = pathTriplets[pathIdx];
+            const lowerPath = pathTriplets[pathIdx + 1];
+
+            const zLevel = upperPath[0][2] - 1;
+
+            const horizontalMatrix = calculateHorizontalLozengeMatrix(upperPath, lowerPath, S, T);
+
+            for (let a = 0; a <= S; a++) {
+                for (let b = 0; b <= T - S; b++) {
+                    if (a < horizontalMatrix.length && b < horizontalMatrix[a].length && horizontalMatrix[a][b] === 1) {
+                        const square = [
+                            [a, b, zLevel],
+                            [a + 1, b, zLevel],
+                            [a + 1, b + 1, zLevel],
+                            [a, b + 1, zLevel]
+                        ];
+                        addSquareFace(square[0], square[1], square[2], square[3], colors.gray3);
+                    }
+                }
+            }
+        }
+
+        // Bottom boundary
+        if (pathTriplets.length > 0) {
+            const lastPath = pathTriplets[pathTriplets.length - 1];
+
+            const bottomBoundary = [];
+            for (let i = 0; i <= T - S; i++) {
+                bottomBoundary.push([0, i, 0]);
+            }
+            for (let i = 1; i <= S; i++) {
+                bottomBoundary.push([i, T - S, 0]);
+            }
+
+            const zLevel = 0;
+            const horizontalMatrix = calculateHorizontalLozengeMatrix(lastPath, bottomBoundary, S, T);
+
+            for (let a = 0; a <= S; a++) {
+                for (let b = 0; b <= T - S; b++) {
+                    if (a < horizontalMatrix.length && b < horizontalMatrix[a].length && horizontalMatrix[a][b] === 1) {
+                        const square = [
+                            [a, b, zLevel],
+                            [a + 1, b, zLevel],
+                            [a + 1, b + 1, zLevel],
+                            [a, b + 1, zLevel]
+                        ];
+                        addSquareFace(square[0], square[1], square[2], square[3], colors.gray3);
+                    }
+                }
+            }
+        }
     }
 
     async function sampleTiling() {
@@ -207,20 +487,13 @@
             }
         }
 
-        drawPaths();
+        pathsTo3D(paths, N_param, T_param, S_param);
+        if (renderer) renderer.render(scene, camera);
     }
 
     function init() {
-        canvas = document.getElementById('why-2p-canvas');
-        if (!canvas) return;
-        ctx = canvas.getContext('2d');
-
-        ctx.fillStyle = backgroundColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#999';
-        ctx.font = '24px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Sampling...', canvas.width / 2, canvas.height / 2);
+        initThreeJS();
+        startRenderLoop();
 
         setTimeout(() => {
             if (wasmReady) {
@@ -244,14 +517,14 @@
     function registerWithEngine() {
         if (window.slideEngine) {
             window.slideEngine.registerSimulation(slideId, {
-                start() {},
-                pause() {},
+                start() { startRenderLoop(); },
+                pause() { stopRenderLoop(); },
                 onSlideEnter() {
                     reset();
                     init();
                 },
                 onSlideLeave() {
-                    reset();
+                    disposeThreeJS();
                 }
             }, 0);
         } else {
