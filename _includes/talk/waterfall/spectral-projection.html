@@ -67,22 +67,10 @@
                 </div>
             </div>
 
-            <!-- Two simulations side by side -->
-            <div id="sp-sim-container" style="display: flex; gap: 1vw; margin-top: auto; opacity: 0; transition: opacity 0.3s; align-items: flex-start; font-size: clamp(1rem, 1.8vw, 1.4rem);">
-                <!-- q=0.97 -->
-                <div id="sp-sim-left" style="text-align: center; opacity: 0; transition: opacity 0.3s;">
-                    <div style="display: flex; gap: 0.5vw;">
-                        <canvas id="sp-3d-canvas-1" width="280" height="240" style="height: 18vh; width: auto; background: #ffffff;"></canvas>
-                        <canvas id="sp-slice-canvas-1" width="280" height="240" style="height: 18vh; width: auto; background: #ffffff;"></canvas>
-                    </div>
-                </div>
-                <!-- q=0.8 -->
-                <div id="sp-sim-right" style="text-align: center; opacity: 0; transition: opacity 0.3s;">
-                    <div style="display: flex; gap: 0.5vw;">
-                        <canvas id="sp-3d-canvas-2" width="280" height="240" style="height: 18vh; width: auto; background: #ffffff;"></canvas>
-                        <canvas id="sp-slice-canvas-2" width="280" height="240" style="height: 18vh; width: auto; background: #ffffff;"></canvas>
-                    </div>
-                </div>
+            <!-- Single simulation container - swaps between q=0.97 and q=0.8 on builds -->
+            <div id="sp-sim-container" style="display: flex; gap: 1.5vw; margin-top: auto; opacity: 0; transition: opacity 0.3s; align-items: flex-end;">
+                <canvas id="sp-3d-canvas" width="500" height="420" style="height: 36vh; width: auto; background: #ffffff;"></canvas>
+                <canvas id="sp-slice-canvas" width="500" height="420" style="height: 36vh; width: auto; background: #ffffff;"></canvas>
             </div>
         </div>
     </div>
