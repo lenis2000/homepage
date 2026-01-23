@@ -91,24 +91,23 @@
         }
     };
 
-    // Wait for WASM module to be ready
-    let wasmInitAttempts = 0;
+    // Wait for WASM to be fully loaded before initializing
     function tryInitWasm() {
-        wasmInitAttempts++;
-        if (typeof Module !== 'undefined' && typeof Module.cwrap === 'function') {
-            const success = wasmInterface.initialize();
-            if (success) {
+        if (typeof Module !== 'undefined' && typeof Module.cwrap === 'function' && Module.calledRun) {
+            if (wasmInterface.initialize()) {
                 wasmReady = true;
-            }
-        } else {
-            if (wasmInitAttempts < 100) {
-                setTimeout(tryInitWasm, 100);
-            } else {
-                console.error('Failed to initialize WASM after 100 attempts');
+                console.log('nature-builds WASM ready');
             }
         }
     }
+
+    // Try immediately in case already loaded
     tryInitWasm();
+
+    // Also listen for wasm-loaded event
+    if (!wasmReady) {
+        window.addEventListener('wasm-loaded', tryInitWasm, { once: true });
+    }
 
     const colors = {
         gray1: '#FFFFFF',

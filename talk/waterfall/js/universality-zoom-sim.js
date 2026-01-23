@@ -228,6 +228,12 @@
             const minZoom = 0.5; // Absolute zoom level (full view)
 
             function animateWithZoom() {
+                // Guard: stop if camera was disposed
+                if (!camera || !controls) {
+                    isAnimating = false;
+                    return;
+                }
+
                 const elapsed = performance.now() - startTime;
 
                 if (elapsed < zoomOutDuration) {

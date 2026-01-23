@@ -1,5 +1,5 @@
 // Service Worker for Waterfall Talk - Aggressive Precaching
-const CACHE_NAME = 'waterfall-talk-v2';
+const CACHE_NAME = 'waterfall-talk-v3';
 
 // All assets to precache
 const PRECACHE_ASSETS = [

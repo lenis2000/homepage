@@ -65,18 +65,23 @@
         }
     };
 
-    let wasmInitAttempts = 0;
+    // Wait for WASM to be fully loaded before initializing
     function tryInitWasm() {
-        wasmInitAttempts++;
-        if (typeof Module !== 'undefined' && typeof Module.cwrap === 'function') {
+        if (typeof Module !== 'undefined' && typeof Module.cwrap === 'function' && Module.calledRun) {
             if (wasmInterface.initialize()) {
                 wasmReady = true;
+                console.log('spectral-transversal WASM ready');
             }
-        } else if (wasmInitAttempts < 100) {
-            setTimeout(tryInitWasm, 100);
         }
     }
+
+    // Try immediately in case already loaded
     tryInitWasm();
+
+    // Also listen for wasm-loaded event
+    if (!wasmReady) {
+        window.addEventListener('wasm-loaded', tryInitWasm, { once: true });
+    }
 
     // ===== THREE.JS 3D VISUALIZATION =====
     function initThreeJS() {
