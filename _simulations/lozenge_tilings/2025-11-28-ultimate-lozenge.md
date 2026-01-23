@@ -880,6 +880,8 @@ Cmd-click: complete lasso</div>
     <button id="export-json" aria-label="Export region shape as JSON file">Export Shape</button>
     <button id="import-json" aria-label="Import region shape from JSON file">Import Shape</button>
     <input type="file" id="import-json-file" accept=".json" style="display: none;" aria-label="JSON file input">
+    <button id="copy-link-btn" aria-label="Copy shareable link to clipboard">Copy Link</button>
+    <span id="link-copied" style="display: none; color: #28a745; font-size: 11px; margin-left: 4px;">Copied!</span>
     <button id="export-obj" aria-label="Export 3D model as OBJ file">OBJ</button>
     <button id="export-obj2" aria-label="Export 3D model as OBJ with orthogonal axes">OBJ-orthogonal</button>
     <label for="obj-thickness" style="font-size: 11px; color: #666;">Thickness (mm):</label>
@@ -7694,6 +7696,105 @@ function initLozengeApp() {
         e.target.value = ''; // Reset file input
     });
 
+    // ========================================================================
+    // URL State Serialization (Share Link)
+    // ========================================================================
+
+    // URL-safe base64 encoding/decoding
+    function toUrlSafeBase64(str) {
+        return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+    function fromUrlSafeBase64(str) {
+        str = str.replace(/-/g, '+').replace(/_/g, '/');
+        while (str.length % 4) str += '=';
+        return atob(str);
+    }
+
+    function serializeStateToUrl() {
+        const params = new URLSearchParams();
+
+        // Encode triangles as compact format: n1,j1,t1;n2,j2,t2;...
+        const triangles = Array.from(activeTriangles.values());
+        if (triangles.length > 0) {
+            const triStr = triangles.map(t => `${t.n},${t.j},${t.type}`).join(';');
+            params.set('t', toUrlSafeBase64(triStr));
+        }
+
+        // Add settings (only if non-default)
+        if (renderer.currentPaletteIndex !== 0) params.set('p', renderer.currentPaletteIndex);
+        if (Math.abs(renderer.zoom - 1.0) > 0.01) params.set('z', Math.round(renderer.zoom * 100));
+        if (!renderer.showGrid) params.set('g', '0');
+
+        return window.location.origin + window.location.pathname + '?' + params.toString();
+    }
+
+    function loadStateFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        if (!params.has('t')) return false;
+
+        try {
+            // Decode triangles
+            const triStr = fromUrlSafeBase64(params.get('t'));
+            const triParts = triStr.split(';');
+
+            activeTriangles.clear();
+            let loadedCount = 0;
+            for (const part of triParts) {
+                const [n, j, typeStr] = part.split(',');
+                const nNum = parseInt(n), jNum = parseInt(j), type = parseInt(typeStr);
+                if (!isNaN(nNum) && !isNaN(jNum) && (type === 1 || type === 2)) {
+                    const key = `${nNum},${jNum},${type}`;
+                    activeTriangles.set(key, { n: nNum, j: jNum, type });
+                    loadedCount++;
+                }
+            }
+            console.log('Loaded', loadedCount, 'triangles from URL');
+
+            // Apply settings
+            if (params.has('p')) {
+                const idx = parseInt(params.get('p'));
+                if (idx >= 0 && idx < renderer.colorPalettes.length) {
+                    renderer.setPalette(idx);
+                    el.paletteSelect.value = idx;
+                }
+            }
+            if (params.has('z')) {
+                renderer.zoom = parseInt(params.get('z')) / 100;
+            }
+            if (params.has('g')) {
+                renderer.showGrid = params.get('g') !== '0';
+                document.getElementById('showGridCheckbox').checked = renderer.showGrid;
+            }
+
+            return activeTriangles.size > 0;
+        } catch (err) {
+            console.error('Failed to load state from URL:', err);
+            return false;
+        }
+    }
+
+    function copyShareLink() {
+        const url = serializeStateToUrl();
+        const linkCopied = document.getElementById('link-copied');
+        navigator.clipboard.writeText(url).then(() => {
+            linkCopied.style.display = 'inline';
+            setTimeout(() => linkCopied.style.display = 'none', 2000);
+        }).catch(err => {
+            console.error('Failed to copy link:', err);
+            // Fallback: select text in a temporary input
+            const input = document.createElement('input');
+            input.value = url;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            linkCopied.style.display = 'inline';
+            setTimeout(() => linkCopied.style.display = 'none', 2000);
+        });
+    }
+
+    document.getElementById('copy-link-btn').addEventListener('click', copyShareLink);
+
     // Initialize
     window.addEventListener('resize', () => {
         renderer.setupCanvas();
@@ -7701,6 +7802,13 @@ function initLozengeApp() {
     });
 
     initPaletteSelector();
+
+    // Load state from URL if present
+    if (loadStateFromUrl()) {
+        reinitialize();
+        renderer.fitToRegion(activeTriangles);
+    }
+
     updateUI();
     draw();
 

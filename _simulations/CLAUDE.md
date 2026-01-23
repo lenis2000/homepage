@@ -139,3 +139,42 @@ for (let i = 1; i < xCoords.length; i++) {
     if (diff > 0) stepX = Math.min(stepX, diff);
 }
 ```
+
+## URL State Serialization (Share Links)
+
+**Pattern for shareable URLs:** Encode simulation state in URL parameters for sharing:
+```javascript
+// URL-safe base64 encoding/decoding (avoids +/= issues in URLs)
+function toUrlSafeBase64(str) {
+    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function fromUrlSafeBase64(str) {
+    str = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (str.length % 4) str += '=';
+    return atob(str);
+}
+```
+
+**WASM timing for URL loading:** State must be loaded AFTER `Module.onRuntimeInitialized`:
+```javascript
+Module.onRuntimeInitialized = function() {
+    wasmReady = true;
+    sim = new Sampler();
+
+    // Load state from URL AFTER WASM is ready
+    if (loadStateFromUrl()) {
+        updateRegion();  // This requires wasmReady=true
+    } else {
+        draw();
+    }
+};
+```
+
+**Triangle types in lozenge simulations:** Use numeric types `1` (up/black) and `2` (down/white), not strings 'A'/'B':
+```javascript
+// Correct - numeric types
+activeTriangles.set(key, { n: nNum, j: jNum, type: 1 });  // or type: 2
+// When parsing from URL:
+const type = parseInt(typeStr);
+if (type === 1 || type === 2) { ... }
+```

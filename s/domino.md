@@ -186,15 +186,6 @@ permalink: /domino/
     border-color: #007bff !important;
   }
 
-  [data-theme="dark"] #apply-palette {
-    background-color: #007bff !important;
-    color: white !important;
-  }
-
-  [data-theme="dark"] #apply-palette:hover {
-    background-color: #0056b3 !important;
-  }
-
   /* Styling for buttons and controls */
   #sample-btn:disabled {
     opacity: 0.7;
@@ -268,6 +259,480 @@ permalink: /domino/
     background-color: #e9ecef;
     border-color: #999;
   }
+
+  /* ========================================================================
+     Phase 1: Two-Column Desktop Layout
+     ======================================================================== */
+  .simulation-layout {
+    display: flex;
+    flex-direction: column;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 8px;
+    gap: 16px;
+  }
+
+  @media (min-width: 992px) {
+    .simulation-layout {
+      flex-direction: row;
+      align-items: flex-start;
+    }
+  }
+
+  .controls-panel {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  @media (min-width: 992px) {
+    .controls-panel {
+      width: 340px;
+      min-width: 300px;
+      max-width: 400px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 80px;
+      padding-right: 8px;
+    }
+    .controls-panel::-webkit-scrollbar {
+      width: 6px;
+    }
+    .controls-panel::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .controls-panel::-webkit-scrollbar-thumb {
+      background: var(--border-color, #dadada);
+      border-radius: 3px;
+    }
+  }
+
+  .visualization-panel {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  @media (min-width: 992px) {
+    .visualization-panel {
+      max-width: calc(100% - 360px);
+    }
+    .visualization-panel #aztec-canvas,
+    .visualization-panel #aztec-2d-canvas {
+      height: 70vh;
+      max-height: 800px;
+    }
+  }
+
+  /* ========================================================================
+     Phase 2: Collapsible Accordion Sections
+     ======================================================================== */
+  details.control-section {
+    display: block;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    background: var(--bg-secondary, #f5f5f5);
+  }
+
+  div.control-section {
+    display: block;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    background: var(--bg-secondary, #f5f5f5);
+  }
+
+  .control-section summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-primary, #333);
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    background: var(--bg-secondary, #f5f5f5);
+    border-radius: 8px;
+    transition: background 0.15s;
+  }
+
+  .control-section summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .control-section summary::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.2s;
+    opacity: 0.6;
+  }
+
+  .control-section[open] summary::after {
+    transform: rotate(45deg);
+  }
+
+  .control-section summary:hover {
+    background: rgba(0, 123, 255, 0.08);
+  }
+
+  .control-section-content {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border-color, #e0e0e0);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .control-section .control-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  [data-theme="dark"] details.control-section,
+  [data-theme="dark"] div.control-section {
+    background: var(--bg-secondary, #2d2d2d);
+    border-color: var(--border-color, #444);
+  }
+
+  [data-theme="dark"] .control-section summary {
+    background: var(--bg-secondary, #2d2d2d);
+    color: var(--text-primary, #e8e8e8);
+  }
+
+  [data-theme="dark"] .control-section summary:hover {
+    background: rgba(0, 123, 255, 0.1);
+  }
+
+  [data-theme="dark"] .control-section-content {
+    border-color: var(--border-color, #444);
+  }
+
+  /* ========================================================================
+     Phase 3: Visual Enhancements - Palette Picker Grid
+     ======================================================================== */
+  .palette-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: 6px;
+    max-height: 140px;
+    overflow-y: auto;
+    padding: 4px;
+    margin-top: 8px;
+  }
+
+  .palette-item {
+    display: flex;
+    flex-wrap: wrap;
+    width: 44px;
+    height: 28px;
+    border: 2px solid var(--border-color, #d0d0d0);
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+  }
+
+  .palette-item:hover {
+    transform: scale(1.08);
+    z-index: 1;
+  }
+
+  .palette-item.active {
+    border-color: var(--accent-color, #e57200);
+    border-width: 2px;
+    box-shadow: 0 0 0 2px rgba(229, 114, 0, 0.3);
+  }
+
+  .palette-item .swatch {
+    width: 50%;
+    height: 50%;
+  }
+
+  [data-theme="dark"] .palette-item {
+    border-color: #555;
+  }
+
+  [data-theme="dark"] .palette-item.active {
+    border-color: var(--accent-color, #ff9933);
+  }
+
+  /* ========================================================================
+     Phase 3: Floating Action Button (Mobile)
+     ======================================================================== */
+  .sample-fab {
+    display: none;
+    position: fixed;
+    bottom: 80px;
+    right: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+    z-index: 1000;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .sample-fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0, 123, 255, 0.5);
+  }
+
+  .sample-fab:active {
+    transform: scale(0.95);
+  }
+
+  .sample-fab:disabled {
+    background: #999;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 991px) {
+    .sample-fab {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  /* ========================================================================
+     Phase 1: Mobile Bottom Sheet Drawer
+     ======================================================================== */
+  @media (max-width: 991px) {
+    .controls-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-primary, #fff);
+      border-top: 1px solid var(--border-color, #e0e0e0);
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+      z-index: 900;
+      max-height: 70vh;
+      transform: translateY(calc(100% - 60px));
+      transition: transform 0.3s ease-out;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .controls-panel.expanded {
+      transform: translateY(0);
+    }
+
+    .controls-panel-inner {
+      max-height: calc(70vh - 60px);
+      overflow-y: auto;
+      padding: 0 12px 20px;
+    }
+
+    .drawer-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 60px;
+      cursor: grab;
+      flex-shrink: 0;
+    }
+
+    .drawer-handle:active {
+      cursor: grabbing;
+    }
+
+    .drawer-handle-bar {
+      width: 40px;
+      height: 4px;
+      background: var(--border-color, #ccc);
+      border-radius: 2px;
+    }
+
+    .drawer-handle-hint {
+      position: absolute;
+      font-size: 11px;
+      color: #888;
+      margin-top: 24px;
+    }
+
+    .controls-panel.expanded .drawer-handle-hint {
+      display: none;
+    }
+
+    [data-theme="dark"] .controls-panel {
+      background: var(--bg-primary, #1a1a1a);
+      border-color: var(--border-color, #444);
+    }
+
+    .visualization-panel {
+      padding-bottom: 70px;
+    }
+
+    .visualization-panel #aztec-canvas,
+    .visualization-panel #aztec-2d-canvas {
+      height: 50vh;
+      max-height: 500px;
+    }
+  }
+
+  @media (min-width: 992px) {
+    .drawer-handle {
+      display: none;
+    }
+    .controls-panel-inner {
+      display: contents;
+    }
+  }
+
+  /* ========================================================================
+     Phase 3 & 6: Button Styling Consistency
+     ======================================================================== */
+  .btn-action {
+    background: #007bff !important;
+    color: white !important;
+    border-color: #007bff !important;
+    font-weight: 500;
+  }
+
+  .btn-action:hover {
+    background: #0056b3 !important;
+    border-color: #0056b3 !important;
+  }
+
+  .btn-action:disabled {
+    background: #80bdff !important;
+    border-color: #80bdff !important;
+  }
+
+  .btn-secondary-action {
+    background: linear-gradient(135deg, #28a745, #218838) !important;
+    color: white !important;
+    border-color: #28a745 !important;
+    font-weight: 500;
+  }
+
+  .btn-secondary-action:hover {
+    background: linear-gradient(135deg, #218838, #1e7e34) !important;
+  }
+
+  .btn-secondary-action:disabled {
+    background: #8fbc8f !important;
+    border-color: #8fbc8f !important;
+  }
+
+  .btn-utility {
+    background: var(--bg-primary, white) !important;
+    color: var(--text-primary, #333) !important;
+    border: 1px solid var(--border-color, #d0d0d0) !important;
+  }
+
+  .btn-utility:hover {
+    background: var(--bg-secondary, #f5f5f5) !important;
+    border-color: #999 !important;
+  }
+
+  /* ========================================================================
+     Phase 5: Export Section Grouping
+     ======================================================================== */
+  .export-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    flex-wrap: wrap;
+  }
+
+  .export-group-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    min-width: 50px;
+  }
+
+  [data-theme="dark"] .export-group-label {
+    color: #aaa;
+  }
+
+  .export-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border-color, #e0e0e0);
+    margin: 4px 0;
+  }
+
+  /* View toggle overlay for visualization panel */
+  .view-overlay {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .view-toggle-pills {
+    display: inline-flex;
+    border: 2px solid #007bff;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .view-toggle-pills button {
+    border: none;
+    border-radius: 0;
+    height: 28px;
+    padding: 0 12px;
+    font-weight: 500;
+    background: white;
+    color: #007bff;
+    cursor: pointer;
+    font-size: 12px;
+  }
+
+  .view-toggle-pills button.active {
+    background: #007bff;
+    color: white;
+  }
+
+  .view-toggle-pills button:hover:not(.active) {
+    background: #e7f3ff;
+  }
+
+  [data-theme="dark"] .view-toggle-pills {
+    border-color: #4dabf7;
+  }
+
+  [data-theme="dark"] .view-toggle-pills button {
+    background: #2d2d2d;
+    color: #4dabf7;
+  }
+
+  [data-theme="dark"] .view-toggle-pills button.active {
+    background: #4dabf7;
+    color: #1a1a1a;
+  }
+
+  [data-theme="dark"] .view-toggle-pills button:hover:not(.active) {
+    background: #3d3d3d;
+  }
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
@@ -332,309 +797,339 @@ permalink: /domino/
   </div>
 </div>
 
-<!-- Parameters section above the panes -->
+<!-- Two-Column Layout Container -->
+<div class="simulation-layout">
 
-<div id="controls">
-  <div class="parameters-section">
-    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px;">
-      <div>
-        <label for="n-input">Aztec Diamond Order: </label>
-        <input id="n-input" type="number" value="12" min="2" step="2" max="300" size="3" class="mobile-input">
-      </div>
-
-    <div style="margin-left: 20px;">
-      <input type="checkbox" id="show-colors-checkbox" checked style="vertical-align: middle;">
-      <label for="show-colors-checkbox" style="cursor: pointer; margin-left: 5px;">Show colors</label>
-    </div>
-
-    <div style="margin-left: 20px;">
-      <input type="checkbox" id="height-gradient-checkbox" checked style="vertical-align: middle;">
-      <label for="height-gradient-checkbox" style="cursor: pointer; margin-left: 5px;">Height gradient (3D)</label>
-    </div>
-
-    <div style="margin-left: auto;">
-      <button id="sample-btn">Sample</button>
-      <button id="cancel-btn" style="display: none; margin-left: 5px; background-color: #ff5555;">Cancel</button>
-    </div>
-
-    <div>
-      <span id="progress-indicator" style="font-weight: bold;"></span>
-    </div>
+<!-- Left: Controls Panel -->
+<aside class="controls-panel" id="controlsPanel">
+  <!-- Mobile drawer handle -->
+  <div class="drawer-handle" id="drawerHandle">
+    <div class="drawer-handle-bar"></div>
+    <span class="drawer-handle-hint">Swipe up for controls</span>
   </div>
 
-  <!-- Periodicity control with radio buttons -->
-  <div style="margin-bottom: 15px;">
-    <h3 style="margin-top: 0; margin-bottom: 8px;">Periodicity:</h3>
-    <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 10px;">
-      <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
-        <input type="radio" id="uniform-radio" name="periodicity" value="uniform" checked style="cursor: pointer;">
-        <label for="uniform-radio" style="cursor: pointer; user-select: none;">Uniform (no parameters)</label>
-      </div>
-      <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
-        <input type="radio" id="2x2-radio" name="periodicity" value="2x2" style="cursor: pointer;">
-        <label for="2x2-radio" style="cursor: pointer; user-select: none;">2×2 Periodic</label>
-      </div>
-      <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
-        <input type="radio" id="3x3-radio" name="periodicity" value="3x3" style="cursor: pointer;">
-        <label for="3x3-radio" style="cursor: pointer; user-select: none;">3×3 Periodic</label>
-      </div>
-      <div style="padding: 5px; border-radius: 4px; cursor: pointer;">
-        <input type="radio" id="6x2-radio" name="periodicity" value="6x2" style="cursor: pointer;">
-        <label for="6x2-radio" style="cursor: pointer; user-select: none;">6×2 Periodic</label>
-      </div>
-      <div style="padding:5px;border-radius:4px;cursor:pointer;">
-        <input type="radio" id="frozenH-radio" name="periodicity"
-               value="frozenH" style="cursor:pointer;">
-        <label for="frozenH-radio" style="cursor:pointer;user-select:none;">
-              Frozen – all horizontal
-        </label>
-      </div>
-      <div style="padding:5px;border-radius:4px;cursor:pointer;">
-        <input type="radio" id="frozenV-radio" name="periodicity"
-               value="frozenV" style="cursor:pointer;">
-        <label for="frozenV-radio" style="cursor:pointer;user-select:none;">
-              Frozen – all vertical
-        </label>
-      </div>
-    </div>
-  </div>
+  <div class="controls-panel-inner">
 
-  <!-- 2×2 Periodic Weights (initially hidden) -->
-  <div id="weights-2x2" style="display: none; margin-bottom: 15px;">
-    <h5 style="margin-top: 0; margin-bottom: 5px;">2×2 Periodic Weights</h5>
-    <div style="display: flex; gap: 15px;">
-      <div>
-        <label for="a-input">a:</label>
-        <input id="a-input" type="number" value="0.5" step="0.1" min="0.1" max="10" style="width: 60px;">
-      </div>
-      <div>
-        <label for="b-input">b:</label>
-        <input id="b-input" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 60px;">
-      </div>
-    </div>
-  </div>
-
-  <!-- 3×3 Periodic Weights (initially hidden) -->
-  <div id="weights-3x3" style="display: none;">
-    <h5 style="margin-top: 0; margin-bottom: 5px;">3×3 Periodic Weights</h5>
-    <div style="display: grid; grid-template-columns: repeat(3, 60px); gap: 5px;">
-      <input id="w1" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w2" type="number" value="4.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w3" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w4" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w5" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w6" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w7" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w8" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w9" type="number" value="9.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-    </div>
-  </div>
-
-  <div id="weights-6x2" style="display: none; margin-bottom: 15px;">
-    <h5 style="margin-top: 0; margin-bottom: 5px;">6×2 Periodic Weights</h5>
-    <div style="display: grid; grid-template-columns: repeat(6, 60px); gap: 5px;">
-      <input id="w6x2_1" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 50px;">
-      <input id="w6x2_2" type="number" value="20.0" step="0.1" min="0.1" max="100" style="width: 50px;">
-      <input id="w6x2_3" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 50px;">
-      <input id="w6x2_4" type="number" value="30.0" step="0.1" min="0.1" max="100" style="width: 50px;">
-      <input id="w6x2_5" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 50px;">
-      <input id="w6x2_6" type="number" value="0.1" step="0.1" min="0.1" max="100" style="width: 50px;">
-      <input id="w6x2_7" type="number" value="5.0" step="0.1" min="0.1" max="100" style="width: 50px;">
-      <input id="w6x2_8" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 50px;">
-      <input id="w6x2_9" type="number" value="0.1" step="0.1" min="0.1" max="100" style="width: 50px;">
-      <input id="w6x2_10" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 50px;">
-      <input id="w6x2_11" type="number" value="30.0" step="0.1" min="0.1" max="100" style="width: 50px;">
-      <input id="w6x2_12" type="number" value="30.0" step="0.1" min="0.1" max="100" style="width: 50px;">
-    </div>
-  </div>
-
-  <div id="glauber-controls" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
-    <h3 style="margin-bottom: 8px;">Glauber Dynamics:</h3>
-    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 15px;">
-      <div>
-        <label for="sweeps-input">Sweeps per redraw:</label>
-        <input id="sweeps-input" type="number" value="100" min="1" step="1" style="width: 70px;">
-        <small>(Number of plaquette updates between screen updates)</small>
-      </div>
-      <div style="margin-left: auto;">
-         <button id="glauber-btn" class="btn btn-success">Run Glauber</button>
-         <span id="glauber-status" style="margin-left: 10px; font-style: italic;"></span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Styling Controls -->
-  <div id="styling-controls" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
-    <h3 style="margin-bottom: 8px;">Styling Controls:</h3>
-    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 15px;">
-      <button id="custom-colors-btn" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Custom Colors</button>
-    </div>
-  </div>
-
-  <!-- Custom Colors Panel (initially hidden) -->
-  <div id="custom-colors-panel" class="custom-colors-panel" style="display: none; margin-top: 15px; padding: 15px; border-radius: 4px; border: 1px solid #ccc;">
-    <h4 style="margin-top: 0; margin-bottom: 15px;">Custom Domino Colors</h4>
-
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px;">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <label for="color-blue" style="width: 100px; font-weight: bold;">Horizontal 1:</label>
-        <input type="color" id="color-blue" value="#4363d8" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
-        <input type="text" id="hex-blue" value="#4363d8" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
-      </div>
-
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <label for="color-green" style="width: 100px; font-weight: bold;">Horizontal 2:</label>
-        <input type="color" id="color-green" value="#1e8c28" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
-        <input type="text" id="hex-green" value="#1e8c28" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
-      </div>
-
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <label for="color-red" style="width: 100px; font-weight: bold;">Vertical 1:</label>
-        <input type="color" id="color-red" value="#ff2244" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
-        <input type="text" id="hex-red" value="#ff2244" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
-      </div>
-
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <label for="color-yellow" style="width: 100px; font-weight: bold;">Vertical 2:</label>
-        <input type="color" id="color-yellow" value="#fca414" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
-        <input type="text" id="hex-yellow" value="#fca414" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
-      </div>
-
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <label for="color-border" style="width: 100px; font-weight: bold;">Border:</label>
-        <input type="color" id="color-border" value="#666666" style="width: 40px; height: 30px; border: none; border-radius: 4px; cursor: pointer;">
-        <input type="text" id="hex-border" value="#666666" placeholder="#RRGGBB" style="width: 80px; height: 26px; font-family: monospace; font-size: 12px; text-align: center; border: 1px solid #ccc; border-radius: 4px;">
-      </div>
-    </div>
-
-    <!-- Palette Selector -->
-    <div style="margin: 15px 0; padding-top: 15px; border-top: 1px solid #ddd;">
-      <h5 style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Choose from Predefined Palettes:</h5>
-      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-        <select id="palette-selector" style="flex: 1; min-width: 200px; height: 36px; padding: 0 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
-          <option value="">-- Select a palette --</option>
-        </select>
-        <button id="apply-palette" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply Palette</button>
-      </div>
-    </div>
-
-    <div style="display: flex; gap: 10px; align-items: center; margin-top: 15px;">
-      <button id="reset-default-colors" style="padding: 6px 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Reset to Default</button>
-      <button id="close-custom-colors" style="padding: 6px 12px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
-    </div>
-  </div>
-</div>
-<!-- Visualization container with switchable views -->
-<div class="visualization-container">
-  <!-- View toggle buttons -->
-  <div class="view-toggle d-flex flex-wrap mb-2">
-    <button id="view-3d-btn" class="btn btn-sm mr-2 active" style="background-color: #e0e0e0; border: 1px solid #999; border-radius: 3px; padding: 6px 12px;">3D</button>
-    <button id="view-2d-btn" class="btn btn-sm mr-2" style="background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 3px; padding: 6px 12px;">2D</button>
-    <div style="margin-left: 10px;">
-      <input type="checkbox" id="no-3d-checkbox" style="vertical-align: middle;">
-      <label for="no-3d-checkbox" style="cursor: pointer; margin-left: 5px; font-size: 14px;">No 3D (faster)</label>
-    </div>
-  </div>
-
-  <!-- Camera controls for 3D pane -->
-  <div id="camera-controls" class="mb-3">
-    <div class="d-flex flex-wrap align-items-center">
-      <label class="mr-2 mb-1">Camera movement:</label>
-      <div class="btn-group mr-2 mb-1">
-        <button id="move-left-btn" class="btn btn-sm btn-outline-secondary px-2 py-1">←</button>
-        <button id="move-up-btn" class="btn btn-sm btn-outline-secondary px-2 py-1">↑</button>
-        <button id="move-down-btn" class="btn btn-sm btn-outline-secondary px-2 py-1">↓</button>
-        <button id="move-right-btn" class="btn btn-sm btn-outline-secondary px-2 py-1">→</button>
-      </div>
-      <button id="reset-view-btn" class="btn btn-sm btn-outline-secondary mr-2 mb-1">Reset View</button>
-      <div class="mb-1">
-        <input type="checkbox" id="demo-mode" style="vertical-align: middle;">
-        <label for="demo-mode" style="cursor: pointer; margin-left: 5px;">Demo mode (automatic rotation)</label>
-      </div>
-    </div>
-  </div>
-
-  <!-- 3D Visualization Pane (default) -->
-  <div id="aztec-canvas"></div>
-
-  <!-- 2D Visualization Pane (hidden by default) -->
-  <div id="aztec-2d-canvas" style="position: relative; overflow: hidden; height: 85vh;">
-    <!-- 2D controls (fixed at top like 3D controls) -->
-    <div id="controls-2d" class="mb-3">
-      <!-- Zoom controls (always visible) -->
-      <div class="d-flex flex-wrap align-items-center mb-2">
-        <span class="font-weight-bold mr-2 mb-1">Zoom: </span>
-        <div class="btn-group mr-2 mb-1">
-          <button id="zoom-in-btn-2d" class="btn btn-sm btn-outline-secondary px-2 py-1">+</button>
-          <button id="zoom-out-btn-2d" class="btn btn-sm btn-outline-secondary px-2 py-1">-</button>
+    <!-- Section 1: Region & Sampling (open by default) -->
+    <details class="control-section" open>
+      <summary>Region & Sampling</summary>
+      <div class="control-section-content">
+        <div class="control-row">
+          <label for="n-input">Aztec Diamond Order:</label>
+          <input id="n-input" type="number" value="12" min="2" step="2" max="300" size="3" class="mobile-input" style="width: 70px;">
         </div>
-        <button id="zoom-reset-btn-2d" class="btn btn-sm btn-outline-secondary mr-2 mb-1">Reset Zoom</button>
-        <span class="d-none d-md-inline font-italic small">(Use mouse wheel to zoom and drag to pan)</span>
-      </div>
-
-      <!-- Display options -->
-      <div id="display-options-2d" class="d-block mb-2">
-        <div class="mb-1">
-          <input type="checkbox" id="grayscale-checkbox-2d" style="vertical-align: middle;">
-          <label for="grayscale-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Grayscale mode (nice for gas phase in \(2\times 2\) model)</label>
+        <div class="control-row">
+          <button id="sample-btn" class="btn-action">Sample</button>
+          <button id="cancel-btn" style="display: none; background-color: #dc3545; color: white; border-color: #dc3545;">Cancel</button>
+          <span id="progress-indicator" style="font-size: 12px; color: #666;"></span>
         </div>
-
-        <div class="mb-1">
-          <input type="checkbox" id="checkerboard-checkbox-2d" style="vertical-align: middle;">
-          <label for="checkerboard-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Show checkerboard overlay</label>
+        <div class="control-row">
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
+            <input type="checkbox" id="show-colors-checkbox" checked>
+            Show colors
+          </label>
         </div>
-
-        <div class="form-group form-inline mb-1">
-          <label for="border-width-input" class="mr-2">Border thickness:</label>
-          <input type="number" id="border-width-input" min="0" max="1" step="0.05" value="0.1" class="form-control form-control-sm mobile-input">
-        </div>
-
-        <div class="mb-1">
-          <input type="checkbox" id="paths-checkbox-2d" style="vertical-align: middle;">
-          <label for="paths-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Show nonintersecting paths</label>
-        </div>
-
-        <div class="mb-1">
-          <input type="checkbox" id="dimers-checkbox-2d" style="vertical-align: middle;">
-          <label for="dimers-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Show dimers</label>
-        </div>
-
-        <div class="mb-1" id="height-function-toggle-container">
-          <input type="checkbox" id="height-function-checkbox-2d" style="vertical-align: middle;">
-          <label for="height-function-checkbox-2d" style="cursor: pointer; margin-left: 5px;">Show height function (\(n \le 30\) only)</label>
+        <div class="control-row">
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
+            <input type="checkbox" id="height-gradient-checkbox" checked>
+            Height gradient (3D)
+          </label>
         </div>
       </div>
+    </details>
+
+    <!-- Section 2: Periodicity (open by default) -->
+    <details class="control-section" open>
+      <summary>Periodicity</summary>
+      <div class="control-section-content">
+        <div class="control-row" style="flex-direction: column; align-items: flex-start; gap: 6px;">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+            <input type="radio" id="uniform-radio" name="periodicity" value="uniform" checked>
+            Uniform
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+            <input type="radio" id="2x2-radio" name="periodicity" value="2x2">
+            2×2 Periodic
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+            <input type="radio" id="3x3-radio" name="periodicity" value="3x3">
+            3×3 Periodic
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+            <input type="radio" id="6x2-radio" name="periodicity" value="6x2">
+            6×2 Periodic
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+            <input type="radio" id="frozenH-radio" name="periodicity" value="frozenH">
+            Frozen – all horizontal
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+            <input type="radio" id="frozenV-radio" name="periodicity" value="frozenV">
+            Frozen – all vertical
+          </label>
+        </div>
+
+        <!-- 2×2 Periodic Weights -->
+        <div id="weights-2x2" style="display: none; padding-top: 10px; border-top: 1px solid var(--border-color, #e0e0e0); margin-top: 8px;">
+          <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px;">2×2 Weights</div>
+          <div class="control-row">
+            <label style="font-size: 12px;">a:</label>
+            <input id="a-input" type="number" value="0.5" step="0.1" min="0.1" max="10" style="width: 55px;">
+            <label style="font-size: 12px; margin-left: 10px;">b:</label>
+            <input id="b-input" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 55px;">
+          </div>
+        </div>
+
+        <!-- 3×3 Periodic Weights -->
+        <div id="weights-3x3" style="display: none; padding-top: 10px; border-top: 1px solid var(--border-color, #e0e0e0); margin-top: 8px;">
+          <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px;">3×3 Weights</div>
+          <div style="display: grid; grid-template-columns: repeat(3, 55px); gap: 4px;">
+            <input id="w1" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+            <input id="w2" type="number" value="4.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+            <input id="w3" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+            <input id="w4" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+            <input id="w5" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+            <input id="w6" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+            <input id="w7" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+            <input id="w8" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+            <input id="w9" type="number" value="9.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+          </div>
+        </div>
+
+        <!-- 6×2 Periodic Weights -->
+        <div id="weights-6x2" style="display: none; padding-top: 10px; border-top: 1px solid var(--border-color, #e0e0e0); margin-top: 8px;">
+          <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px;">6×2 Weights</div>
+          <div style="display: grid; grid-template-columns: repeat(6, 45px); gap: 3px;">
+            <input id="w6x2_1" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
+            <input id="w6x2_2" type="number" value="20.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
+            <input id="w6x2_3" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
+            <input id="w6x2_4" type="number" value="30.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
+            <input id="w6x2_5" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
+            <input id="w6x2_6" type="number" value="0.1" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
+            <input id="w6x2_7" type="number" value="5.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
+            <input id="w6x2_8" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
+            <input id="w6x2_9" type="number" value="0.1" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
+            <input id="w6x2_10" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
+            <input id="w6x2_11" type="number" value="30.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
+            <input id="w6x2_12" type="number" value="30.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Section 3: Glauber Dynamics (collapsed by default) -->
+    <details class="control-section">
+      <summary>Glauber Dynamics</summary>
+      <div class="control-section-content">
+        <div class="control-row">
+          <label for="sweeps-input" style="font-size: 12px;">Sweeps per redraw:</label>
+          <input id="sweeps-input" type="number" value="100" min="1" step="1" style="width: 70px;">
+        </div>
+        <div class="control-row">
+          <button id="glauber-btn" class="btn-secondary-action">Run Glauber</button>
+          <span id="glauber-status" style="font-size: 12px; font-style: italic; color: #666;"></span>
+        </div>
+        <div style="font-size: 11px; color: #888; margin-top: 4px;">
+          Plaquette updates between screen refreshes
+        </div>
+      </div>
+    </details>
+
+    <!-- Section 4: Styling (collapsed by default) -->
+    <details class="control-section">
+      <summary>Styling</summary>
+      <div class="control-section-content">
+        <!-- Palette Selector -->
+        <div class="control-row">
+          <button id="prevPaletteBtn" class="btn-utility" style="padding: 0 10px;" aria-label="Previous color palette">◀</button>
+          <select id="palette-selector" style="flex: 1; min-width: 120px;" aria-label="Select color palette"></select>
+          <button id="nextPaletteBtn" class="btn-utility" style="padding: 0 10px;" aria-label="Next color palette">▶</button>
+          <button id="permuteColorsBtn" class="btn-utility" title="Permute colors" aria-label="Permute color order">Permute</button>
+        </div>
+
+        <!-- Visual Palette Picker Grid -->
+        <div id="palettePickerGrid" class="palette-picker" role="listbox" aria-label="Color palette visual selection"></div>
+
+        <div class="control-row" style="border-top: 1px solid var(--border-color, #e0e0e0); padding-top: 10px; margin-top: 4px;">
+          <label for="border-width-input" style="font-size: 12px; color: #555;">Border:</label>
+          <input type="number" id="border-width-input" value="0.1" min="0" max="1" step="0.05" class="param-input" style="width: 50px;" aria-label="Border width">
+          <button id="custom-colors-btn" class="btn-utility" style="margin-left: auto;">Custom Colors</button>
+        </div>
+
+        <!-- Custom Colors Panel (initially hidden) -->
+        <div id="custom-colors-panel" class="custom-colors-panel" style="display: none; padding: 10px; margin-top: 8px; border-radius: 4px; border: 1px solid var(--border-color, #ccc);">
+          <div style="font-size: 12px; font-weight: 600; margin-bottom: 10px;">Custom Domino Colors</div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label for="color-blue" style="font-size: 11px; width: 70px;">Horizontal 1:</label>
+              <input type="color" id="color-blue" value="#4363d8" style="width: 32px; height: 24px; border: none; border-radius: 4px; cursor: pointer;">
+              <input type="text" id="hex-blue" value="#4363d8" style="width: 70px; height: 22px; font-family: monospace; font-size: 11px; text-align: center; border: 1px solid var(--border-color, #ccc); border-radius: 4px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label for="color-green" style="font-size: 11px; width: 70px;">Horizontal 2:</label>
+              <input type="color" id="color-green" value="#1e8c28" style="width: 32px; height: 24px; border: none; border-radius: 4px; cursor: pointer;">
+              <input type="text" id="hex-green" value="#1e8c28" style="width: 70px; height: 22px; font-family: monospace; font-size: 11px; text-align: center; border: 1px solid var(--border-color, #ccc); border-radius: 4px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label for="color-red" style="font-size: 11px; width: 70px;">Vertical 1:</label>
+              <input type="color" id="color-red" value="#ff2244" style="width: 32px; height: 24px; border: none; border-radius: 4px; cursor: pointer;">
+              <input type="text" id="hex-red" value="#ff2244" style="width: 70px; height: 22px; font-family: monospace; font-size: 11px; text-align: center; border: 1px solid var(--border-color, #ccc); border-radius: 4px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label for="color-yellow" style="font-size: 11px; width: 70px;">Vertical 2:</label>
+              <input type="color" id="color-yellow" value="#fca414" style="width: 32px; height: 24px; border: none; border-radius: 4px; cursor: pointer;">
+              <input type="text" id="hex-yellow" value="#fca414" style="width: 70px; height: 22px; font-family: monospace; font-size: 11px; text-align: center; border: 1px solid var(--border-color, #ccc); border-radius: 4px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label for="color-border" style="font-size: 11px; width: 70px;">Border:</label>
+              <input type="color" id="color-border" value="#666666" style="width: 32px; height: 24px; border: none; border-radius: 4px; cursor: pointer;">
+              <input type="text" id="hex-border" value="#666666" style="width: 70px; height: 22px; font-family: monospace; font-size: 11px; text-align: center; border: 1px solid var(--border-color, #ccc); border-radius: 4px;">
+            </div>
+          </div>
+
+          <div class="control-row" style="margin-top: 10px;">
+            <button id="reset-default-colors" class="btn-utility" style="font-size: 11px;">Reset</button>
+            <button id="close-custom-colors" class="btn-utility" style="font-size: 11px;">Close</button>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Section 5: View Controls (collapsed by default) -->
+    <details class="control-section">
+      <summary>View Controls</summary>
+      <div class="control-section-content">
+        <!-- 3D Camera Controls -->
+        <div id="camera-controls-section">
+          <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px;">3D Camera</div>
+          <div class="control-row">
+            <div class="btn-group" style="display: flex; gap: 2px;">
+              <button id="move-left-btn" class="btn-utility" style="padding: 4px 8px;">←</button>
+              <button id="move-up-btn" class="btn-utility" style="padding: 4px 8px;">↑</button>
+              <button id="move-down-btn" class="btn-utility" style="padding: 4px 8px;">↓</button>
+              <button id="move-right-btn" class="btn-utility" style="padding: 4px 8px;">→</button>
+            </div>
+            <button id="reset-view-btn" class="btn-utility" style="font-size: 11px;">Reset</button>
+          </div>
+          <div class="control-row">
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px;">
+              <input type="checkbox" id="demo-mode">
+              Demo mode (auto-rotate)
+            </label>
+          </div>
+          <div class="control-row">
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px;">
+              <input type="checkbox" id="no-3d-checkbox">
+              No 3D (faster)
+            </label>
+          </div>
+        </div>
+
+        <!-- 2D Display Options -->
+        <div id="display-options-section" style="border-top: 1px solid var(--border-color, #e0e0e0); padding-top: 10px; margin-top: 8px;">
+          <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px;">2D Zoom</div>
+          <div class="control-row">
+            <div class="btn-group" style="display: flex; gap: 2px;">
+              <button id="zoom-in-btn-2d" class="btn-utility" style="padding: 4px 10px;">+</button>
+              <button id="zoom-out-btn-2d" class="btn-utility" style="padding: 4px 10px;">−</button>
+            </div>
+            <button id="zoom-reset-btn-2d" class="btn-utility" style="font-size: 11px;">Reset</button>
+          </div>
+
+          <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px; margin-top: 10px;">2D Display Options</div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
+              <input type="checkbox" id="grayscale-checkbox-2d">
+              Grayscale mode
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
+              <input type="checkbox" id="checkerboard-checkbox-2d">
+              Checkerboard overlay
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
+              <input type="checkbox" id="paths-checkbox-2d">
+              Nonintersecting paths
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
+              <input type="checkbox" id="dimers-checkbox-2d">
+              Show dimers
+            </label>
+            <div id="height-function-toggle-container">
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
+                <input type="checkbox" id="height-function-checkbox-2d">
+                Height function (n ≤ 30)
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Section 6: Export (collapsed by default) -->
+    <details class="control-section">
+      <summary>Export</summary>
+      <div class="control-section-content">
+        <div class="export-group">
+          <span class="export-group-label">Data</span>
+          <button id="download-csv-btn" class="btn-utility" style="font-size: 11px;">CSV ↓</button>
+          <input type="file" id="upload-csv-input" accept=".csv" style="display: none;">
+          <button id="upload-csv-btn" class="btn-utility" style="font-size: 11px;">CSV ↑</button>
+        </div>
+        <div class="export-divider"></div>
+        <div class="export-group">
+          <span class="export-group-label">Images</span>
+          <button id="download-png-btn" class="btn-utility" style="font-size: 11px; display: none;">PNG</button>
+          <button id="download-pdf-btn" class="btn-utility" style="font-size: 11px; display: none;">PDF</button>
+          <button id="download-3d-btn" class="btn-utility" style="font-size: 11px;">3D Screenshot</button>
+        </div>
+        <div class="export-divider"></div>
+        <div class="export-group">
+          <span class="export-group-label">Code</span>
+          <button id="tikz-btn" class="btn-utility" style="font-size: 11px;">Generate TikZ</button>
+        </div>
+        <div id="tikz-buttons-container" style="display: none; margin-top: 8px;">
+          <div class="control-row">
+            <button id="copy-tikz-btn" class="btn-utility" style="font-size: 11px;">Copy</button>
+            <button id="download-tikz-btn" class="btn-utility" style="font-size: 11px;">Download .tex</button>
+            <span id="copy-success-msg" style="color: green; font-size: 11px; font-weight: bold; display: none;">Copied!</span>
+          </div>
+        </div>
+        <!-- TikZ code container -->
+        <div id="tikz-code-container" style="font-family: monospace; padding: 10px; border: 1px solid var(--border-color, #ccc); border-radius: 4px; background: var(--bg-primary, white); white-space: pre; font-size: 11px; max-height: 200px; overflow-y: auto; margin-top: 8px; display: none;"></div>
+      </div>
+    </details>
+
+  </div><!-- end controls-panel-inner -->
+</aside>
+
+<!-- Right: Visualization Panel -->
+<main class="visualization-panel">
+  <!-- Canvas Container with view toggle overlay -->
+  <div id="canvas-container" style="position: relative;">
+    <!-- View Toggle overlay -->
+    <div class="view-overlay">
+      <div class="view-toggle-pills">
+        <button id="view-3d-btn" class="active" title="3D height function view">3D</button>
+        <button id="view-2d-btn" title="2D domino view">2D</button>
+      </div>
     </div>
 
-    <!-- SVG container with adjusted height to account for controls -->
-    <svg id="aztec-svg-2d" style="width: 100%; height: calc(100% - 120px); border: 1px solid #ccc;"></svg>
+    <!-- 3D Visualization Pane (default) -->
+    <div id="aztec-canvas"></div>
+
+    <!-- 2D Visualization Pane (hidden by default) -->
+    <div id="aztec-2d-canvas" style="display: none; position: relative; overflow: hidden; height: 70vh;">
+      <!-- 2D controls moved to sidebar -->
+      <svg id="aztec-svg-2d" style="width: 100%; height: 100%; border: 1px solid var(--border-color, #ccc);"></svg>
+    </div>
   </div>
-</div>
+</main>
 
-<!-- TikZ Code Generation Section -->
-<div style="margin-top: 20px; margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: #f9f9f9;">
-  <h3 style="margin-top: 0;">Export and Import</h3>
+</div><!-- end simulation-layout -->
 
-  <div style="margin-top: 10px; margin-bottom: 10px;">
-    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-      <button id="download-csv-btn" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Download CSV</button>
-      <input type="file" id="upload-csv-input" accept=".csv" style="display: none;">
-      <button id="upload-csv-btn" style="padding: 6px 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Upload CSV</button>
-      <button id="tikz-btn" class="btn btn-primary" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Generate TikZ Code</button>
-      <button id="download-png-btn" style="padding: 6px 12px; background-color: #e83e8c; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;">Download 2D in PNG</button>
-      <button id="download-pdf-btn" style="padding: 6px 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; display: none;">Download 2D in PDF</button>
-      <button id="download-3d-btn" style="padding: 6px 12px; background-color: #6f42c1; color: white; border: none; border-radius: 4px; cursor: pointer;">Download 3D Screenshot</button>
-    </div>
-    <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
-      <button id="copy-tikz-btn" style="padding: 6px 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">Copy to Clipboard</button>
-      <button id="download-tikz-btn" style="margin-left: 10px; padding: 6px 12px; background-color: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">Download .tex File</button>
-      <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
-    </div>
-  </div>
-
-  <!-- TikZ code container that will be updated dynamically -->
-  <div id="tikz-code-container" style="font-family: 'Courier New', monospace; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: white; white-space: pre; font-size: 14px; max-height: 40vh; overflow-y: auto; margin-top: 15px; margin-bottom: 15px; display: none;"></div>
-</div>
+<!-- Floating Action Button for Mobile -->
+<button id="sampleFab" class="sample-fab" aria-label="Sample domino tiling" title="Sample">▶</button>
 
 {%include dear_colleagues.md%}
 
@@ -2073,45 +2568,36 @@ Module.onRuntimeInitialized = async function() {
   });
 
   // Palette Selector Functionality
-  function initializePaletteSelector() {
-    const paletteSelector = document.getElementById('palette-selector');
+  let currentPaletteIndex = 0;
+  let colorPermutation = 0;
+  const paletteSelector = document.getElementById('palette-selector');
+  const palettePickerGrid = document.getElementById('palettePickerGrid');
+  const prevPaletteBtn = document.getElementById('prevPaletteBtn');
+  const nextPaletteBtn = document.getElementById('nextPaletteBtn');
+  const permuteColorsBtn = document.getElementById('permuteColorsBtn');
 
-    // Populate the selector with available color schemes
-    if (typeof window.ColorSchemes !== 'undefined') {
-      window.ColorSchemes.forEach((scheme, index) => {
-        const option = document.createElement('option');
-        option.value = index;
-        option.textContent = scheme.name;
-        paletteSelector.appendChild(option);
-      });
-    }
-  }
+  // Color permutation table (6 permutations of 4 colors)
+  const permutations = [
+    [0, 1, 2, 3], [0, 2, 1, 3], [1, 0, 2, 3],
+    [1, 2, 0, 3], [2, 0, 1, 3], [2, 1, 0, 3]
+  ];
 
-  // Apply selected palette
-  const applyPaletteBtn = document.getElementById('apply-palette');
-  if (applyPaletteBtn) {
-    applyPaletteBtn.addEventListener('click', function() {
-    const paletteSelector = document.getElementById('palette-selector');
-    const selectedIndex = paletteSelector.value;
+  function applyPaletteColors(index) {
+    if (typeof window.ColorSchemes === 'undefined') return;
+    const selectedPalette = window.ColorSchemes[index];
+    if (!selectedPalette || !selectedPalette.colors) return;
 
-    if (selectedIndex === '' || typeof window.ColorSchemes === 'undefined') {
-      return;
-    }
-
-    const selectedPalette = window.ColorSchemes[selectedIndex];
-    if (!selectedPalette || !selectedPalette.colors) {
-      return;
-    }
-
-    // Map palette colors to domino colors
-    // For domino simulation: [blue, green, red, yellow] or [blue, green, red, border]
+    // Apply permutation
     const colors = selectedPalette.colors;
+    const perm = permutations[colorPermutation % 6];
+    const permutedColors = perm.map(i => colors[i] || colors[0]);
+
     const paletteColors = {
-      blue: colors[0] || '#4363d8',
-      green: colors[1] || '#1e8c28',
-      red: colors[2] || '#ff2244',
-      yellow: colors.length >= 4 ? colors[3] : colors[0] || '#fca414', // Use 4th color or fallback to 1st
-      border: colors.length >= 4 ? colors[3] : '#666666' // Use 4th color or default border
+      blue: permutedColors[0] || '#4363d8',
+      green: permutedColors[1] || '#1e8c28',
+      red: permutedColors[2] || '#ff2244',
+      yellow: permutedColors[3] || permutedColors[0] || '#fca414',
+      border: permutedColors[3] || '#666666'
     };
 
     // Update color inputs
@@ -2127,10 +2613,85 @@ Module.onRuntimeInitialized = async function() {
 
     // Update visualization
     updateColorsInVisualization();
+  }
 
-    // Reset selector to show that palette was applied
-    paletteSelector.value = '';
-  });
+  function selectPalette(index) {
+    if (typeof window.ColorSchemes === 'undefined') return;
+    const numPalettes = window.ColorSchemes.length;
+    if (numPalettes === 0) return;
+
+    // Wrap index
+    index = ((index % numPalettes) + numPalettes) % numPalettes;
+    currentPaletteIndex = index;
+    colorPermutation = 0; // Reset permutation when changing palette
+
+    // Update dropdown
+    if (paletteSelector) {
+      paletteSelector.value = index;
+    }
+
+    // Update visual picker grid
+    const gridItems = document.querySelectorAll('#palettePickerGrid .palette-item');
+    gridItems.forEach((item, i) => {
+      item.classList.toggle('active', i === index);
+      item.setAttribute('aria-selected', i === index ? 'true' : 'false');
+    });
+
+    // Apply colors
+    applyPaletteColors(index);
+  }
+  // Expose to window for cross-script access
+  window.selectPalette = selectPalette;
+
+  function initializePaletteSelector() {
+    if (typeof window.ColorSchemes === 'undefined') return;
+
+    // Populate the dropdown
+    if (paletteSelector) {
+      paletteSelector.innerHTML = '';
+      window.ColorSchemes.forEach((scheme, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = scheme.name;
+        paletteSelector.appendChild(option);
+      });
+
+      // Set initial selection
+      paletteSelector.value = currentPaletteIndex;
+
+      // Add change listener for immediate apply
+      paletteSelector.addEventListener('change', () => {
+        selectPalette(parseInt(paletteSelector.value));
+      });
+    }
+
+    // Prev/Next/Permute buttons
+    if (prevPaletteBtn) {
+      prevPaletteBtn.addEventListener('click', () => {
+        selectPalette(currentPaletteIndex - 1);
+      });
+    }
+
+    if (nextPaletteBtn) {
+      nextPaletteBtn.addEventListener('click', () => {
+        selectPalette(currentPaletteIndex + 1);
+      });
+    }
+
+    if (permuteColorsBtn) {
+      permuteColorsBtn.addEventListener('click', () => {
+        colorPermutation = (colorPermutation + 1) % 6;
+        applyPaletteColors(currentPaletteIndex);
+      });
+    }
+
+    // Find "Domino Default" palette and select it
+    const defaultIndex = window.ColorSchemes.findIndex(p => p.name === 'Domino Default');
+    if (defaultIndex >= 0) {
+      selectPalette(defaultIndex);
+    } else {
+      selectPalette(0);
+    }
   }
 
   // Initialize palette selector when ColorSchemes is available
@@ -2138,7 +2699,6 @@ Module.onRuntimeInitialized = async function() {
     if (typeof window.ColorSchemes !== 'undefined') {
       initializePaletteSelector();
     } else {
-      // Keep checking until ColorSchemes is available
       setTimeout(waitForColorSchemes, 100);
     }
   }
@@ -2147,7 +2707,6 @@ Module.onRuntimeInitialized = async function() {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', waitForColorSchemes);
   } else {
-    // DOM is already loaded, start checking
     waitForColorSchemes();
   }
 
@@ -2215,7 +2774,6 @@ Module.onRuntimeInitialized = async function() {
     // Show 3D view, hide 2D view
     document.getElementById("aztec-canvas").style.display = "block";
     document.getElementById("aztec-2d-canvas").style.display = "none";
-    document.getElementById("camera-controls").style.display = no3D ? "none" : "block";
 
     // Update toggle button states
     document.getElementById("view-3d-btn").classList.add("active");
@@ -3195,7 +3753,6 @@ Module.onRuntimeInitialized = async function() {
     // Show 2D view, hide 3D view
     document.getElementById("aztec-canvas").style.display = "none";
     document.getElementById("aztec-2d-canvas").style.display = "block";
-    document.getElementById("camera-controls").style.display = "none";
 
     // Update toggle button states
     document.getElementById("view-3d-btn").classList.remove("active");
@@ -4402,6 +4959,146 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 });
+
+// ========================================================================
+// Mobile Bottom Sheet Drawer Handling
+// ========================================================================
+(function() {
+  const drawerHandle = document.getElementById('drawerHandle');
+  const controlsPanel = document.getElementById('controlsPanel');
+
+  if (drawerHandle && controlsPanel) {
+    let drawerStartY = 0;
+    let drawerStartTranslateY = 0;
+    let isDragging = false;
+
+    const getDrawerTranslateY = () => {
+      const transform = controlsPanel.style.transform;
+      if (transform) {
+        const match = transform.match(/translateY\(([^)]+)\)/);
+        if (match) {
+          const value = match[1];
+          if (value.includes('calc')) return 0;
+          return parseFloat(value) || 0;
+        }
+      }
+      return 0;
+    };
+
+    drawerHandle.addEventListener('touchstart', (e) => {
+      if (window.innerWidth >= 992) return;
+      isDragging = true;
+      drawerStartY = e.touches[0].clientY;
+      drawerStartTranslateY = controlsPanel.classList.contains('expanded') ? 0 : controlsPanel.offsetHeight - 60;
+      controlsPanel.style.transition = 'none';
+    }, { passive: true });
+
+    drawerHandle.addEventListener('touchmove', (e) => {
+      if (!isDragging || window.innerWidth >= 992) return;
+      const deltaY = e.touches[0].clientY - drawerStartY;
+      const newTranslateY = Math.max(0, Math.min(controlsPanel.offsetHeight - 60, drawerStartTranslateY + deltaY));
+      controlsPanel.style.transform = `translateY(${newTranslateY}px)`;
+    }, { passive: true });
+
+    const endDrag = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      controlsPanel.style.transition = '';
+
+      const currentTranslateY = getDrawerTranslateY();
+      const threshold = controlsPanel.offsetHeight * 0.3;
+
+      if (currentTranslateY < threshold) {
+        controlsPanel.classList.add('expanded');
+        controlsPanel.style.transform = '';
+      } else {
+        controlsPanel.classList.remove('expanded');
+        controlsPanel.style.transform = '';
+      }
+    };
+
+    drawerHandle.addEventListener('touchend', endDrag, { passive: true });
+    drawerHandle.addEventListener('touchcancel', endDrag, { passive: true });
+
+    // Click to toggle on drawer handle
+    drawerHandle.addEventListener('click', () => {
+      if (window.innerWidth >= 992) return;
+      controlsPanel.classList.toggle('expanded');
+    });
+  }
+
+  // ========================================================================
+  // Floating Action Button (Mobile - Sample)
+  // ========================================================================
+  const sampleFab = document.getElementById('sampleFab');
+  const sampleBtn = document.getElementById('sample-btn');
+
+  if (sampleFab && sampleBtn) {
+    sampleFab.addEventListener('click', () => {
+      sampleBtn.click();
+    });
+  }
+
+  // ========================================================================
+  // Visual Palette Picker Grid
+  // ========================================================================
+  const gridContainer = document.getElementById('palettePickerGrid');
+
+  function initPalettePickerGrid() {
+    if (!gridContainer || !window.ColorSchemes) return;
+
+    gridContainer.innerHTML = '';
+
+    window.ColorSchemes.forEach((palette, index) => {
+      const item = document.createElement('div');
+      item.className = 'palette-item';
+      item.setAttribute('role', 'option');
+      item.setAttribute('aria-label', palette.name);
+      item.setAttribute('tabindex', '0');
+      item.setAttribute('title', palette.name);
+      item.dataset.index = index;
+
+      // Create 4 swatches for the 4 colors
+      const colors = palette.colors || [];
+      for (let i = 0; i < 4; i++) {
+        const swatch = document.createElement('div');
+        swatch.className = 'swatch';
+        swatch.style.backgroundColor = colors[i] || '#ccc';
+        item.appendChild(swatch);
+      }
+
+      item.addEventListener('click', () => {
+        // Call selectPalette which handles dropdown sync and color application
+        if (typeof window.selectPalette === 'function') {
+          window.selectPalette(index);
+        } else {
+          // Fallback: update visually and trigger dropdown change
+          document.querySelectorAll('.palette-item').forEach(p => p.classList.remove('active'));
+          item.classList.add('active');
+          const selector = document.getElementById('palette-selector');
+          if (selector) {
+            selector.value = index;
+            selector.dispatchEvent(new Event('change'));
+          }
+        }
+      });
+
+      gridContainer.appendChild(item);
+    });
+  }
+
+  // Initialize palette picker when DOM is ready
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(initPalettePickerGrid, 100);
+  } else {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(initPalettePickerGrid, 100));
+  }
+
+  // Re-initialize when ColorSchemes loads
+  if (window.ColorSchemes) {
+    initPalettePickerGrid();
+  }
+})();
 </script>
 
 <div style="text-align: center; font-size: 0.8em; margin-top: 50px; color: #666;">

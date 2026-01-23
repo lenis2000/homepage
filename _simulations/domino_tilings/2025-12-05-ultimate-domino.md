@@ -501,181 +501,746 @@ code:
       transition-duration: 0.01ms !important;
     }
   }
+
+  /* ========================================================================
+     Phase 1: Two-Column Desktop Layout
+     ======================================================================== */
+  .simulation-layout {
+    display: flex;
+    flex-direction: column;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 8px;
+    gap: 16px;
+  }
+
+  @media (min-width: 992px) {
+    .simulation-layout {
+      flex-direction: row;
+      align-items: flex-start;
+    }
+  }
+
+  .controls-panel {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  @media (min-width: 992px) {
+    .controls-panel {
+      width: 340px;
+      min-width: 300px;
+      max-width: 400px;
+      max-height: calc(100vh - 100px);
+      overflow-y: auto;
+      position: sticky;
+      top: 80px;
+      padding-right: 8px;
+    }
+    .controls-panel::-webkit-scrollbar {
+      width: 6px;
+    }
+    .controls-panel::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .controls-panel::-webkit-scrollbar-thumb {
+      background: var(--border-color, #dadada);
+      border-radius: 3px;
+    }
+  }
+
+  .visualization-panel {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  @media (min-width: 992px) {
+    .visualization-panel {
+      max-width: calc(100% - 360px);
+    }
+    .visualization-panel #domino-canvas,
+    .visualization-panel #three-container {
+      height: 70vh;
+      max-height: 800px;
+    }
+  }
+
+  /* ========================================================================
+     Phase 2: Collapsible Accordion Sections
+     ======================================================================== */
+  details.control-section {
+    display: block;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    background: var(--bg-secondary, #f5f5f5);
+    /* Note: avoid overflow:hidden on details - causes Firefox layout issues */
+  }
+
+  /* Non-details control-section (like stats row) */
+  div.control-section {
+    display: block;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    background: var(--bg-secondary, #f5f5f5);
+  }
+
+  .control-section summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    font-family: "franklingothic-demi", Arial, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-primary, #333);
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    background: var(--bg-secondary, #f5f5f5);
+    transition: background 0.15s;
+  }
+
+  .control-section summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .control-section summary::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.2s;
+    opacity: 0.6;
+  }
+
+  .control-section[open] summary::after {
+    transform: rotate(45deg);
+  }
+
+  .control-section summary:hover {
+    background: rgba(229, 114, 0, 0.08);
+  }
+
+  .control-section-content {
+    padding: 12px 14px;
+    border-top: 1px solid var(--border-color, #e0e0e0);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .control-section .control-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  [data-theme="dark"] details.control-section,
+  [data-theme="dark"] div.control-section {
+    background: var(--bg-secondary, #2d2d2d);
+    border-color: var(--border-color, #444);
+  }
+
+  [data-theme="dark"] .control-section summary {
+    background: var(--bg-secondary, #2d2d2d);
+    color: var(--text-primary, #e8e8e8);
+  }
+
+  [data-theme="dark"] .control-section summary:hover {
+    background: rgba(255, 153, 51, 0.1);
+  }
+
+  [data-theme="dark"] .control-section-content {
+    border-color: var(--border-color, #444);
+  }
+
+  /* ========================================================================
+     Phase 3: Visual Enhancements - Palette Picker Grid
+     ======================================================================== */
+  .palette-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: 6px;
+    max-height: 140px;
+    overflow-y: auto;
+    padding: 4px;
+    margin-top: 8px;
+  }
+
+  .palette-item {
+    display: flex;
+    flex-wrap: wrap;
+    width: 44px;
+    height: 28px;
+    border: 2px solid var(--border-color, #d0d0d0);
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+  }
+
+  .palette-item:hover {
+    transform: scale(1.08);
+    z-index: 1;
+  }
+
+  .palette-item.active {
+    border-color: var(--accent-color, #e57200);
+    border-width: 2px;
+    box-shadow: 0 0 0 2px rgba(229, 114, 0, 0.3);
+  }
+
+  .palette-item .swatch {
+    width: 50%;
+    height: 50%;
+  }
+
+  .palette-item[title] {
+    position: relative;
+  }
+
+  [data-theme="dark"] .palette-item {
+    border-color: #555;
+  }
+
+  [data-theme="dark"] .palette-item.active {
+    border-color: var(--accent-color, #ff9933);
+  }
+
+
+  /* ========================================================================
+     Phase 3: Floating Action Button (Mobile)
+     ======================================================================== */
+  .sample-fab {
+    display: none;
+    position: fixed;
+    bottom: 80px;
+    right: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #E57200, #f08c30);
+    color: white;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(229, 114, 0, 0.4);
+    z-index: 1000;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .sample-fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(229, 114, 0, 0.5);
+  }
+
+  .sample-fab:active {
+    transform: scale(0.95);
+  }
+
+  .sample-fab:disabled {
+    background: #999;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 991px) {
+    .sample-fab {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  /* ========================================================================
+     Phase 1: Mobile Bottom Sheet Drawer
+     ======================================================================== */
+  @media (max-width: 991px) {
+    .controls-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-primary, #fff);
+      border-top: 1px solid var(--border-color, #e0e0e0);
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+      z-index: 900;
+      max-height: 70vh;
+      transform: translateY(calc(100% - 60px));
+      transition: transform 0.3s ease-out;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .controls-panel.expanded {
+      transform: translateY(0);
+    }
+
+    .controls-panel-inner {
+      max-height: calc(70vh - 60px);
+      overflow-y: auto;
+      padding: 0 12px 20px;
+    }
+
+    .drawer-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 60px;
+      cursor: grab;
+      flex-shrink: 0;
+    }
+
+    .drawer-handle:active {
+      cursor: grabbing;
+    }
+
+    .drawer-handle-bar {
+      width: 40px;
+      height: 4px;
+      background: var(--border-color, #ccc);
+      border-radius: 2px;
+    }
+
+    .drawer-handle-hint {
+      position: absolute;
+      font-size: 11px;
+      color: #888;
+      margin-top: 24px;
+    }
+
+    .controls-panel.expanded .drawer-handle-hint {
+      display: none;
+    }
+
+    [data-theme="dark"] .controls-panel {
+      background: var(--bg-primary, #1a1a1a);
+      border-color: var(--border-color, #444);
+    }
+
+    .visualization-panel {
+      padding-bottom: 70px;
+    }
+
+    .visualization-panel #domino-canvas,
+    .visualization-panel #three-container {
+      height: 50vh;
+      max-height: 500px;
+    }
+  }
+
+  @media (min-width: 992px) {
+    .drawer-handle {
+      display: none;
+    }
+    .controls-panel-inner {
+      display: contents;
+    }
+  }
+
+  /* ========================================================================
+     Phase 4: 3D Controls Enhancement
+     ======================================================================== */
+  .interaction-hint {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+    z-index: 10;
+  }
+
+  #three-container:hover .interaction-hint,
+  #three-container:focus-within .interaction-hint {
+    opacity: 1;
+  }
+
+  @media (max-width: 767px) {
+    .interaction-hint {
+      font-size: 10px;
+      padding: 6px 12px;
+    }
+  }
+
+  /* ========================================================================
+     Phase 6: Tooltips for Complex Options
+     ======================================================================== */
+  [data-tooltip] {
+    position: relative;
+  }
+
+  [data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 10px;
+    background: rgba(35, 45, 75, 0.95);
+    color: white;
+    font-size: 11px;
+    font-weight: normal;
+    text-transform: none;
+    letter-spacing: normal;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 1001;
+    margin-bottom: 6px;
+    max-width: 250px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  [data-tooltip]:hover::after,
+  [data-tooltip]:focus::after {
+    opacity: 1;
+  }
+
+  /* ========================================================================
+     Phase 3 & 6: Button Styling Consistency
+     ======================================================================== */
+  .btn-action {
+    background: var(--accent-color, #E57200) !important;
+    color: white !important;
+    border-color: var(--accent-color, #E57200) !important;
+    font-weight: 500;
+  }
+
+  .btn-action:hover {
+    background: #c96300 !important;
+    border-color: #c96300 !important;
+  }
+
+  .btn-action:disabled {
+    background: #f0b87c !important;
+    border-color: #f0b87c !important;
+  }
+
+  .btn-secondary-action {
+    background: linear-gradient(135deg, #232D4B, #3a4a6b) !important;
+    color: white !important;
+    border-color: #232D4B !important;
+    font-weight: 500;
+  }
+
+  .btn-secondary-action:hover {
+    background: linear-gradient(135deg, #1a2238, #232D4B) !important;
+  }
+
+  .btn-secondary-action:disabled {
+    background: #8a9ab8 !important;
+    border-color: #8a9ab8 !important;
+  }
+
+  .btn-utility {
+    background: var(--bg-primary, white) !important;
+    color: var(--text-primary, #333) !important;
+    border: 1px solid var(--border-color, #d0d0d0) !important;
+  }
+
+  .btn-utility:hover {
+    background: var(--bg-secondary, #f5f5f5) !important;
+    border-color: #999 !important;
+  }
+
+  /* ========================================================================
+     Phase 6: WCAG AA Contrast Fixes
+     ======================================================================== */
+  .control-group-title,
+  .control-section summary {
+    color: #4a4a4a;
+  }
+
+  [data-theme="dark"] .control-group-title,
+  [data-theme="dark"] .control-section summary {
+    color: #d0d0d0;
+  }
+
+  .stats-inline .stat-label {
+    color: #666;
+  }
+
+  [data-theme="dark"] .stats-inline .stat-label {
+    color: #aaa;
+  }
+
+  /* ========================================================================
+     Phase 5: Export Section Grouping
+     ======================================================================== */
+  .export-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+  }
+
+  .export-group-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    min-width: 50px;
+  }
+
+  [data-theme="dark"] .export-group-label {
+    color: #aaa;
+  }
+
+  .export-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border-color, #e0e0e0);
+    margin: 4px 0;
+  }
+
+  /* Legacy control-group styles within new sections */
+  .control-section .control-group {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .control-section .control-group-title {
+    display: none;
+  }
 </style>
 
 <!-- Skip to main content for accessibility -->
 <a href="#domino-canvas" class="skip-link">Skip to simulation canvas</a>
 
-<!-- Main controls -->
-<div style="max-width: 900px; margin: 0 auto; padding: 8px;">
+<!-- Two-Column Layout Container -->
+<div class="simulation-layout">
 
-<!-- Preset Shapes -->
-<div class="control-group" role="region" aria-labelledby="preset-shapes-title">
-  <div class="control-group-title" id="preset-shapes-title">Preset Shapes</div>
-  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <button id="rectangleBtn" aria-label="Create rectangle region">Rectangle</button>
-    <span class="param-group"><label for="rectWidthInput" class="param-label">W</label><input type="number" class="param-input" id="rectWidthInput" value="8" min="2" max="100" aria-label="Rectangle width"></span>
-    <span class="param-group"><label for="rectHeightInput" class="param-label">H</label><input type="number" class="param-input" id="rectHeightInput" value="6" min="2" max="100" aria-label="Rectangle height"></span>
-    <button id="aztecBtn" aria-label="Create Aztec diamond region">Aztec Diamond</button>
-    <span class="param-group"><label for="aztecNInput" class="param-label">n</label><input type="number" class="param-input" id="aztecNInput" value="4" min="1" max="50" aria-label="Aztec diamond size parameter"></span>
+<!-- Left: Controls Panel -->
+<aside class="controls-panel" id="controlsPanel">
+  <!-- Mobile drawer handle -->
+  <div class="drawer-handle" id="drawerHandle">
+    <div class="drawer-handle-bar"></div>
+    <span class="drawer-handle-hint">Swipe up for controls</span>
   </div>
-</div>
 
-<!-- Simulation Controls -->
-<div class="control-group" role="region" aria-labelledby="sampling-title">
-  <div class="control-group-title" id="sampling-title">Sampling & Dynamics</div>
-  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-    <button id="startStopBtn" class="primary" disabled aria-label="Start or stop Glauber dynamics simulation">Start Glauber</button>
-    <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled aria-label="Generate perfect sample using CFTP algorithm">Perfect Sample</button>
-    <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;" aria-label="Stop CFTP sampling">Stop CFTP</button>
-    <button id="doubleDimerBtn" class="cftp" title="Double Dimer - Two independent CFTP samples" disabled aria-label="Generate double dimer sample">Double Dimer</button>
-    <span id="doubleDimerProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
-    <span style="display: none;" id="minLoopGroup">
-      <label for="minLoopInput" style="font-size: 12px; color: #555;">min loop:</label>
-      <input type="number" id="minLoopInput" value="2" min="2" max="99" style="width: 3.5em; padding: 2px 4px; font-size: 11px;" aria-label="Minimum loop size for filtering">
-    </span>
-    <button id="fluctuationsBtn" class="cftp" title="Height Fluctuations Visualization" style="display: none;" aria-label="Visualize height fluctuations">Fluctuations</button>
-    <button id="resampleBtn" style="display: none; background: #6c757d; color: white; border-color: #6c757d;" aria-label="Resample the tiling">Resample</button>
-    <div style="display: flex; align-items: center; gap: 6px;">
-      <label for="speedSlider" style="font-size: 12px; color: #666;">Speed</label>
-      <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;" aria-label="Simulation speed slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="29">
-      <input type="number" id="speedInput" class="param-input" value="100" min="1" max="100000000" style="width: 80px;" aria-label="Simulation speed in steps per second">
-      <span style="font-size: 11px; color: #888;">/s</span>
+  <div class="controls-panel-inner">
+
+    <!-- Section 1: Region (open by default) -->
+    <details class="control-section" open>
+      <summary>Region</summary>
+      <div class="control-section-content">
+        <!-- Preset Shapes -->
+        <div class="control-row">
+          <button id="rectangleBtn" aria-label="Create rectangle region">Rectangle</button>
+          <span class="param-group"><label for="rectWidthInput" class="param-label">W</label><input type="number" class="param-input" id="rectWidthInput" value="8" min="2" max="100" aria-label="Rectangle width"></span>
+          <span class="param-group"><label for="rectHeightInput" class="param-label">H</label><input type="number" class="param-input" id="rectHeightInput" value="6" min="2" max="100" aria-label="Rectangle height"></span>
+        </div>
+        <div class="control-row">
+          <button id="aztecBtn" aria-label="Create Aztec diamond region">Aztec Diamond</button>
+          <span class="param-group"><label for="aztecNInput" class="param-label">n</label><input type="number" class="param-input" id="aztecNInput" value="4" min="1" max="50" aria-label="Aztec diamond size parameter"></span>
+        </div>
+        <!-- Region Scaling -->
+        <div class="control-row" style="border-top: 1px solid var(--border-color, #e0e0e0); padding-top: 10px; margin-top: 4px;">
+          <span class="param-group"><label for="scaleKInput" class="param-label">k</label><input type="number" class="param-input" id="scaleKInput" value="2" min="2" max="10" aria-label="Scaling factor k"></span>
+          <button id="scaleUpBtn" title="Scale the region by k×k blocks" aria-label="Scale up region by k times k blocks">Scale k×k</button>
+          <button id="smoothScaleBtn" title="Scale up preserving boundary slopes" data-tooltip="Scale preserving boundary slopes (Aztec→Aztec)" aria-label="Smooth scale up preserving boundary slopes">Smooth↑</button>
+          <button id="scaleDownBtn" title="Halve the region size" aria-label="Scale down region by half">Scale↓</button>
+        </div>
+      </div>
+    </details>
+
+    <!-- Section 2: Sampling (open by default) -->
+    <details class="control-section" open>
+      <summary>Sampling</summary>
+      <div class="control-section-content">
+        <div class="control-row">
+          <button id="startStopBtn" class="btn-action" disabled aria-label="Start or stop Glauber dynamics simulation">Start Glauber</button>
+          <button id="cftpBtn" class="btn-secondary-action" data-tooltip="Exact uniform sample via Coupling From The Past" disabled aria-label="Generate perfect sample using CFTP algorithm">Perfect Sample</button>
+          <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;" aria-label="Stop CFTP sampling">Stop</button>
+        </div>
+        <div class="control-row">
+          <button id="doubleDimerBtn" class="btn-secondary-action" data-tooltip="Superimposes two independent samples" disabled aria-label="Generate double dimer sample">Double Dimer</button>
+          <span id="doubleDimerProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
+          <span style="display: none;" id="minLoopGroup">
+            <label for="minLoopInput" style="font-size: 12px; color: #555;">min loop:</label>
+            <input type="number" id="minLoopInput" value="2" min="2" max="99" style="width: 3.5em; padding: 2px 4px; font-size: 11px;" aria-label="Minimum loop size for filtering">
+          </span>
+        </div>
+        <div class="control-row">
+          <button id="fluctuationsBtn" class="btn-secondary-action" title="Height Fluctuations Visualization" style="display: none;" aria-label="Visualize height fluctuations">Fluctuations</button>
+          <button id="resampleBtn" style="display: none; background: #6c757d; color: white; border-color: #6c757d;" aria-label="Resample the tiling">Resample</button>
+        </div>
+        <div class="control-row" style="border-top: 1px solid var(--border-color, #e0e0e0); padding-top: 10px; margin-top: 4px;">
+          <label for="speedSlider" style="font-size: 12px; color: #666;">Speed</label>
+          <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 80px;" aria-label="Simulation speed slider">
+          <input type="number" id="speedInput" class="param-input" value="100" min="1" max="100000000" style="width: 70px;" aria-label="Simulation speed in steps per second">
+          <span style="font-size: 11px; color: #888;">/s</span>
+        </div>
+      </div>
+    </details>
+
+    <!-- Section 3: Drawing Tools -->
+    <details class="control-section" open>
+      <summary>Drawing Tools</summary>
+      <div class="control-section-content">
+        <div class="control-row">
+          <div class="tool-toggle" role="group" aria-label="Drawing mode selection">
+            <button id="handTool" title="Pan view" aria-label="Hand tool - Pan view" aria-pressed="false">🤚</button>
+            <button id="drawTool" class="active" title="Draw cells" aria-label="Draw tool - Add cells to region" aria-pressed="true">✏️</button>
+            <button id="eraseTool" title="Erase cells" aria-label="Erase tool - Remove cells from region" aria-pressed="false">🧹</button>
+          </div>
+          <div class="tool-toggle" role="group" aria-label="Lasso selection mode">
+            <button id="lassoFillTool" title="Lasso fill: click to add points, click near start to close" aria-label="Lasso fill - Click points to define polygon to fill" aria-pressed="false">⭕+</button>
+            <button id="lassoEraseTool" title="Lasso erase: click to add points, click near start to close" aria-label="Lasso erase - Click points to define polygon to erase" aria-pressed="false">⭕−</button>
+            <button id="lassoSnapBtn" class="active" title="Snap to grid" aria-label="Snap lasso to grid" aria-pressed="true">📐</button>
+          </div>
+        </div>
+        <div class="control-row">
+          <button id="clearBtn" aria-label="Clear all cells from region">Clear</button>
+          <button id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo last action" aria-keyshortcuts="Ctrl+Z">Undo</button>
+          <button id="redoBtn" title="Redo (Ctrl+Y)" aria-label="Redo last undone action" aria-keyshortcuts="Ctrl+Y">Redo</button>
+          <button id="repairBtn" data-tooltip="Adds minimal cells for valid tiling" disabled aria-label="Make region tileable by adding cells">Make Tileable</button>
+        </div>
+        <div class="control-row">
+          <span id="statusBadge" class="status-empty" role="status" aria-live="polite">Empty</span>
+        </div>
+      </div>
+    </details>
+
+    <!-- Section 4: Styling (collapsed by default) -->
+    <details class="control-section">
+      <summary>Styling</summary>
+      <div class="control-section-content">
+        <!-- Palette selection by name -->
+        <div class="control-row">
+          <button id="prevPaletteBtn" style="padding: 0 10px;" aria-label="Previous color palette">◀</button>
+          <select id="paletteSelect" style="flex: 1; min-width: 120px;" aria-label="Select color palette"></select>
+          <button id="nextPaletteBtn" style="padding: 0 10px;" aria-label="Next color palette">▶</button>
+          <button id="permuteColorsBtn" title="Permute colors" aria-label="Permute color order">Permute</button>
+        </div>
+        <!-- Visual Palette Picker Grid -->
+        <div id="palettePickerGrid" class="palette-picker" role="listbox" aria-label="Color palette visual selection"></div>
+        <div class="control-row" style="border-top: 1px solid var(--border-color, #e0e0e0); padding-top: 10px; margin-top: 4px;">
+          <label for="borderSlider" style="font-size: 12px; color: #555;">Border:</label>
+          <input type="number" id="borderSlider" value="1" min="0" max="5" step="0.5" class="param-input" style="width: 50px;" aria-label="Border width">
+          <label style="font-size: 12px; display: flex; align-items: center; gap: 4px; cursor: pointer; margin-left: 12px;">
+            <input type="checkbox" id="showGridCheckbox" checked aria-label="Toggle grid display">
+            Grid
+          </label>
+        </div>
+        <div class="control-row">
+          <button id="zoomInBtn" title="Zoom In" aria-label="Zoom in">+</button>
+          <button id="zoomOutBtn" title="Zoom Out" aria-label="Zoom out">−</button>
+          <button id="resetViewBtn" title="Reset View" aria-label="Reset view to default">Reset View</button>
+        </div>
+        <!-- 3D View Controls (moved from separate section) -->
+        <div class="control-row" id="view3DControlsRow" style="display: none; border-top: 1px solid var(--border-color, #e0e0e0); padding-top: 10px; margin-top: 4px;">
+          <button id="perspectiveBtn" title="Toggle perspective/isometric">🎯 Perspective</button>
+          <button id="preset3DBtn" title="Cycle 3D visual preset">☀️ Preset</button>
+          <button id="autoRotateBtn" title="Toggle auto-rotation (3D)" aria-pressed="false">⟳ Auto-rotate</button>
+        </div>
+      </div>
+    </details>
+
+    <!-- Section 5: Export (collapsed by default) -->
+    <details class="control-section">
+      <summary>Export</summary>
+      <div class="control-section-content">
+        <div class="export-group">
+          <span class="export-group-label">Images</span>
+          <button id="exportPngBtn" aria-label="Export as PNG image">PNG</button>
+          <label for="qualitySlider" style="font-size: 11px; color: #666;">Quality:</label>
+          <input type="range" id="qualitySlider" min="1" max="4" value="2" style="width: 60px;" aria-label="PNG export quality">
+          <span id="qualityValue" style="font-size: 11px; color: #1976d2; min-width: 24px;" aria-live="polite">2x</span>
+        </div>
+        <div class="export-divider"></div>
+        <div class="export-group">
+          <span class="export-group-label">Data</span>
+          <button id="exportJsonBtn" aria-label="Export region shape as JSON">Export Shape</button>
+          <button id="importJsonBtn" aria-label="Import region shape from JSON file">Import Shape</button>
+          <input type="file" id="importJsonInput" accept=".json" style="display: none;" aria-label="JSON file input">
+        </div>
+        <div class="export-divider"></div>
+        <div class="export-group">
+          <span class="export-group-label">Share</span>
+          <button id="copyLinkBtn" aria-label="Copy shareable link to clipboard">Copy Link</button>
+          <span id="linkCopied" style="display: none; color: #28a745; font-size: 11px; margin-left: 4px;">Copied!</span>
+        </div>
+      </div>
+    </details>
+
+    <!-- Stats Row -->
+    <div class="control-section" style="padding: 10px 14px;">
+      <div class="stats-inline" role="status" aria-live="polite">
+        <div class="stat"><span class="stat-label">Vertices</span><span class="stat-value" id="cellsCount">0</span></div>
+        <div class="stat"><span class="stat-label">Dominoes</span><span class="stat-value" id="dominoesCount">0</span></div>
+        <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepsCount">0</span></div>
+        <div class="stat"><span class="stat-label">Flips</span><span class="stat-value" id="flipsCount">0</span></div>
+        <div class="stat" id="cftpStatus" style="display: none;"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">0</span></div>
+        <div class="stat" id="gpuIndicator" style="display: none;"><span style="color: #2e8b57; font-size: 0.9em;">🚀 GPU</span></div>
+      </div>
     </div>
-  </div>
-</div>
 
-<!-- Region Scaling -->
-<div class="control-group" role="region" aria-labelledby="scaling-title">
-  <div class="control-group-title" id="scaling-title">Region Scaling</div>
-  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-    <span class="param-group"><label for="scaleKInput" class="param-label">k</label><input type="number" class="param-input" id="scaleKInput" value="2" min="2" max="10" aria-label="Scaling factor k"></span>
-    <button id="scaleUpBtn" title="Scale the region by k×k blocks" aria-label="Scale up region by k times k blocks">Scale k×k</button>
-    <button id="smoothScaleBtn" title="Scale up preserving boundary slopes (Aztec→Aztec)" aria-label="Smooth scale up preserving boundary slopes">Smooth Scale Up</button>
-    <button id="scaleDownBtn" title="Halve the region size" aria-label="Scale down region by half">Scale Down</button>
-  </div>
-</div>
+  </div><!-- end controls-panel-inner -->
+</aside>
 
-<!-- Stats Row -->
-<div class="control-group" role="region" aria-labelledby="stats-title">
-  <div class="control-group-title" id="stats-title">Statistics</div>
-  <div class="stats-inline" role="status" aria-live="polite">
-    <div class="stat"><span class="stat-label">Vertices</span><span class="stat-value" id="cellsCount">0</span></div>
-    <div class="stat"><span class="stat-label">Dominoes</span><span class="stat-value" id="dominoesCount">0</span></div>
-    <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepsCount">0</span></div>
-    <div class="stat"><span class="stat-label">Flips</span><span class="stat-value" id="flipsCount">0</span></div>
-    <div class="stat" id="cftpStatus" style="display: none;"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">0</span></div>
-    <div class="stat" id="gpuIndicator" style="display: none;"><span style="color: #2e8b57; font-size: 0.9em;">🚀 GPU</span></div>
-  </div>
-</div>
-
-</div>
-
-<!-- Canvas Container with overlay -->
-<div id="canvas-container" style="position: relative; max-width: 900px; margin: 0 auto;">
-  <!-- View Toggle overlay -->
-  <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
-    <div class="view-toggle">
-      <button id="toggle3DBtn" title="Toggle 2D/3D view">3D</button>
-      <button id="perspectiveBtn" title="Toggle perspective/isometric" style="display: none;">🎯</button>
-      <button id="preset3DBtn" title="Cycle 3D visual preset" style="display: none;">☀️</button>
-    </div>
-    <div class="view-toggle">
-      <button id="dominoViewBtn" class="active" title="Domino view">▭</button>
-      <button id="dimerViewBtn" title="Dimer view">•-•</button>
-    </div>
-    <button id="helpBtn" style="width: 24px; height: 24px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">?</button>
-    <div id="tool-tooltip" style="padding: 4px 8px; background: rgba(0,0,0,0.85); color: white; border-radius: 4px; font-size: 11px; display: none; white-space: pre-line; line-height: 1.4;">🤚 pan · ✏️ draw · 🧹 erase
+<!-- Right: Visualization Panel -->
+<main class="visualization-panel">
+  <!-- Canvas Container with overlay -->
+  <div id="canvas-container" style="position: relative;">
+    <!-- View Toggle overlay -->
+    <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
+      <div class="view-toggle">
+        <button id="toggle3DBtn" title="Toggle 2D/3D view">3D</button>
+      </div>
+      <div class="view-toggle">
+        <button id="dominoViewBtn" class="active" title="Domino view">▭</button>
+        <button id="dimerViewBtn" title="Dimer view">•-•</button>
+      </div>
+      <button id="helpBtn" style="width: 28px; height: 28px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">?</button>
+      <div id="tool-tooltip" style="padding: 6px 10px; background: rgba(0,0,0,0.85); color: white; border-radius: 6px; font-size: 11px; display: none; white-space: pre-line; line-height: 1.4; position: absolute; right: 0; top: 40px;">🤚 pan · ✏️ draw · 🧹 erase
 ⭕+ lasso fill · ⭕− lasso erase
 📐 snap to grid
 ─────────
 Shift: toggle draw↔erase
 Cmd-click: complete lasso</div>
-  </div>
-
-  <!-- Canvas -->
-  <canvas id="domino-canvas" role="img" aria-label="Interactive domino tiling canvas. Use drawing tools below to create and modify regions."></canvas>
-
-  <!-- 3D Container -->
-  <div id="three-container" role="img" aria-label="3D visualization of domino tiling height function"></div>
-</div>
-
-<!-- Controls below canvas -->
-<div style="max-width: 900px; margin: 0 auto; padding: 8px;">
-
-<!-- Drawing Tools -->
-<div class="control-group" role="region" aria-labelledby="drawing-tools-title">
-  <div class="control-group-title" id="drawing-tools-title">Drawing Tools</div>
-  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-    <div class="tool-toggle" role="group" aria-label="Drawing mode selection">
-      <button id="handTool" title="Pan view" aria-label="Hand tool - Pan view" aria-pressed="false">🤚</button>
-      <button id="drawTool" class="active" title="Draw cells" aria-label="Draw tool - Add cells to region" aria-pressed="true">✏️</button>
-      <button id="eraseTool" title="Erase cells" aria-label="Erase tool - Remove cells from region" aria-pressed="false">🧹</button>
     </div>
-    <div class="tool-toggle" role="group" aria-label="Lasso selection mode">
-      <button id="lassoFillTool" title="Lasso fill: click to add points, click near start to close" aria-label="Lasso fill - Click points to define polygon to fill" aria-pressed="false">⭕+</button>
-      <button id="lassoEraseTool" title="Lasso erase: click to add points, click near start to close" aria-label="Lasso erase - Click points to define polygon to erase" aria-pressed="false">⭕−</button>
-      <button id="lassoSnapBtn" class="active" title="Snap to grid" aria-label="Snap lasso to grid" aria-pressed="true">📐</button>
-    </div>
-    <button id="clearBtn" aria-label="Clear all cells from region">Clear</button>
-    <button id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo last action" aria-keyshortcuts="Ctrl+Z">Undo</button>
-    <button id="redoBtn" title="Redo (Ctrl+Y)" aria-label="Redo last undone action" aria-keyshortcuts="Ctrl+Y">Redo</button>
-    <button id="repairBtn" title="Add cells to make region tileable" disabled aria-label="Make region tileable by adding cells">Make Tileable</button>
-    <span id="statusBadge" class="status-empty" role="status" aria-live="polite">Empty</span>
-  </div>
-</div>
 
-<!-- View Controls -->
-<div class="control-group" role="region" aria-labelledby="view-controls-title">
-  <div class="control-group-title" id="view-controls-title">View Controls</div>
-  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-    <button id="zoomInBtn" title="Zoom In" aria-label="Zoom in">+</button>
-    <button id="zoomOutBtn" title="Zoom Out" aria-label="Zoom out">−</button>
-    <button id="resetViewBtn" title="Reset View" aria-label="Reset view to default">Reset View</button>
-    <label style="font-size: 12px; display: flex; align-items: center; gap: 4px; cursor: pointer;">
-      <input type="checkbox" id="showGridCheckbox" checked aria-label="Toggle grid display">
-      Grid
-    </label>
-    <span style="color: #ccc;" aria-hidden="true">|</span>
-    <button id="rotateLeftBtn" title="Rotate Left (3D)" disabled aria-label="Rotate 3D view left">↺</button>
-    <button id="rotateRightBtn" title="Rotate Right (3D)" disabled aria-label="Rotate 3D view right">↻</button>
-    <button id="autoRotateBtn" title="Toggle auto-rotation (3D)" disabled aria-label="Toggle automatic 3D rotation" aria-pressed="false">⟳</button>
-  </div>
-</div>
+    <!-- Canvas -->
+    <canvas id="domino-canvas" role="img" aria-label="Interactive domino tiling canvas. Use drawing tools to create and modify regions."></canvas>
 
-<!-- Display Options -->
-<div class="control-group" role="region" aria-labelledby="display-options-title">
-  <div class="control-group-title" id="display-options-title">Display Options</div>
-  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-    <div style="display: flex; align-items: center; gap: 4px;" role="group" aria-label="Color palette selection">
-      <button id="prevPaletteBtn" style="padding: 0 8px;" aria-label="Previous color palette">&#9664;</button>
-      <select id="paletteSelect" style="padding: 4px 8px; font-size: 12px; min-width: 120px;" aria-label="Select color palette"></select>
-      <button id="nextPaletteBtn" style="padding: 0 8px;" aria-label="Next color palette">&#9654;</button>
-    </div>
-    <button id="permuteColorsBtn" title="Permute colors" aria-label="Permute color order">Permute</button>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <label for="borderSlider" style="font-size: 12px; color: #555;">Border:</label>
-      <input type="number" id="borderSlider" value="1" min="0" max="5" step="0.5" class="param-input" style="width: 50px;" aria-label="Border width">
+    <!-- 3D Container -->
+    <div id="three-container" role="img" aria-label="3D visualization of domino tiling height function">
+      <!-- 3D Interaction Hint -->
+      <div class="interaction-hint">Drag to rotate · Scroll to zoom · Shift+drag to pan</div>
     </div>
   </div>
-</div>
+</main>
 
-<!-- Export -->
-<div class="control-group" role="region" aria-labelledby="export-title">
-  <div class="control-group-title" id="export-title">Export</div>
-  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-    <button id="exportPngBtn" aria-label="Export as PNG image">PNG</button>
-    <label for="qualitySlider" style="font-size: 11px; color: #666;">Quality:</label>
-    <input type="range" id="qualitySlider" min="1" max="4" value="2" style="width: 60px;" aria-label="PNG export quality" aria-valuemin="1" aria-valuemax="4" aria-valuenow="2">
-    <span id="qualityValue" style="font-size: 11px; color: #1976d2;" aria-live="polite">2x</span>
-    <button id="exportJsonBtn" aria-label="Export region shape as JSON">Export Shape</button>
-    <button id="importJsonBtn" aria-label="Import region shape from JSON file">Import Shape</button>
-    <input type="file" id="importJsonInput" accept=".json" style="display: none;" aria-label="JSON file input">
-  </div>
-</div>
+</div><!-- end simulation-layout -->
 
-
-</div>
+<!-- Floating Action Button for Mobile -->
+<button id="sampleFab" class="sample-fab" disabled aria-label="Generate perfect sample" data-tooltip="Perfect Sample">🎲</button>
 
 <!-- Load ColorSchemes -->
 <script src="/js/colorschemes.js"></script>
@@ -844,6 +1409,8 @@ Cmd-click: complete lasso</div>
         exportJsonBtn: document.getElementById('exportJsonBtn'),
         importJsonBtn: document.getElementById('importJsonBtn'),
         importJsonInput: document.getElementById('importJsonInput'),
+        copyLinkBtn: document.getElementById('copyLinkBtn'),
+        linkCopied: document.getElementById('linkCopied'),
         helpBtn: document.getElementById('helpBtn'),
         toolTooltip: document.getElementById('tool-tooltip'),
         toggle3DBtn: document.getElementById('toggle3DBtn'),
@@ -851,9 +1418,12 @@ Cmd-click: complete lasso</div>
         preset3DBtn: document.getElementById('preset3DBtn'),
         dominoViewBtn: document.getElementById('dominoViewBtn'),
         dimerViewBtn: document.getElementById('dimerViewBtn'),
-        rotateLeftBtn: document.getElementById('rotateLeftBtn'),
-        rotateRightBtn: document.getElementById('rotateRightBtn'),
         autoRotateBtn: document.getElementById('autoRotateBtn'),
+        view3DControlsRow: document.getElementById('view3DControlsRow'),
+        controlsPanel: document.getElementById('controlsPanel'),
+        drawerHandle: document.getElementById('drawerHandle'),
+        sampleFab: document.getElementById('sampleFab'),
+        palettePickerGrid: document.getElementById('palettePickerGrid'),
         doubleDimerBtn: document.getElementById('doubleDimerBtn'),
         doubleDimerProgress: document.getElementById('doubleDimerProgress'),
         minLoopGroup: document.getElementById('minLoopGroup'),
@@ -1196,7 +1766,13 @@ Cmd-click: complete lasso</div>
     Module.onRuntimeInitialized = function() {
         wasmReady = true;
         sim = new DominoSampler();
-        draw();
+
+        // Load state from URL if present (must be after WASM is ready)
+        if (loadStateFromUrl()) {
+            updateRegion();
+        } else {
+            draw();
+        }
 
         // Initialize WebGPU engine if available
         if (navigator.gpu && window.WebGPUDominoEngine) {
@@ -1350,6 +1926,7 @@ Cmd-click: complete lasso</div>
         updateStats();
         draw();
         update3DView();  // Update 3D when region changes
+        updateFabState();  // Update mobile FAB button state
     }
 
     function updateStats() {
@@ -2187,14 +2764,9 @@ Cmd-click: complete lasso</div>
 
         // Update button text
         el.toggle3DBtn.textContent = use3D ? '2D' : '3D';
+        el.toggle3DBtn.classList.toggle('active', use3D);
 
-        // Show/hide 3D option buttons
-        el.perspectiveBtn.style.display = use3D ? 'inline-block' : 'none';
-        el.preset3DBtn.style.display = use3D ? 'inline-block' : 'none';
-
-        // Enable/disable rotation buttons
-        el.rotateLeftBtn.disabled = !use3D;
-        el.rotateRightBtn.disabled = !use3D;
+        // Enable/disable auto-rotate button
         el.autoRotateBtn.disabled = !use3D;
 
         // Disable dimer view buttons in 3D mode
@@ -3387,10 +3959,100 @@ Cmd-click: complete lasso</div>
     }
 
     // ========================================================================
+    // URL State Serialization (Share Link)
+    // ========================================================================
+
+    // URL-safe base64 encoding/decoding
+    function toUrlSafeBase64(str) {
+        return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+    function fromUrlSafeBase64(str) {
+        str = str.replace(/-/g, '+').replace(/_/g, '/');
+        while (str.length % 4) str += '=';
+        return atob(str);
+    }
+
+    function serializeStateToUrl() {
+        const params = new URLSearchParams();
+
+        // Encode cells as compact format: x1,y1;x2,y2;...
+        const cells = Array.from(activeCells.values());
+        if (cells.length > 0) {
+            const cellsStr = cells.map(c => `${c.x},${c.y}`).join(';');
+            params.set('c', toUrlSafeBase64(cellsStr));
+        }
+
+        // Add settings (only if non-default)
+        if (colorPaletteIndex !== 0) params.set('p', colorPaletteIndex);
+        if (Math.abs(zoom - 1.0) > 0.01) params.set('z', Math.round(zoom * 100));
+        if (!el.showGridCheckbox.checked) params.set('g', '0');
+
+        return window.location.origin + window.location.pathname + '?' + params.toString();
+    }
+
+    function loadStateFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        if (!params.has('c')) return false;
+
+        try {
+            // Decode cells
+            const cellsStr = fromUrlSafeBase64(params.get('c'));
+            const cellPairs = cellsStr.split(';');
+
+            activeCells.clear();
+            for (const pair of cellPairs) {
+                const [x, y] = pair.split(',').map(Number);
+                if (!isNaN(x) && !isNaN(y)) {
+                    activeCells.set(`${x},${y}`, { x, y });
+                }
+            }
+
+            // Apply settings
+            if (params.has('p')) {
+                const idx = parseInt(params.get('p'));
+                if (idx >= 0 && idx < colorPalettes.length) {
+                    colorPaletteIndex = idx;
+                }
+            }
+            if (params.has('z')) {
+                zoom = parseInt(params.get('z')) / 100;
+            }
+            if (params.has('g')) {
+                el.showGridCheckbox.checked = params.get('g') !== '0';
+            }
+
+            return true;
+        } catch (err) {
+            console.error('Failed to load state from URL:', err);
+            return false;
+        }
+    }
+
+    function copyShareLink() {
+        const url = serializeStateToUrl();
+        navigator.clipboard.writeText(url).then(() => {
+            el.linkCopied.style.display = 'inline';
+            setTimeout(() => el.linkCopied.style.display = 'none', 2000);
+        }).catch(err => {
+            console.error('Failed to copy link:', err);
+            // Fallback: select text in a temporary input
+            const input = document.createElement('input');
+            input.value = url;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            el.linkCopied.style.display = 'inline';
+            setTimeout(() => el.linkCopied.style.display = 'none', 2000);
+        });
+    }
+
+    // ========================================================================
     // Initialize
     // ========================================================================
 
     function initPaletteSelect() {
+        // Populate hidden select (accessibility fallback)
         el.paletteSelect.innerHTML = '';
         for (let i = 0; i < colorPalettes.length; i++) {
             const option = document.createElement('option');
@@ -3398,6 +4060,63 @@ Cmd-click: complete lasso</div>
             option.textContent = colorPalettes[i].name;
             if (i === colorPaletteIndex) option.selected = true;
             el.paletteSelect.appendChild(option);
+        }
+
+        // Create visual palette picker grid
+        if (el.palettePickerGrid) {
+            el.palettePickerGrid.innerHTML = '';
+            for (let i = 0; i < colorPalettes.length; i++) {
+                const palette = colorPalettes[i];
+                const item = document.createElement('div');
+                item.className = 'palette-item' + (i === colorPaletteIndex ? ' active' : '');
+                item.setAttribute('role', 'option');
+                item.setAttribute('aria-selected', i === colorPaletteIndex ? 'true' : 'false');
+                item.setAttribute('title', palette.name);
+                item.dataset.index = i;
+
+                // Create 4 color swatches (2x2 grid)
+                const colors = palette.colors || [];
+                for (let c = 0; c < 4; c++) {
+                    const swatch = document.createElement('div');
+                    swatch.className = 'swatch';
+                    swatch.style.backgroundColor = colors[c] || '#ccc';
+                    item.appendChild(swatch);
+                }
+
+                item.addEventListener('click', () => {
+                    selectPalette(i);
+                });
+
+                el.palettePickerGrid.appendChild(item);
+            }
+        }
+    }
+
+    function selectPalette(index) {
+        colorPaletteIndex = index;
+        colorPermutation = 0;  // Reset permutation when changing palette
+        el.paletteSelect.value = index;
+
+        // Update visual picker
+        if (el.palettePickerGrid) {
+            const items = el.palettePickerGrid.querySelectorAll('.palette-item');
+            items.forEach((item, i) => {
+                item.classList.toggle('active', i === index);
+                item.setAttribute('aria-selected', i === index ? 'true' : 'false');
+            });
+        }
+
+        draw();
+        update3DView();
+    }
+
+    function updatePalettePickerGrid() {
+        if (el.palettePickerGrid) {
+            const items = el.palettePickerGrid.querySelectorAll('.palette-item');
+            items.forEach((item, i) => {
+                item.classList.toggle('active', i === colorPaletteIndex);
+                item.setAttribute('aria-selected', i === colorPaletteIndex ? 'true' : 'false');
+            });
         }
     }
 
@@ -3902,23 +4621,15 @@ Cmd-click: complete lasso</div>
 
         // Display options
         el.paletteSelect.addEventListener('change', () => {
-            colorPaletteIndex = parseInt(el.paletteSelect.value);
-            draw();
-            update3DView();
+            selectPalette(parseInt(el.paletteSelect.value));
         });
 
         el.prevPaletteBtn.addEventListener('click', () => {
-            colorPaletteIndex = (colorPaletteIndex - 1 + colorPalettes.length) % colorPalettes.length;
-            el.paletteSelect.value = colorPaletteIndex;
-            draw();
-            update3DView();
+            selectPalette((colorPaletteIndex - 1 + colorPalettes.length) % colorPalettes.length);
         });
 
         el.nextPaletteBtn.addEventListener('click', () => {
-            colorPaletteIndex = (colorPaletteIndex + 1) % colorPalettes.length;
-            el.paletteSelect.value = colorPaletteIndex;
-            draw();
-            update3DView();
+            selectPalette((colorPaletteIndex + 1) % colorPalettes.length);
         });
 
         el.permuteColorsBtn.addEventListener('click', () => {
@@ -3965,11 +4676,16 @@ Cmd-click: complete lasso</div>
                 importJson(e.target.files[0]);
             }
         });
+        el.copyLinkBtn.addEventListener('click', copyShareLink);
 
         // 3D View Controls
         el.toggle3DBtn.addEventListener('click', () => {
             const switching3D = !is3DView;
             setViewMode(switching3D);
+            // Show/hide 3D controls in styling panel
+            if (el.view3DControlsRow) {
+                el.view3DControlsRow.style.display = switching3D ? 'flex' : 'none';
+            }
             // Reset 2D view when switching back to 2D
             if (!switching3D) {
                 resetView();
@@ -4024,20 +4740,6 @@ Cmd-click: complete lasso</div>
             redrawView();
         });
 
-        el.rotateLeftBtn.addEventListener('click', () => {
-            if (renderer3D && is3DView) {
-                renderer3D.rotateHorizontal(-15);
-                updateHoleOverlayPositions();
-            }
-        });
-
-        el.rotateRightBtn.addEventListener('click', () => {
-            if (renderer3D && is3DView) {
-                renderer3D.rotateHorizontal(15);
-                updateHoleOverlayPositions();
-            }
-        });
-
         el.autoRotateBtn.addEventListener('click', () => {
             if (renderer3D && is3DView) {
                 renderer3D.autoRotate = !renderer3D.autoRotate;
@@ -4071,11 +4773,93 @@ Cmd-click: complete lasso</div>
 
         // Window resize
         window.addEventListener('resize', draw);
+
+        // ================================================================
+        // Mobile Bottom Sheet Drawer
+        // ================================================================
+        if (el.drawerHandle && el.controlsPanel) {
+            let drawerStartY = 0;
+            let drawerStartTranslateY = 0;
+            let isDragging = false;
+
+            const getDrawerTranslateY = () => {
+                const transform = el.controlsPanel.style.transform;
+                const match = transform.match(/translateY\(([^)]+)\)/);
+                if (match) {
+                    const value = match[1];
+                    if (value.includes('calc')) {
+                        // For calc(100% - 60px), return the collapsed position
+                        return el.controlsPanel.offsetHeight - 60;
+                    }
+                    return parseFloat(value) || 0;
+                }
+                return 0;
+            };
+
+            el.drawerHandle.addEventListener('touchstart', (e) => {
+                if (window.innerWidth >= 992) return;
+                isDragging = true;
+                drawerStartY = e.touches[0].clientY;
+                drawerStartTranslateY = el.controlsPanel.classList.contains('expanded') ? 0 : el.controlsPanel.offsetHeight - 60;
+                el.controlsPanel.style.transition = 'none';
+            }, { passive: true });
+
+            el.drawerHandle.addEventListener('touchmove', (e) => {
+                if (!isDragging || window.innerWidth >= 992) return;
+                const deltaY = e.touches[0].clientY - drawerStartY;
+                const newTranslateY = Math.max(0, Math.min(el.controlsPanel.offsetHeight - 60, drawerStartTranslateY + deltaY));
+                el.controlsPanel.style.transform = `translateY(${newTranslateY}px)`;
+            }, { passive: true });
+
+            const endDrag = (e) => {
+                if (!isDragging || window.innerWidth >= 992) return;
+                isDragging = false;
+                el.controlsPanel.style.transition = '';
+
+                const currentTranslateY = getDrawerTranslateY();
+                const threshold = el.controlsPanel.offsetHeight * 0.3;
+
+                if (currentTranslateY < threshold) {
+                    el.controlsPanel.classList.add('expanded');
+                    el.controlsPanel.style.transform = '';
+                } else {
+                    el.controlsPanel.classList.remove('expanded');
+                    el.controlsPanel.style.transform = '';
+                }
+            };
+
+            el.drawerHandle.addEventListener('touchend', endDrag, { passive: true });
+            el.drawerHandle.addEventListener('touchcancel', endDrag, { passive: true });
+
+            // Click to toggle on drawer handle
+            el.drawerHandle.addEventListener('click', () => {
+                if (window.innerWidth >= 992) return;
+                el.controlsPanel.classList.toggle('expanded');
+            });
+        }
+
+        // ================================================================
+        // Floating Action Button (Mobile - Perfect Sample)
+        // ================================================================
+        if (el.sampleFab) {
+            el.sampleFab.addEventListener('click', () => {
+                if (!el.cftpBtn.disabled && isValid && !hasHoles) {
+                    el.cftpBtn.click();
+                }
+            });
+        }
+    }
+
+    // Update FAB state based on region validity
+    function updateFabState() {
+        if (el.sampleFab) {
+            el.sampleFab.disabled = !isValid || hasHoles || !wasmReady;
+        }
     }
 
     initPaletteSelect();
     setupEventListeners();
-    draw();  // Draw empty canvas
+    draw();  // Draw empty canvas (URL state loaded in onRuntimeInitialized)
 
 })();
 </script>
