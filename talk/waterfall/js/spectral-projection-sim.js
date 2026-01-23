@@ -711,22 +711,23 @@
         hideElement('sp-sine');
         hideElement('sp-refs');
         hideElement('sp-sim-container');
+        hideElement('sp-frozen-label');
         currentSimIdx = 0;
+        // Initialize Three.js and start sampling both on slide load
+        initThreeJS();
+        if (!sampledData[0].sampling && !sampledData[0].sampled) {
+            setTimeout(() => sampleQRacah(0), 100);
+        }
+        if (!sampledData[1].sampling && !sampledData[1].sampled) {
+            setTimeout(() => sampleQRacah(1), 200);
+        }
     }
 
     function onStep(step) {
-        // Step 1: Show limit and sine kernel, start sampling both in background
+        // Step 1: Show limit and sine kernel
         if (step >= 1) {
             showElement('sp-limit');
             showElement('sp-sine');
-            // Initialize Three.js and start sampling both
-            initThreeJS();
-            if (!sampledData[0].sampling && !sampledData[0].sampled) {
-                setTimeout(() => sampleQRacah(0), 100);
-            }
-            if (!sampledData[1].sampling && !sampledData[1].sampled) {
-                setTimeout(() => sampleQRacah(1), 200);
-            }
         }
         // Step 2: Show references
         if (step >= 2) showElement('sp-refs');
@@ -736,9 +737,10 @@
             displaySimulation(0);
             startRenderLoop();
         }
-        // Step 4: Swap to second simulation (q=0.8)
+        // Step 4: Swap to second simulation (q=0.9) and show frozen label
         if (step >= 4) {
             displaySimulation(1);
+            showElement('sp-frozen-label');
         }
     }
 
@@ -746,9 +748,11 @@
         if (step < 4 && step >= 3) {
             // Back to first simulation
             displaySimulation(0);
+            hideElement('sp-frozen-label');
         }
         if (step < 3) {
             hideElement('sp-sim-container');
+            hideElement('sp-frozen-label');
             stopRenderLoop();
         }
         if (step < 2) hideElement('sp-refs');

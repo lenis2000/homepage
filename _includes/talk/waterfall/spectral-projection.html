@@ -68,9 +68,11 @@
             </div>
 
             <!-- Single simulation container - swaps between q=0.97 and q=0.8 on builds -->
-            <div id="sp-sim-container" style="display: flex; gap: 1.5vw; margin-top: auto; opacity: 0; transition: opacity 0.3s; align-items: flex-end;">
+            <div id="sp-sim-container" style="display: flex; gap: 1.5vw; margin-top: auto; opacity: 0; transition: opacity 0.3s; align-items: flex-end; position: relative;">
                 <canvas id="sp-3d-canvas" width="500" height="420" style="height: 36vh; width: auto; background: #ffffff;"></canvas>
                 <canvas id="sp-slice-canvas" width="500" height="420" style="height: 36vh; width: auto; background: #ffffff;"></canvas>
+                <!-- Frozen label - appears on step 4, upper right of 2D canvas -->
+                <span id="sp-frozen-label" style="position: absolute; top: 1vh; right: 0.5vw; background: rgba(35, 45, 75, 0.9); color: white; padding: 0.3vh 0.8vw; font-size: clamp(0.9rem, 1.5vw, 1.2rem); font-weight: bold; border-radius: 4px; opacity: 0; transition: opacity 0.3s;">frozen</span>
             </div>
         </div>
     </div>

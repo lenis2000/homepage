@@ -9,7 +9,7 @@
     const KAPPA = 3.0;
 
     // Two simulations with different q values
-    const Q_VALUES = [0.985, 0.9];
+    const Q_VALUES = [0.985, 0.85];
 
     // UVA Colors
     const colors = {
@@ -647,11 +647,9 @@
         data.sampled = true;
         data.sampling = false;
 
+        // Auto-display when sampling completes for current sim
         if (simIdx === currentSimIdx) {
-            const container = document.getElementById('vs-sim-container');
-            if (container && container.style.opacity === '1') {
-                displaySimulation(simIdx);
-            }
+            displaySimulation(simIdx);
         }
     }
 
@@ -678,45 +676,40 @@
     }
 
     function reset() {
-        hideElement('vs-sim-container');
         hideElement('vs-answer');
         hideElement('vs-rest');
+        hideElement('vs-frozen-label');
         currentSimIdx = 0;
+        // Initialize and start sampling immediately on slide enter
+        initThreeJS();
+        if (!sampledData[0].sampling && !sampledData[0].sampled) {
+            setTimeout(() => sampleQRacah(0), 100);
+        }
+        if (!sampledData[1].sampling && !sampledData[1].sampled) {
+            setTimeout(() => sampleQRacah(1), 200);
+        }
+        displaySimulation(0);
+        startRenderLoop();
     }
 
     function onStep(step) {
-        // Step 1: Show sim with q=0.985, start sampling both
+        // Step 1: Swap to q=0.85 and show frozen label
         if (step >= 1) {
-            initThreeJS();
-            if (!sampledData[0].sampling && !sampledData[0].sampled) {
-                setTimeout(() => sampleQRacah(0), 100);
-            }
-            if (!sampledData[1].sampling && !sampledData[1].sampled) {
-                setTimeout(() => sampleQRacah(1), 200);
-            }
-            showElement('vs-sim-container');
-            displaySimulation(0);
-            startRenderLoop();
-        }
-        // Step 2: Swap to q=0.9
-        if (step >= 2) {
             displaySimulation(1);
+            showElement('vs-frozen-label');
         }
-        // Step 3: Show answer
-        if (step >= 3) showElement('vs-answer');
-        // Step 4: Show rest
-        if (step >= 4) showElement('vs-rest');
+        // Step 2: Show answer
+        if (step >= 2) showElement('vs-answer');
+        // Step 3: Show rest
+        if (step >= 3) showElement('vs-rest');
     }
 
     function onStepBack(step) {
-        if (step < 4) hideElement('vs-rest');
-        if (step < 3) hideElement('vs-answer');
-        if (step < 2 && step >= 1) {
-            displaySimulation(0);
-        }
+        if (step < 3) hideElement('vs-rest');
+        if (step < 2) hideElement('vs-answer');
         if (step < 1) {
-            hideElement('vs-sim-container');
-            stopRenderLoop();
+            displaySimulation(0);
+            hideElement('vs-frozen-label');
         }
     }
 
@@ -724,15 +717,12 @@
         if (window.slideEngine) {
             window.slideEngine.registerSimulation(slideId, {
                 start() {
-                    const container = document.getElementById('vs-sim-container');
-                    if (container && container.style.opacity === '1') {
-                        startRenderLoop();
-                    }
+                    startRenderLoop();
                 },
                 pause() {
                     stopRenderLoop();
                 },
-                steps: 4,
+                steps: 3,
                 onStep,
                 onStepBack,
                 onSlideEnter() { reset(); },
