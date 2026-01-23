@@ -178,3 +178,110 @@ activeTriangles.set(key, { n: nNum, j: jNum, type: 1 });  // or type: 2
 const type = parseInt(typeStr);
 if (type === 1 || type === 2) { ... }
 ```
+
+## UI/UX Patterns for Simulation Pages
+
+### Page Layout Structure (CSS Phases)
+
+**Phase 1 - Two-Column Desktop Layout:**
+```css
+.simulation-layout { display: flex; max-width: 1400px; }
+.controls-panel { width: 340px; position: sticky; top: 80px; }
+.visualization-panel { flex: 1 1 auto; }
+```
+
+**Phase 2 - Collapsible Accordion Sections:**
+Use `<details class="control-section">` with `<summary>` for collapsible sections. Summary headers are UPPERCASE, 12px, 600 weight.
+
+**Phase 3 - Visual Enhancements:**
+- Palette picker grid: `.palette-picker` with `.palette-item` swatches
+- FAB: `.sample-fab` with orange gradient, mobile-only
+
+**Phase 4 - 3D Controls:** Conditional visibility based on view mode
+
+**Phase 5 - Export Section Grouping:**
+```html
+<div class="export-group">
+  <span class="export-group-label">Images</span>
+  <button class="btn-utility">PNG</button>
+</div>
+<div class="export-divider"></div>
+```
+
+**Phase 6 - WCAG AA Contrast Fixes:** Explicit colors for stat labels and kbd elements
+
+### Mobile Bottom Sheet Drawer
+```css
+@media (max-width: 991px) {
+  .controls-panel {
+    position: fixed; bottom: 0;
+    transform: translateY(calc(100% - 60px));
+  }
+  .controls-panel.expanded { transform: translateY(0); }
+}
+```
+Include drawer handle with swipe hint: `.drawer-handle` and `.drawer-handle-hint`
+
+### Button Hierarchy
+- `.btn-action` - Orange gradient, primary actions (Sample, Generate)
+- `.btn-utility` - Neutral, for export/secondary actions
+
+### Stats Bar Pattern
+```html
+<div class="stats-inline">
+  <div class="stat"><span class="stat-label">Vertices</span><span class="stat-value" id="count">0</span></div>
+</div>
+```
+
+**Help button placement:** Place `?` button in the view overlay (next to 3D/2D toggle), not hidden in collapsed sections. Users expect help to be visible.
+
+**Combined Help modal:** Include both drawing tools help AND keyboard shortcuts in one modal with section headers:
+```html
+<h4 style="margin: 12px 0 8px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #666;">Drawing Tools</h4>
+<!-- tool icons and descriptions -->
+<h4 style="margin: 16px 0 8px 0; ...">Keyboard Shortcuts</h4>
+<!-- kbd shortcuts -->
+```
+
+**FAB state changes:** When app state changes (e.g., Glauber dynamics starts), update FAB icon and tooltip:
+```javascript
+// When Glauber starts
+fabBtn.innerHTML = '⏸';
+fabBtn.setAttribute('data-tooltip', 'Stop (G)');
+// When Glauber stops
+fabBtn.innerHTML = '▶';
+fabBtn.setAttribute('data-tooltip', 'Sample (S)');
+```
+
+**FAB tooltip CSS:** Use `::before` pseudo-element with `data-tooltip` attribute:
+```css
+.sample-fab::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  right: 100%;
+  margin-right: 12px;
+  /* ... positioning and styling */
+  opacity: 0;
+  visibility: hidden;
+}
+.sample-fab:hover::before {
+  opacity: 1;
+  visibility: visible;
+}
+```
+
+**kbd element contrast:** Use explicit color values, not CSS variables, for reliable contrast in light mode:
+```css
+.keyboard-help-content kbd {
+  background: #e8e8e8;
+  border: 1px solid #bbb;
+  color: #333;
+  box-shadow: 0 1px 0 #999;
+}
+[data-theme="dark"] .keyboard-help-content kbd {
+  background: #444;
+  border-color: #666;
+  color: #e8e8e8;
+  box-shadow: 0 1px 0 #222;
+}
+```
