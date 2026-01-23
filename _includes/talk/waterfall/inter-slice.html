@@ -1,44 +1,70 @@
 <section class="slide slide-top" id="inter-slice" data-title="Inter-slice Operators">
     <h2 class="slide-title">Inter-slice Operators and Their Limits</h2>
 
-    <div style="display: flex; flex-direction: column; gap: 1.2vh; margin-top: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); width: 95%;">
-        <!-- Physics approach -->
-        <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.8vh 1.2vw;">
-            <strong style="color: var(--slide-navy);">Physics approach:</strong>
-            If we put the physics hat on, we can get the answer for the <strong>barcode kernel</strong>
+    <div style="display: grid; grid-template-columns: 38vw 56vw; gap: 2vw; margin-top: 1vh; font-size: clamp(1.1rem, 1.9vw, 1.5rem);">
+        <!-- Left column: Approach -->
+        <div style="display: flex; flex-direction: column; gap: 1.2vh;">
+            <ul style="margin: 0; padding-left: 1.2em; line-height: 1.6;">
+                <li>Put the <strong>physics hat</strong> on.</li>
+                <li>Diagonalize \(\mathfrak{U}\) into orthonormal eigenfunctions</li>
+                <li>Pretend that the inverse operator makes sense, and write down the <strong>barcode density</strong> \(\rho(t)\)</li>
+            </ul>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1vw; margin-top: 0.5vh;">
+                <div style="text-align: left;">
+                    We get a guess
+                </div>
+                <div style="margin-top: 0.3vh; text-align: center; font-size: clamp(1rem, 1.7vw, 1.35rem);">
+                    \(\displaystyle \rho(t) = \mathfrak{a}\bigl(1-\tfrac{t}{2}\bigr) \sum_{n \in \frac{1}{2}\mathbb{Z}_{\geq 0}} \frac{-q^{-n} \mathcal{F}_n^t(0) \mathcal{F}_n^{t-1}(0)}{\|\mathcal{F}_n\|_{\ell^2(\mathbb{Z})}^2}\)
+                </div>
+            </div>
+
+            <ul style="margin: 0; padding-left: 1.2em;">
+                <li><strong>How good is the guess?</strong></li>
+            </ul>
         </div>
 
-        <!-- Three-term recurrence -->
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
-            <strong style="color: var(--slide-accent);">Three-term recurrence:</strong>
-            <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.2rem, 2vw, 1.6rem);">
-                \(\displaystyle \mathfrak{a}(x) \mathcal{F}_n\left(x - \frac{1}{2}\right) + \mathfrak{a}\left(x + \frac{1}{2}\right) \mathcal{F}_n\left(x + \frac{1}{2}\right) = -q^n \mathcal{F}_n(x)\)
+        <!-- Right column: Formulas -->
+        <div style="display: flex; flex-direction: column; gap: 1vh;">
+            <!-- Eigenfunction formula -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1vw;">
+                <div style="text-align: center; font-size: clamp(1rem, 1.7vw, 1.35rem);">
+                    \(\displaystyle \mathcal{F}_n(x) := \sqrt{1 - \kappa^{-2} q^{-2x}} \sum_{i=-n}^{n} \frac{(-1)^{n+i} q^{-i/2}}{(q;q)_{n-i}(q;q)_{n+i}} \cdot \frac{1}{\theta_{\sqrt{q}}\bigl(|\kappa| q^{x+i+\frac{1}{2}}\bigr)}\)
+                </div>
             </div>
-            <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.1rem, 1.8vw, 1.4rem);">
-                \(\displaystyle \mathfrak{a}(x) := \left[\frac{-\kappa^2 q^{2x-1}}{(1-\kappa^2 q^{2x})(1-\kappa^2 q^{2x-1})}\right]^{1/2}, \qquad x \in \tfrac{1}{2}\mathbb{Z}\)
-            </div>
-        </div>
 
-        <!-- Eigenfunction formula -->
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
-            <strong style="color: var(--slide-accent);">Eigenfunctions \(\mathcal{F}_n(x)\):</strong>
-            <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.1rem, 1.8vw, 1.4rem);">
-                \(\displaystyle \mathcal{F}_n(x) := \sqrt{1 - \kappa^{-2} q^{-2x}} \sum_{i=-n}^{n} \frac{(-1)^{n+i} q^{-i/2}}{(q;q)_{n-i}(q;q)_{n+i}} \cdot \frac{1}{\theta_{\sqrt{q}}\left(|\kappa| q^{x+i+\frac{1}{2}}\right)}\)
+            <!-- Shifted eigenfunction -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1vw;">
+                <div style="text-align: center; font-size: clamp(1.1rem, 1.9vw, 1.5rem);">
+                    \(\displaystyle \mathcal{F}_n^t(x) := \mathcal{F}_n\bigl(x - \tfrac{t-1}{2}\bigr)\)
+                </div>
             </div>
-            <div style="margin-top: 0.3vh; color: var(--slide-muted); font-size: 0.85em; text-align: center;">
-                Involves <strong>theta functions</strong> and <strong>q-factorials</strong>
-            </div>
-        </div>
-    </div>
 
-    <!-- Density formula at bottom -->
-    <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; margin-top: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-        <strong style="color: var(--slide-navy);">Barcode density:</strong>
-        <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.2rem, 2vw, 1.6rem);">
-            \(\displaystyle \rho(t) = \mathfrak{a}\left(1-\frac{t}{2}\right) \sum_{n \in \frac{1}{2}\mathbb{Z}_{\geq 0}} \frac{-q^{-n} \mathcal{F}_n^t(0) \mathcal{F}_n^{t-1}(0)}{\|\mathcal{F}_n\|_{\ell^2(\mathbb{Z})}^2}\)
-        </div>
-        <div style="margin-top: 0.3vh; color: var(--slide-muted); font-size: 0.9em; text-align: center;">
-            where \(\mathcal{F}_n^t(x) := \mathcal{F}_n\left(x - \frac{t-1}{2}\right)\)
+            <!-- U^barcode action -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1vw;">
+                <div style="text-align: center; font-size: clamp(1.1rem, 1.9vw, 1.5rem);">
+                    \(\displaystyle (\mathfrak{U}^{\mathrm{barcode}}_t \mathcal{F}_n^t)(x) = -q^n \mathcal{F}_n^{t+1}(x)\)
+                </div>
+            </div>
+
+            <!-- Domain -->
+            <div style="text-align: center; font-size: clamp(1rem, 1.7vw, 1.35rem); color: var(--slide-muted);">
+                \(t, x \in \mathbb{Z}, \quad n \in \tfrac{1}{2}\mathbb{Z}_{\geq 0}\)
+            </div>
+
+            <!-- a(x) definition -->
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.6vh 1vw;">
+                <div style="text-align: center; font-size: clamp(1rem, 1.7vw, 1.35rem);">
+                    \(\displaystyle \mathfrak{a}(x) := \left[\frac{-\kappa^2 q^{2x-1}}{(1-\kappa^2 q^{2x})(1-\kappa^2 q^{2x-1})}\right]^{1/2}\)
+                </div>
+            </div>
+
+            <!-- Theta function definition -->
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.6vh 1vw;">
+                <div style="text-align: center; font-size: clamp(1rem, 1.7vw, 1.35rem);">
+                    \(\displaystyle \theta_{\sqrt{q}}(z) := \sum_{k=-\infty}^{\infty} q^{k^2/2} z^k = (q;q)_\infty (-z;q)_\infty (-q/z;q)_\infty\)
+                </div>
+            </div>
         </div>
     </div>
 </section>

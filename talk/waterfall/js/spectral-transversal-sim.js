@@ -98,12 +98,6 @@
         controls.enablePan = true;
         controls.enableZoom = true;
 
-        // Log 3D camera position on change
-        controls.addEventListener('change', () => {
-            console.log('3D camera pos:', camera.position.x.toFixed(1), camera.position.y.toFixed(1), camera.position.z.toFixed(1),
-                        '| target:', controls.target.x.toFixed(1), controls.target.y.toFixed(1), controls.target.z.toFixed(1));
-        });
-
         // Lighting
         scene.add(new THREE.AmbientLight(0xffffff, 0.4));
         const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
@@ -534,8 +528,7 @@
             slice2D.scale = newScale;
 
             drawHorizontalSlice(sliceData);
-            log2DCamera();
-        });
+        }, { passive: false });
 
         canvas.addEventListener('mousedown', (e) => {
             slice2D.isDragging = true;
@@ -552,17 +545,10 @@
             slice2D.lastX = e.clientX;
             slice2D.lastY = e.clientY;
             drawHorizontalSlice(sliceData);
-            log2DCamera();
         });
 
         canvas.addEventListener('mouseup', () => { slice2D.isDragging = false; });
         canvas.addEventListener('mouseleave', () => { slice2D.isDragging = false; });
-    }
-
-    function log2DCamera() {
-        console.log('2D slice camera - scale:', slice2D.scale.toFixed(3),
-                    '| offsetX:', slice2D.offsetX.toFixed(1),
-                    '| offsetY:', slice2D.offsetY.toFixed(1));
     }
 
     function set2DCamera(scale, offsetX, offsetY) {
@@ -778,17 +764,69 @@
         startRenderLoop();
     }
 
-    function onStep(step) {
-        // Step 1: Picture zoom
-        if (step >= 1) {
-            // Zoom 3D camera
+    // Zoom animation state
+    let zoomAnimationId = null;
+    const ZOOM_DURATION = 3000; // ms
+
+    // Initial camera positions
+    const initialCam3D = { pos: {x: 140, y: 80, z: 140}, target: {x: 40, y: 40, z: 40} };
+    const zoomedCam3D = { pos: {x: 61.7, y: 35.0, z: 60.1}, target: {x: 40.0, y: 40.0, z: 40.0} };
+    const initialCam2D = { scale: 1, offsetX: 0, offsetY: 0 };
+    const zoomedCam2D = { scale: 5.504, offsetX: -969.0, offsetY: -697.7 };
+
+    function animateZoom(toZoomed) {
+        if (zoomAnimationId) cancelAnimationFrame(zoomAnimationId);
+
+        const startTime = performance.now();
+        const from3D = toZoomed ? initialCam3D : zoomedCam3D;
+        const to3D = toZoomed ? zoomedCam3D : initialCam3D;
+        const from2D = toZoomed ? initialCam2D : zoomedCam2D;
+        const to2D = toZoomed ? zoomedCam2D : initialCam2D;
+
+        // Capture current positions for smooth transition
+        const cur3DPos = camera ? { x: camera.position.x, y: camera.position.y, z: camera.position.z } : from3D.pos;
+        const cur3DTgt = controls ? { x: controls.target.x, y: controls.target.y, z: controls.target.z } : from3D.target;
+        const cur2D = { scale: slice2D.scale, offsetX: slice2D.offsetX, offsetY: slice2D.offsetY };
+
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+
+        function animate() {
+            const elapsed = performance.now() - startTime;
+            const rawT = Math.min(elapsed / ZOOM_DURATION, 1);
+            const t = easeInOutCubic(rawT);
+
+            // Lerp 3D camera
             if (camera && controls) {
-                camera.position.set(61.7, 35.0, 60.1);
-                controls.target.set(40.0, 40.0, 40.0);
+                camera.position.x = cur3DPos.x + (to3D.pos.x - cur3DPos.x) * t;
+                camera.position.y = cur3DPos.y + (to3D.pos.y - cur3DPos.y) * t;
+                camera.position.z = cur3DPos.z + (to3D.pos.z - cur3DPos.z) * t;
+                controls.target.x = cur3DTgt.x + (to3D.target.x - cur3DTgt.x) * t;
+                controls.target.y = cur3DTgt.y + (to3D.target.y - cur3DTgt.y) * t;
+                controls.target.z = cur3DTgt.z + (to3D.target.z - cur3DTgt.z) * t;
                 controls.update();
             }
-            // Zoom 2D slice
-            set2DCamera(5.504, -969.0, -697.7);
+
+            // Lerp 2D camera
+            slice2D.scale = cur2D.scale + (to2D.scale - cur2D.scale) * t;
+            slice2D.offsetX = cur2D.offsetX + (to2D.offsetX - cur2D.offsetX) * t;
+            slice2D.offsetY = cur2D.offsetY + (to2D.offsetY - cur2D.offsetY) * t;
+            if (sliceData) drawHorizontalSlice(sliceData);
+
+            if (rawT < 1) {
+                zoomAnimationId = requestAnimationFrame(animate);
+            } else {
+                zoomAnimationId = null;
+            }
+        }
+        animate();
+    }
+
+    function onStep(step) {
+        // Step 1: Picture zoom (smooth)
+        if (step === 1) {
+            animateZoom(true);
         }
         // Step 2: Show converge pane
         if (step >= 2) showElement('st-converge');
@@ -803,16 +841,8 @@
         if (step < 3) hideElement('st-bounded');
         if (step < 2) hideElement('st-converge');
         if (step < 1) {
-            // Reset to initial camera positions
-            slice2D.scale = 1;
-            slice2D.offsetX = 0;
-            slice2D.offsetY = 0;
-            if (sliceData) drawHorizontalSlice(sliceData);
-            if (camera && controls) {
-                camera.position.set(140, 80, 140);
-                controls.target.set(40, 40, 40);
-                controls.update();
-            }
+            // Animate back to initial camera positions
+            animateZoom(false);
         }
     }
 
