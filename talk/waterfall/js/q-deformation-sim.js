@@ -13,7 +13,6 @@
     const slider = document.getElementById('q-slider');
     const qValueSpan = document.getElementById('q-value');
     const formulaDisplay = document.getElementById('q-formula-display');
-    const qBinomialEl = document.getElementById('q-binomial-formula');
 
     const A = 4, B = 3;
 
@@ -54,8 +53,7 @@
     const allPaths = generateAllPaths(A, B);
     const pathAreas = allPaths.map(calcArea);
 
-    // Coefficients of the q-binomial polynomial (pre-computed)
-    // 1 + q + 2q^2 + 3q^3 + 4q^4 + 4q^5 + 5q^6 + 4q^7 + 4q^8 + 3q^9 + 2q^10 + q^11 + q^12
+    // q-binomial coefficients for (7 choose 4)_q
     const qBinomCoeffs = [1, 1, 2, 3, 4, 4, 5, 4, 4, 3, 2, 1, 1];
 
     function evalQBinomial(q) {
@@ -65,23 +63,6 @@
             sum += qBinomCoeffs[i] * Math.pow(q, i);
         }
         return sum;
-    }
-
-    function updateQBinomialFormula(q) {
-        const val = evalQBinomial(q);
-        if (Math.abs(q - 1) < 0.01) {
-            qBinomialEl.innerHTML = `\\(\\displaystyle\\binom{7}{4}_q = 1 + q + 2q^2 + 3q^3 + 4q^4 + 4q^5 + 5q^6\\)<br>\\(\\phantom{\\binom{7}{4}_q =} +\\, 4q^7 + 4q^8 + 3q^9 + 2q^{10} + q^{11} + q^{12}\\)<br>At \\(q=1\\): <strong style="color: var(--slide-accent);">35</strong> paths`;
-        } else {
-            qBinomialEl.innerHTML = `\\(\\displaystyle\\binom{7}{4}_q = 1 + q + 2q^2 + 3q^3 + 4q^4 + 4q^5 + 5q^6\\)<br>\\(\\phantom{\\binom{7}{4}_q =} +\\, 4q^7 + 4q^8 + 3q^9 + 2q^{10} + q^{11} + q^{12}\\)<br>At \\(q=${q.toFixed(2)}\\): <strong style="color: var(--slide-accent);">${val.toFixed(2)}</strong>`;
-        }
-        if (window.renderMathInElement) {
-            renderMathInElement(qBinomialEl, {
-                delimiters: [
-                    {left: "\\(", right: "\\)", display: false},
-                    {left: "$$", right: "$$", display: true}
-                ]
-            });
-        }
     }
 
     function drawAreaExample() {
@@ -251,10 +232,8 @@
         const q = parseFloat(slider.value);
         qValueSpan.textContent = q.toFixed(2);
         drawAllPaths(q);
-        updateQBinomialFormula(q);
 
         // Update formula display
-        const qBinom = evalQBinomial(q);
         if (Math.abs(q - 1) < 0.01) {
             formulaDisplay.textContent = 'q = 1: ordinary binomial (35 paths)';
         } else if (q < 1) {
@@ -268,7 +247,6 @@
 
     // Initial draw
     drawAreaExample();
-    updateQBinomialFormula(1);
     update();
 
     // Step q values: step 0=1 (uniform), step 1=0.9, step 2=0.5 (favor low area), step 3=1.5 (favor high area)
