@@ -12,7 +12,7 @@
     const N_param = 8;
     const T_param = 16;
     const S_target = 8;
-    const Q_VALUE = 0.5;
+    const Q_VALUE = 0.2;
     const KAPPA = 3.0;
 
     // UVA Colors
@@ -108,13 +108,6 @@
         controls.enablePan = true;
         controls.enableZoom = true;
 
-        // Log camera position on change
-        controls.addEventListener('change', () => {
-            console.log('Camera pos:', camera.position.x.toFixed(1), camera.position.y.toFixed(1), camera.position.z.toFixed(1),
-                        '| Target:', controls.target.x.toFixed(1), controls.target.y.toFixed(1), controls.target.z.toFixed(1),
-                        '| Zoom:', camera.zoom.toFixed(2));
-        });
-
         // Lighting
         scene.add(new THREE.AmbientLight(0xffffff, 0.4));
         const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
@@ -130,11 +123,11 @@
         meshGroup = new THREE.Group();
         scene.add(meshGroup);
 
-        // Initial camera position
-        camera.position.set(20, 20, 20);
+        // Fixed camera position
+        camera.position.set(19.5, -10.3, 22.0);
         camera.up.set(0, 0, 1);
-        controls.target.set(4, 4, 4);
-        camera.zoom = 1;
+        controls.target.set(4.2, 3.8, 3.7);
+        camera.zoom = 1.51;
         camera.updateProjectionMatrix();
         controls.update();
 
@@ -310,10 +303,8 @@
 
         const edgesGeometry = new THREE.EdgesGeometry(geometry, 10);
         const edgesMaterial = new THREE.LineBasicMaterial({
-            color: colors.border,
-            linewidth: 1,
-            opacity: 0.4,
-            transparent: true
+            color: 0x000000,
+            linewidth: 2
         });
         const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
         meshGroup.add(edges);

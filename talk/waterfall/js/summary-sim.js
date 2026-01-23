@@ -54,11 +54,11 @@
         controls.update();
     }
 
-    // UVA Colors
+    // GMU Colors
     const colors = {
-        gray1: '#E57200',  // Orange
-        gray2: '#232D4B',  // Blue
-        gray3: '#F9DCBF',  // Cream
+        gray1: '#005239',  // George Mason Green
+        gray2: '#FFC733',  // George Mason Gold
+        gray3: '#FFFFFF',  // White
         border: '#333333'
     };
 
