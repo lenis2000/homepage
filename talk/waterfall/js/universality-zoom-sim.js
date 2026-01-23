@@ -138,6 +138,9 @@
                 loader.load('images/big_shape.obj', resolve, undefined, reject);
             });
 
+            // Guard: check meshGroup still exists after async loading
+            if (!meshGroup) return;
+
             const material = new THREE.MeshStandardMaterial({
                 side: THREE.DoubleSide,
                 flatShading: true,
@@ -275,6 +278,12 @@
             const duration = 2000; // ms
 
             function animateSimple() {
+                // Guard: stop if camera was disposed
+                if (!camera || !controls) {
+                    isAnimating = false;
+                    return;
+                }
+
                 const elapsed = performance.now() - startTime;
                 const t = Math.min(elapsed / duration, 1);
                 const ease = easeInOutCubic(t);

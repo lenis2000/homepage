@@ -123,6 +123,9 @@
     }
 
     async function loadLetters() {
+        // Guard: don't load if Three.js was disposed
+        if (!meshGroup || !scene) return;
+
         const loaderReady = await loadOBJLoader();
         if (!loaderReady) {
             console.error('OBJLoader not available');
@@ -205,6 +208,9 @@
         }
 
         if (loadedObjects.length === 0) return;
+
+        // Guard: check meshGroup still exists after async loading
+        if (!meshGroup) return;
 
         // Calculate bounding boxes and position letters
         const boxes = loadedObjects.map(obj => new THREE.Box3().setFromObject(obj));
