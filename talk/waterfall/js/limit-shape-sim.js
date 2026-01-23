@@ -10,7 +10,6 @@ function initLimitShapeSim() {
         const canvas = document.getElementById('limit-shape-3d-canvas');
         const statusEl = document.getElementById('limit-shape-3d-status');
         const panelsEl = document.getElementById('limit-shape-panels');
-        const curvedTextEl = document.getElementById('limit-shape-curved-text');
         const imagePanelEl = document.getElementById('limit-shape-image-panel');
         const presampledLabel = document.getElementById('limit-shape-presampled-label');
         if (!canvas) return;
@@ -584,7 +583,6 @@ function initLimitShapeSim() {
                         objLoaded = false;
                         if (statusEl) statusEl.textContent = '';
                         if (panelsEl) panelsEl.style.opacity = '0';
-                        if (curvedTextEl) curvedTextEl.style.opacity = '0';
                         if (presampledLabel) presampledLabel.style.opacity = '0';
                     },
                     async onStep(step) {
@@ -604,9 +602,9 @@ function initLimitShapeSim() {
                             if (statusEl) statusEl.textContent = '';
                             if (presampledLabel) presampledLabel.style.opacity = '1';
                         } else if (step === 4) {
-                            if (panelsEl) panelsEl.style.opacity = '1';
+                            stopAutoRotate();
                         } else if (step === 5) {
-                            if (curvedTextEl) curvedTextEl.style.opacity = '1';
+                            if (panelsEl) panelsEl.style.opacity = '1';
                         } else if (step === 6) {
                             if (imagePanelEl) imagePanelEl.style.opacity = '1';
                         }
@@ -628,7 +626,6 @@ function initLimitShapeSim() {
                             buildGeometry();
                             if (renderer && scene && camera) renderer.render(scene, camera);
                             if (panelsEl) panelsEl.style.opacity = '0';
-                            if (curvedTextEl) curvedTextEl.style.opacity = '0';
                             if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         } else if (step === 1) {
                             stopAutoRotate();
@@ -636,21 +633,20 @@ function initLimitShapeSim() {
                             buildGeometry();
                             if (renderer && scene && camera) renderer.render(scene, camera);
                             if (panelsEl) panelsEl.style.opacity = '0';
-                            if (curvedTextEl) curvedTextEl.style.opacity = '0';
                             if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         } else if (step === 2) {
                             objLoaded = false;
                             buildGeometry();
                             if (renderer && scene && camera) renderer.render(scene, camera);
                             if (panelsEl) panelsEl.style.opacity = '0';
-                            if (curvedTextEl) curvedTextEl.style.opacity = '0';
                             if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         } else if (step === 3) {
+                            // Going back from stopped to rotating
+                            startAutoRotate();
                             if (panelsEl) panelsEl.style.opacity = '0';
-                            if (curvedTextEl) curvedTextEl.style.opacity = '0';
                             if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         } else if (step === 4) {
-                            if (curvedTextEl) curvedTextEl.style.opacity = '0';
+                            if (panelsEl) panelsEl.style.opacity = '0';
                             if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         } else if (step === 5) {
                             if (imagePanelEl) imagePanelEl.style.opacity = '0';

@@ -13,6 +13,7 @@
     const slider = document.getElementById('q-slider');
     const qValueSpan = document.getElementById('q-value');
     const formulaDisplay = document.getElementById('q-formula-display');
+    const qBinomialValueEl = document.getElementById('q-binomial-value');
 
     const A = 4, B = 3;
 
@@ -232,6 +233,14 @@
         const q = parseFloat(slider.value);
         qValueSpan.textContent = q.toFixed(2);
         drawAllPaths(q);
+
+        // Update q-binomial value display
+        const qBinom = evalQBinomial(q);
+        if (Math.abs(q - 1) < 0.01) {
+            qBinomialValueEl.textContent = '= 35 paths at q=1';
+        } else {
+            qBinomialValueEl.textContent = `= ${qBinom.toFixed(2)} at q=${q.toFixed(2)}`;
+        }
 
         // Update formula display
         if (Math.abs(q - 1) < 0.01) {

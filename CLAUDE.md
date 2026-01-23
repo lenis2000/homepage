@@ -72,3 +72,38 @@
 - Animate with `requestAnimationFrame` loop using elapsed time
 - Typical duration: 1500-3000ms for slow, deliberate zoom
 - Can synchronize 3D (Three.js) and 2D (canvas) camera animations
+
+### WASM Initialization Pattern
+- **Critical**: Check `Module.calledRun` in addition to `Module.cwrap` existence
+- Listen for `wasm-loaded` event dispatched after WASM modules load
+- Pattern:
+  ```javascript
+  function tryInitWasm() {
+      if (typeof Module !== 'undefined' && typeof Module.cwrap === 'function' && Module.calledRun) {
+          if (wasmInterface.initialize()) { wasmReady = true; }
+      }
+  }
+  tryInitWasm();
+  if (!wasmReady) {
+      window.addEventListener('wasm-loaded', tryInitWasm, { once: true });
+  }
+  ```
+- Without `Module.calledRun` check, Firefox may fail with "function is not a function" errors
+
+### Async Loading Guards
+- Always guard after async operations (OBJ loading, WASM calls) since Three.js may be disposed mid-load
+- Pattern: `if (!meshGroup) return;` after await statements
+- Animation loops need guards: `if (!camera || !controls) { isAnimating = false; return; }`
+
+### Service Worker & Offline Caching
+- Service worker at `/talk/waterfall/sw.js` with scope `/talk/waterfall/`
+- Precaches WASM, JS, images, OBJ models, fonts, KaTeX
+- Bump `CACHE_NAME` version (e.g., `waterfall-talk-v4`) when updating cached assets
+- Self-hosted assets (no CDN dependencies):
+  - Unna font: `/fonts/unna-*.woff2`
+  - KaTeX 0.16.9: `/katex-0.16.9/`
+
+### User Preferences
+- Don't run Jekyll builds - user handles deployment
+- Prefer static KaTeX formulas in HTML over dynamic JS rendering
+- Keep dynamic value displays (e.g., computed q-binomial values) separate from static formulas

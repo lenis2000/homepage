@@ -9,20 +9,23 @@
                 <strong style="color: var(--slide-accent);">How to get limit shape?</strong>
                 <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
                     <li>Approximate any surface by piecewise-planar patches</li>
-                    <li>Count configurations approximating a given slope \((A,B)\), let \(\sigma(A,B)\) be the main term of the asymptotics</li>
+                    <li>Count configurations approximating a given slope \((A,B)\), let \(\sigma(A,B)\) be the main term of the asymptotics
+                        <span style="color: var(--slide-muted);">[Cohn–Kenyon–Propp'00]</span></li>
                     <li>Integrate and maximize to get the typical shape</li>
                 </ul>
             </div>
 
             <!-- Integral -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Variational principle, subject to boundary conditions</strong><br>
-                Limit shape $z=h(x,y)$ maximizes \(\displaystyle\iint \sigma(\nabla h)\, dxdy\)
+                <strong style="color: var(--slide-accent);">Variational principle:</strong><br>
+                Limit shape $z=h(x,y)$ maximizes \(\displaystyle\iint \sigma(\nabla h)\, dxdy\)<br>
+                subject to boundary conditions
             </div>
 
             <!-- KOS 2006 -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Generalization [Kenyon-Okounkov-Sheffield 2006]</strong><br>
+                <strong style="color: var(--slide-accent);">Generalization</strong>
+                 <span style="color: var(--slide-muted);">[Kenyon–Okounkov–Sheffield'06]</span><br>
                 Our surfaces use \(1\times 1\) squares in three coordinate directions.
                 The theory of limit shapes generalizes
                 to surfaces from plaquettes of other shapes, possibly weighted.
@@ -34,7 +37,7 @@
         <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 1vh;">
             <!-- Text above canvas -->
             <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center;">
-                Flat (sloped) tilings are the <strong>universal local limits</strong> <strong style="color: var(--slide-accent);">[Aggarwal 2019]</strong>
+                Flat (sloped) tilings are the <strong>universal local limits</strong> <span style="color: var(--slide-muted);">[Aggarwal 2019]</span>
             </div>
             <!-- 3D tiling canvas (main) -->
             <canvas id="energy-tiling-canvas" width="1200" height="1000" style="height: 70vh; width:44vw; border: 1px solid #ccc;"></canvas>

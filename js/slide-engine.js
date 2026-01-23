@@ -173,6 +173,15 @@ class SlideEngine {
         menuBtn.addEventListener('click', () => this.toggleJumpMenu());
         nav.appendChild(menuBtn);
 
+        // Add clock (minutes only, for speaker)
+        const clock = document.createElement('span');
+        clock.className = 'slide-clock';
+        clock.textContent = String(new Date().getMinutes()).padStart(2, '0');
+        nav.appendChild(clock);
+        setInterval(() => {
+            clock.textContent = String(new Date().getMinutes()).padStart(2, '0');
+        }, 60000);
+
         this.dotsContainer = dotsContainer;
         this.counter = counter;
     }

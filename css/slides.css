@@ -294,6 +294,14 @@
     color: var(--slide-accent);
 }
 
+/* Speaker clock (minutes only) */
+.slide-clock {
+    color: #999;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 11px;
+    margin-left: 8px;
+}
+
 /* ==================== Jump Menu ==================== */
 
 .slide-jump-menu {
