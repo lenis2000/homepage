@@ -4,6 +4,65 @@ title: "Random Lozenge Waterfall"
 description: "Interactive talk on random lozenge tilings and their limit shapes"
 ---
 
+<!-- Service Worker Registration & Asset Preloader -->
+<script>
+(function() {
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/talk/waterfall/sw.js', { scope: '/talk/waterfall/' })
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.warn('SW registration failed:', err));
+  }
+
+  // Asset preloader with progress bar
+  const criticalAssets = [
+    '/js/three.min.js',
+    '/js/OrbitControls.js',
+    '/js/colorschemes.js',
+    '/js/slide-engine.js',
+    '/talk/visual/sim/visual-lozenge.js',
+    '/talk/visual/sim/visual-lozenge-threaded.js',
+    '/talk/visual/sim/q-partition-cftp.js',
+    '/letters/Rotunda.json',
+    '/katex-0.16.9/katex.min.js',
+    '/katex-0.16.9/katex.min.css'
+  ];
+
+  let loaded = 0;
+  const total = criticalAssets.length;
+
+  function updateLoader() {
+    const bar = document.getElementById('asset-loader-bar');
+    const text = document.getElementById('asset-loader-text');
+    const container = document.getElementById('asset-loader');
+    if (!bar || !text || !container) return;
+
+    const pct = Math.round((loaded / total) * 100);
+    bar.style.width = pct + '%';
+
+    if (loaded >= total) {
+      text.textContent = 'Ready';
+      setTimeout(() => {
+        container.style.opacity = '0';
+        setTimeout(() => container.remove(), 500);
+      }, 500);
+    } else {
+      text.textContent = `Loading assets (${loaded}/${total})`;
+    }
+  }
+
+  // Preload assets
+  criticalAssets.forEach(url => {
+    fetch(url, { cache: 'force-cache' })
+      .then(() => { loaded++; updateLoader(); })
+      .catch(() => { loaded++; updateLoader(); });
+  });
+
+  // Update on DOMContentLoaded in case elements weren't ready
+  document.addEventListener('DOMContentLoaded', updateLoader);
+})();
+</script>
+
 <!-- Load simulation dependencies (colorschemes.js already loaded by slides layout) -->
 <script src="/js/three.min.js"></script>
 <script src="/js/OrbitControls.js"></script>

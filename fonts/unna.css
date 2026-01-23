@@ -1,0 +1,29 @@
+/* Unna font - self-hosted from Google Fonts */
+@font-face {
+  font-family: 'Unna';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/unna-regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Unna';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/unna-italic.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Unna';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/unna-bold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Unna';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/unna-bold-italic.woff2') format('woff2');
+}
