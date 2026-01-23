@@ -2,43 +2,71 @@
     <h2 class="slide-title">Spectral Approach in the Transversal Direction</h2>
 
     <div style="display: flex; flex-direction: column; gap: 1.5vh; margin-top: 2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-        <!-- 2D extended correlation kernel -->
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
-            <strong style="color: var(--slide-accent);">The 2d (extended) correlation kernel is</strong> <span style="color: var(--slide-muted);">[BGR]</span>
-            <div style="margin-top: 1vh; font-size: clamp(1.2rem, 2vw, 1.6rem);">
-                <table style="margin: 0 auto; border-collapse: collapse;">
-                    <tr>
-                        <td rowspan="3" style="vertical-align: middle; padding-right: 0.5em;">\(\tilde{K}(s,x;t,y) =\)</td>
-                        <td rowspan="3" style="vertical-align: middle; font-size: 2.5em; padding-right: 0.3em;">{</td>
-                        <td style="padding: 0.3em 0;">\((U_t^{-1}U_{t+1}^{-1}\ldots U_{s-1}^{-1})_y K_s(x,y),\)</td>
-                        <td style="padding-left: 2em;">\(s > t;\)</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 0.3em 0;">\(K_t(x,y),\)</td>
-                        <td style="padding-left: 2em;">\(s = t;\)</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 0.3em 0;">\((U_{t-1}\ldots U_{s+1}U_s)_y (-\mathbf{1}_{x=y} + K_s(x,y)),\)</td>
-                        <td style="padding-left: 2em;">\(s < t.\)</td>
-                    </tr>
-                </table>
+        <!-- 2D extended correlation kernel - 2 column: formula left, simulation right -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">The 2d (extended) correlation kernel is</strong> <span style="color: var(--slide-muted);">[Borodin–Gorin–Rains 2009]</span>
+                <div style="margin-top: 0.8vh; font-size: clamp(1.3rem, 2.2vw, 1.7rem);">
+                    \(\tilde{K}(s,x;t,y) =\)
+                </div>
+                <div style="margin-top: 0.5vh; font-size: clamp(1.3rem, 2.2vw, 1.7rem);">
+                    <table style="margin: 0 auto; border-collapse: collapse;">
+                        <tr>
+                            <td rowspan="3" style="vertical-align: middle; padding-right: 0.3em;">
+                                <svg width="20" height="120" viewBox="0 0 20 120" style="display: block;">
+                                    <path d="M18 2 Q8 2 8 20 L8 50 Q8 60 2 60 Q8 60 8 70 L8 100 Q8 118 18 118" stroke="currentColor" stroke-width="2" fill="none"/>
+                                </svg>
+                            </td>
+                            <td style="padding: 0.3em 0;">\((U_t^{-1}U_{t+1}^{-1}\ldots U_{s-1}^{-1})_y K_s(x,y),\)</td>
+                            <td style="padding-left: 1.5em;">\(s > t;\)</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.3em 0;">\(K_t(x,y),\)</td>
+                            <td style="padding-left: 1.5em;">\(s = t;\)</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.3em 0;">\((U_{t-1}\ldots U_{s+1}U_s)_y (-\mathbf{1}_{x=y} + K_s(x,y)),\)</td>
+                            <td style="padding-left: 1.5em;">\(s < t.\)</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Simulation pane with 3D tiling and horizontal slice -->
+            <div id="st-sim-container" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; display: flex; gap: 1vw; justify-content: center; align-items: center; position: relative;">
+                <canvas id="st-3d-canvas" width="400" height="340" style="height: 28vh; width: auto; background: #ffffff;"></canvas>
+                <canvas id="st-slice-canvas" width="400" height="340" style="height: 28vh; width: auto; background: #ffffff;"></canvas>
             </div>
         </div>
 
         <!-- Inter-slice operators -->
         <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
             <div>Relies on <strong>inter-slice operators</strong> (whose coefficients are explicit and product-form)</div>
-            <div style="margin-top: 1vh; text-align: center; font-size: clamp(1.1rem, 1.8vw, 1.4rem);">
-                \(\tilde{C}_n^t f_n^{t+1}(x) = \sqrt{\frac{\tilde{w}_t(x-1)}{\tilde{w}_{t+1}(x)}} f_n^t(x-1) a_1^t(x-1) + \sqrt{\frac{\tilde{w}_t(x)}{\tilde{w}_{t+1}(x)}} f_n^t(x) a_0^t(x) =: (U_t f_n^t)(x)\)
+            <div style="margin-top: 1vh; text-align: center; font-size: clamp(1.5rem, 2.5vw, 2rem);">
+                \(\displaystyle \tilde{C}_n^t f_n^{t+1}(x) = \sqrt{\frac{\tilde{w}_t(x-1)}{\tilde{w}_{t+1}(x)}} f_n^t(x-1) a_1^t(x-1) + \sqrt{\frac{\tilde{w}_t(x)}{\tilde{w}_{t+1}(x)}} f_n^t(x) a_0^t(x) =: (U_t f_n^t)(x)\)
             </div>
         </div>
 
-        <!-- Bullet points -->
-        <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw;">
-            <ul style="margin: 0; padding-left: 1.5em;">
-                <li>Inter-slice operators \(U_t\) converge in our regime, <strong>coefficient-wise</strong></li>
-                <li style="margin-top: 0.5vh;">The limit is a "<strong>very bounded</strong>" operator in \(\ell^2(\mathbb{Z})\) - its inverse is "<strong>very unbounded</strong>"</li>
-            </ul>
+        <!-- Inter-slice operators converge -->
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
+            <strong style="color: var(--slide-accent);">Inter-slice operators:</strong>
+            Inter-slice operators converge (under scaling). Coefficients are <strong>explicit and product-form</strong>.
+        </div>
+
+        <!-- Key property: very bounded -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
+                <strong style="color: var(--slide-accent);">Limit operator:</strong>
+                <div style="margin-top: 0.5vh;">
+                    The limit is a "<strong>very bounded</strong>" operator on \(\ell^2(\mathbb{Z})\)
+                </div>
+            </div>
+            <div style="background: #fff3e0; border-left: 4px solid #E57200; padding: 0.8vh 1.2vw;">
+                <strong style="color: #E57200;">Key obstacle:</strong>
+                <div style="margin-top: 0.5vh;">
+                    Its inverse is "<strong>very unbounded</strong>"
+                </div>
+            </div>
         </div>
     </div>
 </section>

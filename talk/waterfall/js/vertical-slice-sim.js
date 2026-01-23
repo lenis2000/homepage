@@ -678,7 +678,6 @@
     function reset() {
         hideElement('vs-answer');
         hideElement('vs-rest');
-        hideElement('vs-frozen-label');
         currentSimIdx = 0;
         // Initialize and start sampling immediately on slide enter
         initThreeJS();
@@ -693,11 +692,8 @@
     }
 
     function onStep(step) {
-        // Step 1: Swap to q=0.85 and show frozen label
-        if (step >= 1) {
-            displaySimulation(1);
-            showElement('vs-frozen-label');
-        }
+        // Step 1: Swap to q=0.85
+        if (step >= 1) displaySimulation(1);
         // Step 2: Show answer
         if (step >= 2) showElement('vs-answer');
         // Step 3: Show rest
@@ -707,10 +703,7 @@
     function onStepBack(step) {
         if (step < 3) hideElement('vs-rest');
         if (step < 2) hideElement('vs-answer');
-        if (step < 1) {
-            displaySimulation(0);
-            hideElement('vs-frozen-label');
-        }
+        if (step < 1) displaySimulation(0);
     }
 
     function registerWithEngine() {
