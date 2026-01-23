@@ -754,12 +754,123 @@ code:
     cursor: not-allowed;
   }
 
+  /* FAB Tooltip */
+  .sample-fab::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    right: 66px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(35, 45, 75, 0.95);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .sample-fab:hover::before {
+    opacity: 1;
+  }
+
+  .sample-fab:disabled::before {
+    content: "Draw a valid region first";
+  }
+
   @media (max-width: 991px) {
     .sample-fab {
       display: flex;
       align-items: center;
       justify-content: center;
     }
+  }
+
+  /* ========================================================================
+     Keyboard Shortcuts Help Modal
+     ======================================================================== */
+  .keyboard-help-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .keyboard-help-modal.visible {
+    display: flex;
+  }
+
+  .keyboard-help-content {
+    background: var(--bg-primary, white);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .keyboard-help-content h3 {
+    margin: 0 0 16px 0;
+    font-family: "franklingothic-demi", Arial, sans-serif;
+    font-size: 16px;
+    color: var(--text-primary, #333);
+  }
+
+  .keyboard-help-content table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .keyboard-help-content td {
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    font-size: 13px;
+  }
+
+  .keyboard-help-content kbd {
+    display: inline-block;
+    background: #e8e8e8;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: monospace;
+    font-size: 12px;
+    min-width: 24px;
+    text-align: center;
+    color: #333;
+    box-shadow: 0 1px 0 #999;
+  }
+
+  [data-theme="dark"] .keyboard-help-content kbd {
+    background: #444;
+    border-color: #666;
+    color: #e8e8e8;
+    box-shadow: 0 1px 0 #222;
+  }
+
+  .keyboard-help-content .close-btn {
+    margin-top: 16px;
+    width: 100%;
+    padding: 10px;
+    background: var(--bg-secondary, #f5f5f5);
+    border: 1px solid var(--border-color, #d0d0d0);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  [data-theme="dark"] .keyboard-help-content {
+    background: var(--bg-primary, #1a1a1a);
   }
 
   /* ========================================================================
@@ -1148,12 +1259,12 @@ code:
             Grid
           </label>
         </div>
-        <div class="control-row">
+        <div class="control-row" id="view2DControlsRow">
           <button id="zoomInBtn" title="Zoom In" aria-label="Zoom in">+</button>
           <button id="zoomOutBtn" title="Zoom Out" aria-label="Zoom out">−</button>
           <button id="resetViewBtn" title="Reset View" aria-label="Reset view to default">Reset View</button>
         </div>
-        <!-- 3D View Controls (moved from separate section) -->
+        <!-- 3D View Controls (shown only in 3D mode) -->
         <div class="control-row" id="view3DControlsRow" style="display: none; border-top: 1px solid var(--border-color, #e0e0e0); padding-top: 10px; margin-top: 4px;">
           <button id="perspectiveBtn" title="Toggle perspective/isometric">🎯 Perspective</button>
           <button id="preset3DBtn" title="Cycle 3D visual preset">☀️ Preset</button>
@@ -1241,6 +1352,41 @@ Cmd-click: complete lasso</div>
 
 <!-- Floating Action Button for Mobile -->
 <button id="sampleFab" class="sample-fab" disabled aria-label="Generate perfect sample" data-tooltip="Perfect Sample">🎲</button>
+
+<!-- Keyboard Shortcuts Help Modal -->
+<div id="keyboardHelpModal" class="keyboard-help-modal" role="dialog" aria-labelledby="keyboard-help-title" aria-modal="true">
+  <div class="keyboard-help-content">
+    <h3 id="keyboard-help-title">Help</h3>
+    <h4 style="margin: 12px 0 8px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #666;">Drawing Tools</h4>
+    <table>
+      <tr><td>🖐</td><td>Pan canvas</td></tr>
+      <tr><td>✏️</td><td>Draw cells</td></tr>
+      <tr><td>🧽</td><td>Erase cells</td></tr>
+      <tr><td>⭕+</td><td>Lasso fill</td></tr>
+      <tr><td>⭕−</td><td>Lasso erase</td></tr>
+      <tr><td>📐</td><td>Snap to grid</td></tr>
+    </table>
+    <table style="margin-top: 8px;">
+      <tr><td><kbd>Shift</kbd></td><td>Toggle draw ↔ erase</td></tr>
+      <tr><td><kbd>Cmd</kbd>-click</td><td>Complete lasso</td></tr>
+    </table>
+    <h4 style="margin: 16px 0 8px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #666;">Keyboard Shortcuts</h4>
+    <table>
+      <tr><td><kbd>S</kbd></td><td>Perfect Sample (CFTP)</td></tr>
+      <tr><td><kbd>G</kbd></td><td>Start/Stop Glauber</td></tr>
+      <tr><td><kbd>Space</kbd></td><td>Pause/Resume Glauber</td></tr>
+      <tr><td><kbd>3</kbd></td><td>Toggle 3D view</td></tr>
+      <tr><td><kbd>R</kbd></td><td>Reset view</td></tr>
+      <tr><td><kbd>+</kbd> / <kbd>-</kbd></td><td>Zoom in/out</td></tr>
+      <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Previous/Next palette</td></tr>
+      <tr><td><kbd>Z</kbd></td><td>Undo</td></tr>
+      <tr><td><kbd>Y</kbd></td><td>Redo</td></tr>
+      <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Close dialogs</td></tr>
+    </table>
+    <button class="close-btn" id="closeKeyboardHelp">Close</button>
+  </div>
+</div>
 
 <!-- Load ColorSchemes -->
 <script src="/js/colorschemes.js"></script>
@@ -1420,6 +1566,9 @@ Cmd-click: complete lasso</div>
         dimerViewBtn: document.getElementById('dimerViewBtn'),
         autoRotateBtn: document.getElementById('autoRotateBtn'),
         view3DControlsRow: document.getElementById('view3DControlsRow'),
+        view2DControlsRow: document.getElementById('view2DControlsRow'),
+        keyboardHelpModal: document.getElementById('keyboardHelpModal'),
+        closeKeyboardHelp: document.getElementById('closeKeyboardHelp'),
         controlsPanel: document.getElementById('controlsPanel'),
         drawerHandle: document.getElementById('drawerHandle'),
         sampleFab: document.getElementById('sampleFab'),
@@ -4640,23 +4789,11 @@ Cmd-click: complete lasso</div>
 
         el.borderSlider.addEventListener('input', draw);
 
-        // Help button tooltip
-        if (el.helpBtn && el.toolTooltip) {
+        // Help button - shows keyboard shortcuts modal
+        if (el.helpBtn) {
             el.helpBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const isVisible = el.toolTooltip.style.display !== 'none';
-                el.toolTooltip.style.display = isVisible ? 'none' : 'block';
-                // Position tooltip below button
-                const rect = el.helpBtn.getBoundingClientRect();
-                el.toolTooltip.style.position = 'absolute';
-                el.toolTooltip.style.top = (rect.bottom + 4) + 'px';
-                el.toolTooltip.style.right = '8px';
-            });
-            // Click anywhere else to hide tooltip
-            document.addEventListener('click', (e) => {
-                if (el.toolTooltip && el.toolTooltip.style.display !== 'none' && !el.helpBtn.contains(e.target)) {
-                    el.toolTooltip.style.display = 'none';
-                }
+                showKeyboardHelp();
             });
         }
 
@@ -4682,9 +4819,12 @@ Cmd-click: complete lasso</div>
         el.toggle3DBtn.addEventListener('click', () => {
             const switching3D = !is3DView;
             setViewMode(switching3D);
-            // Show/hide 3D controls in styling panel
+            // Show/hide view-specific controls
             if (el.view3DControlsRow) {
                 el.view3DControlsRow.style.display = switching3D ? 'flex' : 'none';
+            }
+            if (el.view2DControlsRow) {
+                el.view2DControlsRow.style.display = switching3D ? 'none' : 'flex';
             }
             // Reset 2D view when switching back to 2D
             if (!switching3D) {
@@ -4848,6 +4988,115 @@ Cmd-click: complete lasso</div>
                 }
             });
         }
+
+        // ================================================================
+        // Keyboard Shortcuts
+        // ================================================================
+        function showKeyboardHelp() {
+            el.keyboardHelpModal.classList.add('visible');
+        }
+
+        function hideKeyboardHelp() {
+            el.keyboardHelpModal.classList.remove('visible');
+        }
+
+        el.closeKeyboardHelp.addEventListener('click', hideKeyboardHelp);
+        el.keyboardHelpModal.addEventListener('click', (e) => {
+            if (e.target === el.keyboardHelpModal) hideKeyboardHelp();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            // Ignore if typing in an input field
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                return;
+            }
+
+            const key = e.key.toLowerCase();
+
+            // Help modal
+            if (key === '?' || (e.shiftKey && key === '/')) {
+                e.preventDefault();
+                showKeyboardHelp();
+                return;
+            }
+
+            // Close dialogs
+            if (key === 'escape') {
+                hideKeyboardHelp();
+                return;
+            }
+
+            // Sample (CFTP)
+            if (key === 's' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                if (!el.cftpBtn.disabled) el.cftpBtn.click();
+                return;
+            }
+
+            // Glauber toggle
+            if (key === 'g') {
+                e.preventDefault();
+                if (!el.startStopBtn.disabled) el.startStopBtn.click();
+                return;
+            }
+
+            // Pause/resume (Space)
+            if (key === ' ') {
+                e.preventDefault();
+                if (isRunning || !el.startStopBtn.disabled) el.startStopBtn.click();
+                return;
+            }
+
+            // Toggle 3D
+            if (key === '3') {
+                e.preventDefault();
+                el.toggle3DBtn.click();
+                return;
+            }
+
+            // Reset view
+            if (key === 'r' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                resetView();
+                return;
+            }
+
+            // Zoom
+            if (key === '+' || key === '=') {
+                e.preventDefault();
+                el.zoomInBtn.click();
+                return;
+            }
+            if (key === '-') {
+                e.preventDefault();
+                el.zoomOutBtn.click();
+                return;
+            }
+
+            // Palette navigation
+            if (key === 'arrowleft') {
+                e.preventDefault();
+                el.prevPaletteBtn.click();
+                return;
+            }
+            if (key === 'arrowright') {
+                e.preventDefault();
+                el.nextPaletteBtn.click();
+                return;
+            }
+
+            // Undo/Redo
+            if (key === 'z' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                el.undoBtn.click();
+                return;
+            }
+            if (key === 'y' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                el.redoBtn.click();
+                return;
+            }
+        });
     }
 
     // Update FAB state based on region validity

@@ -480,19 +480,44 @@ permalink: /domino/
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #007bff, #0056b3);
+    background: linear-gradient(135deg, #E57200, #f08c30);
     color: white;
     border: none;
     font-size: 24px;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+    box-shadow: 0 4px 12px rgba(229, 114, 0, 0.4);
     z-index: 1000;
     transition: transform 0.15s, box-shadow 0.15s;
   }
 
   .sample-fab:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 16px rgba(0, 123, 255, 0.5);
+    box-shadow: 0 6px 16px rgba(229, 114, 0, 0.5);
+  }
+
+  /* FAB Tooltip */
+  .sample-fab::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-right: 12px;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    font-size: 13px;
+    white-space: nowrap;
+    border-radius: 4px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+    pointer-events: none;
+  }
+
+  .sample-fab:hover::before {
+    opacity: 1;
+    visibility: visible;
   }
 
   .sample-fab:active {
@@ -732,6 +757,106 @@ permalink: /domino/
 
   [data-theme="dark"] .view-toggle-pills button:hover:not(.active) {
     background: #3d3d3d;
+  }
+
+  /* Help button */
+  #help-btn:hover {
+    border-color: #E57200;
+    color: #E57200;
+  }
+
+  [data-theme="dark"] #help-btn {
+    background: #2d2d2d;
+    color: #aaa;
+    border-color: #555;
+  }
+
+  [data-theme="dark"] #help-btn:hover {
+    border-color: #ff9933;
+    color: #ff9933;
+  }
+
+  /* Keyboard Shortcuts Help Modal */
+  .keyboard-help-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .keyboard-help-modal.visible {
+    display: flex;
+  }
+
+  .keyboard-help-content {
+    background: var(--bg-primary, white);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .keyboard-help-content h3 {
+    margin: 0 0 16px 0;
+    font-family: "franklingothic-demi", Arial, sans-serif;
+    font-size: 16px;
+    color: var(--text-primary, #333);
+  }
+
+  .keyboard-help-content table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .keyboard-help-content td {
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    font-size: 13px;
+  }
+
+  .keyboard-help-content kbd {
+    display: inline-block;
+    background: #e8e8e8;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: monospace;
+    font-size: 12px;
+    min-width: 24px;
+    text-align: center;
+    color: #333;
+    box-shadow: 0 1px 0 #999;
+  }
+
+  [data-theme="dark"] .keyboard-help-content kbd {
+    background: #444;
+    border-color: #666;
+    color: #e8e8e8;
+    box-shadow: 0 1px 0 #222;
+  }
+
+  .keyboard-help-content .close-btn {
+    margin-top: 16px;
+    width: 100%;
+    padding: 10px;
+    background: var(--bg-secondary, #f5f5f5);
+    border: 1px solid var(--border-color, #d0d0d0);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  [data-theme="dark"] .keyboard-help-content {
+    background: var(--bg-primary, #1a1a1a);
   }
 </style>
 
@@ -1097,11 +1222,36 @@ permalink: /domino/
         </div>
         <!-- TikZ code container -->
         <div id="tikz-code-container" style="font-family: monospace; padding: 10px; border: 1px solid var(--border-color, #ccc); border-radius: 4px; background: var(--bg-primary, white); white-space: pre; font-size: 11px; max-height: 200px; overflow-y: auto; margin-top: 8px; display: none;"></div>
+        <div class="export-divider"></div>
+        <div class="export-group">
+          <span class="export-group-label">Share</span>
+          <button id="copy-link-btn" class="btn-utility" style="font-size: 11px;">Copy Link</button>
+          <span id="link-copied-msg" style="color: #28a745; font-size: 11px; font-weight: bold; display: none; margin-left: 4px;">Copied!</span>
+        </div>
       </div>
     </details>
 
   </div><!-- end controls-panel-inner -->
 </aside>
+
+<!-- Keyboard Shortcuts Help Modal -->
+<div id="keyboard-help-modal" class="keyboard-help-modal" role="dialog" aria-labelledby="keyboard-help-title" aria-modal="true">
+  <div class="keyboard-help-content">
+    <h3 id="keyboard-help-title">Keyboard Shortcuts</h3>
+    <table>
+      <tr><td><kbd>S</kbd></td><td>Sample new tiling</td></tr>
+      <tr><td><kbd>G</kbd></td><td>Start/Stop Glauber dynamics</td></tr>
+      <tr><td><kbd>D</kbd></td><td>Toggle demo mode</td></tr>
+      <tr><td><kbd>R</kbd></td><td>Reset view</td></tr>
+      <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>Previous/Next palette</td></tr>
+      <tr><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></td><td>Move camera (3D)</td></tr>
+      <tr><td><kbd>2</kbd> / <kbd>3</kbd></td><td>Switch to 2D/3D view</td></tr>
+      <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Close dialogs</td></tr>
+    </table>
+    <button class="close-btn" id="close-keyboard-help">Close</button>
+  </div>
+</div>
 
 <!-- Right: Visualization Panel -->
 <main class="visualization-panel">
@@ -1113,6 +1263,7 @@ permalink: /domino/
         <button id="view-3d-btn" class="active" title="3D height function view">3D</button>
         <button id="view-2d-btn" title="2D domino view">2D</button>
       </div>
+      <button id="help-btn" title="Keyboard shortcuts" style="width: 28px; height: 28px; border: 1px solid var(--border-color, #888); border-radius: 50%; background: var(--bg-primary, white); color: #666; font-size: 14px; cursor: pointer; padding: 0; margin-left: 8px;">?</button>
     </div>
 
     <!-- 3D Visualization Pane (default) -->
@@ -1129,7 +1280,7 @@ permalink: /domino/
 </div><!-- end simulation-layout -->
 
 <!-- Floating Action Button for Mobile -->
-<button id="sampleFab" class="sample-fab" aria-label="Sample domino tiling" title="Sample">▶</button>
+<button id="sampleFab" class="sample-fab" aria-label="Sample domino tiling" data-tooltip="Sample (S)">▶</button>
 
 {%include dear_colleagues.md%}
 
@@ -1450,6 +1601,8 @@ Module.onRuntimeInitialized = async function() {
     const sweepsInput = document.getElementById('sweeps-input');
     const glauberStatus = document.getElementById('glauber-status');
 
+    const fabBtn = document.getElementById('sampleFab');
+
     if (glauberRunning) {
         // Stop dynamics
         clearInterval(glauberTimer);
@@ -1459,6 +1612,12 @@ Module.onRuntimeInitialized = async function() {
         glauberBtn.classList.remove('running', 'btn-danger');
         glauberBtn.classList.add('btn-success');
         glauberStatus.innerText = "";
+
+        // Update FAB to show play state
+        if (fabBtn) {
+            fabBtn.innerHTML = '▶';
+            fabBtn.setAttribute('data-tooltip', 'Sample (S)');
+        }
 
         // Re-enable controls that were disabled by Glauber
         document.getElementById("sample-btn")?.removeAttribute("disabled");
@@ -1479,6 +1638,12 @@ Module.onRuntimeInitialized = async function() {
         glauberBtn.classList.add('running', 'btn-danger');
         glauberBtn.classList.remove('btn-success');
         glauberStatus.innerText = "";
+
+        // Update FAB to show pause state
+        if (fabBtn) {
+            fabBtn.innerHTML = '⏸';
+            fabBtn.setAttribute('data-tooltip', 'Stop (G)');
+        }
 
         // Disable controls that shouldn't be changed during dynamics
         document.getElementById("sample-btn")?.setAttribute("disabled", "disabled");
@@ -3800,11 +3965,158 @@ Module.onRuntimeInitialized = async function() {
     }
   });
 
-  // Add keyboard controls
+  // ========================================================================
+  // Keyboard Shortcuts Help Modal
+  // ========================================================================
+  const keyboardHelpModal = document.getElementById('keyboard-help-modal');
+  const closeKeyboardHelpBtn = document.getElementById('close-keyboard-help');
+
+  function showKeyboardHelp() {
+    keyboardHelpModal.classList.add('visible');
+  }
+
+  function hideKeyboardHelp() {
+    keyboardHelpModal.classList.remove('visible');
+  }
+
+  closeKeyboardHelpBtn.addEventListener('click', hideKeyboardHelp);
+  keyboardHelpModal.addEventListener('click', function(e) {
+    if (e.target === keyboardHelpModal) hideKeyboardHelp();
+  });
+  document.getElementById('help-btn')?.addEventListener('click', showKeyboardHelp);
+
+  // ========================================================================
+  // URL State Serialization (Share Link)
+  // ========================================================================
+  function toUrlSafeBase64(str) {
+    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function serializeStateToUrl() {
+    const params = new URLSearchParams();
+    const n = document.getElementById('n-input').value;
+    const periodicitySelect = document.getElementById('periodicity-select');
+    const periodicity = periodicitySelect ? periodicitySelect.value : 'uniform';
+
+    params.set('n', n);
+    if (periodicity !== 'uniform') params.set('p', periodicity);
+
+    // Add 2x2 or 3x3 weights if applicable
+    if (periodicity === '2x2') {
+      const a = document.getElementById('weight-a')?.value;
+      const b = document.getElementById('weight-b')?.value;
+      if (a) params.set('a', a);
+      if (b) params.set('b', b);
+    }
+
+    return window.location.origin + window.location.pathname + '?' + params.toString();
+  }
+
+  function copyShareLink() {
+    const url = serializeStateToUrl();
+    const linkCopiedMsg = document.getElementById('link-copied-msg');
+    navigator.clipboard.writeText(url).then(function() {
+      linkCopiedMsg.style.display = 'inline';
+      setTimeout(function() { linkCopiedMsg.style.display = 'none'; }, 2000);
+    }).catch(function() {
+      // Fallback
+      const input = document.createElement('input');
+      input.value = url;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      linkCopiedMsg.style.display = 'inline';
+      setTimeout(function() { linkCopiedMsg.style.display = 'none'; }, 2000);
+    });
+  }
+
+  document.getElementById('copy-link-btn').addEventListener('click', copyShareLink);
+
+  // Load state from URL on page load
+  (function loadStateFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('n')) {
+      document.getElementById('n-input').value = params.get('n');
+    }
+    if (params.has('p')) {
+      const periodicitySelect = document.getElementById('periodicity-select');
+      if (periodicitySelect) periodicitySelect.value = params.get('p');
+    }
+    if (params.has('a')) {
+      const weightA = document.getElementById('weight-a');
+      if (weightA) weightA.value = params.get('a');
+    }
+    if (params.has('b')) {
+      const weightB = document.getElementById('weight-b');
+      if (weightB) weightB.value = params.get('b');
+    }
+  })();
+
+  // ========================================================================
+  // Enhanced Keyboard Controls
+  // ========================================================================
   window.addEventListener('keydown', function(event) {
+    // Ignore if typing in an input field
+    if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.tagName === 'SELECT') {
+      return;
+    }
+
+    const key = event.key.toLowerCase();
     const moveAmount = 5;
 
-    // Arrow keys for camera movement
+    // Help modal
+    if (key === '?' || (event.shiftKey && key === '/')) {
+      event.preventDefault();
+      showKeyboardHelp();
+      return;
+    }
+
+    // Close dialogs
+    if (key === 'escape') {
+      hideKeyboardHelp();
+      return;
+    }
+
+    // Sample
+    if (key === 's' && !event.ctrlKey && !event.metaKey) {
+      event.preventDefault();
+      document.getElementById('sample-btn').click();
+      return;
+    }
+
+    // Glauber toggle
+    if (key === 'g') {
+      event.preventDefault();
+      document.getElementById('glauber-btn').click();
+      return;
+    }
+
+    // View toggle
+    if (key === '2') {
+      event.preventDefault();
+      document.getElementById('view-2d-btn').click();
+      return;
+    }
+    if (key === '3') {
+      event.preventDefault();
+      document.getElementById('view-3d-btn').click();
+      return;
+    }
+
+    // Palette navigation (use [ and ] since arrows are used for camera)
+    if (key === '[') {
+      event.preventDefault();
+      document.getElementById('prevPaletteBtn').click();
+      return;
+    }
+    if (key === ']') {
+      event.preventDefault();
+      document.getElementById('nextPaletteBtn').click();
+      return;
+    }
+
+    // Arrow keys for camera movement (in 3D view)
     if (event.key === 'ArrowUp') {
       const upVector = new THREE.Vector3(0, 1, 0);
       upVector.applyQuaternion(camera.quaternion);
@@ -3834,14 +4146,13 @@ Module.onRuntimeInitialized = async function() {
       controls.update();
     }
     // 'R' key to reset view
-    else if (event.key === 'r' || event.key === 'R') {
+    else if (key === 'r' && !event.ctrlKey && !event.metaKey) {
       document.getElementById("reset-view-btn").click();
     }
     // 'D' key to toggle demo mode
-    else if (event.key === 'd' || event.key === 'D') {
+    else if (key === 'd' && !event.ctrlKey && !event.metaKey) {
       const demoCheckbox = document.getElementById('demo-mode');
       demoCheckbox.checked = !demoCheckbox.checked;
-      // Trigger the change event
       demoCheckbox.dispatchEvent(new Event('change'));
     }
   });
@@ -5028,14 +5339,19 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ========================================================================
-  // Floating Action Button (Mobile - Sample)
+  // Floating Action Button (Mobile - Sample/Stop)
   // ========================================================================
   const sampleFab = document.getElementById('sampleFab');
   const sampleBtn = document.getElementById('sample-btn');
 
   if (sampleFab && sampleBtn) {
     sampleFab.addEventListener('click', () => {
-      sampleBtn.click();
+      // If Glauber is running, clicking FAB stops it
+      if (glauberRunning) {
+        document.getElementById('glauber-btn')?.click();
+      } else {
+        sampleBtn.click();
+      }
     });
   }
 
