@@ -1,7 +1,12 @@
 <section class="slide slide-top" id="why-2-periodic" data-title="Why 2-Periodic">
     <h2 class="slide-title">Why 2-Periodic?</h2>
 
-    <div style="display: flex; justify-content: center; align-items: center; height: 85vh;">
+    <div style="display: flex; justify-content: center; align-items: center; height: 85vh; position: relative;">
         <canvas id="why-2p-canvas" width="1400" height="1000" style="height: 82vh; width: auto;"></canvas>
+        <!-- Position label buttons -->
+        <div id="why2p-buttons" style="position: absolute; bottom: 3vh; right: 3vw; display: flex; gap: 0.5vw;">
+            <button id="why2p-btn-1" class="why2p-btn" style="width: 2.5vw; height: 2.5vw; border: 2px solid #232D4B; border-radius: 4px; background: #E57200; color: #fff; font-size: clamp(0.9rem, 1.5vw, 1.2rem); font-weight: bold; cursor: pointer; transition: all 0.2s;">1</button>
+            <button id="why2p-btn-2" class="why2p-btn" style="width: 2.5vw; height: 2.5vw; border: 2px solid #232D4B; border-radius: 4px; background: #fff; color: #232D4B; font-size: clamp(0.9rem, 1.5vw, 1.2rem); font-weight: bold; cursor: pointer; transition: all 0.2s;">2</button>
+        </div>
     </div>
 </section>

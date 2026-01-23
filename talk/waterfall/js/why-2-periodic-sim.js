@@ -33,6 +33,117 @@
     let paths = null;
     let S_param = 0;
     let currentN = 0, currentT = 0, currentS = 0;
+    let cameraAnimationId = null;
+    let currentStep = 0;
+
+    // Camera positions for build steps
+    const cameraPos1 = { pos: {x: 19.5, y: -10.3, z: 22.0}, target: {x: 4.2, y: 3.8, z: 3.7}, zoom: 1.51 };
+    const cameraPos2 = { pos: {x: 8.2, y: 1.8, z: 31.0}, target: {x: 4.1, y: 4.5, z: 3.8}, zoom: 1.51 };
+
+    // Position buttons
+    const btn1 = document.getElementById('why2p-btn-1');
+    const btn2 = document.getElementById('why2p-btn-2');
+
+    function updateButtons(positionNum) {
+        // positionNum: 1 = cameraPos1, 2 = cameraPos2
+        if (btn1) {
+            if (positionNum === 1) {
+                btn1.style.background = '#E57200';
+                btn1.style.color = '#fff';
+                btn1.style.borderColor = '#E57200';
+            } else {
+                btn1.style.background = '#fff';
+                btn1.style.color = '#232D4B';
+                btn1.style.borderColor = '#232D4B';
+            }
+        }
+        if (btn2) {
+            if (positionNum === 2) {
+                btn2.style.background = '#E57200';
+                btn2.style.color = '#fff';
+                btn2.style.borderColor = '#E57200';
+            } else {
+                btn2.style.background = '#fff';
+                btn2.style.color = '#232D4B';
+                btn2.style.borderColor = '#232D4B';
+            }
+        }
+    }
+
+    let buttonsInitialized = false;
+    function setupButtonHandlers() {
+        if (buttonsInitialized) return;
+        buttonsInitialized = true;
+        if (btn1) {
+            btn1.addEventListener('click', () => {
+                if (cameraAnimationId) return;
+                currentStep = 0;
+                animateCamera(cameraPos2, cameraPos1, 2000);
+                updateButtons(1);
+            });
+        }
+        if (btn2) {
+            btn2.addEventListener('click', () => {
+                if (cameraAnimationId) return;
+                currentStep = 1;
+                animateCamera(cameraPos1, cameraPos2, 2000);
+                updateButtons(2);
+            });
+        }
+    }
+
+    function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function animateCamera(fromPos, toPos, duration, callback) {
+        if (cameraAnimationId) cancelAnimationFrame(cameraAnimationId);
+        if (!camera || !controls) return;
+
+        const startTime = performance.now();
+        const startPos = { x: fromPos.pos.x, y: fromPos.pos.y, z: fromPos.pos.z };
+        const startTarget = { x: fromPos.target.x, y: fromPos.target.y, z: fromPos.target.z };
+        const startZoom = fromPos.zoom;
+
+        function animate() {
+            if (!camera || !controls) return;
+
+            const elapsed = performance.now() - startTime;
+            const t = Math.min(elapsed / duration, 1);
+            const eased = easeInOutCubic(t);
+
+            camera.position.set(
+                startPos.x + (toPos.pos.x - startPos.x) * eased,
+                startPos.y + (toPos.pos.y - startPos.y) * eased,
+                startPos.z + (toPos.pos.z - startPos.z) * eased
+            );
+            controls.target.set(
+                startTarget.x + (toPos.target.x - startTarget.x) * eased,
+                startTarget.y + (toPos.target.y - startTarget.y) * eased,
+                startTarget.z + (toPos.target.z - startTarget.z) * eased
+            );
+            camera.zoom = startZoom + (toPos.zoom - startZoom) * eased;
+            camera.updateProjectionMatrix();
+            controls.update();
+
+            if (t < 1) {
+                cameraAnimationId = requestAnimationFrame(animate);
+            } else {
+                cameraAnimationId = null;
+                if (callback) callback();
+            }
+        }
+        animate();
+    }
+
+    function setCameraImmediate(pos) {
+        if (!camera || !controls) return;
+        camera.position.set(pos.pos.x, pos.pos.y, pos.pos.z);
+        controls.target.set(pos.target.x, pos.target.y, pos.target.z);
+        camera.zoom = pos.zoom;
+        camera.updateProjectionMatrix();
+        controls.update();
+    }
 
     // WASM interface
     let wasmReady = false;
@@ -123,13 +234,8 @@
         meshGroup = new THREE.Group();
         scene.add(meshGroup);
 
-        // Fixed camera position
-        camera.position.set(19.5, -10.3, 22.0);
+        // Set up camera orientation (position set by setCameraImmediate)
         camera.up.set(0, 0, 1);
-        controls.target.set(4.2, 3.8, 3.7);
-        camera.zoom = 1.51;
-        camera.updateProjectionMatrix();
-        controls.update();
 
         const w = canvas.clientWidth, h = canvas.clientHeight;
         if (w > 0 && h > 0) {
@@ -221,17 +327,21 @@
         const normals = [];
         const vertexColors = [];
         const indices = [];
+        const edgeVertices = [];  // For explicit border lines
 
         function addSquareFace(v1, v2, v3, v4, color) {
             const baseIndex = vertices.length / 3;
 
-            vertices.push(v1[1], v1[0], v1[2]);
-            vertices.push(v2[1], v2[0], v2[2]);
-            vertices.push(v3[1], v3[0], v3[2]);
-            vertices.push(v4[1], v4[0], v4[2]);
+            // Transform coordinates (swap x,y for Three.js)
+            const p1 = [v1[1], v1[0], v1[2]];
+            const p2 = [v2[1], v2[0], v2[2]];
+            const p3 = [v3[1], v3[0], v3[2]];
+            const p4 = [v4[1], v4[0], v4[2]];
 
-            const edge1 = [v2[1] - v1[1], v2[0] - v1[0], v2[2] - v1[2]];
-            const edge2 = [v3[1] - v1[1], v3[0] - v1[0], v3[2] - v1[2]];
+            vertices.push(...p1, ...p2, ...p3, ...p4);
+
+            const edge1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
+            const edge2 = [p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]];
             const normal = [
                 edge1[1] * edge2[2] - edge1[2] * edge2[1],
                 edge1[2] * edge2[0] - edge1[0] * edge2[2],
@@ -257,6 +367,12 @@
                 baseIndex, baseIndex + 1, baseIndex + 2,
                 baseIndex, baseIndex + 2, baseIndex + 3
             );
+
+            // Add border edges for this face (4 edges: p1-p2, p2-p3, p3-p4, p4-p1)
+            edgeVertices.push(...p1, ...p2);
+            edgeVertices.push(...p2, ...p3);
+            edgeVertices.push(...p3, ...p4);
+            edgeVertices.push(...p4, ...p1);
         }
 
         // Create strips between consecutive paths
@@ -301,13 +417,32 @@
         const mesh = new THREE.Mesh(geometry, material);
         meshGroup.add(mesh);
 
-        const edgesGeometry = new THREE.EdgesGeometry(geometry, 10);
-        const edgesMaterial = new THREE.LineBasicMaterial({
-            color: 0x000000,
-            linewidth: 2
-        });
-        const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
-        meshGroup.add(edges);
+        // Draw thick borders using cylinder meshes
+        const edgeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const edgeRadius = 0.04;  // Thickness of edge lines
+
+        for (let i = 0; i < edgeVertices.length; i += 6) {
+            const p1 = new THREE.Vector3(edgeVertices[i], edgeVertices[i+1], edgeVertices[i+2]);
+            const p2 = new THREE.Vector3(edgeVertices[i+3], edgeVertices[i+4], edgeVertices[i+5]);
+
+            const direction = new THREE.Vector3().subVectors(p2, p1);
+            const length = direction.length();
+            if (length < 0.001) continue;
+
+            const cylGeom = new THREE.CylinderGeometry(edgeRadius, edgeRadius, length, 4, 1);
+            const cylinder = new THREE.Mesh(cylGeom, edgeMaterial);
+
+            // Position at midpoint
+            cylinder.position.copy(p1).add(p2).multiplyScalar(0.5);
+
+            // Orient along edge direction
+            cylinder.quaternion.setFromUnitVectors(
+                new THREE.Vector3(0, 1, 0),
+                direction.normalize()
+            );
+
+            meshGroup.add(cylinder);
+        }
     }
 
     function extractLastFromIncreasing(list) {
@@ -509,12 +644,50 @@
         if (window.slideEngine) {
             window.slideEngine.registerSimulation(slideId, {
                 start() { startRenderLoop(); },
-                pause() { stopRenderLoop(); },
+                pause() {
+                    stopRenderLoop();
+                    if (cameraAnimationId) {
+                        cancelAnimationFrame(cameraAnimationId);
+                        cameraAnimationId = null;
+                    }
+                },
+                steps: 2,
+                onStep(step) {
+                    currentStep = step;
+                    if (step === 1) {
+                        // Animate to position 2
+                        animateCamera(cameraPos1, cameraPos2, 2000);
+                        updateButtons(2);
+                    } else if (step === 2) {
+                        // Animate back to position 1
+                        animateCamera(cameraPos2, cameraPos1, 2000);
+                        updateButtons(1);
+                    }
+                },
+                onStepBack(step) {
+                    currentStep = step;
+                    if (step === 0) {
+                        // Back to initial position
+                        setCameraImmediate(cameraPos1);
+                        updateButtons(1);
+                    } else if (step === 1) {
+                        // Back to position 2
+                        setCameraImmediate(cameraPos2);
+                        updateButtons(2);
+                    }
+                },
                 onSlideEnter() {
                     reset();
                     init();
+                    setCameraImmediate(cameraPos1);
+                    updateButtons(1);
+                    setupButtonHandlers();
                 },
                 onSlideLeave() {
+                    if (cameraAnimationId) {
+                        cancelAnimationFrame(cameraAnimationId);
+                        cameraAnimationId = null;
+                    }
                     disposeThreeJS();
                 }
             }, 0);
