@@ -88,7 +88,10 @@ const ColorSchemes = [
     { name: 'New Year', colors: ['#C41E3A', '#228B22', '#FFFAFA', '#FFD700'] },  // Christmas red, forest green, snow white, gold
 
     // Domino Tilings Default (4 colors: yellow, green, blue, red for domino types)
-    { name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }  // Yellow, forest green, cobalt blue, crimson
+    { name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] },  // Yellow, forest green, cobalt blue, crimson
+
+    // Pencil Drawing / Escher Style
+    { name: 'Escher', colors: ['#F5F5F5', '#D0D0D0', '#A8A8A8', '#E0E0E0'] }  // Light gray, medium gray, darker gray (lozenges); 4th for dominoes
 ];
 
 // Export for module systems (if needed)
