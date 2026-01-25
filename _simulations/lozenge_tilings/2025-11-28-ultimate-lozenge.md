@@ -3947,18 +3947,11 @@ function initLozengeApp() {
             const rect = this.canvas.getBoundingClientRect();
             // FIX: Cap dpr at 2.0 to prevent iOS Canvas Memory Eviction (saves ~55% VRAM)
             const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            const oldW = this.canvas.width;
-            const oldH = this.canvas.height;
             this.canvas.width = rect.width * dpr;
             this.canvas.height = rect.height * dpr;
             this.ctx.scale(dpr, dpr);
             this.displayWidth = rect.width;
             this.displayHeight = rect.height;
-
-            // Debug: log when setupCanvas is called (which clears the canvas)
-            if (window.debugLog && (oldW !== this.canvas.width || oldH !== this.canvas.height)) {
-                window.debugLog('setupCanvas: ' + oldW + 'x' + oldH + ' -> ' + this.canvas.width + 'x' + this.canvas.height);
-            }
         }
 
         getCurrentPalette() { return this.colorPalettes[this.currentPaletteIndex]; }
@@ -4115,13 +4108,6 @@ function initLozengeApp() {
             ctx.fillRect(0, 0, this.displayWidth, this.displayHeight);
 
             const { centerX, centerY, scale } = this.getTransform(activeTriangles);
-
-            // Debug: log transform for large tilings
-            if (sim.dimers && sim.dimers.length > 1000) {
-                const msg = 'RENDER: d=' + sim.dimers.length + ' sc=' + scale.toFixed(1) + ' c=(' + centerX.toFixed(0) + ',' + centerY.toFixed(0) + ')';
-                console.log(msg);
-                if (window.debugLog) window.debugLog(msg);
-            }
 
             // Check for invalid scale
             if (scale <= 0 || !isFinite(scale)) {
@@ -4298,17 +4284,6 @@ function initLozengeApp() {
             const outlineWidth = this.outlineWidthPct * (refDimerCount / dimerCount);
             const outlineColor = isDarkMode ? '#aaaaaa' : '#000000';
 
-            // Debug first lozenge position
-            if (dimerCount > 1000 && sim.dimers.length > 0) {
-                const firstDimer = sim.dimers[0];
-                const verts = this.getLozengeVertices(firstDimer);
-                const canvasVerts = verts.map(v => this.toCanvas(v.x, v.y, centerX, centerY, scale));
-                const msg = 'LOZENGE[0]: canvas=(' + canvasVerts[0][0].toFixed(0) + ',' + canvasVerts[0][1].toFixed(0) + ') zoom=' + this.zoom.toFixed(3);
-                console.log(msg);
-                if (window.debugLog) window.debugLog(msg);
-            }
-
-            let drawnCount = 0;
             for (const dimer of sim.dimers) {
                 const verts = this.getLozengeVertices(dimer);
                 const canvasVerts = verts.map(v => this.toCanvas(v.x, v.y, centerX, centerY, scale));
@@ -4323,10 +4298,6 @@ function initLozengeApp() {
                     ctx.lineWidth = outlineWidth;
                     ctx.stroke();
                 }
-                drawnCount++;
-            }
-            if (dimerCount > 1000 && window.debugLog) {
-                window.debugLog('Drew ' + drawnCount + ' lozenges');
             }
         }
 
@@ -5779,58 +5750,13 @@ function initLozengeApp() {
     const renderer = new LozengeRenderer(canvas);
     const undoStack = new UndoStack();
 
-    // iOS Debug Panel (toggle with triple-tap on canvas)
-    let debugTapCount = 0;
-    let debugTapTimer = null;
-    let debugMode = false;
-    const debugPanel = document.createElement('div');
-    debugPanel.id = 'ios-debug-panel';
-    debugPanel.style.cssText = 'display:none;position:fixed;top:10px;left:10px;right:10px;background:rgba(0,0,0,0.85);color:#0f0;font:11px monospace;padding:8px;z-index:9999;max-height:40vh;overflow-y:auto;border-radius:6px;';
-    document.body.appendChild(debugPanel);
-
-    function debugLog(msg) {
-        console.log('[DEBUG]', msg);
-        if (debugMode) {
-            const line = document.createElement('div');
-            line.textContent = new Date().toLocaleTimeString() + ': ' + msg;
-            debugPanel.insertBefore(line, debugPanel.firstChild);
-            // Keep only last 50 lines
-            while (debugPanel.children.length > 50) {
-                debugPanel.removeChild(debugPanel.lastChild);
-            }
-        }
-    }
-    // Make it global for renderer access
-    window.debugLog = debugLog;
-
-    canvas.addEventListener('touchend', (e) => {
-        debugTapCount++;
-        clearTimeout(debugTapTimer);
-        debugTapTimer = setTimeout(() => {
-            if (debugTapCount >= 3) {
-                debugMode = !debugMode;
-                debugPanel.style.display = debugMode ? 'block' : 'none';
-                if (debugMode) {
-                    debugLog('Debug panel enabled');
-                    debugLog('Canvas: ' + canvas.width + 'x' + canvas.height);
-                    debugLog('Context: ' + (renderer.ctx ? 'OK' : 'NULL'));
-                    debugLog('Dimers: ' + (sim.dimers ? sim.dimers.length : 'null'));
-                    debugLog('isValid: ' + isValid);
-                }
-            }
-            debugTapCount = 0;
-        }, 400);
-    });
-
     // iOS canvas context loss recovery
     let contextLost = false;
     canvas.addEventListener('contextlost', (e) => {
-        debugLog('Canvas context LOST!');
         e.preventDefault();
         contextLost = true;
     });
     canvas.addEventListener('contextrestored', () => {
-        debugLog('Canvas context restored');
         contextLost = false;
         renderer.setupCanvas();
         draw();
@@ -6495,27 +6421,20 @@ function initLozengeApp() {
     }
 
     function draw() {
-        debugLog('draw() called, dimers=' + (sim.dimers ? sim.dimers.length : 'null') + ', isValid=' + isValid);
-
         // Try to recover from context loss (iOS)
         if (contextLost) {
-            debugLog('Context lost, attempting recovery...');
             renderer.setupCanvas();
             if (renderer.ctx) {
                 contextLost = false;
-                debugLog('Context recovered!');
             } else {
-                debugLog('Context still lost, skipping draw');
                 return;
             }
         }
 
         // Check if context is valid
         if (!renderer.ctx) {
-            debugLog('ERROR: renderer.ctx is null!');
             renderer.setupCanvas();
             if (!renderer.ctx) {
-                debugLog('ERROR: Could not get canvas context');
                 return;
             }
         }
@@ -6538,33 +6457,7 @@ function initLozengeApp() {
             renderer3D.dimersTo3D(sim.dimers, sim.boundaries);
         }
 
-        // Debug before render
-        if (sim.dimers && sim.dimers.length > 500) {
-            debugLog('PRE-RENDER: canvas=' + canvas.width + 'x' + canvas.height + ' ctx=' + (renderer.ctx ? 'OK' : 'NULL'));
-        }
-
         renderer.draw(sim, activeTriangles, isValid);
-
-        // Debug after render
-        if (sim.dimers && sim.dimers.length > 500) {
-            debugLog('POST-RENDER: checking canvas content...');
-            try {
-                // Check multiple pixels
-                const ctx = renderer.ctx;
-                const mid = ctx.getImageData(canvas.width/2, canvas.height/2, 1, 1).data;
-                const corner = ctx.getImageData(100, 100, 1, 1).data;
-                debugLog('Mid pixel: ' + mid[0] + ',' + mid[1] + ',' + mid[2] + ',' + mid[3]);
-                debugLog('Corner pixel: ' + corner[0] + ',' + corner[1] + ',' + corner[2] + ',' + corner[3]);
-
-                // Check if all white (background) - indicates nothing was drawn
-                const isAllWhite = (mid[0] > 250 && mid[1] > 250 && mid[2] > 250);
-                if (isAllWhite) {
-                    debugLog('WARNING: Canvas appears to be all white/blank!');
-                }
-            } catch(e) {
-                debugLog('POST-RENDER check error: ' + e.message);
-            }
-        }
 
         const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
         const tool = getEffectiveTool();
@@ -6577,7 +6470,6 @@ function initLozengeApp() {
 
         // Update hole overlay positions on pan/zoom
         updateHoleOverlayPositions();
-
     }
 
     // Track if simulation should auto-restart when shape becomes valid
@@ -8232,42 +8124,17 @@ function initLozengeApp() {
 
                         if (coalesced) {
                             // Success! Copy result to main grid and WASM
-                            debugLog('GPU CFTP coalesced! Finalizing...');
                             await gpuEngine.finalizeCFTP();
-                            debugLog('finalizeCFTP done');
 
                             // Get dimers from GPU result and update sim
-                            const gpuDimers = await gpuEngine.getDimers(sim.blackTriangles);
-                            debugLog('getDimers returned: ' + (gpuDimers ? gpuDimers.length : 'null') + ' dimers');
-
-                            if (gpuDimers && gpuDimers.length > 0) {
-                                // Check first dimer
-                                const d0 = gpuDimers[0];
-                                debugLog('First dimer: n1=' + d0.n1 + ' j1=' + d0.j1 + ' n2=' + d0.n2 + ' j2=' + d0.j2 + ' t=' + d0.t);
-                            }
-
-                            sim.dimers = gpuDimers;
-                            debugLog('sim.dimers set, now has ' + sim.dimers.length + ' dimers');
+                            sim.dimers = await gpuEngine.getDimers(sim.blackTriangles);
 
                             // Sync to WASM so Glauber can continue from this state
                             sim.setDimers(sim.dimers);
-                            debugLog('setDimers to WASM done');
 
-                            debugLog('Canvas before draw: ' + canvas.width + 'x' + canvas.height);
-                            debugLog('Calling draw()...');
                             draw();
-                            debugLog('draw() returned');
-
-                            // Check canvas content
-                            try {
-                                const testPixel = renderer.ctx.getImageData(canvas.width/2, canvas.height/2, 1, 1).data;
-                                debugLog('Center pixel RGBA: ' + testPixel[0] + ',' + testPixel[1] + ',' + testPixel[2] + ',' + testPixel[3]);
-                            } catch(e) {
-                                debugLog('getImageData error: ' + e.message);
-                            }
 
                             gpuEngine.destroyCFTP();
-                            debugLog('destroyCFTP done');
                             const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                             // Show T@step if coalesced early, otherwise just T
                             const stepInfo = totalStepsRun < T ? T + '@' + totalStepsRun : T;
@@ -8358,28 +8225,8 @@ function initLozengeApp() {
                     }
                     setTimeout(cftpStep, 0);
                 } else if (res.status === 'coalesced') {
-                    debugLog('CFTP coalesced at T=' + res.T);
-                    const finalRes = sim.finalizeCFTP();
-                    const dimerCount = sim.dimers ? sim.dimers.length : 0;
-                    debugLog('finalizeCFTP returned, dimers=' + dimerCount);
-                    debugLog('Canvas size: ' + canvas.width + 'x' + canvas.height);
-                    debugLog('Context valid: ' + (renderer.ctx ? 'YES' : 'NO'));
-
-                    // Auto-show debug panel if something looks wrong
-                    if (dimerCount === 0 || !renderer.ctx) {
-                        debugMode = true;
-                        debugPanel.style.display = 'block';
-                        debugLog('AUTO-DEBUG: Problem detected!');
-                    }
-
-                    // Small delay to let iOS recover before drawing
-                    setTimeout(() => {
-                        draw();
-                        // Redraw after a short delay to recover from any iOS glitches
-                        setTimeout(() => {
-                            draw();
-                        }, 100);
-                    }, 10);
+                    sim.finalizeCFTP();
+                    draw();
                     const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                     el.cftpSteps.textContent = res.T + ' (' + elapsed + 's)';
                     el.cftpBtn.textContent = originalText;
@@ -10253,15 +10100,12 @@ function initLozengeApp() {
     // Initialize - debounced resize handler to avoid interfering with sampling
     let resizeTimeout = null;
     window.addEventListener('resize', () => {
-        debugLog('RESIZE event fired');
         // Skip resize during CFTP to avoid corrupting state
         if (el.cftpBtn.disabled && el.cftpStopBtn.style.display !== 'none') {
-            debugLog('RESIZE skipped - CFTP in progress');
             return;
         }
         if (resizeTimeout) clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
-            debugLog('RESIZE handler executing setupCanvas + draw');
             renderer.setupCanvas();
             draw();
         }, 100);
