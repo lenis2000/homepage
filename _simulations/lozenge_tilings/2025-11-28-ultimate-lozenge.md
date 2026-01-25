@@ -6536,16 +6536,32 @@ function initLozengeApp() {
         // Update hole overlay positions on pan/zoom
         updateHoleOverlayPositions();
 
-        // iOS Safari fix: force canvas buffer flush by reading a pixel
+        // iOS Safari fix: force canvas buffer flush
         // This works around a bug where the canvas doesn't present after many draw calls
         if (sim.dimers && sim.dimers.length > 1000) {
             try {
+                // Method 1: Read a pixel to force GPU sync
                 renderer.ctx.getImageData(0, 0, 1, 1);
                 if (window.debugLog) window.debugLog('Canvas flush forced');
             } catch (e) {
                 if (window.debugLog) window.debugLog('Canvas flush failed: ' + e.message);
             }
         }
+    }
+
+    // iOS Safari: Force canvas buffer presentation by triggering a resize
+    // This is needed after CFTP completes to ensure the buffer is presented
+    function forceCanvasRefresh() {
+        const w = canvas.width;
+        const h = canvas.height;
+        // Briefly change size then restore - this forces iOS to present the buffer
+        canvas.width = w + 1;
+        canvas.height = h + 1;
+        canvas.width = w;
+        canvas.height = h;
+        // Re-setup after resize
+        renderer.setupCanvas();
+        if (window.debugLog) window.debugLog('Canvas refresh forced (resize trick)');
     }
 
     // Track if simulation should auto-restart when shape becomes valid
@@ -8206,11 +8222,12 @@ function initLozengeApp() {
                             // Sync to WASM so Glauber can continue from this state
                             sim.setDimers(sim.dimers);
 
-                            // iOS Safari fix: use requestAnimationFrame to ensure proper buffer presentation
+                            // iOS Safari fix: force canvas refresh then draw
+                            forceCanvasRefresh();
                             await new Promise(resolve => {
                                 requestAnimationFrame(() => {
                                     draw();
-                                    if (window.debugLog) window.debugLog('CFTP draw in rAF completed');
+                                    if (window.debugLog) window.debugLog('CFTP draw in rAF completed (GPU)');
                                     resolve();
                                 });
                             });
@@ -8320,7 +8337,8 @@ function initLozengeApp() {
                         debugLog('AUTO-DEBUG: Problem detected!');
                     }
 
-                    // iOS Safari fix: use requestAnimationFrame for proper buffer presentation
+                    // iOS Safari fix: force canvas refresh then draw
+                    forceCanvasRefresh();
                     requestAnimationFrame(() => {
                         debugLog('CFTP draw in rAF (WASM)...');
                         draw();
