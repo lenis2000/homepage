@@ -995,75 +995,80 @@ code:
   }
 
   /* ========================================================================
-     Phase 3: Floating Action Button (Mobile)
+     Phase 3: Floating Action Buttons (Mobile)
      ======================================================================== */
-  .sample-fab {
+  .fab-group {
     display: none;
     position: fixed;
     bottom: 80px;
     right: 16px;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #E57200, #f08c30);
-    color: white;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(229, 114, 0, 0.4);
     z-index: 1000;
-    transition: transform 0.15s, box-shadow 0.15s;
-  }
-
-  .sample-fab:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 16px rgba(229, 114, 0, 0.5);
-  }
-
-  .sample-fab:active {
-    transform: scale(0.95);
-  }
-
-  .sample-fab:disabled {
-    background: #999;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    cursor: not-allowed;
-  }
-
-  /* FAB Tooltip - only on devices that support hover (not touch) */
-  @media (hover: hover) {
-    .sample-fab::before {
-      content: attr(data-tooltip);
-      position: absolute;
-      right: 66px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: rgba(35, 45, 75, 0.95);
-      color: white;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      white-space: nowrap;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
-    }
-
-    .sample-fab:hover::before {
-      opacity: 1;
-    }
-
-    .sample-fab:disabled::before {
-      content: "Draw a valid region first";
-    }
+    flex-direction: row;
+    gap: 10px;
+    align-items: center;
   }
 
   @media (max-width: 991px) {
-    .sample-fab {
+    .fab-group {
       display: flex;
-      align-items: center;
-      justify-content: center;
     }
+  }
+
+  .fab-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #555;
+    color: white;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .fab-btn:hover {
+    transform: scale(1.1);
+  }
+
+  .fab-btn:active {
+    transform: scale(0.95);
+  }
+
+  .fab-btn:disabled {
+    background: #999;
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Primary FAB (Sample) - larger and orange */
+  .fab-btn.fab-primary {
+    width: 56px;
+    height: 56px;
+    font-size: 24px;
+    background: linear-gradient(135deg, #E57200, #f08c30);
+    box-shadow: 0 4px 12px rgba(229, 114, 0, 0.4);
+  }
+
+  .fab-btn.fab-primary:hover {
+    box-shadow: 0 6px 16px rgba(229, 114, 0, 0.5);
+  }
+
+  .fab-btn.fab-primary:disabled {
+    background: #999;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Secondary FABs - navy blue */
+  .fab-btn.fab-secondary {
+    background: linear-gradient(135deg, #232D4B, #3a4a6b);
+  }
+
+  .fab-btn.fab-secondary:disabled {
+    background: #888;
   }
 
   /* ========================================================================
@@ -2771,8 +2776,12 @@ Graphics3D[{EdgeForm[Black],
 
 </div><!-- end simulation-layout -->
 
-<!-- Floating Action Button for Mobile -->
-<button id="sampleFab" class="sample-fab" disabled aria-label="Generate perfect sample" data-tooltip="Perfect Sample">🎲</button>
+<!-- Floating Action Buttons for Mobile -->
+<div class="fab-group">
+  <button id="hexagonFab" class="fab-btn fab-secondary" aria-label="Create hexagon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="12,2 22,7 22,17 12,22 2,17 2,7"/></svg></button>
+  <button id="scaleUpFab" class="fab-btn fab-secondary" disabled aria-label="Scale region up">2×</button>
+  <button id="sampleFab" class="fab-btn fab-primary" disabled aria-label="Generate perfect sample">🎲</button>
+</div>
 
 <!-- Keyboard Shortcuts Help Modal -->
 <div id="keyboardHelpModal" class="keyboard-help-modal" role="dialog" aria-labelledby="keyboard-help-title" aria-modal="true">
@@ -9805,6 +9814,9 @@ function initLozengeApp() {
     // Floating Action Button (FAB) for Mobile
     // ========================================================================
     const sampleFab = document.getElementById('sampleFab');
+    const hexagonFab = document.getElementById('hexagonFab');
+    const scaleUpFab = document.getElementById('scaleUpFab');
+
     if (sampleFab) {
         sampleFab.addEventListener('click', () => {
             // If Glauber is running, stop it
@@ -9817,26 +9829,49 @@ function initLozengeApp() {
                 el.cftpBtn.click();
             }
         });
+    }
 
-        // Update FAB state based on simulation state
-        function updateFabState() {
+    if (hexagonFab) {
+        hexagonFab.addEventListener('click', () => {
+            // Trigger the hexagon button
+            if (el.hexagonBtn) {
+                el.hexagonBtn.click();
+            }
+        });
+    }
+
+    if (scaleUpFab) {
+        scaleUpFab.addEventListener('click', () => {
+            // Trigger scale up (double mesh)
+            const doubleMeshBtn = document.getElementById('doubleMeshBtn');
+            if (doubleMeshBtn && !doubleMeshBtn.disabled) {
+                doubleMeshBtn.click();
+            }
+        });
+    }
+
+    // Update FAB states based on simulation state
+    function updateFabState() {
+        if (sampleFab) {
             sampleFab.disabled = !isValid || !sim;
             if (running) {
                 sampleFab.innerHTML = '⏸';
-                sampleFab.setAttribute('data-tooltip', 'Stop Glauber (G)');
             } else {
                 sampleFab.innerHTML = '🎲';
-                sampleFab.setAttribute('data-tooltip', 'Perfect Sample (S)');
             }
         }
-
-        // Hook into existing update functions
-        const originalUpdateUI = updateUI;
-        updateUI = function() {
-            originalUpdateUI();
-            updateFabState();
-        };
+        if (scaleUpFab) {
+            // Enable scale up only when we have a valid region
+            scaleUpFab.disabled = !isValid || activeTriangles.size === 0;
+        }
     }
+
+    // Hook into existing update functions
+    const originalUpdateUI = updateUI;
+    updateUI = function() {
+        originalUpdateUI();
+        updateFabState();
+    };
 
     // ========================================================================
     // Palette Picker Grid
