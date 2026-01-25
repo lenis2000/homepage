@@ -5733,6 +5733,20 @@ function initLozengeApp() {
     const renderer = new LozengeRenderer(canvas);
     const undoStack = new UndoStack();
 
+    // iOS canvas context loss recovery
+    let contextLost = false;
+    canvas.addEventListener('contextlost', (e) => {
+        console.warn('Canvas context lost');
+        e.preventDefault();
+        contextLost = true;
+    });
+    canvas.addEventListener('contextrestored', () => {
+        console.log('Canvas context restored');
+        contextLost = false;
+        renderer.setupCanvas();
+        draw();
+    });
+
     // WebGPU Engine (initialized asynchronously if available)
     let gpuEngine = null;
     let useWebGPU = false;
@@ -6388,6 +6402,18 @@ function initLozengeApp() {
     }
 
     function draw() {
+        // Try to recover from context loss (iOS)
+        if (contextLost) {
+            console.log('Attempting to recover canvas context...');
+            renderer.setupCanvas();
+            if (renderer.ctx) {
+                contextLost = false;
+            } else {
+                console.warn('Canvas context still lost, skipping draw');
+                return;
+            }
+        }
+
         // If in double dimer mode, render that instead
         if (inDoubleDimerMode && storedSamples) {
             renderDoubleDimers();
@@ -8170,7 +8196,13 @@ function initLozengeApp() {
                     setTimeout(cftpStep, 0);
                 } else if (res.status === 'coalesced') {
                     const finalRes = sim.finalizeCFTP();
-                    draw();
+                    console.log('CFTP finalized, dimers:', sim.dimers ? sim.dimers.length : 0);
+                    // Small delay to let iOS recover before drawing
+                    setTimeout(() => {
+                        draw();
+                        // Redraw after a short delay to recover from any iOS glitches
+                        setTimeout(() => draw(), 100);
+                    }, 10);
                     const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                     el.cftpSteps.textContent = res.T + ' (' + elapsed + 's)';
                     el.cftpBtn.textContent = originalText;
