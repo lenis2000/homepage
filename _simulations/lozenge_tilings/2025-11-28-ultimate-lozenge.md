@@ -543,7 +543,13 @@ code:
     align-items: center;
     gap: 2px;
     pointer-events: auto;
-    transform: translate(-50%, -50%);
+    /* GPU composition for hardware-accelerated transforms */
+    will-change: transform;
+    top: 0;
+    left: 0;
+    /* Center the element on its coordinate via margin */
+    margin-top: -12px;
+    margin-left: -40px; /* Half of approx width (~80px for the control group) */
   }
   .hole-control button {
     width: 24px;
@@ -3939,7 +3945,8 @@ function initLozengeApp() {
 
         setupCanvas() {
             const rect = this.canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
+            // FIX: Cap dpr at 2.0 to prevent iOS Canvas Memory Eviction (saves ~55% VRAM)
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
             const oldW = this.canvas.width;
             const oldH = this.canvas.height;
             this.canvas.width = rect.width * dpr;
@@ -6171,27 +6178,28 @@ function initLozengeApp() {
         return { x: sx, y: sy };
     }
 
-    // Update hole overlay positions (call on pan/zoom)
+    // Optimized Overlay Position Updater (No WASM calls, No Layout Thrashing)
+    // Reads world coordinates from dataset instead of calling sim.getAllHolesInfo()
     function updateHoleOverlayPositions() {
         const controls = holeOverlays.querySelectorAll('.hole-control');
         if (controls.length === 0) return;
 
-        const holesInfo = sim.getAllHolesInfo();
-        const wasmHoles = holesInfo.holes || [];
+        // NO WASM CALL - read from cached dataset instead
+        controls.forEach(ctrl => {
+            const wx = parseFloat(ctrl.dataset.worldX);
+            const wy = parseFloat(ctrl.dataset.worldY);
 
-        controls.forEach((ctrl, h) => {
-            if (h < wasmHoles.length) {
-                const hole = wasmHoles[h];
-                let screen;
-                if (is3DView && renderer3D) {
-                    // In 3D, position label at hole centroid with height=0
-                    screen = renderer3D.worldToScreen3D(hole.centroidX, hole.centroidY, 0);
-                } else {
-                    screen = worldToScreen(hole.centroidX, hole.centroidY);
-                }
-                ctrl.style.left = screen.x + 'px';
-                ctrl.style.top = screen.y + 'px';
+            if (isNaN(wx) || isNaN(wy)) return;
+
+            let screen;
+            if (is3DView && renderer3D) {
+                screen = renderer3D.worldToScreen3D(wx, wy, 0);
+            } else {
+                screen = worldToScreen(wx, wy);
             }
+
+            // Use transform for hardware accelerated movement (no layout thrashing)
+            ctrl.style.transform = `translate3d(${screen.x}px, ${screen.y}px, 0)`;
         });
     }
 
@@ -6225,9 +6233,12 @@ function initLozengeApp() {
 
             const ctrl = document.createElement('div');
             ctrl.className = 'hole-control';
-            ctrl.style.left = screen.x + 'px';
-            ctrl.style.top = screen.y + 'px';
+            // Use transform for hardware-accelerated positioning
+            ctrl.style.transform = `translate3d(${screen.x}px, ${screen.y}px, 0)`;
             ctrl.dataset.hole = h;
+            // STORE WORLD COORDS IN DATASET for fast position updates (no WASM calls)
+            ctrl.dataset.worldX = hole.centroidX;
+            ctrl.dataset.worldY = hole.centroidY;
 
             // Both modes: [+] [height] [-] with editable height in center
             // Display relative height (currentWinding - baseHeight), starts at 0
