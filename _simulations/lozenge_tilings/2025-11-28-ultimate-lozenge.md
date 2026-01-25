@@ -121,10 +121,6 @@ code:
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
-    /* Force GPU compositing on iOS to prevent canvas buffer issues */
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-    will-change: contents;
   }
   #lozenge-canvas.panning {
     cursor: grab;
@@ -1233,8 +1229,8 @@ code:
 
     .visualization-panel #lozenge-canvas,
     .visualization-panel #three-container {
-      height: 50vh;
-      max-height: 500px;
+      /* Fixed height for iOS - vh units cause resize issues with Safari chrome */
+      height: 400px;
     }
   }
 
@@ -6536,32 +6532,6 @@ function initLozengeApp() {
         // Update hole overlay positions on pan/zoom
         updateHoleOverlayPositions();
 
-        // iOS Safari fix: force canvas buffer flush
-        // This works around a bug where the canvas doesn't present after many draw calls
-        if (sim.dimers && sim.dimers.length > 1000) {
-            try {
-                // Method 1: Read a pixel to force GPU sync
-                renderer.ctx.getImageData(0, 0, 1, 1);
-                if (window.debugLog) window.debugLog('Canvas flush forced');
-            } catch (e) {
-                if (window.debugLog) window.debugLog('Canvas flush failed: ' + e.message);
-            }
-        }
-    }
-
-    // iOS Safari: Force canvas buffer presentation by triggering a resize
-    // This is needed after CFTP completes to ensure the buffer is presented
-    function forceCanvasRefresh() {
-        const w = canvas.width;
-        const h = canvas.height;
-        // Briefly change size then restore - this forces iOS to present the buffer
-        canvas.width = w + 1;
-        canvas.height = h + 1;
-        canvas.width = w;
-        canvas.height = h;
-        // Re-setup after resize
-        renderer.setupCanvas();
-        if (window.debugLog) window.debugLog('Canvas refresh forced (resize trick)');
     }
 
     // Track if simulation should auto-restart when shape becomes valid
@@ -8222,15 +8192,7 @@ function initLozengeApp() {
                             // Sync to WASM so Glauber can continue from this state
                             sim.setDimers(sim.dimers);
 
-                            // iOS Safari fix: force canvas refresh then draw
-                            forceCanvasRefresh();
-                            await new Promise(resolve => {
-                                requestAnimationFrame(() => {
-                                    draw();
-                                    if (window.debugLog) window.debugLog('CFTP draw in rAF completed (GPU)');
-                                    resolve();
-                                });
-                            });
+                            draw();
 
                             gpuEngine.destroyCFTP();
                             const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
@@ -8337,23 +8299,14 @@ function initLozengeApp() {
                         debugLog('AUTO-DEBUG: Problem detected!');
                     }
 
-                    // iOS Safari fix: force canvas refresh then draw
-                    forceCanvasRefresh();
-                    requestAnimationFrame(() => {
-                        debugLog('CFTP draw in rAF (WASM)...');
+                    // Small delay to let iOS recover before drawing
+                    setTimeout(() => {
                         draw();
-                        // Second draw after another frame for iOS stability
-                        requestAnimationFrame(() => {
-                            debugLog('CFTP second draw in rAF...');
+                        // Redraw after a short delay to recover from any iOS glitches
+                        setTimeout(() => {
                             draw();
-                            // Check if still broken
-                            if (sim.dimers && sim.dimers.length === 0) {
-                                debugLog('WARNING: Still 0 dimers after draw!');
-                                debugMode = true;
-                                debugPanel.style.display = 'block';
-                            }
-                        });
-                    });
+                        }, 100);
+                    }, 10);
                     const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                     el.cftpSteps.textContent = res.T + ' (' + elapsed + 's)';
                     el.cftpBtn.textContent = originalText;
@@ -10224,10 +10177,18 @@ function initLozengeApp() {
         }
     });
 
-    // Initialize
+    // Initialize - debounced resize handler to avoid interfering with sampling
+    let resizeTimeout = null;
     window.addEventListener('resize', () => {
-        renderer.setupCanvas();
-        draw();
+        // Skip resize during CFTP to avoid corrupting state
+        if (el.cftpBtn.disabled && el.cftpStopBtn.style.display !== 'none') {
+            return;
+        }
+        if (resizeTimeout) clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            renderer.setupCanvas();
+            draw();
+        }, 100);
     });
 
     initPaletteSelector();
