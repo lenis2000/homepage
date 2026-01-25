@@ -754,30 +754,32 @@ code:
     cursor: not-allowed;
   }
 
-  /* FAB Tooltip */
-  .sample-fab::before {
-    content: attr(data-tooltip);
-    position: absolute;
-    right: 66px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(35, 45, 75, 0.95);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-  }
+  /* FAB Tooltip - only on devices that support hover (not touch) */
+  @media (hover: hover) {
+    .sample-fab::before {
+      content: attr(data-tooltip);
+      position: absolute;
+      right: 66px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(35, 45, 75, 0.95);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
 
-  .sample-fab:hover::before {
-    opacity: 1;
-  }
+    .sample-fab:hover::before {
+      opacity: 1;
+    }
 
-  .sample-fab:disabled::before {
-    content: "Draw a valid region first";
+    .sample-fab:disabled::before {
+      content: "Draw a valid region first";
+    }
   }
 
   @media (max-width: 991px) {
@@ -3414,6 +3416,12 @@ Cmd-click: complete lasso</div>
 
         isRunning = true;
         el.startStopBtn.textContent = 'Stop Glauber';
+        // Update FAB to show stop state
+        if (el.sampleFab) {
+            el.sampleFab.textContent = '⏸';
+            el.sampleFab.setAttribute('data-tooltip', 'Stop');
+            el.sampleFab.setAttribute('aria-label', 'Stop Glauber dynamics');
+        }
         el.cftpBtn.disabled = true;
 
         function loop() {
@@ -3445,6 +3453,17 @@ Cmd-click: complete lasso</div>
         el.startStopBtn.textContent = 'Start Glauber';
         el.cftpBtn.disabled = !isValid || hasHoles;
         el.doubleDimerBtn.disabled = !isValid || hasHoles;
+        // Restore FAB icon
+        if (el.sampleFab) {
+            el.sampleFab.textContent = '🎲';
+            if (hasHoles) {
+                el.sampleFab.setAttribute('data-tooltip', 'Glauber');
+                el.sampleFab.setAttribute('aria-label', 'Start Glauber dynamics');
+            } else {
+                el.sampleFab.setAttribute('data-tooltip', 'Perfect Sample');
+                el.sampleFab.setAttribute('aria-label', 'Generate perfect sample');
+            }
+        }
     }
 
     function formatNumber(n) {
@@ -4979,12 +4998,21 @@ Cmd-click: complete lasso</div>
         }
 
         // ================================================================
-        // Floating Action Button (Mobile - Perfect Sample)
+        // Floating Action Button (Mobile - Sample)
         // ================================================================
         if (el.sampleFab) {
             el.sampleFab.addEventListener('click', () => {
-                if (!el.cftpBtn.disabled && isValid && !hasHoles) {
-                    el.cftpBtn.click();
+                if (!isValid || !wasmReady) return;
+                if (hasHoles) {
+                    // With holes: use Glauber dynamics
+                    if (!el.startStopBtn.disabled) {
+                        el.startStopBtn.click();
+                    }
+                } else {
+                    // No holes: use perfect sample (CFTP)
+                    if (!el.cftpBtn.disabled) {
+                        el.cftpBtn.click();
+                    }
                 }
             });
         }
@@ -5102,7 +5130,15 @@ Cmd-click: complete lasso</div>
     // Update FAB state based on region validity
     function updateFabState() {
         if (el.sampleFab) {
-            el.sampleFab.disabled = !isValid || hasHoles || !wasmReady;
+            el.sampleFab.disabled = !isValid || !wasmReady;
+            // Update tooltip based on whether there are holes
+            if (hasHoles) {
+                el.sampleFab.setAttribute('data-tooltip', 'Glauber');
+                el.sampleFab.setAttribute('aria-label', 'Start Glauber dynamics');
+            } else {
+                el.sampleFab.setAttribute('data-tooltip', 'Perfect Sample');
+                el.sampleFab.setAttribute('aria-label', 'Generate perfect sample');
+            }
         }
     }
 
