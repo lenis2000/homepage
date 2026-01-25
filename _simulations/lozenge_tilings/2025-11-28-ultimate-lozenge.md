@@ -726,13 +726,12 @@ code:
     }
     .controls-panel {
       grid-column: 1;
-      grid-row: 1;
+      grid-row: 1 / 3; /* span both rows */
     }
     .visualization-panel {
       grid-column: 2;
       grid-row: 1;
     }
-    /* Controls that overflow below canvas span full width in 2 columns */
     .controls-panel-inner {
       display: grid;
       grid-template-columns: 1fr;
@@ -744,6 +743,34 @@ code:
   @media (min-width: 1200px) {
     .simulation-layout {
       grid-template-columns: 380px 1fr;
+    }
+  }
+
+  /* Bottom sections wrapper - uses grid placement on desktop */
+  .bottom-sections-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  @media (min-width: 992px) {
+    .bottom-sections-wrapper {
+      grid-column: 2; /* under the canvas */
+      grid-row: 2;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items: start;
+      margin-top: 0;
+    }
+  }
+
+  /* On mobile, bottom sections are moved into drawer via JS */
+  @media (max-width: 991px) {
+    .bottom-sections-wrapper {
+      padding: 0;
+      margin-top: 0;
     }
   }
 
@@ -2545,122 +2572,6 @@ if (window.LOZENGE_WEBGPU) {
       </div>
     </details>
 
-    <!-- Section 6: Advanced (collapsed by default) -->
-    <details class="control-section">
-      <summary>Fluctuations & Double Dimers</summary>
-      <div class="control-section-content">
-        <div class="control-row">
-          <button id="cftpBtn2" class="btn-secondary-action" data-tooltip="Individual perfect sample" disabled aria-label="Generate individual perfect sample using CFTP">CFTP Sample</button>
-          <button id="averageBtn" class="btn-secondary-action" data-tooltip="Compute averaged height (Limit Shape)" disabled aria-label="Compute averaged height function from multiple samples">Average</button>
-          <span class="param-group"><label for="avgSamplesInput" class="param-label">n</label><input type="number" class="param-input" id="avgSamplesInput" value="10" min="1" max="1000" style="width: 50px;" aria-label="Number of samples to average"></span>
-          <button id="avgStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;" aria-label="Stop averaging process">Stop</button>
-        </div>
-        <div class="control-row">
-          <span id="avgProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
-        </div>
-        <div class="control-row">
-          <button id="fluctuationsBtn" class="btn-secondary-action" data-tooltip="Height difference ≈ Gaussian Free Field" disabled aria-label="Visualize height function fluctuations between two samples">Fluctuations</button>
-          <span id="fluctProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
-          <label for="fluctScaleInput" style="font-size: 12px; color: #555;">×</label>
-          <input type="number" id="fluctScaleInput" value="10" min="1" max="100" step="1" style="width: 50px; padding: 2px 4px; font-size: 11px;" aria-label="Fluctuation scale multiplier">
-          <label style="display: flex; align-items: center; gap: 3px; font-size: 12px; color: #555; cursor: pointer;">
-            <input type="checkbox" id="fluctOutlineCheck" checked style="margin: 0;" aria-label="Show outline in fluctuations view">
-            Outline
-          </label>
-        </div>
-        <div class="control-row">
-          <button id="doubleDimerBtn" class="btn-secondary-action" data-tooltip="Superimpose two samples to form loops" disabled aria-label="Generate double dimer loop visualization">Double Dimer</button>
-          <span id="doubleDimerProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
-          <label for="minLoopInput" style="font-size: 12px; color: #555;">min loop:</label>
-          <input type="number" id="minLoopInput" value="2" min="2" max="99" style="width: 3.5em; padding: 2px 4px; font-size: 11px;" aria-label="Minimum loop size to display">
-        </div>
-        <div class="control-row">
-          <button id="resampleBtn" style="display: none; background: #6c757d; color: white; border-color: #6c757d;" aria-label="Generate new sample">Resample</button>
-        </div>
-      </div>
-    </details>
-
-    <!-- Section 7: Export (collapsed by default) -->
-    <details class="control-section">
-      <summary>Export</summary>
-      <div class="control-section-content">
-        <div class="export-group">
-          <span class="export-group-label">Images</span>
-          <button id="export-png" class="btn-utility" aria-label="Export as PNG image">PNG</button>
-          <label for="export-quality" style="font-size: 11px; color: #666;">Quality:</label>
-          <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;" aria-label="PNG export quality">
-          <span id="export-quality-val" style="font-size: 11px; color: #232D4B;">85</span>
-          <button id="export-pdf" class="btn-utility" aria-label="Export as PDF document">PDF</button>
-        </div>
-        <div class="export-divider"></div>
-        <div class="export-group">
-          <span class="export-group-label">Height</span>
-          <button id="export-height-csv" class="btn-utility" aria-label="Export height function as CSV file">CSV</button>
-          <button id="height-csv-info" style="padding: 0 6px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: pointer;" aria-label="Show height CSV format information">?</button>
-          <button id="export-height-mma" class="btn-utility" aria-label="Copy height function as Mathematica array to clipboard">Mathematica</button>
-          <button id="height-mma-info" style="padding: 0 6px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: pointer;" aria-label="Show Mathematica array format information">?</button>
-        </div>
-        <div class="export-divider"></div>
-        <div class="export-group">
-          <span class="export-group-label">Shape</span>
-          <button id="export-json" class="btn-utility" aria-label="Export region shape as JSON file">Export</button>
-          <button id="import-json" class="btn-utility" aria-label="Import region shape from JSON file">Import</button>
-          <input type="file" id="import-json-file" accept=".json" style="display: none;" aria-label="JSON file input">
-        </div>
-        <div class="export-divider"></div>
-        <div class="export-group">
-          <span class="export-group-label">Share</span>
-          <button id="copy-link-btn" class="btn-utility" aria-label="Copy shareable link to clipboard">Copy Link</button>
-          <span id="link-copied" style="display: none; color: #28a745; font-size: 11px;">Copied!</span>
-        </div>
-        <div class="export-divider"></div>
-        <div class="export-group">
-          <span class="export-group-label">3D</span>
-          <button id="export-obj" class="btn-utility" aria-label="Export 3D model as OBJ file">OBJ</button>
-          <button id="export-obj2" class="btn-utility" aria-label="Export 3D model as OBJ with orthogonal axes">OBJ-ortho</button>
-          <label for="obj-thickness" style="font-size: 11px; color: #666;">Thickness:</label>
-          <input type="number" id="obj-thickness" value="2" min="0" step="1" style="width: 40px;" aria-label="OBJ export thickness in millimeters">
-          <span style="font-size: 11px; color: #888;">mm</span>
-        </div>
-        <div id="height-csv-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 100%;">Height CSV Coordinates:
-
-• n, j: Integer lattice coordinates on the triangular grid
-• x, y: World coordinates (floating point)
-• h: Height function value at vertex (n, j)
-
-Coordinate System:
-  The angle between n and j axes is 60°
-
-  n-direction: horizontal + slight upward tilt
-    (vector: (1, 1/√3), angle 30° from horizontal)
-
-  j-direction: purely vertical
-    (vector: (0, 2/√3))
-
-Conversion to world (x, y):
-  x = n
-  y = n/√3 + j × 2/√3
-
-Triangles indexed by (n, j, type):
-  Type 1 (black ▶): vertices (n,j), (n,j-1), (n+1,j-1)
-  Type 2 (white ◀): vertices (n,j), (n+1,j), (n+1,j-1)
-
-The height h is defined on vertices of the triangular lattice
-(equivalently, faces of the dual hexagonal grid).</div>
-        <div id="height-mma-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 100%;">Mathematica Plotting Code:
-
-After pasting, assign to A and run:
-
-pts2D = A[[All, {1, 2}]];
-mesh = DelaunayMesh[pts2D];
-Graphics3D[{EdgeForm[Black],
-  GraphicsComplex[
-    MapThread[Append, {pts2D, A[[All, 3]]}],
-    {Polygon[MeshCells[mesh, 2][[All, 1]]]}]
-}, Boxed -> False]</div>
-      </div>
-    </details>
-
   </div><!-- end controls-panel-inner -->
 </aside>
 
@@ -2721,6 +2632,125 @@ Cmd-click: complete lasso</div>
     <span id="gpuIndicator" style="color: #2e8b57; margin-left: 8px; display: none;">🚀 GPU</span>
   </div>
 </main>
+
+<!-- Bottom sections: under canvas on desktop, in drawer on mobile via JS -->
+<div class="bottom-sections-wrapper">
+  <!-- Fluctuations & Double Dimers -->
+  <details class="control-section bottom-section">
+    <summary>Fluctuations & Double Dimers</summary>
+    <div class="control-section-content">
+      <div class="control-row">
+        <button id="cftpBtn2" class="btn-secondary-action" data-tooltip="Individual perfect sample" disabled aria-label="Generate individual perfect sample using CFTP">CFTP Sample</button>
+        <button id="averageBtn" class="btn-secondary-action" data-tooltip="Compute averaged height (Limit Shape)" disabled aria-label="Compute averaged height function from multiple samples">Average</button>
+        <span class="param-group"><label for="avgSamplesInput" class="param-label">n</label><input type="number" class="param-input" id="avgSamplesInput" value="10" min="1" max="1000" style="width: 50px;" aria-label="Number of samples to average"></span>
+        <button id="avgStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;" aria-label="Stop averaging process">Stop</button>
+      </div>
+      <div class="control-row">
+        <span id="avgProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
+      </div>
+      <div class="control-row">
+        <button id="fluctuationsBtn" class="btn-secondary-action" data-tooltip="Height difference ≈ Gaussian Free Field" disabled aria-label="Visualize height function fluctuations between two samples">Fluctuations</button>
+        <span id="fluctProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
+        <label for="fluctScaleInput" style="font-size: 14px; color: #555;">×</label>
+        <input type="number" id="fluctScaleInput" value="10" min="1" max="100" step="1" style="width: 50px; padding: 2px 4px; font-size: 13px;" aria-label="Fluctuation scale multiplier">
+        <label style="display: flex; align-items: center; gap: 3px; font-size: 14px; color: #555; cursor: pointer;">
+          <input type="checkbox" id="fluctOutlineCheck" checked style="margin: 0;" aria-label="Show outline in fluctuations view">
+          Outline
+        </label>
+      </div>
+      <div class="control-row">
+        <button id="doubleDimerBtn" class="btn-secondary-action" data-tooltip="Superimpose two samples to form loops" disabled aria-label="Generate double dimer loop visualization">Double Dimer</button>
+        <span id="doubleDimerProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
+        <label for="minLoopInput" style="font-size: 14px; color: #555;">min loop:</label>
+        <input type="number" id="minLoopInput" value="2" min="2" max="99" style="width: 3.5em; padding: 2px 4px; font-size: 13px;" aria-label="Minimum loop size to display">
+      </div>
+      <div class="control-row">
+        <button id="resampleBtn" style="display: none; background: #6c757d; color: white; border-color: #6c757d;" aria-label="Generate new sample">Resample</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- Export -->
+  <details class="control-section bottom-section">
+    <summary>Export</summary>
+    <div class="control-section-content">
+      <div class="export-group">
+        <span class="export-group-label">Images</span>
+        <button id="export-png" class="btn-utility" aria-label="Export as PNG image">PNG</button>
+        <label for="export-quality" style="font-size: 13px; color: #666;">Quality:</label>
+        <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;" aria-label="PNG export quality">
+        <span id="export-quality-val" style="font-size: 13px; color: #232D4B;">85</span>
+        <button id="export-pdf" class="btn-utility" aria-label="Export as PDF document">PDF</button>
+      </div>
+      <div class="export-divider"></div>
+      <div class="export-group">
+        <span class="export-group-label">Height</span>
+        <button id="export-height-csv" class="btn-utility" aria-label="Export height function as CSV file">CSV</button>
+        <button id="height-csv-info" style="padding: 0 6px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 13px; cursor: pointer;" aria-label="Show height CSV format information">?</button>
+        <button id="export-height-mma" class="btn-utility" aria-label="Copy height function as Mathematica array to clipboard">Mathematica</button>
+        <button id="height-mma-info" style="padding: 0 6px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 13px; cursor: pointer;" aria-label="Show Mathematica array format information">?</button>
+      </div>
+      <div class="export-divider"></div>
+      <div class="export-group">
+        <span class="export-group-label">Shape</span>
+        <button id="export-json" class="btn-utility" aria-label="Export region shape as JSON file">Export</button>
+        <button id="import-json" class="btn-utility" aria-label="Import region shape from JSON file">Import</button>
+        <input type="file" id="import-json-file" accept=".json" style="display: none;" aria-label="JSON file input">
+      </div>
+      <div class="export-divider"></div>
+      <div class="export-group">
+        <span class="export-group-label">Share</span>
+        <button id="copy-link-btn" class="btn-utility" aria-label="Copy shareable link to clipboard">Copy Link</button>
+        <span id="link-copied" style="display: none; color: #28a745; font-size: 13px;">Copied!</span>
+      </div>
+      <div class="export-divider"></div>
+      <div class="export-group">
+        <span class="export-group-label">3D</span>
+        <button id="export-obj" class="btn-utility" aria-label="Export 3D model as OBJ file">OBJ</button>
+        <button id="export-obj2" class="btn-utility" aria-label="Export 3D model as OBJ with orthogonal axes">OBJ-ortho</button>
+        <label for="obj-thickness" style="font-size: 13px; color: #666;">Thickness:</label>
+        <input type="number" id="obj-thickness" value="2" min="0" step="1" style="width: 40px;" aria-label="OBJ export thickness in millimeters">
+        <span style="font-size: 13px; color: #888;">mm</span>
+      </div>
+      <div id="height-csv-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 100%;">Height CSV Coordinates:
+
+• n, j: Integer lattice coordinates on the triangular grid
+• x, y: World coordinates (floating point)
+• h: Height function value at vertex (n, j)
+
+Coordinate System:
+  The angle between n and j axes is 60°
+
+  n-direction: horizontal + slight upward tilt
+    (vector: (1, 1/√3), angle 30° from horizontal)
+
+  j-direction: purely vertical
+    (vector: (0, 2/√3))
+
+Conversion to world (x, y):
+  x = n
+  y = n/√3 + j × 2/√3
+
+Triangles indexed by (n, j, type):
+  Type 1 (black ▶): vertices (n,j), (n,j-1), (n+1,j-1)
+  Type 2 (white ◀): vertices (n,j), (n+1,j), (n+1,j-1)
+
+The height h is defined on vertices of the triangular lattice
+(equivalently, faces of the dual hexagonal grid).</div>
+      <div id="height-mma-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 100%;">Mathematica Plotting Code:
+
+After pasting, assign to A and run:
+
+pts2D = A[[All, {1, 2}]];
+mesh = DelaunayMesh[pts2D];
+Graphics3D[{EdgeForm[Black],
+  GraphicsComplex[
+    MapThread[Append, {pts2D, A[[All, 3]]}],
+    {Polygon[MeshCells[mesh, 2][[All, 1]]]}]
+}, Boxed -> False]</div>
+    </div>
+  </details>
+</div>
 
 </div><!-- end simulation-layout -->
 
@@ -2783,6 +2813,37 @@ Cmd-click: complete lasso</div>
       if (targetPane) targetPane.classList.add('active');
     });
   });
+})();
+
+// Responsive: Move bottom sections into drawer on mobile, out on desktop
+(function() {
+  const bottomSections = document.querySelector('.bottom-sections-wrapper');
+  const controlsInner = document.querySelector('.controls-panel-inner');
+  const simulationLayout = document.querySelector('.simulation-layout');
+
+  if (!bottomSections || !controlsInner || !simulationLayout) return;
+
+  let isInDrawer = false;
+
+  function updateBottomSectionsPosition() {
+    const isMobile = window.innerWidth < 992;
+
+    if (isMobile && !isInDrawer) {
+      // Move into drawer (at the end of controls-panel-inner)
+      controlsInner.appendChild(bottomSections);
+      isInDrawer = true;
+    } else if (!isMobile && isInDrawer) {
+      // Move out to simulation-layout (before closing div)
+      simulationLayout.appendChild(bottomSections);
+      isInDrawer = false;
+    }
+  }
+
+  // Initial position
+  updateBottomSectionsPosition();
+
+  // Update on resize
+  window.addEventListener('resize', updateBottomSectionsPosition);
 })();
 
 function initLozengeApp() {
