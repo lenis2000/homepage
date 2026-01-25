@@ -459,6 +459,11 @@ code:
     #lozenge-canvas, #three-container {
       height: 400px;
     }
+    /* Prevent iOS page bounce/scroll during canvas interaction */
+    .visualization-panel {
+      overscroll-behavior: none;
+      -webkit-overflow-scrolling: auto;
+    }
     .control-group {
       padding: 8px 12px;
       margin-bottom: 10px;
