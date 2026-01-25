@@ -12,80 +12,79 @@ code:
 
 <details id="about-simulation-details">
 <summary>About this simulation</summary>
-<div class="content" style="padding: 16px; background: white; border-top: 1px solid #e0e0e0;">
+<div class="info-panel-content">
+  <div class="info-tabs">
+    <button class="info-tab active" data-tab="quickstart">Quick Start</button>
+    <button class="info-tab" data-tab="sampling">Sampling</button>
+    <button class="info-tab" data-tab="tools">Tools</button>
+    <button class="info-tab" data-tab="export">Export</button>
+  </div>
 
-<p>This simulator generates <strong>random lozenge tilings</strong> of arbitrary polygonal regions on the triangular lattice, supporting both <strong>uniform</strong> and <strong>q-volume weighted</strong> distributions.</p>
+  <div class="info-pane active" id="pane-quickstart">
+    <ol>
+      <li><strong>Draw a region</strong> on the triangular grid using the pencil tool, or use <strong>Hexagon</strong> preset</li>
+      <li>Click <strong>"Make Tileable"</strong> if the region shows as invalid</li>
+      <li>Click <strong>"Perfect Sample"</strong> to generate an exact random tiling</li>
+      <li>Toggle <strong>3D</strong> view to see the height function surface</li>
+    </ol>
+    <p style="margin-top: 12px; color: #666; font-size: 12px;">A region is <strong>tileable</strong> if it has equal numbers of black and white triangles that can be perfectly matched.</p>
+  </div>
 
-<p><strong>How to use:</strong></p>
-<ul>
-  <li><strong>Draw mode</strong>: Click or drag on the triangular grid to add triangles to your region</li>
-  <li><strong>Erase mode</strong>: Remove triangles from your region</li>
-  <li><strong>Hexagon preset</strong>: Quickly generate a standard hexagonal region with sides (a,b,c,a,b,c)</li>
-  <li><strong>Scale Up Region</strong>: Double the size of your current region while preserving its shape</li>
-  <li><strong>Make Tileable</strong>: If your region is invalid, this adds the minimum number of triangles from the exterior boundary to make it tileable. For each unmatched triangle, it finds an adjacent exterior neighbor of the opposite color.</li>
-</ul>
-
-<p>A region is <strong>tileable</strong> (valid) if and only if it has equal numbers of black and white triangles AND they can be perfectly matched. The simulator uses <strong>Dinic's maximum flow algorithm</strong> to find a perfect matching when one exists.</p>
-
-<p><strong>Uniform and q-Volume Sampling:</strong></p>
-<p>The simulator samples from two main distributions:</p>
-<ul>
-  <li><strong>Uniform (q=1)</strong>: Each valid tiling has equal probability</li>
-  <li><strong>q-Volume weighted (q≠1)</strong>: Each tiling has probability proportional to q<sup>volume</sup>, where volume is the 3D volume under the corresponding stepped surface. When q&gt;1, higher-volume (flatter) tilings are favored; when q&lt;1, lower-volume (more tilted) tilings are favored.</li>
-  <li><strong>Periodic weights</strong>: Position-dependent q values arranged in a k×k matrix (k=1,2,3,4,5). At position (n,j) on the triangular lattice, the flip probability uses q<sub>n mod k, j mod k</sub>. This creates spatially varying weight patterns that can produce interesting limit shapes and phase transitions. Two presets are provided:
+  <div class="info-pane" id="pane-sampling">
+    <p><strong>Sampling Methods:</strong></p>
     <ul>
-      <li><strong>Charlier-Duits-Kuijlaars 2×2</strong>: Matrix [[α, 1], [1, 1/α]] with tunable parameter α. See <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/sapm.12339" target="_blank">Charlier (2020)</a> and <a href="https://ems.press/journals/jems/articles/17389" target="_blank">Duits-Kuijlaars (2021)</a>.</li>
-      <li><strong>Nienhuis-Hilhorst-Blöte 3×3</strong>: Matrix [[1, α, 1/α], [1/α, 1, α], [α, 1/α, 1]] with tunable parameter α. Based on <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank">Nienhuis, Hilhorst, Blöte (1984)</a>.</li>
+      <li><strong>Glauber dynamics</strong>: MCMC with local flips. Converges to target distribution over time.</li>
+      <li><strong>Perfect Sample (CFTP)</strong>: Coupling From The Past — exact sample with no burn-in.</li>
     </ul>
-  </li>
-  <li><strong>Imaginary q-Racah weights</strong>: Height-dependent weighting where flip acceptance uses q<sup>j</sup> + q<sup>2J−j</sup> based on the local height j and a tunable parameter J. This creates non-uniform distributions that depend on the height function value at each position.</li>
-</ul>
+    <p style="margin-top: 12px;"><strong>Weight Distributions:</strong></p>
+    <ul>
+      <li><strong>Uniform (q=1)</strong>: Equal probability for all tilings</li>
+      <li><strong>q-Volume (q≠1)</strong>: Probability ∝ q<sup>volume</sup></li>
+      <li><strong>Periodic weights</strong>: k×k matrix of position-dependent q values</li>
+    </ul>
+    <p style="margin-top: 12px;"><strong>Advanced:</strong></p>
+    <ul>
+      <li><strong>Average Sample</strong>: Compute mean height (Limit Shape)</li>
+      <li><strong>Fluctuations</strong>: Height difference ≈ Gaussian Free Field</li>
+      <li><strong>Double Dimer</strong>: Superimpose two samples to form loops</li>
+    </ul>
+  </div>
 
-<p><strong>Sampling methods:</strong></p>
-<ul>
-  <li><strong>Glauber dynamics</strong> (Start/Stop): Markov chain Monte Carlo that performs local "flips" of three lozenges around hexagonal vertices. Converges to the uniform (q=1) or q-volume weighted distribution over time.</li>
-  <li><strong>Perfect Sample (CFTP)</strong>: <strong>Coupling From The Past</strong> algorithm that produces an <em>exact</em> sample from the uniform (or q-weighted) distribution in finite time, with no burn-in period required. It works by running coupled Markov chains backward in time until they coalesce. Early coalescence detection checks every 1000 steps for faster termination.</li>
-</ul>
+  <div class="info-pane" id="pane-tools">
+    <p><strong>Drawing Tools:</strong></p>
+    <ul>
+      <li><strong>Pan</strong> 🤚: Move the view around</li>
+      <li><strong>Draw</strong> ✏️: Add triangles to region</li>
+      <li><strong>Erase</strong> 🧹: Remove triangles from region</li>
+      <li><strong>Lasso Fill/Erase</strong>: Click points to define polygon, click near start to close</li>
+      <li><strong>Snap</strong> 📐: Snap lasso to grid vertices</li>
+    </ul>
+    <p style="margin-top: 12px;"><strong>Region Tools:</strong></p>
+    <ul>
+      <li><strong>Scale Up/Down</strong>: Double or halve region size</li>
+      <li><strong>Make Tileable</strong>: Auto-fix invalid regions</li>
+      <li><strong>Undo/Redo</strong>: Full history support (Ctrl+Z/Y)</li>
+    </ul>
+    <p style="margin-top: 12px;"><strong>Presets:</strong> Hexagon (a,b,c), Letters A-Z, Numbers 0-9, Shape of the Month</p>
+  </div>
 
-<p><strong>Hole Constraints:</strong> For regions with holes, you can control the height change around each hole. Click the <strong>+</strong> or <strong>−</strong> buttons that appear inside each hole to adjust this constraint. Both Glauber dynamics and CFTP respect these constraints when sampling. Note that a lozenge tiling with hole might not correspond to a correct 3D shape, and fun discontinuities will arise.</p>
-
-<p><strong>Drawing & Editing Tools:</strong></p>
-<ul>
-  <li><strong>Lasso Selection</strong>: Click multiple points to define a polygon. Click near the start to close the loop, or use <strong>Cmd/Ctrl-Click</strong> to close immediately. Supports <strong>Snap to Grid</strong> for precise lattice alignment.</li>
-  <li><strong>Scale Region</strong>: Instantly <strong>Double</strong> (scale up) or <strong>Halve</strong> (scale down) the current region size.</li>
-  <li><strong>Undo/Redo</strong>: Full history support for shape modifications.</li>
-</ul>
-
-<p><strong>Presets:</strong></p>
-<ul>
-  <li><strong>Text</strong>: Generate regions shaped like letters (A-Z) or numbers (0-9).</li>
-  <li><strong>Shape of the Month</strong>: Loads a curated complex polygon.</li>
-</ul>
-
-<p><strong>Visualization Modes:</strong></p>
-<ul>
-  <li><strong>2D Lozenge</strong>: Standard flat tiling view.</li>
-  <li><strong>2D Dimer</strong>: Displays the underlying matching on the dual graph.</li>
-  <li><strong>3D Height Function</strong>: Renders the tiling as a stepped surface in 3D space. Supports rotation, panning, and zooming.</li>
-  <li><strong>Color Palettes</strong>: Multiple color schemes available, with permutation support to cycle colors.</li>
-</ul>
-
-<p><strong>Sampling & Analysis:</strong></p>
-<ul>
-  <li><strong>Average Sample</strong>: Runs parallel CFTP chains to compute the mean height function (Limit Shape).</li>
-  <li><strong>Fluctuations (GFF)</strong>: Visualizes the height difference between two perfect samples (scaled by &radic;2), approximating the Gaussian Free Field.</li>
-  <li><strong>Double Dimer</strong>: Superimposes two independent samples to form loops. Includes a <strong>Min Loop Size</strong> filter to analyze loop statistics.</li>
-</ul>
-
-<p><strong>Data Export:</strong></p>
-<ul>
-  <li><strong>Images</strong>: Export high-quality PNG or PDF.</li>
-  <li><strong>Geometry</strong>: Import/Export the region shape as JSON.</li>
-  <li><strong>Scientific Data</strong>: Export the computed Height Function as a <strong>CSV</strong> file or <strong>Mathematica array</strong> for external analysis.</li>
-</ul>
-
-<p><strong>Performance:</strong> The simulation runs entirely in your browser. When available, it uses <strong>WebGPU</strong> compute shaders for massively parallel Glauber dynamics and CFTP sampling, based on the chromatic sweep approach from <a href="https://arxiv.org/abs/1804.07250" target="_blank">Keating-Sridhar (2018)</a>. On systems without WebGPU, it falls back to <strong>multi-threaded WebAssembly</strong> (up to 4 cores) for parallel CFTP chains, or single-threaded WASM with optimized pre-computed caches and Lemire's fast bounded random.</p>
-
+  <div class="info-pane" id="pane-export">
+    <p><strong>Visualization:</strong></p>
+    <ul>
+      <li><strong>2D Lozenge</strong> ◆: Standard flat tiling view</li>
+      <li><strong>2D Paths</strong> →: Non-intersecting paths</li>
+      <li><strong>2D Dimer</strong> •-•: Matching on dual graph</li>
+      <li><strong>3D Height</strong>: Stepped surface, rotate/zoom</li>
+    </ul>
+    <p style="margin-top: 12px;"><strong>Export Options:</strong></p>
+    <ul>
+      <li><strong>Images</strong>: PNG, PDF</li>
+      <li><strong>Data</strong>: Height CSV, Mathematica array</li>
+      <li><strong>Region</strong>: JSON import/export</li>
+      <li><strong>Share</strong>: Copy link with encoded state</li>
+    </ul>
+    <p style="margin-top: 12px;"><strong>Performance:</strong> Uses WebGPU when available, falls back to multi-threaded WASM.</p>
+  </div>
 </div>
 </details>
 
@@ -256,6 +255,12 @@ code:
     border: 2px solid #232D4B;
     border-radius: 6px;
     overflow: hidden;
+  }
+  /* Exception: zoom overlay has no border */
+  #zoom-overlay > .view-toggle {
+    border: none;
+    background: transparent;
+    overflow: visible;
   }
   .view-toggle button {
     border: none;
@@ -578,6 +583,1709 @@ code:
   [data-theme="dark"] .hole-control input:focus {
     background: rgba(60, 60, 60, 0.8);
   }
+
+  /* ========================================================================
+     About Section - Full Width with Tabbed Interface
+     ======================================================================== */
+  #about-simulation-details {
+    max-width: 1400px;
+    margin: 0 auto 16px auto;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    background: var(--bg-secondary, #f8f9fa);
+  }
+
+  #about-simulation-details summary {
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--bg-secondary, #f5f5f5);
+    border-radius: 8px;
+  }
+
+  #about-simulation-details[open] summary {
+    border-radius: 8px 8px 0 0;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+  }
+
+  .info-panel-content {
+    background: var(--bg-primary, white);
+    border-radius: 0 0 8px 8px;
+    padding: 0;
+  }
+
+  .info-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color, #ddd);
+    background: var(--bg-secondary, #f8f9fa);
+    padding: 0 8px;
+    overflow-x: auto;
+  }
+
+  .info-tab {
+    padding: 10px 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    color: #666;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+
+  .info-tab:hover {
+    color: #333;
+    background: rgba(0, 0, 0, 0.03);
+  }
+
+  .info-tab.active {
+    color: #232d4b;
+    border-bottom-color: #E57200;
+    font-weight: 600;
+  }
+
+  .info-pane {
+    display: none;
+    padding: 16px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .info-pane.active {
+    display: block;
+  }
+
+  .info-pane ol,
+  .info-pane ul {
+    margin: 8px 0;
+    padding-left: 20px;
+  }
+
+  .info-pane li {
+    margin: 6px 0;
+  }
+
+  .info-pane p {
+    margin: 0;
+  }
+
+  [data-theme="dark"] #about-simulation-details {
+    background: var(--bg-secondary, #2d2d2d);
+    border-color: var(--border-color, #444);
+  }
+
+  [data-theme="dark"] #about-simulation-details summary {
+    background: var(--bg-secondary, #2d2d2d);
+  }
+
+  [data-theme="dark"] .info-panel-content {
+    background: var(--bg-primary, #1a1a1a);
+  }
+
+  [data-theme="dark"] .info-tabs {
+    background: var(--bg-secondary, #2d2d2d);
+    border-color: var(--border-color, #444);
+  }
+
+  [data-theme="dark"] .info-tab {
+    color: #999;
+  }
+
+  [data-theme="dark"] .info-tab:hover {
+    color: #ddd;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  [data-theme="dark"] .info-tab.active {
+    color: #e8e8e8;
+    border-bottom-color: #ff9933;
+  }
+
+  /* ========================================================================
+     Phase 1: Two-Column Desktop Layout
+     ======================================================================== */
+  .simulation-layout {
+    display: flex;
+    flex-direction: column;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 8px;
+    gap: 16px;
+  }
+
+  @media (min-width: 992px) {
+    .simulation-layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      grid-template-rows: auto auto;
+      gap: 16px;
+      align-items: start;
+    }
+    .controls-panel {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .visualization-panel {
+      grid-column: 2;
+      grid-row: 1;
+    }
+    /* Controls that overflow below canvas span full width in 2 columns */
+    .controls-panel-inner {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+  }
+
+  /* Wide desktop: 2-column controls below canvas height */
+  @media (min-width: 1200px) {
+    .simulation-layout {
+      grid-template-columns: 380px 1fr;
+    }
+  }
+
+  .controls-panel {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: visible;
+  }
+
+  @media (min-width: 992px) {
+    .controls-panel {
+      padding-right: 16px;
+      border-right: 2px solid var(--border-color, #d0d0d0);
+      box-shadow: 4px 0 12px rgba(0, 0, 0, 0.06);
+      overflow: visible;
+    }
+    [data-theme="dark"] .controls-panel {
+      border-right-color: var(--border-color, #555);
+      box-shadow: 4px 0 12px rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  .visualization-panel {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  @media (min-width: 992px) {
+    .visualization-panel #lozenge-canvas,
+    .visualization-panel #three-container {
+      width: 100%;
+      max-width: none;
+      height: 70vh;
+      max-height: 800px;
+      margin: 0;
+    }
+  }
+
+  /* ========================================================================
+     Phase 2: Collapsible Accordion Sections
+     ======================================================================== */
+  details.control-section {
+    display: block;
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    background: var(--bg-secondary, #f5f5f5);
+    overflow: visible;
+    margin: 0;
+  }
+
+  /* Non-details control-section (like stats row) */
+  div.control-section {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    background: var(--bg-secondary, #f5f5f5);
+  }
+
+  .control-section summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    font-family: "franklingothic-demi", Arial, sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0.3px;
+    color: var(--text-primary, #333);
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    background: var(--bg-secondary, #f5f5f5);
+    transition: background 0.15s;
+  }
+
+  .control-section summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .control-section summary::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.2s;
+    opacity: 0.6;
+  }
+
+  .control-section[open] summary::after {
+    transform: rotate(45deg);
+  }
+
+  .control-section summary:hover {
+    background: rgba(229, 114, 0, 0.08);
+  }
+
+  .control-section-content {
+    padding: 12px;
+    border-top: 1px solid var(--border-color, #e0e0e0);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-x: visible;
+  }
+
+  .control-section .control-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Form labels - consistent 14px */
+  .control-section label,
+  .control-section .param-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary, #555);
+  }
+
+  [data-theme="dark"] .control-section label,
+  [data-theme="dark"] .control-section .param-label {
+    color: var(--text-secondary, #aaa);
+  }
+
+  [data-theme="dark"] details.control-section,
+  [data-theme="dark"] div.control-section {
+    background: var(--bg-secondary, #2d2d2d);
+    border-color: var(--border-color, #444);
+  }
+
+  [data-theme="dark"] .control-section summary {
+    background: var(--bg-secondary, #2d2d2d);
+    color: var(--text-primary, #e8e8e8);
+  }
+
+  [data-theme="dark"] .control-section summary:hover {
+    background: rgba(255, 153, 51, 0.1);
+  }
+
+  [data-theme="dark"] .control-section-content {
+    border-color: var(--border-color, #444);
+  }
+
+  /* ========================================================================
+     Phase 3: Visual Enhancements - Palette Picker Grid
+     ======================================================================== */
+  .palette-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+    gap: 6px;
+    max-height: 140px;
+    overflow-y: auto;
+    padding: 4px;
+    margin-top: 8px;
+  }
+
+  .palette-item {
+    display: flex;
+    flex-wrap: wrap;
+    width: 44px;
+    height: 28px;
+    border: 2px solid var(--border-color, #d0d0d0);
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+  }
+
+  .palette-item:hover {
+    transform: scale(1.08);
+    z-index: 1;
+  }
+
+  .palette-item.active {
+    border-color: var(--accent-color, #e57200);
+    border-width: 2px;
+    box-shadow: 0 0 0 2px rgba(229, 114, 0, 0.3);
+  }
+
+  .palette-item .swatch {
+    width: 33.33%;
+    height: 100%;
+  }
+
+  [data-theme="dark"] .palette-item {
+    border-color: #555;
+  }
+
+  [data-theme="dark"] .palette-item.active {
+    border-color: var(--accent-color, #ff9933);
+  }
+
+  /* ========================================================================
+     Phase 3: Floating Action Button (Mobile)
+     ======================================================================== */
+  .sample-fab {
+    display: none;
+    position: fixed;
+    bottom: 80px;
+    right: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #E57200, #f08c30);
+    color: white;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(229, 114, 0, 0.4);
+    z-index: 1000;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .sample-fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(229, 114, 0, 0.5);
+  }
+
+  .sample-fab:active {
+    transform: scale(0.95);
+  }
+
+  .sample-fab:disabled {
+    background: #999;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    cursor: not-allowed;
+  }
+
+  /* FAB Tooltip */
+  .sample-fab::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    right: 66px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(35, 45, 75, 0.95);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .sample-fab:hover::before {
+    opacity: 1;
+  }
+
+  .sample-fab:disabled::before {
+    content: "Draw a valid region first";
+  }
+
+  @media (max-width: 991px) {
+    .sample-fab {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  /* ========================================================================
+     Keyboard Shortcuts Help Modal
+     ======================================================================== */
+  .keyboard-help-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .keyboard-help-modal.visible {
+    display: flex;
+  }
+
+  .keyboard-help-content {
+    background: var(--bg-primary, white);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .keyboard-help-content h3 {
+    margin: 0 0 16px 0;
+    font-family: "franklingothic-demi", Arial, sans-serif;
+    font-size: 16px;
+    color: var(--text-primary, #333);
+  }
+
+  .keyboard-help-content table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .keyboard-help-content td {
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    font-size: 13px;
+  }
+
+  .keyboard-help-content kbd {
+    display: inline-block;
+    background: #e8e8e8;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: monospace;
+    font-size: 12px;
+    min-width: 24px;
+    text-align: center;
+    color: #333;
+    box-shadow: 0 1px 0 #999;
+  }
+
+  [data-theme="dark"] .keyboard-help-content kbd {
+    background: #444;
+    border-color: #666;
+    color: #e8e8e8;
+    box-shadow: 0 1px 0 #222;
+  }
+
+  .keyboard-help-content .close-btn {
+    margin-top: 16px;
+    width: 100%;
+    padding: 10px;
+    background: var(--bg-secondary, #f5f5f5);
+    border: 1px solid var(--border-color, #d0d0d0);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  [data-theme="dark"] .keyboard-help-content {
+    background: var(--bg-primary, #1a1a1a);
+  }
+
+  /* ========================================================================
+     Phase 1: Mobile Bottom Sheet Drawer
+     ======================================================================== */
+  @media (max-width: 991px) {
+    .controls-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-primary, #fff);
+      border-top: 1px solid var(--border-color, #e0e0e0);
+      border-radius: 16px 16px 0 0;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+      z-index: 900;
+      max-height: 70vh;
+      transform: translateY(calc(100% - 60px));
+      transition: transform 0.3s ease-out;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .controls-panel.expanded {
+      transform: translateY(0);
+    }
+
+    .controls-panel-inner {
+      max-height: calc(70vh - 60px);
+      overflow-y: auto;
+      padding: 0 12px 20px;
+    }
+
+    .drawer-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 60px;
+      cursor: grab;
+      flex-shrink: 0;
+    }
+
+    .drawer-handle:active {
+      cursor: grabbing;
+    }
+
+    .drawer-handle-bar {
+      width: 40px;
+      height: 4px;
+      background: var(--border-color, #ccc);
+      border-radius: 2px;
+    }
+
+    .drawer-handle-hint {
+      position: absolute;
+      font-size: 11px;
+      color: #888;
+      margin-top: 24px;
+    }
+
+    .controls-panel.expanded .drawer-handle-hint {
+      display: none;
+    }
+
+    [data-theme="dark"] .controls-panel {
+      background: var(--bg-primary, #1a1a1a);
+      border-color: var(--border-color, #444);
+    }
+
+    .visualization-panel {
+      padding-bottom: 70px;
+    }
+
+    .visualization-panel #lozenge-canvas,
+    .visualization-panel #three-container {
+      height: 50vh;
+      max-height: 500px;
+    }
+  }
+
+  @media (min-width: 992px) {
+    .drawer-handle {
+      display: none;
+    }
+    .controls-panel-inner {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      overflow: visible;
+    }
+  }
+
+  /* Ensure buttons can shrink and wrap properly */
+  .control-section button,
+  .control-row button {
+    flex-shrink: 1;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  /* ========================================================================
+     Issue 9: Additional Mobile Responsiveness
+     ======================================================================== */
+  @media (max-width: 768px) {
+    .simulation-layout {
+      padding: 4px;
+    }
+
+    /* Touch-friendly accordion headers */
+    .control-section summary {
+      padding: 14px 16px;
+      min-height: 48px;
+      font-size: 13px;
+    }
+
+    .control-section-content {
+      padding: 12px;
+    }
+
+    .control-row {
+      gap: 8px;
+    }
+
+    /* Drawing tools in grid layout */
+    .tool-toggle {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      width: 100%;
+      border: none !important;
+    }
+
+    .tool-toggle button {
+      min-width: 44px;
+      min-height: 44px;
+      padding: 8px;
+      border: 1px solid var(--border-color, #ddd) !important;
+      border-radius: 6px !important;
+    }
+
+    .tool-toggle button.active {
+      background: #232D4B !important;
+      color: white !important;
+      border-color: #232D4B !important;
+    }
+
+    /* Smaller param inputs on mobile */
+    .param-input {
+      width: 50px;
+      height: 36px;
+      font-size: 14px;
+    }
+
+    /* Compact export groups */
+    .export-group {
+      flex-wrap: wrap;
+    }
+
+    .export-group-label {
+      width: 100%;
+      margin-bottom: 4px;
+    }
+
+    /* Info tabs scroll on mobile */
+    .info-tabs {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .info-tab {
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    /* Very small screens */
+    .control-section summary {
+      padding: 12px 14px;
+      min-height: 44px;
+      font-size: 12px;
+    }
+
+    .control-section-content {
+      padding: 10px;
+      gap: 10px;
+    }
+
+    .btn-action,
+    .btn-secondary-action {
+      padding: 10px 14px;
+      font-size: 13px;
+      width: 100%;
+    }
+
+    .btn-utility,
+    .btn-outline {
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+
+    /* Stack main action buttons vertically */
+    #startStopBtn,
+    #cftpBtn {
+      flex: 1 1 100% !important;
+    }
+
+    /* Control row stacks */
+    .control-row {
+      flex-wrap: wrap;
+    }
+
+    /* Zoom overlay - bottom left on small screens */
+    #zoom-overlay {
+      bottom: 12px !important;
+      left: 12px !important;
+    }
+
+    /* Stats bar compact */
+    .stats-bar {
+      font-size: 11px;
+      padding: 6px 10px;
+      gap: 6px;
+    }
+
+    .stats-bar .stat-divider {
+      margin: 0 2px;
+    }
+  }
+
+  /* ========================================================================
+     Issue 3: Drawing Tool Labels
+     ======================================================================== */
+  .tool-btn-labeled {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 10px;
+    min-width: 48px;
+    gap: 2px;
+  }
+
+  .tool-btn-labeled .tool-icon {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .tool-btn-labeled .tool-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    opacity: 0.8;
+  }
+
+  .tool-toggle .tool-btn-labeled.active .tool-label {
+    opacity: 1;
+  }
+
+  /* ========================================================================
+     Issue 1: Validity Status Indicator
+     ======================================================================== */
+  .validity-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .validity-status.status-empty {
+    background-color: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+    border: 1px solid rgba(108, 117, 125, 0.2);
+  }
+
+  .validity-status.status-invalid {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.25);
+  }
+
+  .validity-status.status-valid {
+    background-color: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.25);
+  }
+
+  .validity-status .status-icon {
+    font-size: 14px;
+  }
+
+  [data-theme="dark"] .validity-status.status-empty {
+    background-color: rgba(108, 117, 125, 0.2);
+    border-color: rgba(108, 117, 125, 0.3);
+  }
+
+  [data-theme="dark"] .validity-status.status-invalid {
+    background-color: rgba(220, 53, 69, 0.15);
+    border-color: rgba(220, 53, 69, 0.3);
+  }
+
+  [data-theme="dark"] .validity-status.status-valid {
+    background-color: rgba(40, 167, 69, 0.15);
+    border-color: rgba(40, 167, 69, 0.3);
+  }
+
+  /* ========================================================================
+     Issue 2: Button Hierarchy Refinement
+     ======================================================================== */
+  /* Primary CTA - orange gradient */
+  .btn-primary-cta {
+    background: linear-gradient(135deg, #E57200 0%, #f08c30 100%);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(229, 114, 0, 0.3);
+  }
+
+  .btn-primary-cta:hover:not(:disabled) {
+    background: linear-gradient(135deg, #d16610 0%, #E57200 100%);
+    box-shadow: 0 3px 8px rgba(229, 114, 0, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary-cta:disabled {
+    background: #ccc;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* Secondary CTA - navy */
+  .btn-secondary-cta {
+    background: linear-gradient(135deg, #232D4B 0%, #3a4a6b 100%);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    font-weight: 500;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary-cta:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1a2238 0%, #232D4B 100%);
+  }
+
+  .btn-secondary-cta:disabled {
+    background: #8a9ab8;
+    cursor: not-allowed;
+  }
+
+  /* Outline button */
+  .btn-outline {
+    background: transparent;
+    color: #232D4B;
+    border: 1px solid #232D4B;
+    padding: 7px 14px;
+    border-radius: 5px;
+    font-weight: 500;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-outline:hover:not(:disabled) {
+    background: #232D4B;
+    color: white;
+  }
+
+  [data-theme="dark"] .btn-outline {
+    color: #b0c4de;
+    border-color: #b0c4de;
+  }
+
+  [data-theme="dark"] .btn-outline:hover:not(:disabled) {
+    background: #b0c4de;
+    color: #1a1a1a;
+  }
+
+  /* ========================================================================
+     Issue 10: Zoom Controls - Bottom Right with Container
+     ======================================================================== */
+  #zoom-overlay {
+    position: absolute !important;
+    bottom: 16px !important;
+    left: 16px !important;
+    top: auto !important;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    border: 1px solid rgba(0,0,0,0.08);
+  }
+
+  [data-theme="dark"] #zoom-overlay {
+    background: rgba(35, 35, 35, 0.95);
+    border-color: rgba(255,255,255,0.1);
+  }
+
+  #zoom-overlay .view-toggle {
+    background: transparent !important;
+    border: none !important;
+    border-width: 0 !important;
+    padding: 0;
+    gap: 2px;
+    box-shadow: none !important;
+    overflow: visible;
+  }
+
+  #zoom-overlay .view-toggle::before,
+  #zoom-overlay .view-toggle::after {
+    display: none !important;
+  }
+
+  #zoom-overlay button {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none !important;
+    border-radius: 6px;
+    background: transparent !important;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background 0.15s;
+    color: var(--text-primary, #333);
+    box-shadow: none !important;
+  }
+
+  #zoom-overlay button:hover {
+    background: rgba(0, 0, 0, 0.08) !important;
+  }
+
+  #zoom-overlay button:active {
+    background: rgba(0, 0, 0, 0.12) !important;
+  }
+
+  #zoom-overlay button.active {
+    background: transparent !important;
+    color: var(--text-primary, #333);
+  }
+
+  [data-theme="dark"] #zoom-overlay button {
+    color: var(--text-primary, #e8e8e8);
+  }
+
+  [data-theme="dark"] #zoom-overlay button:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  /* ========================================================================
+     Issue 4: Canvas Toolbar Improvements with Tooltips
+     ======================================================================== */
+  #view-overlay {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    padding: 6px 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    border: 1px solid rgba(0,0,0,0.08);
+  }
+
+  [data-theme="dark"] #view-overlay {
+    background: rgba(35, 35, 35, 0.95);
+    border-color: rgba(255,255,255,0.1);
+  }
+
+  #view-overlay button[title]::after {
+    content: attr(title);
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 6px;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    font-size: 11px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    z-index: 1000;
+  }
+
+  #view-overlay button[title]:hover::after {
+    opacity: 1;
+  }
+
+  #view-overlay .view-toggle {
+    background: transparent;
+    border: none;
+    padding: 0;
+    gap: 2px;
+  }
+
+  #view-overlay button {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid var(--border-color, #ddd);
+    font-size: 13px;
+  }
+
+  /* ========================================================================
+     Issue 5: Accordion Panel Enhancement
+     ======================================================================== */
+  .control-section summary {
+    background: linear-gradient(to bottom, var(--bg-secondary, #f8f9fa), var(--bg-secondary, #f5f5f5));
+    border-bottom: 1px solid transparent;
+  }
+
+  .control-section[open] summary {
+    border-bottom-color: var(--border-color, #e0e0e0);
+    border-radius: 8px 8px 0 0;
+  }
+
+  .control-section summary::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.2s;
+    margin-right: 8px;
+    opacity: 0.5;
+  }
+
+  .control-section[open] summary::before {
+    transform: rotate(45deg);
+  }
+
+  .control-section summary::after {
+    display: none;
+  }
+
+  /* ========================================================================
+     Issue 8: Status Bar Enhancement
+     ======================================================================== */
+  .stats-inline {
+    background: linear-gradient(to bottom, var(--bg-secondary, #f8f9fa), var(--bg-primary, #fff));
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color, #e0e0e0);
+  }
+
+  .stats-inline .stat {
+    padding: 4px 12px;
+    background: var(--bg-primary, white);
+    border-radius: 4px;
+    border: 1px solid var(--border-color, #e8e8e8);
+  }
+
+  .stats-inline .stat-label {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-right: 6px;
+  }
+
+  .stats-inline .stat-value {
+    font-family: 'SF Mono', Monaco, 'Consolas', monospace;
+    font-weight: 700;
+  }
+
+  [data-theme="dark"] .stats-inline {
+    background: linear-gradient(to bottom, var(--bg-secondary, #2d2d2d), var(--bg-primary, #1a1a1a));
+  }
+
+  [data-theme="dark"] .stats-inline .stat {
+    background: var(--bg-secondary, #2d2d2d);
+    border-color: var(--border-color, #444);
+  }
+
+  /* ========================================================================
+     Phase 6: Tooltips for Complex Options
+     ======================================================================== */
+  [data-tooltip] {
+    position: relative;
+  }
+
+  [data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 10px;
+    background: rgba(35, 45, 75, 0.95);
+    color: white;
+    font-size: 11px;
+    font-weight: normal;
+    text-transform: none;
+    letter-spacing: normal;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 1001;
+    margin-bottom: 6px;
+    max-width: 250px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  [data-tooltip]:hover::after,
+  [data-tooltip]:focus::after {
+    opacity: 1;
+  }
+
+  /* ========================================================================
+     Phase 3 & 6: Button Styling Consistency - Three-Tier Hierarchy
+     ======================================================================== */
+
+  /* Primary buttons (main actions) - solid orange fill */
+  .btn-action {
+    background: linear-gradient(135deg, #E57200, #f08c30) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 10px 20px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    box-shadow: 0 2px 4px rgba(229, 114, 0, 0.3);
+    transition: all 0.15s ease;
+  }
+
+  .btn-action:hover:not(:disabled) {
+    background: linear-gradient(135deg, #c96300, #E57200) !important;
+    box-shadow: 0 3px 6px rgba(229, 114, 0, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-action:disabled {
+    background: #ccc !important;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* Secondary buttons (important but not primary) - solid navy fill */
+  .btn-secondary-action {
+    background: linear-gradient(135deg, #232D4B, #3a4a6b) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 10px 20px !important;
+    font-weight: 500 !important;
+    font-size: 14px !important;
+    box-shadow: 0 2px 4px rgba(35, 45, 75, 0.3);
+    transition: all 0.15s ease;
+  }
+
+  .btn-secondary-action:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1a2238, #232D4B) !important;
+    box-shadow: 0 3px 6px rgba(35, 45, 75, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary-action:disabled {
+    background: #8a9ab8 !important;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* Tertiary buttons (utility) - outlined style */
+  .btn-utility,
+  .btn-outline {
+    background: var(--bg-primary, white) !important;
+    color: var(--text-primary, #333) !important;
+    border: 1px solid var(--border-color, #d0d0d0) !important;
+    border-radius: 4px !important;
+    padding: 8px 16px !important;
+    font-weight: 500 !important;
+    font-size: 13px !important;
+    transition: all 0.15s ease;
+  }
+
+  .btn-utility:hover:not(:disabled),
+  .btn-outline:hover:not(:disabled) {
+    background: var(--bg-secondary, #f5f5f5) !important;
+    border-color: #999 !important;
+  }
+
+  .btn-utility:disabled,
+  .btn-outline:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  [data-theme="dark"] .btn-utility,
+  [data-theme="dark"] .btn-outline {
+    background: var(--bg-secondary, #2d2d2d) !important;
+    border-color: var(--border-color, #555) !important;
+    color: var(--text-primary, #e8e8e8) !important;
+  }
+
+  [data-theme="dark"] .btn-utility:hover:not(:disabled),
+  [data-theme="dark"] .btn-outline:hover:not(:disabled) {
+    background: #3d3d3d !important;
+    border-color: #777 !important;
+  }
+
+  /* ========================================================================
+     Phase 6: WCAG AA Contrast Fixes
+     ======================================================================== */
+  .control-group-title,
+  .control-section summary {
+    color: #4a4a4a;
+  }
+
+  [data-theme="dark"] .control-group-title,
+  [data-theme="dark"] .control-section summary {
+    color: #d0d0d0;
+  }
+
+  .stats-inline .stat-label {
+    color: #666;
+  }
+
+  [data-theme="dark"] .stats-inline .stat-label {
+    color: #aaa;
+  }
+
+  /* ========================================================================
+     Dark Mode Contrast Improvements (WCAG AA)
+     ======================================================================== */
+
+  /* Form labels - increase contrast */
+  [data-theme="dark"] .control-section label,
+  [data-theme="dark"] .control-row label,
+  [data-theme="dark"] .param-label {
+    color: #c0c0c0 !important;
+  }
+
+  /* Secondary/helper text - more visible */
+  [data-theme="dark"] .control-section p,
+  [data-theme="dark"] .helper-text,
+  [data-theme="dark"] small {
+    color: #999 !important;
+  }
+
+  /* Input field styling - better borders and backgrounds */
+  [data-theme="dark"] input[type="text"],
+  [data-theme="dark"] input[type="number"],
+  [data-theme="dark"] select,
+  [data-theme="dark"] .param-input {
+    background: #2a2a2a !important;
+    border: 1px solid #555 !important;
+    color: #e0e0e0 !important;
+  }
+
+  [data-theme="dark"] input[type="text"]:focus,
+  [data-theme="dark"] input[type="number"]:focus,
+  [data-theme="dark"] select:focus,
+  [data-theme="dark"] .param-input:focus {
+    border-color: #777 !important;
+    outline: 2px solid rgba(229, 114, 0, 0.4);
+  }
+
+  /* Disabled button contrast fix for dark mode */
+  [data-theme="dark"] .btn-action:disabled {
+    background: #4a4a4a !important;
+    color: #888 !important;
+  }
+
+  [data-theme="dark"] .btn-secondary-action:disabled {
+    background: #3a3a3a !important;
+    color: #777 !important;
+  }
+
+  /* Checkbox visibility - add clear border */
+  [data-theme="dark"] input[type="checkbox"] {
+    accent-color: #ff9933;
+    border: 2px solid #666 !important;
+    background: #2a2a2a;
+  }
+
+  /* Slider track - more visible in dark mode */
+  [data-theme="dark"] input[type="range"] {
+    background: #555 !important;
+  }
+
+  [data-theme="dark"] input[type="range"]::-webkit-slider-runnable-track {
+    background: #555;
+  }
+
+  [data-theme="dark"] input[type="range"]::-moz-range-track {
+    background: #555;
+  }
+
+  /* Canvas control buttons (zoom +/-) - increase contrast */
+  [data-theme="dark"] #zoom-overlay button,
+  [data-theme="dark"] .view-overlay button {
+    background: #3a3a3a !important;
+    border-color: #666 !important;
+    color: #e0e0e0 !important;
+  }
+
+  [data-theme="dark"] #zoom-overlay button:hover,
+  [data-theme="dark"] .view-overlay button:hover {
+    background: #4a4a4a !important;
+    border-color: #888 !important;
+  }
+
+  /* View toggle buttons in dark mode */
+  [data-theme="dark"] .view-toggle {
+    border-color: #666 !important;
+  }
+
+  [data-theme="dark"] .view-toggle button {
+    background: #2d2d2d !important;
+    color: #c0c0c0 !important;
+  }
+
+  [data-theme="dark"] .view-toggle button.active {
+    background: #4a90d9 !important;
+    color: white !important;
+  }
+
+  [data-theme="dark"] .view-toggle button:hover:not(.active) {
+    background: #3d3d3d !important;
+  }
+
+  /* Tool toggle buttons in dark mode */
+  [data-theme="dark"] .tool-toggle {
+    border-color: #666 !important;
+  }
+
+  [data-theme="dark"] .tool-toggle button {
+    background: #2d2d2d !important;
+    color: #c0c0c0 !important;
+    border-color: #555 !important;
+  }
+
+  [data-theme="dark"] .tool-toggle button.active {
+    background: #4a4a4a !important;
+    color: #fff !important;
+  }
+
+  /* Stats bar in dark mode */
+  [data-theme="dark"] .stats-bar {
+    background: #252525 !important;
+    color: #c0c0c0 !important;
+  }
+
+  [data-theme="dark"] .stats-bar .stat-label {
+    color: #999 !important;
+  }
+
+  [data-theme="dark"] .stats-bar .stat-value {
+    color: #e0e0e0 !important;
+  }
+
+  /* ========================================================================
+     Phase 5: Export Section Grouping
+     ======================================================================== */
+  .export-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px 0;
+  }
+
+  .export-group-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    min-width: 45px;
+    flex-shrink: 0;
+  }
+
+  [data-theme="dark"] .export-group-label {
+    color: #aaa;
+  }
+
+  .export-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border-color, #e0e0e0);
+    margin: 4px 0;
+  }
+
+  /* Legacy control-group styles within new sections */
+  .control-section .control-group {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .control-section .control-group-title {
+    display: none;
+  }
+
+  /* ========================================================================
+     Input Field Standardization
+     ======================================================================== */
+
+  /* Small numeric inputs (a, b, c, q values) */
+  .param-input,
+  .control-section input[type="number"] {
+    width: 60px;
+    height: 34px;
+    padding: 4px 8px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: 'SF Mono', Monaco, monospace;
+    text-align: center;
+    background: var(--bg-primary, white);
+    color: var(--text-primary, #333);
+  }
+
+  .param-input:focus,
+  .control-section input[type="number"]:focus {
+    outline: none;
+    border-color: #E57200;
+    box-shadow: 0 0 0 2px rgba(229, 114, 0, 0.2);
+  }
+
+  [data-theme="dark"] .param-input,
+  [data-theme="dark"] .control-section input[type="number"] {
+    background: var(--bg-secondary, #2d2d2d);
+    border-color: var(--border-color, #555);
+    color: var(--text-primary, #e8e8e8);
+  }
+
+  /* Param group - hexagon inputs alignment */
+  .param-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .param-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary, #555);
+    min-width: 12px;
+  }
+
+  /* Medium inputs (Speed value, sample counts) */
+  .control-section input.medium-input,
+  #speedInput,
+  #avgSamplesInput,
+  #fluctuationSamplesInput,
+  #minLoopInput {
+    width: 70px !important;
+  }
+
+  /* Full-width dropdowns */
+  .control-section select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    font-size: 14px;
+    background: var(--bg-primary, white);
+    color: var(--text-primary, #333);
+    cursor: pointer;
+  }
+
+  .control-section select:focus {
+    outline: none;
+    border-color: #E57200;
+  }
+
+  [data-theme="dark"] .control-section select {
+    background: var(--bg-secondary, #2d2d2d);
+    border-color: var(--border-color, #555);
+    color: var(--text-primary, #e8e8e8);
+  }
+
+  /* ========================================================================
+     Checkbox + Label Spacing
+     ======================================================================== */
+  .control-section label:has(input[type="checkbox"]) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .control-section input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: #E57200;
+  }
+
+  /* ========================================================================
+     Speed Slider Alignment
+     ======================================================================== */
+  .speed-control-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .control-section input[type="range"] {
+    flex: 1;
+    min-width: 60px;
+    max-width: 100px;
+    height: 6px;
+    accent-color: #E57200;
+  }
+
+  /* ========================================================================
+     Status Bar - Simple Horizontal Line Under Canvas
+     ======================================================================== */
+  .stats-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--text-secondary, #666);
+    background: var(--bg-secondary, #f8f9fa);
+    border-radius: 4px;
+    margin-top: 8px;
+  }
+
+  .stats-bar .stat-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .stats-bar .stat-label {
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.3px;
+    color: var(--text-secondary, #888);
+  }
+
+  .stats-bar .stat-value {
+    font-weight: 600;
+    font-family: 'SF Mono', Monaco, monospace;
+    color: var(--text-primary, #333);
+  }
+
+  .stats-bar .stat-divider {
+    color: var(--border-color, #ccc);
+    margin: 0 4px;
+  }
+
+  [data-theme="dark"] .stats-bar {
+    background: var(--bg-secondary, #2a2a2a);
+  }
+
+  [data-theme="dark"] .stats-bar .stat-label {
+    color: #999;
+  }
+
+  [data-theme="dark"] .stats-bar .stat-value {
+    color: #e8e8e8;
+  }
+
+  [data-theme="dark"] .stats-bar .stat-divider {
+    color: #555;
+  }
+
+  /* ========================================================================
+     Shape of the Month Button - UVA Orange, Rectangular
+     ======================================================================== */
+  #shapeOfMonthBtn {
+    background: var(--bg-primary, white) !important;
+    color: #E57200 !important;
+    border: 1px dashed #E57200 !important;
+    border-radius: 4px !important;
+    padding: 6px 14px !important;
+    font-weight: 500 !important;
+    font-size: 11px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  #shapeOfMonthBtn:hover {
+    background: #fff8f0 !important;
+    border-style: solid !important;
+  }
+
+  [data-theme="dark"] #shapeOfMonthBtn {
+    background: var(--bg-secondary, #2d2d2d) !important;
+    color: #ff9933 !important;
+    border-color: #ff9933 !important;
+  }
+
+  [data-theme="dark"] #shapeOfMonthBtn:hover {
+    background: #3d3020 !important;
+  }
+
+  /* ========================================================================
+     Sampling Buttons - Side by Side Layout
+     ======================================================================== */
+  #startStopBtn,
+  #cftpBtn {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  /* ========================================================================
+     WEIGHTS Matrix Grid Alignment
+     ======================================================================== */
+  #periodicWeightsMatrix {
+    display: grid !important;
+    gap: 8px !important;
+    justify-content: start;
+  }
+
+  #periodicWeightsMatrix input {
+    width: 60px !important;
+    height: 32px !important;
+    text-align: center;
+  }
+
+  /* ========================================================================
+     Permute Button Alignment
+     ======================================================================== */
+  #permuteColors {
+    height: 32px !important;
+    padding: 0 12px !important;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* ========================================================================
+     Drawing Tools Icon Buttons - Uniform Size
+     ======================================================================== */
+  .tool-toggle button {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 4px 8px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+  }
+
+  .tool-toggle .tool-btn-labeled {
+    min-width: 48px;
+    padding: 6px 8px;
+  }
+
+  .tool-toggle .tool-btn-labeled .tool-icon {
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .tool-toggle .tool-btn-labeled .tool-label {
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    opacity: 0.8;
+  }
+
+  .tool-toggle .tool-btn-labeled.active .tool-label {
+    opacity: 1;
+  }
 </style>
 
 <script src="/js/colorschemes.js"></script>
@@ -604,290 +2312,317 @@ if (window.LOZENGE_WEBGPU) {
 <!-- Skip to main content for accessibility -->
 <a href="#lozenge-canvas" class="skip-link">Skip to simulation canvas</a>
 
-<!-- Main controls -->
-<div style="max-width: 900px; margin: 0 auto; padding: 8px;">
+<!-- Two-Column Layout Container -->
+<div class="simulation-layout">
 
-<!-- Preset Shapes -->
-<div class="control-group" role="region" aria-labelledby="preset-shapes-title">
-  <div class="control-group-title" id="preset-shapes-title">Preset Shapes</div>
-  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <button id="shapeOfMonthBtn" style="background: #ff5555; color: white; border-color: #ff5555;" aria-label="Load shape of the month preset">Shape of the Month</button>
-    <button id="hexagonBtn" aria-label="Create hexagonal region">Hexagon</button>
-    <span class="param-group"><label for="hexAInput" class="param-label">a</label><input type="number" class="param-input" id="hexAInput" value="4" min="1" max="30" aria-label="Hexagon side a"></span>
-    <span class="param-group"><label for="hexBInput" class="param-label">b</label><input type="number" class="param-input" id="hexBInput" value="3" min="1" max="30" aria-label="Hexagon side b"></span>
-    <span class="param-group"><label for="hexCInput" class="param-label">c</label><input type="number" class="param-input" id="hexCInput" value="5" min="1" max="30" aria-label="Hexagon side c"></span>
-    <select id="letterSelect" style="padding: 4px 8px; font-size: 12px;" aria-label="Select preset shape">
-      <option value="">Presets</option>
-    </select>
-  </div>
-</div>
-
-<!-- Simulation Controls -->
-<div class="control-group" role="region" aria-labelledby="sampling-title">
-  <div class="control-group-title" id="sampling-title">Sampling & Dynamics</div>
-  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-    <button id="startStopBtn" class="primary" disabled aria-label="Start or stop Glauber dynamics simulation">Start Glauber</button>
-    <button id="cftpBtn" class="cftp" title="Coupling From The Past - Perfect Sample" disabled aria-label="Generate perfect sample using CFTP algorithm">Perfect Sample</button>
-    <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;" aria-label="Stop CFTP sampling">Stop CFTP</button>
-    <div style="display: flex; align-items: center; gap: 6px;">
-      <label for="speedSlider" style="font-size: 12px; color: #666;">Speed</label>
-      <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 100px;" aria-label="Simulation speed slider">
-      <input type="number" id="speedInput" class="param-input" value="100" min="1" max="100000000" style="width: 80px;" aria-label="Simulation speed in steps per second">
-      <span style="font-size: 11px; color: #888;" aria-hidden="true">/s</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <input type="checkbox" id="useRandomSweepsCheckbox" aria-label="Enable random sweeps mode">
-      <label for="useRandomSweepsCheckbox" style="font-size: 12px; color: #555;">Random Sweeps</label>
-    </div>
-    <span class="param-group"><label for="qInput" class="param-label">q</label><input type="number" class="param-input" id="qInput" value="1" min="0" max="10" step="0.01" style="width: 60px;" aria-label="q-volume weight parameter"></span>
-  </div>
-</div>
-
-<!-- Region Scaling -->
-<div class="control-group" role="region" aria-labelledby="scaling-title">
-  <div class="control-group-title" id="scaling-title">Region Scaling</div>
-  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-    <button id="doubleMeshBtn" title="Double the region size" aria-label="Scale up region by doubling size">Scale Up Region</button>
-    <button id="halveMeshBtn" title="Halve the region size" aria-label="Scale down region by halving size">Scale Down Region</button>
-  </div>
-</div>
-
-<!-- Periodic Weights -->
-<details id="periodic-weights-details">
-<summary>Periodic Weights</summary>
-<div class="content">
-  <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 8px;">
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <input type="checkbox" id="usePeriodicWeightsCheckbox">
-      <label for="usePeriodicWeightsCheckbox" style="font-size: 12px; color: #555;">Enable periodic weights</label>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <label for="periodicKSelect" style="font-size: 12px; color: #555;">Period k:</label>
-      <select id="periodicKSelect" style="padding: 2px 6px; font-size: 12px;">
-        <option value="1">1</option>
-        <option value="2" selected>2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-      </select>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
-      <span style="font-size: 12px; color: #555;">Presets:</span>
-      <button id="preset2x2Btn" style="padding: 2px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;">Charlier-Duits-Kuijlaars 2x2</button>
-      <span id="duits2x2Container" style="display: none; align-items: center; gap: 4px;">
-        <label for="duitsAlpha" style="font-size: 11px; color: #555;">α:</label>
-        <input type="number" id="duitsAlpha" value="2" step="0.1" min="0.01" style="width: 50px; padding: 2px 4px; font-size: 11px; border: 1px solid #999; border-radius: 3px;">
-        <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/sapm.12339" target="_blank" style="font-size: 11px;">[paper]</a>
-      </span>
-      <button id="presetNienhuis3x3Btn" style="padding: 2px 8px; font-size: 11px; border: 1px solid #999; border-radius: 3px; background: #f5f5f5; cursor: pointer;">Nienhuis-Hilhorst-Blöte 3x3</button>
-      <span id="nienhuis3x3AlphaContainer" style="display: none; align-items: center; gap: 4px;">
-        <label for="nienhuis3x3Alpha" style="font-size: 11px; color: #555;">α:</label>
-        <input type="number" id="nienhuis3x3Alpha" value="2" min="0.01" step="0.1" style="width: 60px; padding: 2px 4px; font-size: 11px; border: 1px solid #999; border-radius: 3px;">
-        <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank" style="font-size: 11px;">[paper]</a>
-      </span>
-    </div>
-  </div>
-  <div id="periodicWeightsMatrix" style="display: inline-grid; gap: 4px;"></div>
-  <div style="font-size: 13px; color: #333; margin-top: 8px;">
-    At position (n,j), uses q<sub>n mod k, j mod k</sub> · <strong>Product: <span id="periodicQProduct">1</span></strong>
-  </div>
-</div>
-</details>
-
-<!-- Stats Row -->
-<div class="control-group" role="region" aria-labelledby="stats-title">
-  <div class="control-group-title" id="stats-title">Statistics</div>
-  <div class="stats-inline" role="status" aria-live="polite">
-    <div class="stat"><span class="stat-label">Dimers</span><span class="stat-value" id="dimerCount">0</span><span id="dimerWarning" style="color: #e77500; font-size: 0.85em; margin-left: 4px; display: none;" role="alert">⚠️ CFTP may take a few minutes</span></div>
-    <div class="stat"><span class="stat-label">Steps</span><span class="stat-value" id="stepCount">0</span></div>
-    <div class="stat"><span class="stat-label">CFTP</span><span class="stat-value" id="cftpSteps">-</span><span id="gpuIndicator" style="color: #2e8b57; font-size: 0.85em; margin-left: 4px; display: none;">🚀 GPU detected</span></div>
-  </div>
-</div>
-
-</div>
-
-<!-- Canvas Container with overlay -->
-<div id="canvas-container" style="position: relative; max-width: 900px; margin: 0 auto;">
-  <!-- View Toggle overlay -->
-  <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
-    <div class="view-toggle">
-      <button id="toggle3DBtn" title="Toggle 2D/3D">2D</button>
-      <button id="perspectiveBtn" title="Isometric view (click for perspective)" style="display: none;">📐</button>
-      <button id="preset3DBtn" title="Cycle 3D visual preset" style="display: none;">☀️</button>
-    </div>
-    <div class="view-toggle">
-      <button id="lozengeViewBtn" class="active" title="Lozenge view">&#9670;</button>
-      <button id="pathViewBtn" title="Toggle nonintersecting paths (cycles: off, type 0+1, type 1+2, type 0+2)">⟶</button>
-      <button id="dimerViewBtn" title="Dimer view">&#8226;-&#8226;</button>
-      <button id="rotate2DBtn" title="Rotate canvas 90°">&#8635;</button>
-    </div>
-    <button id="helpBtn" style="width: 24px; height: 24px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">?</button>
-    <div id="tool-tooltip" style="padding: 4px 8px; background: rgba(0,0,0,0.85); color: white; border-radius: 4px; font-size: 11px; display: none; white-space: pre-line; line-height: 1.4;">🤚 pan · ✏️ draw · 🧹 erase
-⭕+ lasso fill · ⭕− lasso erase
-📐 snap to grid
-─────────
-Shift: toggle draw↔erase
-Cmd-click: complete lasso</div>
+<!-- Left: Controls Panel -->
+<aside class="controls-panel" id="controlsPanel">
+  <!-- Mobile drawer handle -->
+  <div class="drawer-handle" id="drawerHandle">
+    <div class="drawer-handle-bar"></div>
+    <span class="drawer-handle-hint">Swipe up for controls</span>
   </div>
 
-  <!-- Canvas -->
-  <canvas id="lozenge-canvas" role="img" aria-label="Interactive lozenge tiling canvas. Use drawing tools below to create and modify regions."></canvas>
+  <div class="controls-panel-inner">
 
-  <!-- 3D Container -->
-  <div id="three-container" role="img" aria-label="3D visualization of lozenge tiling height function"></div>
+    <!-- Section 1: Region (open by default) -->
+    <details class="control-section" open>
+      <summary>Region</summary>
+      <div class="control-section-content">
+        <div class="control-row">
+          <button id="shapeOfMonthBtn" aria-label="Load shape of the month preset">Shape of the Month</button>
+        </div>
+        <div class="control-row">
+          <button id="hexagonBtn" class="btn-outline" aria-label="Create hexagonal region">Hexagon</button>
+          <span class="param-group"><label for="hexAInput" class="param-label">a</label><input type="number" class="param-input" id="hexAInput" value="4" min="1" max="30" aria-label="Hexagon side a"></span>
+          <span class="param-group"><label for="hexBInput" class="param-label">b</label><input type="number" class="param-input" id="hexBInput" value="3" min="1" max="30" aria-label="Hexagon side b"></span>
+          <span class="param-group"><label for="hexCInput" class="param-label">c</label><input type="number" class="param-input" id="hexCInput" value="5" min="1" max="30" aria-label="Hexagon side c"></span>
+        </div>
+        <div class="control-row">
+          <select id="letterSelect" style="padding: 4px 8px; font-size: 12px; flex: 1;" aria-label="Select preset shape">
+            <option value="">Presets</option>
+          </select>
+        </div>
+        <div class="control-row" style="border-top: 1px solid var(--border-color, #e0e0e0); padding-top: 10px; margin-top: 4px;">
+          <button id="doubleMeshBtn" class="btn-utility" title="Double the region size (U)" aria-label="Scale up region by doubling size">Scale Up</button>
+          <button id="halveMeshBtn" class="btn-utility" title="Halve the region size" aria-label="Scale down region by halving size">Scale Down</button>
+          <button id="clearRegionBtn" class="btn-outline" title="Clear all triangles" aria-label="Clear all triangles from region">Clear</button>
+        </div>
+      </div>
+    </details>
 
-  <!-- Hole winding overlays -->
-  <div id="hole-overlays" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50;" aria-hidden="true"></div>
-</div>
+    <!-- Section 2: Sampling (open by default) -->
+    <details class="control-section" open>
+      <summary>Sampling</summary>
+      <div class="control-section-content">
+        <div class="control-row">
+          <button id="startStopBtn" class="btn-action" disabled aria-label="Start or stop Glauber dynamics simulation">Start Glauber</button>
+          <button id="cftpBtn" class="btn-secondary-action" data-tooltip="Exact sample via Coupling From The Past" disabled aria-label="Generate perfect sample using CFTP algorithm">Perfect Sample</button>
+          <button id="cftpStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;" aria-label="Stop CFTP sampling">Stop</button>
+        </div>
+        <div class="control-row">
+          <label for="speedSlider" style="font-size: 12px; color: #666;">Speed</label>
+          <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 80px;" aria-label="Simulation speed slider">
+          <input type="number" id="speedInput" class="param-input" value="100" min="1" max="100000000" style="width: 70px;" aria-label="Simulation speed in steps per second">
+          <span style="font-size: 11px; color: #888;">/s</span>
+        </div>
+        <div class="control-row">
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #555; cursor: pointer;">
+            <input type="checkbox" id="useRandomSweepsCheckbox" aria-label="Enable random sweeps mode"> Random Sweeps
+          </label>
+          <span class="param-group"><label for="qInput" class="param-label">q</label><input type="number" class="param-input" id="qInput" value="1" min="0" max="10" step="0.01" style="width: 60px;" aria-label="q-volume weight parameter"></span>
+        </div>
+      </div>
+    </details>
 
-<!-- Controls below canvas -->
-<div style="max-width: 900px; margin: 0 auto; padding: 8px;">
+    <!-- Section 3: Drawing Tools (open by default) -->
+    <details class="control-section" open>
+      <summary>Drawing Tools</summary>
+      <div class="control-section-content">
+        <div class="control-row">
+          <div class="tool-toggle" role="group" aria-label="Drawing mode selection">
+            <button id="handBtn" class="tool-btn-labeled" title="Pan view (P)" aria-label="Hand tool - Pan view" aria-pressed="false">
+              <span class="tool-icon">🤚</span>
+              <span class="tool-label">Pan</span>
+            </button>
+            <button id="drawBtn" class="tool-btn-labeled active" title="Draw triangles (D)" aria-label="Draw tool - Add triangles to region" aria-pressed="true">
+              <span class="tool-icon">✏️</span>
+              <span class="tool-label">Draw</span>
+            </button>
+            <button id="eraseBtn" class="tool-btn-labeled" title="Erase triangles (E)" aria-label="Erase tool - Remove triangles from region" aria-pressed="false">
+              <span class="tool-icon">🧹</span>
+              <span class="tool-label">Erase</span>
+            </button>
+          </div>
+          <div class="tool-toggle" role="group" aria-label="Lasso selection mode">
+            <button id="lassoFillBtn" class="tool-btn-labeled" title="Lasso fill (L)" aria-label="Lasso fill - Click points to define polygon to fill" aria-pressed="false">
+              <span class="tool-icon">⭕+</span>
+              <span class="tool-label">Fill</span>
+            </button>
+            <button id="lassoEraseBtn" class="tool-btn-labeled" title="Lasso erase" aria-label="Lasso erase - Click points to define polygon to erase" aria-pressed="false">
+              <span class="tool-icon">⭕−</span>
+              <span class="tool-label">Erase</span>
+            </button>
+            <button id="lassoSnapBtn" class="tool-btn-labeled active" title="Snap to triangular grid" aria-label="Snap lasso to grid" aria-pressed="true">
+              <span class="tool-icon">📐</span>
+              <span class="tool-label">Snap</span>
+            </button>
+          </div>
+        </div>
+        <div class="control-row">
+          <button id="resetBtn" class="btn-outline" aria-label="Clear all triangles from region">Clear</button>
+          <button id="undoBtn" class="btn-outline" title="Undo (Ctrl+Z)" aria-label="Undo last action" aria-keyshortcuts="Ctrl+Z">Undo</button>
+          <button id="redoBtn" class="btn-outline" title="Redo (Ctrl+Y)" aria-label="Redo last undone action" aria-keyshortcuts="Ctrl+Y">Redo</button>
+          <button id="repairBtn" class="btn-outline" data-tooltip="Adds minimal triangles for valid tiling" disabled aria-label="Make region tileable by adding triangles">Make Tileable</button>
+        </div>
+        <div class="control-row">
+          <span id="statusBadge" class="validity-status status-empty" role="status" aria-live="polite">
+            <span class="status-icon">○</span>
+            <span class="status-text">Empty</span>
+          </span>
+        </div>
+      </div>
+    </details>
 
-<!-- Drawing Tools -->
-<div class="control-group" role="region" aria-labelledby="drawing-tools-title">
-  <div class="control-group-title" id="drawing-tools-title">Drawing Tools</div>
-  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <div class="tool-toggle" role="group" aria-label="Drawing mode selection">
-      <button id="handBtn" title="Pan view" aria-label="Hand tool - Pan view" aria-pressed="false">🤚</button>
-      <button id="drawBtn" class="active" title="Draw triangles" aria-label="Draw tool - Add triangles to region" aria-pressed="true">✏️</button>
-      <button id="eraseBtn" title="Erase triangles" aria-label="Erase tool - Remove triangles from region" aria-pressed="false">🧹</button>
-    </div>
-    <div class="tool-toggle" role="group" aria-label="Lasso selection mode">
-      <button id="lassoFillBtn" title="Lasso fill: click to add points, click near start to close" aria-label="Lasso fill - Click points to define polygon to fill" aria-pressed="false">⭕+</button>
-      <button id="lassoEraseBtn" title="Lasso erase: click to add points, click near start to close" aria-label="Lasso erase - Click points to define polygon to erase" aria-pressed="false">⭕−</button>
-      <button id="lassoSnapBtn" class="active" title="Snap to triangular grid" aria-label="Snap lasso to grid" aria-pressed="true">📐</button>
-    </div>
-    <button id="resetBtn" aria-label="Clear all triangles from region">Clear</button>
-    <button id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo last action" aria-keyshortcuts="Ctrl+Z">Undo</button>
-    <button id="redoBtn" title="Redo (Ctrl+Y)" aria-label="Redo last undone action" aria-keyshortcuts="Ctrl+Y">Redo</button>
-    <button id="repairBtn" title="Add triangles to make region tileable" disabled aria-label="Make region tileable by adding triangles">Make Tileable</button>
-    <span id="statusBadge" class="status-empty" role="status" aria-live="polite">Empty</span>
-  </div>
-</div>
+    <!-- Section 4: Weights (collapsed by default) -->
+    <details class="control-section" id="periodic-weights-details">
+      <summary>Weights</summary>
+      <div class="control-section-content">
+        <div class="control-row">
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #555; cursor: pointer;">
+            <input type="checkbox" id="usePeriodicWeightsCheckbox"> Enable periodic weights
+          </label>
+        </div>
+        <div class="control-row">
+          <label for="periodicKSelect" style="font-size: 12px; color: #555;">Period k:</label>
+          <select id="periodicKSelect" style="padding: 2px 6px; font-size: 12px;">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+        <div class="control-row" style="flex-direction: column; align-items: flex-start; gap: 6px;">
+          <span style="font-size: 12px; color: #555;">Presets:</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <button id="preset2x2Btn" class="btn-utility" style="font-size: 11px;">Charlier-Duits-Kuijlaars 2x2</button>
+            <span id="duits2x2Container" style="display: none; align-items: center; gap: 4px;">
+              <label for="duitsAlpha" style="font-size: 11px; color: #555;">α:</label>
+              <input type="number" id="duitsAlpha" value="2" step="0.1" min="0.01" style="width: 50px; padding: 2px 4px; font-size: 11px; border: 1px solid #999; border-radius: 3px;">
+              <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/sapm.12339" target="_blank" style="font-size: 11px;">[paper]</a>
+            </span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <button id="presetNienhuis3x3Btn" class="btn-utility" style="font-size: 11px;">Nienhuis-Hilhorst-Blöte 3x3</button>
+            <span id="nienhuis3x3AlphaContainer" style="display: none; align-items: center; gap: 4px;">
+              <label for="nienhuis3x3Alpha" style="font-size: 11px; color: #555;">α:</label>
+              <input type="number" id="nienhuis3x3Alpha" value="2" min="0.01" step="0.1" style="width: 60px; padding: 2px 4px; font-size: 11px; border: 1px solid #999; border-radius: 3px;">
+              <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank" style="font-size: 11px;">[paper]</a>
+            </span>
+          </div>
+        </div>
+        <div id="periodicWeightsMatrix" style="display: inline-grid; gap: 4px;"></div>
+        <div style="font-size: 12px; color: #555;">
+          At position (n,j), uses q<sub>n mod k, j mod k</sub> · <strong>Product: <span id="periodicQProduct">1</span></strong>
+        </div>
+      </div>
+    </details>
 
-<!-- View Controls -->
-<div class="control-group" role="region" aria-labelledby="view-controls-title">
-  <div class="control-group-title" id="view-controls-title">View Controls</div>
-  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-    <button id="zoomInBtn" title="Zoom In" aria-label="Zoom in">+</button>
-    <button id="zoomOutBtn" title="Zoom Out" aria-label="Zoom out">−</button>
-    <button id="panLeftBtn" title="Pan Left" aria-label="Pan view left">←</button>
-    <button id="panRightBtn" title="Pan Right" aria-label="Pan view right">→</button>
-    <button id="panUpBtn" title="Pan Up" aria-label="Pan view up">↑</button>
-    <button id="panDownBtn" title="Pan Down" aria-label="Pan view down">↓</button>
-    <button id="rotateLeftBtn" title="Rotate Left (3D)" disabled aria-label="Rotate 3D view left">↺</button>
-    <button id="rotateRightBtn" title="Rotate Right (3D)" disabled aria-label="Rotate 3D view right">↻</button>
-    <button id="resetViewBtn" title="Reset View" aria-label="Reset view to default">Reset View</button>
-  </div>
-</div>
+    <!-- Section 5: Styling (collapsed by default) -->
+    <details class="control-section">
+      <summary>Styling</summary>
+      <div class="control-section-content">
+        <!-- Palette selection -->
+        <div class="control-row">
+          <button id="prev-palette" class="btn-utility" style="padding: 0 10px;" aria-label="Previous color palette">◀</button>
+          <select id="palette-select" style="flex: 1; min-width: 100px;" aria-label="Select color palette"></select>
+          <button id="next-palette" class="btn-utility" style="padding: 0 10px;" aria-label="Next color palette">▶</button>
+          <button id="permuteColors" class="btn-utility" title="Permute colors" aria-label="Permute color order">Permute</button>
+        </div>
+        <!-- Visual Palette Picker Grid -->
+        <div id="palettePickerGrid" class="palette-picker" role="listbox" aria-label="Color palette visual selection"></div>
+        <!-- Custom colors -->
+        <div class="control-row">
+          <button id="customColorsBtn" class="btn-utility" title="Custom colors" aria-label="Toggle custom color pickers">Custom colors</button>
+          <div id="customColorPickers" style="display: none; align-items: center; gap: 8px;" role="group" aria-label="Custom color pickers">
+            <input type="color" id="customColor1" value="#E57200" title="Color 1" aria-label="Custom lozenge color 1" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+            <input type="color" id="customColor2" value="#232D4B" title="Color 2" aria-label="Custom lozenge color 2" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+            <input type="color" id="customColor3" value="#F9DCBF" title="Color 3" aria-label="Custom lozenge color 3" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+          </div>
+          <label for="holeColorPicker" style="font-size: 12px; color: #555;">Holes:</label>
+          <input type="color" id="holeColorPicker" value="#FFFFFF" title="Hole color" aria-label="Color for holes in the region" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+        </div>
+        <!-- Line widths -->
+        <div class="control-row" style="border-top: 1px solid var(--border-color, #e0e0e0); padding-top: 10px; margin-top: 4px;">
+          <label for="outlineWidthPct" style="font-size: 12px; color: #555;">Outline:</label>
+          <input type="number" id="outlineWidthPct" value="0.1" min="0" max="100" step="0.1" class="param-input" style="width: 50px;" aria-label="Outline width percentage">
+          <span style="font-size: 11px; color: #888;">%</span>
+          <label for="borderWidthPct" style="font-size: 12px; color: #555; margin-left: 8px;">Border:</label>
+          <input type="number" id="borderWidthPct" value="1" min="0" max="50" step="0.5" class="param-input" style="width: 50px;" aria-label="Border width percentage">
+          <span style="font-size: 11px; color: #888;">%</span>
+        </div>
+        <div class="control-row">
+          <label for="pathWidthPx" style="font-size: 12px; color: #555;">Path:</label>
+          <input type="number" id="pathWidthPx" value="2" min="0" max="20" step="0.5" class="param-input" style="width: 50px;" aria-label="Path width in pixels">
+          <span style="font-size: 11px; color: #888;">px</span>
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555; margin-left: 12px;">
+            <input type="checkbox" id="showGridCheckbox" checked aria-label="Show grid lines"> Grid
+          </label>
+        </div>
+        <!-- Labels -->
+        <div class="control-row">
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
+            <input type="checkbox" id="showBoundaryLengthsCheckbox" aria-label="Show boundary length labels"> Length Labels
+          </label>
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
+            <input type="checkbox" id="showHoleLabelsCheckbox" checked aria-label="Show hole winding labels"> Hole Labels
+          </label>
+        </div>
+        <span id="labelControls" style="display: none; align-items: center; gap: 4px; flex-wrap: wrap;" role="group" aria-label="Label display settings">
+          <label for="labelSizeInput" style="font-size: 11px; color: #888;">size:</label>
+          <input type="number" id="labelSizeInput" value="1.0" min="0.3" max="3" step="0.1" style="width: 45px; padding: 2px 4px; font-size: 11px;" aria-label="Label font size multiplier">
+          <label for="labelOffsetInput" style="font-size: 11px; color: #888;">offset:</label>
+          <input type="number" id="labelOffsetInput" value="1.5" min="0.5" max="5" step="0.1" style="width: 45px; padding: 2px 4px; font-size: 11px;" aria-label="Label offset distance">
+          <label style="display: flex; align-items: center; gap: 2px; font-size: 11px; color: #888; cursor: pointer;">
+            <input type="checkbox" id="showHoleLengthsCheckbox" checked style="margin: 0;" aria-label="Show hole length labels"> holes
+          </label>
+        </span>
+        <!-- Pan controls (zoom/reset moved to canvas overlay) -->
+        <div class="control-row" id="view2DControlsRow" style="border-top: 1px solid var(--border-color, #e0e0e0); padding-top: 10px; margin-top: 4px;">
+          <span style="font-size: 11px; color: #666; margin-right: 4px;">Pan:</span>
+          <button id="panLeftBtn" class="btn-utility" title="Pan Left" aria-label="Pan view left">←</button>
+          <button id="panRightBtn" class="btn-utility" title="Pan Right" aria-label="Pan view right">→</button>
+          <button id="panUpBtn" class="btn-utility" title="Pan Up" aria-label="Pan view up">↑</button>
+          <button id="panDownBtn" class="btn-utility" title="Pan Down" aria-label="Pan view down">↓</button>
+        </div>
+        <!-- 3D View Controls (shown only in 3D mode) -->
+        <div class="control-row" id="view3DControlsRow" style="display: none;">
+          <span style="font-size: 11px; color: #666; margin-right: 4px;">Rotate:</span>
+          <button id="rotateLeftBtn" class="btn-utility" title="Rotate Left (3D)" disabled aria-label="Rotate 3D view left">↺</button>
+          <button id="rotateRightBtn" class="btn-utility" title="Rotate Right (3D)" disabled aria-label="Rotate 3D view right">↻</button>
+        </div>
+      </div>
+    </details>
 
-<!-- Display Options -->
-<div class="control-group" role="region" aria-labelledby="display-options-title">
-  <div class="control-group-title" id="display-options-title">Display Options</div>
-  <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-    <div style="display: flex; align-items: center; gap: 4px;" role="group" aria-label="Color palette selection">
-      <button id="prev-palette" style="padding: 0 8px;" aria-label="Previous color palette">&#9664;</button>
-      <select id="palette-select" style="width: 120px;" aria-label="Select color palette"></select>
-      <button id="next-palette" style="padding: 0 8px;" aria-label="Next color palette">&#9654;</button>
-    </div>
-    <button id="permuteColors" title="Permute colors" aria-label="Cycle through color permutations">Permute</button>
-    <button id="customColorsBtn" title="Custom colors" aria-label="Toggle custom color pickers">Custom colors</button>
-    <div id="customColorPickers" style="display: none; align-items: center; gap: 8px;" role="group" aria-label="Custom color pickers">
-      <input type="color" id="customColor1" value="#E57200" title="Color 1" aria-label="Custom lozenge color 1" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-      <input type="color" id="customColor2" value="#232D4B" title="Color 2" aria-label="Custom lozenge color 2" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-      <input type="color" id="customColor3" value="#F9DCBF" title="Color 3" aria-label="Custom lozenge color 3" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <label for="holeColorPicker" style="font-size: 12px; color: #555;">Holes:</label>
-      <input type="color" id="holeColorPicker" value="#FFFFFF" title="Hole color" aria-label="Color for holes in the region" style="width: 32px; height: 26px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <label for="outlineWidthPct" style="font-size: 12px; color: #555;">Outline:</label>
-      <input type="number" id="outlineWidthPct" value="0.1" min="0" max="100" step="0.1" class="param-input" style="width: 50px;" aria-label="Outline width percentage">
-      <span style="font-size: 11px; color: #888;" aria-hidden="true">%</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <label for="borderWidthPct" style="font-size: 12px; color: #555;">Border:</label>
-      <input type="number" id="borderWidthPct" value="1" min="0" max="50" step="0.5" class="param-input" style="width: 50px;" aria-label="Border width percentage">
-      <span style="font-size: 11px; color: #888;" aria-hidden="true">%</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-      <label for="pathWidthPx" style="font-size: 12px; color: #555;">Path:</label>
-      <input type="number" id="pathWidthPx" value="2" min="0" max="20" step="0.5" class="param-input" style="width: 50px;" aria-label="Path width in pixels">
-      <span style="font-size: 11px; color: #888;" aria-hidden="true">px</span>
-    </div>
-    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
-      <input type="checkbox" id="showGridCheckbox" checked aria-label="Show grid lines"> Grid
-    </label>
-    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
-      <input type="checkbox" id="showBoundaryLengthsCheckbox" aria-label="Show boundary length labels"> Length Labels
-    </label>
-    <span id="labelControls" style="display: none; align-items: center; gap: 4px;" role="group" aria-label="Label display settings">
-      <label for="labelSizeInput" style="font-size: 11px; color: #888;">size:</label>
-      <input type="number" id="labelSizeInput" value="1.0" min="0.3" max="3" step="0.1" style="width: 45px; padding: 2px 4px; font-size: 11px;" aria-label="Label font size multiplier">
-      <label for="labelOffsetInput" style="font-size: 11px; color: #888;">offset:</label>
-      <input type="number" id="labelOffsetInput" value="1.5" min="0.5" max="5" step="0.1" style="width: 45px; padding: 2px 4px; font-size: 11px;" aria-label="Label offset distance">
-      <label style="display: flex; align-items: center; gap: 2px; font-size: 11px; color: #888; cursor: pointer; margin-left: 4px;">
-        <input type="checkbox" id="showHoleLengthsCheckbox" checked style="margin: 0;" aria-label="Show hole length labels"> holes
-      </label>
-    </span>
-    <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
-      <input type="checkbox" id="showHoleLabelsCheckbox" checked aria-label="Show hole winding labels"> Hole Labels
-    </label>
-  </div>
-</div>
+    <!-- Section 6: Advanced (collapsed by default) -->
+    <details class="control-section">
+      <summary>Fluctuations & Double Dimers</summary>
+      <div class="control-section-content">
+        <div class="control-row">
+          <button id="cftpBtn2" class="btn-secondary-action" data-tooltip="Individual perfect sample" disabled aria-label="Generate individual perfect sample using CFTP">CFTP Sample</button>
+          <button id="averageBtn" class="btn-secondary-action" data-tooltip="Compute averaged height (Limit Shape)" disabled aria-label="Compute averaged height function from multiple samples">Average</button>
+          <span class="param-group"><label for="avgSamplesInput" class="param-label">n</label><input type="number" class="param-input" id="avgSamplesInput" value="10" min="1" max="1000" style="width: 50px;" aria-label="Number of samples to average"></span>
+          <button id="avgStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;" aria-label="Stop averaging process">Stop</button>
+        </div>
+        <div class="control-row">
+          <span id="avgProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
+        </div>
+        <div class="control-row">
+          <button id="fluctuationsBtn" class="btn-secondary-action" data-tooltip="Height difference ≈ Gaussian Free Field" disabled aria-label="Visualize height function fluctuations between two samples">Fluctuations</button>
+          <span id="fluctProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
+          <label for="fluctScaleInput" style="font-size: 12px; color: #555;">×</label>
+          <input type="number" id="fluctScaleInput" value="10" min="1" max="100" step="1" style="width: 50px; padding: 2px 4px; font-size: 11px;" aria-label="Fluctuation scale multiplier">
+          <label style="display: flex; align-items: center; gap: 3px; font-size: 12px; color: #555; cursor: pointer;">
+            <input type="checkbox" id="fluctOutlineCheck" checked style="margin: 0;" aria-label="Show outline in fluctuations view">
+            Outline
+          </label>
+        </div>
+        <div class="control-row">
+          <button id="doubleDimerBtn" class="btn-secondary-action" data-tooltip="Superimpose two samples to form loops" disabled aria-label="Generate double dimer loop visualization">Double Dimer</button>
+          <span id="doubleDimerProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
+          <label for="minLoopInput" style="font-size: 12px; color: #555;">min loop:</label>
+          <input type="number" id="minLoopInput" value="2" min="2" max="99" style="width: 3.5em; padding: 2px 4px; font-size: 11px;" aria-label="Minimum loop size to display">
+        </div>
+        <div class="control-row">
+          <button id="resampleBtn" style="display: none; background: #6c757d; color: white; border-color: #6c757d;" aria-label="Generate new sample">Resample</button>
+        </div>
+      </div>
+    </details>
 
-<!-- Advanced Sampling & Analysis -->
-<div class="control-group" role="region" aria-labelledby="advanced-sampling-title">
-  <div class="control-group-title" id="advanced-sampling-title">Advanced Sampling & Analysis</div>
-  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-    <button id="cftpBtn2" class="cftp" title="Coupling From The Past - Perfect Sample" disabled aria-label="Generate individual perfect sample using CFTP">Individual Sample with CFTP</button>
-    <button id="averageBtn" class="cftp" disabled aria-label="Compute averaged height function from multiple samples">Get Averaged Sample</button>
-    <span class="param-group"><label for="avgSamplesInput" class="param-label">Samples</label><input type="number" class="param-input" id="avgSamplesInput" value="10" min="1" max="1000" style="width: 60px;" aria-label="Number of samples to average"></span>
-    <button id="avgStopBtn" style="display: none; background: #dc3545; color: white; border-color: #dc3545;" aria-label="Stop averaging process">Stop</button>
-    <span id="avgProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
-    <button id="fluctuationsBtn" class="cftp" disabled aria-label="Visualize height function fluctuations between two samples">Fluctuations</button>
-    <span id="fluctProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
-    <span style="display: flex; align-items: center; gap: 2px;">
-      <label for="fluctScaleInput" style="font-size: 12px; color: #555;">×</label>
-      <input type="number" id="fluctScaleInput" value="10" min="1" max="100" step="1" style="width: 50px; padding: 2px 4px; font-size: 11px;" aria-label="Fluctuation scale multiplier">
-    </span>
-    <label style="display: flex; align-items: center; gap: 3px; font-size: 12px; color: #555; cursor: pointer;">
-      <input type="checkbox" id="fluctOutlineCheck" checked style="margin: 0;" aria-label="Show outline in fluctuations view">
-      Outline
-    </label>
-    <button id="doubleDimerBtn" class="cftp" disabled aria-label="Generate double dimer loop visualization">Double Dimer</button>
-    <span id="doubleDimerProgress" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
-    <span style="display: flex; align-items: center; gap: 2px;">
-      <label for="minLoopInput" style="font-size: 12px; color: #555;">min loop:</label>
-      <input type="number" id="minLoopInput" value="2" min="2" max="99" style="width: 3.5em; padding: 2px 4px; font-size: 11px;" aria-label="Minimum loop size to display">
-    </span>
-    <button id="resampleBtn" style="display: none; background: #6c757d; color: white; border-color: #6c757d;" aria-label="Generate new sample">Resample</button>
-  </div>
-</div>
-
-<!-- Export -->
-<div class="control-group" role="region" aria-labelledby="export-title">
-  <div class="control-group-title" id="export-title">Export</div>
-  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-    <button id="export-png" aria-label="Export as PNG image">PNG</button>
-    <label for="export-quality" style="font-size: 11px; color: #666;">Quality:</label>
-    <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;" aria-label="PNG export quality">
-    <span id="export-quality-val" style="font-size: 11px; color: #232D4B;" aria-hidden="true">85</span>
-    <button id="export-pdf" aria-label="Export as PDF document">PDF</button>
-    <button id="export-height-csv" aria-label="Export height function as CSV file">Height CSV</button><button id="height-csv-info" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: pointer;" aria-label="Show height CSV format information">?</button>
-    <button id="export-height-mma" aria-label="Copy height function as Mathematica array to clipboard">Copy Height as Mathematica Array</button><button id="height-mma-info" style="padding: 0 6px; margin-left: -12px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: pointer;" aria-label="Show Mathematica array format information">?</button>
-    <button id="export-json" aria-label="Export region shape as JSON file">Export Shape</button>
-    <button id="import-json" aria-label="Import region shape from JSON file">Import Shape</button>
-    <input type="file" id="import-json-file" accept=".json" style="display: none;" aria-label="JSON file input">
-    <button id="copy-link-btn" aria-label="Copy shareable link to clipboard">Copy Link</button>
-    <span id="link-copied" style="display: none; color: #28a745; font-size: 11px; margin-left: 4px;">Copied!</span>
-    <button id="export-obj" aria-label="Export 3D model as OBJ file">OBJ</button>
-    <button id="export-obj2" aria-label="Export 3D model as OBJ with orthogonal axes">OBJ-orthogonal</button>
-    <label for="obj-thickness" style="font-size: 11px; color: #666;">Thickness (mm):</label>
-    <input type="number" id="obj-thickness" value="2" min="0" step="1" style="width: 40px;" aria-label="OBJ export thickness in millimeters">
-  </div>
-  <div id="height-csv-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 600px;">Height CSV Coordinates:
+    <!-- Section 7: Export (collapsed by default) -->
+    <details class="control-section">
+      <summary>Export</summary>
+      <div class="control-section-content">
+        <div class="export-group">
+          <span class="export-group-label">Images</span>
+          <button id="export-png" class="btn-utility" aria-label="Export as PNG image">PNG</button>
+          <label for="export-quality" style="font-size: 11px; color: #666;">Quality:</label>
+          <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 60px;" aria-label="PNG export quality">
+          <span id="export-quality-val" style="font-size: 11px; color: #232D4B;">85</span>
+          <button id="export-pdf" class="btn-utility" aria-label="Export as PDF document">PDF</button>
+        </div>
+        <div class="export-divider"></div>
+        <div class="export-group">
+          <span class="export-group-label">Height</span>
+          <button id="export-height-csv" class="btn-utility" aria-label="Export height function as CSV file">CSV</button>
+          <button id="height-csv-info" style="padding: 0 6px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: pointer;" aria-label="Show height CSV format information">?</button>
+          <button id="export-height-mma" class="btn-utility" aria-label="Copy height function as Mathematica array to clipboard">Mathematica</button>
+          <button id="height-mma-info" style="padding: 0 6px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 50%; font-size: 11px; cursor: pointer;" aria-label="Show Mathematica array format information">?</button>
+        </div>
+        <div class="export-divider"></div>
+        <div class="export-group">
+          <span class="export-group-label">Shape</span>
+          <button id="export-json" class="btn-utility" aria-label="Export region shape as JSON file">Export</button>
+          <button id="import-json" class="btn-utility" aria-label="Import region shape from JSON file">Import</button>
+          <input type="file" id="import-json-file" accept=".json" style="display: none;" aria-label="JSON file input">
+        </div>
+        <div class="export-divider"></div>
+        <div class="export-group">
+          <span class="export-group-label">Share</span>
+          <button id="copy-link-btn" class="btn-utility" aria-label="Copy shareable link to clipboard">Copy Link</button>
+          <span id="link-copied" style="display: none; color: #28a745; font-size: 11px;">Copied!</span>
+        </div>
+        <div class="export-divider"></div>
+        <div class="export-group">
+          <span class="export-group-label">3D</span>
+          <button id="export-obj" class="btn-utility" aria-label="Export 3D model as OBJ file">OBJ</button>
+          <button id="export-obj2" class="btn-utility" aria-label="Export 3D model as OBJ with orthogonal axes">OBJ-ortho</button>
+          <label for="obj-thickness" style="font-size: 11px; color: #666;">Thickness:</label>
+          <input type="number" id="obj-thickness" value="2" min="0" step="1" style="width: 40px;" aria-label="OBJ export thickness in millimeters">
+          <span style="font-size: 11px; color: #888;">mm</span>
+        </div>
+        <div id="height-csv-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 100%;">Height CSV Coordinates:
 
 • n, j: Integer lattice coordinates on the triangular grid
 • x, y: World coordinates (floating point)
@@ -912,7 +2647,7 @@ Triangles indexed by (n, j, type):
 
 The height h is defined on vertices of the triangular lattice
 (equivalently, faces of the dual hexagonal grid).</div>
-  <div id="height-mma-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 600px;">Mathematica Plotting Code:
+        <div id="height-mma-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 100%;">Mathematica Plotting Code:
 
 After pasting, assign to A and run:
 
@@ -923,11 +2658,133 @@ Graphics3D[{EdgeForm[Black],
     MapThread[Append, {pts2D, A[[All, 3]]}],
     {Polygon[MeshCells[mesh, 2][[All, 1]]]}]
 }, Boxed -> False]</div>
-</div>
+      </div>
+    </details>
 
+  </div><!-- end controls-panel-inner -->
+</aside>
+
+<!-- Right: Visualization Panel -->
+<main class="visualization-panel">
+  <!-- Canvas Container with overlay -->
+  <div id="canvas-container" style="position: relative;">
+    <!-- Zoom controls overlay (left side) -->
+    <div id="zoom-overlay" style="position: absolute; top: 8px; left: 8px; z-index: 100; display: flex; flex-direction: column; gap: 4px;">
+      <div class="view-toggle" style="flex-direction: column;">
+        <button id="zoomInBtn" title="Zoom In (+)" aria-label="Zoom in">+</button>
+        <button id="zoomOutBtn" title="Zoom Out (-)" aria-label="Zoom out">−</button>
+        <button id="resetViewBtn" title="Reset View (R)" aria-label="Reset view to default">⊙</button>
+      </div>
+    </div>
+
+    <!-- View Toggle overlay -->
+    <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
+      <div class="view-toggle">
+        <button id="toggle3DBtn" title="Toggle 2D/3D view">3D</button>
+      </div>
+      <div class="view-toggle">
+        <button id="lozengeViewBtn" class="active" title="Lozenge view">◆</button>
+        <button id="pathViewBtn" title="Toggle nonintersecting paths">⟶</button>
+        <button id="dimerViewBtn" title="Dimer view">•-•</button>
+        <button id="rotate2DBtn" title="Rotate canvas 90°">↻</button>
+      </div>
+      <div class="view-toggle" id="view3DOverlay" style="display: none;">
+        <button id="perspectiveBtn" title="Isometric view (click for perspective)">📐</button>
+        <button id="preset3DBtn" title="Cycle 3D visual preset">☀️</button>
+      </div>
+      <button id="helpBtn" style="width: 28px; height: 28px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">?</button>
+      <div id="tool-tooltip" style="padding: 6px 10px; background: rgba(0,0,0,0.85); color: white; border-radius: 6px; font-size: 11px; display: none; white-space: pre-line; line-height: 1.4; position: absolute; right: 0; top: 40px;">🤚 pan · ✏️ draw · 🧹 erase
+⭕+ lasso fill · ⭕− lasso erase
+📐 snap to grid
+─────────
+Shift: toggle draw↔erase
+Cmd-click: complete lasso</div>
+    </div>
+
+    <!-- Canvas -->
+    <canvas id="lozenge-canvas" role="img" aria-label="Interactive lozenge tiling canvas. Use drawing tools to create and modify regions."></canvas>
+
+    <!-- 3D Container -->
+    <div id="three-container" role="img" aria-label="3D visualization of lozenge tiling height function"></div>
+
+    <!-- Hole winding overlays -->
+    <div id="hole-overlays" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50;" aria-hidden="true"></div>
+  </div>
+
+  <!-- Stats Bar (under canvas) -->
+  <div class="stats-bar" role="status" aria-live="polite">
+    <span class="stat-item"><span class="stat-label">Dimers</span> <span class="stat-value" id="dimerCount">0</span><span id="dimerWarning" style="color: #e77500; font-size: 0.85em; margin-left: 4px; display: none;" role="alert">⚠️ slow</span></span>
+    <span class="stat-divider">|</span>
+    <span class="stat-item"><span class="stat-label">Steps</span> <span class="stat-value" id="stepCount">0</span></span>
+    <span class="stat-divider">|</span>
+    <span class="stat-item"><span class="stat-label">CFTP</span> <span class="stat-value" id="cftpSteps">-</span></span>
+    <span id="gpuIndicator" style="color: #2e8b57; margin-left: 8px; display: none;">🚀 GPU</span>
+  </div>
+</main>
+
+</div><!-- end simulation-layout -->
+
+<!-- Floating Action Button for Mobile -->
+<button id="sampleFab" class="sample-fab" disabled aria-label="Generate perfect sample" data-tooltip="Perfect Sample">🎲</button>
+
+<!-- Keyboard Shortcuts Help Modal -->
+<div id="keyboardHelpModal" class="keyboard-help-modal" role="dialog" aria-labelledby="keyboard-help-title" aria-modal="true">
+  <div class="keyboard-help-content">
+    <h3 id="keyboard-help-title">Help</h3>
+    <h4 style="margin: 12px 0 8px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #666;">Drawing Tools</h4>
+    <table>
+      <tr><td>🖐</td><td>Pan canvas</td></tr>
+      <tr><td>✏️</td><td>Draw triangles</td></tr>
+      <tr><td>🧽</td><td>Erase triangles</td></tr>
+      <tr><td>⭕+</td><td>Lasso fill</td></tr>
+      <tr><td>⭕−</td><td>Lasso erase</td></tr>
+      <tr><td>📐</td><td>Snap to grid</td></tr>
+    </table>
+    <table style="margin-top: 8px;">
+      <tr><td><kbd>Shift</kbd></td><td>Toggle draw ↔ erase</td></tr>
+      <tr><td><kbd>Cmd</kbd>-click</td><td>Complete lasso</td></tr>
+    </table>
+    <h4 style="margin: 16px 0 8px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #666;">Keyboard Shortcuts</h4>
+    <table>
+      <tr><td><kbd>S</kbd></td><td>Perfect Sample (CFTP)</td></tr>
+      <tr><td><kbd>G</kbd></td><td>Start/Stop Glauber</td></tr>
+      <tr><td><kbd>Space</kbd></td><td>Pause/Resume Glauber</td></tr>
+      <tr><td><kbd>3</kbd></td><td>Toggle 3D view</td></tr>
+      <tr><td><kbd>R</kbd></td><td>Reset view</td></tr>
+      <tr><td><kbd>U</kbd></td><td>Scale Up region (2×)</td></tr>
+      <tr><td><kbd>+</kbd> / <kbd>-</kbd></td><td>Zoom in/out</td></tr>
+      <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Previous/Next palette</td></tr>
+      <tr><td><kbd>Z</kbd></td><td>Undo</td></tr>
+      <tr><td><kbd>Y</kbd></td><td>Redo</td></tr>
+      <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Close dialogs</td></tr>
+    </table>
+    <button class="close-btn" id="closeKeyboardHelp">Close</button>
+  </div>
 </div>
 
 <script>
+// Info Panel Tab Switching
+(function() {
+  const tabs = document.querySelectorAll('.info-tab');
+  const panes = document.querySelectorAll('.info-pane');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetId = 'pane-' + tab.dataset.tab;
+
+      // Remove active from all tabs and panes
+      tabs.forEach(t => t.classList.remove('active'));
+      panes.forEach(p => p.classList.remove('active'));
+
+      // Add active to clicked tab and target pane
+      tab.classList.add('active');
+      const targetPane = document.getElementById(targetId);
+      if (targetPane) targetPane.classList.add('active');
+    });
+  });
+})();
+
 function initLozengeApp() {
     const slope = 1 / Math.sqrt(3);
     const deltaC = 2 / Math.sqrt(3);
@@ -4295,13 +6152,19 @@ function initLozengeApp() {
         }
         el.stepCount.textContent = formatNumber(sim.getTotalSteps());
 
-        // Status badge - only show when invalid
-        if (activeTriangles.size === 0 || isValid) {
-            el.statusBadge.style.display = 'none';
-        } else {
+        // Status badge with icons - show different states
+        if (activeTriangles.size === 0) {
+            el.statusBadge.className = 'validity-status status-empty';
+            el.statusBadge.innerHTML = '<span class="status-icon">○</span><span class="status-text">Empty</span>';
             el.statusBadge.style.display = '';
-            el.statusBadge.textContent = 'Invalid';
-            el.statusBadge.className = 'status-invalid';
+        } else if (isValid) {
+            el.statusBadge.className = 'validity-status status-valid';
+            el.statusBadge.innerHTML = '<span class="status-icon">✓</span><span class="status-text">Valid</span>';
+            el.statusBadge.style.display = '';
+        } else {
+            el.statusBadge.className = 'validity-status status-invalid';
+            el.statusBadge.innerHTML = '<span class="status-icon">✗</span><span class="status-text">Invalid</span>';
+            el.statusBadge.style.display = '';
         }
 
         // Enable/disable simulation buttons
@@ -4359,9 +6222,18 @@ function initLozengeApp() {
         threeContainer.style.display = use3D ? 'block' : 'none';
         // Hole overlays are shown in both 2D and 3D views
         el.toggle3DBtn.textContent = use3D ? '2D' : '3D';
-        // Show/hide 3D option buttons
+        // Show/hide 3D option buttons (grouped in view3DOverlay container)
+        const view3DOverlay = document.getElementById('view3DOverlay');
+        if (view3DOverlay) {
+            view3DOverlay.style.display = use3D ? 'flex' : 'none';
+        }
         el.perspectiveBtn.style.display = use3D ? 'inline-block' : 'none';
         el.preset3DBtn.style.display = use3D ? 'inline-block' : 'none';
+        // Show/hide 2D/3D view control rows in Styling section
+        const view2DRow = document.getElementById('view2DControlsRow');
+        const view3DRow = document.getElementById('view3DControlsRow');
+        if (view2DRow) view2DRow.style.display = use3D ? 'none' : 'flex';
+        if (view3DRow) view3DRow.style.display = use3D ? 'flex' : 'none';
         if (use3D && renderer3D) {
             el.preset3DBtn.textContent = renderer3D.getCurrentPreset().icon;
             el.preset3DBtn.title = `Style: ${renderer3D.getCurrentPreset().name}`;
@@ -5087,6 +6959,12 @@ function initLozengeApp() {
         reinitialize();
     });
 
+    // Clear button in Region section - same action as resetBtn
+    const clearRegionBtn = document.getElementById('clearRegionBtn');
+    if (clearRegionBtn) {
+        clearRegionBtn.addEventListener('click', () => el.resetBtn.click());
+    }
+
     el.undoBtn.addEventListener('click', () => {
         const state = undoStack.undo(Array.from(activeTriangles.values()));
         if (state) loadState(state);
@@ -5441,11 +7319,34 @@ function initLozengeApp() {
         }
     });
 
-    // Help button toggle
+    // Help button - show keyboard shortcuts modal
     document.getElementById('helpBtn').addEventListener('click', () => {
-        const tooltip = document.getElementById('tool-tooltip');
-        tooltip.style.display = tooltip.style.display === 'none' ? 'block' : 'none';
+        const modal = document.getElementById('keyboardHelpModal');
+        if (modal) {
+            modal.classList.add('visible');
+        }
     });
+
+    // Keyboard help modal close button
+    const closeKeyboardHelp = document.getElementById('closeKeyboardHelp');
+    if (closeKeyboardHelp) {
+        closeKeyboardHelp.addEventListener('click', () => {
+            const modal = document.getElementById('keyboardHelpModal');
+            if (modal) {
+                modal.classList.remove('visible');
+            }
+        });
+    }
+
+    // Close modal on backdrop click
+    const keyboardModal = document.getElementById('keyboardHelpModal');
+    if (keyboardModal) {
+        keyboardModal.addEventListener('click', (e) => {
+            if (e.target === keyboardModal) {
+                keyboardModal.classList.remove('visible');
+            }
+        });
+    }
 
     // Custom colors functionality
     const customColorsBtn = document.getElementById('customColorsBtn');
@@ -7795,6 +9696,238 @@ function initLozengeApp() {
 
     document.getElementById('copy-link-btn').addEventListener('click', copyShareLink);
 
+    // ========================================================================
+    // Mobile Drawer Toggle
+    // ========================================================================
+    const controlsPanel = document.getElementById('controlsPanel');
+    const drawerHandle = document.getElementById('drawerHandle');
+    if (controlsPanel && drawerHandle) {
+        drawerHandle.addEventListener('click', () => {
+            controlsPanel.classList.toggle('expanded');
+        });
+
+        // Touch swipe support for drawer
+        let touchStartY = 0;
+        let touchStartExpanded = false;
+        drawerHandle.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+            touchStartExpanded = controlsPanel.classList.contains('expanded');
+        }, { passive: true });
+        drawerHandle.addEventListener('touchmove', (e) => {
+            const deltaY = touchStartY - e.touches[0].clientY;
+            if (deltaY > 30 && !touchStartExpanded) {
+                controlsPanel.classList.add('expanded');
+            } else if (deltaY < -30 && touchStartExpanded) {
+                controlsPanel.classList.remove('expanded');
+            }
+        }, { passive: true });
+    }
+
+    // ========================================================================
+    // Floating Action Button (FAB) for Mobile
+    // ========================================================================
+    const sampleFab = document.getElementById('sampleFab');
+    if (sampleFab) {
+        sampleFab.addEventListener('click', () => {
+            // If Glauber is running, stop it
+            if (running) {
+                el.startStopBtn.click();
+                return;
+            }
+            // Otherwise, trigger CFTP
+            if (!el.cftpBtn.disabled) {
+                el.cftpBtn.click();
+            }
+        });
+
+        // Update FAB state based on simulation state
+        function updateFabState() {
+            sampleFab.disabled = !isValid || !sim;
+            if (running) {
+                sampleFab.innerHTML = '⏸';
+                sampleFab.setAttribute('data-tooltip', 'Stop Glauber (G)');
+            } else {
+                sampleFab.innerHTML = '🎲';
+                sampleFab.setAttribute('data-tooltip', 'Perfect Sample (S)');
+            }
+        }
+
+        // Hook into existing update functions
+        const originalUpdateUI = updateUI;
+        updateUI = function() {
+            originalUpdateUI();
+            updateFabState();
+        };
+    }
+
+    // ========================================================================
+    // Palette Picker Grid
+    // ========================================================================
+    function initPalettePickerGrid() {
+        const grid = document.getElementById('palettePickerGrid');
+        if (!grid || typeof LOZENGE_PALETTES === 'undefined') return;
+
+        grid.innerHTML = '';
+        LOZENGE_PALETTES.forEach((palette, idx) => {
+            const item = document.createElement('div');
+            item.className = 'palette-item' + (idx === renderer.currentPaletteIndex ? ' active' : '');
+            item.setAttribute('role', 'option');
+            item.setAttribute('aria-selected', idx === renderer.currentPaletteIndex);
+            item.title = palette.name;
+            item.dataset.index = idx;
+
+            // Create 3 color swatches
+            for (let i = 0; i < 3; i++) {
+                const swatch = document.createElement('div');
+                swatch.className = 'swatch';
+                swatch.style.backgroundColor = palette.colors[i];
+                item.appendChild(swatch);
+            }
+
+            item.addEventListener('click', () => {
+                renderer.setPalette(idx);
+                if (renderer3D) {
+                    renderer3D.setPalette(idx);
+                }
+                el.paletteSelect.value = idx;
+                // Update active state
+                grid.querySelectorAll('.palette-item').forEach(p => {
+                    p.classList.remove('active');
+                    p.setAttribute('aria-selected', 'false');
+                });
+                item.classList.add('active');
+                item.setAttribute('aria-selected', 'true');
+                draw();
+            });
+
+            grid.appendChild(item);
+        });
+    }
+
+    // ========================================================================
+    // Keyboard Shortcuts
+    // ========================================================================
+    document.addEventListener('keydown', (e) => {
+        // Ignore if typing in an input field
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+            return;
+        }
+
+        const key = e.key.toLowerCase();
+
+        // ? or h - show help modal
+        if (key === '?' || (key === 'h' && !e.ctrlKey && !e.metaKey)) {
+            e.preventDefault();
+            const modal = document.getElementById('keyboardHelpModal');
+            if (modal) modal.classList.add('visible');
+            return;
+        }
+
+        // Escape - close modal
+        if (key === 'escape') {
+            const modal = document.getElementById('keyboardHelpModal');
+            if (modal && modal.classList.contains('visible')) {
+                modal.classList.remove('visible');
+            }
+            return;
+        }
+
+        // S - Perfect Sample (CFTP)
+        if (key === 's' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            if (!el.cftpBtn.disabled) {
+                el.cftpBtn.click();
+            }
+            return;
+        }
+
+        // G - Start/Stop Glauber
+        if (key === 'g') {
+            e.preventDefault();
+            if (!el.startStopBtn.disabled) {
+                el.startStopBtn.click();
+            }
+            return;
+        }
+
+        // Space - Pause/Resume Glauber
+        if (key === ' ') {
+            e.preventDefault();
+            if (running) {
+                el.startStopBtn.click();
+            }
+            return;
+        }
+
+        // 3 - Toggle 3D view
+        if (key === '3') {
+            e.preventDefault();
+            el.toggle3DBtn.click();
+            return;
+        }
+
+        // R - Reset view
+        if (key === 'r' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            document.getElementById('resetViewBtn').click();
+            return;
+        }
+
+        // U - Scale Up region (2×)
+        if (key === 'u' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            const btn = document.getElementById('doubleMeshBtn');
+            if (btn && !btn.disabled) {
+                btn.click();
+            }
+            return;
+        }
+
+        // +/= - Zoom in (only without Cmd/Ctrl to allow browser zoom)
+        if ((key === '+' || key === '=') && !e.metaKey && !e.ctrlKey) {
+            e.preventDefault();
+            document.getElementById('zoomInBtn').click();
+            return;
+        }
+
+        // - - Zoom out (only without Cmd/Ctrl to allow browser zoom)
+        if (key === '-' && !e.metaKey && !e.ctrlKey) {
+            e.preventDefault();
+            document.getElementById('zoomOutBtn').click();
+            return;
+        }
+
+        // Arrow Left - Previous palette
+        if (key === 'arrowleft' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            document.getElementById('prev-palette').click();
+            initPalettePickerGrid(); // Update grid selection
+            return;
+        }
+
+        // Arrow Right - Next palette
+        if (key === 'arrowright' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            document.getElementById('next-palette').click();
+            initPalettePickerGrid(); // Update grid selection
+            return;
+        }
+
+        // Z - Undo (without Ctrl, for simplicity; Ctrl+Z also works via existing handler)
+        if (key === 'z' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            el.undoBtn.click();
+            return;
+        }
+
+        // Y - Redo
+        if (key === 'y' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            el.redoBtn.click();
+            return;
+        }
+    });
+
     // Initialize
     window.addEventListener('resize', () => {
         renderer.setupCanvas();
@@ -7802,6 +9935,7 @@ function initLozengeApp() {
     });
 
     initPaletteSelector();
+    initPalettePickerGrid();
 
     // Load state from URL if present
     if (loadStateFromUrl()) {
@@ -7811,6 +9945,15 @@ function initLozengeApp() {
 
     updateUI();
     draw();
+
+    // Re-setup canvas after layout settles (handles CSS loading delay)
+    setTimeout(() => {
+        renderer.setupCanvas();
+        if (activeTriangles.size > 0) {
+            renderer.fitToRegion(activeTriangles);
+        }
+        draw();
+    }, 100);
 
     console.log('Ultimate Lozenge Tiling ready (WASM with Dinic\'s Algorithm) - ' + (window.LOZENGE_THREADED ? 'THREADED' : 'single-threaded'));
 }
