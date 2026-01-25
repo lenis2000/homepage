@@ -5733,15 +5733,56 @@ function initLozengeApp() {
     const renderer = new LozengeRenderer(canvas);
     const undoStack = new UndoStack();
 
+    // iOS Debug Panel (toggle with triple-tap on canvas)
+    let debugTapCount = 0;
+    let debugTapTimer = null;
+    let debugMode = false;
+    const debugPanel = document.createElement('div');
+    debugPanel.id = 'ios-debug-panel';
+    debugPanel.style.cssText = 'display:none;position:fixed;top:10px;left:10px;right:10px;background:rgba(0,0,0,0.85);color:#0f0;font:11px monospace;padding:8px;z-index:9999;max-height:40vh;overflow-y:auto;border-radius:6px;';
+    document.body.appendChild(debugPanel);
+
+    function debugLog(msg) {
+        console.log('[DEBUG]', msg);
+        if (debugMode) {
+            const line = document.createElement('div');
+            line.textContent = new Date().toLocaleTimeString() + ': ' + msg;
+            debugPanel.insertBefore(line, debugPanel.firstChild);
+            // Keep only last 50 lines
+            while (debugPanel.children.length > 50) {
+                debugPanel.removeChild(debugPanel.lastChild);
+            }
+        }
+    }
+
+    canvas.addEventListener('touchend', (e) => {
+        debugTapCount++;
+        clearTimeout(debugTapTimer);
+        debugTapTimer = setTimeout(() => {
+            if (debugTapCount >= 3) {
+                debugMode = !debugMode;
+                debugPanel.style.display = debugMode ? 'block' : 'none';
+                if (debugMode) {
+                    debugLog('Debug panel enabled');
+                    debugLog('Canvas: ' + canvas.width + 'x' + canvas.height);
+                    debugLog('Context: ' + (renderer.ctx ? 'OK' : 'NULL'));
+                    debugLog('Dimers: ' + (sim.dimers ? sim.dimers.length : 'null'));
+                    debugLog('isValid: ' + isValid);
+                }
+            }
+            debugTapCount = 0;
+        }, 400);
+    });
+
     // iOS canvas context loss recovery
     let contextLost = false;
     canvas.addEventListener('contextlost', (e) => {
-        console.warn('Canvas context lost');
+        debugLog('Canvas context LOST!');
         e.preventDefault();
         contextLost = true;
     });
     canvas.addEventListener('contextrestored', () => {
-        console.log('Canvas context restored');
+        debugLog('Canvas context restored');
         contextLost = false;
         renderer.setupCanvas();
         draw();
@@ -6402,14 +6443,27 @@ function initLozengeApp() {
     }
 
     function draw() {
+        debugLog('draw() called, dimers=' + (sim.dimers ? sim.dimers.length : 'null') + ', isValid=' + isValid);
+
         // Try to recover from context loss (iOS)
         if (contextLost) {
-            console.log('Attempting to recover canvas context...');
+            debugLog('Context lost, attempting recovery...');
             renderer.setupCanvas();
             if (renderer.ctx) {
                 contextLost = false;
+                debugLog('Context recovered!');
             } else {
-                console.warn('Canvas context still lost, skipping draw');
+                debugLog('Context still lost, skipping draw');
+                return;
+            }
+        }
+
+        // Check if context is valid
+        if (!renderer.ctx) {
+            debugLog('ERROR: renderer.ctx is null!');
+            renderer.setupCanvas();
+            if (!renderer.ctx) {
+                debugLog('ERROR: Could not get canvas context');
                 return;
             }
         }
@@ -8195,13 +8249,35 @@ function initLozengeApp() {
                     }
                     setTimeout(cftpStep, 0);
                 } else if (res.status === 'coalesced') {
+                    debugLog('CFTP coalesced at T=' + res.T);
                     const finalRes = sim.finalizeCFTP();
-                    console.log('CFTP finalized, dimers:', sim.dimers ? sim.dimers.length : 0);
+                    const dimerCount = sim.dimers ? sim.dimers.length : 0;
+                    debugLog('finalizeCFTP returned, dimers=' + dimerCount);
+                    debugLog('Canvas size: ' + canvas.width + 'x' + canvas.height);
+                    debugLog('Context valid: ' + (renderer.ctx ? 'YES' : 'NO'));
+
+                    // Auto-show debug panel if something looks wrong
+                    if (dimerCount === 0 || !renderer.ctx) {
+                        debugMode = true;
+                        debugPanel.style.display = 'block';
+                        debugLog('AUTO-DEBUG: Problem detected!');
+                    }
+
                     // Small delay to let iOS recover before drawing
                     setTimeout(() => {
+                        debugLog('First draw attempt...');
                         draw();
                         // Redraw after a short delay to recover from any iOS glitches
-                        setTimeout(() => draw(), 100);
+                        setTimeout(() => {
+                            debugLog('Second draw attempt...');
+                            draw();
+                            // Check if still broken
+                            if (sim.dimers && sim.dimers.length === 0) {
+                                debugLog('WARNING: Still 0 dimers after draw!');
+                                debugMode = true;
+                                debugPanel.style.display = 'block';
+                            }
+                        }, 100);
                     }, 10);
                     const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                     el.cftpSteps.textContent = res.T + ' (' + elapsed + 's)';
