@@ -3940,11 +3940,18 @@ function initLozengeApp() {
         setupCanvas() {
             const rect = this.canvas.getBoundingClientRect();
             const dpr = window.devicePixelRatio || 1;
+            const oldW = this.canvas.width;
+            const oldH = this.canvas.height;
             this.canvas.width = rect.width * dpr;
             this.canvas.height = rect.height * dpr;
             this.ctx.scale(dpr, dpr);
             this.displayWidth = rect.width;
             this.displayHeight = rect.height;
+
+            // Debug: log when setupCanvas is called (which clears the canvas)
+            if (window.debugLog && (oldW !== this.canvas.width || oldH !== this.canvas.height)) {
+                window.debugLog('setupCanvas: ' + oldW + 'x' + oldH + ' -> ' + this.canvas.width + 'x' + this.canvas.height);
+            }
         }
 
         getCurrentPalette() { return this.colorPalettes[this.currentPaletteIndex]; }
@@ -6519,7 +6526,35 @@ function initLozengeApp() {
         if (is3DView && renderer3D && isValid && sim.dimers.length > 0 && !inFluctuationMode) {
             renderer3D.dimersTo3D(sim.dimers, sim.boundaries);
         }
+
+        // Debug before render
+        if (sim.dimers && sim.dimers.length > 500) {
+            debugLog('PRE-RENDER: canvas=' + canvas.width + 'x' + canvas.height + ' ctx=' + (renderer.ctx ? 'OK' : 'NULL'));
+        }
+
         renderer.draw(sim, activeTriangles, isValid);
+
+        // Debug after render
+        if (sim.dimers && sim.dimers.length > 500) {
+            debugLog('POST-RENDER: checking canvas content...');
+            try {
+                // Check multiple pixels
+                const ctx = renderer.ctx;
+                const mid = ctx.getImageData(canvas.width/2, canvas.height/2, 1, 1).data;
+                const corner = ctx.getImageData(100, 100, 1, 1).data;
+                debugLog('Mid pixel: ' + mid[0] + ',' + mid[1] + ',' + mid[2] + ',' + mid[3]);
+                debugLog('Corner pixel: ' + corner[0] + ',' + corner[1] + ',' + corner[2] + ',' + corner[3]);
+
+                // Check if all white (background) - indicates nothing was drawn
+                const isAllWhite = (mid[0] > 250 && mid[1] > 250 && mid[2] > 250);
+                if (isAllWhite) {
+                    debugLog('WARNING: Canvas appears to be all white/blank!');
+                }
+            } catch(e) {
+                debugLog('POST-RENDER check error: ' + e.message);
+            }
+        }
+
         const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
         const tool = getEffectiveTool();
 
@@ -8186,15 +8221,42 @@ function initLozengeApp() {
 
                         if (coalesced) {
                             // Success! Copy result to main grid and WASM
+                            debugLog('GPU CFTP coalesced! Finalizing...');
                             await gpuEngine.finalizeCFTP();
+                            debugLog('finalizeCFTP done');
+
                             // Get dimers from GPU result and update sim
-                            sim.dimers = await gpuEngine.getDimers(sim.blackTriangles);
+                            const gpuDimers = await gpuEngine.getDimers(sim.blackTriangles);
+                            debugLog('getDimers returned: ' + (gpuDimers ? gpuDimers.length : 'null') + ' dimers');
+
+                            if (gpuDimers && gpuDimers.length > 0) {
+                                // Check first dimer
+                                const d0 = gpuDimers[0];
+                                debugLog('First dimer: n1=' + d0.n1 + ' j1=' + d0.j1 + ' n2=' + d0.n2 + ' j2=' + d0.j2 + ' t=' + d0.t);
+                            }
+
+                            sim.dimers = gpuDimers;
+                            debugLog('sim.dimers set, now has ' + sim.dimers.length + ' dimers');
+
                             // Sync to WASM so Glauber can continue from this state
                             sim.setDimers(sim.dimers);
+                            debugLog('setDimers to WASM done');
 
+                            debugLog('Canvas before draw: ' + canvas.width + 'x' + canvas.height);
+                            debugLog('Calling draw()...');
                             draw();
+                            debugLog('draw() returned');
+
+                            // Check canvas content
+                            try {
+                                const testPixel = renderer.ctx.getImageData(canvas.width/2, canvas.height/2, 1, 1).data;
+                                debugLog('Center pixel RGBA: ' + testPixel[0] + ',' + testPixel[1] + ',' + testPixel[2] + ',' + testPixel[3]);
+                            } catch(e) {
+                                debugLog('getImageData error: ' + e.message);
+                            }
 
                             gpuEngine.destroyCFTP();
+                            debugLog('destroyCFTP done');
                             const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                             // Show T@step if coalesced early, otherwise just T
                             const stepInfo = totalStepsRun < T ? T + '@' + totalStepsRun : T;
@@ -10180,12 +10242,15 @@ function initLozengeApp() {
     // Initialize - debounced resize handler to avoid interfering with sampling
     let resizeTimeout = null;
     window.addEventListener('resize', () => {
+        debugLog('RESIZE event fired');
         // Skip resize during CFTP to avoid corrupting state
         if (el.cftpBtn.disabled && el.cftpStopBtn.style.display !== 'none') {
+            debugLog('RESIZE skipped - CFTP in progress');
             return;
         }
         if (resizeTimeout) clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
+            debugLog('RESIZE handler executing setupCanvas + draw');
             renderer.setupCanvas();
             draw();
         }, 100);
