@@ -116,6 +116,11 @@ code:
     background: #ffffff;
     border-radius: 6px;
     cursor: crosshair;
+    /* Prevent iOS touch behaviors that cause jumping */
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
   #lozenge-canvas.panning {
     cursor: grab;
@@ -132,6 +137,11 @@ code:
     margin: 0 auto;
     background: #ffffff;
     border-radius: 6px;
+    /* Prevent iOS touch behaviors */
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
   #three-container canvas {
     width: 100% !important;
@@ -1015,30 +1025,32 @@ code:
     cursor: not-allowed;
   }
 
-  /* FAB Tooltip */
-  .sample-fab::before {
-    content: attr(data-tooltip);
-    position: absolute;
-    right: 66px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(35, 45, 75, 0.95);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s;
-  }
+  /* FAB Tooltip - only on devices that support hover (not touch) */
+  @media (hover: hover) {
+    .sample-fab::before {
+      content: attr(data-tooltip);
+      position: absolute;
+      right: 66px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(35, 45, 75, 0.95);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
 
-  .sample-fab:hover::before {
-    opacity: 1;
-  }
+    .sample-fab:hover::before {
+      opacity: 1;
+    }
 
-  .sample-fab:disabled::before {
-    content: "Draw a valid region first";
+    .sample-fab:disabled::before {
+      content: "Draw a valid region first";
+    }
   }
 
   @media (max-width: 991px) {
