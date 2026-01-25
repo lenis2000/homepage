@@ -871,13 +871,13 @@ permalink: /domino/
   <div class="card">
     <div class="card-header" id="infoHeading">
       <h5 class="mb-0">
-        <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#infoCollapse" aria-expanded="true" aria-controls="infoCollapse">
+        <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#infoCollapse" aria-expanded="false" aria-controls="infoCollapse">
           <strong>About</strong> <i class="fa fa-chevron-down"></i>
         </button>
       </h5>
     </div>
 
-    <div id="infoCollapse" class="collapse show" aria-labelledby="infoHeading" data-parent="#infoAccordion">
+    <div id="infoCollapse" class="collapse" aria-labelledby="infoHeading" data-parent="#infoAccordion">
       <div class="card-body">
         <p class="mt-3">This page hosts an <strong>all‑in‑one interactive sampler of random domino tilings of the <a href="https://en.wikipedia.org/wiki/Aztec_diamond">Aztec diamond</a></strong>. The sampling is done by the traditional <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>, and here it is adapted to <code>JavaScript</code> and <code>WebAssembly</code>.
         See also the <a href="{{site.url}}/simulations/model/domino-tilings/">individual simulations page</a> which include bite-size examples with more readable code.
@@ -5247,29 +5247,7 @@ Module.onRuntimeInitialized = async function() {
   });
 };
 
-/* Collapse the “About” section automatically on phones.
-   ▸ Uses Bootstrap’s Collapse API.
-   ▸ Triggers after DOM+CSS are ready, so it works on iOS Safari.  */
-document.addEventListener('DOMContentLoaded', () => {
-  const isSmallScreen = window.matchMedia('(max-width: 768px)').matches;
-  if (!isSmallScreen) return;      // keep desktop behaviour unchanged
-
-  const about = document.getElementById('infoCollapse');
-  if (!about) return;              // safety check
-
-  // Remove the “show” class Bootstrap added in the markup
-  about.classList.remove('show');
-
-  // Tell assistive technologies it is now collapsed
-  const btn = document.querySelector('[data-target="#infoCollapse"]');
-  if (btn) btn.setAttribute('aria-expanded', 'false');
-
-  // Initialise the collapse component without toggling (so it stays folded)
-  if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
-    new bootstrap.Collapse(about, { toggle: false });
-  }
-
-});
+/* About section is closed by default via HTML (no "show" class). */
 
 // ========================================================================
 // Mobile Bottom Sheet Drawer Handling
