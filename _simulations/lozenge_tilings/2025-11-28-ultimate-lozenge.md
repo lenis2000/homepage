@@ -4091,12 +4091,29 @@ function initLozengeApp() {
 
         draw(sim, activeTriangles, isValid) {
             const ctx = this.ctx;
+            if (!ctx) {
+                console.error('RENDERER: ctx is null!');
+                return;
+            }
             const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
 
             ctx.fillStyle = isDarkMode ? '#1a1a1a' : '#ffffff';
             ctx.fillRect(0, 0, this.displayWidth, this.displayHeight);
 
             const { centerX, centerY, scale } = this.getTransform(activeTriangles);
+
+            // Debug: log transform for large tilings
+            if (sim.dimers && sim.dimers.length > 1000) {
+                const msg = 'RENDER: d=' + sim.dimers.length + ' sc=' + scale.toFixed(1) + ' c=(' + centerX.toFixed(0) + ',' + centerY.toFixed(0) + ')';
+                console.log(msg);
+                if (window.debugLog) window.debugLog(msg);
+            }
+
+            // Check for invalid scale
+            if (scale <= 0 || !isFinite(scale)) {
+                console.error('RENDERER: Invalid scale=' + scale);
+                return;
+            }
 
             // Draw background grid
             this.drawBackgroundGrid(ctx, centerX, centerY, scale, isDarkMode);
@@ -4267,6 +4284,17 @@ function initLozengeApp() {
             const outlineWidth = this.outlineWidthPct * (refDimerCount / dimerCount);
             const outlineColor = isDarkMode ? '#aaaaaa' : '#000000';
 
+            // Debug first lozenge position
+            if (dimerCount > 1000 && sim.dimers.length > 0) {
+                const firstDimer = sim.dimers[0];
+                const verts = this.getLozengeVertices(firstDimer);
+                const canvasVerts = verts.map(v => this.toCanvas(v.x, v.y, centerX, centerY, scale));
+                const msg = 'LOZENGE[0]: canvas=(' + canvasVerts[0][0].toFixed(0) + ',' + canvasVerts[0][1].toFixed(0) + ') zoom=' + this.zoom.toFixed(3);
+                console.log(msg);
+                if (window.debugLog) window.debugLog(msg);
+            }
+
+            let drawnCount = 0;
             for (const dimer of sim.dimers) {
                 const verts = this.getLozengeVertices(dimer);
                 const canvasVerts = verts.map(v => this.toCanvas(v.x, v.y, centerX, centerY, scale));
@@ -4281,6 +4309,10 @@ function initLozengeApp() {
                     ctx.lineWidth = outlineWidth;
                     ctx.stroke();
                 }
+                drawnCount++;
+            }
+            if (dimerCount > 1000 && window.debugLog) {
+                window.debugLog('Drew ' + drawnCount + ' lozenges');
             }
         }
 
@@ -5754,6 +5786,8 @@ function initLozengeApp() {
             }
         }
     }
+    // Make it global for renderer access
+    window.debugLog = debugLog;
 
     canvas.addEventListener('touchend', (e) => {
         debugTapCount++;
