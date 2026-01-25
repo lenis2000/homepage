@@ -121,6 +121,10 @@ code:
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
+    /* Force GPU compositing on iOS to prevent canvas buffer issues */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: contents;
   }
   #lozenge-canvas.panning {
     cursor: grab;
@@ -6531,6 +6535,17 @@ function initLozengeApp() {
 
         // Update hole overlay positions on pan/zoom
         updateHoleOverlayPositions();
+
+        // iOS Safari fix: force canvas buffer flush by reading a pixel
+        // This works around a bug where the canvas doesn't present after many draw calls
+        if (sim.dimers && sim.dimers.length > 1000) {
+            try {
+                renderer.ctx.getImageData(0, 0, 1, 1);
+                if (window.debugLog) window.debugLog('Canvas flush forced');
+            } catch (e) {
+                if (window.debugLog) window.debugLog('Canvas flush failed: ' + e.message);
+            }
+        }
     }
 
     // Track if simulation should auto-restart when shape becomes valid
@@ -8190,7 +8205,15 @@ function initLozengeApp() {
                             sim.dimers = await gpuEngine.getDimers(sim.blackTriangles);
                             // Sync to WASM so Glauber can continue from this state
                             sim.setDimers(sim.dimers);
-                            draw();
+
+                            // iOS Safari fix: use requestAnimationFrame to ensure proper buffer presentation
+                            await new Promise(resolve => {
+                                requestAnimationFrame(() => {
+                                    draw();
+                                    if (window.debugLog) window.debugLog('CFTP draw in rAF completed');
+                                    resolve();
+                                });
+                            });
 
                             gpuEngine.destroyCFTP();
                             const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
@@ -8297,13 +8320,13 @@ function initLozengeApp() {
                         debugLog('AUTO-DEBUG: Problem detected!');
                     }
 
-                    // Small delay to let iOS recover before drawing
-                    setTimeout(() => {
-                        debugLog('First draw attempt...');
+                    // iOS Safari fix: use requestAnimationFrame for proper buffer presentation
+                    requestAnimationFrame(() => {
+                        debugLog('CFTP draw in rAF (WASM)...');
                         draw();
-                        // Redraw after a short delay to recover from any iOS glitches
-                        setTimeout(() => {
-                            debugLog('Second draw attempt...');
+                        // Second draw after another frame for iOS stability
+                        requestAnimationFrame(() => {
+                            debugLog('CFTP second draw in rAF...');
                             draw();
                             // Check if still broken
                             if (sim.dimers && sim.dimers.length === 0) {
@@ -8311,8 +8334,8 @@ function initLozengeApp() {
                                 debugMode = true;
                                 debugPanel.style.display = 'block';
                             }
-                        }, 100);
-                    }, 10);
+                        });
+                    });
                     const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                     el.cftpSteps.textContent = res.T + ' (' + elapsed + 's)';
                     el.cftpBtn.textContent = originalText;

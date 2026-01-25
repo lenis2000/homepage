@@ -495,29 +495,31 @@ permalink: /domino/
     box-shadow: 0 6px 16px rgba(229, 114, 0, 0.5);
   }
 
-  /* FAB Tooltip */
-  .sample-fab::before {
-    content: attr(data-tooltip);
-    position: absolute;
-    right: 100%;
-    top: 50%;
-    transform: translateY(-50%);
-    margin-right: 12px;
-    padding: 6px 12px;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    font-size: 13px;
-    white-space: nowrap;
-    border-radius: 4px;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s, visibility 0.2s;
-    pointer-events: none;
-  }
+  /* FAB Tooltip - only on devices that support hover (not touch) */
+  @media (hover: hover) {
+    .sample-fab::before {
+      content: attr(data-tooltip);
+      position: absolute;
+      right: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      margin-right: 12px;
+      padding: 6px 12px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      font-size: 13px;
+      white-space: nowrap;
+      border-radius: 4px;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+      pointer-events: none;
+    }
 
-  .sample-fab:hover::before {
-    opacity: 1;
-    visibility: visible;
+    .sample-fab:hover::before {
+      opacity: 1;
+      visibility: visible;
+    }
   }
 
   .sample-fab:active {
