@@ -1345,8 +1345,9 @@ Module.onRuntimeInitialized = async function() {
   let useHeightFunction = false; // Track height function visibility state
   let heightGroup; // Group for height function display
 
-  // Glauber state variables
+  // Glauber state variables (exposed on window for FAB access)
   let glauberRunning = false;
+  window.glauberRunning = glauberRunning;
   let glauberTimer = null;
   let lastSampleWasGlauber = false; // Track if the *last* visualization update came from Glauber
 
@@ -1497,6 +1498,7 @@ Module.onRuntimeInitialized = async function() {
         const glauberBtn = document.getElementById('glauber-btn');
         const glauberStatus = document.getElementById('glauber-status');
         glauberRunning = false;
+        window.glauberRunning = false;
         clearInterval(glauberTimer);
         glauberTimer = null;
         glauberBtn.textContent = "Run Glauber";
@@ -1610,6 +1612,7 @@ Module.onRuntimeInitialized = async function() {
         clearInterval(glauberTimer);
         glauberTimer = null;
         glauberRunning = false;
+        window.glauberRunning = false;
         glauberBtn.textContent = "Run Glauber";
         glauberBtn.classList.remove('running', 'btn-danger');
         glauberBtn.classList.add('btn-success');
@@ -1636,6 +1639,7 @@ Module.onRuntimeInitialized = async function() {
         }
 
         glauberRunning = true;
+        window.glauberRunning = true;
         glauberBtn.textContent = "Stop Glauber";
         glauberBtn.classList.add('running', 'btn-danger');
         glauberBtn.classList.remove('btn-success');
@@ -2448,7 +2452,8 @@ Module.onRuntimeInitialized = async function() {
     document.getElementById('weights-6x2').style.display = (p === '6x2') ? 'block' : 'none';
 
     // Glauber controls
-    document.getElementById('glauber-controls').style.display = isFrozen ? 'none' : 'block';
+    const glauberControls = document.getElementById('glauber-controls');
+    if (glauberControls) glauberControls.style.display = isFrozen ? 'none' : 'block';
   }
 
   // Add handlers for periodicity radio buttons
@@ -5337,7 +5342,7 @@ Module.onRuntimeInitialized = async function() {
   if (sampleFab && sampleBtn) {
     sampleFab.addEventListener('click', () => {
       // If Glauber is running, clicking FAB stops it
-      if (glauberRunning) {
+      if (window.glauberRunning) {
         document.getElementById('glauber-btn')?.click();
       } else {
         sampleBtn.click();
