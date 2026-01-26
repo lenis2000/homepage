@@ -6508,13 +6508,18 @@ function initLozengeApp() {
         } else if (isValid && gpuEngine && gpuEngine.isReady) {
             const gridInfo = sim.getRawGridData();
             if (gridInfo) {
-                gpuEngine.initFromWasmData(gridInfo.data, gridInfo.minN, gridInfo.maxN, gridInfo.minJ, gridInfo.maxJ);
-                // Set GPU weights if periodic weights UI is available
-                if (typeof currentPeriodicQ !== 'undefined' && typeof currentPeriodicK !== 'undefined') {
-                    const usePeriodic = document.getElementById('usePeriodicWeightsCheckbox')?.checked || false;
-                    gpuEngine.setWeights(currentPeriodicQ, currentPeriodicK, usePeriodic);
+                try {
+                    gpuEngine.initFromWasmData(gridInfo.data, gridInfo.minN, gridInfo.maxN, gridInfo.minJ, gridInfo.maxJ);
+                    // Set GPU weights if periodic weights UI is available
+                    if (typeof currentPeriodicQ !== 'undefined' && typeof currentPeriodicK !== 'undefined') {
+                        const usePeriodic = document.getElementById('usePeriodicWeightsCheckbox')?.checked || false;
+                        gpuEngine.setWeights(currentPeriodicQ, currentPeriodicK, usePeriodic);
+                    }
+                    useWebGPU = true;
+                } catch (e) {
+                    console.warn('[reinitialize] GPU sync failed, falling back to CPU:', e);
+                    useWebGPU = false;
                 }
-                useWebGPU = true;
             }
         } else {
             useWebGPU = false;
