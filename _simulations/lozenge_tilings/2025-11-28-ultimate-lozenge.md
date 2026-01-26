@@ -9980,6 +9980,7 @@ function initLozengeApp() {
             const doubleMeshBtn = document.getElementById('doubleMeshBtn');
             if (doubleMeshBtn && !doubleMeshBtn.disabled) {
                 doubleMeshBtn.click();
+                draw(); // Ensure full redraw after scale up
             }
         });
     }
