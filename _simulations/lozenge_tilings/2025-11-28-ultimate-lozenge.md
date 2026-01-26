@@ -2553,15 +2553,15 @@ if (window.LOZENGE_WEBGPU) {
         <!-- Line widths -->
         <div class="control-row" style="border-top: 1px solid var(--border-color, #e0e0e0); padding-top: 10px; margin-top: 4px;">
           <label for="outlineWidthPct" style="font-size: 12px; color: #555;">Outline:</label>
-          <input type="number" id="outlineWidthPct" value="0.1" min="0" max="100" step="0.1" class="param-input" style="width: 50px;" aria-label="Outline width percentage">
+          <input type="number" id="outlineWidthPct" value="0.1" min="0" max="100" step="0.1" class="param-input" style="width: 5em;" aria-label="Outline width percentage">
           <span style="font-size: 11px; color: #888;">%</span>
           <label for="borderWidthPct" style="font-size: 12px; color: #555; margin-left: 8px;">Border:</label>
-          <input type="number" id="borderWidthPct" value="1" min="0" max="50" step="0.5" class="param-input" style="width: 50px;" aria-label="Border width percentage">
+          <input type="number" id="borderWidthPct" value="1" min="0" max="50" step="0.5" class="param-input" style="width: 5em;" aria-label="Border width percentage">
           <span style="font-size: 11px; color: #888;">%</span>
         </div>
         <div class="control-row">
           <label for="pathWidthPx" style="font-size: 12px; color: #555;">Path:</label>
-          <input type="number" id="pathWidthPx" value="2" min="0" max="20" step="0.5" class="param-input" style="width: 50px;" aria-label="Path width in pixels">
+          <input type="number" id="pathWidthPx" value="2" min="0" max="20" step="0.5" class="param-input" style="width: 5em;" aria-label="Path width in pixels">
           <span style="font-size: 11px; color: #888;">px</span>
           <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555; margin-left: 12px;">
             <input type="checkbox" id="showGridCheckbox" checked aria-label="Show grid lines"> Grid
