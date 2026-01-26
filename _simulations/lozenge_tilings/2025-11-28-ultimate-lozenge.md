@@ -6517,7 +6517,7 @@ function initLozengeApp() {
                     }
                     useWebGPU = true;
                 } catch (e) {
-                    console.warn('[reinitialize] GPU sync failed, falling back to CPU:', e);
+                    console.warn('[reinitialize] GPU sync failed (buffer resize error?), falling back to CPU:', e);
                     useWebGPU = false;
                 }
             }
@@ -8053,6 +8053,9 @@ function initLozengeApp() {
                 // Initialize GPU CFTP with extremal states
                 let gpuCftpOk = false;
                 try {
+                    // FLUSH: Destroy old CFTP buffers before init to prevent size mismatch errors
+                    try { if (gpuEngine.destroyCFTP) gpuEngine.destroyCFTP(); } catch(e) {}
+
                     console.log('[GPU-CFTP] Calling gpuEngine.initCFTP()...');
                     gpuCftpOk = await gpuEngine.initCFTP(minGridData, maxGridData);
                     console.log('[GPU-CFTP] initCFTP returned:', gpuCftpOk);
