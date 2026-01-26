@@ -33,6 +33,14 @@ class WebGPULozengeEngine {
         }
 
         this.device = await adapter.requestDevice();
+        this.deviceLost = false;
+
+        // Handle device lost (iOS can kill GPU under memory pressure)
+        this.device.lost.then((info) => {
+            console.error('[GPU] Device lost:', info.reason, info.message);
+            this.deviceLost = true;
+            this.isReady = false;
+        });
 
         // Load shader code
         try {
@@ -508,6 +516,10 @@ class WebGPULozengeEngine {
      */
     async stepCFTP(numSteps, checkInterval = 0) {
         if (!this.cftpInitialized) return { coalesced: false, stepsRun: 0 };
+        if (this.deviceLost) {
+            console.error('[GPU] Device was lost, cannot step CFTP');
+            throw new Error('GPU device lost');
+        }
 
         const workgroupCount = Math.ceil(this.cftpNumCells / 64);
         const qBias = this.cftpQBias || 1.0;
@@ -544,41 +556,56 @@ class WebGPULozengeEngine {
             for (let i = 0; i < this.cftpNumCells; i++) {
                 randomData[i] = Math.random();
             }
-            this.device.queue.writeBuffer(this.randomBuffer, 0, randomData);
 
-            // Batch all 8 dispatches (4 colors × 2 chains) in a single command buffer
-            const commandEncoder = this.device.createCommandEncoder();
+            try {
+                this.device.queue.writeBuffer(this.randomBuffer, 0, randomData);
 
-            for (let color = 0; color < 4; color++) {
-                // Dispatch lower chain for this color
-                const lowerPass = commandEncoder.beginComputePass();
-                lowerPass.setPipeline(this.cftpPipeline);
-                lowerPass.setBindGroup(0, this.lowerBindGroups[color]);
-                lowerPass.dispatchWorkgroups(workgroupCount);
-                lowerPass.end();
+                // Batch all 8 dispatches (4 colors × 2 chains) in a single command buffer
+                const commandEncoder = this.device.createCommandEncoder();
 
-                // Dispatch upper chain for this color (same randoms)
-                const upperPass = commandEncoder.beginComputePass();
-                upperPass.setPipeline(this.cftpPipeline);
-                upperPass.setBindGroup(0, this.upperBindGroups[color]);
-                upperPass.dispatchWorkgroups(workgroupCount);
-                upperPass.end();
+                for (let color = 0; color < 4; color++) {
+                    // Dispatch lower chain for this color
+                    const lowerPass = commandEncoder.beginComputePass();
+                    lowerPass.setPipeline(this.cftpPipeline);
+                    lowerPass.setBindGroup(0, this.lowerBindGroups[color]);
+                    lowerPass.dispatchWorkgroups(workgroupCount);
+                    lowerPass.end();
+
+                    // Dispatch upper chain for this color (same randoms)
+                    const upperPass = commandEncoder.beginComputePass();
+                    upperPass.setPipeline(this.cftpPipeline);
+                    upperPass.setBindGroup(0, this.upperBindGroups[color]);
+                    upperPass.dispatchWorkgroups(workgroupCount);
+                    upperPass.end();
+                }
+
+                this.device.queue.submit([commandEncoder.finish()]);
+            } catch (e) {
+                console.error('[GPU] Compute dispatch failed at step', step, ':', e);
+                throw e; // Re-throw to stop CFTP
             }
-
-            this.device.queue.submit([commandEncoder.finish()]);
             stepsRun++;
 
             // Early coalescence check
             if (checkInterval > 0 && stepsRun % checkInterval === 0) {
-                const coalesced = await this.checkCoalescence();
-                if (coalesced) {
-                    return { coalesced: true, stepsRun };
+                try {
+                    const coalesced = await this.checkCoalescence();
+                    if (coalesced) {
+                        return { coalesced: true, stepsRun };
+                    }
+                } catch (e) {
+                    console.error('[GPU] Early coalescence check failed, continuing:', e);
+                    // Continue without early stopping - will check at end of epoch
                 }
             }
         }
 
         // Wait for GPU to finish
-        await this.device.queue.onSubmittedWorkDone();
+        try {
+            await this.device.queue.onSubmittedWorkDone();
+        } catch (e) {
+            console.error('[GPU] onSubmittedWorkDone failed:', e);
+        }
         return { coalesced: false, stepsRun };
     }
 
@@ -590,28 +617,47 @@ class WebGPULozengeEngine {
         if (!this.cftpInitialized) return false;
 
         // Copy both grids to staging buffers
-        const commandEncoder = this.device.createCommandEncoder();
+        let commandEncoder;
+        try {
+            commandEncoder = this.device.createCommandEncoder();
+        } catch (e) {
+            console.error('[GPU] createCommandEncoder failed in checkCoalescence:', e);
+            return false;
+        }
         commandEncoder.copyBufferToBuffer(this.lowerGridBuffer, 0, this.lowerStagingBuffer, 0, this.lowerGridBuffer.size);
         commandEncoder.copyBufferToBuffer(this.upperGridBuffer, 0, this.upperStagingBuffer, 0, this.upperGridBuffer.size);
         this.device.queue.submit([commandEncoder.finish()]);
 
-        // Read back both grids
-        await this.lowerStagingBuffer.mapAsync(GPUMapMode.READ);
-        await this.upperStagingBuffer.mapAsync(GPUMapMode.READ);
+        // Read back both grids with error handling
+        let lowerMapped = false, upperMapped = false;
+        try {
+            await this.lowerStagingBuffer.mapAsync(GPUMapMode.READ);
+            lowerMapped = true;
+            await this.upperStagingBuffer.mapAsync(GPUMapMode.READ);
+            upperMapped = true;
 
-        const lowerData = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
-        const upperData = new Int32Array(this.upperStagingBuffer.getMappedRange().slice(0));
+            const lowerData = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
+            const upperData = new Int32Array(this.upperStagingBuffer.getMappedRange().slice(0));
 
-        this.lowerStagingBuffer.unmap();
-        this.upperStagingBuffer.unmap();
+            this.lowerStagingBuffer.unmap();
+            lowerMapped = false;
+            this.upperStagingBuffer.unmap();
+            upperMapped = false;
 
-        // Compare grids
-        for (let i = 0; i < lowerData.length; i++) {
-            if (lowerData[i] !== upperData[i]) {
-                return false;
+            // Compare grids
+            for (let i = 0; i < lowerData.length; i++) {
+                if (lowerData[i] !== upperData[i]) {
+                    return false;
+                }
             }
+            return true;
+        } catch (e) {
+            console.error('[GPU] mapAsync failed in checkCoalescence:', e);
+            // Clean up any mapped buffers
+            try { if (lowerMapped) this.lowerStagingBuffer.unmap(); } catch (e2) {}
+            try { if (upperMapped) this.upperStagingBuffer.unmap(); } catch (e2) {}
+            throw e; // Re-throw to let caller handle
         }
-        return true;
     }
 
     /**
