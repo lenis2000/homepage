@@ -4200,15 +4200,25 @@ Module.onRuntimeInitialized = async function() {
    ③  Wait until #aztec‑canvas has a non‑zero size (layout stabilised).
    ④  Only then run updateVisualization.                                */
 
+  let firstSampleAttempts = 0;
+  let firstSampleDone = false;
+
   function firstSampleWhenReady() {
+    if (firstSampleDone) return;
+    firstSampleAttempts++;
+
     // 1. container for 3‑D view
     const container = document.getElementById('aztec-canvas');
 
-    // 2. if it is still collapsed (0×0), try again on next frame
+    // 2. if it is still collapsed (0×0), try again (with limit)
     if (!container || !container.clientWidth || !container.clientHeight) {
-      return requestAnimationFrame(firstSampleWhenReady);
+      if (firstSampleAttempts < 100) {
+        return requestAnimationFrame(firstSampleWhenReady);
+      }
+      // Fallback: try anyway after 100 attempts
     }
 
+    firstSampleDone = true;
 
     // 3. everything is ready – launch the initial sample
     const n = parseInt(document.getElementById("n-input").value, 10) || 12;
@@ -4226,8 +4236,14 @@ Module.onRuntimeInitialized = async function() {
 
   // Make sure we also explicitly update any time the pane becomes visible
   function ensureVisualization() {
-    if (document.visibilityState === 'visible' && cachedDominoes && cachedDominoes.length > 0) {
-
+    if (document.visibilityState === 'visible') {
+      // If no tiling yet, trigger first sample
+      if (!cachedDominoes || cachedDominoes.length === 0) {
+        if (!firstSampleDone) {
+          firstSampleWhenReady();
+        }
+        return;
+      }
       const n = parseInt(document.getElementById("n-input").value, 10) || 12;
       // If we're in 2D view, re-render it
       if (document.getElementById("view-2d-btn").classList.contains("active")) {
