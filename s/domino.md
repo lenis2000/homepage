@@ -5341,12 +5341,8 @@ Module.onRuntimeInitialized = async function() {
 
   if (sampleFab && sampleBtn) {
     sampleFab.addEventListener('click', () => {
-      // If Glauber is running, clicking FAB stops it
-      if (window.glauberRunning) {
-        document.getElementById('glauber-btn')?.click();
-      } else {
-        sampleBtn.click();
-      }
+      // Toggle Glauber dynamics on/off
+      document.getElementById('glauber-btn')?.click();
     });
   }
 
