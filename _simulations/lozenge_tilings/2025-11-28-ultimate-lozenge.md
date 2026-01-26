@@ -164,6 +164,7 @@ code:
     border-radius: 4px;
     font-size: 14px;
     font-family: 'SF Mono', Monaco, monospace;
+    box-sizing: border-box;
   }
   .param-input:focus {
     outline: none;
@@ -2086,6 +2087,7 @@ code:
     text-align: center;
     background: var(--bg-primary, white);
     color: var(--text-primary, #333);
+    box-sizing: border-box;
   }
 
   .param-input:focus,
@@ -2122,7 +2124,7 @@ code:
   #avgSamplesInput,
   #fluctuationSamplesInput,
   #minLoopInput {
-    width: 70px !important;
+    width: 90px !important;
   }
 
   /* Full-width dropdowns */
@@ -2418,14 +2420,14 @@ if (window.LOZENGE_WEBGPU) {
         <div class="control-row">
           <label for="speedSlider" style="font-size: 12px; color: #666;">Speed</label>
           <input type="range" id="speedSlider" min="0" max="100" value="29" style="width: 80px;" aria-label="Simulation speed slider">
-          <input type="number" id="speedInput" class="param-input" value="100" min="1" max="100000000" style="width: 70px;" aria-label="Simulation speed in steps per second">
+          <input type="number" id="speedInput" class="param-input" value="100" min="1" max="100000000" style="width: 90px;" aria-label="Simulation speed in steps per second">
           <span style="font-size: 11px; color: #888;">/s</span>
         </div>
         <div class="control-row">
           <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #555; cursor: pointer;">
             <input type="checkbox" id="useRandomSweepsCheckbox" aria-label="Enable random sweeps mode"> Random Sweeps
           </label>
-          <span class="param-group"><label for="qInput" class="param-label">q</label><input type="number" class="param-input" id="qInput" value="1" min="0" max="10" step="0.01" style="width: 60px;" aria-label="q-volume weight parameter"></span>
+          <span class="param-group"><label for="qInput" class="param-label">q</label><input type="number" class="param-input" id="qInput" value="1" min="0" max="10" step="0.01" style="width: 75px;" aria-label="q-volume weight parameter"></span>
         </div>
       </div>
     </details>
