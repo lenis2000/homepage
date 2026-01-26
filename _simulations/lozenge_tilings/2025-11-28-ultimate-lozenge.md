@@ -6505,7 +6505,7 @@ function initLozengeApp() {
         // SAFETY: Skip if GPU is busy (prevents destroying buffers mid-CFTP)
         if (isGpuBusy) {
             console.warn('[reinitialize] Skipping GPU init - GPU is busy');
-        } else if (isValid && gpuEngine && gpuEngine.isReady) {
+        } else if (isValid && gpuEngine && gpuEngine.isReady && !gpuEngine.deviceLost) {
             const gridInfo = sim.getRawGridData();
             if (gridInfo) {
                 try {
@@ -7783,7 +7783,7 @@ function initLozengeApp() {
 
         // Update GPU weights
         const usePeriodic = usePeriodicCheckbox.checked;
-        if (gpuEngine && gpuEngine.isInitialized()) {
+        if (gpuEngine && gpuEngine.isInitialized() && !gpuEngine.deviceLost) {
             gpuEngine.setWeights(currentPeriodicQ, k, usePeriodic);
         }
         draw();
@@ -7820,7 +7820,7 @@ function initLozengeApp() {
         sim.setUsePeriodicWeights(e.target.checked);
         renderer.usePeriodicWeights = e.target.checked;
         // Always update GPU weights (either enable or disable periodic)
-        if (gpuEngine && gpuEngine.isInitialized()) {
+        if (gpuEngine && gpuEngine.isInitialized() && !gpuEngine.deviceLost) {
             gpuEngine.setWeights(currentPeriodicQ, currentPeriodicK, e.target.checked);
         }
         if (e.target.checked) {
@@ -8016,8 +8016,8 @@ function initLozengeApp() {
         el.cftpStopBtn.style.display = 'inline-block';
         const cftpStartTime = performance.now();
 
-        // Check if WebGPU is available for accelerated CFTP
-        const useGpuCFTP = gpuEngine && gpuEngine.isInitialized && gpuEngine.isInitialized();
+        // Check if WebGPU is available for accelerated CFTP (skip if device was lost)
+        const useGpuCFTP = gpuEngine && gpuEngine.isInitialized && gpuEngine.isInitialized() && !gpuEngine.deviceLost;
 
         setTimeout(async () => {
             // Initialize CFTP in WASM (creates extremal states)
@@ -8526,8 +8526,8 @@ function initLozengeApp() {
         // Start timing
         const startTime = performance.now();
 
-        // Check if GPU is available
-        const useGpuFluct = useWebGPU && gpuEngine && gpuEngine.isInitialized();
+        // Check if GPU is available (skip if device was lost)
+        const useGpuFluct = useWebGPU && gpuEngine && gpuEngine.isInitialized() && !gpuEngine.deviceLost;
 
         if (useGpuFluct) {
             console.log('Fluctuations: starting (GPU)');
@@ -8818,8 +8818,8 @@ function initLozengeApp() {
 
         const ddStartTime = performance.now();
 
-        // Check if GPU is available
-        const useGpuDD = useWebGPU && gpuEngine && gpuEngine.isInitialized && gpuEngine.isInitialized();
+        // Check if GPU is available (skip if device was lost)
+        const useGpuDD = useWebGPU && gpuEngine && gpuEngine.isInitialized && gpuEngine.isInitialized() && !gpuEngine.deviceLost;
 
         el.doubleDimerProgress.textContent = 'initializing...';
 
