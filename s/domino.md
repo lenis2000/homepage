@@ -2364,6 +2364,11 @@ Module.onRuntimeInitialized = async function() {
 
   // Add Glauber button event listener
   document.getElementById('glauber-btn')?.addEventListener('click', toggleGlauberDynamics);
+  // iOS Safari touch fix
+  document.getElementById('glauber-btn')?.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    toggleGlauberDynamics();
+  }, { passive: false });
 
   document.getElementById("sample-btn").addEventListener("click", () => {
     let n = parseInt(document.getElementById("n-input").value, 10);
