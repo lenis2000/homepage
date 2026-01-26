@@ -5877,6 +5877,8 @@ function initLozengeApp() {
 
     // CFTP cancellation flag
     let cftpCancelled = false;
+    // GPU busy lock - prevents reinitialize() from destroying buffers mid-frame
+    let isGpuBusy = false;
     // Average sampling cancellation flag
     let avgCancelled = false;
     // Fluctuations cancellation flag
@@ -6500,7 +6502,10 @@ function initLozengeApp() {
 
         // Sync grid data to WebGPU if available and valid
         // Check gpuEngine.isReady (GPU initialized) rather than isInitialized() (which also requires gridBuffer)
-        if (isValid && gpuEngine && gpuEngine.isReady) {
+        // SAFETY: Skip if GPU is busy (prevents destroying buffers mid-CFTP)
+        if (isGpuBusy) {
+            console.warn('[reinitialize] Skipping GPU init - GPU is busy');
+        } else if (isValid && gpuEngine && gpuEngine.isReady) {
             const gridInfo = sim.getRawGridData();
             if (gridInfo) {
                 gpuEngine.initFromWasmData(gridInfo.data, gridInfo.minN, gridInfo.maxN, gridInfo.minJ, gridInfo.maxJ);
@@ -8011,16 +8016,28 @@ function initLozengeApp() {
 
         setTimeout(async () => {
             // Initialize CFTP in WASM (creates extremal states)
+            console.log('[CFTP] Starting CFTP, useGpuCFTP=' + useGpuCFTP);
             sim.initCFTP();
 
             if (useGpuCFTP) {
                 // ========== WebGPU CFTP Path ==========
+                console.log('[GPU-CFTP] Starting GPU path');
+                console.log('[GPU-CFTP] gpuEngine state:', {
+                    exists: !!gpuEngine,
+                    isInitialized: gpuEngine?.isInitialized?.(),
+                    device: !!gpuEngine?.device
+                });
+
                 // Get extremal states from WASM as raw grid data
                 const minGridData = sim.getCFTPMinRawGridData();
                 const maxGridData = sim.getCFTPMaxRawGridData();
+                console.log('[GPU-CFTP] Got extremal states from WASM:', {
+                    minGridData: minGridData ? minGridData.length : null,
+                    maxGridData: maxGridData ? maxGridData.length : null
+                });
 
                 if (!minGridData || !maxGridData) {
-                    console.error('Failed to get CFTP extremal states');
+                    console.error('[GPU-CFTP] Failed to get CFTP extremal states');
                     el.cftpSteps.textContent = 'error';
                     el.cftpBtn.textContent = originalText;
                     el.cftpBtn.disabled = false;
@@ -8029,9 +8046,17 @@ function initLozengeApp() {
                 }
 
                 // Initialize GPU CFTP with extremal states
-                const gpuCftpOk = await gpuEngine.initCFTP(minGridData, maxGridData);
+                let gpuCftpOk = false;
+                try {
+                    console.log('[GPU-CFTP] Calling gpuEngine.initCFTP()...');
+                    gpuCftpOk = await gpuEngine.initCFTP(minGridData, maxGridData);
+                    console.log('[GPU-CFTP] initCFTP returned:', gpuCftpOk);
+                } catch (initErr) {
+                    console.error('[GPU-CFTP] initCFTP threw error:', initErr);
+                    console.error('[GPU-CFTP] Error stack:', initErr.stack);
+                }
                 if (!gpuCftpOk) {
-                    console.error('Failed to initialize GPU CFTP, falling back to WASM');
+                    console.error('[GPU-CFTP] Failed to initialize GPU CFTP, falling back to WASM');
                     // Fall through to WASM path below
                 } else {
                     // Set CFTP weights (periodic or global q_bias)
@@ -8048,6 +8073,7 @@ function initLozengeApp() {
 
                     async function gpuCftpStep() {
                         if (cftpCancelled) {
+                            isGpuBusy = false;
                             gpuEngine.destroyCFTP();
                             const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                             el.cftpSteps.textContent = 'stopped (' + elapsed + 's)';
@@ -8058,7 +8084,18 @@ function initLozengeApp() {
                         }
 
                         // Reset chains to extremal states at start of each epoch
-                        gpuEngine.resetCFTPChains(minGridData, maxGridData);
+                        try {
+                            gpuEngine.resetCFTPChains(minGridData, maxGridData);
+                        } catch (resetErr) {
+                            console.error('[GPU-CFTP] resetCFTPChains error:', resetErr);
+                            isGpuBusy = false;
+                            gpuEngine.destroyCFTP();
+                            el.cftpSteps.textContent = 'GPU error';
+                            el.cftpBtn.textContent = originalText;
+                            el.cftpBtn.disabled = false;
+                            el.cftpStopBtn.style.display = 'none';
+                            return;
+                        }
                         el.cftpSteps.textContent = 'T=' + T;
                         el.cftpBtn.textContent = 'T=' + T;
                         lastDrawnBlock = -1; // Reset for new epoch
@@ -8070,7 +8107,21 @@ function initLozengeApp() {
                         while (totalStepsRun < T && !cftpCancelled && !coalesced) {
                             const batchSize = Math.min(stepsPerBatch, T - totalStepsRun);
                             // Pass checkInterval for early stopping within batch
-                            const result = await gpuEngine.stepCFTP(batchSize, checkInterval);
+                            let result;
+                            try {
+                                result = await gpuEngine.stepCFTP(batchSize, checkInterval);
+                            } catch (stepErr) {
+                                console.error('[GPU-CFTP] stepCFTP error:', stepErr);
+                                console.error('[GPU-CFTP] Error name:', stepErr.name);
+                                console.error('[GPU-CFTP] Error stack:', stepErr.stack);
+                                isGpuBusy = false;
+                                try { gpuEngine.destroyCFTP(); } catch (e) {}
+                                el.cftpSteps.textContent = 'GPU error: ' + stepErr.name;
+                                el.cftpBtn.textContent = originalText;
+                                el.cftpBtn.disabled = false;
+                                el.cftpStopBtn.style.display = 'none';
+                                return;
+                            }
                             totalStepsRun += result.stepsRun;
                             coalesced = result.coalesced;
 
@@ -8083,22 +8134,27 @@ function initLozengeApp() {
                                 const currentBlock = Math.floor(totalStepsRun / drawInterval);
                                 if (currentBlock > lastDrawnBlock) {
                                     lastDrawnBlock = currentBlock;
-                                    const bounds = await gpuEngine.getCFTPBounds(sim.blackTriangles);
-                                    if (bounds.maxDimers.length > 0) {
-                                        if (is3DView && renderer3D) {
-                                            renderer3D.cftpBoundsTo3D(bounds.minDimers, bounds.maxDimers);
-                                        } else if (renderer.showDimerView) {
-                                            // Draw double dimer view in 2D dimer mode
-                                            renderer.draw(sim, activeTriangles, isValid);
-                                            const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
-                                            renderer.drawDoubleDimerView(renderer.ctx, sim, bounds.minDimers, bounds.maxDimers, centerX, centerY, scale);
-                                        } else {
-                                            // Lozenge view - just show max
-                                            const savedDimers = sim.dimers;
-                                            sim.dimers = bounds.maxDimers;
-                                            draw();
-                                            sim.dimers = savedDimers;
+                                    try {
+                                        const bounds = await gpuEngine.getCFTPBounds(sim.blackTriangles);
+                                        if (bounds.maxDimers.length > 0) {
+                                            if (is3DView && renderer3D) {
+                                                renderer3D.cftpBoundsTo3D(bounds.minDimers, bounds.maxDimers);
+                                            } else if (renderer.showDimerView) {
+                                                // Draw double dimer view in 2D dimer mode
+                                                renderer.draw(sim, activeTriangles, isValid);
+                                                const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+                                                renderer.drawDoubleDimerView(renderer.ctx, sim, bounds.minDimers, bounds.maxDimers, centerX, centerY, scale);
+                                            } else {
+                                                // Lozenge view - just show max
+                                                const savedDimers = sim.dimers;
+                                                sim.dimers = bounds.maxDimers;
+                                                draw();
+                                                sim.dimers = savedDimers;
+                                            }
                                         }
+                                    } catch (boundsErr) {
+                                        console.error('[GPU-CFTP] getCFTPBounds error:', boundsErr);
+                                        // Continue without drawing bounds
                                     }
                                 }
                             }
@@ -8108,6 +8164,7 @@ function initLozengeApp() {
                         }
 
                         if (cftpCancelled) {
+                            isGpuBusy = false;
                             gpuEngine.destroyCFTP();
                             const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                             el.cftpSteps.textContent = 'stopped (' + elapsed + 's)';
@@ -8119,21 +8176,27 @@ function initLozengeApp() {
 
                         // Final coalescence check if not detected during run
                         if (!coalesced) {
-                            coalesced = await gpuEngine.checkCoalescence();
+                            try {
+                                coalesced = await gpuEngine.checkCoalescence();
+                            } catch (coalErr) {
+                                console.error('[GPU-CFTP] checkCoalescence error:', coalErr);
+                            }
                         }
 
                         if (coalesced) {
                             // Success! Copy result to main grid and WASM
-                            await gpuEngine.finalizeCFTP();
+                            try {
+                                await gpuEngine.finalizeCFTP();
+                                // Get dimers from GPU result and update sim
+                                sim.dimers = await gpuEngine.getDimers(sim.blackTriangles);
+                                // Sync to WASM so Glauber can continue from this state
+                                sim.setDimers(sim.dimers);
+                                draw();
+                            } catch (finalErr) {
+                                console.error('[GPU-CFTP] finalizeCFTP/getDimers error:', finalErr);
+                            }
 
-                            // Get dimers from GPU result and update sim
-                            sim.dimers = await gpuEngine.getDimers(sim.blackTriangles);
-
-                            // Sync to WASM so Glauber can continue from this state
-                            sim.setDimers(sim.dimers);
-
-                            draw();
-
+                            isGpuBusy = false;
                             gpuEngine.destroyCFTP();
                             const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                             // Show T@step if coalesced early, otherwise just T
@@ -8144,6 +8207,7 @@ function initLozengeApp() {
                             el.cftpStopBtn.style.display = 'none';
                         } else if (T >= maxT) {
                             // Timeout
+                            isGpuBusy = false;
                             gpuEngine.destroyCFTP();
                             const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                             el.cftpSteps.textContent = 'timeout (' + elapsed + 's)';
@@ -8175,6 +8239,9 @@ function initLozengeApp() {
                         }
                     }
 
+                    // LOCK: Prevent reinitialize() from destroying GPU buffers during CFTP
+                    isGpuBusy = true;
+                    console.log('[GPU-CFTP] Starting gpuCftpStep loop, isGpuBusy=true');
                     gpuCftpStep();
                     return; // Don't fall through to WASM path
                 }
