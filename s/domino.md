@@ -1050,7 +1050,7 @@ permalink: /domino/
       <div class="control-section-content">
         <div class="control-row">
           <label for="sweeps-input" style="font-size: 12px;">Sweeps per redraw:</label>
-          <input id="sweeps-input" type="number" value="100" min="1" step="1" style="width: 70px;">
+          <input id="sweeps-input" type="number" value="20000" min="1" step="1" style="width: 70px;">
         </div>
         <div class="control-row">
           <button id="glauber-btn" class="btn-secondary-action">Run Glauber</button>
@@ -2362,13 +2362,18 @@ Module.onRuntimeInitialized = async function() {
     }
   }
 
-  // Add Glauber button event listener
-  document.getElementById('glauber-btn')?.addEventListener('click', toggleGlauberDynamics);
-  // iOS Safari touch fix
+  // Add Glauber button event listener with iOS touch fix
+  let glauberTouchFired = false;
   document.getElementById('glauber-btn')?.addEventListener('touchend', function(e) {
     e.preventDefault();
+    glauberTouchFired = true;
     toggleGlauberDynamics();
+    setTimeout(() => { glauberTouchFired = false; }, 300);
   }, { passive: false });
+  document.getElementById('glauber-btn')?.addEventListener('click', function() {
+    if (glauberTouchFired) return; // Prevent double-fire on iOS
+    toggleGlauberDynamics();
+  });
 
   document.getElementById("sample-btn").addEventListener("click", () => {
     let n = parseInt(document.getElementById("n-input").value, 10);
