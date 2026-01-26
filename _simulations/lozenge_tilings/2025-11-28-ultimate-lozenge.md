@@ -8054,7 +8054,10 @@ function initLozengeApp() {
                 let gpuCftpOk = false;
                 try {
                     // FLUSH: Destroy old CFTP buffers before init to prevent size mismatch errors
-                    try { if (gpuEngine.destroyCFTP) gpuEngine.destroyCFTP(); } catch(e) {}
+                    try {
+                        if (gpuEngine.destroyCFTP) gpuEngine.destroyCFTP();
+                        draw(); // Redraw to refresh rendering state after buffer flush
+                    } catch(e) {}
 
                     console.log('[GPU-CFTP] Calling gpuEngine.initCFTP()...');
                     gpuCftpOk = await gpuEngine.initCFTP(minGridData, maxGridData);
