@@ -8089,8 +8089,8 @@ function initLozengeApp() {
                         } catch (resetErr) {
                             console.error('[GPU-CFTP] resetCFTPChains error:', resetErr);
                             isGpuBusy = false;
-                            gpuEngine.destroyCFTP();
-                            el.cftpSteps.textContent = 'GPU error';
+                            try { gpuEngine.destroyCFTP(); } catch (e) {}
+                            el.cftpSteps.textContent = 'GPU error - tap Sample to retry';
                             el.cftpBtn.textContent = originalText;
                             el.cftpBtn.disabled = false;
                             el.cftpStopBtn.style.display = 'none';
@@ -8116,7 +8116,7 @@ function initLozengeApp() {
                                 console.error('[GPU-CFTP] Error stack:', stepErr.stack);
                                 isGpuBusy = false;
                                 try { gpuEngine.destroyCFTP(); } catch (e) {}
-                                el.cftpSteps.textContent = 'GPU error: ' + stepErr.name;
+                                el.cftpSteps.textContent = 'GPU error - tap Sample to retry';
                                 el.cftpBtn.textContent = originalText;
                                 el.cftpBtn.disabled = false;
                                 el.cftpStopBtn.style.display = 'none';
