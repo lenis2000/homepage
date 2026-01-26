@@ -2130,13 +2130,17 @@ code:
   /* Full-width dropdowns */
   .control-section select {
     width: 100%;
+    height: auto;
+    min-height: 36px;
     padding: 8px 12px;
     border: 1px solid var(--border-color, #ccc);
     border-radius: 4px;
     font-size: 14px;
+    line-height: 1.4;
     background: var(--bg-primary, white);
     color: var(--text-primary, #333);
     cursor: pointer;
+    box-sizing: border-box;
   }
 
   .control-section select:focus {
