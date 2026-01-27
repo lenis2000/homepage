@@ -1925,8 +1925,14 @@ Cmd-click: complete lasso</div>
             draw();
         }
 
-        // Initialize WebGPU engine if available
-        if (navigator.gpu && window.WebGPUDominoEngine) {
+        // Detect Firefox - force CPU due to WebGPU IPC overhead issues (Bug 1870699)
+        const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+        if (isFirefox) {
+            console.log('WebGPU: disabled (Firefox: forced CPU due to IPC overhead issues)');
+        }
+
+        // Initialize WebGPU engine if available (skip on Firefox)
+        if (!isFirefox && navigator.gpu && window.WebGPUDominoEngine) {
             (async () => {
                 try {
                     gpuEngine = new WebGPUDominoEngine();
