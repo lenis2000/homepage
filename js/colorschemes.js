@@ -22,7 +22,7 @@
 const ColorSchemes = [
     { name: 'UVA', colors: ['#E57200', '#232D4B', '#F9DCBF', '#002D62'] }, // Added UVA Blue as fourth color
     { name: 'Albina', colors: ['#47a290', '#ee5a4e', '#f7b948', '#333333'] }, // Kept neutral dark gray
-    { name: 'No Colors', colors: ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#808080'] }, // Added light gray for subtle contrast
+    { name: 'No Colors', colors: ['#FFFFFF', '#FFFFFF', '#FFFFFF', '#FFFFFF'] }, // Added light gray for subtle contrast
     { name: 'Ocean Breeze', colors: ['#2E86AB', '#A23B72', '#F18F01', '#D4F1F4'] }, // Added a light, airy blue
     { name: 'Forest Calm', colors: ['#355E3B', '#8FBC8F', '#F5F5DC', '#A0C49D'] }, // Added a lighter green variant
     { name: 'Sunset Glow', colors: ['#FF6B35', '#F7931E', '#FFE66D', '#A0522D'] }, // Added a brown evocative of earth at sunset
