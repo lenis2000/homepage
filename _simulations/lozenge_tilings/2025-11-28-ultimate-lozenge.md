@@ -157,7 +157,7 @@ code:
     border-color: #444;
   }
   #canvas-container.fullscreen-mode {
-    position: fixed;
+    position: fixed !important;
     top: 0;
     left: 0;
     width: 100vw;
@@ -168,7 +168,8 @@ code:
   #canvas-container.fullscreen-mode #lozenge-canvas,
   #canvas-container.fullscreen-mode #three-container {
     max-width: none;
-    height: 100vh;
+    height: 100vh !important;
+    width: 100vw;
   }
   [data-theme="dark"] #canvas-container.fullscreen-mode {
     background: #1a1a1a;
@@ -2843,6 +2844,7 @@ Graphics3D[{EdgeForm[Black],
       <tr><td><kbd>Z</kbd></td><td>Undo</td></tr>
       <tr><td><kbd>H</kbd></td><td>Toggle hole labels</td></tr>
       <tr><td><kbd>Y</kbd></td><td>Redo</td></tr>
+      <tr><td><kbd>M</kbd></td><td>Make tileable</td></tr>
       <tr><td><kbd>F</kbd></td><td>Toggle fullscreen</td></tr>
       <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
       <tr><td><kbd>Esc</kbd></td><td>Close dialogs</td></tr>
@@ -7498,6 +7500,8 @@ function initLozengeApp() {
     // Fullscreen button
     function setFullscreen(enter) {
         const container = document.getElementById('canvas-container');
+        const canvas = document.getElementById('lozenge-canvas');
+        const three = document.getElementById('three-container');
         const hide = [
             document.getElementById('controlsPanel'),
             document.querySelector('.stats-bar'),
@@ -7509,17 +7513,38 @@ function initLozengeApp() {
                 setTool('hand');
             }
             container.classList.add('fullscreen-mode');
+            container.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:white;';
+            canvas.style.width = '100vw';
+            canvas.style.height = '100vh';
+            canvas.style.maxWidth = 'none';
+            three.style.width = '100vw';
+            three.style.height = '100vh';
+            three.style.maxWidth = 'none';
             document.body.style.overflow = 'hidden';
             hide.forEach(el => { if (el) el.style.display = 'none'; });
         } else {
             container.classList.remove('fullscreen-mode');
+            container.style.cssText = 'position:relative;';
+            canvas.style.width = '';
+            canvas.style.height = '';
+            canvas.style.maxWidth = '';
+            three.style.width = '';
+            three.style.height = '';
+            three.style.maxWidth = '';
             document.body.style.overflow = '';
             hide.forEach(el => { if (el) el.style.display = ''; });
         }
 
-        renderer.setupCanvas();
-        if (renderer3D) renderer3D.handleResize();
-        draw();
+        function resizeAndDraw() {
+            renderer.setupCanvas();
+            if (renderer3D) renderer3D.handleResize();
+            draw();
+        }
+        if (enter) {
+            requestAnimationFrame(resizeAndDraw);
+        } else {
+            requestAnimationFrame(() => requestAnimationFrame(resizeAndDraw));
+        }
     }
 
     document.getElementById('fullscreenBtn').addEventListener('click', () => {
@@ -10136,6 +10161,15 @@ function initLozengeApp() {
             if (checkbox) {
                 checkbox.checked = !checkbox.checked;
                 checkbox.dispatchEvent(new Event('change'));
+            }
+            return;
+        }
+
+        // M - Make tileable
+        if (key === 'm' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            if (!el.repairBtn.disabled) {
+                el.repairBtn.click();
             }
             return;
         }
