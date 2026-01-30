@@ -156,6 +156,23 @@ code:
     background: #1a1a1a;
     border-color: #444;
   }
+  #canvas-container.fullscreen-mode {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 9999;
+    background: white;
+  }
+  #canvas-container.fullscreen-mode #lozenge-canvas,
+  #canvas-container.fullscreen-mode #three-container {
+    max-width: none;
+    height: 100vh;
+  }
+  [data-theme="dark"] #canvas-container.fullscreen-mode {
+    background: #1a1a1a;
+  }
   .param-input {
     width: 50px;
     height: 28px;
@@ -2637,6 +2654,7 @@ if (window.LOZENGE_WEBGPU) {
         <button id="perspectiveBtn" title="Isometric view (click for perspective)">📐</button>
         <button id="preset3DBtn" title="Cycle 3D visual preset">☀️</button>
       </div>
+      <button id="fullscreenBtn" title="Fullscreen (F)" style="width: 28px; height: 28px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">⛶</button>
       <button id="helpBtn" style="width: 28px; height: 28px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">?</button>
       <div id="tool-tooltip" style="padding: 6px 10px; background: rgba(0,0,0,0.85); color: white; border-radius: 6px; font-size: 11px; display: none; white-space: pre-line; line-height: 1.4; position: absolute; right: 0; top: 40px;">🤚 pan · ✏️ draw · 🧹 erase
 ⭕+ lasso fill · ⭕− lasso erase
@@ -2825,6 +2843,7 @@ Graphics3D[{EdgeForm[Black],
       <tr><td><kbd>Z</kbd></td><td>Undo</td></tr>
       <tr><td><kbd>H</kbd></td><td>Toggle hole labels</td></tr>
       <tr><td><kbd>Y</kbd></td><td>Redo</td></tr>
+      <tr><td><kbd>F</kbd></td><td>Toggle fullscreen</td></tr>
       <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
       <tr><td><kbd>Esc</kbd></td><td>Close dialogs</td></tr>
     </table>
@@ -7476,6 +7495,27 @@ function initLozengeApp() {
         }
     });
 
+    // Fullscreen button
+    document.getElementById('fullscreenBtn').addEventListener('click', () => {
+        const container = document.getElementById('canvas-container');
+        const isFullscreen = container.classList.contains('fullscreen-mode');
+
+        if (!isFullscreen) {
+            if (!is3DView) {
+                setTool('hand');
+            }
+            container.classList.add('fullscreen-mode');
+            document.body.style.overflow = 'hidden';
+        } else {
+            container.classList.remove('fullscreen-mode');
+            document.body.style.overflow = '';
+        }
+
+        renderer.setupCanvas();
+        if (renderer3D) renderer3D.handleResize();
+        draw();
+    });
+
     // Help button - show keyboard shortcuts modal
     document.getElementById('helpBtn').addEventListener('click', () => {
         const modal = document.getElementById('keyboardHelpModal');
@@ -10089,8 +10129,24 @@ function initLozengeApp() {
             return;
         }
 
-        // Escape - close modal
+        // F - Toggle fullscreen
+        if (key === 'f' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            document.getElementById('fullscreenBtn').click();
+            return;
+        }
+
+        // Escape - close modal or exit fullscreen
         if (key === 'escape') {
+            const container = document.getElementById('canvas-container');
+            if (container.classList.contains('fullscreen-mode')) {
+                container.classList.remove('fullscreen-mode');
+                document.body.style.overflow = '';
+                renderer.setupCanvas();
+                if (renderer3D) renderer3D.handleResize();
+                draw();
+                return;
+            }
             const modal = document.getElementById('keyboardHelpModal');
             if (modal && modal.classList.contains('visible')) {
                 modal.classList.remove('visible');
