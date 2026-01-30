@@ -7496,24 +7496,35 @@ function initLozengeApp() {
     });
 
     // Fullscreen button
-    document.getElementById('fullscreenBtn').addEventListener('click', () => {
+    function setFullscreen(enter) {
         const container = document.getElementById('canvas-container');
-        const isFullscreen = container.classList.contains('fullscreen-mode');
+        const hide = [
+            document.getElementById('controlsPanel'),
+            document.querySelector('.stats-bar'),
+            document.querySelector('.bottom-sections-wrapper')
+        ];
 
-        if (!isFullscreen) {
+        if (enter) {
             if (!is3DView) {
                 setTool('hand');
             }
             container.classList.add('fullscreen-mode');
             document.body.style.overflow = 'hidden';
+            hide.forEach(el => { if (el) el.style.display = 'none'; });
         } else {
             container.classList.remove('fullscreen-mode');
             document.body.style.overflow = '';
+            hide.forEach(el => { if (el) el.style.display = ''; });
         }
 
         renderer.setupCanvas();
         if (renderer3D) renderer3D.handleResize();
         draw();
+    }
+
+    document.getElementById('fullscreenBtn').addEventListener('click', () => {
+        const container = document.getElementById('canvas-container');
+        setFullscreen(!container.classList.contains('fullscreen-mode'));
     });
 
     // Help button - show keyboard shortcuts modal
@@ -10140,11 +10151,7 @@ function initLozengeApp() {
         if (key === 'escape') {
             const container = document.getElementById('canvas-container');
             if (container.classList.contains('fullscreen-mode')) {
-                container.classList.remove('fullscreen-mode');
-                document.body.style.overflow = '';
-                renderer.setupCanvas();
-                if (renderer3D) renderer3D.handleResize();
-                draw();
+                setFullscreen(false);
                 return;
             }
             const modal = document.getElementById('keyboardHelpModal');
