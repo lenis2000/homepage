@@ -2481,6 +2481,9 @@ if (window.LOZENGE_WEBGPU) {
             <span class="status-icon">○</span>
             <span class="status-text">Empty</span>
           </span>
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555; margin-left: auto;">
+            <input type="checkbox" id="showHoleLabelsCheckbox" checked aria-label="Show hole winding labels"> Hole Labels
+          </label>
         </div>
       </div>
     </details>
@@ -2575,9 +2578,6 @@ if (window.LOZENGE_WEBGPU) {
         <div class="control-row">
           <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
             <input type="checkbox" id="showBoundaryLengthsCheckbox" aria-label="Show boundary length labels"> Length Labels
-          </label>
-          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555;">
-            <input type="checkbox" id="showHoleLabelsCheckbox" checked aria-label="Show hole winding labels"> Hole Labels
           </label>
         </div>
         <span id="labelControls" style="display: none; align-items: center; gap: 4px; flex-wrap: wrap;" role="group" aria-label="Label display settings">
@@ -2823,6 +2823,7 @@ Graphics3D[{EdgeForm[Black],
       <tr><td><kbd>+</kbd> / <kbd>-</kbd></td><td>Zoom in/out</td></tr>
       <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Previous/Next palette</td></tr>
       <tr><td><kbd>Z</kbd></td><td>Undo</td></tr>
+      <tr><td><kbd>H</kbd></td><td>Toggle hole labels</td></tr>
       <tr><td><kbd>Y</kbd></td><td>Redo</td></tr>
       <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
       <tr><td><kbd>Esc</kbd></td><td>Close dialogs</td></tr>
@@ -10069,11 +10070,22 @@ function initLozengeApp() {
 
         const key = e.key.toLowerCase();
 
-        // ? or h - show help modal
-        if (key === '?' || (key === 'h' && !e.ctrlKey && !e.metaKey)) {
+        // ? - show help modal
+        if (key === '?') {
             e.preventDefault();
             const modal = document.getElementById('keyboardHelpModal');
             if (modal) modal.classList.add('visible');
+            return;
+        }
+
+        // H - Toggle hole labels
+        if (key === 'h' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            const checkbox = document.getElementById('showHoleLabelsCheckbox');
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
+            }
             return;
         }
 

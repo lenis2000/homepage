@@ -1,0 +1,939 @@
+---
+layout: null
+permalink: triangle/
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Truth</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Georgia', serif;
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: none;
+        }
+
+        /* Hook screen */
+        #hook-screen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        #hook-screen .question {
+            color: #fff;
+            font-size: clamp(1.5rem, 4vw, 3rem);
+            font-style: italic;
+            text-align: center;
+            padding: 0 2rem;
+            opacity: 0;
+            animation: fadeIn 2s ease-out forwards;
+        }
+
+        #hook-screen .hint {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            margin-top: 3rem;
+            opacity: 0;
+            animation: fadeIn 1s ease-out 1.5s forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.7; }
+        }
+
+        #hook-screen .hint {
+            animation: fadeIn 1s ease-out 1.5s forwards, pulse 2s ease-in-out 2.5s infinite;
+        }
+
+        /* Caption */
+        #caption {
+            position: absolute;
+            bottom: 10vh;
+            left: 0; right: 0;
+            text-align: center;
+            color: #fff;
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            font-style: italic;
+            opacity: 0;
+            transition: opacity 2s ease-in;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        #caption.visible {
+            opacity: 1;
+        }
+
+        /* Entropy slider - minimalist */
+        #controls {
+            position: absolute;
+            bottom: 4vh;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.4rem;
+            opacity: 0;
+            transition: opacity 1.5s ease-in;
+            z-index: 5;
+        }
+
+        #controls.visible {
+            opacity: 1;
+        }
+
+        #controls label {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.65rem;
+            font-family: 'Arial', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: 300;
+        }
+
+        #entropy {
+            width: 180px;
+            height: 1px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 0;
+            outline: none;
+            cursor: pointer;
+        }
+
+        #entropy::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 10px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        #entropy::-webkit-slider-thumb:hover {
+            transform: scale(1.3);
+            background: #fff;
+        }
+
+        #entropy::-moz-range-thumb {
+            width: 10px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        /* Loading indicator */
+        #loading {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+            display: none;
+            z-index: 15;
+        }
+    </style>
+</head>
+<body>
+    <div id="hook-screen">
+        <p class="question">"Does Chaos hide the Truth?"</p>
+        <p class="hint">Click to enter</p>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <div id="caption">Local Truth, Global Paradox</div>
+
+    <div id="controls">
+        <input type="range" id="entropy" min="0" max="100" value="0">
+        <label>ENTROPY</label>
+    </div>
+
+    <div id="loading">Loading...</div>
+
+    <script src="/js/2025-11-28-ultimate-lozenge.js"></script>
+    <script>
+    (function() {
+        'use strict';
+
+        // ========================================================================
+        // CONFIGURATION
+        // ========================================================================
+        const ESCHER_COLORS = ['#F5F5F5', '#D0D0D0', '#A8A8A8'];
+        const SCALE_ITERATIONS = 4; // 12 * 2^4 = 3072 triangles
+        const STEPS_PER_FRAME = 5000;
+
+        // Narrative Timeline
+        const CHAOS_DURATION = 4000;    // Stay chaotic for 4s
+        const ANNEAL_DURATION = 15000;  // Slowly freeze for 15s
+
+        const Q_CHAOS = 1.0;    // Maximum entropy
+        const Q_ORDER = 50.0;   // Maximum order
+
+        // Base Penrose triangle shape (12 triangles) - creates hole with winding
+        const BASE_SHAPE = [
+            { n: -9, j: 5, type: 2 },
+            { n: -9, j: 6, type: 1 },
+            { n: -9, j: 6, type: 2 },
+            { n: -9, j: 7, type: 1 },
+            { n: -8, j: 6, type: 2 },
+            { n: -8, j: 7, type: 1 },
+            { n: -7, j: 6, type: 1 },
+            { n: -7, j: 5, type: 2 },
+            { n: -7, j: 5, type: 1 },
+            { n: -8, j: 5, type: 2 },
+            { n: -8, j: 5, type: 1 },
+            { n: -9, j: 7, type: 2 }
+        ];
+
+        // ========================================================================
+        // STATE
+        // ========================================================================
+        const STATES = {
+            HOOK: 'hook',
+            LOADING: 'loading',
+            TRANSFORMING: 'transforming',
+            FROZEN: 'frozen',
+            INTERACTIVE: 'interactive'
+        };
+
+        let currentState = STATES.HOOK;
+        let sim = null;
+        let activeTriangles = new Map();
+        let animationId = null;
+        let sonifier = null;
+
+        // Rendering
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let displayWidth, displayHeight;
+        let zoom = 1, panX = 0, panY = 0;
+
+        // Triangular lattice constants
+        const slope = 1 / Math.sqrt(3);
+        const deltaC = 2 / Math.sqrt(3);
+
+        // ========================================================================
+        // GEOMETRY HELPERS
+        // ========================================================================
+        function getVertex(n, j) {
+            return {
+                x: n,
+                y: slope * n + j * deltaC
+            };
+        }
+
+        function getTriangleCentroid(n, j, type) {
+            if (type === 1) {
+                // Black (right-facing): (n,j), (n,j-1), (n+1,j-1)
+                const v0 = getVertex(n, j);
+                const v1 = getVertex(n, j - 1);
+                const v2 = getVertex(n + 1, j - 1);
+                return { x: (v0.x + v1.x + v2.x) / 3, y: (v0.y + v1.y + v2.y) / 3 };
+            } else {
+                // White (left-facing): (n,j), (n+1,j), (n+1,j-1)
+                const v0 = getVertex(n, j);
+                const v1 = getVertex(n + 1, j);
+                const v2 = getVertex(n + 1, j - 1);
+                return { x: (v0.x + v1.x + v2.x) / 3, y: (v0.y + v1.y + v2.y) / 3 };
+            }
+        }
+
+        function pointInPolygon(x, y, polygon) {
+            if (!polygon || polygon.length < 3) return false;
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i].x, yi = polygon[i].y;
+                const xj = polygon[j].x, yj = polygon[j].y;
+                if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        }
+
+        // ========================================================================
+        // SHAPE SCALING (uses WASM boundaries like ultimate-lozenge)
+        // ========================================================================
+        function trianglesToMap(triangles) {
+            const map = new Map();
+            for (const t of triangles) {
+                map.set(`${t.n},${t.j},${t.type}`, { n: t.n, j: t.j, type: t.type });
+            }
+            return map;
+        }
+
+        function worldToLattice(x, y) {
+            const n = Math.round(x);
+            const j = Math.round((y - slope * n) / deltaC);
+            return { n, j };
+        }
+
+        // Scale mesh using WASM-computed boundaries (from sim.boundaries)
+        function doubleMeshWithBoundaries(triangles, boundaries) {
+            if (triangles.size === 0 || !boundaries || boundaries.length === 0) return triangles;
+
+            // Find outer boundary (largest area)
+            let outerIdx = 0;
+            let maxDiag = -1;
+            const latticeBoundaries = boundaries.map(b => b.map(v => worldToLattice(v.x, v.y)));
+
+            latticeBoundaries.forEach((b, i) => {
+                let mn = Infinity, mxn = -Infinity, mj = Infinity, mxj = -Infinity;
+                for (const v of b) {
+                    mn = Math.min(mn, v.n); mxn = Math.max(mxn, v.n);
+                    mj = Math.min(mj, v.j); mxj = Math.max(mxj, v.j);
+                }
+                const diag = (mxn - mn) ** 2 + (mxj - mj) ** 2;
+                if (diag > maxDiag) { maxDiag = diag; outerIdx = i; }
+            });
+
+            // Anchor at centroid
+            const outerLattice = latticeBoundaries[outerIdx];
+            let cenN = 0, cenJ = 0;
+            for (const v of outerLattice) { cenN += v.n; cenJ += v.j; }
+            const anchorN = Math.round(cenN / outerLattice.length);
+            const anchorJ = Math.round(cenJ / outerLattice.length);
+
+            // Scale all boundaries
+            const scaledBoundaries = latticeBoundaries.map(b => {
+                return b.map(v => {
+                    const newN = anchorN + (v.n - anchorN) * 2;
+                    const newJ = anchorJ + (v.j - anchorJ) * 2;
+                    return getVertex(newN, newJ);
+                });
+            });
+
+            const scaledOuter = scaledBoundaries[outerIdx];
+            const scaledHoles = scaledBoundaries.filter((_, i) => i !== outerIdx);
+
+            // Bounding box
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            for (const v of scaledOuter) {
+                minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+                minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+            }
+
+            // Rasterize
+            const newTriangles = new Map();
+            const searchMinN = Math.floor(minX) - 2;
+            const searchMaxN = Math.ceil(maxX) + 2;
+            const nRange = searchMaxN - searchMinN;
+            const searchMinJ = Math.floor(minY / deltaC) - nRange - 5;
+            const searchMaxJ = Math.ceil(maxY / deltaC) + nRange + 5;
+
+            for (let n = searchMinN; n <= searchMaxN; n++) {
+                for (let j = searchMinJ; j <= searchMaxJ; j++) {
+                    // Check type 1 (black)
+                    const c1 = getTriangleCentroid(n, j, 1);
+                    if (pointInPolygon(c1.x, c1.y, scaledOuter)) {
+                        let inHole = false;
+                        for (const hole of scaledHoles) {
+                            if (pointInPolygon(c1.x, c1.y, hole)) { inHole = true; break; }
+                        }
+                        if (!inHole) newTriangles.set(`${n},${j},1`, { n, j, type: 1 });
+                    }
+                    // Check type 2 (white)
+                    const c2 = getTriangleCentroid(n, j, 2);
+                    if (pointInPolygon(c2.x, c2.y, scaledOuter)) {
+                        let inHole = false;
+                        for (const hole of scaledHoles) {
+                            if (pointInPolygon(c2.x, c2.y, hole)) { inHole = true; break; }
+                        }
+                        if (!inHole) newTriangles.set(`${n},${j},2`, { n, j, type: 2 });
+                    }
+                }
+            }
+
+            return newTriangles;
+        }
+
+        // Iteratively scale using WASM boundaries
+        async function generateScaledShape(simInterface) {
+            let triangles = trianglesToMap(BASE_SHAPE);
+
+            for (let i = 0; i < SCALE_ITERATIONS; i++) {
+                // Init WASM to get boundaries
+                simInterface.initFromTriangles(triangles);
+                if (!simInterface.isValid || !simInterface.boundaries || simInterface.boundaries.length === 0) {
+                    console.error('Invalid shape at iteration', i);
+                    break;
+                }
+                // Scale using WASM boundaries
+                triangles = doubleMeshWithBoundaries(triangles, simInterface.boundaries);
+                console.log(`Scale iteration ${i + 1}: ${triangles.size} triangles`);
+            }
+
+            return triangles;
+        }
+
+        // ========================================================================
+        // AUDIO SONIFICATION
+        // ========================================================================
+        class FlipSonifier {
+            constructor() {
+                this.audioCtx = null;
+                this.masterGain = null;
+                this.lastFlipTime = 0;
+                this.minInterval = 5;
+                this.enabled = true;
+            }
+
+            init() {
+                this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                // Explicitly resume in case browser suspended it
+                if (this.audioCtx.state === 'suspended') {
+                    this.audioCtx.resume();
+                }
+                this.masterGain = this.audioCtx.createGain();
+                this.masterGain.connect(this.audioCtx.destination);
+                this.masterGain.gain.value = 0.3;
+            }
+
+            playFlipSound(flipCount) {
+                if (!this.enabled || !this.audioCtx) return;
+
+                const now = performance.now();
+                if (now - this.lastFlipTime < this.minInterval) return;
+                this.lastFlipTime = now;
+
+                const osc = this.audioCtx.createOscillator();
+                const gain = this.audioCtx.createGain();
+                const panner = this.audioCtx.createStereoPanner();
+
+                // Pitch based on flip count - more flips = higher pitch
+                // Pentatonic scale for musical coherence
+                const pentatonic = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21];
+                const baseFreq = 110; // A2
+                // Map flip count to note index (higher flips = higher notes)
+                const normalized = Math.min(flipCount / 100000, 1); // normalize to 0-1
+                const noteIndex = Math.min(Math.floor(normalized * pentatonic.length), pentatonic.length - 1);
+                const freq = baseFreq * Math.pow(2, pentatonic[noteIndex] / 12);
+
+                osc.frequency.value = freq;
+                osc.type = 'triangle';
+
+                // Random stereo position for spatial interest
+                panner.pan.value = Math.random() * 2 - 1;
+
+                // Volume scales with flip count
+                const vol = Math.min(0.15, 0.03 + normalized * 0.12);
+                const t = this.audioCtx.currentTime;
+                gain.gain.setValueAtTime(vol, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+
+                osc.connect(gain);
+                gain.connect(panner);
+                panner.connect(this.masterGain);
+                osc.start(t);
+                osc.stop(t + 0.1);
+            }
+
+            setFlipRate(rate) {
+                if (!this.masterGain) return;
+                const vol = Math.max(0.05, 0.4 - rate / 5000);
+                this.masterGain.gain.setTargetAtTime(vol, this.audioCtx.currentTime, 0.1);
+            }
+
+            fadeOut(duration = 2000) {
+                if (!this.masterGain) return;
+                this.masterGain.gain.setTargetAtTime(0, this.audioCtx.currentTime, duration / 3000);
+            }
+        }
+
+        // ========================================================================
+        // WASM INTERFACE
+        // ========================================================================
+        class SimulatorInterface {
+            constructor() {
+                this.initFromTrianglesWasm = Module.cwrap('initFromTriangles', 'number', ['number', 'number']);
+                this.performGlauberStepsWasm = Module.cwrap('performGlauberSteps', 'number', ['number']);
+                this.exportDimersWasm = Module.cwrap('exportDimers', 'number', []);
+                this.setQBiasWasm = Module.cwrap('setQBias', null, ['number']);
+                this.setHoleBaseHeightWasm = Module.cwrap('setHoleBaseHeight', 'number', ['number', 'number']);
+                this.getHoleCountWasm = Module.cwrap('getHoleCount', 'number', []);
+                this.getAllHolesInfoWasm = Module.cwrap('getAllHolesInfo', 'number', []);
+                this.adjustHoleWindingWasm = Module.cwrap('adjustHoleWindingExport', 'number', ['number', 'number']);
+                this.freeStringWasm = Module.cwrap('freeString', null, ['number']);
+
+                this.dimers = [];
+                this.blackTriangles = [];
+                this.whiteTriangles = [];
+                this.boundaries = [];
+                this.isValid = false;
+                this.totalSteps = 0;
+                this.flipCount = 0;
+            }
+
+            initFromTriangles(trianglesMap) {
+                const arr = [];
+                for (const [key, tri] of trianglesMap) {
+                    arr.push(tri.n, tri.j, tri.type);
+                }
+
+                if (arr.length === 0) {
+                    this.isValid = false;
+                    return { status: 'empty' };
+                }
+
+                const dataPtr = Module._malloc(arr.length * 4);
+                for (let i = 0; i < arr.length; i++) {
+                    Module.setValue(dataPtr + i * 4, arr[i], 'i32');
+                }
+
+                const ptr = this.initFromTrianglesWasm(dataPtr, arr.length);
+                const jsonStr = Module.UTF8ToString(ptr);
+                this.freeStringWasm(ptr);
+                Module._free(dataPtr);
+
+                const result = JSON.parse(jsonStr);
+                this.isValid = result.status === 'valid';
+                this.totalSteps = 0;
+                this.flipCount = 0;
+
+                if (this.isValid) {
+                    this.refreshDimers();
+                }
+
+                return result;
+            }
+
+            step(numSteps) {
+                const ptr = this.performGlauberStepsWasm(numSteps);
+                const jsonStr = Module.UTF8ToString(ptr);
+                this.freeStringWasm(ptr);
+                const result = JSON.parse(jsonStr);
+                this.totalSteps = result.totalSteps || 0;
+                this.flipCount = result.flipCount || 0;
+                this.refreshDimers();
+                return result;
+            }
+
+            refreshDimers() {
+                const ptr = this.exportDimersWasm();
+                const jsonStr = Module.UTF8ToString(ptr);
+                this.freeStringWasm(ptr);
+                const result = JSON.parse(jsonStr);
+                this.boundaries = result.boundaries || [];
+                this.dimers = result.dimers;
+                this.blackTriangles = result.black;
+                this.whiteTriangles = result.white;
+            }
+
+            setQBias(q) {
+                this.setQBiasWasm(q);
+            }
+
+            setHoleBaseHeight(holeIdx, height) {
+                this.setHoleBaseHeightWasm(holeIdx, height);
+            }
+
+            getHoleCount() {
+                return this.getHoleCountWasm();
+            }
+
+            getAllHolesInfo() {
+                const ptr = this.getAllHolesInfoWasm();
+                const jsonStr = Module.UTF8ToString(ptr);
+                this.freeStringWasm(ptr);
+                return JSON.parse(jsonStr);
+            }
+
+            adjustHoleWinding(holeIdx, delta) {
+                const ptr = this.adjustHoleWindingWasm(holeIdx, delta);
+                const jsonStr = Module.UTF8ToString(ptr);
+                this.freeStringWasm(ptr);
+                return JSON.parse(jsonStr);
+            }
+        }
+
+        // ========================================================================
+        // RENDERING
+        // ========================================================================
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            displayWidth = rect.width;
+            displayHeight = rect.height;
+        }
+
+        function getTransform() {
+            const baseViewSize = 20;
+            const baseScale = Math.min(displayWidth, displayHeight) / baseViewSize;
+            const scale = baseScale * zoom;
+            const centerX = displayWidth / 2 - panX * scale;
+            const centerY = displayHeight / 2 + panY * scale;
+            return { centerX, centerY, scale };
+        }
+
+        function toCanvas(x, y, centerX, centerY, scale) {
+            return [centerX + x * scale, centerY - y * scale];
+        }
+
+        function fitToRegion() {
+            if (activeTriangles.size === 0) return;
+
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+
+            for (const [key, tri] of activeTriangles) {
+                let verts;
+                if (tri.type === 1) {
+                    verts = [getVertex(tri.n, tri.j), getVertex(tri.n, tri.j - 1), getVertex(tri.n + 1, tri.j - 1)];
+                } else {
+                    verts = [getVertex(tri.n, tri.j), getVertex(tri.n + 1, tri.j), getVertex(tri.n + 1, tri.j - 1)];
+                }
+                for (const v of verts) {
+                    minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+                    minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+                }
+            }
+
+            const padding = 2;
+            minX -= padding; maxX += padding;
+            minY -= padding; maxY += padding;
+
+            const centerWorldX = (minX + maxX) / 2;
+            const centerWorldY = (minY + maxY) / 2;
+            const rangeX = maxX - minX;
+            const rangeY = maxY - minY;
+
+            const baseViewSize = 20;
+            const neededZoomX = displayWidth / rangeX / (Math.min(displayWidth, displayHeight) / baseViewSize);
+            const neededZoomY = displayHeight / rangeY / (Math.min(displayWidth, displayHeight) / baseViewSize);
+            zoom = Math.min(neededZoomX, neededZoomY);
+            panX = centerWorldX;
+            panY = centerWorldY;
+        }
+
+        function getLozengeVertices(dimer) {
+            const { bn, bj, t } = dimer;
+            if (t === 0) {
+                return [getVertex(bn, bj), getVertex(bn + 1, bj), getVertex(bn + 1, bj - 1), getVertex(bn, bj - 1)];
+            } else if (t === 1) {
+                return [getVertex(bn, bj), getVertex(bn + 1, bj - 1), getVertex(bn + 1, bj - 2), getVertex(bn, bj - 1)];
+            } else {
+                return [getVertex(bn - 1, bj), getVertex(bn, bj), getVertex(bn + 1, bj - 1), getVertex(bn, bj - 1)];
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, displayWidth, displayHeight);
+
+            if (!sim || !sim.isValid || sim.dimers.length === 0) return;
+
+            const { centerX, centerY, scale } = getTransform();
+
+            // Draw lozenges
+            for (const dimer of sim.dimers) {
+                const verts = getLozengeVertices(dimer);
+                const canvasVerts = verts.map(v => toCanvas(v.x, v.y, centerX, centerY, scale));
+
+                ctx.beginPath();
+                ctx.moveTo(canvasVerts[0][0], canvasVerts[0][1]);
+                for (let i = 1; i < canvasVerts.length; i++) {
+                    ctx.lineTo(canvasVerts[i][0], canvasVerts[i][1]);
+                }
+                ctx.closePath();
+
+                ctx.fillStyle = ESCHER_COLORS[dimer.t];
+                ctx.fill();
+
+                // Subtle outline
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+            }
+
+            // Draw boundary
+            if (sim.boundaries && sim.boundaries.length > 0) {
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                for (const boundary of sim.boundaries) {
+                    if (boundary.length < 2) continue;
+                    ctx.beginPath();
+                    const first = toCanvas(boundary[0].x, boundary[0].y, centerX, centerY, scale);
+                    ctx.moveTo(first[0], first[1]);
+                    for (let i = 1; i < boundary.length; i++) {
+                        const pt = toCanvas(boundary[i].x, boundary[i].y, centerX, centerY, scale);
+                        ctx.lineTo(pt[0], pt[1]);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // ========================================================================
+        // STATE MACHINE
+        // ========================================================================
+        function enterHook() {
+            currentState = STATES.HOOK;
+            document.getElementById('hook-screen').style.display = 'flex';
+            canvas.style.display = 'none';
+
+            document.getElementById('hook-screen').addEventListener('click', enterLoading, { once: true });
+        }
+
+        async function enterLoading() {
+            currentState = STATES.LOADING;
+            document.getElementById('hook-screen').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+
+            // Initialize audio (requires user gesture)
+            sonifier = new FlipSonifier();
+            sonifier.init();
+
+            // Initialize WASM first
+            sim = new SimulatorInterface();
+
+            // Generate scaled shape using WASM boundaries
+            setTimeout(async () => {
+                try {
+                    activeTriangles = await generateScaledShape(sim);
+
+                    // Final init with scaled shape
+                    sim.initFromTriangles(activeTriangles);
+
+                    // Adjust hole height for impossible illusion, but allow fluctuation
+                    const holeCount = sim.getHoleCount();
+                    if (holeCount > 0) {
+                        const HOLE_HEIGHT_INCREASE = 8;
+                        for (let i = 0; i < holeCount; i++) {
+                            // Get initial winding before adjustment
+                            const initialInfo = sim.getAllHolesInfo();
+                            const baseWinding = initialInfo.holes[i].currentWinding;
+
+                            // Increase winding by 8 for the impossible illusion
+                            for (let step = 0; step < HOLE_HEIGHT_INCREASE; step++) {
+                                const result = sim.adjustHoleWinding(i, +1);
+                                if (!result.success) break;
+                            }
+
+                            // Set base height to initial (before +8) to allow downward fluctuation
+                            sim.setHoleBaseHeight(i, baseWinding);
+                        }
+                        const holesInfo = sim.getAllHolesInfo();
+                        console.log('Hole setup - base:', holesInfo.holes[0].baseHeight, 'current:', holesInfo.holes[0].currentWinding);
+                        sim.refreshDimers();
+                    }
+
+                    if (sim.isValid) {
+                        // CALIBRATION (Invisible Step)
+                        // Freeze to ground state briefly to get the "perfect" volume for reference
+                        sim.setQBias(0.001);
+                        sim.step(100000);
+                        sim.refreshDimers();
+
+                        // Calculate "Target Volume" (The Truth)
+                        let targetVolume = 0;
+                        for (const d of sim.dimers) {
+                            const h = (d.t === 0) ? 0 : ((d.t === 1) ? d.bj : -d.bj);
+                            targetVolume += h;
+                        }
+                        sim.targetVolume = targetVolume;
+                        console.log('Calibrated target volume (Truth):', targetVolume);
+
+                        // RANDOMIZATION - Melt to chaos BEFORE first draw
+                        sim.setQBias(Q_CHAOS);
+                        sim.step(200000);
+                        sim.refreshDimers();
+                        console.log('Randomized to chaos');
+
+                        // Launch Visuals - first draw will be messy/chaotic
+                        document.getElementById('loading').style.display = 'none';
+                        canvas.style.display = 'block';
+                        resizeCanvas();
+                        fitToRegion();
+                        draw(); // First draw is CHAOS
+
+                        enterTransforming();
+                    } else {
+                        document.getElementById('loading').textContent = 'Error: Invalid shape';
+                    }
+                } catch (err) {
+                    console.error('Error:', err);
+                    document.getElementById('loading').textContent = 'Error: ' + err.message;
+                }
+            }, 50);
+        }
+
+        function enterTransforming() {
+            currentState = STATES.TRANSFORMING;
+            const startTime = performance.now();
+
+            // Initial state tracking
+            let lastFlipCount = sim.flipCount;
+            let currentQ = Q_CHAOS;
+
+            function animationLoop(timestamp) {
+                if (currentState !== STATES.TRANSFORMING) return;
+
+                const elapsed = timestamp - startTime;
+
+                // --- TIMELINE LOGIC ---
+                if (elapsed < CHAOS_DURATION) {
+                    // Phase 1: Pure Chaos
+                    currentQ = Q_CHAOS;
+                } else if (elapsed < CHAOS_DURATION + ANNEAL_DURATION) {
+                    // Phase 2: The Emergence (Cubic Annealing)
+                    const progress = (elapsed - CHAOS_DURATION) / ANNEAL_DURATION;
+                    // Cubic curve feels more natural for crystallization
+                    currentQ = Q_CHAOS + (Q_ORDER - Q_CHAOS) * Math.pow(progress, 3);
+                } else {
+                    // Phase 3: Truth Reached
+                    enterFrozen();
+                    return;
+                }
+
+                // Apply Physics
+                sim.setQBias(currentQ);
+                sim.step(STEPS_PER_FRAME);
+
+                // Audio Logic - sound corresponds to accepted flips
+                const newFlips = sim.flipCount - lastFlipCount;
+                lastFlipCount = sim.flipCount;
+
+                if (newFlips > 0 && sonifier) {
+                    sonifier.playFlipSound(newFlips);
+                }
+
+                draw();
+                animationId = requestAnimationFrame(animationLoop);
+            }
+
+            animationId = requestAnimationFrame(animationLoop);
+        }
+
+        function enterFrozen() {
+            currentState = STATES.FROZEN;
+
+            // Final polish - lock in the Truth
+            sim.setQBias(Q_ORDER);
+            sim.step(10000);
+            sim.refreshDimers();
+            draw();
+
+            if (sonifier) sonifier.fadeOut(2000);
+
+            // UI Reveal
+            setTimeout(() => {
+                document.getElementById('caption').classList.add('visible');
+            }, 500);
+
+            setTimeout(() => {
+                document.getElementById('controls').classList.add('visible');
+                enterInteractive();
+            }, 2000);
+        }
+
+        function enterInteractive() {
+            currentState = STATES.INTERACTIVE;
+
+            const slider = document.getElementById('entropy');
+            let lastFlipCount = sim.flipCount;
+
+            function interactiveLoop() {
+                if (currentState !== STATES.INTERACTIVE) return;
+
+                // Get slider value (0 = Frozen, 100 = Chaos)
+                const val = parseInt(slider.value);
+                const e = val / 100;
+                // Map slider to Q: 0 -> Q_ORDER, 100 -> Q_CHAOS
+                const targetQ = Q_ORDER * Math.pow(Q_CHAOS / Q_ORDER, e);
+
+                sim.setQBias(targetQ);
+                sim.step(STEPS_PER_FRAME);
+
+                // Audio feedback on interaction
+                const newFlips = sim.flipCount - lastFlipCount;
+                lastFlipCount = sim.flipCount;
+
+                if (newFlips > 0 && sonifier && val > 5) {
+                    sonifier.playFlipSound(newFlips);
+                }
+
+                draw();
+                animationId = requestAnimationFrame(interactiveLoop);
+            }
+
+            interactiveLoop();
+        }
+
+        function updateEntropy(value) {
+            // Map 0-100 to q bias
+            // entropy=0 → q=100 (frozen/ordered), entropy=100 → q=1 (chaotic)
+            const e = value / 100;
+            const q = 100 * Math.pow(0.01, e); // q goes from 100 to 1
+            sim.setQBias(q);
+
+            // Audio volume scales with entropy
+            if (sonifier && sonifier.masterGain) {
+                const vol = 0.3 * (value / 100);
+                sonifier.masterGain.gain.setTargetAtTime(vol, sonifier.audioCtx.currentTime, 0.1);
+            }
+        }
+
+        // ========================================================================
+        // EVENT LISTENERS
+        // ========================================================================
+        window.addEventListener('resize', () => {
+            if (canvas.style.display !== 'none') {
+                resizeCanvas();
+                draw();
+            }
+        });
+
+        document.getElementById('entropy').addEventListener('input', (e) => {
+            updateEntropy(parseInt(e.target.value));
+        });
+
+        // ========================================================================
+        // INITIALIZATION
+        // ========================================================================
+        // Wait for WASM to be ready
+        if (typeof Module !== 'undefined' && Module.calledRun) {
+            enterHook();
+        } else {
+            Module.onRuntimeInitialized = function() {
+                enterHook();
+            };
+        }
+
+    })();
+    </script>
+</body>
+</html>
