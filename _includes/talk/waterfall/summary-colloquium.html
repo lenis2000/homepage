@@ -1,0 +1,57 @@
+<section class="slide slide-top" id="summary-colloquium" data-title="Summary">
+    <h2 class="slide-title">Summary</h2>
+
+    <div style="display: grid; grid-template-columns: 48vw 43vw; gap: 2vw; margin-top: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+
+        <!-- Left: summary panes -->
+        <div style="display: flex; flex-direction: column; gap: 2.5vh;">
+
+            <!-- 1. Orange: Local to global -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
+                <strong style="color: var(--slide-accent);">Local randomness → global shapes:</strong>
+                Random surfaces concentrate around <strong>deterministic limit shapes</strong> as the mesh refines.
+                Local statistics are <strong>universal</strong> — determined only by the slope.
+            </div>
+
+            <!-- 2. Blue: Variational/PDE -->
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.8vh 1.2vw;">
+                <strong style="color: var(--slide-navy);">Variational principle & PDE:</strong>
+                Limit shapes maximize entropy subject to boundary conditions.
+                The Euler–Lagrange equation is a <strong>complex Burgers equation</strong> with a <strong>free boundary</strong> (arctic curve).
+            </div>
+
+            <!-- 3. Orange: Breaking universality -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
+                <strong style="color: var(--slide-accent);">Breaking the framework:</strong>
+                The <strong>q-Racah</strong> deformation introduces a weight favoring/disfavoring volume.
+                In the frozen regime, instead of losing all randomness, the system retains entropy by <strong>collapsing 2D phases into 1D</strong> — the <strong>waterfall</strong>.
+            </div>
+
+            <!-- 4. Blue: This work -->
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.8vh 1.2vw;">
+                <strong style="color: var(--slide-navy);">This work</strong>
+                <span style="color: var(--slide-muted);">[Knizel–P. 2025]</span><strong style="color: var(--slide-navy);">:</strong>
+                Justified the global behavior (limit shape) and the <strong>dimensional collapse</strong> mechanism.
+                Horizontal lozenges are exponentially suppressed in the waterfall region.
+            </div>
+
+            <!-- 5. Orange: Open problems -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
+                <strong style="color: var(--slide-accent);">Open problems:</strong>
+                <ul style="margin: 0.3vh 0 0 1.2em; padding: 0;">
+                    <li>Conjectural <strong>two-periodic barcode process</strong> (1D edge statistics)</li>
+                    <li>Edge behavior of the waterfall: new universality class?</li>
+                    <li>PDE characterization of deformed limit shapes</li>
+                </ul>
+            </div>
+
+        </div>
+
+        <!-- Right: Svartifoss waterfall image -->
+        <figure style="margin: 0; display: flex; flex-direction: column; height: 100%;">
+            <img src="images/waterfall-svartifoss-sbartsch-cc-by-sa-4.jpg" alt="Svartifoss waterfall with basalt columns in Iceland" style="flex: 1; width: 100%; object-fit: cover; border-radius: 8px;">
+            <figcaption style="text-align: right; margin-top: 0.5vh;"><strong style="color: var(--slide-navy);">Svartifoss, Iceland</strong> · Sebastian Bartsch, CC BY-SA 4.0</figcaption>
+        </figure>
+
+    </div>
+</section>
