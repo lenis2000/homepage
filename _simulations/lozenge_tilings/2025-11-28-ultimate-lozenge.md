@@ -4784,6 +4784,9 @@ function initLozengeApp() {
             this.currentPresetIndex = 0;
             this.usePerspective = false;
             this.legoMode = false;
+            this.glauberRunning = false;
+            this._legoMergedEdges = null;
+            this._legoFP = null;
 
             // Three.js setup
             this.scene = new THREE.Scene();
@@ -5334,30 +5337,126 @@ function initLozengeApp() {
                 indices.push(baseIndex, baseIndex + 2, baseIndex + 3);
             };
 
+            // Pre-compute tile positions
+            const tileData = [];
             for (const dimer of dimers) {
                 const verts = getVertexKeys(dimer);
                 const h0 = heights.get(`${verts[0][0]},${verts[0][1]}`);
-                if (h0 === undefined) continue;
-
-                // Use locally-consistent heights from vertex 0 + tile pattern
-                // to avoid branch-cut distortion around holes
+                if (h0 === undefined) { tileData.push(null); continue; }
                 const pattern = getHeightPattern(dimer.t);
                 const baseH = h0 - pattern[0];
                 const v3d = verts.map(([n, j], i) => to3D(n, j, baseH + pattern[i]));
+                tileData.push({ dimer, verts, v3d });
+            }
 
-                // Compute center
-                const cx = (v3d[0].x + v3d[1].x + v3d[2].x + v3d[3].x) / 4;
-                const cy = (v3d[0].y + v3d[1].y + v3d[2].y + v3d[3].y) / 4;
-                const cz = (v3d[0].z + v3d[1].z + v3d[2].z + v3d[3].z) / 4;
+            // Build edge adjacency for brick merging
+            const edgeToTiles = new Map();
+            const tileEdgeKeys = [];
+            for (let di = 0; di < tileData.length; di++) {
+                if (!tileData[di]) { tileEdgeKeys.push(null); continue; }
+                const { verts } = tileData[di];
+                const keys = [];
+                for (let e = 0; e < 4; e++) {
+                    const [n1, j1] = verts[e];
+                    const [n2, j2] = verts[(e + 1) % 4];
+                    const key = (n1 < n2 || (n1 === n2 && j1 < j2))
+                        ? `${n1},${j1}-${n2},${j2}` : `${n2},${j2}-${n1},${j1}`;
+                    keys.push(key);
+                    if (!edgeToTiles.has(key)) edgeToTiles.set(key, []);
+                    edgeToTiles.get(key).push(di);
+                }
+                tileEdgeKeys.push(keys);
+            }
 
-                // Shrink vertices toward center for gaps
-                const shrunk = v3d.map(v => ({
-                    x: cx + (v.x - cx) * shrink,
-                    y: cy + (v.y - cy) * shrink,
-                    z: cz + (v.z - cz) * shrink
-                }));
+            // Brick merging: cache coin flips, skip during Glauber
+            const dimerFP = dimers.length > 0
+                ? dimers[0].bn * 100003 + dimers[0].bj * 101 + dimers[dimers.length-1].bn * 997 + dimers[dimers.length-1].bj
+                : 0;
+            let mergedEdges;
+            if (this.glauberRunning) {
+                mergedEdges = new Set();
+            } else if (this._legoMergedEdges !== null && this._legoFP === dimerFP) {
+                mergedEdges = this._legoMergedEdges;
+            } else {
+                mergedEdges = new Set();
+                for (const [key, tiles] of edgeToTiles) {
+                    if (tiles.length === 2) {
+                        const d0 = tileData[tiles[0]], d1 = tileData[tiles[1]];
+                        if (d0 && d1 && d0.dimer.t === d1.dimer.t && d0.dimer.t !== 2) {
+                            // Only merge wall tiles (types 0,1), not top faces (type 2)
+                            // Only merge vertical edges (different z) — these connect side-by-side tiles into wider bricks
+                            // Horizontal edges (same z) connect stacked tiles and would create tall bricks
+                            const edgeIdx = tileEdgeKeys[tiles[0]].indexOf(key);
+                            const pattern = getHeightPattern(d0.dimer.t);
+                            const nextIdx = (edgeIdx + 1) % 4;
+                            if (d0.verts[edgeIdx][1] - pattern[edgeIdx] !== d0.verts[nextIdx][1] - pattern[nextIdx]) {
+                                if (Math.random() < 0.5) mergedEdges.add(key);
+                            }
+                        }
+                    }
+                }
+                // Propagate wall merges to Type 2 (top face) edges:
+                // when two wall tiles merge, the Type 2 tiles above them should also merge
+                for (const key of [...mergedEdges]) {
+                    const tiles = edgeToTiles.get(key);
+                    if (!tiles || tiles.length !== 2) continue;
+                    const d0 = tileData[tiles[0]], d1 = tileData[tiles[1]];
+                    if (!d0 || !d1 || d0.dimer.t === 2) continue;
+                    const ek0 = tileEdgeKeys[tiles[0]], ek1 = tileEdgeKeys[tiles[1]];
+                    if (!ek0 || !ek1) continue;
+                    // Edge 0 of each wall tile is its top edge, shared with a Type 2 tile
+                    const tt0 = edgeToTiles.get(ek0[0]), tt1 = edgeToTiles.get(ek1[0]);
+                    if (!tt0 || !tt1) continue;
+                    let t2a = -1, t2b = -1;
+                    for (const ti of tt0) if (tileData[ti] && tileData[ti].dimer.t === 2) { t2a = ti; break; }
+                    for (const ti of tt1) if (tileData[ti] && tileData[ti].dimer.t === 2) { t2b = ti; break; }
+                    if (t2a >= 0 && t2b >= 0 && t2a !== t2b) {
+                        const ka = tileEdgeKeys[t2a], kb = new Set(tileEdgeKeys[t2b]);
+                        if (ka) for (const k of ka) { if (kb.has(k)) { mergedEdges.add(k); break; } }
+                    }
+                }
+                this._legoMergedEdges = mergedEdges;
+                this._legoFP = dimerFP;
+            }
+
+            // Render with selective per-edge shrink (gaps only at non-merged edges)
+            const gap = 1 - shrink;
+            const linePositions = [];
+            for (let di = 0; di < tileData.length; di++) {
+                if (!tileData[di]) continue;
+                const { v3d } = tileData[di];
+                const edgeKeys = tileEdgeKeys[di];
+
+                const shrunk = v3d.map((v, i) => {
+                    const prev = (i + 3) % 4;
+                    const next = (i + 1) % 4;
+                    let dx = 0, dy = 0, dz = 0;
+                    // Gap on outgoing edge i (v[i] → v[next])
+                    if (!mergedEdges.has(edgeKeys[i])) {
+                        dx += gap * (v3d[prev].x - v.x) / 2;
+                        dy += gap * (v3d[prev].y - v.y) / 2;
+                        dz += gap * (v3d[prev].z - v.z) / 2;
+                    }
+                    // Gap on incoming edge prev (v[prev] → v[i])
+                    if (!mergedEdges.has(edgeKeys[prev])) {
+                        dx += gap * (v3d[next].x - v.x) / 2;
+                        dy += gap * (v3d[next].y - v.y) / 2;
+                        dz += gap * (v3d[next].z - v.z) / 2;
+                    }
+                    return { x: v.x + dx, y: v.y + dy, z: v.z + dz };
+                });
 
                 addQuad(shrunk[0], shrunk[1], shrunk[2], shrunk[3], colors[0]);
+
+                // Collect edge lines at non-merged boundaries
+                for (let e = 0; e < 4; e++) {
+                    if (!mergedEdges.has(edgeKeys[e])) {
+                        linePositions.push(
+                            shrunk[e].x, shrunk[e].y, shrunk[e].z,
+                            shrunk[(e+1)%4].x, shrunk[(e+1)%4].y, shrunk[(e+1)%4].z
+                        );
+                    }
+                }
             }
 
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
@@ -5380,29 +5479,23 @@ function initLozengeApp() {
             const mesh = new THREE.Mesh(geometry, material);
             this.meshGroup.add(mesh);
 
-            // Edge lines
-            const edgesGeometry = new THREE.EdgesGeometry(geometry, 10);
+            // Brick edge lines (only at non-merged boundaries)
+            const lineGeom = new THREE.BufferGeometry();
+            lineGeom.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
             const edgesMaterial = new THREE.LineBasicMaterial({
                 color: 0x333333,
                 linewidth: 2
             });
-            const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+            const edges = new THREE.LineSegments(lineGeom, edgesMaterial);
             this.meshGroup.add(edges);
 
             // Studs: 4 per lozenge, on all face types
             const typeGroups = [[], [], []];
             const typeNormals = [null, null, null];
 
-            for (const dimer of dimers) {
-                const verts = getVertexKeys(dimer);
-                const h0 = heights.get(`${verts[0][0]},${verts[0][1]}`);
-                if (h0 === undefined) continue;
-
-                // Use locally-consistent heights from vertex 0 + tile pattern
-                // to avoid branch-cut distortion around holes
-                const pattern = getHeightPattern(dimer.t);
-                const baseH = h0 - pattern[0];
-                const v3d = verts.map(([n, j], i) => to3D(n, j, baseH + pattern[i]));
+            for (let di = 0; di < tileData.length; di++) {
+                if (!tileData[di]) continue;
+                const { dimer, v3d } = tileData[di];
                 typeGroups[dimer.t].push(v3d);
                 if (!typeNormals[dimer.t]) {
                     const e1 = { x: v3d[1].x - v3d[0].x, y: v3d[1].y - v3d[0].y, z: v3d[1].z - v3d[0].z };
@@ -7775,6 +7868,7 @@ function initLozengeApp() {
     el.legoCheckbox.addEventListener('change', () => {
         if (renderer3D) {
             renderer3D.legoMode = el.legoCheckbox.checked;
+            renderer3D._legoMergedEdges = null; // Fresh coin flips
             if (isValid && sim.dimers.length > 0) {
                 renderer3D.renderDimers(sim.dimers, sim.boundaries);
             }
@@ -8348,6 +8442,7 @@ function initLozengeApp() {
         if (running) {
             inFluctuationMode = false; // Exit fluctuation mode when starting Glauber
             inDoubleDimerMode = false; // Exit double dimer mode when starting Glauber
+            if (renderer3D) renderer3D.glauberRunning = true;
             lastFrameTime = performance.now();
             frameCount = 0;
             loop();
@@ -8357,6 +8452,11 @@ function initLozengeApp() {
                 clearTimeout(animationId);
                 animationId = null;
             }
+            if (renderer3D) {
+                renderer3D.glauberRunning = false;
+                renderer3D._legoMergedEdges = null; // Fresh coin flips on stop
+            }
+            draw(); // Redraw with LEGO merges
         }
     });
 
@@ -9950,20 +10050,26 @@ function initLozengeApp() {
             return `${n2},${j2}-${n1},${j1}`;
         };
 
+        const getHeightPattern = (t) => {
+            if (t === 0) return [0, 0, 0, 0];
+            if (t === 1) return [1, 0, 0, 1];
+            return [1, 1, 0, 0];
+        };
+
         for (const dimer of dimers) {
             const verts = getVertexKeys(dimer);
+            const h0 = heights.get(`${verts[0][0]},${verts[0][1]}`);
+            if (h0 === undefined) continue;
 
-            const topVerts = verts.map(([n, j]) => {
-                const h = heights.get(`${n},${j}`) || 0;
-                const pos = to3D(n, j, h);
-                return addVertex(pos.x, pos.y, pos.z);
-            });
+            // Use locally-consistent heights from vertex 0 + tile pattern
+            // to avoid branch-cut distortion around holes
+            const pattern = getHeightPattern(dimer.t);
+            const baseH = h0 - pattern[0];
 
-            const botVerts = verts.map(([n, j]) => {
-                const h = heights.get(`${n},${j}`) || 0;
-                const pos = to3D(n, j, h);
-                return addVertex(pos.x + offset.x, pos.y + offset.y, pos.z + offset.z);
-            });
+            const positions = verts.map(([n, j], i) => to3D(n, j, baseH + pattern[i]));
+
+            const topVerts = positions.map(pos => addVertex(pos.x, pos.y, pos.z));
+            const botVerts = positions.map(pos => addVertex(pos.x + offset.x, pos.y + offset.y, pos.z + offset.z));
 
             // Top face
             faces.push([topVerts[0], topVerts[1], topVerts[2], topVerts[3]]);
@@ -10082,21 +10188,26 @@ function initLozengeApp() {
             return `${n2},${j2}-${n1},${j1}`;
         };
 
+        const getHeightPattern = (t) => {
+            if (t === 0) return [0, 0, 0, 0];
+            if (t === 1) return [1, 0, 0, 1];
+            return [1, 1, 0, 0];
+        };
+
         for (const dimer of dimers) {
             const verts = getVertexKeys(dimer);
+            const h0 = heights.get(`${verts[0][0]},${verts[0][1]}`);
+            if (h0 === undefined) continue;
 
-            const topVerts = verts.map(([n, j]) => {
-                const h = heights.get(`${n},${j}`) || 0;
-                const pos = to3D(n, j, h);
-                return addVertex(pos.x, pos.y, pos.z);
-            });
+            // Use locally-consistent heights from vertex 0 + tile pattern
+            // to avoid branch-cut distortion around holes
+            const pattern = getHeightPattern(dimer.t);
+            const baseH = h0 - pattern[0];
 
-            // Bottom vertices: same x,y but flat Z
-            const botVerts = verts.map(([n, j]) => {
-                const h = heights.get(`${n},${j}`) || 0;
-                const pos = to3D(n, j, h);
-                return addVertex(pos.x, pos.y, bottomZ);
-            });
+            const positions = verts.map(([n, j], i) => to3D(n, j, baseH + pattern[i]));
+
+            const topVerts = positions.map(pos => addVertex(pos.x, pos.y, pos.z));
+            const botVerts = positions.map(pos => addVertex(pos.x, pos.y, bottomZ));
 
             faces.push([topVerts[0], topVerts[1], topVerts[2], topVerts[3]]);
             faces.push([botVerts[3], botVerts[2], botVerts[1], botVerts[0]]);
