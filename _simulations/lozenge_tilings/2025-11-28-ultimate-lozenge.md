@@ -5509,7 +5509,8 @@ function initLozengeApp() {
             }
 
             const segments = dimers.length > 3000 ? 12 : 16;
-            const studGeom = new THREE.CylinderGeometry(0.10, 0.10, 0.18, segments);
+            const studR = 0.13, studH = 0.10;
+            const studGeom = new THREE.CylinderGeometry(studR, studR, studH, segments);
             const yAxis = new THREE.Vector3(0, 1, 0);
             const studMat = new THREE.MeshStandardMaterial({
                 color: new THREE.Color(colors[0]),
@@ -5529,28 +5530,56 @@ function initLozengeApp() {
                 const flipped = normal.clone().negate();
                 const quaternion = new THREE.Quaternion().setFromUnitVectors(yAxis, flipped);
                 const dummy = new THREE.Matrix4();
-                const nOffset = flipped.clone().multiplyScalar(0.12);
+                const nOffset = flipped.clone().multiplyScalar(0.08);
 
+                // Precompute rotated circle templates for stud rim outlines
+                const circleTop = [], circleBot = [];
+                for (let i = 0; i <= segments; i++) {
+                    const angle = (i / segments) * Math.PI * 2;
+                    const cos = Math.cos(angle) * studR, sin = Math.sin(angle) * studR;
+                    const pt = new THREE.Vector3(cos, studH / 2, sin).applyQuaternion(quaternion);
+                    circleTop.push(pt);
+                    const pb = new THREE.Vector3(cos, -studH / 2, sin).applyQuaternion(quaternion);
+                    circleBot.push(pb);
+                }
+
+                const studLinePos = [];
                 let idx = 0;
                 for (const v3d of groupVerts) {
                     const a = { x: v3d[1].x - v3d[0].x, y: v3d[1].y - v3d[0].y, z: v3d[1].z - v3d[0].z };
                     const b = { x: v3d[3].x - v3d[0].x, y: v3d[3].y - v3d[0].y, z: v3d[3].z - v3d[0].z };
                     for (const [s, t] of [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) {
+                        const cx = v3d[0].x + s * a.x + t * b.x + nOffset.x;
+                        const cy = v3d[0].y + s * a.y + t * b.y + nOffset.y;
+                        const cz = v3d[0].z + s * a.z + t * b.z + nOffset.z;
                         dummy.compose(
-                            new THREE.Vector3(
-                                v3d[0].x + s * a.x + t * b.x + nOffset.x,
-                                v3d[0].y + s * a.y + t * b.y + nOffset.y,
-                                v3d[0].z + s * a.z + t * b.z + nOffset.z
-                            ),
+                            new THREE.Vector3(cx, cy, cz),
                             quaternion,
                             new THREE.Vector3(1, 1, 1)
                         );
                         instancedMesh.setMatrixAt(idx++, dummy);
+                        // Top and bottom rim circle outlines
+                        for (let i = 0; i < segments; i++) {
+                            studLinePos.push(
+                                cx + circleTop[i].x, cy + circleTop[i].y, cz + circleTop[i].z,
+                                cx + circleTop[i+1].x, cy + circleTop[i+1].y, cz + circleTop[i+1].z,
+                                cx + circleBot[i].x, cy + circleBot[i].y, cz + circleBot[i].z,
+                                cx + circleBot[i+1].x, cy + circleBot[i+1].y, cz + circleBot[i+1].z
+                            );
+                        }
                     }
                 }
 
                 instancedMesh.instanceMatrix.needsUpdate = true;
                 this.meshGroup.add(instancedMesh);
+
+                // Stud rim outlines (same dark material as brick edges)
+                if (studLinePos.length > 0) {
+                    const studLineGeom = new THREE.BufferGeometry();
+                    studLineGeom.setAttribute('position', new THREE.Float32BufferAttribute(studLinePos, 3));
+                    const studEdges = new THREE.LineSegments(studLineGeom, edgesMaterial);
+                    this.meshGroup.add(studEdges);
+                }
             }
 
             if (!this.cameraInitialized && dimers.length > 0) {
