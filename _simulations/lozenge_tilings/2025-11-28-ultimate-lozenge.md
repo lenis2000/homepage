@@ -2620,6 +2620,9 @@ if (window.LOZENGE_WEBGPU) {
           <span style="font-size: 11px; color: #666; margin-right: 4px;">Rotate:</span>
           <button id="rotateLeftBtn" class="btn-utility" title="Rotate Left (3D)" disabled aria-label="Rotate 3D view left">↺</button>
           <button id="rotateRightBtn" class="btn-utility" title="Rotate Right (3D)" disabled aria-label="Rotate 3D view right">↻</button>
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555; margin-left: 12px;">
+            <input type="checkbox" id="legoModeCheckbox" aria-label="LEGO brick mode"> LEGO
+          </label>
         </div>
       </div>
     </details>
@@ -2840,9 +2843,12 @@ Graphics3D[{EdgeForm[Black],
       <tr><td><kbd>R</kbd></td><td>Reset view</td></tr>
       <tr><td><kbd>U</kbd></td><td>Scale Up region (2×)</td></tr>
       <tr><td><kbd>+</kbd> / <kbd>-</kbd></td><td>Zoom in/out</td></tr>
+      <tr><td><kbd>C</kbd> / <kbd>Shift</kbd>+<kbd>C</kbd></td><td>Next/Previous palette</td></tr>
+      <tr><td><kbd>P</kbd></td><td>Permute colors</td></tr>
       <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Previous/Next palette</td></tr>
       <tr><td><kbd>Z</kbd></td><td>Undo</td></tr>
       <tr><td><kbd>H</kbd></td><td>Toggle hole labels</td></tr>
+      <tr><td><kbd>L</kbd></td><td>LEGO mode (3D)</td></tr>
       <tr><td><kbd>Y</kbd></td><td>Redo</td></tr>
       <tr><td><kbd>M</kbd></td><td>Make tileable</td></tr>
       <tr><td><kbd>F</kbd></td><td>Toggle fullscreen</td></tr>
@@ -4777,6 +4783,7 @@ function initLozengeApp() {
             this.cameraInitialized = false;
             this.currentPresetIndex = 0;
             this.usePerspective = false;
+            this.legoMode = false;
 
             // Three.js setup
             this.scene = new THREE.Scene();
@@ -4940,7 +4947,8 @@ function initLozengeApp() {
         }
 
         permuteColors() {
-            this.colorPermutation = ((this.colorPermutation || 0) + 1) % 6;
+            const step = this.legoMode ? 2 : 1;
+            this.colorPermutation = ((this.colorPermutation || 0) + step) % 6;
         }
 
         setAutoRotate(enabled) {
@@ -5139,10 +5147,14 @@ function initLozengeApp() {
             // 4. Generate Geometry
             for (const dimer of dimers) {
                 const verts = getVertexKeys(dimer);
-                const v3d = verts.map(([n, j]) => {
-                    const h = heights.get(`${n},${j}`) || 0;
-                    return to3D(n, j, h);
-                });
+                const h0 = heights.get(`${verts[0][0]},${verts[0][1]}`);
+                if (h0 === undefined) continue;
+
+                // Use locally-consistent heights from vertex 0 + tile pattern
+                // to avoid branch-cut distortion around holes
+                const pattern = getHeightPattern(dimer.t);
+                const baseH = h0 - pattern[0];
+                const v3d = verts.map(([n, j], i) => to3D(n, j, baseH + pattern[i]));
                 addQuad(v3d[0], v3d[1], v3d[2], v3d[3], colors[dimer.t]);
             }
 
@@ -5195,6 +5207,268 @@ function initLozengeApp() {
                 this.centerCamera(heights);
                 this.cameraInitialized = true;
             }
+        }
+
+        dimersToLego3D(dimers, boundaries) {
+            // Clear existing geometry
+            while (this.meshGroup.children.length > 0) {
+                const child = this.meshGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+                this.meshGroup.remove(child);
+            }
+
+            if (!dimers || dimers.length === 0) return;
+
+            const colors = this.getPermutedColors();
+
+            const getVertexKeys = (dimer) => {
+                const { bn, bj, t } = dimer;
+                if (t === 0) return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+                else if (t === 1) return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+                else return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+            };
+
+            const getHeightPattern = (t) => {
+                if (t === 0) return [0, 0, 0, 0];
+                if (t === 1) return [1, 0, 0, 1];
+                return [1, 1, 0, 0];
+            };
+
+            // Build vertex-to-dimer map
+            const vertexToDimers = new Map();
+            for (const dimer of dimers) {
+                const verts = getVertexKeys(dimer);
+                for (const [n, j] of verts) {
+                    const key = `${n},${j}`;
+                    if (!vertexToDimers.has(key)) vertexToDimers.set(key, []);
+                    vertexToDimers.get(key).push(dimer);
+                }
+            }
+
+            // BFS height computation
+            const heights = new Map();
+            if (dimers.length > 0) {
+                const firstDimer = dimers[0];
+                const firstVerts = getVertexKeys(firstDimer);
+                const startKey = `${firstVerts[0][0]},${firstVerts[0][1]}`;
+                heights.set(startKey, 0);
+
+                const queue = [startKey];
+                const visited = new Set();
+
+                while (queue.length > 0) {
+                    const currentKey = queue.shift();
+                    if (visited.has(currentKey)) continue;
+                    visited.add(currentKey);
+
+                    const currentH = heights.get(currentKey);
+                    const [cn, cj] = currentKey.split(',').map(Number);
+
+                    for (const dimer of vertexToDimers.get(currentKey) || []) {
+                        const verts = getVertexKeys(dimer);
+                        const pattern = getHeightPattern(dimer.t);
+
+                        let myIdx = -1;
+                        for (let i = 0; i < 4; i++) {
+                            if (verts[i][0] === cn && verts[i][1] === cj) {
+                                myIdx = i;
+                                break;
+                            }
+                        }
+
+                        if (myIdx >= 0) {
+                            for (let i = 0; i < 4; i++) {
+                                const [vn, vj] = verts[i];
+                                const vkey = `${vn},${vj}`;
+                                if (!heights.has(vkey)) {
+                                    const newH = currentH + (pattern[i] - pattern[myIdx]);
+                                    heights.set(vkey, newH);
+                                    queue.push(vkey);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            const to3D = (n, j, h) => ({
+                x: h,
+                y: -n - h,
+                z: j - h
+            });
+
+            // Build geometry with gaps between bricks
+            const geometry = new THREE.BufferGeometry();
+            const vertices = [];
+            const normals = [];
+            const vertexColors = [];
+            const indices = [];
+
+            const shrink = 0.97;
+
+            const addQuad = (v1, v2, v3, v4, color) => {
+                const baseIndex = vertices.length / 3;
+                vertices.push(v1.x, v1.y, v1.z);
+                vertices.push(v2.x, v2.y, v2.z);
+                vertices.push(v3.x, v3.y, v3.z);
+                vertices.push(v4.x, v4.y, v4.z);
+
+                const edge1 = { x: v2.x - v1.x, y: v2.y - v1.y, z: v2.z - v1.z };
+                const edge2 = { x: v4.x - v1.x, y: v4.y - v1.y, z: v4.z - v1.z };
+                const nx = edge1.y * edge2.z - edge1.z * edge2.y;
+                const ny = edge1.z * edge2.x - edge1.x * edge2.z;
+                const nz = edge1.x * edge2.y - edge1.y * edge2.x;
+                const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+
+                for (let i = 0; i < 4; i++) {
+                    normals.push(nx / len, ny / len, nz / len);
+                }
+
+                const c = new THREE.Color(color);
+                for (let i = 0; i < 4; i++) {
+                    vertexColors.push(c.r, c.g, c.b);
+                }
+
+                indices.push(baseIndex, baseIndex + 1, baseIndex + 2);
+                indices.push(baseIndex, baseIndex + 2, baseIndex + 3);
+            };
+
+            for (const dimer of dimers) {
+                const verts = getVertexKeys(dimer);
+                const h0 = heights.get(`${verts[0][0]},${verts[0][1]}`);
+                if (h0 === undefined) continue;
+
+                // Use locally-consistent heights from vertex 0 + tile pattern
+                // to avoid branch-cut distortion around holes
+                const pattern = getHeightPattern(dimer.t);
+                const baseH = h0 - pattern[0];
+                const v3d = verts.map(([n, j], i) => to3D(n, j, baseH + pattern[i]));
+
+                // Compute center
+                const cx = (v3d[0].x + v3d[1].x + v3d[2].x + v3d[3].x) / 4;
+                const cy = (v3d[0].y + v3d[1].y + v3d[2].y + v3d[3].y) / 4;
+                const cz = (v3d[0].z + v3d[1].z + v3d[2].z + v3d[3].z) / 4;
+
+                // Shrink vertices toward center for gaps
+                const shrunk = v3d.map(v => ({
+                    x: cx + (v.x - cx) * shrink,
+                    y: cy + (v.y - cy) * shrink,
+                    z: cz + (v.z - cz) * shrink
+                }));
+
+                addQuad(shrunk[0], shrunk[1], shrunk[2], shrunk[3], colors[0]);
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
+            geometry.setIndex(indices);
+            geometry.computeBoundingSphere();
+
+            // Plastic material - polygonOffset pushes faces back so studs/edges don't z-fight
+            const material = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                side: THREE.DoubleSide,
+                flatShading: true,
+                roughness: 0.35,
+                metalness: 0.0,
+                polygonOffset: true,
+                polygonOffsetFactor: 1,
+                polygonOffsetUnits: 1
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            this.meshGroup.add(mesh);
+
+            // Edge lines
+            const edgesGeometry = new THREE.EdgesGeometry(geometry, 10);
+            const edgesMaterial = new THREE.LineBasicMaterial({
+                color: 0x333333,
+                linewidth: 2
+            });
+            const edges = new THREE.LineSegments(edgesGeometry, edgesMaterial);
+            this.meshGroup.add(edges);
+
+            // Studs: 4 per lozenge, on all face types
+            const typeGroups = [[], [], []];
+            const typeNormals = [null, null, null];
+
+            for (const dimer of dimers) {
+                const verts = getVertexKeys(dimer);
+                const h0 = heights.get(`${verts[0][0]},${verts[0][1]}`);
+                if (h0 === undefined) continue;
+
+                // Use locally-consistent heights from vertex 0 + tile pattern
+                // to avoid branch-cut distortion around holes
+                const pattern = getHeightPattern(dimer.t);
+                const baseH = h0 - pattern[0];
+                const v3d = verts.map(([n, j], i) => to3D(n, j, baseH + pattern[i]));
+                typeGroups[dimer.t].push(v3d);
+                if (!typeNormals[dimer.t]) {
+                    const e1 = { x: v3d[1].x - v3d[0].x, y: v3d[1].y - v3d[0].y, z: v3d[1].z - v3d[0].z };
+                    const e2 = { x: v3d[3].x - v3d[0].x, y: v3d[3].y - v3d[0].y, z: v3d[3].z - v3d[0].z };
+                    const nx = e1.y * e2.z - e1.z * e2.y;
+                    const ny = e1.z * e2.x - e1.x * e2.z;
+                    const nz = e1.x * e2.y - e1.y * e2.x;
+                    const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+                    typeNormals[dimer.t] = new THREE.Vector3(nx / len, ny / len, nz / len);
+                }
+            }
+
+            const segments = dimers.length > 3000 ? 12 : 16;
+            const studGeom = new THREE.CylinderGeometry(0.10, 0.10, 0.18, segments);
+            const yAxis = new THREE.Vector3(0, 1, 0);
+            const studMat = new THREE.MeshStandardMaterial({
+                color: new THREE.Color(colors[0]),
+                roughness: 0.25,
+                metalness: 0.0,
+                flatShading: true,
+                side: THREE.DoubleSide
+            });
+
+            for (const type of [2]) {
+                const groupVerts = typeGroups[type];
+                const normal = typeNormals[type];
+                if (groupVerts.length === 0 || !normal) continue;
+
+                const totalStuds = groupVerts.length * 4;
+                const instancedMesh = new THREE.InstancedMesh(studGeom, studMat, totalStuds);
+                const flipped = normal.clone().negate();
+                const quaternion = new THREE.Quaternion().setFromUnitVectors(yAxis, flipped);
+                const dummy = new THREE.Matrix4();
+                const nOffset = flipped.clone().multiplyScalar(0.12);
+
+                let idx = 0;
+                for (const v3d of groupVerts) {
+                    const a = { x: v3d[1].x - v3d[0].x, y: v3d[1].y - v3d[0].y, z: v3d[1].z - v3d[0].z };
+                    const b = { x: v3d[3].x - v3d[0].x, y: v3d[3].y - v3d[0].y, z: v3d[3].z - v3d[0].z };
+                    for (const [s, t] of [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) {
+                        dummy.compose(
+                            new THREE.Vector3(
+                                v3d[0].x + s * a.x + t * b.x + nOffset.x,
+                                v3d[0].y + s * a.y + t * b.y + nOffset.y,
+                                v3d[0].z + s * a.z + t * b.z + nOffset.z
+                            ),
+                            quaternion,
+                            new THREE.Vector3(1, 1, 1)
+                        );
+                        instancedMesh.setMatrixAt(idx++, dummy);
+                    }
+                }
+
+                instancedMesh.instanceMatrix.needsUpdate = true;
+                this.meshGroup.add(instancedMesh);
+            }
+
+            if (!this.cameraInitialized && dimers.length > 0) {
+                this.centerCamera(heights);
+                this.cameraInitialized = true;
+            }
+        }
+
+        renderDimers(dimers, boundaries) {
+            if (this.legoMode) this.dimersToLego3D(dimers, boundaries);
+            else this.dimersTo3D(dimers, boundaries);
         }
 
         // Render both min and max CFTP surfaces with transparency
@@ -5889,6 +6163,7 @@ function initLozengeApp() {
         toggle3DBtn: document.getElementById('toggle3DBtn'),
         perspectiveBtn: document.getElementById('perspectiveBtn'),
         preset3DBtn: document.getElementById('preset3DBtn'),
+        legoCheckbox: document.getElementById('legoModeCheckbox'),
         averageBtn: document.getElementById('averageBtn'),
         avgSamplesInput: document.getElementById('avgSamplesInput'),
         avgStopBtn: document.getElementById('avgStopBtn'),
@@ -6435,7 +6710,7 @@ function initLozengeApp() {
             if (inFluctuationMode && rawFluctuations) {
                 renderFluctuations();
             } else if (isValid && sim.dimers.length > 0) {
-                renderer3D.dimersTo3D(sim.dimers, sim.boundaries);
+                renderer3D.renderDimers(sim.dimers, sim.boundaries);
                 renderer3D.resetCamera();
             }
         } else {
@@ -6484,7 +6759,7 @@ function initLozengeApp() {
         }
 
         if (is3DView && renderer3D && isValid && sim.dimers.length > 0 && !inFluctuationMode) {
-            renderer3D.dimersTo3D(sim.dimers, sim.boundaries);
+            renderer3D.renderDimers(sim.dimers, sim.boundaries);
         }
 
         renderer.draw(sim, activeTriangles, isValid);
@@ -7246,7 +7521,7 @@ function initLozengeApp() {
             renderer3D.handleResize();
             // Rebuild 3D geometry from current state
             if (isValid && sim.dimers.length > 0) {
-                renderer3D.dimersTo3D(sim.dimers, sim.boundaries);
+                renderer3D.renderDimers(sim.dimers, sim.boundaries);
             }
         }
         draw();
@@ -7491,8 +7766,17 @@ function initLozengeApp() {
             el.preset3DBtn.textContent = preset.icon;
             el.preset3DBtn.title = `Style: ${preset.name}`;
             // Re-render with new preset
-            if (currentDimers && currentDimers.length > 0) {
-                renderer3D.dimersTo3D(currentDimers);
+            if (isValid && sim.dimers.length > 0) {
+                renderer3D.renderDimers(sim.dimers, sim.boundaries);
+            }
+        }
+    });
+
+    el.legoCheckbox.addEventListener('change', () => {
+        if (renderer3D) {
+            renderer3D.legoMode = el.legoCheckbox.checked;
+            if (isValid && sim.dimers.length > 0) {
+                renderer3D.renderDimers(sim.dimers, sim.boundaries);
             }
         }
     });
@@ -10165,6 +10449,16 @@ function initLozengeApp() {
             return;
         }
 
+        // L - Toggle LEGO mode (3D)
+        if (key === 'l' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            if (is3DView && el.legoCheckbox) {
+                el.legoCheckbox.checked = !el.legoCheckbox.checked;
+                el.legoCheckbox.dispatchEvent(new Event('change'));
+            }
+            return;
+        }
+
         // M - Make tileable
         if (key === 'm' && !e.ctrlKey && !e.metaKey) {
             e.preventDefault();
@@ -10257,6 +10551,25 @@ function initLozengeApp() {
         if (key === '-' && !e.metaKey && !e.ctrlKey) {
             e.preventDefault();
             document.getElementById('zoomOutBtn').click();
+            return;
+        }
+
+        // C - Next palette, Shift+C - Previous palette
+        if (key === 'c' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            if (e.shiftKey) {
+                document.getElementById('prev-palette').click();
+            } else {
+                document.getElementById('next-palette').click();
+            }
+            initPalettePickerGrid();
+            return;
+        }
+
+        // P - Permute colors
+        if (key === 'p' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+            e.preventDefault();
+            el.permuteColors.click();
             return;
         }
 
