@@ -2620,9 +2620,11 @@ if (window.LOZENGE_WEBGPU) {
           <span style="font-size: 11px; color: #666; margin-right: 4px;">Rotate:</span>
           <button id="rotateLeftBtn" class="btn-utility" title="Rotate Left (3D)" disabled aria-label="Rotate 3D view left">↺</button>
           <button id="rotateRightBtn" class="btn-utility" title="Rotate Right (3D)" disabled aria-label="Rotate 3D view right">↻</button>
-          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px; color: #555; margin-left: 12px;">
-            <input type="checkbox" id="legoModeCheckbox" aria-label="LEGO brick mode"> LEGO
-          </label>
+          <select id="renderModeSelect" style="display:none;" aria-label="3D render style">
+            <option value="standard">Standard</option>
+            <option value="lego">LEGO</option>
+            <option value="minecraft">Minecraft</option>
+          </select>
         </div>
       </div>
     </details>
@@ -2848,7 +2850,7 @@ Graphics3D[{EdgeForm[Black],
       <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Previous/Next palette</td></tr>
       <tr><td><kbd>Z</kbd></td><td>Undo</td></tr>
       <tr><td><kbd>H</kbd></td><td>Toggle hole labels</td></tr>
-      <tr><td><kbd>L</kbd></td><td>LEGO mode (3D)</td></tr>
+      <tr><td><kbd>L</kbd></td><td>Cycle render mode (3D)</td></tr>
       <tr><td><kbd>Y</kbd></td><td>Redo</td></tr>
       <tr><td><kbd>M</kbd></td><td>Make tileable</td></tr>
       <tr><td><kbd>F</kbd></td><td>Toggle fullscreen</td></tr>
@@ -4783,7 +4785,7 @@ function initLozengeApp() {
             this.cameraInitialized = false;
             this.currentPresetIndex = 0;
             this.usePerspective = false;
-            this.legoMode = false;
+            this.renderMode = 'standard';
             this.glauberRunning = false;
             this._legoMergedEdges = null;
             this._legoFP = null;
@@ -4856,6 +4858,9 @@ function initLozengeApp() {
             // Start animation loop
             this.animate();
         }
+
+        get legoMode() { return this.renderMode === 'lego'; }
+        set legoMode(v) { this.renderMode = v ? 'lego' : 'standard'; }
 
         applyPreset(index) {
             this.currentPresetIndex = index % VISUAL_PRESETS_3D.length;
@@ -4950,7 +4955,7 @@ function initLozengeApp() {
         }
 
         permuteColors() {
-            const step = this.legoMode ? 2 : 1;
+            const step = this.renderMode !== 'standard' ? 2 : 1;
             this.colorPermutation = ((this.colorPermutation || 0) + step) % 6;
         }
 
@@ -5015,7 +5020,7 @@ function initLozengeApp() {
             while (this.meshGroup.children.length > 0) {
                 const child = this.meshGroup.children[0];
                 if (child.geometry) child.geometry.dispose();
-                if (child.material) child.material.dispose();
+                if (child.material) { if (Array.isArray(child.material)) child.material.forEach(m => m.dispose()); else child.material.dispose(); }
                 this.meshGroup.remove(child);
             }
 
@@ -5217,7 +5222,7 @@ function initLozengeApp() {
             while (this.meshGroup.children.length > 0) {
                 const child = this.meshGroup.children[0];
                 if (child.geometry) child.geometry.dispose();
-                if (child.material) child.material.dispose();
+                if (child.material) { if (Array.isArray(child.material)) child.material.forEach(m => m.dispose()); else child.material.dispose(); }
                 this.meshGroup.remove(child);
             }
 
@@ -5588,8 +5593,386 @@ function initLozengeApp() {
             }
         }
 
+        _generateMinecraftTexture(type) {
+            const S = 16;
+            const canvas = document.createElement('canvas');
+            canvas.width = S; canvas.height = S;
+            const ctx = canvas.getContext('2d');
+
+            // 4x4 value noise interpolated to 16x16 — used to bias pixel color picks
+            const noise = () => {
+                const g = [];
+                for (let i = 0; i < 25; i++) g.push(Math.random());
+                return (x, y) => {
+                    const gx = x / S * 4, gy = y / S * 4;
+                    const ix = Math.floor(gx), iy = Math.floor(gy);
+                    const fx = gx - ix, fy = gy - iy;
+                    const v = (r, c) => g[r * 5 + c];
+                    return v(iy,ix)*(1-fx)*(1-fy) + v(iy,ix+1)*fx*(1-fy) +
+                           v(iy+1,ix)*(1-fx)*fy + v(iy+1,ix+1)*fx*fy;
+                };
+            };
+
+            // Pick from palette: noise sets region, random adds strong per-pixel variation
+            const fill = (palette, n) => {
+                for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+                    const t = n(x, y) * 0.4 + Math.random() * 0.6;
+                    const idx = Math.min(palette.length - 1, (t * palette.length) | 0);
+                    ctx.fillStyle = palette[idx];
+                    ctx.fillRect(x, y, 1, 1);
+                }
+            };
+
+            if (type === 'stone') {
+                fill(['#555555','#666666','#6E6E6E','#7A7A7A','#848484','#8B8B8B','#8B8B8B','#959595','#9A9A9A','#A0A0A0'], noise());
+                for (let i = 0; i < 10; i++) {
+                    ctx.fillStyle = '#4A4A4A';
+                    ctx.fillRect((Math.random()*S)|0, (Math.random()*S)|0, 1, 1);
+                }
+            } else if (type === 'dirt') {
+                fill(['#5A4020','#654A2A','#6B4E30','#7A5C3A','#836442','#8B6B4A','#96785A','#9C7C5A','#A8896A'], noise());
+                for (let i = 0; i < 8; i++) {
+                    ctx.fillStyle = '#4E3618';
+                    ctx.fillRect((Math.random()*S)|0, (Math.random()*S)|0, 1, 1);
+                }
+            } else if (type === 'grass') {
+                fill(['#2E5510','#3A6818','#3D6B1E','#4A7A28','#52842E','#5B8C32','#68A038','#6EA03E','#7AB848','#88CC50'], noise());
+                for (let i = 0; i < 8; i++) {
+                    ctx.fillStyle = Math.random() < 0.5 ? '#8AD048' : '#305A12';
+                    ctx.fillRect((Math.random()*S)|0, (Math.random()*S)|0, 1, 1);
+                }
+            } else if (type === 'magma') {
+                fill(['#120808','#1A0E0E','#221414','#2A1A1A','#2A1A1A','#332020','#3A2222','#442828'], noise());
+                for (let i = 0; i < 5; i++) {
+                    let cx = (Math.random()*S)|0, cy = (Math.random()*S)|0;
+                    for (let s = 0; s < 3 + ((Math.random()*4)|0); s++) {
+                        const colors = ['#CC4400','#FF6600','#FF9900','#FFCC00','#FFE040'];
+                        ctx.fillStyle = colors[(Math.random()*colors.length)|0];
+                        ctx.fillRect(cx, cy, 1, 1);
+                        cx += [-1,0,1][(Math.random()*3)|0];
+                        cy += [-1,0,1][(Math.random()*3)|0];
+                    }
+                }
+            } else if (type === 'diamond') {
+                fill(['#555555','#666666','#6E6E6E','#7A7A7A','#848484','#8B8B8B','#8B8B8B','#959595','#9A9A9A','#A0A0A0'], noise());
+                const ox = 3 + ((Math.random()*10)|0), oy = 3 + ((Math.random()*10)|0);
+                const spots = [[0,0],[1,0],[0,1]];
+                if (Math.random() < 0.7) spots.push([1,1]);
+                if (Math.random() < 0.5) spots.push([-1,0]);
+                if (Math.random() < 0.4) spots.push([0,-1]);
+                if (Math.random() < 0.3) spots.push([2,0]);
+                for (const [dx, dy] of spots) {
+                    ctx.fillStyle = ['#3DCEBE','#50DED0','#6EEEDE','#88FFF0'][(Math.random()*4)|0];
+                    ctx.fillRect(ox + dx, oy + dy, 1, 1);
+                }
+            } else if (type === 'emerald') {
+                fill(['#555555','#666666','#6E6E6E','#7A7A7A','#848484','#8B8B8B','#8B8B8B','#959595','#9A9A9A','#A0A0A0'], noise());
+                const ox = 3 + ((Math.random()*10)|0), oy = 3 + ((Math.random()*10)|0);
+                const spots = [[0,0],[1,0],[0,1]];
+                if (Math.random() < 0.7) spots.push([1,1]);
+                if (Math.random() < 0.5) spots.push([-1,0]);
+                if (Math.random() < 0.4) spots.push([0,-1]);
+                if (Math.random() < 0.3) spots.push([2,0],[0,2]);
+                for (const [dx, dy] of spots) {
+                    ctx.fillStyle = ['#1B8C1B','#2DA82D','#40C040','#55DD55'][(Math.random()*4)|0];
+                    ctx.fillRect(ox + dx, oy + dy, 1, 1);
+                }
+            }
+
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.magFilter = THREE.NearestFilter;
+            tex.minFilter = THREE.NearestFilter;
+            tex.wrapS = THREE.RepeatWrapping;
+            tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
+        dimersToMinecraft3D(dimers, boundaries) {
+            // Clear existing geometry
+            while (this.meshGroup.children.length > 0) {
+                const child = this.meshGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+                    else child.material.dispose();
+                }
+                this.meshGroup.remove(child);
+            }
+
+            if (!dimers || dimers.length === 0) return;
+
+            const getVertexKeys = (dimer) => {
+                const { bn, bj, t } = dimer;
+                if (t === 0) return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+                else if (t === 1) return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+                else return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+            };
+            const getHeightPattern = (t) => {
+                if (t === 0) return [0, 0, 0, 0];
+                if (t === 1) return [1, 0, 0, 1];
+                return [1, 1, 0, 0];
+            };
+
+            // BFS heights (same as standard)
+            const vertexToDimers = new Map();
+            for (const dimer of dimers) {
+                for (const [n, j] of getVertexKeys(dimer)) {
+                    const key = `${n},${j}`;
+                    if (!vertexToDimers.has(key)) vertexToDimers.set(key, []);
+                    vertexToDimers.get(key).push(dimer);
+                }
+            }
+            const heights = new Map();
+            if (dimers.length > 0) {
+                const fv = getVertexKeys(dimers[0]);
+                const startKey = `${fv[0][0]},${fv[0][1]}`;
+                heights.set(startKey, 0);
+                const queue = [startKey];
+                const visited = new Set();
+                while (queue.length > 0) {
+                    const ck = queue.shift();
+                    if (visited.has(ck)) continue;
+                    visited.add(ck);
+                    const ch = heights.get(ck);
+                    const [cn, cj] = ck.split(',').map(Number);
+                    for (const dimer of vertexToDimers.get(ck) || []) {
+                        const verts = getVertexKeys(dimer);
+                        const pattern = getHeightPattern(dimer.t);
+                        let myIdx = -1;
+                        for (let i = 0; i < 4; i++) {
+                            if (verts[i][0] === cn && verts[i][1] === cj) { myIdx = i; break; }
+                        }
+                        if (myIdx >= 0) {
+                            for (let i = 0; i < 4; i++) {
+                                const vkey = `${verts[i][0]},${verts[i][1]}`;
+                                if (!heights.has(vkey)) {
+                                    heights.set(vkey, ch + (pattern[i] - pattern[myIdx]));
+                                    queue.push(vkey);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            const to3D = (n, j, h) => ({ x: h, y: -n - h, z: j - h });
+
+            // Per-hexagonal-face texture: the three tiles (types 0,1,2) forming
+            // each visible "hex cube" share one texture. We detect hex-face triples
+            // at tri-vertices (3D vertices where all 3 tile types meet) by checking
+            // which tiles share edges emanating from that vertex.
+            const MC_TYPES = ['stone','dirt','grass','magma','diamond','emerald'];
+
+            const hashInts = (a, b, c) => {
+                let h = (a * 73856093) ^ (b * 19349663) ^ (c * 83492791);
+                h = ((h >> 16) ^ h) * 0x45d9f3b;
+                h = ((h >> 16) ^ h) * 0x45d9f3b;
+                return (h ^ (h >> 16)) & 0x7fffffff;
+            };
+            const texFromHash = (h) => {
+                const r = (h % 1000) / 1000;
+                if (r < 0.01) return 5;      // emerald ore (1%)
+                if (r < 0.05) return 4;      // diamond (4%)
+                if (r < 0.10) return 3;      // magma (5%)
+                if (r < 0.55) return 1;      // dirt (45%)
+                return 0;                    // stone (45%)
+            };
+
+            // Compute 3D verts for each tile
+            const dimerV3D = [];
+            for (let di = 0; di < dimers.length; di++) {
+                const dimer = dimers[di];
+                const vk = getVertexKeys(dimer);
+                const h0 = heights.get(`${vk[0][0]},${vk[0][1]}`);
+                if (h0 === undefined) { dimerV3D.push(null); continue; }
+                const pattern = getHeightPattern(dimer.t);
+                const baseH = h0 - pattern[0];
+                const v3d = vk.map(([n, j], i) => to3D(n, j, baseH + pattern[i]));
+                dimerV3D.push(v3d);
+            }
+
+            // Build vertex → tiles map
+            const v3dMap = new Map();
+            for (let di = 0; di < dimers.length; di++) {
+                const v = dimerV3D[di]; if (!v) continue;
+                for (const vv of v) {
+                    const k = `${vv.x},${vv.y},${vv.z}`;
+                    if (!v3dMap.has(k)) v3dMap.set(k, []);
+                    v3dMap.get(k).push(di);
+                }
+            }
+
+            // Helper: do tiles di,dj share an edge emanating from vertex vKey?
+            const sharesEdgeAtV = (di, dj, vKey) => {
+                const vi = dimerV3D[di], vj = dimerV3D[dj];
+                let idxI = -1, idxJ = -1;
+                for (let i = 0; i < 4; i++) {
+                    if (`${vi[i].x},${vi[i].y},${vi[i].z}` === vKey) idxI = i;
+                    if (`${vj[i].x},${vj[i].y},${vj[i].z}` === vKey) idxJ = i;
+                }
+                if (idxI < 0 || idxJ < 0) return false;
+                const adjI = [vi[(idxI+3)%4], vi[(idxI+1)%4]];
+                const adjJ = [vj[(idxJ+3)%4], vj[(idxJ+1)%4]];
+                for (const a of adjI) for (const b of adjJ)
+                    if (a.x === b.x && a.y === b.y && a.z === b.z) return true;
+                return false;
+            };
+
+            // Find hex-face triples at tri-vertices
+            const tileGroupId = new Int32Array(dimers.length).fill(-1);
+            let nextGrp = 0;
+
+            for (const [vKey, tiles] of v3dMap) {
+                const byType = [[], [], []];
+                for (const di of tiles) {
+                    if (tileGroupId[di] === -1) byType[dimers[di].t].push(di);
+                }
+                if (!byType[0].length || !byType[1].length || !byType[2].length) continue;
+
+                for (const a of byType[0]) {
+                    if (tileGroupId[a] !== -1) continue;
+                    for (const b of byType[1]) {
+                        if (tileGroupId[b] !== -1 || !sharesEdgeAtV(a, b, vKey)) continue;
+                        for (const c of byType[2]) {
+                            if (tileGroupId[c] !== -1) continue;
+                            if (sharesEdgeAtV(b, c, vKey) && sharesEdgeAtV(a, c, vKey)) {
+                                const g = nextGrp++;
+                                tileGroupId[a] = g; tileGroupId[b] = g; tileGroupId[c] = g;
+                                break;
+                            }
+                        }
+                        if (tileGroupId[a] !== -1) break;
+                    }
+                }
+            }
+            // Solo group IDs for ungrouped tiles (boundary / incomplete hexes)
+            for (let di = 0; di < dimers.length; di++) {
+                if (dimerV3D[di] && tileGroupId[di] === -1) tileGroupId[di] = nextGrp++;
+            }
+
+            // Assign texture per group
+            const tileTexture = new Uint8Array(dimers.length);
+            for (let di = 0; di < dimers.length; di++) {
+                if (!dimerV3D[di]) continue;
+                const g = tileGroupId[di];
+                let tex = texFromHash(hashInts(g, g * 73, g * 137));
+                if (tex === 1 && dimers[di].t === 2) tex = 2; // grass on top of dirt (type 2 = top face, same as lego studs)
+                tileTexture[di] = tex;
+            }
+
+            // DEBUG: grouping stats
+            {
+                const groups = new Map();
+                for (let di = 0; di < dimers.length; di++) {
+                    if (!dimerV3D[di]) continue;
+                    const g = tileGroupId[di];
+                    if (!groups.has(g)) groups.set(g, []);
+                    groups.get(g).push(di);
+                }
+                const sizeDist = {};
+                for (const [, m] of groups) { const s = m.length; sizeDist[s] = (sizeDist[s]||0) + 1; }
+                console.log(`[MC] ${groups.size} groups, size dist:`, sizeDist);
+                // Check what % of cross-type edges are within the same group
+                const edgeMap = new Map();
+                for (let di = 0; di < dimers.length; di++) {
+                    const v = dimerV3D[di]; if (!v) continue;
+                    for (let e = 0; e < 4; e++) {
+                        const a = v[e], b = v[(e+1)%4];
+                        const k1 = `${a.x},${a.y},${a.z}`, k2 = `${b.x},${b.y},${b.z}`;
+                        const ek = k1 < k2 ? `${k1}|${k2}` : `${k2}|${k1}`;
+                        if (!edgeMap.has(ek)) edgeMap.set(ek, []);
+                        edgeMap.get(ek).push(di);
+                    }
+                }
+                let crossEdges = 0, sameGroup = 0;
+                for (const [, tiles] of edgeMap) {
+                    if (tiles.length !== 2) continue;
+                    if (dimers[tiles[0]].t === dimers[tiles[1]].t) continue;
+                    crossEdges++;
+                    if (tileGroupId[tiles[0]] === tileGroupId[tiles[1]]) sameGroup++;
+                }
+                console.log(`[MC] Cross-type edges: ${crossEdges}, same group: ${sameGroup}/${crossEdges} (${crossEdges ? (100*sameGroup/crossEdges).toFixed(1) : 0}%)`);
+            }
+
+            // Build geometry
+            const geometry = new THREE.BufferGeometry();
+            const verts = [], norms = [], uvs = [];
+            const groupIdx = MC_TYPES.map(() => []);
+            const linePositions = [];
+            const gap = 0.03;
+
+            const addQuad = (v1, v2, v3, v4, grp, uvOff) => {
+                const base = verts.length / 3;
+                verts.push(v1.x,v1.y,v1.z, v2.x,v2.y,v2.z, v3.x,v3.y,v3.z, v4.x,v4.y,v4.z);
+                const e1x=v2.x-v1.x,e1y=v2.y-v1.y,e1z=v2.z-v1.z;
+                const e2x=v4.x-v1.x,e2y=v4.y-v1.y,e2z=v4.z-v1.z;
+                const nx=e1y*e2z-e1z*e2y, ny=e1z*e2x-e1x*e2z, nz=e1x*e2y-e1y*e2x;
+                const len=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
+                for(let i=0;i<4;i++) norms.push(nx/len,ny/len,nz/len);
+                uvs.push(uvOff,uvOff, uvOff+1,uvOff, uvOff+1,uvOff+1, uvOff,uvOff+1);
+                groupIdx[grp].push(base,base+1,base+2, base,base+2,base+3);
+            };
+
+            for (let di = 0; di < dimers.length; di++) {
+                const v3d = dimerV3D[di];
+                if (!v3d) continue;
+                const grp = tileTexture[di];
+                const uvOff = (di * 0.37) % 1;
+
+                // Shrink toward center for gap
+                const cx = (v3d[0].x+v3d[1].x+v3d[2].x+v3d[3].x)/4;
+                const cy = (v3d[0].y+v3d[1].y+v3d[2].y+v3d[3].y)/4;
+                const cz = (v3d[0].z+v3d[1].z+v3d[2].z+v3d[3].z)/4;
+                const s = v3d.map(v => ({
+                    x: v.x + (cx-v.x)*gap, y: v.y + (cy-v.y)*gap, z: v.z + (cz-v.z)*gap
+                }));
+
+                // Top face
+                addQuad(s[0], s[1], s[2], s[3], grp, uvOff);
+
+                // Edge lines for this face
+                for (let e = 0; e < 4; e++) {
+                    const a = s[e], b = s[(e+1)%4];
+                    linePositions.push(a.x,a.y,a.z, b.x,b.y,b.z);
+                }
+
+            }
+
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+            geometry.setAttribute('normal', new THREE.Float32BufferAttribute(norms, 3));
+            geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+            const allIdx = [];
+            const materials = [];
+            for (let g = 0; g < MC_TYPES.length; g++) {
+                const start = allIdx.length;
+                for (const idx of groupIdx[g]) allIdx.push(idx);
+                if (groupIdx[g].length > 0) {
+                    geometry.addGroup(start, groupIdx[g].length, materials.length);
+                    const tex = this._generateMinecraftTexture(MC_TYPES[g]);
+                    materials.push(new THREE.MeshLambertMaterial({
+                        map: tex, side: THREE.DoubleSide,
+                        polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1
+                    }));
+                }
+            }
+            geometry.setIndex(allIdx);
+            geometry.computeBoundingSphere();
+            this.meshGroup.add(new THREE.Mesh(geometry, materials));
+
+            // Edge lines
+            const lineGeom = new THREE.BufferGeometry();
+            lineGeom.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+            this.meshGroup.add(new THREE.LineSegments(lineGeom,
+                new THREE.LineBasicMaterial({ color: 0x1a1a1a, linewidth: 2 })));
+
+            if (!this.cameraInitialized && dimers.length > 0) {
+                this.centerCamera(heights);
+                this.cameraInitialized = true;
+            }
+        }
+
         renderDimers(dimers, boundaries) {
-            if (this.legoMode) this.dimersToLego3D(dimers, boundaries);
+            if (this.renderMode === 'lego') this.dimersToLego3D(dimers, boundaries);
+            else if (this.renderMode === 'minecraft') this.dimersToMinecraft3D(dimers, boundaries);
             else this.dimersTo3D(dimers, boundaries);
         }
 
@@ -5598,7 +5981,7 @@ function initLozengeApp() {
             while (this.meshGroup.children.length > 0) {
                 const child = this.meshGroup.children[0];
                 if (child.geometry) child.geometry.dispose();
-                if (child.material) child.material.dispose();
+                if (child.material) { if (Array.isArray(child.material)) child.material.forEach(m => m.dispose()); else child.material.dispose(); }
                 this.meshGroup.remove(child);
             }
 
@@ -5728,7 +6111,7 @@ function initLozengeApp() {
             while (this.meshGroup.children.length > 0) {
                 const child = this.meshGroup.children[0];
                 if (child.geometry) child.geometry.dispose();
-                if (child.material) child.material.dispose();
+                if (child.material) { if (Array.isArray(child.material)) child.material.forEach(m => m.dispose()); else child.material.dispose(); }
                 this.meshGroup.remove(child);
             }
 
@@ -6285,7 +6668,7 @@ function initLozengeApp() {
         toggle3DBtn: document.getElementById('toggle3DBtn'),
         perspectiveBtn: document.getElementById('perspectiveBtn'),
         preset3DBtn: document.getElementById('preset3DBtn'),
-        legoCheckbox: document.getElementById('legoModeCheckbox'),
+        renderModeSelect: document.getElementById('renderModeSelect'),
         averageBtn: document.getElementById('averageBtn'),
         avgSamplesInput: document.getElementById('avgSamplesInput'),
         avgStopBtn: document.getElementById('avgStopBtn'),
@@ -7894,10 +8277,10 @@ function initLozengeApp() {
         }
     });
 
-    el.legoCheckbox.addEventListener('change', () => {
+    el.renderModeSelect.addEventListener('change', () => {
         if (renderer3D) {
-            renderer3D.legoMode = el.legoCheckbox.checked;
-            renderer3D._legoMergedEdges = null; // Fresh coin flips
+            renderer3D.renderMode = el.renderModeSelect.value;
+            renderer3D._legoMergedEdges = null;
             if (isValid && sim.dimers.length > 0) {
                 renderer3D.renderDimers(sim.dimers, sim.boundaries);
             }
@@ -8471,7 +8854,13 @@ function initLozengeApp() {
         if (running) {
             inFluctuationMode = false; // Exit fluctuation mode when starting Glauber
             inDoubleDimerMode = false; // Exit double dimer mode when starting Glauber
-            if (renderer3D) renderer3D.glauberRunning = true;
+            if (renderer3D) {
+                renderer3D.glauberRunning = true;
+                if (renderer3D.renderMode === 'minecraft') {
+                    renderer3D.renderMode = 'standard';
+                    renderer3D._legoMergedEdges = null;
+                }
+            }
             lastFrameTime = performance.now();
             frameCount = 0;
             loop();
@@ -8483,9 +8872,9 @@ function initLozengeApp() {
             }
             if (renderer3D) {
                 renderer3D.glauberRunning = false;
-                renderer3D._legoMergedEdges = null; // Fresh coin flips on stop
+                renderer3D._legoMergedEdges = null;
             }
-            draw(); // Redraw with LEGO merges
+            draw(); // Redraw with merges
         }
     });
 
@@ -10589,12 +10978,17 @@ function initLozengeApp() {
             return;
         }
 
-        // L - Toggle LEGO mode (3D)
+        // L - Cycle render mode (3D)
         if (key === 'l' && !e.ctrlKey && !e.metaKey) {
             e.preventDefault();
-            if (is3DView && el.legoCheckbox) {
-                el.legoCheckbox.checked = !el.legoCheckbox.checked;
-                el.legoCheckbox.dispatchEvent(new Event('change'));
+            if (is3DView && renderer3D) {
+                const modes = ['standard', 'lego', 'minecraft'];
+                const cur = renderer3D.renderMode;
+                renderer3D.renderMode = modes[(modes.indexOf(cur) + 1) % 3];
+                renderer3D._legoMergedEdges = null;
+                if (isValid && sim.dimers.length > 0) {
+                    renderer3D.renderDimers(sim.dimers, sim.boundaries);
+                }
             }
             return;
         }
