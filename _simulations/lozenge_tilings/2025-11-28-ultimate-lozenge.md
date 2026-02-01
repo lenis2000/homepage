@@ -5817,7 +5817,10 @@ function initLozengeApp() {
                 return false;
             };
 
-            // Find hex-face triples at tri-vertices
+            // Find hex-face triples at tri-vertices using "bridge" approach:
+            // In 3D lozenge geometry, only 2 of 3 tile-type pairs share edges
+            // at the convex corner vertex. Try each type as bridge connecting
+            // the other two via shared edges.
             const tileGroupId = new Int32Array(dimers.length).fill(-1);
             let nextGrp = 0;
 
@@ -5828,19 +5831,24 @@ function initLozengeApp() {
                 }
                 if (!byType[0].length || !byType[1].length || !byType[2].length) continue;
 
-                for (const a of byType[0]) {
-                    if (tileGroupId[a] !== -1) continue;
-                    for (const b of byType[1]) {
-                        if (tileGroupId[b] !== -1 || !sharesEdgeAtV(a, b, vKey)) continue;
-                        for (const c of byType[2]) {
-                            if (tileGroupId[c] !== -1) continue;
-                            if (sharesEdgeAtV(b, c, vKey) && sharesEdgeAtV(a, c, vKey)) {
-                                const g = nextGrp++;
-                                tileGroupId[a] = g; tileGroupId[b] = g; tileGroupId[c] = g;
-                                break;
-                            }
+                let found = false;
+                for (const bt of [0, 1, 2]) {
+                    if (found) break;
+                    const ot = [0, 1, 2].filter(t => t !== bt);
+                    for (const b of byType[bt]) {
+                        if (found || tileGroupId[b] !== -1) continue;
+                        let mA = -1, mC = -1;
+                        for (const a of byType[ot[0]]) {
+                            if (tileGroupId[a] === -1 && sharesEdgeAtV(a, b, vKey)) { mA = a; break; }
                         }
-                        if (tileGroupId[a] !== -1) break;
+                        if (mA < 0) continue;
+                        for (const c of byType[ot[1]]) {
+                            if (tileGroupId[c] === -1 && sharesEdgeAtV(b, c, vKey)) { mC = c; break; }
+                        }
+                        if (mC < 0) continue;
+                        const g = nextGrp++;
+                        tileGroupId[mA] = g; tileGroupId[b] = g; tileGroupId[mC] = g;
+                        found = true;
                     }
                 }
             }
