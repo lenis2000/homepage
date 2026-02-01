@@ -4112,8 +4112,10 @@ function initLozengeApp() {
 
             // Fit to canvas
             const baseViewSize = 20;
-            const neededZoomX = this.displayWidth / rangeX / (Math.min(this.displayWidth, this.displayHeight) / baseViewSize);
-            const neededZoomY = this.displayHeight / rangeY / (Math.min(this.displayWidth, this.displayHeight) / baseViewSize);
+            const minDim = Math.min(this.displayWidth, this.displayHeight);
+            if (minDim <= 0 || rangeX <= 0 || rangeY <= 0) return;
+            const neededZoomX = this.displayWidth / rangeX / (minDim / baseViewSize);
+            const neededZoomY = this.displayHeight / rangeY / (minDim / baseViewSize);
             this.zoom = Math.min(neededZoomX, neededZoomY);
 
             // Set pan to center the region
@@ -4145,11 +4147,8 @@ function initLozengeApp() {
 
             const { centerX, centerY, scale } = this.getTransform(activeTriangles);
 
-            // Check for invalid scale
-            if (scale <= 0 || !isFinite(scale)) {
-                console.error('RENDERER: Invalid scale=' + scale);
-                return;
-            }
+            // Skip draw if canvas has no dimensions (e.g. hidden in 3D mode)
+            if (scale <= 0 || !isFinite(scale)) return;
 
             // Draw background grid
             this.drawBackgroundGrid(ctx, centerX, centerY, scale, isDarkMode);
@@ -5790,115 +5789,42 @@ function initLozengeApp() {
                 dimerV3D.push(v3d);
             }
 
-            // Build vertex → tiles map
-            const v3dMap = new Map();
+            // Union-find: group tiles sharing cross-type 3D edges.
+            // Any two adjacent tiles of different types get the same block texture.
+            const ufP = new Int32Array(dimers.length);
+            for (let i = 0; i < dimers.length; i++) ufP[i] = i;
+            const ufF = (x) => { while (ufP[x] !== x) { ufP[x] = ufP[ufP[x]]; x = ufP[x]; } return x; };
+            const ufU = (a, b) => { a = ufF(a); b = ufF(b); if (a !== b) ufP[a] = b; };
+
+            const edgeToTiles = new Map();
             for (let di = 0; di < dimers.length; di++) {
                 const v = dimerV3D[di]; if (!v) continue;
-                for (const vv of v) {
-                    const k = `${vv.x},${vv.y},${vv.z}`;
-                    if (!v3dMap.has(k)) v3dMap.set(k, []);
-                    v3dMap.get(k).push(di);
+                for (let e = 0; e < 4; e++) {
+                    const a = v[e], b = v[(e+1)%4];
+                    const k1 = `${a.x},${a.y},${a.z}`, k2 = `${b.x},${b.y},${b.z}`;
+                    const ek = k1 < k2 ? `${k1}|${k2}` : `${k2}|${k1}`;
+                    if (!edgeToTiles.has(ek)) edgeToTiles.set(ek, []);
+                    edgeToTiles.get(ek).push(di);
+                }
+            }
+            for (const [, tiles] of edgeToTiles) {
+                if (tiles.length === 2 && dimers[tiles[0]].t !== dimers[tiles[1]].t) {
+                    ufU(tiles[0], tiles[1]);
                 }
             }
 
-            // Helper: do tiles di,dj share an edge emanating from vertex vKey?
-            const sharesEdgeAtV = (di, dj, vKey) => {
-                const vi = dimerV3D[di], vj = dimerV3D[dj];
-                let idxI = -1, idxJ = -1;
-                for (let i = 0; i < 4; i++) {
-                    if (`${vi[i].x},${vi[i].y},${vi[i].z}` === vKey) idxI = i;
-                    if (`${vj[i].x},${vj[i].y},${vj[i].z}` === vKey) idxJ = i;
-                }
-                if (idxI < 0 || idxJ < 0) return false;
-                const adjI = [vi[(idxI+3)%4], vi[(idxI+1)%4]];
-                const adjJ = [vj[(idxJ+3)%4], vj[(idxJ+1)%4]];
-                for (const a of adjI) for (const b of adjJ)
-                    if (a.x === b.x && a.y === b.y && a.z === b.z) return true;
-                return false;
-            };
-
-            // Find hex-face triples at tri-vertices using "bridge" approach:
-            // In 3D lozenge geometry, only 2 of 3 tile-type pairs share edges
-            // at the convex corner vertex. Try each type as bridge connecting
-            // the other two via shared edges.
-            const tileGroupId = new Int32Array(dimers.length).fill(-1);
-            let nextGrp = 0;
-
-            for (const [vKey, tiles] of v3dMap) {
-                const byType = [[], [], []];
-                for (const di of tiles) {
-                    if (tileGroupId[di] === -1) byType[dimers[di].t].push(di);
-                }
-                if (!byType[0].length || !byType[1].length || !byType[2].length) continue;
-
-                let found = false;
-                for (const bt of [0, 1, 2]) {
-                    if (found) break;
-                    const ot = [0, 1, 2].filter(t => t !== bt);
-                    for (const b of byType[bt]) {
-                        if (found || tileGroupId[b] !== -1) continue;
-                        let mA = -1, mC = -1;
-                        for (const a of byType[ot[0]]) {
-                            if (tileGroupId[a] === -1 && sharesEdgeAtV(a, b, vKey)) { mA = a; break; }
-                        }
-                        if (mA < 0) continue;
-                        for (const c of byType[ot[1]]) {
-                            if (tileGroupId[c] === -1 && sharesEdgeAtV(b, c, vKey)) { mC = c; break; }
-                        }
-                        if (mC < 0) continue;
-                        const g = nextGrp++;
-                        tileGroupId[mA] = g; tileGroupId[b] = g; tileGroupId[mC] = g;
-                        found = true;
-                    }
-                }
-            }
-            // Solo group IDs for ungrouped tiles (boundary / incomplete hexes)
-            for (let di = 0; di < dimers.length; di++) {
-                if (dimerV3D[di] && tileGroupId[di] === -1) tileGroupId[di] = nextGrp++;
-            }
-
-            // Assign texture per group
+            // Assign texture per group using spatial hash of representative's centroid
             const tileTexture = new Uint8Array(dimers.length);
             for (let di = 0; di < dimers.length; di++) {
-                if (!dimerV3D[di]) continue;
-                const g = tileGroupId[di];
-                let tex = texFromHash(hashInts(g, g * 73, g * 137));
-                if (tex === 1 && dimers[di].t === 2) tex = 2; // grass on top of dirt (type 2 = top face, same as lego studs)
+                const v = dimerV3D[di]; if (!v) continue;
+                const rep = ufF(di);
+                const rv = dimerV3D[rep];
+                const cx = Math.round((rv[0].x + rv[1].x + rv[2].x + rv[3].x) * 4);
+                const cy = Math.round((rv[0].y + rv[1].y + rv[2].y + rv[3].y) * 4);
+                const cz = Math.round((rv[0].z + rv[1].z + rv[2].z + rv[3].z) * 4);
+                let tex = texFromHash(hashInts(cx, cy, cz));
+                if (tex === 1 && dimers[di].t === 2) tex = 2; // grass on top of dirt (type 2 = top face)
                 tileTexture[di] = tex;
-            }
-
-            // DEBUG: grouping stats
-            {
-                const groups = new Map();
-                for (let di = 0; di < dimers.length; di++) {
-                    if (!dimerV3D[di]) continue;
-                    const g = tileGroupId[di];
-                    if (!groups.has(g)) groups.set(g, []);
-                    groups.get(g).push(di);
-                }
-                const sizeDist = {};
-                for (const [, m] of groups) { const s = m.length; sizeDist[s] = (sizeDist[s]||0) + 1; }
-                console.log(`[MC] ${groups.size} groups, size dist:`, sizeDist);
-                // Check what % of cross-type edges are within the same group
-                const edgeMap = new Map();
-                for (let di = 0; di < dimers.length; di++) {
-                    const v = dimerV3D[di]; if (!v) continue;
-                    for (let e = 0; e < 4; e++) {
-                        const a = v[e], b = v[(e+1)%4];
-                        const k1 = `${a.x},${a.y},${a.z}`, k2 = `${b.x},${b.y},${b.z}`;
-                        const ek = k1 < k2 ? `${k1}|${k2}` : `${k2}|${k1}`;
-                        if (!edgeMap.has(ek)) edgeMap.set(ek, []);
-                        edgeMap.get(ek).push(di);
-                    }
-                }
-                let crossEdges = 0, sameGroup = 0;
-                for (const [, tiles] of edgeMap) {
-                    if (tiles.length !== 2) continue;
-                    if (dimers[tiles[0]].t === dimers[tiles[1]].t) continue;
-                    crossEdges++;
-                    if (tileGroupId[tiles[0]] === tileGroupId[tiles[1]]) sameGroup++;
-                }
-                console.log(`[MC] Cross-type edges: ${crossEdges}, same group: ${sameGroup}/${crossEdges} (${crossEdges ? (100*sameGroup/crossEdges).toFixed(1) : 0}%)`);
             }
 
             // Build geometry
