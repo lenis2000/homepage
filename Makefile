@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy
+.PHONY: serve invalidate deploy autodeploy deploy-local
 
 serve:
 	bundle exec jekyll serve --incremental
@@ -41,3 +41,38 @@ autodeploy:
 	@git push
 	@$(MAKE) invalidate
 	@echo "Auto-deployment complete!"
+
+deploy-local:
+	@echo "Building Jekyll site..."
+	bundle exec jekyll build
+	@echo "Cleaning HTML files..."
+	@find _site -name "*.html" -type f | while read file; do \
+		grep -v '^[[:space:]]*$$' "$$file" > "$$file.tmp" && mv "$$file.tmp" "$$file"; \
+	done
+	@echo "Fetching CV PDFs..."
+	@rm -rf /tmp/homepage-cv /tmp/homepage-syllabi
+	@git clone --depth 1 https://github.com/lenis2000/CV.git /tmp/homepage-cv
+	@cp /tmp/homepage-cv/__petrovCV__.pdf _site/research/petrovCV.pdf
+	@cp /tmp/homepage-cv/__petrovCV__short.pdf _site/research/petrovCVbrief.pdf
+	@echo "Fetching Syllabi..."
+	@git clone --depth 1 https://github.com/lenis2000/Syllabi.git /tmp/homepage-syllabi
+	@cp /tmp/homepage-syllabi/Syllabus_2310_f16.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_3100_s17.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_3100_f18.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_7310_s19.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_7310_s20.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_3340_s20.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_3100_f20.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_3100_s22.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_3100_f22.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_3340_s23.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_3100_f23.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_2310_f24.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_EGMT_f25.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_EGMT_s26.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_EGMT_s26.html _site/teaching/
+	@rm -rf /tmp/homepage-cv /tmp/homepage-syllabi
+	@echo "Syncing to S3..."
+	aws s3 sync _site/ s3://lpetrov.cc --delete
+	@$(MAKE) invalidate
+	@echo "Local deploy complete!"
