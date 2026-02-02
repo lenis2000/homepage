@@ -8160,6 +8160,25 @@ function initLozengeApp() {
             console.warn('Could not load theme:', e);
         }
         reinitialize();
+
+        // Load and apply hole height from HOLE_HEIGHT.txt
+        try {
+            const holeHeightResponse = await fetch('/letters/HOLE_HEIGHT.txt');
+            if (holeHeightResponse.ok) {
+                const holeHeight = parseInt((await holeHeightResponse.text()).trim());
+                if (!isNaN(holeHeight) && holeHeight !== 0 && isValid) {
+                    const holeCount = sim.getHoleCount();
+                    for (let h = 0; h < holeCount; h++) {
+                        sim.adjustHoleWinding(h, holeHeight);
+                    }
+                    sim.refreshDimers();
+                    draw();
+                    updateHolesUI();
+                }
+            }
+        } catch (e) {
+            console.warn('Could not load hole height:', e);
+        }
     });
 
     // View toggle
