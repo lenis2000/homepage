@@ -3592,7 +3592,7 @@ function initLozengeApp() {
         // Special characters like * and *** don't need uppercasing
         const filename = (char.match(/^[a-zA-Z0-9]$/) ? char.toUpperCase() : char) + '.json';
         try {
-            const response = await fetch(`/letters/${filename}`);
+            const response = await fetch(`/letters/${filename}?v=${Date.now()}`);
             if (!response.ok) return new Map();
             const data = await response.json();
             if (!data.triangles) return new Map();
@@ -8144,7 +8144,7 @@ function initLozengeApp() {
         }
         // Load and apply theme from THEME.txt
         try {
-            const themeResponse = await fetch('/letters/THEME.txt');
+            const themeResponse = await fetch(`/letters/THEME.txt?v=${Date.now()}`);
             if (themeResponse.ok) {
                 const themeName = (await themeResponse.text()).trim();
                 const paletteIndex = renderer.colorPalettes.findIndex(p => p.name === themeName);
@@ -8163,7 +8163,7 @@ function initLozengeApp() {
 
         // Load and apply hole height from HOLE_HEIGHT.txt
         try {
-            const holeHeightResponse = await fetch('/letters/HOLE_HEIGHT.txt');
+            const holeHeightResponse = await fetch(`/letters/HOLE_HEIGHT.txt?v=${Date.now()}`);
             if (holeHeightResponse.ok) {
                 const holeHeight = parseInt((await holeHeightResponse.text()).trim());
                 if (!isNaN(holeHeight) && holeHeight !== 0 && isValid) {
