@@ -1,9 +1,9 @@
 <section class="slide slide-top" id="gff-fluctuations" data-title="GFF Fluctuations">
     <h2 class="slide-title">Height Fluctuations</h2>
 
-    <div style="display: grid; grid-template-columns: 30vw 62vw; gap: 2vw; margin-top: 2vh; padding: 0 2vw;">
+    <div style="display: grid; grid-template-columns: 42vw 50vw; gap: 2vw; margin-top: 1vh; padding: 0 1vw;">
         <!-- Left: text + references -->
-        <div style="display: flex; flex-direction: column; gap: 1.5vh;">
+        <div style="display: flex; flex-direction: column; gap: 1.2vh;">
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
                 <strong style="color: var(--slide-accent);">Gaussian Free Field</strong><br>
                 Like the Brownian bridge, but with <strong>two-dimensional time</strong>
@@ -15,10 +15,25 @@
                 </div>
             </div>
 
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+                <strong style="color: var(--slide-navy);">Covariance structure:</strong><br>
+                The complex coordinate \(u\colon\) liquid region \(\to\) upper half plane \(\mathbb{H}\) determines the correlations:
+                <div style="text-align: center; margin-top: 0.5vh; font-size: clamp(1.2rem, 2vw, 1.6rem);">
+                    \(\displaystyle \operatorname{Cov}(h(x_1), h(x_2)) \to -\frac{1}{2\pi^2} \ln\left|\frac{u(x_1)-u(x_2)}{u(x_1)-\bar u(x_2)}\right|\)
+                </div>
+                <div style="margin-top: 0.5vh;">
+                    = Green function on \(\mathbb{H}\), pulled back by \(u\)
+                </div>
+            </div>
+
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
-                <span style="color: var(--slide-muted);">[Kenyon 2001; Kenyon 2008]</span><br>
-                <span style="color: var(--slide-muted);">[Petrov 2014; Bufetov&ndash;Gorin 2018]</span><br>
-                <span style="color: var(--slide-muted);">[Borot&ndash;Gorin&ndash;Guionnet 2026]</span>
+                <strong style="color: var(--slide-accent);">Fluctuations</strong> of the height function are \(O(\sqrt{\log N})\). Correlations stay <strong style="color: var(--slide-accent);">bounded</strong> as \(N \to \infty\).
+                    <strong>Universal:</strong> same GFF for all simply-connected polygonal domains (<strong>open</strong>); needs discrete corrections for non-simply-connected situations.
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 0.8vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+                <span style="color: var(--slide-muted);">[Kenyon 2001], [Kenyon 2008],
+                [Petrov 2014], [Bufetov&ndash;Gorin 2018], [Borot&ndash;Gorin&ndash;Guionnet 2026]</span>
             </div>
         </div>
 

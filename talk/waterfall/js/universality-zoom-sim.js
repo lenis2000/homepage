@@ -218,15 +218,36 @@
             return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
         }
 
-        // Only zoom out/in for transitions 2→3 and 3→4 (idx 2 and 3)
-        const useZoomOutIn = idx >= 2;
+        // Zoom out/in for transitions 2→3; quick snap for 4 (back to full)
+        const useZoomOutIn = idx >= 2 && idx <= 3;
 
-        if (useZoomOutIn) {
+        if (idx === 4) {
+            // Last step: quick zoom back to full view
+            isAnimating = true;
+            const duration = 500;
+            function animateQuick() {
+                if (!camera || !controls) { isAnimating = false; return; }
+                const elapsed = performance.now() - startTime;
+                const t = Math.min(elapsed / duration, 1);
+                const ease = easeInOutCubic(t);
+                camera.position.x = startPos.x + (zp.pos.x - startPos.x) * ease;
+                camera.position.y = startPos.y + (zp.pos.y - startPos.y) * ease;
+                camera.position.z = startPos.z + (zp.pos.z - startPos.z) * ease;
+                controls.target.x = startTarget.x + (zp.target.x - startTarget.x) * ease;
+                controls.target.y = startTarget.y + (zp.target.y - startTarget.y) * ease;
+                controls.target.z = startTarget.z + (zp.target.z - startTarget.z) * ease;
+                camera.zoom = startZoom + (zp.zoom - startZoom) * ease;
+                camera.updateProjectionMatrix();
+                controls.update();
+                if (t < 1) { requestAnimationFrame(animateQuick); } else { isAnimating = false; }
+            }
+            animateQuick();
+        } else if (useZoomOutIn) {
             // Smooth animation: zoom out, move, then zoom in
             isAnimating = true;
-            const zoomOutDuration = 1200; // ms
-            const moveDuration = 1500; // ms
-            const zoomInDuration = 1200; // ms
+            const zoomOutDuration = 600; // ms
+            const moveDuration = 750; // ms
+            const zoomInDuration = 600; // ms
             const totalDuration = zoomOutDuration + moveDuration + zoomInDuration;
             const minZoom = 0.5; // Absolute zoom level (full view)
 

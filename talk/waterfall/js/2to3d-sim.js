@@ -757,11 +757,10 @@ function init2to3dHexagonSim() {
             clearMeshGroup();
             if (currentDimers.length === 0) return;
 
-            // Minecraft sky + fog
+            // Keep white background, no fog
             if (scene) {
-                const skyColor = new THREE.Color(0x87CEEB);
-                scene.background = skyColor;
-                scene.fog = new THREE.Fog(skyColor, 30, 80);
+                scene.background = new THREE.Color(0xffffff);
+                scene.fog = null;
             }
 
             // BFS heights

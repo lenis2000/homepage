@@ -43,15 +43,15 @@
     <!-- Question pane -->
     <div id="rpg-question" style="background: #fff3e0; border-left: 4px solid #E57200; padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left; margin-top: 1vh; opacity: 0; transition: opacity 0.3s;">
         <strong style="color: #E57200;">Question:</strong>
-        What does the histogram of the midpoint fluctuations resemble?
+        What are the fluctuations of the midpoint around the limit shape?
     </div>
 
     <!-- Answer pane with Brownian bridge -->
     <div id="rpg-answer" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left; margin-top: 1vh; opacity: 0; transition: opacity 0.3s; display: flex; align-items: center; gap: 2vw;">
         <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); flex: 1;">
             <strong style="color: var(--slide-accent);">Central Limit Theorem:</strong>
-            The midpoint distribution is the <strong>Bell curve</strong> (Gaussian).
-            The whole path minus the diagonal converges to <strong>Brownian bridge</strong>.
+            Midpoint fluctuations are <strong>Gaussian</strong> of order \(\sqrt{N}\).
+            The rescaled path converges to a <strong>Brownian bridge</strong>.
         </div>
         <div style="flex-shrink: 0;">
             <canvas id="rpg-bridge-canvas" width="400" height="200" style="height: 13vh; width: auto; border: 1px solid #ccc;"></canvas>
