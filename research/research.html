@@ -224,6 +224,54 @@ nav_weight: 2
 
     <br><br>
     <div class="col-12" id="arxivfeed"></div>
+
+    <br><br>
+    <div class="list-group-sm">
+    <div class="list-group-item h5" style="font-weight: bold;">Coauthors</div>
+    {% assign coauthor_entries = "" %}
+    {% for post in site.posts %}
+      {% if post.categories contains "paper" or post.categories contains "preprint" %}
+        {% for coa in post.coauthors %}
+          {% unless coa.name == "Leonid Petrov" %}
+            {% unless coauthor_entries contains coa.name %}
+              {% assign name_parts = coa.name | split: " " %}
+              {% assign last_name = name_parts | last %}
+              {% assign post_year = post.date | date: "%Y" %}
+              {% assign entry = last_name | append: "^" | append: coa.name | append: "^" | append: post_year %}
+              {% if coauthor_entries == "" %}
+                {% assign coauthor_entries = entry %}
+              {% else %}
+                {% assign coauthor_entries = coauthor_entries | append: "~" | append: entry %}
+              {% endif %}
+            {% endunless %}
+          {% endunless %}
+        {% endfor %}
+      {% endif %}
+    {% endfor %}
+    {% assign entry_list = coauthor_entries | split: "~" | sort %}
+    {% for entry in entry_list %}
+      {% assign entry_parts = entry | split: "^" %}
+      {% assign cname = entry_parts[1] %}
+      {% assign cyear = entry_parts[2] %}
+      {% assign coa_web = nil %}
+      {% assign coa_noweb = false %}
+      {% for post in site.posts %}
+        {% if coa_web or coa_noweb %}{% break %}{% endif %}
+        {% for coa in post.coauthors %}
+          {% if coa.name == cname %}
+            {% if coa.web %}
+              {% assign coa_web = coa.web %}
+              {% break %}
+            {% elsif coa.noweb %}
+              {% assign coa_noweb = true %}
+              {% break %}
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+      {% if coa_web %}<a class="list-group-item list-group-item-action" href="{{ coa_web }}">{{ cname }}&ensp;<small class="text-muted">(&le;{{ cyear }})</small></a>{% else %}<span class="list-group-item">{{ cname }}&ensp;<small class="text-muted">(&le;{{ cyear }})</small></span>{% endif %}
+    {% endfor %}
+    </div>
   </div>
 
 </div>

@@ -3,7 +3,7 @@ layout: post
 title: 'Integrable probability: From representation theory to Macdonald processes'
 coauthors:
   - name: Alexei Borodin
-    web: 'http://math.mit.edu/directory/profile.php?pid=1222'
+    web: 'https://math.mit.edu/directory/profile.html?pid=1222'
   - name: Leonid Petrov
 arXiv: 1310.8007 [math-ph]
 date: 2013-10-30 02:00:00

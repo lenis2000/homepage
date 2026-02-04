@@ -3,7 +3,7 @@ layout: post
 title: Universality of local statistics for noncolliding random walks
 coauthors:
   - name: Vadim Gorin
-    web: http://www.mccme.ru/~vadicgor/
+    web: https://www.stat.berkeley.edu/~vadicgor/
   - name: Leonid Petrov
 arXiv: 	1608.03243 [math.PR]
 date: 2016-08-10 02:00:00

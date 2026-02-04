@@ -3,7 +3,7 @@ layout: post
 title: Higher spin six vertex model and symmetric rational functions
 coauthors:
   - name: Alexei Borodin
-    web: http://math.mit.edu/directory/profile.php?pid=1222
+    web: https://math.mit.edu/directory/profile.html?pid=1222
   - name: Leonid Petrov
 arXiv: 1601.05770 [math.PR]
 date: 2016-01-21 02:00:00
