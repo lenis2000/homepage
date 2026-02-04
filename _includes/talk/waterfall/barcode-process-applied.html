@@ -29,24 +29,40 @@
     </div>
 
     <!-- Text panes -->
-    <div id="bpa-text-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1vw; margin-top: 1vh; padding: 0 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+    <div id="bpa-text-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1vw; margin-top: 1vh; padding: 0 1.5vw; font-size: clamp(1.1rem, 1.8vw, 1.4rem);">
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
             <strong style="color: var(--slide-accent);">Spectral analysis (nonrigorous):</strong>
-            <div style="margin-top: 0.3vh;">
-                Diagonalize via <em>q</em>-Racah eigenfunctions → <strong>density formula</strong> as a series.
-                Series <strong>diverges mildly</strong>: \(+c - c + c - c + \ldots\)
-            </div>
+            <ul style="margin: 0.3vh 0 0 0; padding-left: 1.2em; line-height: 1.5;">
+                <li>Put the <strong>physics hat</strong> on</li>
+                <li>Diagonalize the transversal operators via <em>q</em>-Racah eigenfunctions \(\mathcal{F}_n\)</li>
+                <li>Write <strong>barcode density</strong> as a series:
+                    <div style="text-align: center; margin: 0.3vh 0; font-size: clamp(1.2rem, 2vw, 1.6rem);">
+											\(\displaystyle \rho(t) = \sum_{n \in \frac{1}{2}\mathbb{Z}_{\geq 0}} \frac{(-q^{-n})\mathcal{F}_n(-\frac{t}{2})\mathcal{F}_n(1-\frac{t}{2})}{\|\mathcal{F}_n\|^2_{\ell^2(\mathbb{Z})}}\)
+                    </div>
+                </li>
+                <li>But... this series <strong>does not converge!</strong></li>
+                <li>Diverges "<strong>mildly</strong>": \(+c - c + c - c + \ldots\)</li>
+            </ul>
         </div>
 
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw;">
-            <strong style="color: var(--slide-navy);">Two-periodic barcode:</strong>
-            <div style="margin-top: 0.3vh;">
-                Two subsequential limits →
-                <strong style="color: var(--slide-accent);">\(\rho_0 \approx 0.56\)</strong>,
-                <strong style="color: var(--slide-navy);">\(\rho_1 \approx 0.44\)</strong>
-                (indep. of \(t\)).
-                Even/odd positions alternate — lattice checkerboard.
+        <div id="bpa-pane-right" style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 0.8vh 1.2vw; opacity: 0; transition: opacity 0.3s;">
+            <ul style="margin: 0.3vh 0 0 0; padding-left: 1.2em; line-height: 1.5;">
+							<li>So, we postulate that <strong>the 
+								sum "has two limits"!</strong>
+							</li>
+                <li>Two subsequential limits:</li>
+            </ul>
+            <div style="text-align: center; margin: 0.3vh 0; font-size: clamp(1.1rem, 1.8vw, 1.4rem);">
+                <strong style="color: var(--slide-accent);">\(\rho_0\)</strong> := lim (even partial sums) \(\approx 0.5611\)
             </div>
+            <div style="text-align: center; margin: 0.3vh 0; font-size: clamp(1.1rem, 1.8vw, 1.4rem);">
+                <strong style="color: var(--slide-navy);">\(\rho_1\)</strong> := lim (odd partial sums) \(\approx 0.4389\)
+            </div>
+            <ul style="margin: 0.3vh 0 0 0; padding-left: 1.2em; line-height: 1.5;">
+                <li>Both limits are <strong>independent of \(t\)</strong></li>
+								<li>\(\rho_0+\rho_1 = 1\) (global direction of the waterfall plane)</li>
+								<li>And indeed, the <strong style="color: var(--slide-navy);">barcode process is 2-periodic (!)</strong></li>
+            </ul>
         </div>
     </div>
 </section>

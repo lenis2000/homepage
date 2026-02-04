@@ -780,22 +780,26 @@
                     if (cameraAnimationId) { cancelAnimationFrame(cameraAnimationId); cameraAnimationId = null; }
                     if (zoomAnimationId) { cancelAnimationFrame(zoomAnimationId); zoomAnimationId = null; }
                 },
-                steps: 3,
+                steps: 4,
                 onStep(step) {
-                    // Step 1: zoom into barcode interface (sim 2 camera)
+                    // Step 1: zoom into barcode interface (sim 2 camera + 2D slice)
                     if (step === 1) animateZoomView1(true, 2500);
-                    // Step 2: rotate why-2-periodic to position 2
-                    if (step === 2) { animateCameraView2(cam2Pos1, cam2Pos2, 2000); updateButtons(2); }
-                    // Step 3: rotate why-2-periodic back to position 1
-                    if (step === 3) { animateCameraView2(cam2Pos2, cam2Pos1, 2000); updateButtons(1); }
+                    // Step 2: show right pane ("sum has two limits")
+                    if (step === 2) showElement('bpa-pane-right');
+                    // Step 3: rotate why-2-periodic to position 2
+                    if (step === 3) { animateCameraView2(cam2Pos1, cam2Pos2, 2000); updateButtons(2); }
+                    // Step 4: rotate why-2-periodic back to position 1
+                    if (step === 4) { animateCameraView2(cam2Pos2, cam2Pos1, 2000); updateButtons(1); }
                 },
                 onStepBack(step) {
-                    if (step < 1) { animateZoomView1(false, 2500); }
-                    if (step < 2) { setCameraImmediate(cam2Pos1); updateButtons(1); }
-                    if (step < 3) { setCameraImmediate(cam2Pos2); updateButtons(2); }
+                    if (step < 1) animateZoomView1(false, 2500);
+                    if (step < 2) hideElement('bpa-pane-right');
+                    if (step < 3) { setCameraImmediate(cam2Pos1); updateButtons(1); }
+                    if (step < 4) { setCameraImmediate(cam2Pos2); updateButtons(2); }
                 },
                 reset() {
                     slice2D.scale = 1; slice2D.offsetX = 0; slice2D.offsetY = 0;
+                    hideElement('bpa-pane-right');
                 },
                 onSlideEnter() {
                     // Create views

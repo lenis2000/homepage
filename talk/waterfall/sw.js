@@ -1,5 +1,5 @@
 // Service Worker for Waterfall Talk - Aggressive Precaching
-const CACHE_NAME = 'waterfall-talk-v4';
+const CACHE_NAME = 'waterfall-talk-v5';
 
 // All assets to precache
 const PRECACHE_ASSETS = [
@@ -73,6 +73,7 @@ const PRECACHE_ASSETS = [
   '/talk/waterfall/js/q-volume-sim.js',
   '/talk/waterfall/js/q-racah-measure-sim.js',
   '/talk/waterfall/js/q-racah-large-hexagons-sim.js',
+  '/talk/waterfall/js/computational-sim.js',
   '/talk/waterfall/js/dimensional-collapse-sim.js',
   '/talk/waterfall/js/qracah-ope-sim.js',
   '/talk/waterfall/js/spectral-projection-sim.js',

@@ -43,15 +43,10 @@ extreme chains (maximal and minimal).
             </div>
         </div>
 
-        <!-- Right column: Try it yourself + images -->
-        <div style="display: flex; flex-direction: column; gap: 2vh; align-items: center;">
-            <!-- Screenshot/demo image -->
-            <div style="position: relative;">
-                <img src="images/hexagon.png" alt="Sample lozenge tiling" style="height: 38vh; width: auto; border-radius: 8px; border: 1px solid #ccc;">
-                <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.3vh 0.6vw; border-radius: 3px; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold;">pre-sampled</div>
-            </div>
-
-
+        <!-- Right column: 3D simulation canvas -->
+        <div style="display: flex; flex-direction: column; gap: 1vh; align-items: center;">
+            <canvas id="comp-sim-canvas" width="1200" height="800" style="height: 52vh; width: auto; border-radius: 8px;"></canvas>
+            <div id="comp-sim-status" style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted); min-height: 1.5em;"></div>
         </div>
     </div>
 </section>
