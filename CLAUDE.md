@@ -172,6 +172,23 @@ simulations: simulations/YYYY-MM-DD-slug/    # optional
 - Comment out both the `{% include %}` and the `<script>` tag
 - Keep files intact so they can be re-enabled by uncommenting
 
+### Talk Variant File Naming
+- Variant-specific slides use a suffix: `-applied` (applied math colloquium), `-colloquium` (general colloquium), `-intro` (specialized/pure math talk)
+- Examples: `part3-applied.html`, `summary-colloquium.html`, `part3-intro.html`
+- Generic slides shared across all variants have no suffix (e.g., `q-volume.html`, `energy.html`)
+- Part intro slides for the applied variant: `part{N}-applied.html` with IDs `part{N}-applied`
+
+### Part Intro Slide Pattern
+- Style: `slide-center` class, Part number in large font + subtitle in uppercase muted color
+- For italic lowercase *q* inside uppercase headings: `<span style="text-transform: none; font-style: italic;">q</span>`
+- Template:
+  ```html
+  <section class="slide slide-center" id="partN-applied" data-title="Part N: Title">
+      <h2 style="font-size: clamp(3rem, 5vw, 5.5rem);">Part N</h2>
+      <h3 style="font-size: clamp(2rem, 3.5vw, 3.5rem); color: var(--slide-muted); text-transform: uppercase; letter-spacing: 0.05em;">Subtitle Here</h3>
+  </section>
+  ```
+
 ### Element ID Namespacing for Coexisting Slides
 - When two slides share similar content, prefix IDs to avoid DOM conflicts
 - Example: `#random-path` uses `local-view-canvas`, `#random-path-gaussian` uses `rpg-local-view-canvas`
