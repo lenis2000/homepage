@@ -4,6 +4,43 @@
 - For cpp compile, look at their preambles
 - Simulation-specific documentation is in `_simulations/CLAUDE.md`
 
+## Paper Posts & S3 Storage
+
+### Adding a New Paper
+1. Create `_posts/papers/YYYY-MM-DD-slug.md` with front matter (see existing posts for template)
+2. Upload PDF to S3: `aws s3 cp paper.pdf s3://lpetrov.cc.storage/papers/NN-slug.pdf`
+3. PDF naming: `{cv-number}-{slug}.pdf` (e.g., `50-colored-interlacing-genocchi.pdf`)
+4. Commit and push — GitHub Actions builds Jekyll and deploys site to `s3://lpetrov.cc` with CloudFront invalidation
+
+### Paper Post Front Matter Template
+```yaml
+layout: post
+title: "Paper Title"
+arXiv: YYMM.NNNNN [math.XX]
+coauthors:
+  - name: Coauthor Name
+    web: https://...       # optional, use 'noweb: true' if no website
+  - name: Leonid Petrov
+categories: blog math preprint   # use 'paper' once published
+journal-ref: ...                 # add when published
+journal-web: https://...         # DOI link
+image: __STORAGE_URL__/img/papers/image.png   # optional
+show-date: true
+pdf: NN-slug.pdf
+post-pdf: true
+pages: NN
+cv-number: NN
+published: true
+simulations: simulations/YYYY-MM-DD-slug/    # optional
+```
+
+### S3 Buckets
+- **Site**: `s3://lpetrov.cc` (deployed by GitHub Actions, don't push PDFs here)
+- **Storage**: `s3://lpetrov.cc.storage` — paper PDFs go to `papers/` prefix, served at `https://storage.lpetrov.cc`
+
+### Current Paper Count
+- Latest cv-number: 50 (as of Feb 2026)
+
 ## Talk Slides (waterfall talk)
 
 - Slides are in `_includes/talk/waterfall/*.html`
