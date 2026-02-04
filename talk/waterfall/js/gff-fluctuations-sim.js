@@ -41,6 +41,7 @@
             runCFTP: wasm.cwrap('runCFTP', 'number', []),
             exportDimers: wasm.cwrap('exportDimers', 'number', []),
             freeString: wasm.cwrap('freeString', null, ['number']),
+            seedRNG: typeof wasm._seedRNG === 'function' ? wasm.cwrap('seedRNG', null, ['number']) : null,
             getHoleCount: typeof wasm._getHoleCount === 'function' ? wasm.cwrap('getHoleCount', 'number', []) : null,
             adjustHoleWinding: typeof wasm._adjustHoleWinding === 'function' ? wasm.cwrap('adjustHoleWinding', 'number', ['number', 'number']) : null
         };
@@ -80,6 +81,16 @@
 
         inst1 = wrap(wasm1);
         inst2 = wrap(wasm2);
+
+        // Seed each instance with different time-based seeds
+        const now = Date.now();
+        if (inst1.seedRNG) {
+            inst1.seedRNG(now & 0xFFFFFFFF);
+            inst2.seedRNG((now + 999999) & 0xFFFFFFFF);
+            console.log('[GFF] Seeded RNGs:', now & 0xFFFFFFFF, (now + 999999) & 0xFFFFFFFF);
+        } else {
+            console.warn('[GFF] seedRNG not available in WASM build');
+        }
         return true;
     }
 
@@ -168,21 +179,15 @@
 
     // ---- GFF COMPUTATION ----
     function computeGFF() {
-        // Use SAME instance for both samples (RNG state advances between calls)
-        // Re-init shape before each CFTP to reset tiling state
-        console.log('[GFF] Running CFTP sample 1 (inst1)...');
+        console.log('[GFF] Running CFTP sample 1...');
         const t0 = performance.now();
-        initShape(inst1);
         const dimers1 = sampleDimers(inst1);
         console.log('[GFF] CFTP 1 done:', dimers1.length, 'dimers in', (performance.now() - t0).toFixed(0), 'ms');
-        console.log('[GFF] Sample 1 first 3 dimers:', JSON.stringify(dimers1.slice(0, 3)));
 
-        console.log('[GFF] Running CFTP sample 2 (inst1 again)...');
+        console.log('[GFF] Running CFTP sample 2...');
         const t1 = performance.now();
-        initShape(inst1);
-        const dimers2 = sampleDimers(inst1);
+        const dimers2 = sampleDimers(inst2);
         console.log('[GFF] CFTP 2 done:', dimers2.length, 'dimers in', (performance.now() - t1).toFixed(0), 'ms');
-        console.log('[GFF] Sample 2 first 3 dimers:', JSON.stringify(dimers2.slice(0, 3)));
 
         if (!meshGroup) return null;
 
@@ -195,42 +200,39 @@
         const ref1 = heights1.get(refKey) || 0;
         const ref2 = heights2.get(refKey) || 0;
 
+        // Store {z: centered height for mesh, diff: raw integer difference for color}
         const gff = new Map();
         let sum = 0, count = 0;
         for (const [key, h1] of heights1) {
             const h2 = heights2.has(key) ? heights2.get(key) : 0;
-            const g = ((h1 - ref1) - (h2 - ref2)) / Math.sqrt(2);
-            gff.set(key, g);
+            const diff = (h1 - ref1) - (h2 - ref2); // integer
+            const g = diff / Math.sqrt(2);
+            gff.set(key, { z: g, diff });
             sum += g;
             count++;
         }
 
         if (count > 0) {
             const mean = sum / count;
-            for (const [key, g] of gff) {
-                gff.set(key, g - mean);
+            for (const [key, v] of gff) {
+                v.z -= mean;
             }
         }
 
         let gMin = Infinity, gMax = -Infinity;
-        for (const g of gff.values()) {
-            if (g < gMin) gMin = g;
-            if (g > gMax) gMax = g;
+        for (const v of gff.values()) {
+            if (v.z < gMin) gMin = v.z;
+            if (v.z > gMax) gMax = v.z;
         }
         console.log('[GFF] GFF computed:', gff.size, 'vertices, range:', gMin.toFixed(3), 'to', gMax.toFixed(3));
         return gff;
     }
 
-    // ---- DIVERGING COLORMAP ----
-    function gffColor(h) {
-        const t = Math.tanh(h / 3);
-        if (t < 0) {
-            const s = -t;
-            return [0.85 + s * (0.2 - 0.85), 0.85 + s * (0.3 - 0.85), 0.85 + s * (0.8 - 0.85)];
-        } else {
-            const s = t;
-            return [0.85 + s * (0.8 - 0.85), 0.85 + s * (0.2 - 0.85), 0.85 + s * (0.2 - 0.85)];
-        }
+    // ---- DIVERGING COLORMAP: blue (negative) / gray (zero) / red (positive) ----
+    function gffColor(diff) {
+        if (diff === 0) return [0.7, 0.7, 0.7];
+        if (diff < 0) return [0.2, 0.3, 0.85];
+        return [0.85, 0.2, 0.2];
     }
 
     // ---- THREE.JS ----
@@ -348,9 +350,9 @@
         let minX = Infinity, maxX = -Infinity;
         let minY = Infinity, maxY = -Infinity;
         let minZ = Infinity, maxZ = -Infinity;
-        for (const [key, h] of gff) {
+        for (const [key, v] of gff) {
             const [n, j] = key.split(',').map(Number);
-            const x = n, y = slope * n + j * deltaC, z = h * Z_SCALE;
+            const x = n, y = slope * n + j * deltaC, z = v.z * Z_SCALE;
             if (x < minX) minX = x; if (x > maxX) maxX = x;
             if (y < minY) minY = y; if (y > maxY) maxY = y;
             if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
@@ -396,9 +398,9 @@
         const colors = [];
 
         function addVertex(n, j) {
-            const h = gff.get(`${n},${j}`);
-            positions.push(n, slope * n + j * deltaC, h * Z_SCALE);
-            const [r, g, b] = gffColor(h);
+            const v = gff.get(`${n},${j}`);
+            positions.push(n, slope * n + j * deltaC, v.z * Z_SCALE);
+            const [r, g, b] = gffColor(v.diff);
             colors.push(r, g, b);
         }
 
