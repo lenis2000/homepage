@@ -34,12 +34,9 @@ self.onmessage = async function(e) {
                 initFromTriangles: wasm.cwrap('initFromTriangles', 'number', ['number', 'number']),
                 runCFTP: wasm.cwrap('runCFTP', 'number', []),
                 exportDimers: wasm.cwrap('exportDimers', 'number', []),
-                freeString: wasm.cwrap('freeString', null, ['number'])
+                freeString: wasm.cwrap('freeString', null, ['number']),
+                performGlauberSteps: wasm.cwrap('performGlauberSteps', 'number', ['number'])
             };
-
-            if (typeof wasm._seedRNG === 'function') {
-                wasm.cwrap('seedRNG', null, ['number'])(msg.seed);
-            }
 
             const tris = new Int32Array(msg.triangles);
             const ptr = wasm._malloc(tris.length * 4);
@@ -49,6 +46,12 @@ self.onmessage = async function(e) {
             const initPtr = inst.initFromTriangles(ptr, tris.length);
             inst.freeString(initPtr);
             wasm._free(ptr);
+
+            // Advance RNG state for worker 2 so CFTP produces an independent sample
+            // (WASM uses hard-coded initial seed; Glauber steps advance xorshift state)
+            if (msg.workerIndex > 0) {
+                inst.performGlauberSteps(msg.workerIndex * 1000);
+            }
 
             if (typeof wasm._getHoleCount === 'function' && typeof wasm._adjustHoleWinding === 'function') {
                 const getHoleCount = wasm.cwrap('getHoleCount', 'number', []);

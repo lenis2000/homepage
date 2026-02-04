@@ -2,7 +2,7 @@
  * GFF Fluctuations: 3D surface from two independent lozenge tiling CFTP samples
  * GFF ≈ (h₁ - h₂) / √2
  * Uses Rotunda shape loaded from /letters/Rotunda.json
- * CFTP runs in parallel Web Workers (non-blocking, ~5s total)
+ * Runs two sequential CFTP samples using the already-loaded threaded LozengeModule
  */
 (function() {
     'use strict';
@@ -14,9 +14,7 @@
 
     // State
     let shapeTriangles = null;
-    let worker1 = null, worker2 = null;
     let sampleGeneration = 0;
-    let timerInterval = null;
     let scene = null, renderer = null, camera = null, controls = null, meshGroup = null;
     let animationId = null;
     let isRunning = false;
@@ -75,22 +73,40 @@
         }
     }
 
-    // ---- PRE-COMPILE WASM ----
-    async function ensureWasmModule() {
-        if (wasmModule) return true;
-        try {
-            const wasmUrl = '/talk/visual/sim/visual-lozenge.wasm';
-            try {
-                wasmModule = await WebAssembly.compileStreaming(fetch(wasmUrl));
-            } catch (e) {
-                const bytes = await fetch(wasmUrl).then(r => r.arrayBuffer());
-                wasmModule = await WebAssembly.compile(bytes);
-            }
-            return true;
-        } catch (e) {
-            console.error('[GFF] Failed to compile WASM:', e);
-            return false;
+    // ---- WASM INSTANCE HELPER ----
+    async function createWasmInstance() {
+        const wasm = await LozengeModule();
+        return {
+            wasm,
+            initFromTriangles: wasm.cwrap('initFromTriangles', 'number', ['number', 'number']),
+            runCFTP: wasm.cwrap('runCFTP', 'number', []),
+            exportDimers: wasm.cwrap('exportDimers', 'number', []),
+            freeString: wasm.cwrap('freeString', null, ['number']),
+            performGlauberSteps: wasm.cwrap('performGlauberSteps', 'number', ['number'])
+        };
+    }
+
+    function initTilingFromTriangles(inst) {
+        const ptr = inst.wasm._malloc(shapeTriangles.length * 4);
+        for (let i = 0; i < shapeTriangles.length; i++) {
+            inst.wasm.setValue(ptr + i * 4, shapeTriangles[i], 'i32');
         }
+        const initPtr = inst.initFromTriangles(ptr, shapeTriangles.length);
+        inst.freeString(initPtr);
+        inst.wasm._free(ptr);
+    }
+
+    function runCFTPAndExport(inst) {
+        inst.freeString(inst.runCFTP());
+        const dp = inst.exportDimers();
+        const json = inst.wasm.UTF8ToString(dp);
+        inst.freeString(dp);
+        return json;
+    }
+
+    // yield to browser for status updates
+    function yieldFrame() {
+        return new Promise(r => setTimeout(r, 0));
     }
 
     // ---- HEIGHT FUNCTION FROM DIMERS (BFS) ----
@@ -438,81 +454,41 @@
         drawBoundary(new Set(gff.keys()), 0);
     }
 
-    // ---- WORKER MANAGEMENT ----
-    function terminateWorkers() {
-        if (worker1) { worker1.terminate(); worker1 = null; }
-        if (worker2) { worker2.terminate(); worker2 = null; }
-        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-    }
-
-    function createWorker(seed) {
-        return new Promise((resolve, reject) => {
-            const w = new Worker('/talk/waterfall/js/gff-worker.js');
-            w.onerror = (e) => reject(e);
-            w.onmessage = (e) => {
-                if (e.data.type === 'ready') resolve({ worker: w, dimers: e.data.dimers });
-                else if (e.data.type === 'error') reject(new Error(e.data.message));
-            };
-            w.postMessage({
-                type: 'init',
-                wasmSrc: '/talk/visual/sim/visual-lozenge.js',
-                wasmBase: '/talk/visual/sim/',
-                module: wasmModule,
-                seed: seed & 0xFFFFFFFF,
-                triangles: Array.from(shapeTriangles)
-            });
-        });
-    }
-
-    function runWorkerCFTP(w) {
-        return new Promise((resolve, reject) => {
-            w.onmessage = (e) => {
-                if (e.data.type === 'sampled') resolve(e.data.dimers);
-                else if (e.data.type === 'error') reject(new Error(e.data.message));
-            };
-            w.postMessage({ type: 'sample' });
-        });
-    }
-
-    // ---- MAIN SAMPLING ----
+    // ---- MAIN SAMPLING (main thread, uses already-loaded threaded LozengeModule) ----
     async function doSample() {
         const gen = ++sampleGeneration;
-        terminateWorkers();
         samplingActive = true;
 
         showStatus('Loading...');
 
-        // Load shape + pre-compile WASM in parallel
-        const [shapeOk, wasmOk] = await Promise.all([loadShape(), ensureWasmModule()]);
-        if (!shapeOk || !wasmOk || gen !== sampleGeneration || !meshGroup) { samplingActive = false; hideStatus(); return; }
+        const shapeOk = await loadShape();
+        if (!shapeOk || gen !== sampleGeneration || !meshGroup) { samplingActive = false; hideStatus(); return; }
 
-        // Init two workers in parallel (pre-compiled module = fast instantiation)
+        // Create two independent WASM instances (uses threaded LozengeModule from index.html)
         showStatus('Initializing...');
-        const now = Date.now();
-        let res1, res2;
+        let inst1, inst2;
         try {
-            [res1, res2] = await Promise.all([
-                createWorker(now),
-                createWorker(now + 999999)
-            ]);
+            [inst1, inst2] = await Promise.all([createWasmInstance(), createWasmInstance()]);
         } catch (e) {
-            console.error('[GFF] Worker init failed:', e);
+            console.error('[GFF] WASM init failed:', e);
             samplingActive = false; hideStatus();
             return;
         }
+        if (gen !== sampleGeneration || !meshGroup) { samplingActive = false; hideStatus(); return; }
 
-        if (gen !== sampleGeneration || !meshGroup) {
-            res1.worker.terminate();
-            res2.worker.terminate();
-            samplingActive = false; hideStatus();
-            return;
-        }
+        // Initialize both from the same triangles
+        initTilingFromTriangles(inst1);
+        initTilingFromTriangles(inst2);
 
-        worker1 = res1.worker;
-        worker2 = res2.worker;
+        // Advance RNG on instance 2 so it produces a different CFTP sample
+        // (WASM uses hard-coded initial xorshift seed; Glauber steps advance the state)
+        inst2.performGlauberSteps(1000);
 
-        // Draw boundary from initial dimers (before CFTP)
-        const initDimers = JSON.parse(res1.dimers).dimers || [];
+        // Get initial dimers for boundary (before CFTP)
+        const dp0 = inst1.exportDimers();
+        const initDimersJson = inst1.wasm.UTF8ToString(dp0);
+        inst1.freeString(dp0);
+        const initDimers = JSON.parse(initDimersJson).dimers || [];
         const verts = new Set();
         for (const d of initDimers) {
             for (const [n, j] of getVertexKeys(d)) verts.add(n + ',' + j);
@@ -521,36 +497,29 @@
         centerCameraFlat(verts);
         if (renderer) renderer.render(scene, camera);
 
-        // Run CFTP on both workers in parallel (non-blocking!)
+        // Run CFTP 1
         const t0 = performance.now();
-        let done1 = false, done2 = false;
+        showStatus('Sampling (1/2)...');
+        await yieldFrame();
+        if (gen !== sampleGeneration || !meshGroup) { samplingActive = false; hideStatus(); return; }
 
-        timerInterval = setInterval(() => {
-            const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
-            const count = (done1 ? 1 : 0) + (done2 ? 1 : 0);
-            showStatus('Sampling (' + count + '/2)... ' + elapsed + 's');
-        }, 200);
-        showStatus('Sampling (0/2)...');
+        const json1 = runCFTPAndExport(inst1);
+        const t1 = performance.now();
+        console.log('[GFF] CFTP 1 took ' + ((t1 - t0) / 1000).toFixed(1) + 's');
 
-        let json1, json2;
-        try {
-            const p1 = runWorkerCFTP(worker1).then(d => { done1 = true; return d; });
-            const p2 = runWorkerCFTP(worker2).then(d => { done2 = true; return d; });
-            [json1, json2] = await Promise.all([p1, p2]);
-        } catch (e) {
-            clearInterval(timerInterval); timerInterval = null;
-            console.error('[GFF] CFTP failed:', e);
-            samplingActive = false; hideStatus();
-            return;
-        }
+        // Run CFTP 2
+        showStatus('Sampling (2/2)...');
+        await yieldFrame();
+        if (gen !== sampleGeneration || !meshGroup) { samplingActive = false; hideStatus(); return; }
 
-        clearInterval(timerInterval); timerInterval = null;
-        const tTotal = ((performance.now() - t0) / 1000).toFixed(1);
-        console.log('[GFF] Sampling took ' + tTotal + 's');
+        const json2 = runCFTPAndExport(inst2);
+        const t2 = performance.now();
+        console.log('[GFF] CFTP 2 took ' + ((t2 - t1) / 1000).toFixed(1) + 's');
+        console.log('[GFF] Total sampling: ' + ((t2 - t0) / 1000).toFixed(1) + 's');
 
         if (gen !== sampleGeneration || !meshGroup) { samplingActive = false; hideStatus(); return; }
 
-        // Compute GFF on main thread
+        // Compute GFF = (h1 - h2) / sqrt(2)
         const dimers1 = JSON.parse(json1).dimers || [];
         const dimers2 = JSON.parse(json2).dimers || [];
         const heights1 = computeHeights(dimers1);
@@ -602,7 +571,6 @@
                 onSlideLeave() {
                     sampleGeneration++;
                     samplingActive = false;
-                    terminateWorkers();
                     stopAnimation();
                     disposeThreeJS();
                 },
