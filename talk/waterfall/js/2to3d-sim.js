@@ -267,8 +267,13 @@ function init2to3dHexagonSim() {
             controls.update();
         }
 
+        function clearFog() {
+            if (scene) { scene.background = new THREE.Color(0xffffff); scene.fog = null; }
+        }
+
         function buildGeometry() {
             if (!meshGroup) return;
+            clearFog();
 
             while (meshGroup.children.length > 0) {
                 const child = meshGroup.children[0];
@@ -389,6 +394,7 @@ function init2to3dHexagonSim() {
         function buildLegoGeometry() {
             if (!meshGroup) return;
             clearMeshGroup();
+            clearFog();
             if (currentDimers.length === 0) return;
 
             // BFS height computation
@@ -750,6 +756,13 @@ function init2to3dHexagonSim() {
             if (!meshGroup) return;
             clearMeshGroup();
             if (currentDimers.length === 0) return;
+
+            // Minecraft sky + fog
+            if (scene) {
+                const skyColor = new THREE.Color(0x87CEEB);
+                scene.background = skyColor;
+                scene.fog = new THREE.Fog(skyColor, 30, 80);
+            }
 
             // BFS heights
             const vertexToDimers = new Map();

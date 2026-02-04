@@ -1,0 +1,24 @@
+<section class="slide slide-top" id="gff-fluctuations" data-title="GFF Fluctuations">
+    <h2 class="slide-title">Height Fluctuations</h2>
+
+    <div style="display: grid; grid-template-columns: 30vw 62vw; gap: 2vw; margin-top: 2vh; padding: 0 2vw;">
+        <!-- Left: text pane (hidden initially, revealed on step 1) -->
+        <div>
+            <div id="gff-text-pane" style="opacity: 0; transition: opacity 0.3s; background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+                <strong style="color: var(--slide-accent);">Gaussian Free Field</strong><br>
+                Height fluctuations converge to the <strong>GFF</strong>:
+                <div style="text-align: center; margin-top: 1vh; font-size: clamp(1.5rem, 2.5vw, 2rem);">
+                    \(\displaystyle \text{GFF} \approx \frac{h_1 - h_2}{\sqrt{2}}\)
+                </div>
+                <div style="margin-top: 0.5vh;">
+                    where \(h_1, h_2\) are two independent uniform lozenge tilings
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: 3D canvas -->
+        <div style="display: flex; align-items: center; justify-content: center;">
+            <canvas id="gff-canvas" width="1200" height="900" style="height: 60vh; width: auto;"></canvas>
+        </div>
+    </div>
+</section>

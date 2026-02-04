@@ -645,6 +645,7 @@ function initLimitShapeSim() {
                             startAutoRotate();
                             if (panelsEl) panelsEl.style.opacity = '0';
                             if (imagePanelEl) imagePanelEl.style.opacity = '0';
+
                         } else if (step === 4) {
                             if (panelsEl) panelsEl.style.opacity = '0';
                             if (imagePanelEl) imagePanelEl.style.opacity = '0';
