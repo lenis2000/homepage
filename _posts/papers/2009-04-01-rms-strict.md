@@ -11,6 +11,7 @@ published: true
 more-text: Full abstract
 show-date: true
 journal-ref: Russian Mathematical Surveys 64 (2009), no. 6, 1139-1141
+journal-year: 2009
 no-abstract: true
 pdf: 03-limit_behavior_of.pdf
 #image: __STORAGE_URL__/img/papers/

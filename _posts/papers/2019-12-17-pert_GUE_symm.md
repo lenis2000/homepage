@@ -11,6 +11,7 @@ categories: blog math paper
 published: true
 journal-ref: Journal of Statistical Physics, 181 (2020), 1996-2010
 journal-web: https://doi.org/10.1007/s10955-020-02652-7
+journal-year: 2020
 # more-text:
 image: __STORAGE_URL__/img/papers/pert_Dyson.png
 image-alt: Perturbed Dyson Brownian motion - eigenvalue dynamics of a 6x6 matrix of Brownian motions, with no drift off the diagonal, and an arithmetic progression of drifts on the diagonal

@@ -9,6 +9,7 @@ coauthors:
   - name: Leonid Petrov
 journal-ref: Electronic Journal of Probability, vol. 25 (2020), paper no. 114
 journal-web: https://doi.org/10.1214/20-EJP517
+journal-year: 2020
 # more-text:
 image: __STORAGE_URL__/img/papers/pushTASEP.png
 image-alt: Limit shapes in inhomogeneous PushTASEP

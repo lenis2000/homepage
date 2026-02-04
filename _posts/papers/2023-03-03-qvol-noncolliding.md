@@ -11,6 +11,7 @@ categories: blog math paper
 published: true
 journal-ref: "J. Phys. A: Math. Theor. 56 365203"
 journal-web: https://iopscience.iop.org/article/10.1088/1751-8121/acedda
+journal-year: 2023
 # more-text:
 image: __STORAGE_URL__/img/papers/qvol_noncoll.png
 image-alt: Limit shapes of the noncolliding q-exchangeable random walks

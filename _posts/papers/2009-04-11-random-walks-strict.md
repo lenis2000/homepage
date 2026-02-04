@@ -12,6 +12,7 @@ more-text: Full abstract
 show-date: true
 journal-ref: Journal of Mathematical Sciences 168 (2010), no. 3, 437-463
 journal-web:
+journal-year: 2010
 pdf: 04-random_walks_on.pdf
 pages: 27
 cv-number: 4

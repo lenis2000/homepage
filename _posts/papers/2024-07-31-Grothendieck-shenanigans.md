@@ -15,6 +15,7 @@ categories: blog math paper
 journal-ref: Advances in Mathematics, 480 (2025), Part C, 110510.
 journal-web: https://www.sciencedirect.com/science/article/pii/S0001870825004086
 journal-ref-extra: FPSAC 2025 poster
+journal-year: 2025
 published: true
 image: __STORAGE_URL__/img/papers/grothendieck-shenanigans.png
 image-alt: Reduction of a pipe dream leading to the permutation w(D) = 241653.

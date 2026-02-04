@@ -11,6 +11,7 @@ categories: blog math paper
 published: true
 journal-ref: Probability Theory and Related Fields, 182, pages 481-530 (2022)
 journal-web: https://doi.org/10.1007/s00440-021-01074-0
+journal-year: 2022
 # more-text:
 image: __STORAGE_URL__/img/papers/multi_BHP.png
 image-alt: Multitime distribution in the backwards Hammersley-type process

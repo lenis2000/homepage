@@ -12,6 +12,7 @@ more-text: Full abstract
 show-date: true
 journal-ref: Moscow Mathematical Journal, 14 (2014) no. 1, 121-160
 journal-web: http://www.mathjournals.org/mmj/2014-014-001/2014-014-001-006.html
+journal-year: 2014
 pdf: 11-the_boundary_of.pdf
 pages: 36
 cv-number: 11

@@ -10,6 +10,7 @@ comments: false
 categories: blog math paper
 journal-ref: Forum Math. Sigma 14 (2026), e15
 journal-web: https://doi.org/10.1017/fms.2025.10165
+journal-year: 2026
 image: __STORAGE_URL__/img/papers/YF.png
 image-alt: The Young-Fibonacci lattice and cotransition weights defined by an arbitrary harmonic function
 show-date: true

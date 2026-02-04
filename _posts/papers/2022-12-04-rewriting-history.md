@@ -11,6 +11,7 @@ categories: blog math paper
 published: true
 journal-ref: Commun. Math. Phys., 405 (300), 2024
 journal-web: https://link.springer.com/article/10.1007/s00220-024-05189-y
+journal-year: 2024
 # more-text:
 image: __STORAGE_URL__/img/papers/rewriting-2-cars.png
 image-alt: |

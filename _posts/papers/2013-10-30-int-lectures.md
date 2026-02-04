@@ -14,6 +14,7 @@ more-text: Full abstract
 show-date: true
 journal-ref: Probability Surveys, 11 (2014), 1-58
 journal-web: 'http://www.i-journals.org/ps/viewarticle.php?id=225&layout=abstract'
+journal-year: 2014
 image: __STORAGE_URL__/research_files/img/discr.png
 image-alt: Large scale and long time behavior of a jumping interacting particle system
 pdf: 15-integrable_probability_from.pdf

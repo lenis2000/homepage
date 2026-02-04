@@ -11,6 +11,7 @@ categories: blog math paper
 published: true
 journal-ref: Selecta Math. (2024), Volume 30, article 56
 journal-web: https://link.springer.com/article/10.1007/s00029-024-00945-3
+journal-year: 2024
 # more-text:
 image: __STORAGE_URL__/img/papers/Grothendieck.png
 image-alt: Limit shapes of 2d Schur processes and the corresponding Grothendieck random partitions

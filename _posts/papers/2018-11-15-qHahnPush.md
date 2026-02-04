@@ -13,6 +13,7 @@ categories: blog math paper
 published: true
 journal-ref: International Mathematics Research Notices (2019),  rnz106
 journal-web: https://doi.org/10.1093/imrn/rnz106
+journal-year: 2019
 # more-text:
 image: __STORAGE_URL__/img/papers/qHahnPush.png
 image-alt: The q-Hahn PushTASEP

@@ -229,10 +229,14 @@ nav_weight: 2
     <div class="list-group-sm">
     <div class="list-group-item h5" style="font-weight: bold;">Coauthors</div>
     {% assign coauthor_entries = "" %}
+    {% assign solo_count = 0 %}
+    {% assign solo_journal_year = 0 %}
     {% for post in site.posts %}
       {% if post.categories contains "paper" or post.categories contains "preprint" %}
+        {% assign has_coauthor = false %}
         {% for coa in post.coauthors %}
           {% unless coa.name == "Leonid Petrov" %}
+            {% assign has_coauthor = true %}
             {% unless coauthor_entries contains coa.name %}
               {% assign name_parts = coa.name | split: " " %}
               {% assign last_name = name_parts | last %}
@@ -246,31 +250,47 @@ nav_weight: 2
             {% endunless %}
           {% endunless %}
         {% endfor %}
-      {% endif %}
-    {% endfor %}
-    {% assign entry_list = coauthor_entries | split: "~" | sort %}
-    {% for entry in entry_list %}
-      {% assign entry_parts = entry | split: "^" %}
-      {% assign cname = entry_parts[1] %}
-      {% assign cyear = entry_parts[2] %}
-      {% assign coa_web = nil %}
-      {% assign coa_noweb = false %}
-      {% for post in site.posts %}
-        {% if coa_web or coa_noweb %}{% break %}{% endif %}
-        {% for coa in post.coauthors %}
-          {% if coa.name == cname %}
-            {% if coa.web %}
-              {% assign coa_web = coa.web %}
-              {% break %}
-            {% elsif coa.noweb %}
-              {% assign coa_noweb = true %}
-              {% break %}
+        {% unless has_coauthor %}
+          {% assign solo_count = solo_count | plus: 1 %}
+          {% if post.journal-year %}
+            {% if solo_journal_year == 0 %}
+              {% assign solo_journal_year = post.journal-year %}
             {% endif %}
           {% endif %}
-        {% endfor %}
-      {% endfor %}
-      {% if coa_web %}<a class="list-group-item list-group-item-action" href="{{ coa_web }}">{{ cname }}&ensp;<small class="text-muted">(&le;{{ cyear }})</small></a>{% else %}<span class="list-group-item">{{ cname }}&ensp;<small class="text-muted">(&le;{{ cyear }})</small></span>{% endif %}
+        {% endunless %}
+      {% endif %}
     {% endfor %}
+    {%- assign entry_list = coauthor_entries | split: "~" | sort -%}
+    {%- for entry in entry_list -%}
+      {%- assign entry_parts = entry | split: "^" -%}
+      {%- assign cname = entry_parts[1] -%}
+      {%- assign cyear = entry_parts[2] -%}
+      {%- assign coa_web = nil -%}
+      {%- assign coa_noweb = false -%}
+      {%- assign coa_count = 0 -%}
+      {%- assign coa_jyear = 0 -%}
+      {%- for post in site.posts -%}
+        {%- if post.categories contains "paper" or post.categories contains "preprint" -%}
+          {%- for coa in post.coauthors -%}
+            {%- if coa.name == cname -%}
+              {%- assign coa_count = coa_count | plus: 1 -%}
+              {%- if coa.web and coa_web == nil -%}
+                {%- assign coa_web = coa.web -%}
+              {%- endif -%}
+              {%- if coa.noweb and coa_noweb == false and coa_web == nil -%}
+                {%- assign coa_noweb = true -%}
+              {%- endif -%}
+              {%- if post.journal-year and coa_jyear == 0 -%}
+                {%- assign coa_jyear = post.journal-year -%}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- if coa_jyear != 0 -%}{%- assign coa_display_year = coa_jyear -%}{%- else -%}{%- assign coa_display_year = cyear -%}{%- endif -%}
+      {%- if coa_web -%}<a class="list-group-item list-group-item-action" href="{{ coa_web }}"><small class="text-muted">[{{ coa_count }}]</small>&nbsp;{{ cname }}&ensp;<small class="text-muted">(&le;{{ coa_display_year }})</small></a>{%- else -%}<span class="list-group-item"><small class="text-muted">[{{ coa_count }}]</small>&nbsp;{{ cname }}&ensp;<small class="text-muted">(&le;{{ coa_display_year }})</small></span>{%- endif -%}
+    {%- endfor %}
+    <span class="list-group-item"><small class="text-muted">[{{ solo_count }}]</small>&nbsp;<b>Solo</b>&ensp;<small class="text-muted">{%- if solo_journal_year != 0 -%}(&le;{{ solo_journal_year }}){%- endif -%}</small></span>
     </div>
   </div>
 

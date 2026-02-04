@@ -12,6 +12,7 @@ comments: false
 categories: blog math preprint
 # journal-ref: submitted to ??? (AOP? CMP second choice?)
 # journal-web:
+# journal-year:
 image: __STORAGE_URL__/img/papers/300_uniform.jpg
 image-alt: A random domino tiling of the Aztec diamond of size 300 with i.i.d. continuous uniform random weights on [0,2]
 show-date: true
