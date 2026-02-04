@@ -33,16 +33,78 @@
     let wasmInitPromise = null;
 
     // Generate regular hexagonal region of side length a
-    // Triangles: type 1 = black (up), type 2 = white (down)
+    // Uses same coordinate system as ultimate-lozenge: getVertex(n,j) = {x: n, y: n/√3 + j*2/√3}
+    // Type 1 = black (right-facing): vertices (n,j), (n,j-1), (n+1,j-1)
+    // Type 2 = white (left-facing): vertices (n,j), (n+1,j), (n+1,j-1)
     const HEX_SIDE = 30;  // 2700 dimers, 5400 triangles
 
     function generateHexagonTriangles(a) {
+        const slope = 1 / Math.sqrt(3);
+        const deltaC = 2 / Math.sqrt(3);
+
+        function getVertex(n, j) {
+            return { x: n, y: slope * n + j * deltaC };
+        }
+
+        function getRightCentroid(n, j) {
+            const v1 = getVertex(n, j), v2 = getVertex(n, j - 1), v3 = getVertex(n + 1, j - 1);
+            return { x: (v1.x + v2.x + v3.x) / 3, y: (v1.y + v2.y + v3.y) / 3 };
+        }
+
+        function getLeftCentroid(n, j) {
+            const v1 = getVertex(n, j), v2 = getVertex(n + 1, j), v3 = getVertex(n + 1, j - 1);
+            return { x: (v1.x + v2.x + v3.x) / 3, y: (v1.y + v2.y + v3.y) / 3 };
+        }
+
+        // Build hexagonal boundary polygon: sides a,a,a,a,a,a with 6 directions
+        const directions = [[1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1]];
+        const boundary = [];
+        let bn = 0, bj = 0;
+        for (let dir = 0; dir < 6; dir++) {
+            const [dn, dj] = directions[dir];
+            for (let step = 0; step < a; step++) {
+                boundary.push(getVertex(bn, bj));
+                bn += dn;
+                bj += dj;
+            }
+        }
+
+        // Point-in-polygon (ray casting)
+        function pointInPolygon(px, py, poly) {
+            let inside = false;
+            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                const xi = poly[i].x, yi = poly[i].y;
+                const xj = poly[j].x, yj = poly[j].y;
+                if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        }
+
+        // Find bounding box in (n, j) space
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const v of boundary) {
+            minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+            minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+        }
+        const searchMinN = Math.floor(minX) - 2;
+        const searchMaxN = Math.ceil(maxX) + 2;
+        const nRange = searchMaxN - searchMinN;
+        const searchMinJ = Math.floor(minY / deltaC) - nRange - 5;
+        const searchMaxJ = Math.ceil(maxY / deltaC) + nRange + 5;
+
+        // Enumerate triangles via centroid point-in-polygon test
         const triangles = [];
-        for (let n = 0; n < 2 * a; n++) {
-            for (let j = 0; j < 2 * a; j++) {
-                if (n + j >= a && n + j < 3 * a) {
-                    triangles.push(n, j, 1);  // black
-                    triangles.push(n, j, 2);  // white
+        for (let n = searchMinN; n <= searchMaxN; n++) {
+            for (let j = searchMinJ; j <= searchMaxJ; j++) {
+                const rc = getRightCentroid(n, j);
+                if (pointInPolygon(rc.x, rc.y, boundary)) {
+                    triangles.push(n, j, 1);
+                }
+                const lc = getLeftCentroid(n, j);
+                if (pointInPolygon(lc.x, lc.y, boundary)) {
+                    triangles.push(n, j, 2);
                 }
             }
         }
