@@ -178,8 +178,13 @@
     // Initial draw
     drawPaths();
 
-    // No steps needed - everything visible on load
-    // Register with slideEngine just for slide enter/leave hooks
+    function setValues(a, b) {
+        inputA.value = a;
+        inputB.value = b;
+        drawPaths();
+    }
+
+    // Register with slideEngine
     function waitForSlideEngine() {
         if (!window.slideEngine) {
             setTimeout(waitForSlideEngine, 50);
@@ -188,10 +193,19 @@
         window.slideEngine.registerSimulation('grid-paths', {
             start() {},
             pause() {},
+            steps: 1,
+            onStep(step) {
+                if (step === 1) {
+                    setValues(4, 3);
+                }
+            },
+            onStepBack(step) {
+                if (step === 0) {
+                    setValues(2, 2);
+                }
+            },
             onSlideEnter() {
-                inputA.value = 4;
-                inputB.value = 3;
-                drawPaths();
+                setValues(2, 2);
             }
         }, 0);
     }

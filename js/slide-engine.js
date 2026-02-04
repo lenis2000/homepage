@@ -481,11 +481,6 @@ class SlideEngine {
 
         // Determine navigation direction if not explicitly set
         let direction = opts.direction;
-        if (direction === 'jump') {
-            // Auto-detect based on index change
-            if (index === prevIndex + 1) direction = 'forward';
-            else if (index === prevIndex - 1) direction = 'backward';
-        }
 
         // Get saved state for this slide
         const savedState = this.slideHistory.get(nextSlide.id) || { fragment: 0, simStep: 0 };
@@ -800,6 +795,12 @@ class SlideEngine {
                         this.goTo(this.slides.length - 1);
                         return;
                     }
+                    // Option/Alt+Right = jump to next slide (always start at first build)
+                    if (e.altKey) {
+                        e.preventDefault();
+                        this.goTo(this.current + 1, { direction: 'jump' });
+                        return;
+                    }
                     e.preventDefault();
                     this.next();
                     break;
@@ -814,6 +815,12 @@ class SlideEngine {
                     if (e.metaKey) {
                         e.preventDefault();
                         this.goTo(0);
+                        return;
+                    }
+                    // Option/Alt+Left = jump to previous slide (always start at first build)
+                    if (e.altKey) {
+                        e.preventDefault();
+                        this.goTo(this.current - 1, { direction: 'jump' });
                         return;
                     }
                     e.preventDefault();

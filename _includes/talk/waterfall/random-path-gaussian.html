@@ -1,0 +1,60 @@
+<section class="slide slide-top" id="random-path-gaussian" data-title="Gaussian Fluctuations">
+    <h2 class="slide-title">Random path: local and global structure</h2>
+
+    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
+        <!-- Left: Full path with highlighted region -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 0.5vh;">
+                Random path in <span id="rpg-path-size">100 × 60</span> grid <span style="color: var(--slide-muted);">(click to resample)</span>
+            </div>
+            <canvas id="rpg-main-canvas" width="1000" height="600" style="height: 42vh; width: auto; cursor: pointer;"></canvas>
+        </div>
+        <!-- Right: Local view (phase 1) / Histogram (phase 2) -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <!-- Local zoom view (visible during steps 3-6) -->
+            <div id="rpg-local-view-container">
+                <div id="rpg-local-view-title" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 0.5vh; opacity: 0; transition: opacity 0.3s;">
+                    Zoomed in: local segment
+                </div>
+                <canvas id="rpg-local-view-canvas" width="600" height="500" style="height: 35vh; width: auto; opacity: 0; transition: opacity 0.3s;"></canvas>
+            </div>
+            <!-- Histogram (visible during steps 7+) -->
+            <div id="rpg-histogram-container" style="display: none; flex-direction: column; align-items: center;">
+                <canvas id="rpg-histogram-canvas" width="800" height="600" style="height: 38vh; width: auto;"></canvas>
+                <div id="rpg-histogram-stats" style="margin-top: 0.3vh; font-size: clamp(1rem, 1.8vw, 1.4rem); color: var(--slide-muted);">
+                    <span id="rpg-histogram-count">0</span> samples
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bernoulli explanation -->
+    <div id="rpg-bernoulli-explanation" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left; margin-top: 1.5vh; opacity: 0; transition: opacity 0.3s;">
+        <strong style="color: var(--slide-accent);">Local structure is IID Bernoulli:</strong>
+        At each step, choose <span style="color: #E57200; font-weight: bold;">R</span> with prob. \(\frac{a}{a+b}\), <span style="color: #232D4B; font-weight: bold;">U</span> with prob. \(\frac{b}{a+b}\) — independent trials!
+    </div>
+
+    <!-- LLN / Global observation -->
+    <div id="rpg-global-observation" style="background: #f5f5f5; border-left: 4px solid #232D4B; padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left; margin-top: 1vh; opacity: 0; transition: opacity 0.3s;">
+        <strong style="color: #232D4B;">Law of Large Numbers:</strong>
+        Path follows the <strong>diagonal</strong> — this is the <strong>limit shape</strong> phenomenon. What are the fluctuations?
+    </div>
+
+    <!-- Question pane -->
+    <div id="rpg-question" style="background: #fff3e0; border-left: 4px solid #E57200; padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left; margin-top: 1vh; opacity: 0; transition: opacity 0.3s;">
+        <strong style="color: #E57200;">Question:</strong>
+        What does the histogram of the midpoint fluctuations resemble?
+    </div>
+
+    <!-- Answer pane with Brownian bridge -->
+    <div id="rpg-answer" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left; margin-top: 1vh; opacity: 0; transition: opacity 0.3s; display: flex; align-items: center; gap: 2vw;">
+        <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); flex: 1;">
+            <strong style="color: var(--slide-accent);">Central Limit Theorem:</strong>
+            The midpoint distribution is the <strong>Bell curve</strong> (Gaussian).
+            The whole path minus the diagonal converges to <strong>Brownian bridge</strong>.
+        </div>
+        <div style="flex-shrink: 0;">
+            <canvas id="rpg-bridge-canvas" width="400" height="200" style="height: 13vh; width: auto; border: 1px solid #ccc;"></canvas>
+        </div>
+    </div>
+</section>

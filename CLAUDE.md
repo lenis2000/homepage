@@ -103,7 +103,44 @@
   - Unna font: `/fonts/unna-*.woff2`
   - KaTeX 0.16.9: `/katex-0.16.9/`
 
+### WebGPU Lazy Initialization (Race Condition Fix)
+- WebGPU engine scripts may not be loaded when defer'd simulation scripts run
+- Do NOT check WebGPU availability at init time — it may not exist yet
+- Use lazy init pattern: attempt GPU init in `onSlideEnter()` with a guard flag
+- Pattern:
+  ```javascript
+  let gpuEngine = null;
+  let gpuInitAttempted = false;
+  async function tryInitGPU() {
+      if (gpuInitAttempted) return;
+      gpuInitAttempted = true;
+      if (typeof WebGPUQPartitionEngine !== 'undefined' && WebGPUQPartitionEngine.isAvailable()) {
+          gpuEngine = new WebGPUQPartitionEngine();
+          await gpuEngine.init();
+      }
+  }
+  // Call in onSlideEnter(), NOT at module load time
+  ```
+
+### Slide Reuse Across Talks
+- Same slide HTML/JS can be used in multiple talks (e.g., pure math colloquium vs applied math colloquium)
+- Comment out slides in `index.html` with `<!-- -->` to disable for a specific talk variant
+- Comment out both the `{% include %}` and the `<script>` tag
+- Keep files intact so they can be re-enabled by uncommenting
+
+### Element ID Namespacing for Coexisting Slides
+- When two slides share similar content, prefix IDs to avoid DOM conflicts
+- Example: `#random-path` uses `local-view-canvas`, `#random-path-gaussian` uses `rpg-local-view-canvas`
+- Convention: use slide-specific prefix (e.g., `rpg-` for random-path-gaussian)
+
+### Accumulative Sampling for Histograms
+- For progressive histogram reveals, accumulate samples across steps rather than resetting
+- Use target counts and compute `needed = target - currentCount` to add the difference
+- Example: targets [1000, 2000, 3000, 4000, 5000] with initial 20 from CFTP → adds 980, 1000, 1000, 1000, 1000
+- Avoids jarring reset-and-resample on each step
+
 ### User Preferences
 - Don't run Jekyll builds - user handles deployment
 - Prefer static KaTeX formulas in HTML over dynamic JS rendering
 - Keep dynamic value displays (e.g., computed q-binomial values) separate from static formulas
+- Avoid redundant status text — show sample counts in ONE place (e.g., under histogram only, not also under the path canvas)
