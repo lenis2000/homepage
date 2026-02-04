@@ -2,23 +2,31 @@
     <h2 class="slide-title">Height Fluctuations</h2>
 
     <div style="display: grid; grid-template-columns: 30vw 62vw; gap: 2vw; margin-top: 2vh; padding: 0 2vw;">
-        <!-- Left: text pane (hidden initially, revealed on step 1) -->
-        <div>
-            <div id="gff-text-pane" style="opacity: 0; transition: opacity 0.3s; background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+        <!-- Left: text + references -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
                 <strong style="color: var(--slide-accent);">Gaussian Free Field</strong><br>
-                Height fluctuations converge to the <strong>GFF</strong>:
+                Like the Brownian bridge, but with <strong>two-dimensional time</strong>
                 <div style="text-align: center; margin-top: 1vh; font-size: clamp(1.5rem, 2.5vw, 2rem);">
                     \(\displaystyle \text{GFF} \approx \frac{h_1 - h_2}{\sqrt{2}}\)
                 </div>
                 <div style="margin-top: 0.5vh;">
-                    where \(h_1, h_2\) are two independent uniform lozenge tilings
+                    where \(h_1, h_2\) are two independent samples of the height function.
                 </div>
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+                <span style="color: var(--slide-muted);">[Kenyon 2001; Kenyon 2008]</span><br>
+                <span style="color: var(--slide-muted);">[Petrov 2014; Bufetov&ndash;Gorin 2018]</span><br>
+                <span style="color: var(--slide-muted);">[Borot&ndash;Gorin&ndash;Guionnet 2026]</span>
             </div>
         </div>
 
-        <!-- Right: 3D canvas -->
+        <!-- Right: placeholder for GFF image -->
         <div style="display: flex; align-items: center; justify-content: center;">
-            <canvas id="gff-canvas" width="1200" height="900" style="height: 60vh; width: auto;"></canvas>
+            <div style="height: 60vh; width: 80vh; background: #f0f0f0; border: 2px dashed #ccc; display: flex; align-items: center; justify-content: center; color: #999; font-size: clamp(1rem, 1.5vw, 1.2rem);">
+                GFF surface image
+            </div>
         </div>
     </div>
 </section>
