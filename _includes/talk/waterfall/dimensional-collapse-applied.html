@@ -1,0 +1,55 @@
+<section class="slide slide-top" id="dimensional-collapse-applied" data-title="Dimensional Collapse">
+    <h2 class="slide-title">The Waterfall: Dimensional Collapse [Knizel-P. 2025]</h2>
+
+    <div style="display: grid; grid-template-columns: 40% 60%; gap: 2vw; margin-top: 2vh; padding: 0 2vw;">
+        <!-- Left column: Text -->
+        <div style="display: flex; flex-direction: column; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Theorem</strong> <span style="color: var(--slide-muted);">[Knizel-P. 2025]</span>
+                <div style="margin-top: 0.5vh;">
+                    Probability to find a horizontal (light-colored) lozenge in the waterfall region is <strong>exponentially small</strong>:
+                    <div style="text-align: center; font-size: clamp(1.3rem, 2.2vw, 1.7rem); margin-top: 0.5vh;">
+                        \(\mathbb{P}(\text{horizontal lozenge}) \sim e^{-cN}\)
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; margin-top: 2vh;">
+                <strong style="color: var(--slide-accent);">Dimensional collapse:</strong>
+                <div style="margin-top: 0.5vh;">
+                    In the waterfall: <strong>No pure states</strong> (2D translation-invariant ergodic Gibbs measures), since all
+                    pure states are either <strong>frozen/semifrozen nonrandom</strong>; <strong>liquid</strong> with all three types of lozenges; or <strong>gaseous</strong> with all three types of lozenges
+                    <span style="color: var(--slide-muted);">[Kenyon-Okounkov-Sheffield 2006]</span>
+                </div>
+            </div>
+
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; margin-top: 2vh;">
+                <strong style="color: var(--slide-accent);">Mechanism:</strong>
+                <div style="margin-top: 0.5vh;">
+                    Center line of waterfall: \(x = \tfrac{S+t}{2}\)
+                    <div style="font-size: clamp(1.3rem, 2.2vw, 1.8rem); margin-top: 0.5vh;">
+                        \(\mathrm{w}(x - \tfrac{t}{2} + 1) = \chi\, q^{x-\frac{S+t}{2}+\frac{1}{2}} + \frac{1}{\chi\, q^{x-\frac{S+t}{2}+\frac{1}{2}}}\)
+                    </div>
+                    <div style="margin-top: 0.5vh;">
+                        Horizontal lozenges <strong>repel</strong> from center → waterfall forms
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right column: 3D Simulation + paths image -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
+            <canvas id="dim-collapse-canvas-applied" width="1300" height="800" style="height: 56vh; width: auto; background: #ffffff; border: 1px solid #ccc;"></canvas>
+            <div style="display: flex; gap: 1vw; align-items: center;">
+                <div style="height: 28vh; overflow: hidden;">
+                    <img src="images/fig_lozenge_and_paths.svg" alt="Lozenge tiling and paths" style="height: 28vh; width: auto;">
+                </div>
+                <div style="position: relative;">
+                    <img src="images/concentration-paths.png" alt="Path concentration" style="height: 28vh; width: auto;">
+                    <span style="position: absolute; top: 0.5vh; left: 0.5vw; background: var(--slide-accent); color: white; padding: 0.3vh 0.6vw; font-size: clamp(0.8rem, 1.2vw, 1rem); font-weight: bold; border-radius: 3px;">pre-sampled</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

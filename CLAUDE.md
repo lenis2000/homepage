@@ -57,6 +57,7 @@ simulations: simulations/YYYY-MM-DD-slug/    # optional
 - **Orange/accent panes**: `background: #f5f5f5; border-left: 4px solid var(--slide-accent);` with `color: var(--slide-accent);` for titles
 - **Blue/navy panes**: `background: #e3f2fd; border-left: 4px solid var(--slide-navy);` with `color: var(--slide-navy);` for titles
 - **Yellow/warning panes**: `background: #fff3e0; border-left: 4px solid #E57200;` with `color: #E57200;` for titles
+- **Alternating pane colors**: When a slide has multiple content panes, alternate border/title colors between accent (orange) and navy (blue) for visual variety. Reference: `complex-burgers.html` (5 panes: accent, navy, accent, navy, accent). For two-column layouts, continue the alternation across columns.
 
 ### Citation Style
 - **Inline citations** (after pane titles): `<strong style="color: var(--slide-accent);">Title</strong> <span style="color: var(--slide-muted);">[Author Year]</span>`
