@@ -576,6 +576,15 @@
         setCameraPosition(1);  // Final camera position
     }
 
+    function showElement(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.opacity = '1';
+    }
+    function hideElement(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.opacity = '0';
+    }
+
     window.slideEngine.registerSimulation('dimensional-collapse', {
         start() {
             startRenderLoop();
@@ -592,6 +601,22 @@
         onSlideLeave() {
             stopAnimation();
             disposeThreeJS();
+        },
+        reset() {
+            hideElement('dc-why');
+            hideElement('dc-collapse');
+            hideElement('dc-conjecture');
+        },
+        steps: 3,
+        onStep(step) {
+            if (step === 1) showElement('dc-why');
+            if (step === 2) showElement('dc-collapse');
+            if (step === 3) showElement('dc-conjecture');
+        },
+        onStepBack(step) {
+            if (step === 0) hideElement('dc-why');
+            if (step === 1) hideElement('dc-collapse');
+            if (step === 2) hideElement('dc-conjecture');
         }
     }, 0);
 
