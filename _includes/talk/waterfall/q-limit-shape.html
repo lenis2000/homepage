@@ -1,0 +1,60 @@
+<section class="slide slide-top" id="q-limit-shape" data-title="q-Limit Shape">
+    <h2 class="slide-title">q-Area: Global Limit Shape</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
+        <!-- Left: Explanation -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <!-- Block 1: Limit Shape -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Limit shape</strong> <span style="color: var(--slide-muted);">[Vershik 1996]</span><br>
+                As \(N \to \infty\) with \(q = e^{-\gamma/N}\), the limit shape satisfies:
+                \(\displaystyle A e^{-\gamma y} + B e^{-\gamma x} = 1\)<br>
+                \(\displaystyle A = \frac{1-e^{-\gamma}}{1-e^{-\gamma(1+\alpha)}}\), \(\displaystyle B = \frac{1-e^{-\gamma \alpha}}{1-e^{-\gamma(1+\alpha)}}\),
+                \(\alpha\) = aspect ratio
+            </div>
+
+            <!-- Block 2: How to get limit shape -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">How to get limit shape?</strong>
+                <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
+                    <li>Approximate any curve by a piecewise-linear trajectory</li>
+                    <li>Locally, we know how many configurations approximate a given line</li>
+                    <li>Integrate and maximize to get the typical shape</li>
+                </ul>
+            </div>
+
+            <!-- Block 3: Variational Principle -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Variational principle for the limit shape \(y=f(x)\):</strong><br>
+                Maximize
+                <strong style="color: #232D4B; font-size: clamp(1.4rem, 2.5vw, 2rem);">entropy − γ · area</strong> =<br>
+                \(\displaystyle \int \sigma(f'(x)) \, dx - \gamma \cdot \int f(x) \, dx\)<br>
+                \(\sigma(s) = (s+1)\log(s+1) - s\log(s)\) = entropy of paths with slope \(s\)
+            </div>
+        </div>
+
+        <!-- Right: Simulation canvas -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
+            <!-- Controls at top -->
+            <div style="text-align: center;">
+                <div style="display: flex; align-items: center; gap: 1vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+                    <label for="gamma-slider" style="font-weight: bold;">γ = </label>
+                    <input type="range" id="gamma-slider" min="-50" max="50" step="0.01" value="3.6" style="width: 12vw;">
+                    <span id="gamma-value" style="font-weight: bold; min-width: 3em;">3.6</span>
+                    <span>(q = <span id="q-limit-value">0.990</span>)</span>
+                    <button id="q-limit-resample" style="padding: 0.3vh 0.8vw; cursor: pointer;">Resample</button>
+                </div>
+                <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--slide-muted);">
+                    <span>a = 240, b = 180</span> · <span id="q-limit-status">Loading...</span>
+                </div>
+            </div>
+            <canvas id="q-limit-canvas" width="1200" height="900" style="height: 55vh; width: auto;"></canvas>
+            <!-- Fluctuations block -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.5vh 1vw; width: 100%; box-sizing: border-box;">
+                <strong style="color: var(--slide-accent); font-size: clamp(1rem, 1.8vw, 1.4rem);">Fluctuations:</strong>
+                <span style="font-size: clamp(1rem, 1.8vw, 1.4rem);">Random curve minus limit shape</span><br>
+                <canvas id="fluctuations-canvas" width="800" height="200" style="width: 100%; height: 12vh;"></canvas>
+            </div>
+        </div>
+    </div>
+</section>

@@ -139,8 +139,31 @@
 - Example: targets [1000, 2000, 3000, 4000, 5000] with initial 20 from CFTP → adds 980, 1000, 1000, 1000, 1000
 - Avoids jarring reset-and-resample on each step
 
+### Multi-Material Mesh Disposal
+When using multi-material meshes (e.g., Minecraft mode with material arrays), disposal must handle arrays:
+```javascript
+if (Array.isArray(child.material)) {
+    child.material.forEach(m => { if (m.map) m.map.dispose(); m.dispose(); });
+} else {
+    child.material.dispose();
+}
+```
+
+### Alternative Rendering Modes (LEGO, Minecraft)
+- Use a `renderMode` variable (`'standard'`, `'lego'`, `'minecraft'`) to switch geometry builders
+- `regenerate()` checks `renderMode` and calls the appropriate builder
+- Reference implementations for LEGO (`dimersToLego3D`) and Minecraft (`dimersToMinecraft3D`) are in `_simulations/lozenge_tilings/2025-11-28-ultimate-lozenge.md`
+- LEGO: `MeshStandardMaterial` with `roughness: 0.35, metalness: 0.0`, `InstancedMesh` for studs, brick merging via edge adjacency
+- Minecraft: Procedural 16×16 textures with `NearestFilter`, `MeshLambertMaterial`, union-find for block grouping
+
+### Lozenge 3D Camera Convention
+- Use `camera.up.set(0, 0, 1)` (Z-up) for lozenge tilings, matching the ultimate lozenge simulation
+- `to3D(n, j, h)` maps to `{ x: h, y: -n - h, z: j - h }`
+- Dynamic `centerCamera(heights)` computes bounding box and positions camera at `center - size*3` along X, `center + size*1.5` along Y and Z
+
 ### User Preferences
 - Don't run Jekyll builds - user handles deployment
 - Prefer static KaTeX formulas in HTML over dynamic JS rendering
 - Keep dynamic value displays (e.g., computed q-binomial values) separate from static formulas
 - Avoid redundant status text — show sample counts in ONE place (e.g., under histogram only, not also under the path canvas)
+- When switching rendering modes (LEGO, Minecraft), do NOT announce the mode in descriptions — just silently change the visual style while keeping the mathematical description unchanged

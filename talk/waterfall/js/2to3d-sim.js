@@ -182,9 +182,6 @@ function init2to3dHexagonSim() {
 
             controls.addEventListener('change', () => {
                 if (!isRunning && renderer) renderer.render(scene, camera);
-                console.log('Camera pos:', camera.position.x.toFixed(1), camera.position.y.toFixed(1), camera.position.z.toFixed(1),
-                    '| Target:', controls.target.x.toFixed(1), controls.target.y.toFixed(1), controls.target.z.toFixed(1),
-                    '| Zoom:', camera.zoom.toFixed(3));
             });
 
             resize();
