@@ -1,52 +1,49 @@
 <section class="slide slide-top" id="barcode-process-applied" data-title="Barcode Process">
     <h2 class="slide-title">The Conjectural Barcode Process [Knizel-P. 2025]</h2>
 
-    <div style="display: grid; grid-template-columns: 55% 43%; gap: 1vw; margin-top: 1vh; padding: 0 1.5vw;">
-        <!-- Left: Big 3D tiling -->
-        <div style="display: flex; flex-direction: column; align-items: center;">
-            <canvas id="bpa-3d-canvas" width="1200" height="900" style="height: 55vh; width: auto; background: #ffffff; border: 1px solid #ccc;"></canvas>
-            <!-- Camera position buttons -->
-            <div id="bpa-buttons" style="display: flex; gap: 0.5vw; margin-top: 0.5vh;">
-                <button id="bpa-btn-1" style="width: 2.5vw; height: 2.5vw; border: 2px solid #232D4B; border-radius: 4px; background: #E57200; color: #fff; font-size: clamp(0.9rem, 1.5vw, 1.2rem); font-weight: bold; cursor: pointer;">1</button>
-                <button id="bpa-btn-2" style="width: 2.5vw; height: 2.5vw; border: 2px solid #232D4B; border-radius: 4px; background: #fff; color: #232D4B; font-size: clamp(0.9rem, 1.5vw, 1.2rem); font-weight: bold; cursor: pointer;">2</button>
-                <button id="bpa-btn-resample" style="padding: 0 1vw; height: 2.5vw; border: 2px solid #232D4B; border-radius: 4px; background: #232D4B; color: #fff; font-size: clamp(0.75rem, 1.2vw, 1rem); font-weight: bold; cursor: pointer;">resample</button>
+    <!-- Three simulations in a row -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1vw; margin-top: 1vh; padding: 0 1.5vw;">
+        <!-- Sim 1: Vertical slice style (q far from 1) -->
+        <div id="bpa-sim1" style="opacity: 0; transition: opacity 0.3s; display: flex; flex-direction: column; align-items: center;">
+            <canvas id="bpa-canvas-vs" width="600" height="500" style="width: 100%; height: 42vh; background: #fff; border: 1px solid #ccc;"></canvas>
+            <div style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-navy); margin-top: 0.3vh;">Diagonal slice, <em>q</em> = 0.3</div>
+        </div>
+
+        <!-- Sim 2: Spectral transversal style -->
+        <div id="bpa-sim2" style="opacity: 0; transition: opacity 0.3s; display: flex; flex-direction: column; align-items: center;">
+            <canvas id="bpa-canvas-st" width="600" height="500" style="width: 100%; height: 42vh; background: #fff; border: 1px solid #ccc;"></canvas>
+            <div style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-accent); margin-top: 0.3vh;">Horizontal cross-section</div>
+        </div>
+
+        <!-- Sim 3: Why-2-periodic style -->
+        <div id="bpa-sim3" style="opacity: 0; transition: opacity 0.3s; display: flex; flex-direction: column; align-items: center;">
+            <canvas id="bpa-canvas-w2p" width="600" height="500" style="width: 100%; height: 42vh; background: #fff; border: 1px solid #ccc;"></canvas>
+            <div style="display: flex; gap: 0.5vw; margin-top: 0.3vh;">
+                <button id="bpa-btn-1" style="width: 2vw; height: 2vw; border: 2px solid #232D4B; border-radius: 4px; background: #E57200; color: #fff; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold; cursor: pointer;">1</button>
+                <button id="bpa-btn-2" style="width: 2vw; height: 2vw; border: 2px solid #232D4B; border-radius: 4px; background: #fff; color: #232D4B; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold; cursor: pointer;">2</button>
+                <button id="bpa-btn-resample" style="padding: 0 0.8vw; height: 2vw; border: 2px solid #232D4B; border-radius: 4px; background: #232D4B; color: #fff; font-size: clamp(0.6rem, 1vw, 0.85rem); font-weight: bold; cursor: pointer;">resample</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Text panes (step 4) -->
+    <div id="bpa-text-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1vw; margin-top: 1vh; padding: 0 1.5vw; opacity: 0; transition: opacity 0.3s; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+            <strong style="color: var(--slide-accent);">Spectral analysis (nonrigorous):</strong>
+            <div style="margin-top: 0.3vh;">
+                Diagonalize via <em>q</em>-Racah eigenfunctions → <strong>density formula</strong> as a series.
+                Series <strong>diverges mildly</strong>: \(+c - c + c - c + \ldots\)
             </div>
         </div>
 
-        <!-- Right: Barcode slice + density -->
-        <div style="display: flex; flex-direction: column; gap: 1vh;">
-            <!-- Barcode strip -->
-            <div>
-                <div style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-navy); font-weight: bold; margin-bottom: 0.3vh;">Horizontal cross-section (barcode):</div>
-                <canvas id="bpa-barcode-canvas" width="800" height="120" style="width: 100%; height: 8vh; border: 1px solid #ccc;"></canvas>
-            </div>
-
-            <!-- Density graph -->
-            <div>
-                <div style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-accent); font-weight: bold; margin-bottom: 0.3vh;">Barcode density (even/odd positions):</div>
-                <canvas id="bpa-density-canvas" width="800" height="300" style="width: 100%; height: 20vh; border: 1px solid #ccc;"></canvas>
-            </div>
-
-            <!-- Text panes -->
-            <div style="display: flex; flex-direction: column; gap: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-                <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
-                    <strong style="color: var(--slide-accent);">Spectral analysis (nonrigorous):</strong>
-                    <div style="margin-top: 0.3vh;">
-                        Diagonalize via <em>q</em>-Racah eigenfunctions → <strong>density formula</strong> as a series.
-                        Series <strong>diverges mildly</strong>: \(+c - c + c - c + \ldots\)
-                    </div>
-                </div>
-
-                <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw;">
-                    <strong style="color: var(--slide-navy);">Two-periodic barcode:</strong>
-                    <div style="margin-top: 0.3vh;">
-                        Two subsequential limits →
-                        <strong style="color: var(--slide-accent);">\(\rho_0 \approx 0.56\)</strong>,
-                        <strong style="color: var(--slide-navy);">\(\rho_1 \approx 0.44\)</strong>
-                        (indep. of \(t\)).
-                        Even/odd positions alternate — lattice checkerboard.
-                    </div>
-                </div>
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw;">
+            <strong style="color: var(--slide-navy);">Two-periodic barcode:</strong>
+            <div style="margin-top: 0.3vh;">
+                Two subsequential limits →
+                <strong style="color: var(--slide-accent);">\(\rho_0 \approx 0.56\)</strong>,
+                <strong style="color: var(--slide-navy);">\(\rho_1 \approx 0.44\)</strong>
+                (indep. of \(t\)).
+                Even/odd positions alternate — lattice checkerboard.
             </div>
         </div>
     </div>
