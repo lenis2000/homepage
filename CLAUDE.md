@@ -221,9 +221,30 @@ if (Array.isArray(child.material)) {
 - Create `abstract.txt` with plain text title, authors, and abstract (keep `$...$` math)
 - Use single hyphens in abstract (arXiv style), not `--` em-dashes
 
+### Mathematical Content Sourcing
+- **NEVER invent mathematical content** — user is a working mathematician and will catch errors
+- When slide content involves specific theorems/equations from papers, verify against the actual paper source
+- Fetch arXiv TeX sources: `https://arxiv.org/e-print/{id}` returns gzipped TeX (may be `.tar.gz` or plain `.tex.gz`)
+- If the original variational principle / theorem was already correct, don't rewrite it — only fix the parts that were actually wrong
+- Maintain **notation consistency across slides** — if one slide says "maximizes ∬σ(∇h)", other slides should use the same sign convention
+
+### Pre-sampled Image Badge
+For static pre-computed images (when live simulation is too slow):
+```html
+<div style="position: relative;">
+    <img src="images/example.png" alt="Description" style="max-height: 34vh; max-width: 100%; object-fit: contain;">
+    <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.3vh 0.6vw; border-radius: 3px; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold;">pre-sampled</div>
+</div>
+```
+Images stored in `talk/waterfall/images/`
+
+### Variable Naming in Slides
+- Avoid variable names that read badly in text context (e.g., "3d sides" reads like "3D" → use "3k sides" instead)
+
 ### User Preferences
 - Don't run Jekyll builds - user handles deployment
 - Prefer static KaTeX formulas in HTML over dynamic JS rendering
 - Keep dynamic value displays (e.g., computed q-binomial values) separate from static formulas
 - Avoid redundant status text — show sample counts in ONE place (e.g., under histogram only, not also under the path canvas)
 - When switching rendering modes (LEGO, Minecraft), do NOT announce the mode in descriptions — just silently change the visual style while keeping the mathematical description unchanged
+- Grid column widths are per-slide — adjust to fit content (e.g., `52vw 40vw` for text-heavy left, `42vw 50vw` for balanced)

@@ -223,9 +223,6 @@ nav_weight: 2
     </div>  -->
 
     <br><br>
-    <div class="col-12" id="arxivfeed"></div>
-
-    <br><br>
     <div class="list-group-sm">
     <div class="list-group-item h5" style="font-weight: bold;">Coauthors</div>
     {% assign coauthor_entries = "" %}
@@ -292,6 +289,9 @@ nav_weight: 2
     {%- endfor %}
     <span class="list-group-item"><small class="text-muted">[{{ solo_count }}]</small>&nbsp;<b>Solo</b>&ensp;<small class="text-muted">{%- if solo_journal_year != 0 -%}(&le;{{ solo_journal_year }}){%- endif -%}</small></span>
     </div>
+
+    <br><br>
+    <div class="col-12" id="arxivfeed" style="font-size: 0.85em;"></div>
   </div>
 
 </div>
