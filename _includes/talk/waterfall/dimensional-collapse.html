@@ -14,7 +14,11 @@
                 </div>
             </div>
 
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; margin-top: 2vh;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; margin-top: 1.5vh;">
+                <strong style="color: var(--slide-navy);">Why?</strong> \(\displaystyle\mathrm{w}(h) = \chi\, q^{h} + \frac{1}{\chi\, q^{h}}\) — avoid center
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; margin-top: 1.5vh;">
                 <strong style="color: var(--slide-accent);">Dimensional collapse:</strong>
                 <div style="margin-top: 0.5vh;">
                     In the waterfall: <strong>No pure states</strong> (2D translation-invariant ergodic Gibbs measures), since all
@@ -23,33 +27,11 @@
                 </div>
             </div>
 
-
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; margin-top: 2vh;">
-                <strong style="color: var(--slide-accent);">Mechanism:</strong>
-                <div style="margin-top: 0.5vh;">
-                    Center line of waterfall: \(x = \tfrac{S+t}{2}\)
-                    <div style="font-size: clamp(1.3rem, 2.2vw, 1.8rem); margin-top: 0.5vh;">
-                        \(\mathrm{w}_{q,\kappa}(x - \tfrac{t}{2} + 1) = \kappa q^{x-\frac{S+t}{2}+\frac{1}{2}} - \frac{1}{\kappa q^{x-\frac{S+t}{2}+\frac{1}{2}}}\)
-                    </div>
-                    <div style="margin-top: 0.5vh;">
-                        Horizontal lozenges <strong>repel</strong> from center → waterfall forms
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- Right column: 3D Simulation + paths image -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
-            <canvas id="dim-collapse-canvas" width="1300" height="800" style="height: 56vh; width: auto; background: #ffffff; border: 1px solid #ccc;"></canvas>
-            <div style="display: flex; gap: 1vw; align-items: center;">
-                <div style="height: 28vh; overflow: hidden;">
-                    <img src="images/fig_lozenge_and_paths.svg" alt="Lozenge tiling and paths" style="height: 28vh; width: auto;">
-                </div>
-                <div style="position: relative;">
-                    <img src="images/concentration-paths.png" alt="Path concentration" style="height: 28vh; width: auto;">
-                    <span style="position: absolute; top: 0.5vh; left: 0.5vw; background: var(--slide-accent); color: white; padding: 0.3vh 0.6vw; font-size: clamp(0.8rem, 1.2vw, 1rem); font-weight: bold; border-radius: 3px;">pre-sampled</span>
-                </div>
-            </div>
+            <canvas id="dim-collapse-canvas" width="1300" height="800" style="height: 75vh; width: auto; background: #ffffff; border: 1px solid #ccc;"></canvas>
         </div>
     </div>
 </section>
