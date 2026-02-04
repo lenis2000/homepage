@@ -24,6 +24,7 @@ coauthors:
 categories: blog math preprint   # use 'paper' once published
 journal-ref: ...                 # add when published
 journal-web: https://...         # DOI link
+journal-year: YYYY               # publication year (extracted from journal-ref)
 image: __STORAGE_URL__/img/papers/image.png   # optional
 show-date: true
 pdf: NN-slug.pdf
@@ -33,6 +34,12 @@ cv-number: NN
 published: true
 simulations: simulations/YYYY-MM-DD-slug/    # optional
 ```
+
+### journal-year Field
+- Every published paper post should have a `journal-year:` field with the publication year
+- For preprints, add commented-out placeholder: `# journal-year:`
+- This field is used by the coauthors sidebar on the research page
+- The post date corresponds to the arXiv submission date, NOT the journal publication date
 
 ### S3 Buckets
 - **Site**: `s3://lpetrov.cc` (deployed by GitHub Actions, don't push PDFs here)
@@ -197,6 +204,22 @@ if (Array.isArray(child.material)) {
 - Use `camera.up.set(0, 0, 1)` (Z-up) for lozenge tilings, matching the ultimate lozenge simulation
 - `to3D(n, j, h)` maps to `{ x: h, y: -n - h, z: j - h }`
 - Dynamic `centerCamera(heights)` computes bounding box and positions camera at `center - size*3` along X, `center + size*1.5` along Y and Z
+
+### Coauthors Sidebar (research page)
+- Auto-generated from paper/preprint post front matter via Liquid in `research/research.html`
+- Sorted by last name using `LastName^FullName^Year` entries
+- Shows: `[count] Name (≤year)` — year is journal-year if available, else arXiv year
+- Includes a "Solo" entry for sole-authored papers
+- Uses `{%- -%}` whitespace-stripping Liquid tags to prevent unwanted line breaks
+- Uses `&nbsp;` for spaces inside stripped blocks (regular spaces get eaten)
+- Styled with `list-group-sm` / `list-group-item` to match other sidebar sections
+
+### arXiv Submission Workflow
+- Create `arXiv_vN/` folder with flat structure (no subdirectories)
+- Copy: `.tex`, `.bib`, `.bbl`, and all referenced images
+- Update `\includegraphics` paths if they reference subdirectories
+- Create `abstract.txt` with plain text title, authors, and abstract (keep `$...$` math)
+- Use single hyphens in abstract (arXiv style), not `--` em-dashes
 
 ### User Preferences
 - Don't run Jekyll builds - user handles deployment
