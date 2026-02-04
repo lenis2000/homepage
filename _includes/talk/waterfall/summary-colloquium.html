@@ -9,40 +9,35 @@
             <!-- 1. Orange: Local to global -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
                 <strong style="color: var(--slide-accent);">Local randomness → global shapes:</strong>
-                Random surfaces concentrate around <strong>deterministic limit shapes</strong> as the mesh refines.
-                Local statistics are <strong>universal</strong> — determined only by the slope.
+                Random up-right paths, surfaces, 1-Lipschitz function, etc., concentrate around <strong>deterministic limit shapes</strong>, typically with global <strong>Gaussian fluctuations</strong>.
+								In 1D and 2D, we saw that 
+                <strong>local statistics are universal</strong> — determined only by the slope.
             </div>
 
             <!-- 2. Blue: Variational/PDE -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 0.8vh 1.2vw;">
                 <strong style="color: var(--slide-navy);">Variational principle & PDE:</strong>
-                Limit shapes maximize entropy subject to boundary conditions.
-                The Euler–Lagrange equation is a <strong>complex Burgers equation</strong> with a <strong>free boundary</strong> (arctic curve).
+								Limit shapes maximize entropy subject to boundary conditions and volume/energy constraints.<br>
+                The Euler–Lagrange equation 
+for random surfaces
+								is the <strong>complex Burgers equation</strong>
+								\(u_x=u\,u_y\).
             </div>
 
             <!-- 3. Orange: Breaking universality -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
-                <strong style="color: var(--slide-accent);">Breaking the framework:</strong>
-                The <strong>q-Racah</strong> deformation introduces a height-dependent weight interpolating between \(q^{\pm\text{vol}}\).
-                In what would normally be a frozen region, the system retains entropy by <strong>collapsing 2D phases into 1D</strong> — the <strong>waterfall</strong>.
+                <strong style="color: var(--slide-accent);">Beyond the classical picture:</strong>
+                "Freezing" (\(q \not\to 1\)) <strong>breaks local universality</strong>. 
+In the \(q\)-Racah example, freezing is combined with a strong energy differential in a specific direction, which leads to a novel 
+<strong>waterfall phenomenon</strong>: 2D Gibbs measures collapse into 1D, but there is some residual randomness
+(the <strong>barcode interface</strong>).
             </div>
 
-            <!-- 4. Blue: This work -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 0.8vh 1.2vw;">
-                <strong style="color: var(--slide-navy);">This work</strong>
-                <span style="color: var(--slide-muted);">[Knizel–P. 2025]</span><strong style="color: var(--slide-navy);">:</strong>
-                Justified the global behavior (limit shape) and the <strong>dimensional collapse</strong> mechanism.
-                Horizontal lozenges are exponentially suppressed in the waterfall region.
-            </div>
-
-            <!-- 5. Orange: Open problems -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
-                <strong style="color: var(--slide-accent);">Open problems:</strong>
-                <ul style="margin: 0.3vh 0 0 1.2em; padding: 0;">
-                    <li>Conjectural <strong>two-periodic barcode process</strong> (1D edge statistics)</li>
-                    <li>Edge behavior of the waterfall: new universality class?</li>
-                    <li>PDE characterization of deformed limit shapes</li>
-                </ul>
+            <!-- 5. Orange: Open question -->
+<div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
+                <strong style="color: var(--slide-accent);">Open questions</strong>
+								<br>
+                How else can we meaningfully <strong>break universality</strong> — and still be able to say something?
             </div>
 
         </div>
@@ -50,7 +45,7 @@
         <!-- Right: Svartifoss waterfall image -->
         <figure style="margin: 0; display: flex; flex-direction: column; height: 100%;">
             <img src="images/waterfall-svartifoss-sbartsch-cc-by-sa-4.jpg" alt="Svartifoss waterfall with basalt columns in Iceland" style="flex: 1; width: 100%; object-fit: cover; border-radius: 8px;">
-            <figcaption style="text-align: right; margin-top: 0.5vh;"><strong style="color: var(--slide-navy);">Svartifoss, Iceland</strong> · Sebastian Bartsch, CC BY-SA 4.0</figcaption>
+            <figcaption style="text-align: right; margin-top: 0.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);"><strong style="color: var(--slide-navy);">Svartifoss, Iceland</strong> · Sebastian Bartsch, CC BY-SA 4.0</figcaption>
         </figure>
 
     </div>
