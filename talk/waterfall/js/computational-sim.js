@@ -200,19 +200,12 @@
         cftpMeshGroup = new THREE.Group();
         cftpScene.add(cftpMeshGroup);
 
-        // Camera — initial position for hexagonal tiling
-        cftpCamera.position.set(22.6, -118.1, 11.9);
+        // Camera position for hexagonal tiling
+        cftpCamera.position.set(31.0, 15.6, 60.1);
         cftpCamera.zoom = 1.0;
         cftpCamera.updateProjectionMatrix();
-        cftpControls.target.set(0.0, -48.0, 32.0);
+        cftpControls.target.set(-15.1, -17.6, 9.0);
         cftpControls.update();
-
-        // Camera logging for finding best angle
-        cftpControls.addEventListener('change', () => {
-            console.log('CFTP Camera pos:', cftpCamera.position.x.toFixed(1), cftpCamera.position.y.toFixed(1), cftpCamera.position.z.toFixed(1),
-                        '| Target:', cftpControls.target.x.toFixed(1), cftpControls.target.y.toFixed(1), cftpControls.target.z.toFixed(1),
-                        '| Zoom:', cftpCamera.zoom.toFixed(2));
-        });
 
         resizeCFTP();
     }
@@ -910,17 +903,23 @@
         },
 
         onStep: function(step) {
+            console.log('computational onStep:', step);
             if (step === 2) {
                 showElement('comp-cftp');
                 // Start CFTP simulation
                 (async () => {
+                    console.log('computational: awaiting CFTP wasm...');
                     const ok = await initCFTPWasm();
+                    console.log('computational: CFTP wasm ready:', ok);
                     if (!ok) return;
                     initCFTPThreeJS();
+                    console.log('computational: Three.js init done, starting render loop');
                     startCFTPRenderLoop();
                     activeSim = 'cftp';
+                    console.log('computational: starting CFTP animation');
                     await runCFTPAnimated();
-                })();
+                    console.log('computational: CFTP animation finished');
+                })().catch(e => console.error('computational CFTP error:', e));
             }
             if (step === 3) {
                 showElement('comp-why-works');

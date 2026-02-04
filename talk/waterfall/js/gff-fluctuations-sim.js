@@ -221,11 +221,17 @@ function initGFFFluctuationsSim() {
             return heights;
         }
 
-        // ---- Discrete colormap: 0=gray, positive=red, negative=blue ----
-        function gffColor(diff) {
-            if (diff === 0) return [0.75, 0.75, 0.75];
-            if (diff > 0) return [0.95, 0.05, 0.05];
-            return [0.05, 0.15, 0.95];
+        // ---- Absolute colormap: 0=gray, positive→red, negative→blue ----
+        // Same tanh approach as ultimate lozenge: zero is always gray
+        function gffColor(h) {
+            const t = Math.tanh(h / 1.5);
+            const alpha = Math.min(1, Math.abs(h) / 1);
+            if (t < 0) {
+                const s = -t;
+                return [0.1 * (1 - s), 0.2 * (1 - s), 1.0, alpha];
+            }
+            const s = t;
+            return [1.0, 0.15 * (1 - s), 0.05 * (1 - s), alpha];
         }
 
         // ---- Three.js ----
@@ -485,12 +491,14 @@ function initGFFFluctuationsSim() {
 
             const positions = [];
             const colors = [];
+            const alphas = [];
 
             function addVertex(n, j) {
                 const v = gff.get(`${n},${j}`);
                 positions.push(n, slope * n + j * deltaC, v.z * Z_SCALE);
-                const [r, g, b] = gffColor(v.diff);
+                const [r, g, b, a] = gffColor(v.z);
                 colors.push(r, g, b);
+                alphas.push(a);
             }
 
             for (let n = minN; n <= maxN; n++) {
@@ -513,12 +521,28 @@ function initGFFFluctuationsSim() {
             const geometry = new THREE.BufferGeometry();
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
             geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setAttribute('alpha', new THREE.Float32BufferAttribute(alphas, 1));
             geometry.computeVertexNormals();
 
             const material = new THREE.MeshStandardMaterial({
                 vertexColors: true, side: THREE.DoubleSide,
-                flatShading: true, roughness: 0.5, metalness: 0.15
+                flatShading: true, roughness: 0.5, metalness: 0.15,
+                transparent: true, depthWrite: false
             });
+            material.onBeforeCompile = (shader) => {
+                shader.vertexShader = shader.vertexShader.replace(
+                    'void main() {',
+                    'attribute float alpha;\nvarying float vAlpha;\nvoid main() {\n  vAlpha = alpha;'
+                );
+                shader.fragmentShader = shader.fragmentShader.replace(
+                    'void main() {',
+                    'varying float vAlpha;\nvoid main() {'
+                );
+                shader.fragmentShader = shader.fragmentShader.replace(
+                    '#include <dithering_fragment>',
+                    '#include <dithering_fragment>\n  gl_FragColor.a *= vAlpha;'
+                );
+            };
             meshGroup.add(new THREE.Mesh(geometry, material));
 
             const edgeGeo = new THREE.EdgesGeometry(geometry, 15);
