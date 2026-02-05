@@ -1,5 +1,5 @@
 // Service Worker for Waterfall Talk - Aggressive Precaching
-const CACHE_NAME = 'waterfall-talk-v6';
+const CACHE_NAME = 'waterfall-talk-v7';
 
 // All assets to precache
 const PRECACHE_ASSETS = [
@@ -14,6 +14,7 @@ const PRECACHE_ASSETS = [
   '/js/slide-engine.js',
   '/js/theme-toggle.js',
   '/js/webgpu-lozenge-engine.js',
+  '/js/webgpu-qpartition-engine.js',
 
   // WASM modules
   '/talk/visual/sim/visual-lozenge.js',
@@ -64,11 +65,15 @@ const PRECACHE_ASSETS = [
   '/talk/waterfall/js/nature-builds-sim.js',
   '/talk/waterfall/js/grid-paths-sim.js',
   '/talk/waterfall/js/random-path-sim.js',
+  '/talk/waterfall/js/random-path-gaussian-sim.js',
   '/talk/waterfall/js/q-deformation-sim.js',
+  '/talk/waterfall/js/q-limit-shape-sim.js',
   '/talk/waterfall/js/q-local-sim.js',
   '/talk/waterfall/js/2to3d-sim.js',
   '/talk/waterfall/js/limit-shape-sim.js',
   '/talk/waterfall/js/energy-sim.js',
+  '/talk/waterfall/js/gff-fluctuations-sim.js',
+  '/talk/waterfall/js/gff-worker.js',
   '/talk/waterfall/js/universality-zoom-sim.js',
   '/talk/waterfall/js/q-volume-sim.js',
   '/talk/waterfall/js/q-racah-measure-sim.js',
@@ -83,7 +88,9 @@ const PRECACHE_ASSETS = [
   '/talk/waterfall/js/why-2-periodic-sim.js',
   '/talk/waterfall/js/barcode-density-sim.js',
   '/talk/waterfall/js/barcode-conjecture-sim.js',
+  '/talk/waterfall/js/barcode-process-applied-sim.js',
   '/talk/waterfall/js/summary-sim.js',
+  '/talk/waterfall/js/summary-colloquium-sim.js',
   '/talk/waterfall/js/thankyou-sim.js',
 
   // Shared utilities
@@ -94,6 +101,16 @@ const PRECACHE_ASSETS = [
 
   // Data files
   '/letters/Rotunda.json',
+  '/letters/T.json',
+  '/letters/H.json',
+  '/letters/A.json',
+  '/letters/N.json',
+  '/letters/K.json',
+  '/letters/Y.json',
+  '/letters/O.json',
+  '/letters/U.json',
+  '/letters/big_snoflake.json',
+  '/letters/shape_for_arctic_small.json',
 
   // 3D models
   '/talk/waterfall/g.obj',
@@ -117,13 +134,17 @@ const PRECACHE_ASSETS = [
   '/talk/waterfall/images/fig_lozenge_intro.svg',
   '/talk/waterfall/images/frozen_sample.png',
   '/talk/waterfall/images/hexagon.png',
+  '/talk/waterfall/images/hexagon-small-sample.png',
   '/talk/waterfall/images/hypergeometric-book.png',
+  '/talk/waterfall/images/lozenge_small_sample.png',
+  '/talk/waterfall/images/nonsimplyconn_sample.png',
   '/talk/waterfall/images/nsf-logo.png',
   '/talk/waterfall/images/orthogonal-hierarchy.png',
   '/talk/waterfall/images/q_1.025.png',
   '/talk/waterfall/images/qr-arxiv-2507.22011.png',
   '/talk/waterfall/images/qr-lozenge-draw.png',
   '/talk/waterfall/images/qr-lozenge.png',
+  '/talk/waterfall/images/qr-blueridge2026.svg',
   '/talk/waterfall/images/salt-halite-doronenko-cc-by-3.jpg',
   '/talk/waterfall/images/salt-halite-lavinsky-irocks-cc-by-sa-3.jpg',
   '/talk/waterfall/images/salt-micro-public-domain.jpg',
@@ -133,6 +154,7 @@ const PRECACHE_ASSETS = [
   '/talk/waterfall/images/waterfall-3d-1.png',
   '/talk/waterfall/images/waterfall-3d-2.png',
   '/talk/waterfall/images/waterfall-3d-3.png',
+  '/talk/waterfall/images/waterfall-svartifoss-sbartsch-cc-by-sa-4.jpg',
   '/talk/waterfall/images/waterfall-thin-1.png',
   '/talk/waterfall/images/waterfall-thin-2.png',
 ];
@@ -140,6 +162,7 @@ const PRECACHE_ASSETS = [
 // Bootstrap is still from CDN (small, not critical for offline)
 const CDN_ASSETS = [
   'https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css',
+  'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js',
 ];
 
 // Install: precache all assets
