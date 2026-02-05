@@ -301,7 +301,7 @@ function initQLocalSim() {
             // Only show Bernoulli text for non-extreme steps
             if (currentStep < 3) {
                 localCtx.fillStyle = '#666';
-                localCtx.font = '18px sans-serif';
+                localCtx.font = '28px sans-serif';
                 localCtx.textAlign = 'center';
                 localCtx.textBaseline = 'top';
                 localCtx.fillText('Locally still IID Bernoulli!', w / 2, baseY + 15);

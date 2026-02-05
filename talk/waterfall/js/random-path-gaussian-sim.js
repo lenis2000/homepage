@@ -24,7 +24,6 @@ function initRandomPathGaussianSim() {
     const histCanvas = document.getElementById('rpg-histogram-canvas');
     const histCtx = histCanvas.getContext('2d');
     const histCountEl = document.getElementById('rpg-histogram-count');
-    const questionEl = document.getElementById('rpg-question');
     const answerEl = document.getElementById('rpg-answer');
     const bridgeCanvas = document.getElementById('rpg-bridge-canvas');
     const bridgeCtx = bridgeCanvas.getContext('2d');
@@ -543,7 +542,7 @@ function initRandomPathGaussianSim() {
 
         // Difference curve
         bridgeCtx.strokeStyle = '#E57200';
-        bridgeCtx.lineWidth = 2;
+        bridgeCtx.lineWidth = 4;
         bridgeCtx.beginPath();
         for (let i = 0; i < pathCoords.length; i++) {
             const px = padding + pathCoords[i][0] * scaleX;
@@ -586,7 +585,6 @@ function initRandomPathGaussianSim() {
         localViewContainer.style.display = '';
         histContainer.style.display = 'none';
 
-        questionEl.style.opacity = '0';
         answerEl.style.opacity = '0';
 
         // Phase 2 state
@@ -602,7 +600,7 @@ function initRandomPathGaussianSim() {
     // === Step Logic ===
     // Steps 1-2: resample, 3: zoom, 4-5: resample+zoom, 6: Bernoulli,
     // 7: LLN + histogram + WASM sampling, 8-10: accumulate 1K/3K/5K,
-    // 11: question, 12: answer+bridge, 13: resample
+    // 11: answer+bridge, 12: resample
 
     async function onStep(step) {
         currentStep = step;
@@ -649,11 +647,9 @@ function initRandomPathGaussianSim() {
                 await collectSamples(needed);
             }
         } else if (step === 11) {
-            questionEl.style.opacity = '1';
-        } else if (step === 12) {
             answerEl.style.opacity = '1';
             drawBrownianBridge();
-        } else if (step === 13) {
+        } else if (step === 12) {
             resample();
             drawMainPath(false, true);
             drawBrownianBridge();
@@ -664,8 +660,7 @@ function initRandomPathGaussianSim() {
         currentStep = step;
 
         // Always hide elements beyond current step
-        if (step < 12) answerEl.style.opacity = '0';
-        if (step < 11) questionEl.style.opacity = '0';
+        if (step < 11) answerEl.style.opacity = '0';
         if (step < 7) {
             globalEl.style.opacity = '0';
     
@@ -707,7 +702,7 @@ function initRandomPathGaussianSim() {
         window.slideEngine.registerSimulation('random-path-gaussian', {
             start() {},
             pause() {},
-            steps: 13,
+            steps: 12,
             onStep: onStep,
             onStepBack: onStepBack,
             async onSlideEnter() {
