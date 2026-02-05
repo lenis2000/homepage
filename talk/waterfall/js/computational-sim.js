@@ -433,7 +433,7 @@
         return last + (Math.floor(beyond / CFTP_AFTER_MILESTONES) + 1) * CFTP_AFTER_MILESTONES;
     }
 
-    async function runCFTPAnimated() {
+    async function runCFTPAnimated(gen) {
         if (!wasm || !cftpFuncs) return;
         cftpAnimating = true;
         cftpAutoRotating = false;
@@ -449,9 +449,10 @@
         }
         if (statusEl) statusEl.textContent = 'coupled Glauber: step 0';
         await new Promise(r => setTimeout(r, CFTP_STEP_DELAY));
+        if (gen !== stepGeneration) return;
 
         let totalSteps = 0;
-        while (cftpAnimating) {
+        while (cftpAnimating && gen === stepGeneration) {
             const nextMilestone = getNextMilestone(totalSteps);
             const stepsToRun = nextMilestone - totalSteps;
             const result = wasmCallJSON(() => cftpFuncs.forwardCoupledStep(stepsToRun));
@@ -468,6 +469,7 @@
                 }
                 if (statusEl) statusEl.textContent = 'coupled Glauber: step ' + result.step;
                 await new Promise(r => setTimeout(r, CFTP_STEP_DELAY));
+                if (gen !== stepGeneration) return;
             } else if (result.status === 'already_coalesced') {
                 break;
             } else {
@@ -476,7 +478,7 @@
         }
 
         // Finalize: show single coalesced surface
-        if (cftpAnimating && cftpMeshGroup) {
+        if (cftpAnimating && cftpMeshGroup && gen === stepGeneration) {
             wasmCallJSON(cftpFuncs.finalizeCFTP);
             const dimersResult = wasmCallJSON(cftpFuncs.exportDimers);
             renderCFTPCoalesced(dimersResult.dimers || []);
@@ -865,24 +867,28 @@
     }
 
     async function runWaterfallAnimation() {
-        if (!wfWasmReady || wfAnimating) return;
+        console.log('[comp] runWaterfallAnimation: wfWasmReady=' + wfWasmReady + ', wfAnimating=' + wfAnimating + ', gen=' + stepGeneration);
+        if (!wfWasmReady || wfAnimating) { console.log('[comp] runWaterfallAnimation: SKIPPED'); return; }
         wfAnimating = true;
+        const gen = stepGeneration;
 
         await wfWasm.initTilingQRacah(WF_Q, WF_KAPPA);
+        if (gen !== stepGeneration) { console.log('[comp] runWaterfallAnimation: stale after initTiling, gen=' + gen + ' vs ' + stepGeneration); return; }
+        console.log('[comp] runWaterfallAnimation: building initial geometry');
         wfPathsTo3D(wfWasm.paths, WF_N, WF_T, wfWasm.S_param);
         setWfCameraPosition(0);
 
         async function doStep() {
-            if (!wfAnimating || wfWasm.S_param >= WF_S_TARGET) {
+            if (gen !== stepGeneration || !wfAnimating || wfWasm.S_param >= WF_S_TARGET) {
                 wfAnimating = false;
-                setWfCameraPosition(1);
+                if (gen === stepGeneration) setWfCameraPosition(1);
                 if (statusEl) statusEl.textContent = '';
                 return;
             }
             for (let i = 0; i < WF_STEP_INCREMENT && wfWasm.S_param < WF_S_TARGET; i++) {
                 await wfWasm.stepForward();
             }
-            if (!wfMeshGroup) { wfAnimating = false; return; }
+            if (gen !== stepGeneration || !wfMeshGroup) { wfAnimating = false; return; }
             const pathsCopy = wfWasm.paths.map(p => [...p]);
             wfPathsTo3D(pathsCopy, WF_N, WF_T, wfWasm.S_param);
             const progress = wfWasm.S_param / WF_S_TARGET;
@@ -905,15 +911,15 @@
     // ===================================================================
 
     let activeSim = null; // 'cftp' | 'waterfall' | null
+    let stepGeneration = 0; // guards async work from stale steps
 
-    function disposeActive() {
-        if (activeSim === 'cftp') {
-            cftpAnimating = false;
-            cftpAutoRotating = false;
-            disposeCFTPThreeJS();
-        } else if (activeSim === 'waterfall') {
-            disposeWaterfallThreeJS();
-        }
+    function disposeAll() {
+        stepGeneration++;
+        console.log('[comp] disposeAll: gen=' + stepGeneration + ', cftpRenderer=' + !!cftpRenderer + ', wfRenderer=' + !!wfRenderer);
+        cftpAnimating = false;
+        cftpAutoRotating = false;
+        disposeCFTPThreeJS();
+        disposeWaterfallThreeJS();
         activeSim = null;
         if (statusEl) statusEl.textContent = '';
     }
@@ -929,77 +935,96 @@
     // Step 5: Dispose CFTP → start waterfall
 
     window.slideEngine.registerSimulation('computational', {
-        steps: 3,
+        steps: 2,
 
         onSlideEnter: function() {
-            // Banner is always visible (no opacity transition)
+            console.log('[comp] onSlideEnter, gen=' + stepGeneration);
         },
 
         onSlideLeave: function() {
-            disposeActive();
+            console.log('[comp] onSlideLeave, gen=' + stepGeneration);
+            disposeAll();
+            console.log('[comp] onSlideLeave done, gen=' + stepGeneration);
         },
 
         onStep: function(step) {
+            console.log('[comp] onStep(' + step + '), gen=' + stepGeneration + ', activeSim=' + activeSim + ', cftpRenderer=' + !!cftpRenderer + ', wfRenderer=' + !!wfRenderer);
             if (step === 1) {
                 showElement('comp-cftp');
                 showElement('comp-why-works');
-                // Init CFTP Three.js + run forward coupled Glauber
+                const gen = ++stepGeneration;
+                console.log('[comp] step1: starting async CFTP, gen=' + gen);
                 (async () => {
                     const ok = await initCFTPWasm();
                     if (!ok) { console.warn('computational: CFTP wasm not available'); return; }
+                    if (gen !== stepGeneration) { console.log('[comp] step1: stale gen=' + gen + ' vs ' + stepGeneration + ', bailing'); return; }
+                    console.log('[comp] step1: initCFTPThreeJS, gen=' + gen);
                     initCFTPThreeJS();
                     startCFTPRenderLoop();
                     activeSim = 'cftp';
-                    await runCFTPAnimated();
+                    await runCFTPAnimated(gen);
+                    console.log('[comp] step1: runCFTPAnimated done, gen=' + gen + ' vs ' + stepGeneration);
                 })().catch(e => console.error('computational CFTP error:', e));
             }
             if (step === 2) {
-                // Show "why fails" pane, swap QR, dispose CFTP, start waterfall
+                console.log('[comp] step2: disposeAll before waterfall');
+                disposeAll();
+                console.log('[comp] step2: starting waterfall, gen=' + stepGeneration + ', wfWasmReady=' + wfWasmReady + ', wfAnimating=' + wfAnimating);
                 showElement('comp-why-fails');
                 if (qrEl) qrEl.style.display = 'none';
                 if (qrWfEl) qrWfEl.style.display = 'flex';
-                cftpAnimating = false;
-                cftpAutoRotating = false;
-                disposeCFTPThreeJS();
                 initWaterfallThreeJS();
                 startWfRenderLoop();
                 activeSim = 'waterfall';
+                console.log('[comp] step2: wfRenderer=' + !!wfRenderer + ', wfMeshGroup=' + !!wfMeshGroup);
                 runWaterfallAnimation();
             }
         },
 
         onStepBack: function(step) {
-            if (step === 2) {
-                // Undo waterfall: dispose, re-init CFTP with quick sample + auto-rotate
+            // onStepBack(N) = "now at step N, undo what step N+1 did"
+            console.log('[comp] onStepBack(' + step + '), gen=' + stepGeneration + ', activeSim=' + activeSim);
+            if (step === 1) {
+                // Now at step 1: undo step 2 (waterfall → CFTP)
+                disposeAll();
+                console.log('[comp] stepBack→1: disposed waterfall, gen=' + stepGeneration);
                 hideElement('comp-why-fails');
                 if (qrEl) qrEl.style.display = 'flex';
                 if (qrWfEl) qrWfEl.style.display = 'none';
-                disposeWaterfallThreeJS();
+                const gen = stepGeneration;
                 (async () => {
                     const ok = await initCFTPWasm();
-                    if (!ok) return;
+                    if (!ok || gen !== stepGeneration) { console.log('[comp] stepBack→1: stale gen=' + gen + ' vs ' + stepGeneration); return; }
+                    console.log('[comp] stepBack→1: initCFTPThreeJS, gen=' + gen);
                     initCFTPThreeJS();
                     startCFTPRenderLoop();
                     activeSim = 'cftp';
                     await runCFTPQuick();
+                    console.log('[comp] stepBack→1: runCFTPQuick done');
                 })();
             }
-            if (step === 1) {
-                // Undo CFTP animation: stop and dispose
+            if (step === 0) {
+                // Now at step 0: undo step 1 (dispose CFTP)
+                disposeAll();
+                console.log('[comp] stepBack→0: disposed CFTP, gen=' + stepGeneration);
                 hideElement('comp-cftp');
                 hideElement('comp-why-works');
-                cftpAnimating = false;
-                cftpAutoRotating = false;
-                disposeCFTPThreeJS();
-                activeSim = null;
-                if (statusEl) statusEl.textContent = '';
             }
         },
 
         reset: function() {
+            console.log('[comp] reset, gen=' + stepGeneration);
+            disposeAll();
+            console.log('[comp] reset done, gen=' + stepGeneration);
+            // Hide all panes
             hideElement('comp-cftp');
             hideElement('comp-why-works');
             hideElement('comp-why-fails');
+            // Reset QR codes to initial state
+            if (qrEl) qrEl.style.display = 'flex';
+            if (qrWfEl) qrWfEl.style.display = 'none';
+            // Clear status
+            if (statusEl) statusEl.textContent = '';
         }
     }, 0);
 })();
