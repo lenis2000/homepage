@@ -1,7 +1,12 @@
 /**
  * Computational Slide — Dual 3D Simulations
- * Step 2-3: CFTP with animated min/max surface convergence
- * Step 4: Waterfall growth (clone of dimensional-collapse-sim)
+ * Build order:
+ *   1. Show banner
+ *   2. Show CFTP pane
+ *   3. Show "Why works" pane
+ *   4. Run forward coupled Glauber animation (no T-doubling)
+ *   5. Show "Why fails" pane
+ *   6. Dispose CFTP → start waterfall animation
  *
  * Uses LozengeModule (modularized WASM) for CFTP,
  * global Module (non-modularized) for waterfall.
@@ -30,13 +35,14 @@
     let cftpScene = null, cftpRenderer = null, cftpCamera = null, cftpControls = null, cftpMeshGroup = null;
     let cftpRenderLoopId = null;
     let cftpAnimating = false;
+    let cftpAutoRotating = false;
     let wasmInitPromise = null;
 
     // Generate regular hexagonal region of side length a
     // Uses same coordinate system as ultimate-lozenge: getVertex(n,j) = {x: n, y: n/√3 + j*2/√3}
     // Type 1 = black (right-facing): vertices (n,j), (n,j-1), (n+1,j-1)
     // Type 2 = white (left-facing): vertices (n,j), (n+1,j), (n+1,j-1)
-    const HEX_SIDE = 30;  // 2700 dimers, 5400 triangles
+    const HEX_SIDE = 30;
 
     function generateHexagonTriangles(a) {
         const slope = 1 / Math.sqrt(3);
@@ -113,7 +119,6 @@
 
     async function initCFTPWasm() {
         if (wasm) return true;
-        // Prevent concurrent initialization
         if (wasmInitPromise) return wasmInitPromise;
         wasmInitPromise = (async () => {
             if (typeof LozengeModule === 'undefined') {
@@ -125,7 +130,7 @@
                 cftpFuncs = {
                     initFromTriangles: wasm.cwrap('initFromTriangles', 'number', ['number', 'number']),
                     initCFTP: wasm.cwrap('initCFTP', 'number', []),
-                    stepCFTP: wasm.cwrap('stepCFTP', 'number', []),
+                    forwardCoupledStep: wasm.cwrap('forwardCoupledStep', 'number', []),
                     finalizeCFTP: wasm.cwrap('finalizeCFTP', 'number', []),
                     exportCFTPMinDimers: wasm.cwrap('exportCFTPMinDimers', 'number', []),
                     exportCFTPMaxDimers: wasm.cwrap('exportCFTPMaxDimers', 'number', []),
@@ -133,7 +138,6 @@
                     runCFTP: wasm.cwrap('runCFTP', 'number', []),
                     freeString: wasm.cwrap('freeString', null, ['number'])
                 };
-                console.log('computational: LozengeModule initialized');
                 return true;
             } catch (e) {
                 console.error('Failed to init LozengeModule for computational:', e);
@@ -225,8 +229,21 @@
 
     function startCFTPRenderLoop() {
         if (cftpRenderLoopId) return;
+        const AUTO_ROTATE_SPEED = 0.003; // radians per frame
         function loop() {
             if (!cftpRenderer || !cftpCamera || !cftpControls) return;
+            // Auto-rotate after coalescence
+            if (cftpAutoRotating && cftpControls) {
+                const target = cftpControls.target;
+                const offset = cftpCamera.position.clone().sub(target);
+                const angle = AUTO_ROTATE_SPEED;
+                const cosA = Math.cos(angle), sinA = Math.sin(angle);
+                const newX = offset.x * cosA - offset.y * sinA;
+                const newY = offset.x * sinA + offset.y * cosA;
+                offset.x = newX;
+                offset.y = newY;
+                cftpCamera.position.copy(target).add(offset);
+            }
             cftpControls.update();
             cftpRenderer.render(cftpScene, cftpCamera);
             cftpRenderLoopId = requestAnimationFrame(loop);
@@ -244,6 +261,7 @@
     function disposeCFTPThreeJS() {
         stopCFTPRenderLoop();
         cftpAnimating = false;
+        cftpAutoRotating = false;
         if (cftpMeshGroup) {
             while (cftpMeshGroup.children.length > 0) {
                 const child = cftpMeshGroup.children[0];
@@ -396,78 +414,73 @@
         }
     }
 
-    // --- CFTP animation ---
+    // --- Forward coupled Glauber animation (no T-doubling) ---
+
+    const CFTP_STEP_DELAY = 600;  // ms between visual updates
 
     async function runCFTPAnimated() {
         if (!wasm || !cftpFuncs) return;
         cftpAnimating = true;
+        cftpAutoRotating = false;
 
         loadShapeIntoWasm();
         wasmCallJSON(cftpFuncs.initCFTP);
 
-        if (statusEl) statusEl.textContent = 'CFTP: T=1';
+        // Show initial min/max bounds (fully separated)
+        if (cftpMeshGroup) {
+            const minD = wasmCallJSON(cftpFuncs.exportCFTPMinDimers);
+            const maxD = wasmCallJSON(cftpFuncs.exportCFTPMaxDimers);
+            renderCFTPBounds(minD.dimers, maxD.dimers);
+        }
+        if (statusEl) statusEl.textContent = 'coupled Glauber: step 0';
+        await new Promise(r => setTimeout(r, CFTP_STEP_DELAY));
 
-        let coalesced = false;
-        let lastT = 1;
-
-        while (!coalesced && cftpAnimating) {
-            const result = wasmCallJSON(cftpFuncs.stepCFTP);
+        while (cftpAnimating) {
+            const result = wasmCallJSON(cftpFuncs.forwardCoupledStep);
 
             if (result.status === 'coalesced') {
-                coalesced = true;
-                if (statusEl) statusEl.textContent = 'CFTP: coalesced at T=' + (result.T || lastT);
+                if (statusEl) statusEl.textContent = 'coalesced at step ' + (result.step || '?');
+                break;
             } else if (result.status === 'in_progress') {
-                // Within an epoch — show bounds every ~4000 steps
-                if (result.step % 4000 < 1000 && cftpMeshGroup) {
-                    const minD = wasmCallJSON(cftpFuncs.exportCFTPMinDimers);
-                    const maxD = wasmCallJSON(cftpFuncs.exportCFTPMaxDimers);
-                    renderCFTPBounds(minD.dimers, maxD.dimers);
-                }
-                if (statusEl) statusEl.textContent = 'CFTP: T=' + result.T + ' step ' + result.step + '/' + result.T;
-                // Yield to let rendering happen
-                await new Promise(r => setTimeout(r, 0));
-                continue;
-            } else if (result.status === 'not_coalesced') {
-                // Epoch finished, T doubled — show bounds
-                lastT = result.T;
-                if (statusEl) statusEl.textContent = 'CFTP: T=' + result.T;
                 if (cftpMeshGroup) {
                     const minD = wasmCallJSON(cftpFuncs.exportCFTPMinDimers);
                     const maxD = wasmCallJSON(cftpFuncs.exportCFTPMaxDimers);
                     renderCFTPBounds(minD.dimers, maxD.dimers);
                 }
-                await new Promise(r => setTimeout(r, 0));
-                continue;
-            } else if (result.status === 'timeout') {
-                if (statusEl) statusEl.textContent = 'CFTP: timeout at T=' + result.T;
-                break;
+                if (statusEl) statusEl.textContent = 'coupled Glauber: step ' + result.step;
+                await new Promise(r => setTimeout(r, CFTP_STEP_DELAY));
             } else if (result.status === 'already_coalesced') {
-                coalesced = true;
+                break;
+            } else {
+                // error or unexpected
                 break;
             }
         }
 
-        if (coalesced && cftpAnimating) {
+        // Finalize: show single coalesced surface
+        if (cftpAnimating && cftpMeshGroup) {
             wasmCallJSON(cftpFuncs.finalizeCFTP);
             const dimersResult = wasmCallJSON(cftpFuncs.exportDimers);
             renderCFTPCoalesced(dimersResult.dimers || []);
-            if (statusEl) statusEl.textContent = '';
+            // Start slow auto-rotation
+            cftpAutoRotating = true;
         }
 
         cftpAnimating = false;
     }
 
     async function runCFTPQuick() {
-        // One-shot CFTP without animation (for step back 4→3)
+        // One-shot CFTP without animation (for step back 6→5)
         if (!wasm || !cftpFuncs) return;
 
         loadShapeIntoWasm();
-        if (statusEl) statusEl.textContent = 'CFTP: sampling...';
+        if (statusEl) statusEl.textContent = 'sampling...';
         wasmCallJSON(cftpFuncs.runCFTP);
 
         const dimersResult = wasmCallJSON(cftpFuncs.exportDimers);
         renderCFTPCoalesced(dimersResult.dimers || []);
         if (statusEl) statusEl.textContent = '';
+        cftpAutoRotating = true;
     }
 
     // ===================================================================
@@ -878,6 +891,7 @@
     function disposeActive() {
         if (activeSim === 'cftp') {
             cftpAnimating = false;
+            cftpAutoRotating = false;
             disposeCFTPThreeJS();
         } else if (activeSim === 'waterfall') {
             disposeWaterfallThreeJS();
@@ -887,15 +901,20 @@
     }
 
     // ===================================================================
-    // Slide engine registration
+    // Slide engine registration — 5-step build order
     // ===================================================================
+    // Banner always visible
+    // Step 1: Show CFTP pane
+    // Step 2: Show "Why works" pane
+    // Step 3: Run CFTP animation
+    // Step 4: Show "Why fails" pane
+    // Step 5: Dispose CFTP → start waterfall
 
     window.slideEngine.registerSimulation('computational', {
-        steps: 4,
+        steps: 5,
 
         onSlideEnter: function() {
-            // Pre-init CFTP wasm in background
-            initCFTPWasm();
+            // Banner is always visible (no opacity transition)
         },
 
         onSlideLeave: function() {
@@ -903,32 +922,30 @@
         },
 
         onStep: function(step) {
-            console.log('computational onStep:', step);
-            if (step === 2) {
+            if (step === 1) {
                 showElement('comp-cftp');
-                // Start CFTP simulation
-                (async () => {
-                    console.log('computational: awaiting CFTP wasm...');
-                    const ok = await initCFTPWasm();
-                    console.log('computational: CFTP wasm ready:', ok);
-                    if (!ok) return;
-                    initCFTPThreeJS();
-                    console.log('computational: Three.js init done, starting render loop');
-                    startCFTPRenderLoop();
-                    activeSim = 'cftp';
-                    console.log('computational: starting CFTP animation');
-                    await runCFTPAnimated();
-                    console.log('computational: CFTP animation finished');
-                })().catch(e => console.error('computational CFTP error:', e));
+            }
+            if (step === 2) {
+                showElement('comp-why-works');
             }
             if (step === 3) {
-                showElement('comp-why-works');
-                // CFTP result stays on screen (coalesced surface)
+                // Init CFTP Three.js + run forward coupled Glauber
+                (async () => {
+                    const ok = await initCFTPWasm();
+                    if (!ok) { console.warn('computational: CFTP wasm not available'); return; }
+                    initCFTPThreeJS();
+                    startCFTPRenderLoop();
+                    activeSim = 'cftp';
+                    await runCFTPAnimated();
+                })().catch(e => console.error('computational CFTP error:', e));
             }
             if (step === 4) {
                 showElement('comp-why-fails');
+            }
+            if (step === 5) {
                 // Dispose CFTP, start waterfall
                 cftpAnimating = false;
+                cftpAutoRotating = false;
                 disposeCFTPThreeJS();
                 initWaterfallThreeJS();
                 startWfRenderLoop();
@@ -938,9 +955,8 @@
         },
 
         onStepBack: function(step) {
-            if (step === 4) {
-                // Going back from step 4: hide why-fails, dispose waterfall, re-init CFTP quick
-                hideElement('comp-why-fails');
+            if (step === 5) {
+                // Undo waterfall: dispose, re-init CFTP with quick sample + auto-rotate
                 disposeWaterfallThreeJS();
                 (async () => {
                     const ok = await initCFTPWasm();
@@ -951,14 +967,22 @@
                     await runCFTPQuick();
                 })();
             }
+            if (step === 4) {
+                hideElement('comp-why-fails');
+            }
             if (step === 3) {
-                // Going back from step 3: hide why-works, CFTP result stays
-                hideElement('comp-why-works');
+                // Undo CFTP animation: stop and dispose
+                cftpAnimating = false;
+                cftpAutoRotating = false;
+                disposeCFTPThreeJS();
+                activeSim = null;
+                if (statusEl) statusEl.textContent = '';
             }
             if (step === 2) {
-                // Going back from step 2: hide CFTP pane, dispose Three.js
+                hideElement('comp-why-works');
+            }
+            if (step === 1) {
                 hideElement('comp-cftp');
-                disposeActive();
             }
         },
 
@@ -966,7 +990,6 @@
             hideElement('comp-cftp');
             hideElement('comp-why-works');
             hideElement('comp-why-fails');
-            disposeActive();
         }
     }, 0);
 })();

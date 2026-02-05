@@ -4,7 +4,7 @@ emcc visual-lozenge.cpp -o ../visual-lozenge.js \
   -s WASM=1 \
   -s MODULARIZE=1 \
   -s EXPORT_NAME='LozengeModule' \
-  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_setHoleBaseHeight','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_getCFTPMinGridData','_getCFTPMaxGridData','_loadDimersForLoops','_detectLoopSizes','_filterLoopsBySize','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_initFromTriangles','_performGlauberSteps','_exportDimers','_getTotalSteps','_getFlipCount','_getAcceptRate','_setQBias','_getQBias','_setPeriodicQBias','_setPeriodicK','_setUsePeriodicWeights','_setUseRandomSweeps','_getUseRandomSweeps','_freeString','_runCFTP','_initCFTP','_stepCFTP','_forwardCoupledStep','_finalizeCFTP','_exportCFTPMaxDimers','_exportCFTPMinDimers','_repairRegion','_setDimers','_getHoleCount','_getAllHolesInfo','_adjustHoleWindingExport','_setHoleBaseHeight','_recomputeHoleInfo','_getVerticalCutInfo','_getHardwareConcurrency','_initFluctuationsCFTP','_stepFluctuationsCFTP','_getFluctuationsResult','_exportFluctuationSample','_getRawGridData','_getGridBounds','_getCFTPMinGridData','_getCFTPMaxGridData','_loadDimersForLoops','_detectLoopSizes','_filterLoopsBySize','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['ccall','cwrap','UTF8ToString','setValue','getValue','lengthBytesUTF8','stringToUTF8']" \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=32MB \
@@ -1599,7 +1599,7 @@ static bool cftp_initialized = false;
 static bool cftp_coalesced = false;
 static std::vector<uint64_t> cftp_seeds;
 static int cftp_currentStep = 0;
-static const int cftp_stepsPerBatch = 1000;
+static const int cftp_stepsPerBatch = 100;
 
 void makeExtremalState(GridState& state, int direction) {
     state.grid = dimerGrid;
@@ -2154,6 +2154,8 @@ char* initCFTP() {
     cftp_initialized = true;
     cftp_coalesced = false;
     cftp_currentStep = 0;
+    cftp_lower.cloneFrom(cftp_minState.grid);
+    cftp_upper.cloneFrom(cftp_maxState.grid);
 
     std::string json = "{\"status\":\"cftp_initialized\", \"T\":" + std::to_string(cftp_T) + "}";
     char* out = (char*)malloc(json.size() + 1);
@@ -2223,6 +2225,39 @@ char* stepCFTP() {
         strcpy(out, json.c_str());
         return out;
     }
+}
+
+// Forward coupled Glauber: just run coupled steps forward without T-doubling
+EMSCRIPTEN_KEEPALIVE
+char* forwardCoupledStep() {
+    if (!cftp_initialized) {
+        std::string json = "{\"status\":\"error\", \"message\":\"not initialized\"}";
+        char* out = (char*)malloc(json.size() + 1);
+        strcpy(out, json.c_str());
+        return out;
+    }
+    if (cftp_coalesced) {
+        std::string json = "{\"status\":\"already_coalesced\", \"step\":" + std::to_string(cftp_currentStep) + "}";
+        char* out = (char*)malloc(json.size() + 1);
+        strcpy(out, json.c_str());
+        return out;
+    }
+    for (int i = 0; i < cftp_stepsPerBatch; i++) {
+        uint64_t seed = xorshift64();
+        coupledStep(cftp_lower, cftp_upper, seed);
+        cftp_currentStep++;
+    }
+    if (cftp_lower.grid == cftp_upper.grid) {
+        cftp_coalesced = true;
+        std::string json = "{\"status\":\"coalesced\", \"step\":" + std::to_string(cftp_currentStep) + "}";
+        char* out = (char*)malloc(json.size() + 1);
+        strcpy(out, json.c_str());
+        return out;
+    }
+    std::string json = "{\"status\":\"in_progress\", \"step\":" + std::to_string(cftp_currentStep) + "}";
+    char* out = (char*)malloc(json.size() + 1);
+    strcpy(out, json.c_str());
+    return out;
 }
 
 EMSCRIPTEN_KEEPALIVE
