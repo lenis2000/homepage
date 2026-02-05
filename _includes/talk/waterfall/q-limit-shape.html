@@ -29,7 +29,8 @@
                 Maximize
                 <strong style="color: #232D4B; font-size: clamp(1.4rem, 2.5vw, 2rem);">entropy − γ · area</strong> =<br>
                 \(\displaystyle \int \sigma(f'(x)) \, dx - \gamma \cdot \int f(x) \, dx\)<br>
-                \(\sigma(s) = (s+1)\log(s+1) - s\log(s)\) = entropy of paths with slope \(s\)
+                \(\sigma(s) = (s+1)\log(s+1) - s\log(s)\) = entropy of paths with slope \(s\):<br>
+                <span style="color: var(--slide-muted);">\(\sigma(s) = \lim\limits_{N\to\infty} \dfrac{1}{N} \log\# \)paths from \((0,0)\) to \((N,\lfloor sN\rfloor)\)</span>
             </div>
         </div>
 

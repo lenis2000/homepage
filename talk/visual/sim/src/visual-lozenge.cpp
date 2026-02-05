@@ -1730,6 +1730,10 @@ extern "C" {
 // type: 1 = Black (right-facing), 2 = White (left-facing)
 EMSCRIPTEN_KEEPALIVE
 char* initFromTriangles(int* data, int count) {
+    // Auto-seed for randomness
+    uint32_t jsSeed = EM_ASM_INT({ return Math.floor(Math.random() * 0xFFFFFFFF); });
+    rng_state = (uint64_t)jsSeed * 6364136223846793005ULL + 1442695040888963407ULL;
+
     blackTriangles.clear();
     whiteTriangles.clear();
     blackMap.clear();
@@ -2106,6 +2110,10 @@ void seedRNG(uint32_t seed) {
 
 EMSCRIPTEN_KEEPALIVE
 char* runCFTP() {
+    // Auto-seed for randomness
+    uint32_t jsSeed = EM_ASM_INT({ return Math.floor(Math.random() * 0xFFFFFFFF); });
+    rng_state = (uint64_t)jsSeed * 6364136223846793005ULL + 1442695040888963407ULL;
+
     GridState minState, maxState;
     makeExtremalState(minState, -1);
     makeExtremalState(maxState, 1);
@@ -2153,6 +2161,10 @@ char* runCFTP() {
 
 EMSCRIPTEN_KEEPALIVE
 char* initCFTP() {
+    // Auto-seed for randomness
+    uint32_t jsSeed = EM_ASM_INT({ return Math.floor(Math.random() * 0xFFFFFFFF); });
+    rng_state = (uint64_t)jsSeed * 6364136223846793005ULL + 1442695040888963407ULL;
+
     makeExtremalState(cftp_minState, -1);
     makeExtremalState(cftp_maxState, 1);
     cftp_T = 1;
@@ -2234,7 +2246,7 @@ char* stepCFTP() {
 
 // Forward coupled Glauber: just run coupled steps forward without T-doubling
 EMSCRIPTEN_KEEPALIVE
-char* forwardCoupledStep() {
+char* forwardCoupledStep(int numSteps) {
     if (!cftp_initialized) {
         std::string json = "{\"status\":\"error\", \"message\":\"not initialized\"}";
         char* out = (char*)malloc(json.size() + 1);
@@ -2247,7 +2259,7 @@ char* forwardCoupledStep() {
         strcpy(out, json.c_str());
         return out;
     }
-    for (int i = 0; i < cftp_stepsPerBatch; i++) {
+    for (int i = 0; i < numSteps; i++) {
         uint64_t seed = xorshift64();
         coupledStep(cftp_lower, cftp_upper, seed);
         cftp_currentStep++;
@@ -2636,6 +2648,10 @@ int getHardwareConcurrency() {
 
 EMSCRIPTEN_KEEPALIVE
 char* initFluctuationsCFTP(int numSamples) {
+    // Auto-seed for randomness
+    uint32_t jsSeed = EM_ASM_INT({ return Math.floor(Math.random() * 0xFFFFFFFF); });
+    rng_state = (uint64_t)jsSeed * 6364136223846793005ULL + 1442695040888963407ULL;
+
     fluct_num_samples = numSamples;
     fluct_coalesced.assign(numSamples, false);
     fluct_samples.resize(numSamples);

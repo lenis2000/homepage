@@ -252,39 +252,85 @@
         }
     }
 
-    slider.addEventListener('input', update);
+    slider.addEventListener('input', function() {
+        stopQAnimation();
+        update();
+    });
 
     // Initial draw
     drawAreaExample();
     update();
-
-    // Step q values: step 0=1 (uniform), step 1=0.9, step 2=0.5 (favor low area), step 3=1.5 (favor high area)
-    const stepQValues = [1, 0.9, 0.5, 1.5];
 
     function setQ(q) {
         slider.value = q;
         update();
     }
 
+    // Continuous q animation
+    let animId = null;
+    const ANIM_Q_START = 0.5, ANIM_Q_END = 2.0, ANIM_DURATION = 8000; // 8 seconds
+
+    // First leg: 0.9 → 0.5 (half duration), then ping-pong 0.5 → 2 → 0.5 ...
+    const ANIM_INTRO_DURATION = ANIM_DURATION / 2; // 0.9→0.5
+
+    function startQAnimation() {
+        stopQAnimation();
+        const t0 = performance.now();
+        function tick(now) {
+            const elapsed = now - t0;
+            let q;
+            if (elapsed < ANIM_INTRO_DURATION) {
+                // Intro: 0.9 → 0.5
+                const t = elapsed / ANIM_INTRO_DURATION;
+                q = 0.9 + (ANIM_Q_START - 0.9) * t;
+            } else {
+                // Ping-pong: 0.5 → 2 → 0.5 ...
+                const loopElapsed = elapsed - ANIM_INTRO_DURATION;
+                const cycleT = (loopElapsed % (ANIM_DURATION * 2)) / ANIM_DURATION;
+                const t = cycleT <= 1 ? cycleT : 2 - cycleT;
+                q = ANIM_Q_START + (ANIM_Q_END - ANIM_Q_START) * t;
+            }
+            setQ(Math.round(q * 100) / 100);
+            animId = requestAnimationFrame(tick);
+        }
+        animId = requestAnimationFrame(tick);
+    }
+
+    function stopQAnimation() {
+        if (animId) { cancelAnimationFrame(animId); animId = null; }
+    }
+
     // Register with slide engine
+    // Build 1 (enter): q=1, Build 2: q=0.9, Build 3: continuous slide q=0.1→2
     function waitForSlideEngine() {
         if (window.slideEngine) {
             window.slideEngine.registerSimulation('q-deformation', {
                 start() {},
                 pause() {},
-                steps: 3,
+                steps: 2,
                 onStep(step) {
-                    if (step >= 1 && step <= 3) {
-                        setQ(stepQValues[step]);
+                    if (step === 1) {
+                        stopQAnimation();
+                        setQ(0.9);
+                    }
+                    if (step === 2) {
+                        startQAnimation();
                     }
                 },
                 onStepBack(step) {
-                    setQ(stepQValues[step]);
+                    stopQAnimation();
+                    if (step === 2) {
+                        setQ(0.9);
+                    }
+                    if (step === 1) {
+                        setQ(1);
+                    }
                 },
                 onSlideEnter() {
                     setQ(1);
                 },
                 onSlideLeave() {
+                    stopQAnimation();
                     setQ(1);
                 }
             }, 0);

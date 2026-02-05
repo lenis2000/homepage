@@ -130,7 +130,7 @@
                 cftpFuncs = {
                     initFromTriangles: wasm.cwrap('initFromTriangles', 'number', ['number', 'number']),
                     initCFTP: wasm.cwrap('initCFTP', 'number', []),
-                    forwardCoupledStep: wasm.cwrap('forwardCoupledStep', 'number', []),
+                    forwardCoupledStep: wasm.cwrap('forwardCoupledStep', 'number', ['number']),
                     finalizeCFTP: wasm.cwrap('finalizeCFTP', 'number', []),
                     exportCFTPMinDimers: wasm.cwrap('exportCFTPMinDimers', 'number', []),
                     exportCFTPMaxDimers: wasm.cwrap('exportCFTPMaxDimers', 'number', []),
@@ -417,6 +417,19 @@
     // --- Forward coupled Glauber animation (no T-doubling) ---
 
     const CFTP_STEP_DELAY = 600;  // ms between visual updates
+    // Progressive milestone schedule: update visuals at these cumulative step counts
+    const CFTP_MILESTONES = [10, 20, 50, 100, 200, 300, 500, 700];
+    const CFTP_AFTER_MILESTONES = 200; // then every 200 steps
+
+    function getNextMilestone(currentStep) {
+        for (const m of CFTP_MILESTONES) {
+            if (m > currentStep) return m;
+        }
+        // Past fixed milestones: next multiple of CFTP_AFTER_MILESTONES above last milestone
+        const last = CFTP_MILESTONES[CFTP_MILESTONES.length - 1];
+        const beyond = currentStep - last;
+        return last + (Math.floor(beyond / CFTP_AFTER_MILESTONES) + 1) * CFTP_AFTER_MILESTONES;
+    }
 
     async function runCFTPAnimated() {
         if (!wasm || !cftpFuncs) return;
@@ -435,8 +448,12 @@
         if (statusEl) statusEl.textContent = 'coupled Glauber: step 0';
         await new Promise(r => setTimeout(r, CFTP_STEP_DELAY));
 
+        let totalSteps = 0;
         while (cftpAnimating) {
-            const result = wasmCallJSON(cftpFuncs.forwardCoupledStep);
+            const nextMilestone = getNextMilestone(totalSteps);
+            const stepsToRun = nextMilestone - totalSteps;
+            const result = wasmCallJSON(() => cftpFuncs.forwardCoupledStep(stepsToRun));
+            totalSteps = nextMilestone;
 
             if (result.status === 'coalesced') {
                 if (statusEl) statusEl.textContent = 'coalesced at step ' + (result.step || '?');
@@ -452,7 +469,6 @@
             } else if (result.status === 'already_coalesced') {
                 break;
             } else {
-                // error or unexpected
                 break;
             }
         }
