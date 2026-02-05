@@ -29,8 +29,10 @@ function initTitleSim() {
         const freeStringWasm = wasm.cwrap('freeString', null, ['number']);
         const setUseRandomSweepsWasm = wasm.cwrap('setUseRandomSweeps', null, ['number']);
 
-        // Color palette (UVA)
-        const colors = ['#E57200', '#232D4B', '#F9DCBF'];
+        // Color palettes
+        const colorsUVA = ['#E57200', '#232D4B', '#F9DCBF'];
+        const colorsPink = ['#E91E63', '#880E4F', '#F8BBD0'];
+        let colors = colorsUVA;
 
         // Simulation state
         let activeTriangles = new Map();
@@ -223,9 +225,26 @@ function initTitleSim() {
         function waitForSlideEngine() {
             if (window.slideEngine) {
                 window.slideEngine.registerSimulation('title', {
+                    steps: 2,
                     start: startSim,
-                    pause: pauseSim
-                }, 1);
+                    pause: pauseSim,
+                    onStep(step) {
+                        if (step === 1) {
+                            startSim();
+                        } else if (step === 2) {
+                            colors = colorsPink;
+                            draw();
+                        }
+                    },
+                    onStepBack(step) {
+                        if (step === 0) {
+                            pauseSim();
+                        } else if (step === 1) {
+                            colors = colorsUVA;
+                            draw();
+                        }
+                    }
+                }, 0);
             } else {
                 setTimeout(waitForSlideEngine, 50);
             }
