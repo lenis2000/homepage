@@ -25,6 +25,8 @@
 
     function showElement(id) { var el = document.getElementById(id); if (el) el.style.opacity = '1'; }
     function hideElement(id) { var el = document.getElementById(id); if (el) el.style.opacity = '0'; }
+    const qrEl = document.getElementById('comp-qr');
+    const qrWfEl = document.getElementById('comp-qr-wf');
 
     // ===================================================================
     // CFTP Simulation (LozengeModule — isolated modularized instance)
@@ -927,7 +929,7 @@
     // Step 5: Dispose CFTP → start waterfall
 
     window.slideEngine.registerSimulation('computational', {
-        steps: 5,
+        steps: 3,
 
         onSlideEnter: function() {
             // Banner is always visible (no opacity transition)
@@ -940,11 +942,7 @@
         onStep: function(step) {
             if (step === 1) {
                 showElement('comp-cftp');
-            }
-            if (step === 2) {
                 showElement('comp-why-works');
-            }
-            if (step === 3) {
                 // Init CFTP Three.js + run forward coupled Glauber
                 (async () => {
                     const ok = await initCFTPWasm();
@@ -955,11 +953,11 @@
                     await runCFTPAnimated();
                 })().catch(e => console.error('computational CFTP error:', e));
             }
-            if (step === 4) {
+            if (step === 2) {
+                // Show "why fails" pane, swap QR, dispose CFTP, start waterfall
                 showElement('comp-why-fails');
-            }
-            if (step === 5) {
-                // Dispose CFTP, start waterfall
+                if (qrEl) qrEl.style.display = 'none';
+                if (qrWfEl) qrWfEl.style.display = 'flex';
                 cftpAnimating = false;
                 cftpAutoRotating = false;
                 disposeCFTPThreeJS();
@@ -971,8 +969,11 @@
         },
 
         onStepBack: function(step) {
-            if (step === 5) {
+            if (step === 2) {
                 // Undo waterfall: dispose, re-init CFTP with quick sample + auto-rotate
+                hideElement('comp-why-fails');
+                if (qrEl) qrEl.style.display = 'flex';
+                if (qrWfEl) qrWfEl.style.display = 'none';
                 disposeWaterfallThreeJS();
                 (async () => {
                     const ok = await initCFTPWasm();
@@ -983,22 +984,15 @@
                     await runCFTPQuick();
                 })();
             }
-            if (step === 4) {
-                hideElement('comp-why-fails');
-            }
-            if (step === 3) {
+            if (step === 1) {
                 // Undo CFTP animation: stop and dispose
+                hideElement('comp-cftp');
+                hideElement('comp-why-works');
                 cftpAnimating = false;
                 cftpAutoRotating = false;
                 disposeCFTPThreeJS();
                 activeSim = null;
                 if (statusEl) statusEl.textContent = '';
-            }
-            if (step === 2) {
-                hideElement('comp-why-works');
-            }
-            if (step === 1) {
-                hideElement('comp-cftp');
             }
         },
 

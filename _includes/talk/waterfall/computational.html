@@ -5,7 +5,7 @@
         This talk is a live demo
 				(JS, C++/Webassembly, WebGPU) and works in any browser.
 				<br>
-				Most pictures were generated on-the-fly!
+				Most pictures in the talk were generated on-the-fly!
     </div>
 
     <div style="display: grid; grid-template-columns: 48vw 44vw; gap: 2vw; margin-top: 2vh; padding: 0 2vw;">
@@ -47,6 +47,16 @@ extreme chains (maximal and minimal).
         <div style="display: flex; flex-direction: column; gap: 1vh; align-items: center;">
             <canvas id="comp-sim-canvas" width="1200" height="800" style="height: 52vh; width: auto; border-radius: 8px;"></canvas>
             <div id="comp-sim-status" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--slide-muted); min-height: 1.5em;"></div>
+            <!-- QR code for lozenge-draw (shown during CFTP) -->
+            <a id="comp-qr" href="https://lpetrov.cc/lozenge-draw/" target="_blank" style="display: flex; align-items: center; gap: 1vw; text-decoration: none; transition: opacity 0.3s;">
+                <img src="images/qr-lozenge-draw.png" alt="QR code to lozenge-draw" style="height: 15vh; width: auto;">
+                <span style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--slide-muted);">lpetrov.cc/lozenge-draw</span>
+            </a>
+            <!-- QR code for lozenge (shown during waterfall) -->
+            <a id="comp-qr-wf" href="https://lpetrov.cc/lozenge/" target="_blank" style="display: none; align-items: center; gap: 1vw; text-decoration: none;">
+                <img src="images/qr-lozenge.png" alt="QR code to lozenge" style="height: 15vh; width: auto;">
+                <span style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--slide-muted);">lpetrov.cc/lozenge</span>
+            </a>
         </div>
     </div>
 </section>
