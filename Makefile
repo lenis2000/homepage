@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local deploy-time
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local
 
 serve:
 	bundle exec jekyll serve --incremental
@@ -42,7 +42,7 @@ autodeploy:
 	@$(MAKE) invalidate
 	@echo "Auto-deployment complete!"
 
-deploy-local:
+deploy-local-full:
 	@echo "Building Jekyll site..."
 	bundle exec jekyll build
 	@echo "Cleaning HTML files..."
@@ -72,12 +72,12 @@ deploy-local:
 	@cp /tmp/homepage-syllabi/Syllabus_EGMT_s26.pdf _site/teaching/
 	@cp /tmp/homepage-syllabi/Syllabus_EGMT_s26.html _site/teaching/
 	@rm -rf /tmp/homepage-cv /tmp/homepage-syllabi
-	@echo "Syncing to S3..."
+	@echo "Syncing to S3 (full sync with --delete)..."
 	aws s3 sync _site/ s3://lpetrov.cc --delete
 	@$(MAKE) invalidate
-	@echo "Local deploy complete!"
+	@echo "Full local deploy complete!"
 
-deploy-time:
+deploy-local:
 	@echo "Building Jekyll site..."
 	bundle exec jekyll build
 	@echo "Cleaning HTML files..."
@@ -110,4 +110,4 @@ deploy-time:
 	@echo "Syncing to S3 (size-only comparison, no deletes)..."
 	aws s3 sync _site/ s3://lpetrov.cc --size-only
 	@$(MAKE) invalidate
-	@echo "Time-based deploy complete!"
+	@echo "Local deploy complete!"
