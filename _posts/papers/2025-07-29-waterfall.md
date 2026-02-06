@@ -4,7 +4,7 @@ title: "Random Lozenge Waterfall: Dimensional Collapse of Gibbs Measures"
 arXiv: 2507.22011 [math.PR]
 coauthors:
   - name: Alisa Knizel
-    web: https://sites.google.com/view/alisaknizel/home
+    web: https://alisaknizel.weebly.com/
   - name: Leonid Petrov
 comments: false
 categories: blog math preprint
