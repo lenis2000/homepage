@@ -18,6 +18,7 @@ description: "Interactive talk on random lozenge tilings and their limit shapes"
   const criticalAssets = [
     '/js/three.min.js',
     '/js/OrbitControls.js',
+    '/js/TrackballControls.js',
     '/js/colorschemes.js',
     '/js/slide-engine.js',
     '/talk/visual/sim/visual-lozenge.js',
@@ -91,10 +92,11 @@ Promise.all([
     loadScript(wasmSrc),
     loadScript(qpartSrc)
 ]).then(() => {
-    // Load WebGPU lozenge engine, then signal ready
-    loadScript('/js/webgpu-lozenge-engine.js')
-        .catch(e => console.log('WebGPU engine not available'))
-        .finally(() => window.dispatchEvent(new Event('wasm-loaded')));
+    // Load WebGPU engines, then signal ready
+    Promise.all([
+        loadScript('/js/webgpu-lozenge-engine.js').catch(e => console.log('WebGPU lozenge engine not available')),
+        loadScript('/js/webgpu-qpartition-engine.js').catch(e => console.log('WebGPU qpartition engine not available'))
+    ]).finally(() => window.dispatchEvent(new Event('wasm-loaded')));
 });
 </script>
 
@@ -110,22 +112,32 @@ Promise.all([
 
 {% include talk/waterfall/grid-paths.html %}
 
-{% include talk/waterfall/random-path.html %}
+<!-- {% include talk/waterfall/random-path.html %} -->
+
+{% include talk/waterfall/random-path-gaussian.html %}
+
+{% include talk/waterfall/q-deformation.html %}
+
+{% include talk/waterfall/q-limit-shape.html %}
+
+{% include talk/waterfall/q-local.html %}
 
 {% include talk/waterfall/part2-intro.html %}
 
 {% include talk/waterfall/2to3d.html %}
 
-<!-- Act 2: Variational Framework -->
 {% include talk/waterfall/limit-shape.html %}
 
 {% include talk/waterfall/energy.html %}
 
-{% include talk/waterfall/complex-burgers.html %}
-
 {% include talk/waterfall/universality-zoom.html %}
 
-<!-- Act 3: Breaking the Framework -->
+{% include talk/waterfall/complex-burgers.html %}
+
+{% include talk/waterfall/gff-fluctuations.html %}
+
+{% include talk/waterfall/part3-applied.html %}
+
 {% include talk/waterfall/q-volume.html %}
 
 {% include talk/waterfall/q-racah-brief.html %}
@@ -134,7 +146,10 @@ Promise.all([
 
 {% include talk/waterfall/dimensional-collapse.html %}
 
-<!-- Act 4: Wrapup -->
+{% include talk/waterfall/barcode-process-applied.html %}
+
+{% include talk/waterfall/part4-applied.html %}
+
 {% include talk/waterfall/computational.html %}
 
 {% include talk/waterfall/summary-colloquium.html %}
@@ -146,15 +161,23 @@ Promise.all([
 <script src="js/title-sim.js" defer></script>
 <script src="js/nature-builds-sim.js" defer></script>
 <script src="js/grid-paths-sim.js" defer></script>
-<script src="js/random-path-sim.js" defer></script>
+<!-- <script src="js/random-path-sim.js" defer></script> -->
+<script src="js/random-path-gaussian-sim.js" defer></script>
+<script src="js/q-deformation-sim.js" defer></script>
+<script src="js/q-limit-shape-sim.js" defer></script>
+<script src="js/q-local-sim.js" defer></script>
 <script src="js/2to3d-sim.js" defer></script>
 <script src="js/limit-shape-sim.js" defer></script>
 <script src="js/energy-sim.js" defer></script>
+<script src="js/gff-fluctuations-sim.js" defer></script>
 <script src="js/universality-zoom-sim.js" defer></script>
 <script src="js/q-volume-sim.js" defer></script>
 <script src="js/q-racah-large-hexagons-sim.js" defer></script>
 <script src="js/dimensional-collapse-sim.js" defer></script>
+<script src="js/barcode-process-applied-sim.js" defer></script>
+<script src="js/computational-sim.js" defer></script>
 <script src="js/summary-sim.js" defer></script>
+<script src="js/summary-colloquium-sim.js" defer></script>
 <script src="js/thankyou-sim.js" defer></script>
 
 <!-- Global: Escape/Enter key blurs input fields for slide navigation -->
