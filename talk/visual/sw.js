@@ -62,7 +62,7 @@ const PRECACHE_ASSETS = [
   // Simulation JS files — Part I
   '/talk/visual/js/title-sim.js',
   '/talk/visual/js/nature-builds-sim.js',
-  '/talk/waterfall/js/grid-paths-sim.js',
+  '/talk/visual/js/grid-paths-sim.js',
   '/talk/visual/js/random-path-sim.js',
   '/talk/visual/js/fluctuations-gaussian-sim.js',
   '/talk/visual/js/q-deformation-sim.js',
