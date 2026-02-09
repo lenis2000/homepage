@@ -4,6 +4,86 @@ title: "Random Surfaces from Stacking Cubes: A Visual Journey"
 description: "Interactive talk on random lozenge tilings and their limit shapes"
 ---
 
+<!-- PWA: Service Worker Registration & Asset Preloader -->
+<script>
+(function() {
+  // Add manifest link to head
+  var link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = '/talk/visual/manifest.json';
+  document.head.appendChild(link);
+
+  // Add theme-color meta
+  var meta = document.createElement('meta');
+  meta.name = 'theme-color';
+  meta.content = '#232D4B';
+  document.head.appendChild(meta);
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/talk/visual/sw.js', { scope: '/talk/visual/' })
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.warn('SW registration failed:', err));
+  }
+
+  // Asset preloader with progress bar
+  var criticalAssets = [
+    '/js/three.min.js',
+    '/js/OrbitControls.js',
+    '/js/colorschemes.js',
+    '/js/slide-engine.js',
+    '/talk/visual/sim/visual-lozenge.js',
+    '/talk/visual/sim/visual-lozenge-threaded.js',
+    '/talk/visual/sim/q-partition-cftp.js',
+    '/letters/Rotunda.json',
+    '/letters/T.json',
+    '/letters/H.json',
+    '/letters/A.json',
+    '/letters/N.json',
+    '/letters/K.json',
+    '/letters/Y.json',
+    '/letters/O.json',
+    '/letters/U.json',
+    '/katex-0.16.9/katex.min.js',
+    '/katex-0.16.9/katex.min.css',
+    '/talk/visual/images/big_shape.obj'
+  ];
+
+  var loaded = 0;
+  var total = criticalAssets.length;
+
+  function updateLoader() {
+    var bar = document.getElementById('asset-loader-bar');
+    var text = document.getElementById('asset-loader-text');
+    var container = document.getElementById('asset-loader');
+    if (!bar || !text || !container) return;
+
+    var pct = Math.round((loaded / total) * 100);
+    bar.style.width = pct + '%';
+
+    if (loaded >= total) {
+      text.textContent = 'Ready';
+      setTimeout(function() {
+        container.style.opacity = '0';
+        setTimeout(function() { container.remove(); }, 500);
+      }, 500);
+    } else {
+      text.textContent = 'Loading assets (' + loaded + '/' + total + ')';
+    }
+  }
+
+  // Preload assets
+  criticalAssets.forEach(function(url) {
+    fetch(url, { cache: 'force-cache' })
+      .then(function() { loaded++; updateLoader(); })
+      .catch(function() { loaded++; updateLoader(); });
+  });
+
+  // Update on DOMContentLoaded in case elements weren't ready
+  document.addEventListener('DOMContentLoaded', updateLoader);
+})();
+</script>
+
 <!-- Load simulation dependencies (colorschemes.js already loaded by slides layout) -->
 <script src="/js/three.min.js"></script>
 <script src="/js/OrbitControls.js"></script>

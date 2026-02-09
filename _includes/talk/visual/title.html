@@ -8,9 +8,17 @@
         <canvas id="title-canvas" width="1600" height="1200" style="cursor: pointer; height: 55vh; width: auto;"></canvas>
     </div>
 
+    <!-- Loading progress bar (disappears when loaded) -->
+    <div id="asset-loader" style="position: absolute; bottom: 10vh; left: 50%; transform: translateX(-50%); text-align: center; transition: opacity 0.5s;">
+        <div style="width: 200px; height: 4px; background: rgba(0,0,0,0.1); border-radius: 2px; overflow: hidden;">
+            <div id="asset-loader-bar" style="height: 100%; width: 0%; background: var(--slide-accent); transition: width 0.2s;"></div>
+        </div>
+        <div id="asset-loader-text" style="font-size: 0.7rem; color: var(--slide-muted); margin-top: 0.5vh;">Loading...</div>
+    </div>
+
     <!-- Funding acknowledgment logos -->
     <div style="position: absolute; bottom: 2vh; left: 2vw; display: flex; align-items: center; gap: 2vw;">
-        <img src="images/nsf-logo.png" alt="NSF" style="height: 7.5vh;">
-        <img src="images/simons-logo.svg" alt="Simons Foundation" style="height: 3vh;">
+        <img src="images/nsf-logo.png" alt="NSF" style="height: 15vh;">
+        <img src="images/simons-logo.svg" alt="Simons Foundation" style="height: 6vh;">
     </div>
 </section>

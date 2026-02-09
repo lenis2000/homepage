@@ -608,9 +608,9 @@
 }
 
 .slide figcaption {
-    font-size: 1rem;
+    font-size: clamp(0.9rem, 1.4vw, 1.3rem);
     color: var(--slide-muted);
-    margin-top: 0.5rem;
+    margin-top: 0.5vh;
     font-style: italic;
 }
 

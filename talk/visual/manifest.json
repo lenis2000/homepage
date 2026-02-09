@@ -1,0 +1,18 @@
+{
+  "name": "Random Surfaces from Stacking Cubes: A Visual Journey",
+  "short_name": "Visual Talk",
+  "description": "Interactive talk on random lozenge tilings and their limit shapes",
+  "start_url": "/talk/visual/",
+  "scope": "/talk/visual/",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#ffffff",
+  "theme_color": "#232D4B",
+  "icons": [
+    {
+      "src": "/talk/visual/images/hexagon.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ]
+}
