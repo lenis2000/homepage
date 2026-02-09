@@ -1,0 +1,1595 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+% young.sty                                                                   %
+%                                                                             %
+% version 0.67                                                                %
+%                                                                             %
+% Copyright 2011 Kevin Purbhoo                                                %
+% Licence: GNU general public licence version 2                               %
+%                                                                             %
+% This is an EXTENSIVELY modified version of                                  %
+%     YOUNG.STY by J"org Knappen 7-feb-1992                                   %
+%     Licence: GNU licence version 2                                          %
+%     based on YOUNG.TEX                                                      %
+%     macro to make Young tableaux                                            %
+%     by:  Paul E. S. Wormer  <U644301@HNYKUN11>                              %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%                                                                             %
+%                                                                             %
+%    This program is free software: you can redistribute it and/or modify     %
+%    it under the terms of the GNU General Public License as published by     %
+%    the Free Software Foundation, version 2.                                 %
+%                                                                             %
+%    This program is distributed in the hope that it will be useful,          %
+%    but WITHOUT ANY WARRANTY; without even the implied warranty of           %
+%    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the            %
+%    GNU General Public License for more details.                             %
+%                                                                             %
+%    You should have received a copy of the GNU General Public License        %
+%    along with this program.  If not, see <http://www.gnu.org/licenses/>.    %
+%                                                                             %
+%                                                                             %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% Global color variables
+%
+\newcommand*{\yshadecolorbg}{}
+\newcommand*{\yshadecolorfg}{}
+\newcommand*{\YShadeColorBg}{}
+\newcommand*{\YShadeColorFg}{}
+\newcommand*{\YSHADECOLORFG}{}
+\newcommand*{\YSHADECOLORBG}{}
+\newcommand*{\yaltshadecolorbg}{}
+\newcommand*{\yaltshadecolorfg}{}
+\newcommand*{\YAltShadeColorBg}{}
+\newcommand*{\YAltShadeColorFg}{}
+\newcommand*{\YALTSHADECOLORFG}{}
+\newcommand*{\YALTSHADECOLORBG}{}
+%
+% Commands to set colors
+%
+\newcommand*{\ysetshade}[2][]{%
+  \def\yshadecolorfg{#1}%
+  \def\yshadecolorbg{#2}%
+}
+\newcommand*{\YSetShade}[2][]{%
+  \def\YShadeColorFg{#1}%
+  \def\YShadeColorBg{#2}%
+}
+\newcommand*{\YSETSHADE}[2][]{%
+  \def\YSHADECOLORFG{#1}%
+  \def\YSHADECOLORBG{#2}%
+}
+\newcommand*{\ysetaltshade}[2][]{%
+  \def\yaltshadecolorfg{#1}%
+  \def\yaltshadecolorbg{#2}%
+}
+\newcommand*{\YSetAltShade}[2][]{%
+  \def\YAltShadeColorFg{#1}%
+  \def\YAltShadeColorBg{#2}%
+}
+\newcommand*{\YSETALTSHADE}[2][]{%
+  \def\YALTSHADECOLORFG{#1}%
+  \def\YALTSHADECOLORBG{#2}%
+}
+%
+%  Default options for young environment
+%
+\newcommand*{\y@defaultcellsize}{2.8ex}
+\newcommand*{\y@defaultposition}{b}
+\newcommand*{\youngspecial}{,;=!?^_}
+\newcommand*{\y@hwratio}{1:1}
+\newcommand*{\y@everycell}{}
+\newcommand*{\y@everyframe}{}
+%
+% Commands for setting them
+%
+\newcommand*{\ydefaultcellsize}[1]{\def\y@defaultcellsize{#1}}
+\newcommand*{\ydefaultposition}[1]{\def\y@defaultposition{#1}}
+\newcommand*{\yhwratio}[1]{\def\y@hwratio{#1}}
+\newcommand*{\yeverycell}[1]{\def\y@everycell{#1}}
+\newcommand*{\yeveryframe}[1]{\def\y@everyframe{#1}}
+%
+% public lengths
+%
+\newlength\ybaselineoffset     \setlength{\ybaselineoffset}{.75ex}
+\newlength\yframethickness     \setlength{\yframethickness}{0.5pt}
+\newlength\yautosizeminimum    \setlength{\yautosizeminimum}{2.8ex}
+\newlength\ycellpadding        \setlength{\ycellpadding}{0.3ex} 
+%
+% A counter that get's incremented with every \begin{young}
+%
+\newcounter{youngcounter}
+%
+%  Commands to set formatting for cells drawn in the young environment
+%
+\newcommand\yframe{%  cell with a frame
+   \gdef\y@draw@left{l}%
+   \gdef\y@draw@right{r}%
+   \gdef\y@default@draw@state{}%
+   \gdef\y@use@default@draw{}%
+}
+\newcommand\ynoframe{%  cell with no frame
+   \global\let\y@box@cmd\y@nofbox%
+   \gdef\y@use@default@draw{}%
+}
+\newcommand\ynoright{%
+   \gdef\y@draw@left{l}%
+   \gdef\y@draw@right{}%
+   \gdef\y@default@draw@state{[}%
+   \gdef\y@use@default@draw{}%
+}
+\newcommand\ynoleft{%
+   \gdef\y@draw@left{}%
+   \gdef\y@draw@right{r}%
+   \gdef\y@default@draw@state{]}%
+   \gdef\y@use@default@draw{}%
+}
+\newcommand\ynoleftright{%
+   \gdef\y@draw@left{}%
+   \gdef\y@draw@right{}%
+   \gdef\y@default@draw@state{=}%
+   \gdef\y@use@default@draw{}%
+}
+\newcommand\ynotop[1][]{%
+   \def\y@patch{#1}
+   \ifx\y@patch\empty%
+      \gdef\y@dont@draw@top{y}%
+   \else
+      \gdef\y@dont@draw@top{#1}%
+   \fi%
+}
+\newcommand\ywithtop{%
+   \gdef\y@dont@draw@top{}%
+}
+\newcommand\ynobottom[1][]{%
+   \def\y@patch{#1}
+   \ifx\y@patch\empty%
+      \gdef\y@dont@draw@bottom{y}%
+   \else
+      \gdef\y@dont@draw@bottom{#1}%
+   \fi%
+}
+\newcommand\ywithbottom{%
+   \gdef\y@dont@draw@bottom{}%
+}
+\def\y@shadeopt[#1]{%
+   \xdef\y@shade@color@fg{}%
+   \xdef\y@shade@color@bg{#1}}%
+\def\y@shadenoopt{%
+   \xdef\y@shade@color@fg{\yshadecolorfg}%
+   \xdef\y@shade@color@bg{\yshadecolorbg}%
+}
+\newcommand\yshade[1][@@@@]{%  Shade cell in color ##1 if specified
+   \def\y@stringa{@@@@}%       or colors set by \ysetshade otherwise
+   \def\y@stringb{#1}%
+   \ifx\y@stringa\y@stringb%
+       \y@shadenoopt%
+   \else%
+       \y@shadeopt[#1]%
+   \fi%
+}
+\newcommand\YShade{%    Shaded cell in color set by \YSetShade
+   \ifx\YShadeColorFg\empty%
+      \xdef\y@shade@color@fg{\yshadecolorfg}%
+   \else%
+      \xdef\y@shade@color@fg{\YShadeColorFg}%
+   \fi%
+   \xdef\y@shade@color@bg{\YShadeColorBg}%
+}
+\newcommand\YSHADE{%    Shaded cell in color set by \YSETSHADE
+   \ifx\YSHADECOLORFG\empty%
+      \ifx\YShadeColorFg\empty%
+         \xdef\y@shade@color@fg{\yshadecolorfg}%
+      \else%
+         \xdef\y@shade@color@fg{\YShadeColorFg}%
+      \fi%
+   \else%
+      \xdef\y@shade@color@fg{\YSHADECOLORFG}%
+   \fi%
+   \xdef\y@shade@color@bg{\YSHADECOLORBG}%
+}
+\newcommand\yaltshade{%  Shaded cell in color set by \ysetaltshade
+   \xdef\y@shade@color@fg{\yaltshadecolorfg}%
+   \xdef\y@shade@color@bg{\yaltshadecolorbg}%
+}
+\newcommand\YAltShade{%   Shaded cell in color set by \YSetAltShade
+   \ifx\YAltShadeColorFg\empty%
+      \xdef\y@shade@color@fg{\yaltshadecolorfg}%
+   \else%
+      \xdef\y@shade@color@fg{\YAltShadeColorFg}%
+   \fi%
+   \xdef\y@shade@color@bg{\YAltShadeColorBg}%
+}
+\newcommand\YALTSHADE{%    Shaded cell in color set by \YSETSHADE
+   \ifx\YALTSHADECOLORFG\empty%
+      \ifx\YAltShadeColorFg\empty%
+         \xdef\y@shade@color@fg{\yaltshadecolorfg}%
+      \else%
+         \xdef\y@shade@color@fg{\YAltShadeColorFg}%
+      \fi%
+   \else
+      \xdef\y@shade@color@fg{\YALTSHADECOLORFG}%
+   \fi%
+   \xdef\y@shade@color@bg{\YALTSHADECOLORBG}%
+}
+\newcommand\ynoshade{%
+   \xdef\y@shade@color@fg{}%
+   \xdef\y@shade@color@bg{}%
+}
+\newcommand\yvalignincell[1]{%
+   \xdef\y@valign@cell{#1}%
+}
+\newcommand\yrighttoleft{%
+   \xdef\y@order@right@to@left{y}%
+}
+%
+% Commands used for autosizing
+%
+\newcounter{young@auto}%  Keeps track of autosized tableaux
+\newcounter{last@young@auto}%  Keeps track of how many there were last time
+\newcommand*{\y@autosizedata}[4]{%  
+  \global\@namedef{y@auto@#1}{#3}%
+  \global\@namedef{y@autowarn@#2}{#4}%
+  \global\@namedef{y@autoname@#2}{#1}%
+  \stepcounter{last@young@auto}%
+}%
+    % This command is used by the .aux file.  
+    % Three macros are declared.  The first allows us to lookup the cell size 
+    % of a tableau by its label.  The second does lookup by counter.
+    % The third allows us to lookup of label name using the counter.
+    % Since more than one tableau may have the same label, the results
+    % of the first two lookups may not always agree.  By-label lookup is used 
+    % to set the cell size.  The other two are used to check if things have
+    % changed since the last run.
+\newif\if@y@autosize@warning%   Becomes true if we need to generate
+\@y@autosize@warningfalse%      a warning at the end of document
+\newif\if@y@use@autosize%       True if cell size is "auto" or "auto=<label>"
+\AtEndDocument{%   Make a warning at the end of document, if necessary
+      \def\@xgobble#1{{\setbox0\hbox{#1}}}%
+      \@xgobble{%  Don't produce output, because i don't trust \ifnum
+      % produce if there were a different number of autosizes than last time
+      \ifnum\thelast@young@auto=\theyoung@auto\relax\else%
+          \global\@y@autosize@warningtrue\fi%
+      }%
+      \if@y@autosize@warning%
+        \PackageWarningNoLine{young.sty}% make the warning
+        {Autosizing data have changed or are not available. %
+        You may need to rerun LaTeX to get cell sizes right}%
+      \fi%
+}%
+%
+%
+% private lengths
+%
+\newlength\y@cell@size        % (vertical) cell size excluding the frame
+\newlength\y@withf@size       % cell size including the frame
+\newlength\y@hcell@size       % horizontal cell size excluding the frame
+\newlength\y@hwithf@size      % horizontal size including the frame
+\newlength\y@below@amt        % amount below the baseline
+\newlength\y@above@amt        % amount above the baseline
+\newlength\y@abovewithf@amt   % amount below the baseline, including frame
+\newlength\y@belowwithf@amt   % amount above the baseline, including frame
+\newlength\y@templen          % a temporary length variable
+\newlength\y@maxentry@size    % the size of the largest cell seen so far
+\newlength\@y@maxentry@size 
+\newlength\y@lastmaxentry@size % the size of the largest cell seen so far
+\newlength\@y@lastmaxentry@size
+%
+% Some boxes that will be handy
+%
+\newsavebox\young@box%
+\newsavebox\y@current@box%
+\newsavebox\y@reverse@box%
+\newsavebox\@y@reverse@box%
+%
+%  These commands are used as global variables by the environment
+%
+\newcommand{\y@box@cmd}{}%          what basic type (frame or no frame)?
+\newcommand{\y@valign@cell}{}%      vertical alignment of entry in the cell
+\newcommand{\y@shade@color@fg}{}%   foreground color
+\newcommand{\y@shade@color@bg}{}%   background color
+\newcommand{\y@draw@left}{}%          should we draw the left side?
+\newcommand{\y@draw@right}{}%         should we draw the right side?
+\newcommand{\y@dont@draw@top}{}%      should we draw the top?
+\newcommand{\y@dont@draw@bottom}{}%   should we draw the bottom?
+\newcommand{\y@default@draw@state}{}% the default if no options are given
+\newcommand{\y@use@default@draw}{}%   should we use the default?
+\newcommand{\y@at@eol}{}%             are we at the end of line?
+%
+%
+%  THE MAIN ENVIRONMENT
+%
+\newenvironment{young}[1][\y@defaultcellsize]{%  This extra relaying
+  \def\y@@optargI{#1}\begin{young@relay}%        circumvents a bug
+}%                                               in which an error occurs
+{\end{young@relay}}%                             when the first cell is
+%                                                empty and the optional
+\newenvironment{young@relay}[1][\y@defaultcellsize]{%  arguments aren't
+   \begin{@young}[\y@@optargI][#1]%                    specified.  This
+}%                                           is a hack, but I have no idea
+{\end{@young}}%                              how to fix it properly.
+%
+\newenvironment{@young}[1][\y@defaultcellsize]{%
+%  There are actually two optional arguments---the second argument is
+%  provided by a relay mechanism
+  \stepcounter{youngcounter}%              increment the counter
+  \vrule height 0pt width 0pt depth 0pt%   switch tex into horizontal mode
+  \begingroup%
+  \def\y@optargI{#1}%
+  \let\@y@box@cmd\y@box@cmd%                save "global variables"
+  \let\@y@valign@cell\y@valign@cell%        just in case somebody wants
+  \let\@y@shade@color@fg\y@shade@color@fg%  to nest the environment
+  \let\@y@shade@color@bg\y@shade@color@bg%  nest this environment, i.e.
+  \let\@y@draw@left\y@draw@left%            create a tableau whose
+  \let\@y@draw@right\y@draw@right%          entries are young tableaux.
+  \let\@y@default@draw@state\y@default@draw@state%  (this actually works!
+  \let\@y@use@default@draw\y@use@default@draw%      you just need to 
+  \let\@y@dont@draw@top\y@dont@draw@top%            enclose the inside
+  \let\@y@dont@draw@bottom\y@dont@draw@bottom%      environment in braces.)
+  \let\@y@at@eol\y@at@eol%                     saving is local so that it
+  \let\@y@order@right@to@left\y@order@right@to@left%   doesn't clobber
+  \setlength\@y@maxentry@size\y@maxentry@size%         anything
+  \setlength\@y@lastmaxentry@size\y@lastmaxentry@size%  
+  \setbox\@y@reverse@box\box\y@reverse@box%
+  \begin{@young@relay}% 
+}% 
+  {\end{@young@relay}%
+  \global\let\y@box@cmd\@y@box@cmd%           restore global variables
+  \global\let\y@valign@cell\@y@valign@cell%   
+  \global\let\y@shade@color@fg\@y@shade@color@fg%
+  \global\let\y@shade@color@bg\@y@shade@color@bg%
+  \global\let\y@draw@left\@y@draw@left%
+  \global\let\y@draw@right\@y@draw@right%
+  \global\let\y@default@draw@state\@y@default@draw@state%
+  \global\let\y@use@default@draw\@y@use@default@draw%
+  \global\let\y@dont@draw@top\@y@dont@draw@top%
+  \global\let\y@dont@draw@bottom\@y@dont@draw@bottom%
+  \global\let\y@at@eol\@y@at@eol%
+  \global\let\y@order@right@to@left\@y@order@right@to@left% 
+  \global\setlength\y@maxentry@size\@y@maxentry@size%
+  \global\setlength\y@lastmaxentry@size\@y@lastmaxentry@size%
+  \global\setbox\y@reverse@box\box\@y@reverse@box%
+  \endgroup}
+%
+\newenvironment{@young@relay}[1][\y@defaultcellsize]{%
+  %
+  % parse arguments: one arg is position, other is cell size
+  % they can come in either order
+  % first figure out what position is suppposed to be
+  %
+  \def\y@optargII{#1}%
+  \def\y@begin@vert@align{}%
+  \def\y@setvalignment##1{%
+    \edef\y@optstring{##1}%
+    \def\y@optionc{c}%
+    \def\y@optiont{t}%
+    \def\y@optionb{b}%
+    \def\y@optionbb{bb}%
+    \def\y@optiontt{tt}%
+    \ifx\y@optstring\y@optionc%
+      \ifmmode%
+         \def\y@begin@vert@align{\vcenter\bgroup}%
+         \def\y@end@vert@align{\egroup}%
+      \else%
+         \def\y@begin@vert@align{\begin{math}\vcenter\bgroup}%
+         \def\y@end@vert@align{\egroup\end{math}}%
+      \fi%
+    \else\ifx\y@optstring\y@optiontt%
+      \def\y@begin@vert@align{\lower\y@withf@size\hbox\bgroup\vtop\bgroup}%
+      \def\y@end@vert@align{\egroup\egroup}%
+    \else\ifx\y@optstring\y@optiont%
+      \def\y@begin@vert@align{\lower\y@belowwithf@amt\hbox\bgroup\vtop\bgroup}%
+      \def\y@end@vert@align{\egroup\egroup}%
+    \else\ifx\y@optstring\y@optionbb%
+      \def\y@begin@vert@align{\vbox\bgroup}%
+      \def\y@end@vert@align{\egroup}%
+    \else\ifx\y@optstring\y@optionb%
+      \def\y@begin@vert@align{\lower\y@belowwithf@amt\hbox\bgroup\vbox\bgroup}%
+      \def\y@end@vert@align{\egroup\egroup}%
+    \fi\fi\fi\fi\fi%
+  }%
+  \y@setvalignment\y@optargI%         try using arg 1 as position
+  \ifx\y@begin@vert@align\empty%  if that didn't work
+     \y@setvalignment\y@optargII%     try using arg 2
+     \ifx\y@begin@vert@align\empty%      if that didn't work
+       \y@setvalignment\y@defaultposition%  try using \y@defaultposition
+       \ifx\y@begin@vert@align\empty%     if that didn't work
+         \y@setvalignment{b}%               fall back to position = b
+       \fi%
+     \fi%
+     \edef\y@optargII{\y@optargI}% arg 1 wasn't position, assume it's size
+  \fi%
+  %
+  % Set the cell size, which is now in \y@optargII.  If auto is given 
+  % as size, check to see if a label is specified.  If so, use this 
+  % label to look it up based on data from the .aux file.  Otherwise, 
+  % use \theyoung@auto counter as the label.
+  %
+  \def\y@checkifauto##1{\expandafter\y@@checkifauto##1@@@@@@]}%
+       % pad the label name with six @-signs to make sure we pass at least
+       % six characters to \y@@checkifauto
+  \def\y@@checkifauto##1##2##3##4##5##6]{%
+    \def\y@autostring{auto}%
+    \def\y@initstring{##1##2##3##4}%
+    \ifx\y@initstring\y@autostring%  if "auto" given as size
+      \stepcounter{young@auto}%
+      \edef\y@autowarn@label{\theyoung@auto}%
+      \@y@use@autosizetrue%
+       \if##5=% if a label was specified
+          \def\y@autosize@label{##6}%
+          \@ifundefined{y@@auto@##6}{%  if we haven't seen this label yet
+             \expandafter\def\csname y@@auto@##6\endcsname{0pt}% remember it
+          }{%  if we have seen this same label before
+            %  look up the largest entry produced under this label
+             \edef\y@last@maxsize{\csname y@@auto@##6\endcsname}%
+             \global\setlength{\y@lastmaxentry@size}{\y@last@maxsize}%
+          }%
+       \else%  otherwise just use the counter as the label
+          \edef\y@autosize@label{\theyoung@auto}%
+       \fi%
+    \else% otherwise, we're not autosizing
+       \@y@use@autosizefalse
+    \fi%
+  }%
+  \def\y@setcellsize##1{%  set the cell size by looking up macro ##1
+    \ifx##1\relax%
+      \setlength{\y@cell@size}{0pt}%
+    \else%
+      \setlength{\y@cell@size}{##1}%
+    \fi%
+  }%
+  \global\setlength{\y@maxentry@size}{0pt}%
+  \global\setlength{\y@lastmaxentry@size}{0pt}%
+  \y@checkifauto\y@optargII%
+  \if@y@use@autosize%
+    \expandafter\y@setcellsize\csname y@auto@\y@autosize@label\endcsname%
+    % set the cell size by looking it up.
+    \addtolength{\y@cell@size}{2\ycellpadding}% add padding
+    \ifdim\y@cell@size<\yautosizeminimum%  if it's still not big enough
+       \setlength{\y@cell@size}{\yautosizeminimum}% make it the min size
+    \fi%
+  \else%  autosize not used, set cell size from arguments
+    \setlength{\y@cell@size}{\y@optargII}%
+  \fi%
+  %
+  % set all other relevant lengths
+  %
+  \def\y@@hwratio##1:##2]{\def\y@hratio{##1}\def\y@wratio{##2}}%
+  \expandafter\y@@hwratio\y@hwratio]%
+  \setlength{\y@withf@size}{\y@cell@size}%
+    \addtolength{\y@withf@size}{2\yframethickness}%
+  \setlength{\y@hcell@size}{\y@cell@size}%
+    \multiply\y@hcell@size by \y@wratio%
+    \divide\y@hcell@size by \y@hratio%
+  \setlength{\y@hwithf@size}{\y@hcell@size}%
+    \addtolength{\y@hwithf@size}{2\yframethickness}%
+  \setlength{\y@below@amt}{0.5\y@cell@size}% 
+    \addtolength{\y@below@amt}{-\ybaselineoffset}% 
+    \ifdim\y@below@amt<0pt\setlength{\y@below@amt}{0pt}\fi%
+  \setlength{\y@belowwithf@amt}{\y@below@amt}%  
+    \addtolength{\y@belowwithf@amt}{\yframethickness}%  
+  \setlength{\y@above@amt}{\y@cell@size}%
+    \addtolength{\y@above@amt}{-\y@below@amt}% 
+  \setlength{\y@abovewithf@amt}{\y@above@amt}%
+    \addtolength{\y@abovewithf@amt}{\yframethickness}%
+  %
+  % Macros involved in drawing cells.
+  %
+  \def\y@drawentry{%  positions the entry within the cell and draw it
+     \edef\y@cellpaddingskip{\the\ycellpadding}% because \hskip is picky
+     \setbox\young@box\hbox to \y@hcell@size{% add fils and skips on both sides
+        \hskip\y@cellpaddingskip plus 1fil minus\y@cellpaddingskip%
+        \unhbox\young@box%
+        \hskip\y@cellpaddingskip plus 1fil minus\y@cellpaddingskip%
+     }%
+     \addtolength{\y@above@amt}{-\ht\young@box}%  compute space above 
+     \addtolength{\y@below@amt}{-\dp\young@box}%  and below the box
+     \setlength{\y@templen}{\y@above@amt}%
+     \addtolength{\y@templen}{\y@below@amt}%
+     \ifdim\y@templen<2\ycellpadding%  if it's too big
+         \def\y@valign@cell{c}%        just center it
+     \else\ifdim\y@above@amt<\ycellpadding%  if it goes too high
+         \def\y@valign@cell@{t}%       align top with top
+     \else\ifdim\y@below@amt<\ycellpadding%  if it goes to low
+         \def\y@valign@cell@{b}%       align bottom with bottom
+     \fi\fi\fi%
+     \if\y@valign@cell c%
+         \setlength{\y@templen}{\y@above@amt}%
+         \addtolength{\y@templen}{-\y@below@amt}%
+         \raise0.5\y@templen\box\young@box%
+     \else\if\y@valign@cell t%
+         \addtolength{\y@above@amt}{-\ycellpadding}%
+         \raise\y@above@amt\box\young@box%
+     \else\if\y@valign@cell b%
+         \addtolength{\y@below@amt}{-\ycellpadding}%
+         \lower\y@below@amt\box\young@box%
+     \else%
+         \box\young@box%
+     \fi\fi\fi%
+  }%
+  \def\y@nofbox{%   Cell with no frame
+     \vbox{\offinterlineskip%
+     \hbox to \y@hwithf@size{%
+     \vrule height\y@abovewithf@amt%
+            width 0pt%
+            depth\y@belowwithf@amt% 
+     \kern\yframethickness%
+     \y@drawentry%
+     \kern\yframethickness}%
+     \hrule height 0pt}%
+  }%
+  \def\y@patchcorners##1{% 
+     \edef\y@patcharg{##1}%
+     % look for "l" in the argument
+     \expandafter\in@\expandafter l\expandafter{\y@patcharg}\ifin@%
+     % if found, patch the left corner if found
+        \hbox{%
+        \begin{picture}(0,0)(0,0)%
+        \put(0,0){\vrule height 0pt%
+                          width \yframethickness%
+                          depth \yframethickness}%
+        \end{picture}%
+        }%
+     \fi
+     % look for "r" in the argument
+     \expandafter\in@\expandafter r\expandafter{\y@patcharg}\ifin@%
+     % if found, patch the right corner if found
+        \hbox{%
+        \begin{picture}(0,0)(0,0)%
+        \put(0,0){\kern\yframethickness\kern\y@hcell@size%
+                  \vrule height 0pt%
+                          width \yframethickness%
+                          depth \yframethickness}%
+        \end{picture}%
+        }%
+     \fi
+  }%
+  \def\y@switchleftandright{%
+     \if\y@draw@left l\ifx\y@draw@right\empty%
+         \def\y@draw@left{}\def\y@draw@right{r}%
+     \fi\else\ifx\y@draw@left\empty\if\y@draw@right r%
+         \def\y@draw@left{l}\def\y@draw@right{}%
+     \fi\fi\fi%
+     \if\y@dont@draw@top l%
+         \def\y@dont@draw@top{r}%
+     \else\if\y@dont@draw@top r%
+         \def\y@dont@draw@top{l}%
+     \fi\fi%
+     \if\y@dont@draw@bottom l%
+         \def\y@dont@draw@bottom{r}%
+     \else\if\y@dont@draw@bottom r%
+         \def\y@dont@draw@bottom{l}%
+     \fi\fi%
+  }%
+  \def\y@fbox{%  Cell with a frame
+     \if\y@order@right@to@left y%
+        \y@switchleftandright%
+     \fi%
+     \ifx\y@shade@color@bg\empty\else%
+        \begin{picture}(0,0)(0,0)%  do the shading.  picture is an easy
+        \put(0,0){{\color{\y@shade@color@bg}%        way to draw something
+        \kern0.5\yframethickness%                    bigger than the box
+        \addtolength{\y@withf@size}{-0.5\yframethickness}%  it naturally
+        \addtolength{\y@hcell@size}{\yframethickness}%      fits in.
+        \vrule height\y@withf@size%
+               width\y@hcell@size%
+               depth -0.5\yframethickness}}%
+        \end{picture}%
+     \fi%
+     \vbox{\offinterlineskip%  
+     \ifx\y@dont@draw@top\empty%
+         \hrule height\yframethickness%  draw the top line
+     \else%   otherwise patch corners...
+         \y@patchcorners{\y@dont@draw@top\y@draw@left\y@draw@right}% 
+         \kern\yframethickness% ...but don't draw the line
+     \fi%
+     \hbox to \y@hwithf@size{%
+     \ifx\y@draw@left\empty%
+         \vrule height\y@above@amt% create the space
+                width 0pt%          but don't draw anything
+                depth\y@below@amt%
+         \kern\yframethickness%   
+     \else%
+         \vrule height\y@above@amt%   draw the left side
+                width\yframethickness%
+                depth\y@below@amt%
+     \fi%
+     \begingroup%
+     \ifx\y@shade@color@fg\empty\else%
+       \color{\y@shade@color@fg}%  set foreground color
+     \fi% 
+     \y@drawentry%  draw entry
+     \endgroup%
+     \ifx\y@draw@right\empty%
+         \vrule height\y@above@amt%
+                width 0pt%
+                depth\y@below@amt%
+         \kern\yframethickness%
+     \else%
+         \vrule height\y@above@amt%
+                width\yframethickness%
+                depth\y@below@amt%
+     \fi%
+     }% end the hbox
+     \ifx\y@dont@draw@bottom\empty%
+         \hrule height\yframethickness%  draw the bottom line
+     \else%
+         \y@patchcorners{\y@dont@draw@bottom\y@draw@left\y@draw@right}% 
+         \kern\yframethickness%  patch corners but don't draw the line
+     \fi%
+     }% end the vbox
+  }%
+  %
+  % The macros below read the cell entry, and decide what kind of
+  % cell to draw.
+  %
+  \def\y@defaultdraw{%  picks what to draw if user hasn't specified anything.
+                     %  depends on the current "state" and whether we're
+                     %  at the end of line.  In theory, this algorithm
+                     %  should default to the thing you want (at least
+                     %  most of the time!).
+     \if\y@default@draw@state[%
+         \ifx\y@at@eol\empty%  
+            \ynoleftright%                  draw =
+            \gdef\y@default@draw@state{[}%  state [ -> [ if not end of line
+         \else%        draw ]
+            \ynoleft%  state [ -> ] if at end of line
+         \fi%
+     \else\if\y@default@draw@state]% 
+         \ifx\y@at@eol\empty%   draw [
+            \ynoright%          state ] -> [ if not at end of line
+         \else%
+            \yframe%                        draw {}
+            \gdef\y@default@draw@state{]}%  state ] -> ] if at end of line
+         \fi%
+     \else\if\y@default@draw@state=%   draw =
+         \ynoleftright%                state = -> =
+     \else%                            draw {}
+         \yframe%                      state {} -> {}
+     \fi\fi\fi%
+  }%
+  \def\y@ifnextspecial##1##2##3{% matches the next character if it's special
+      \def\y@argthen{##2}% otherwise \@gobble gobbles up the \else or \fi!
+      \def\y@argelse{##3}%
+      \@ifnextcharnoigsp##1{%
+          \expandafter\in@\expandafter##1\expandafter{\youngspecial}%
+          \ifin@\expandafter\y@argthen%
+          \else\expandafter\y@argelse\fi}{##3}% 
+  }%
+  \def\y@initcell{% set defaults
+      \gdef\y@at@eol{}%
+      \gdef\y@use@default@draw{y}%
+      \global\let\y@box@cmd\y@fbox%
+      \gdef\y@shade@color@fg{}%
+      \gdef\y@shade@color@bg{}%
+      \gdef\y@order@right@to@left{}%
+      \ywithtop\ywithbottom%
+      \yvalignincell{}%
+  }%
+  \def\y@readentry{%  check for alignment characters
+      %  check for <frame> characters
+     \y@ifnextspecial,{\ynoframe\expandafter\y@@readentry\@gobble}{%  else
+     \@ifnextcharnoigsp]{\expandafter\y@maybeleft\@gobble}{%  else
+     \y@ifnextspecial={\expandafter\y@mayberight\@gobble}{%  else
+     \y@ifnextspecial;{\yframe\expandafter\y@@readentry\@gobble}{%  else
+     \y@@readentry}}}}%
+  }%
+  \def\y@@readentry{%  check for shading characters
+     \y@ifnextspecial!{\expandafter\y@shbox\@gobble}{%  else
+     \y@ifnextspecial?{\expandafter\y@shboxalt\@gobble}{%  else
+     \y@@@readentry}}%
+  }%
+  \def\y@@@readentry{%  check for alignment characters
+      \y@ifnextspecial_{\expandafter\y@vadown\@gobble}{%  else
+      \y@ifnextspecial^{\expandafter\y@vaup\@gobble}{%  else
+      \ignorespaces}}%
+  }%
+  % the rest of these macros continue parsing the formatting string
+  \def\y@maybeleft{%
+     \y@ifnextspecial={\expandafter\y@@maybeleft\@gobble}{% else
+     ]}% put the ] back
+  }%
+  \def\y@@maybeleft{%
+     \@ifnextcharnoigsp]{\yframe\expandafter\y@@readentry\@gobble}{% else
+     \ynoright\y@@readentry}% put the ] back
+  }%
+  \def\y@mayberight{%
+     \@ifnextcharnoigsp]{\ynoleft\expandafter\y@@readentry\@gobble}{% else
+     \@ifnextcharnoigsp={\ynoleftright\expandafter\y@@readentry\@gobble}{% else
+     =}}% put the = back
+  }%
+  \def\y@shbox{%   
+     \def\yshadeand@@@read[####1]{\y@shadeopt[####1]\y@@@readentry}%
+     \@ifnextcharnoigsp!{\expandafter\y@@shbox\@gobble}{%  else
+     \@ifnextcharnoigsp[{\expandafter\yshadeand@@@read}{%  else
+     \y@shadenoopt\y@@@readentry}}%
+  }%
+  \def\y@@shbox{%   
+     \@ifnextcharnoigsp!{\YSHADE\expandafter\y@@@readentry\@gobble}{%  else
+     \YShade\y@@@readentry}%
+  }%
+  \def\y@shboxalt{%
+     \@ifnextcharnoigsp?{\expandafter\y@@shboxalt\@gobble}{% else
+      \yaltshade\y@@@readentry}%
+  }%
+  \def\y@@shboxalt{%
+     \@ifnextcharnoigsp?{\YALTSHADE\expandafter\y@@@readentry\@gobble}{% else
+      \YAltShade\y@@@readentry}%
+  }%
+  \def\y@vadown{%
+     \y@ifnextspecial^{\yvalignincell{c}%
+                       \expandafter\ignorespaces\@gobble}{% else
+     \yvalignincell{b}\ignorespaces}%
+  }%
+  \def\y@vaup{%
+     \y@ifnextspecial_{\yvalignincell{c}%
+                       \expandafter\ignorespaces\@gobble}{% else
+     \yvalignincell{t}\ignorespaces}%
+  }%
+  %
+  % main routine
+  %
+  \ifmmode%         figure out if we started in math mode or not
+     \def\y@beginmathortext{$}%  if so, use math mode for entries
+     \def\y@endmathortext{$}%
+  \else%
+     \def\y@beginmathortext{}%   otherwise don't
+     \def\y@endmathortext{}%
+  \fi%
+  \hskip\yframethickness%
+  \y@begin@vert@align%              begin vertically aligned box
+  \offinterlineskip%
+  \tabskip=-\yframethickness%   draw adjacent cell frames over top...
+  \lineskip=-\yframethickness%  of one another to avoid double-thick lines
+  \yframe%      make box with a frame the default
+  \setbox\y@reverse@box\hbox{}%
+  %
+  %  mess with the definitions of \cr and \\ so we can recognize
+  %  end of lines
+  %
+  \@ifundefined{y@@cr}{%  only do this once!
+    \let\y@@cr\cr%  save \cr
+    \def\cr{\gdef\y@at@eol{y}\y@@cr}% mark end of lines
+  }{}%
+  \let\y@@ss\\%     save \\
+  \let\\\cr%        allow \\ to end lines, instead of \cr
+  \everyvbox{\ifx\cr\\\let\\\y@@ss\fi\let\cr\y@@cr}% 
+       % in theory, this should correctly restore \\ and \cr inside 
+       % environments that might use them.  We only restore \\ if the
+       % other environment hasn't already redefined it.
+       % I haven't tested this exhaustively, but it seems to work
+       % for tabular, parbox, matrix
+  %
+  \halign\bgroup%                      start halign environment
+  %
+  % preamble to halign
+  % First read the next entry and put it in a box.
+  % Use math mode if appropriate.
+  %
+  &\setbox\young@box\hbox{\y@beginmathortext%
+      \begingroup\y@initcell\y@everycell\y@readentry##%
+       \ifdim\lastskip>0pt\unskip\fi% unskip whitespace, not stretches
+       \ifx\y@box@cmd\y@fbox\y@everyframe\fi%
+      \endgroup%
+     \y@endmathortext}%
+  %
+  \if\y@use@default@draw y%
+      \y@defaultdraw%
+      \gdef\y@use@default@draw{y}%
+  \fi%
+  %
+  %  measure the size of the box
+  %
+  \setlength{\y@templen}{\wd\young@box}%   measure the width of the box
+  \addtolength{\y@templen}{2\ycellpadding}%
+  \multiply\y@templen by \y@hratio%
+  \divide\y@templen by \y@wratio%
+  \addtolength{\y@templen}{-2\ycellpadding}%
+  \ifdim\y@templen>\y@maxentry@size%
+     \global\setlength{\y@maxentry@size}{\y@templen}%
+  \fi%
+  %  The way we calculate vertical size depends on how the entry is aligned
+  %  within the cell.  If it's the default, we measure both the height above
+  %  the centerline, and the depth below the centerline, and use twice
+  %  the larger as the vertical size.  Otherwise, we use the total of 
+  %  height and depth.
+  \ifx\y@valign@cell\empty%
+    \setlength{\y@templen}{2\ht\young@box}%  measure the height
+    \addtolength{\y@templen}{-2\ybaselineoffset}%
+    \ifdim\y@templen>\y@maxentry@size%
+       \global\setlength{\y@maxentry@size}{\y@templen}%
+    \fi%
+    \setlength{\y@templen}{2\dp\young@box}%  measure the depth
+    \addtolength{\y@templen}{2\ybaselineoffset}%
+    \ifdim\y@templen>\y@maxentry@size%
+      \global\setlength{\y@maxentry@size}{\y@templen}%
+    \fi%
+  \else%
+    \setlength{\y@templen}{\ht\young@box}%  measure the height
+    \addtolength{\y@templen}{\dp\young@box}%  add the depth
+    \ifdim\y@templen>\y@maxentry@size%
+      \global\setlength{\y@maxentry@size}{\y@templen}%
+    \fi%
+  \fi%
+  \ifdim\y@maxentry@size>\y@lastmaxentry@size%
+     \global\setlength{\y@lastmaxentry@size}{\y@maxentry@size}%
+  \fi%
+  %
+  %  Finally draw the box.
+  %
+  \setbox\y@current@box\hbox{\y@box@cmd}%  put the whole cell in a box
+  \if\y@order@right@to@left y%             if we need to reverse boxes
+	\ifx\y@at@eol\empty%                   if not at the end of line
+      \global\setbox\y@reverse@box\hbox{%  prepend the box to beginning of the
+         \box\y@current@box\hskip -\yframethickness\box\y@reverse@box}% sequence
+      \kern\y@hwithf@size%                 make some space to put it in later
+    \else%                                 if we are at the end of line
+      \kern -\wd\y@reverse@box%            remove the empty space and put the
+      \box\y@current@box\hskip -\yframethickness\box\y@reverse@box% sequence in
+    \fi%
+  \else%                               otherwise we're not reversing this box
+    \kern -\wd\y@reverse@box%          draw any reversed boxes in the sequence
+    \box\y@reverse@box\box\y@current@box%  followed by the current box
+  \fi%
+  %
+  \unskip\crcr%     recognize end of line.
+  %
+  % This is the end of the preamble to halign.  Next come the
+  % actual contents, supplied by the user.
+}
+{% close @young@relay environment
+   \crcr% if the last line does not have a \\ or \cr, put one in
+        % unfortunately it won't get noticed by the formatting processor
+        % so we may need to make a correction after the fact
+   %
+   \egroup%       end halign environment
+   %
+   \ifx\y@at@eol\empty% if last \\ or \cr character was omitted
+                      % we need to draw any boxes that were reversed
+                      % and possibly patch up the last box drawn
+                      % if default draw state ended in state [
+     \if\y@order@right@to@left y%
+          \setbox\young@box\lastbox%   remove the last box that TeX made
+          \vskip \yframethickness%  undo the extra baseline skip that happens
+          \hbox{\unhbox\young@box%   put in the reversed boxes.
+          \kern -\wd\y@reverse@box%
+          \if\y@use@default@draw y\if\y@default@draw@state[% patch the box first
+             \vrule height \y@withf@size width \yframethickness depth 0pt%
+          \else%
+             \kern\yframethickness% 
+          \fi\fi%
+          \box\y@current@box\hskip -\yframethickness\box\y@reverse@box}%
+     \else%
+     \if\y@use@default@draw y\if\y@default@draw@state[% 
+          \setbox\young@box\lastbox%   remove the last box that TeX made
+          \vskip \yframethickness%  undo the extra baseline skip that happens
+          \hbox{\unhbox\young@box%   patch up the box and put it back
+          \vrule height \y@withf@size width \yframethickness depth 0pt}%
+     \fi\fi\fi%
+   \fi%
+   \y@end@vert@align%       end the vbox
+   \hskip\yframethickness%   undo the last tabskip
+   %
+   % If using autosizing, write autosize data to aux file.
+   % Give a warning if the data have changed from last run.
+   %
+   \def\y@warnifwrong{%  
+     \if@y@autosize@warning\else%  if we haven't made this warning already
+       \expandafter\y@setcellsize%...
+       \csname y@autowarn@\y@autowarn@label\endcsname% use counter to lookup
+                                               % cell size from last time
+       \ifdim\y@cell@size=\y@maxentry@size%
+          \edef\y@oldlabel{\csname y@autoname@\y@autowarn@label\endcsname}%
+          \ifx\y@oldlabel\y@autosize@label\else% if labels have changed 
+             \global\@y@autosize@warningtrue%  need to make a warning
+          \fi%
+       \else% if cell size has changed
+             \global\@y@autosize@warningtrue%  need to make a warning
+        \fi%
+     \fi
+   }%
+   \if@y@use@autosize%  if autosizing is enabled
+     \expandafter\xdef\csname y@@auto@\y@autosize@label\endcsname{%
+     \the\y@maxentry@size}%
+     \protected@write\@auxout{}%  write relevant data to the .aux file
+       {\string\y@autosizedata%   the string "\y@autosizedata"
+        {\y@autosize@label}%      the label
+        {\y@autowarn@label}%      the counter value
+        {\the\y@lastmaxentry@size}%  the overall max entry size
+        {\the\y@maxentry@size}}%  the max entry of this tableau
+     \y@warnifwrong%  produce a warning if size has changed from last run
+   \fi%
+}
+%
+% provide "Young" as an alternate for "young"
+%
+\newenvironment{Young}[1][\y@defaultcellsize]{\begin{young}[#1]}{\end{young}}
+%
+%  Also recreate the \yng command from the youngtab package
+%
+\newcounter{y@rowsizecounter}
+\newcommand\y@@@@@makerow{\ynoframe&}%  called if \y@makerow has blank argument
+\newcommand\y@@@@makerow{&\y@@@makerow}% these two macros call each
+\newcommand\y@@@makerow{%                other recursively to make the row
+    \addtocounter{y@rowsizecounter}{-1}%
+    \ifnum\they@rowsizecounter>0\relax%
+        \expandafter\y@@@@makerow%  \expandafter in these macros ensures 
+    \fi%                           \fi and \else are seen before the &
+}
+\newcommand\y@@makerow{% make a row length \they@rowsizecounter plus \cr
+    \ifnum\they@rowsizecounter=0\relax%
+       	\ynoframe% create a cell without frame, pretending to be an empty row
+                 % really what I want is an \omit here, but TeX won't
+                 % recognize it because by this point it's already read 
+                 % some \edef and decide not to \omit.  I think one could 
+                 % fix this by reading ahead an extra cell, and deciding 
+                 % whether or not to put in the \omit before placing the 
+                 % & ... but that just seems like waaaayyy to much work!
+    \else%
+        \expandafter\y@@@makerow%
+	\fi\cr%    
+}
+\newcommand\y@makerow[1]{%  makes a row of (#1) cells
+    \edef\y@therow{\expandafter\@firstofone#1\relax}% this ignores spaces...
+	\edef\y@relaxed{\relax}%                          ... believe it or not
+	\ifx\y@therow\y@relaxed%           if the entry is blank
+        \expandafter\y@@@@@makerow%       make an cell without frame
+	\else%
+        \setcounter{y@rowsizecounter}{#1}% make a row of the 
+		\expandafter\y@@makerow%           correct length
+    \fi%
+}
+\def\y@@@@ng#1){\y@makerow{#1}\end{@young}\endgroup}
+\def\y@@@ng#1,#2){\y@makerow{#1}\y@@ng(#2)}
+\def\y@@ng(#1){%
+   \edef\y@partition{#1}%
+   \expandafter\in@\expandafter,\expandafter{\y@partition}%
+   \ifin@%
+       \expandafter\y@@@ng#1)% more than one row left
+   \else%
+       \expandafter\y@@@@ng#1)% just one row left
+   \fi%
+}
+\newcommand{\y@ng}[1][\y@defaultcellsize]{%
+\begin{@young}[\y@@optargI][#1]\y@@ng}%
+\newcommand{\yng}[1][\y@defaultcellsize]{\begingroup%
+   \def\y@@optargI{#1}%
+   \y@ng%
+}
+%
+%  This code is cut-and-pasted from the LaTeX kernel, with some minor
+%  changes. This is just a modification of \@ifnextchar that doesn't 
+%  gobble up spaces.  Because of this, use of reserved names should be 
+%  quite safe here.
+%
+\def\@ifnextcharnoigsp#1#2#3{%
+  \let\reserved@d=#1%
+  \def\reserved@a{#2}%
+  \def\reserved@b{#3}%
+  \futurelet\@let@token\@ifnchnoigsp}%
+\def\@ifnchnoigsp{%
+    \ifx\@let@token\reserved@d%
+      \let\reserved@c\reserved@a%
+    \else%
+      \let\reserved@c\reserved@b%
+    \fi%
+  \reserved@c}
+%
+%
+\endinput
+%
+
+--------------------------------------------------------------------
+Documentation:
+
+
+                       *****************
+
+If you're looking at this for the first time, you probably want to
+go straight to the "Example", which is at the end.
+
+                       *****************
+
+In the recent past, I have found myself needing to create skew tableaux, 
+with various colors and shaded boxes to distinguish different types 
+of entries.  The creation of such diagrams in LaTeX has been a tedious 
+process, as neither of the packages in the standard distribution of LaTeX
+will do this.  The main purpose of writing this package was to provide 
+a mechanism for doing this very easily.
+
+The "young" package, has a nice tabular-like interface but no bells 
+and whistles.  The syntax allows you to put just about any LaTeX code 
+into any cell (but since the cell size is fixed, it's hard to take
+full advantage of this).  The "youngtab" package is more comprehensive 
+in its capabilities, but the contents of a cell must be represented 
+by a single token, which can be frustrating if you find yourself needing 
+to make a new command for every cell.
+
+This package is intended to be an extension of (and in the parlance of 
+the LaTeX Project Public Licence a "direct replacement for") the original 
+"young" package, which has comparable functionality to the "youngtab" 
+package.  I have tried to set things up so that any backwards 
+compatibility issues should be rare, and easily resolved if they do arise.
+
+--------------------------------------------------------------------
+Enivironments:
+
+\begin{young}[<position>][<cell size>]
+<entry> & <entry> & ... \\
+<entry> & <entry> & ... \\
+...
+ \end{young}
+
+Creates a Young tableau.
+
+<cell size> specifies the size of the cell.  This can be a length,
+or {auto} or {auto=<label>}, which invokes the autosizing mechanism 
+(see "Autosizing" below).  The command \ydefaultcellsize sets the
+default value.  If the height to width ratio given set by \yhwratio 
+is not 1:1, <cell size> means the height of the cell, and the 
+width is determined by the ratio.
+
+<position> specifies which part of the tableau should be aligned with
+the rest of the line.  Valid options are:
+   b   : bottom--align baseline with cell entries of bottom row
+   c   : center
+   t   : top--align baseline with cell entries of top row
+   bb  : very bottom--align baseline with bottom of tableau
+   tt  : very bottom--align baseline with top of tableau 
+The command \ydefaultposition sets the default.
+
+Optional arguments may be specified in either order, and either may
+omitted.  
+
+
+The entries are of the form:
+
+    <entry> = <formatting><cell contents>
+
+The formatting string is of the form:
+ 
+    <formatting> = <frame><shading><alignment> 
+
+Any or all of these may be omitted, but they must specified in the 
+order above.  Spaces are (deliberately) not allowed.
+
+<frame> may be one of:
+,        : create a cell with no frame (cannot be shaded)
+; or ]=] : create a cell with a frame
+==       : cell with frame missing left and right sides 
+]=       : cell with frame missing right side
+=]       : cell with frame missing left side
+
+These behave identically to the commands \ynoframe, \yframe, 
+\ynoleftright, \ynoright and \ynoleft respectively.
+
+If none is specified and no framing command is given anywhere in the 
+<cell contents>, the default behaves according to the finite
+state machine rules below.
+
+    first frame      ->  frame ]=], state ]=]
+       state ]=]     ->  frame ]=], state ]=]
+       state ==      ->  frame ==, state ==
+       state ]=      ->  frame ==, state ]=     (not at end of line)
+       state ]=,EOL  ->  frame =], state =]     (at end of line)
+       state =]      ->  frame ]=, state ]=     (not at end of line)
+       state =],EOL  ->  frame ]=], state =]    (at end of line)
+`
+Explicitly specifying the frame type also puts the state machine into 
+the specifed state for the next frame.  These rules make it quite easy
+to draw objects like tabloids.  (See "Example", below.)
+
+
+For cells with a frame or partial frame, <shading> may be one of:
+!       : create a shaded cell with colors specified by \ysetshade
+!!      : create a shaded cell with colors specified by \YSetShade
+!!!     : create a shaded cell with colors specified by \YSETSHADE
+?       : create a shaded cell with colors specified by \ysetaltshade
+??      : create a shaded cell with colors specified by \YSetAltShade
+???     : create a shaded cell with colors specified by \YSETALTSHADE
+![<bg>] : create a shaded cell with background color <bg>
+
+These behave identically to \yshade, \YShade, \YSHADE, \yaltshade,
+\YAltShade, \YALTSHADE and \yshade[<bg>] respectively.
+
+If none is specifed, or the relevant colors have not been set, the 
+cell is drawn unshaded.  A cell without a frame can't be shaded, 
+and <shading> will be ignored.  (The effect of a shaded cell with no frame 
+can nevertheless be achieved using == (or \ynoleftright) with \ynotop 
+and \ynobottom---it takes more work because it may also be necessary 
+to patch corners.  See "Commands".)
+
+
+<alignment> may be one of:
+_        : place the entry at the bottom of the cell
+^        : place the entry at the top of the cell
+_^ or ^_ : vertically center the contents in the cell
+
+These behave identically to \yvalignincell{b}, \yvalignincell{t}, 
+\yvalignincell{c} respectively.
+
+If none is specified, the default is to try to write the contents 
+on the baseline of the cell, whose position is \ybaselineoffset below the 
+center of the cell.  Normally, this should produce reasonably 
+well-centered entries with a consistent baseline, which most of the
+time is preferable over exact vertical centering.  However, if 
+your entries involve vastly different font sizes, you may want to 
+override this.  Other considerations, such as avoiding overfull
+boxes, override any default or user-specified behaviour. 
+
+Horizontal positioning can be adjusted by using \hfill in <cell contents>.
+
+
+The <cell contents> can be almost anything.  If the tableau 
+is created in math mode, the <cell contents> are processed and output 
+in math mode (textstyle).  Otherwise the horizontal (non-math) mode is 
+used.  Spaces before <cell contents> are ignored.  For code that
+require use of alignment characters (&) or newlines (\\), group 
+delimeters {...} are required.  For example: the outside braces are 
+required in
+
+   {\begin{smallmatrix} a & b \\ c & d \end{smallmatrix}}
+
+Group delimeters can also be used to begin the cell contents with a 
+literal formatting character (e.g. {;}).  Formatting characters can 
+also be disabled by redefining the \youngspecial command.
+
+
+\begin{Young}...\end{Young} is provided as an alternate.
+
+The counter {youngcounter} is incremented at the start of every 
+young environment.  It is not used but the package in any other way, 
+which means you can use it in any way that strikes your fancy.
+
+--------------------------------------------------------------------
+Commands that work within a cell:
+
+The commands below have no effect if performed outside the young 
+environment, but used within the environment will affect the formatting 
+of the current cell.  These can be used in any combination.  Commands 
+which obviously do conflicting things override each other.  Shading 
+commands are ignored in a cell with no frame.  
+
+Frame commands:
+\yframe         draw cell with a frame
+\ynoframe       draw cell with no frame
+\ynoleft        draw cell with frame missing left side but including right
+\ynoright       draw cell with frame missing right but including left
+\ynoleftright   draw cell with frame missing left and right sides
+
+Shading Commands:
+\yshade[<bg>]   shade the cell in colors specified by \ysetshade
+                 (or just use background color <bg>, if argument is given)
+\YShade         shade the cell in colors specifide by \YSetShade
+\YSHADE         shade the cell in colors specifide by \YSETSHADE
+\yaltshade      shade the cell in colors specifide by \ysetaltshade
+\YAltShade      shade the cell in colors specifide by \YSetAltShade
+\YALTSHADE      shade the cell in colors specifide by \YSETALTSHADE
+
+Alignment commands:
+\yvalignincell{<position>} change vertical position of the cell contents
+
+If <position> is one of {b}, {c} or {t}, the cell contents will be at 
+the bottom/exact center/top of the cell (respectively).  If anything 
+else is given, the default is used. (See "Environments" for more info.)
+
+Each of the above commands has an equivalent formatting string in the 
+young environment.
+
+%%
+
+There are five additional formatting commands which do not have equivalent
+formatting strings.
+
+\ynotop[<patch>]     don't draw the top line of the frame
+\ynobottom[<patch>]  don't draw the bottom line of the frame
+\ywithtop            override \ynotop
+\ywithbottom         override \ynobottom
+\ynoshade            don't shade the cell (overrides any shading command)
+
+The commands \ynotop and \ynobottom are independent of the other framing
+commands, and can be used together (unlike \ynoleft and \ynoright which 
+override each other).  The optional argument <patch> may be used to 
+manually patch the corners of the frame, if they get mangled 
+(see "Bugs").  <patch> can be one of [l], [r] or [lr] (which mean patch 
+left corner, patch right corner, patch both corners, respectively).  
+Patching corners is only necessary when the cell is being shaded, and 
+rarely even then.
+
+Note: The combination \ynoleftright\ynotop\ynobottom behaves differently,
+in a few of ways from \ynoframe.  Both create a cell with no frame;
+however, the former allows the possibility of shading, and it also 
+changes the default behaviour for how the next cell is drawn.  
+(See "Environments")
+
+%%
+
+\yrighttoleft
+
+Switches left and right.  On any single cell, a ]= frame is drawn
+as a =] frame and vice versa.  If sequential cells in the same row contain 
+the command \yrighttoleft, that entire sequence of cells will be reversed,
+i.e. drawn from right to left, instead of left to right.  Used with 
+the \yeverycell or \yeveryframe commands, it will produce something like a 
+mirror image.
+
+-------------------------------------------------------------------
+Young Diagrams:
+
+\yng[<position>][<cell size>](<r1>,<r2>,...)
+
+This roughly mimics the \yng command from the youngtab package.  This 
+command creates a young diagram with <r1> cells in the first row, <r2> 
+cells in the second row, etc.  For example: \yng(4,3,1,1) creates the 
+diagram of the partition (4,3,1,1).  If two or more commas appear in 
+a row (blank space is ignored), a cell with no frame is drawn instead 
+of starting a new row.  This feature allows us to create skew diagrams.
+For example: \yng(,,3, ,,2, 4, 1) creates the diagram of (5,4,4,1)/(2,2).  
+
+The command is implemented as a macro that creates a young environment
+filled with the appropriate entries, so any defaults for the young
+environment will apply here too.
+
+--------------------------------------------------------------------
+Customizing:
+
+\ysetshade[<foreground color>]{<background color>}
+\YSetShade[<foreground color>]{<background color>}
+\YSETSHADE[<foreground color>]{<background color>}
+\ysetaltshade[<foreground color>]{<background color>}
+\YSetAltShade[<foreground color>]{<background color>}
+\YSETALTSHADE[<foreground color>]{<background color>}
+
+Set the colors used for shaded cells.  
+
+Use of these requires the color/xcolor package to be loaded.
+<background color> and <foreground color> may be any argument
+that can be read by the \color command.
+
+If arguments are left blank, defaults are used.  For example
+\yshade[Blue]{} sets the foreground color to "Blue", and sets
+the background color to none (default).
+
+
+\ydefaultcellsize{<cell size>}
+
+{Sets the default value for the optional argument <cell size> in
+the young environment.  System default is {2.8ex}.
+
+
+\ydefaultposition{<position>} 
+
+Change sets the default value for optional argument <position> in
+the young environment.  It's not obvious to me what the right system
+default should be here.  For better or for worse, it's {b}.
+
+
+\yhwratio{<height>:<width>}
+
+Sets the height to width ratio of the cells. <height> and <width> must
+be positive integers.  System default is {1:1}. 
+
+
+\renewcommand{\youngspecial}{<characters>} 
+
+Sets the list of characters that are processed as "special formatting
+characters" in a tableau entry.  The system default is {,;=!?^_}.  
+For example: \renewcommand{\youngspecial}{,;=^_} disables ! and ? 
+as formatting characters, and instead the young environment treats ! and ? 
+as literal characters.  In this case the shading features can still be 
+accessed though the commands \yshade etc.  Note: brackets are not 
+considered special characters, since they must be used in combination 
+with other formatting charcters to produce formatting effects.
+
+
+\yeverycell{<command sequence>}
+
+Inserts <command sequence> at the beginning of every cell.  <command sequence> 
+is processed before the rest of the cell entry is read, including any 
+formatting strings.  This means any cell formatting commands in
+<command sequence> can be overrridden on a case-by-case basis.  
+For example, \yeverycell{\yshade} will shade every cell in 
+the colors set by \ysetshade, unless another shading option is specified.
+
+
+\yeveryframe{<command sequence>}
+
+Like \yeverycell, except: (1) <command sequence> is inserted at the
+end of the cell, not at the beginning, thus formatting commands in 
+<command sequence> cannot be overridden.  (2)  <command sequence> is only 
+inserted on cells with frames.  This may be the less useful of the two,
+however if you insert a clever function, it can be used to make the 
+\yng command automatically produce tableaux.  (See "Example".)
+
+
+
+\setlength{\ybaselineoffset}{<depth>}
+
+Specifies where the baseline is relative to the center of the cell.
+Specifically, the baseline is \ybaselineoffset below the center of
+the cell. The default is .75ex, which is approximately half the font 
+size.
+
+
+\setlength{\yframethickness}{<thickness>}
+
+Sets the thickness of the cell frames.  If <thickness> is 0pt, the frames
+will be invisible.  Default is 0.5pt.
+
+
+\setlength{\yautosizeminimun}{<size>}
+
+The smallest box size allowed by the autosizing mechanism.
+
+
+\setlength{\ycellpadding}{<length>}
+
+The algorithms for vertical positioning and autosizing always try
+pad the cell contents with at least this much space.  Default is
+0.3ex.
+
+
+Note: the effects of any of these commands are local--if used within
+a group, the effects are restricted to the group.
+
+--------------------------------------------------------------------
+Autosizing:
+
+Autosizing, like LaTeX referencing, is done via a two pass mechanism.
+The main reason for this is that I don't know how to to make TeX 
+calculate how big the cells should be before drawing them.  So, instead, 
+the size is calculated as the tableau is drawn, and written to the .aux 
+file.  The next time LaTeX is run, the data from the .aux file are used 
+to determine the sizes of the boxes.  
+
+The downside is that you may need to run LaTeX twice to get autosizing 
+to work properly.  A warning message will tell you if another pass
+is needed.
+
+The upside is that this mechanism makes it is possible to autosize two 
+or more tableaux to have exactly the same size.  To do this, use the syntax 
+
+\begin{young}[auto=<label>]  ... \end{young}.  
+
+Any two tableaux with the same <label> will automatically have the same 
+cell size.
+
+--------------------------------------------------------------------
+Backwards Compatibility:
+
+For the most part, there should be few backwards compatibility issues,
+with the origial "young" package.  However, the addition of two optional 
+arguments, and the treatment of certain characters as formatting 
+information do have the potential to cause some compatibility issues.  
+These are easily resolved by including offending material in braces.
+
+If better backwards compatibility is desired, it can be attained 
+by changing defaults.  For example the following code effectively 
+recreates the Young environment from the original package.
+
+\renewenvironment{Young}{% redefine Young environment to use original defaults
+  \hbox\bgroup%        never use math mode for entries
+  \def\youngspecial{}% disable formatting characters
+  \yhwratio{12:13}% set height to width ratio
+  \setlength{\ybaselineoffset}{3.6pt}% set baseline position
+  \setlength{\ycellpadding}{0pt}%  don't try to pad the entries with space
+  \begin{young}[12pt][bb]% now start the young environment with these argument
+}%
+{\end{young}\egroup}% end of redefinition
+
+--------------------------------------------------------------------
+Bugs (and other quirks):
+
+Shading a cell overwrites part of half of the frames of the cells 
+above and to its left.  This is done intentionally---it works well
+most of the time---but has a downside: you need to be careful about
+drawing frames of shaded boxes.  For example, with
+    \begin{young}
+    =]!1 & ==!2
+    \end{young}
+you'll see that the frame center line is only half as thick as it
+should be.  The solution is to use
+    \begin{young}
+    =]!1 & ]=!2
+    \end{young}
+instead.  Similar issues arise when using \ynotop and \ynobottom,
+which is why these have an optional <patch> argument.  To avoid
+these issues, one would need to keep track of all the different
+frames that have been drawn, which is something I'm not willing to 
+try to do in TeX.
+
+Sometimes autosizing generates a warning to rerun LaTeX, when it
+isn't actually necessary to do so.  This is only a minor nuissance,
+since you should never get an _unnecessary_ warning if LaTeX is run 
+twice in a row on the same input file.  Any warnings generated on
+the second run should be taken seriously.  It should not be possible
+(or at least not easy!) to get a false negative---a situation where 
+a warning to rerun should be generated, but isn't.
+
+The environment doesn't do any checking for invalid input, which
+may lead to impenetrable error messages or strange behaviour if 
+invalid input is given.  For example, if invalid optional arguments 
+are provided to the young environment, two things could happen:
+options are ignored, or an error results.  It's not very consistent.
+
+There is no good reason for insisting that the formatting characters
+be given in the order <frame><shading><alignment>, except that it
+is harder to implement their parsing in arbitrary order.
+
+The young environment can't create a row with zero cells, so the 
+command \yng(2,1,0), actually creates an unframed cell in the third
+row (and the corresponding horizontal space).  The extra space isn't
+actually a problem, unless you do something like \yng(0,0,0)....
+Here's the actual bug: Normally these are empty---however if \yeverycell 
+has declared some interesting behaviour, they may not be.  An easy 
+pseudo-fix would be to not draw contents of the cell, but this conceals 
+the fact that the contents are actually read and processed nevertheless... 
+which (if it made a difference) would be an even more perplexing bug.  
+The solution (for now), is to use \yeveryframe instead in this situation.
+
+There is no extra space around a tableau.
+
+There must be something other than empty space in the young environment 
+in order to create a tableau.  For example: \begin{young} \end{young}
+and \begin{young}\empty\end{young} do produce any output.  However, 
+\begin{young}\relax\end{young}, or \begin{young}\\\end{young} will 
+create a single empty box.
+
+There are probably other bugs that I don't know about.  This has
+not been exhaustively tested.
+
+--------------------------------------------------------------------
+Example:
+
+\documentclass{article}
+\usepackage{young}
+\usepackage[svgnames]{xcolor}
+
+%
+% set some default colors
+%
+\ysetshade{Green!15}%      a pale green
+\YSetShade{Green!50}%      slightly darker green
+\ysetaltshade{Blue!15}%    a pale blue
+\YSetAltShade{Blue!50}%    a slightly darker blue
+
+\begin{document}
+
+% 
+% A basic example of a skew tableau.  The comma creates a cell with
+% no frame.
+\noindent
+A skew tableau:
+
+\begin{young}            
+, & , & , & 3 & 5 & 10\\
+, & 1 & 4 & 6 \\
+2 & 7 & 8  \\
+9 & 11  
+\end{young}
+
+%
+% If we just want unfilled boxes, the \yng command can be used.
+% The extra commas create unframed cells instead of new rows.
+%
+\bigskip \noindent
+A young diagram  and a skew diagram.
+
+\yng(5,5,4,2) \qquad \yng(,,3,,3,4,2)
+
+%
+% The next example illustrates shading with the default colors.
+% The formatting strings ! and ? use the colors set by \ysetshade
+% and \yaltshade respectively.  !! and ?? use the colors set by 
+% \YSetShade and \YAltShade.  !!! and ??? are also valid, but
+% not illustrated in this example.
+%
+\bigskip \noindent
+Shading with two default colors:
+
+\begin{young}
+,  & ,  & !1 & !2 & ?5 & ?6 \\
+!3 & !5 & !6 & ?1  \\
+!4 & ?2 & ?3 & ?4  
+\end{young}
+
+\bigskip \noindent
+Same example with some highlighted boxes:
+
+\begin{young}
+,  & ,  & !1 & !2 & ?5 & ?6 \\
+!3 & !5 &!!6 &??1  \\
+!4 & ?2 & ?3 & ?4 
+\end{young}
+
+%
+% The next example illustrates use of the optional arguments.  One
+% argument is position, the other is cell size.  They can be given
+% in either order.  The use of [tt] as the position makes the top
+% of the cells of the two tableaux line up, even though they are the
+% different sizes---however, this probably not the option you want
+% to use most of the time.  The second example uses autosizing, 
+%
+\bigskip \noindent
+Some tableaux with different sized cells.  If the one on the right 
+looks weird, you need to rerun LaTeX.
+
+\begin{young}[30pt][tt]
+cell & size & is \\    
+30pt & here
+\end{young}
+%
+\qquad
+%
+\begin{young}[tt][auto]
+here it's & autosize
+\end{young}
+
+%
+% The next example illustrates the use of formatting instructions to
+% make tabloids. In the first example, the ]= instructs the environment 
+% to create a cell missing the right side of the frame.  From then on
+% the default behaviour creates the rest of the frames the way we want,
+% so no further formatting instructions are needed.  In the second 
+% example the == instructure creates a cell missing the right and left 
+% sides of the frame.  Again, the default behaviour does the right 
+% thing from then on.
+%
+\bigskip \noindent
+Tabloid variants:
+
+\begin{young}     
+]=3 & 4 & 8 & 9 \\
+1 & 5 & 6 \\
+2 \\
+7 
+\end{young}
+%
+\qquad
+%
+\begin{young}
+==3 & 4 & 8 & 9 \\
+1 & 5 & 6 \\
+2 \\
+7 
+\end{young}
+
+%
+% Illustration of the optional argument to the ! instruction.
+%
+\bigskip \noindent
+Just some colored boxes:
+
+\begin{young}
+, & ![Orange] & ![Red] \\
+![Yellow] & ![Blue] \\
+![Green] & ![Purple] 
+\end{young}
+
+%
+% Just for fun, an illustration of the \yeveryframe command.  Here the 
+% value of a counter is automatically inserted into every cell with a 
+% frame, which allows us to produce superstandard tableaux using 
+% the \yng command.
+%
+\bigskip \noindent
+Automatically generated superstandard tableaux:
+
+\newcounter{superstd}[youngcounter]
+{
+  \yeveryframe{\stepcounter{superstd}\thesuperstd}
+  \yng(10,5,2,1) \qquad \yng(,,,7, ,4,2,1)
+}
+
+\bigskip \noindent
+We can also number from right to left:
+
+{
+  \yeveryframe{\stepcounter{superstd}\thesuperstd\yrighttoleft}
+  \yng(10,5,2,1) \qquad \yng(,,,7, ,4,2,1)
+}
+
+\end{document}

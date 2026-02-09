@@ -1,0 +1,39 @@
+\def\epsx{.12}
+\newcommand{\SVoooo}[2]{\scalebox{#1}{\begin{tikzpicture}
+[scale=1, very thick, baseline=#2]
+\draw[dotted] (-.5,0) -- (.5,0);
+\draw[dotted] (0,-.5) -- (0,.5);
+\end{tikzpicture}}}
+\newcommand{\SViiii}[2]{\scalebox{#1}{\begin{tikzpicture}
+[scale=1, very thick, baseline=#2]
+\draw[->] (-.5,0) -- (-\epsx/4,0);
+\draw[->] (0,0) -- (.5,0);
+\draw[->] (0,-.5) -- (0,-\epsx/4);
+\draw[->] (0,0) -- (0,.5);
+\end{tikzpicture}}}
+\newcommand{\SVoioi}[2]{\scalebox{#1}{\begin{tikzpicture}
+[scale=1, very thick, baseline=#2]
+\draw[->] (-.5,0) -- (-\epsx/4,0);
+\draw[->] (0,0) -- (.5,0);
+\draw[dotted] (0,-.5) -- (0,.5);
+\end{tikzpicture}}}
+\newcommand{\SVoiio}[2]{\scalebox{#1}{\begin{tikzpicture}
+[scale=1, very thick, baseline=#2]
+\draw[->] (-.5,0) -- (-\epsx/4,0);
+\draw[->] (0,0) -- (0,.5);
+\draw[dotted] (0,-.5) -- (0,0);
+\draw[dotted] (0,0) -- (.5,0);
+\end{tikzpicture}}}
+\newcommand{\SVioio}[2]{\scalebox{#1}{\begin{tikzpicture}
+[scale=1, very thick, baseline=#2]
+\draw[->] (0,-.5) -- (0,-\epsx/4);
+\draw[->] (0,0) -- (0,0.5);
+\draw[dotted] (-.5,0) -- (.5,0);
+\end{tikzpicture}}}
+\newcommand{\SViooi}[2]{\scalebox{#1}{\begin{tikzpicture}
+[scale=1, very thick, baseline=#2]
+\draw[->] (0,-.5) -- (0,-\epsx/4);
+\draw[->] (0,0) -- (0.5,0);
+\draw[dotted] (-.5,0) -- (0,0);
+\draw[dotted] (0,0) -- (0,.5);
+\end{tikzpicture}}}

@@ -1,0 +1,13 @@
+{
+   "sources" : [
+      {
+         "usage" : "toplevel",
+         "filename" : "June2025_random_edge_Aztec.tex"
+      }
+   ],
+   "version" : 2,
+   "texlive_version" : 2023,
+   "process" : {
+      "compiler" : "pdflatex"
+   }
+}

@@ -1,0 +1,16 @@
+{
+   "stamp" : true,
+   "sources" : [
+      {
+         "usage" : "toplevel",
+         "filename" : "final_colored_stationary.tex"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "bib.bib"
+      }
+   ],
+   "process" : {
+      "compiler" : "pdflatex"
+   }
+}

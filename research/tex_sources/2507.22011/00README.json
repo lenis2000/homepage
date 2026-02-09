@@ -1,0 +1,17 @@
+{
+   "sources" : [
+      {
+         "usage" : "toplevel",
+         "filename" : "July2025_waterfall.tex"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "anc/python_imaginary_qRacah_tilings.py"
+      }
+   ],
+   "version" : 2,
+   "texlive_version" : 2023,
+   "process" : {
+      "compiler" : "pdflatex"
+   }
+}
