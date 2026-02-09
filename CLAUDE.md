@@ -48,7 +48,15 @@ simulations: simulations/YYYY-MM-DD-slug/    # optional
 ### Current Paper Count
 - Latest cv-number: 50 (as of Feb 2026)
 
-## Talk Slides (waterfall talk)
+## Talk Slides
+
+### Talk Structure
+- Each talk lives at `/talk/<name>/index.html` with slides in `_includes/talk/<name>/*.html`
+- **Waterfall talk** (`/talk/waterfall/`): Multiple variants (applied-math, pure-math colloquium). ~18 slides per variant.
+- **Visual talk** (`/talk/visual/`): PWA with service worker + loading bar. Currently a stub (title, nature-builds, thankyou).
+- Both talks share WASM modules from `/talk/visual/sim/` and WebGPU engines from `/js/`
+
+### Waterfall talk
 
 - Slides are in `_includes/talk/waterfall/*.html`
 - Each slide is a separate HTML file with `id` matching the URL hash (e.g., `#spectral-projection` → `spectral-projection.html`)
@@ -140,10 +148,13 @@ simulations: simulations/YYYY-MM-DD-slug/    # optional
 - Pattern: `if (!meshGroup) return;` after await statements
 - Animation loops need guards: `if (!camera || !controls) { isAnimating = false; return; }`
 
-### Service Worker & Offline Caching
-- Service worker at `/talk/waterfall/sw.js` with scope `/talk/waterfall/`
+### Service Worker & Offline Caching (per-talk PWA)
+- Each talk has its own service worker and manifest:
+  - Waterfall: `sw.js` at `/talk/waterfall/sw.js`, cache `waterfall-talk-vN`
+  - Visual: `sw.js` at `/talk/visual/sw.js`, cache `visual-talk-vN`, manifest at `/talk/visual/manifest.json`
 - Precaches WASM, JS, images, OBJ models, fonts, KaTeX
-- Bump `CACHE_NAME` version (e.g., `waterfall-talk-v4`) when updating cached assets
+- Bump `CACHE_NAME` version when updating cached assets
+- Since `slides.html` layout has no slot for extra `<head>` tags, inject manifest link and theme-color meta via JS in `index.html`
 - Self-hosted assets (no CDN dependencies):
   - Unna font: `/fonts/unna-*.woff2`
   - KaTeX 0.16.9: `/katex-0.16.9/`
@@ -260,6 +271,7 @@ Images stored in `talk/waterfall/images/`
 - Avoid variable names that read badly in text context (e.g., "3d sides" reads like "3D" → use "3k sides" instead)
 
 ### User Preferences
+- **No co-author line in commits** — do NOT add `Co-Authored-By: Claude` to git commit messages
 - Don't run Jekyll builds - user handles deployment
 - Prefer static KaTeX formulas in HTML over dynamic JS rendering
 - Keep dynamic value displays (e.g., computed q-binomial values) separate from static formulas
