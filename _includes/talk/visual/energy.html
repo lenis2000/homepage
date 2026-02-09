@@ -3,9 +3,9 @@
 
     <div style="display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 2vw; margin-top: 1vh; width: 100%; align-items: start;">
         <!-- Left: Text explanation -->
-        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.5rem, 2.5vw, 2rem);">
             <!-- How to get limit shape -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-accent);">Local patches:</strong>
                 <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
                     <li>Approximate the surface by piecewise-planar patches</li>
@@ -15,18 +15,12 @@
             </div>
 
             <!-- Variational principle -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1.5vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-navy);">Variational principle:</strong><br>
                 Limit shape \(z=h(x,y)\) maximizes \(\displaystyle\iint \sigma(\nabla h)\, dxdy\)<br>
                 subject to boundary conditions
             </div>
 
-            <!-- Entropy formula -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Surface tension:</strong><br>
-                \(\sigma(s_1,s_2) = \tfrac{1}{\pi}\bigl[\Lambda(\pi s_1) + \Lambda(\pi s_2) + \Lambda(\pi (1\!-\!s_1\!-\!s_2))\bigr]\)<br>
-                <span style="color: var(--slide-muted);">\(\Lambda(\theta)=-\!\int_0^\theta \ln|2\sin t|\,dt\) (Lobachevsky function)</span>
-            </div>
         </div>
 
         <!-- Right: 3D tiling canvas -->

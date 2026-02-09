@@ -17,17 +17,22 @@
 
             <div id="fg-insight" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left; opacity: 0; transition: opacity 0.3s;">
                 <strong style="color: var(--slide-accent);">Brownian bridge:</strong><br>
-                The full fluctuation process (path minus diagonal) converges to a <strong>Brownian bridge</strong> — a Gaussian process pinned at both ends.
+                The full fluctuation process (path minus diagonal) converges to the <strong>Brownian bridge</strong> — the Brownian motion pinned at both ends.
             </div>
         </div>
 
-        <!-- Right: Histogram + bridge canvas -->
+        <!-- Right: Bridge canvas (top) + Histogram (below) -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
-            <canvas id="fg-histogram-canvas" width="800" height="500" style="height: 35vh; width: auto;"></canvas>
-            <div style="font-size: clamp(0.9rem, 1.5vw, 1.1rem); color: var(--slide-muted);">
-                Samples: <span id="fg-histogram-count">0</span>
+            <canvas id="fg-histogram-canvas" width="800" height="400" style="height: 34vh; width: auto; opacity: 0; transition: opacity 0.3s;"></canvas>
+            <div id="fg-histogram-label" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--slide-muted); opacity: 0; transition: opacity 0.3s;">
+                Midpoint height samples: <span id="fg-histogram-count">0</span>
             </div>
-            <canvas id="fg-bridge-canvas" width="800" height="300" style="height: 20vh; width: auto; border: 1px solid #ccc; opacity: 0; transition: opacity 0.3s;"></canvas>
+            <div id="fg-bridge-container" style="opacity: 0; transition: opacity 0.3s;">
+                <div style="font-size: clamp(1.1rem, 2vw, 1.6rem); color: var(--slide-navy); font-weight: bold;">
+                    Path minus diagonal <span style="font-weight: normal; color: var(--slide-muted);">(100 × 60)</span>
+                </div>
+                <canvas id="fg-bridge-canvas" width="800" height="350" style="height: 29vh; width: auto;"></canvas>
+            </div>
         </div>
     </div>
 </section>

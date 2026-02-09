@@ -10,7 +10,6 @@ function initLimitShapeSim() {
         const canvas = document.getElementById('limit-shape-3d-canvas');
         const statusEl = document.getElementById('limit-shape-3d-status');
         const panelsEl = document.getElementById('limit-shape-panels');
-        const imagePanelEl = document.getElementById('limit-shape-image-panel');
         const presampledLabel = document.getElementById('limit-shape-presampled-label');
         if (!canvas) return;
 
@@ -549,7 +548,7 @@ function initLimitShapeSim() {
                 window.slideEngine.registerSimulation('limit-shape', {
                     start,
                     pause,
-                    steps: 6,
+                    steps: 5,
                     onSlideEnter() {
                         initThreeJS();
                         if (camera && controls) {
@@ -605,8 +604,6 @@ function initLimitShapeSim() {
                             stopAutoRotate();
                         } else if (step === 5) {
                             if (panelsEl) panelsEl.style.opacity = '1';
-                        } else if (step === 6) {
-                            if (imagePanelEl) imagePanelEl.style.opacity = '1';
                         }
                     },
                     onStepBack(step) {
@@ -626,31 +623,25 @@ function initLimitShapeSim() {
                             buildGeometry();
                             if (renderer && scene && camera) renderer.render(scene, camera);
                             if (panelsEl) panelsEl.style.opacity = '0';
-                            if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         } else if (step === 1) {
                             stopAutoRotate();
                             objLoaded = false;
                             buildGeometry();
                             if (renderer && scene && camera) renderer.render(scene, camera);
                             if (panelsEl) panelsEl.style.opacity = '0';
-                            if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         } else if (step === 2) {
                             objLoaded = false;
                             buildGeometry();
                             if (renderer && scene && camera) renderer.render(scene, camera);
                             if (panelsEl) panelsEl.style.opacity = '0';
-                            if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         } else if (step === 3) {
                             // Going back from stopped to rotating
                             startAutoRotate();
                             if (panelsEl) panelsEl.style.opacity = '0';
-                            if (imagePanelEl) imagePanelEl.style.opacity = '0';
 
                         } else if (step === 4) {
                             if (panelsEl) panelsEl.style.opacity = '0';
-                            if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         } else if (step === 5) {
-                            if (imagePanelEl) imagePanelEl.style.opacity = '0';
                         }
                     }
                 }, 0);

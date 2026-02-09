@@ -1,14 +1,14 @@
 /**
  * Fluctuations Gaussian Simulation
- * Samples lattice paths via WASM CFTP, measures middle-y values,
- * builds histogram that converges to Gaussian, then reveals Brownian bridge.
+ * Shows path-minus-diagonal (Brownian bridge) immediately with pure JS 100×60 path.
+ * Then samples midpoint heights via WASM CFTP, builds histogram → Gaussian.
  *
  * Steps:
- *   0: Reset, show empty histogram
- *   1: Run CFTP + collect ~20 samples, histogram forming
- *   2: Collect 1000 samples (GPU if available), clearly Gaussian
+ *   0: Bridge canvas visible (pure JS path-minus-diagonal)
+ *   1: Init WASM, run CFTP + collect ~20 histogram samples
+ *   2: Collect to 1000 samples
  *   3: Collect to 5000 samples
- *   4: Show fg-insight (Brownian bridge explanation) + draw bridge canvas
+ *   4: Show fg-insight (Brownian bridge explanation text)
  */
 
 function initFluctuationsGaussianSim() {
@@ -19,29 +19,121 @@ function initFluctuationsGaussianSim() {
     const histCanvas = document.getElementById('fg-histogram-canvas');
     const bridgeCanvas = document.getElementById('fg-bridge-canvas');
     const histCountEl = document.getElementById('fg-histogram-count');
-    if (!histCanvas) return;
+    if (!bridgeCanvas) return;
 
-    const histCtx = histCanvas.getContext('2d');
-    const bridgeCtx = bridgeCanvas ? bridgeCanvas.getContext('2d') : null;
+    const histCtx = histCanvas ? histCanvas.getContext('2d') : null;
+    const bridgeCtx = bridgeCanvas.getContext('2d');
 
     function showElement(id) { var el = document.getElementById(id); if (el) el.style.opacity = '1'; }
     function hideElement(id) { var el = document.getElementById(id); if (el) el.style.opacity = '0'; }
 
-    // === WASM Parameters ===
+    // === Pure JS path generation for bridge display ===
+    const BRIDGE_A = 100, BRIDGE_B = 60;
+
+    function generateRandomPath(a, b) {
+        const moves = [];
+        let remainingR = a, remainingU = b;
+        while (remainingR + remainingU > 0) {
+            if (remainingR === 0) { moves.push('U'); remainingU--; }
+            else if (remainingU === 0) { moves.push('R'); remainingR--; }
+            else if (Math.random() < remainingR / (remainingR + remainingU)) { moves.push('R'); remainingR--; }
+            else { moves.push('U'); remainingU--; }
+        }
+        return moves;
+    }
+
+    function drawBridgeFromMoves(moves, a, b) {
+        const w = bridgeCanvas.width, h = bridgeCanvas.height;
+        const padding = 40;
+        const N = a + b;
+
+        bridgeCtx.fillStyle = '#fff';
+        bridgeCtx.fillRect(0, 0, w, h);
+
+        // Compute fluctuations: y_i - (b/(a+b)) * i
+        const fluct = [0];
+        let yCount = 0;
+        for (let i = 0; i < moves.length; i++) {
+            if (moves[i] === 'U') yCount++;
+            fluct.push(yCount - (b / N) * (i + 1));
+        }
+
+        let minF = 0, maxF = 0;
+        for (const f of fluct) {
+            if (f < minF) minF = f;
+            if (f > maxF) maxF = f;
+        }
+        const absMax = Math.max(Math.abs(minF), Math.abs(maxF), 1) * 1.2;
+
+        const plotW = w - 2 * padding;
+        const plotH = h - 2 * padding;
+        const stepX = plotW / N;
+        const zeroY = padding + plotH / 2;
+
+        // Zero line
+        bridgeCtx.strokeStyle = '#aaa';
+        bridgeCtx.lineWidth = 1;
+        bridgeCtx.setLineDash([6, 4]);
+        bridgeCtx.beginPath();
+        bridgeCtx.moveTo(padding, zeroY);
+        bridgeCtx.lineTo(padding + plotW, zeroY);
+        bridgeCtx.stroke();
+        bridgeCtx.setLineDash([]);
+
+        // Fluctuation curve
+        bridgeCtx.strokeStyle = '#E57200';
+        bridgeCtx.lineWidth = 9;
+        bridgeCtx.lineCap = 'round';
+        bridgeCtx.lineJoin = 'round';
+        bridgeCtx.beginPath();
+        for (let i = 0; i <= N; i++) {
+            const px = padding + i * stepX;
+            const py = zeroY - (fluct[i] / absMax) * (plotH / 2);
+            if (i === 0) bridgeCtx.moveTo(px, py);
+            else bridgeCtx.lineTo(px, py);
+        }
+        bridgeCtx.stroke();
+
+        // Dots at endpoints
+        bridgeCtx.fillStyle = '#232D4B';
+        bridgeCtx.beginPath();
+        bridgeCtx.arc(padding, zeroY, 5, 0, Math.PI * 2);
+        bridgeCtx.fill();
+        bridgeCtx.beginPath();
+        bridgeCtx.arc(padding + plotW, zeroY, 5, 0, Math.PI * 2);
+        bridgeCtx.fill();
+
+        // Labels
+        bridgeCtx.fillStyle = '#666';
+        bridgeCtx.font = '14px sans-serif';
+        bridgeCtx.textAlign = 'left';
+        bridgeCtx.textBaseline = 'middle';
+        bridgeCtx.fillText('0', padding - 20, zeroY);
+        bridgeCtx.textAlign = 'center';
+        bridgeCtx.textBaseline = 'top';
+        bridgeCtx.fillText('0', padding, h - padding + 8);
+        bridgeCtx.fillText(N + '', padding + plotW, h - padding + 8);
+    }
+
+    let bridgeMoves = null;
+
+    function drawBridge() {
+        if (!bridgeMoves) bridgeMoves = generateRandomPath(BRIDGE_A, BRIDGE_B);
+        drawBridgeFromMoves(bridgeMoves, BRIDGE_A, BRIDGE_B);
+    }
+
+    // === WASM Parameters (for histogram) ===
     const WASM_N = 210, WASM_M = 120;
     const midX = Math.floor(WASM_N / 2);
 
     let wasm = null;
     let gpuEngine = null;
     let gpuInitAttempted = false;
-    let wasmSamples = [];
     let middleYs = [];
     let wasmIsRunning = false;
     let cachedInitialBits = null;
     let wasmFunctions = {};
     let currentStep = 0;
-    // Store the last CFTP-sampled path for Brownian bridge drawing
-    let lastSampledPath = null;
 
     // === WASM Initialization ===
 
@@ -71,9 +163,7 @@ function initFluctuationsGaussianSim() {
             try {
                 gpuEngine = new WebGPUQPartitionEngine();
                 await gpuEngine.init();
-                console.log('FG: WebGPU engine ready');
             } catch (e) {
-                console.warn('FG: WebGPU init failed, CPU fallback:', e);
                 gpuEngine = null;
             }
         }
@@ -102,7 +192,6 @@ function initFluctuationsGaussianSim() {
     async function runCFTP() {
         if (wasmIsRunning || !wasm) return null;
         wasmIsRunning = true;
-
         wasmFunctions.initSimulation(WASM_N, WASM_M, 1.0);
 
         return new Promise((resolve) => {
@@ -113,11 +202,8 @@ function initFluctuationsGaussianSim() {
                     const str = wasm.UTF8ToString(ptr);
                     wasmFunctions.freeString(ptr);
                     const path = JSON.parse(str);
-                    wasmSamples.push(path);
                     middleYs.push(getMiddleY(path));
                     cachedInitialBits = pathToBits(path);
-                    lastSampledPath = path;
-
                     drawHistogram();
                     wasmIsRunning = false;
                     resolve(path);
@@ -147,58 +233,53 @@ function initFluctuationsGaussianSim() {
                 await runCFTP();
                 if (!cachedInitialBits) return collectSamplesCPU(count);
             }
-            const initialBits = cachedInitialBits;
             const batchSize = 5000;
             let remaining = count;
             while (remaining > 0) {
                 const thisBatch = Math.min(batchSize, remaining);
-                const gpuPromise = gpuEngine.sample(WASM_N, WASM_M, thisBatch, initialBits, 1000000);
+                const gpuPromise = gpuEngine.sample(WASM_N, WASM_M, thisBatch, cachedInitialBits, 1000000);
                 const timeoutPromise = new Promise((_, reject) =>
                     setTimeout(() => reject(new Error('GPU timeout')), 10000)
                 );
                 const gpuMiddleYs = await Promise.race([gpuPromise, timeoutPromise]);
-                for (let i = 0; i < gpuMiddleYs.length; i++) {
-                    middleYs.push(gpuMiddleYs[i]);
-                }
+                for (let i = 0; i < gpuMiddleYs.length; i++) middleYs.push(gpuMiddleYs[i]);
                 remaining -= thisBatch;
                 drawHistogram();
                 await new Promise(r => setTimeout(r, 0));
             }
-            drawHistogram();
         } catch (e) {
-            console.error('FG: GPU sampling failed, falling back to CPU:', e);
+            console.warn('FG: GPU sampling failed, falling back to CPU:', e);
             gpuEngine = null;
-            return collectSamplesCPU(count);
+            return collectSamplesCPU(count - middleYs.length);
         }
     }
 
     async function collectSamplesCPU(count) {
+        if (!wasm) {
+            const ok = await initWASM();
+            if (!ok) return;
+        }
         if (!cachedInitialBits) {
             await runCFTP();
             if (!cachedInitialBits) return;
         }
-        const initialBits = cachedInitialBits;
-        const stepsPerSample = 1000000;
         for (let i = 0; i < count; i++) {
-            const y = runGlauberWASM(initialBits, stepsPerSample);
+            const y = runGlauberWASM(cachedInitialBits, 1000000);
             middleYs.push(y);
             drawHistogram();
             await new Promise(r => setTimeout(r, 0));
         }
-        drawHistogram();
     }
 
     async function collectSamples(count) {
-        if (gpuEngine) {
-            await collectSamplesGPU(count);
-        } else {
-            await collectSamplesCPU(count);
-        }
+        if (gpuEngine) await collectSamplesGPU(count);
+        else await collectSamplesCPU(count);
     }
 
     // === Drawing: Histogram ===
 
     function drawHistogram() {
+        if (!histCtx) return;
         const padding = { top: 40, right: 40, bottom: 60, left: 70 };
         const w = histCanvas.width - padding.left - padding.right;
         const h = histCanvas.height - padding.top - padding.bottom;
@@ -207,7 +288,6 @@ function initFluctuationsGaussianSim() {
         histCtx.fillRect(0, 0, histCanvas.width, histCanvas.height);
 
         if (middleYs.length === 0) {
-            // Draw empty axes
             histCtx.strokeStyle = '#232D4B';
             histCtx.lineWidth = 2;
             histCtx.beginPath();
@@ -215,12 +295,10 @@ function initFluctuationsGaussianSim() {
             histCtx.lineTo(padding.left, padding.top + h);
             histCtx.lineTo(padding.left + w, padding.top + h);
             histCtx.stroke();
-
             histCtx.fillStyle = '#232D4B';
-            histCtx.font = Math.round(histCanvas.height * 0.03) + 'px sans-serif';
+            histCtx.font = Math.round(histCanvas.height * 0.035) + 'px sans-serif';
             histCtx.textAlign = 'center';
             histCtx.fillText('y at x=' + midX, padding.left + w / 2, padding.top + h + 30);
-
             if (histCountEl) histCountEl.textContent = '0';
             return;
         }
@@ -238,7 +316,6 @@ function initFluctuationsGaussianSim() {
         }
         const maxBin = Math.max(...bins);
 
-        // Axes
         histCtx.strokeStyle = '#232D4B';
         histCtx.lineWidth = 2;
         histCtx.beginPath();
@@ -247,7 +324,6 @@ function initFluctuationsGaussianSim() {
         histCtx.lineTo(padding.left + w, padding.top + h);
         histCtx.stroke();
 
-        // Bars
         const barW = w / binCount;
         for (let i = 0; i < binCount; i++) {
             const barH = (bins[i] / maxBin) * h * 0.9;
@@ -260,98 +336,34 @@ function initFluctuationsGaussianSim() {
             histCtx.strokeRect(x + 1, y, barW - 2, barH);
         }
 
-        // X-axis labels
         histCtx.fillStyle = '#232D4B';
-        histCtx.font = Math.round(histCanvas.height * 0.03) + 'px sans-serif';
+        histCtx.font = Math.round(histCanvas.height * 0.035) + 'px sans-serif';
         histCtx.textAlign = 'center';
         histCtx.textBaseline = 'top';
         histCtx.fillText(Math.round(minY) + '', padding.left, padding.top + h + 8);
         histCtx.fillText(Math.round(maxY) + '', padding.left + w, padding.top + h + 8);
         histCtx.fillText('y at x=' + midX, padding.left + w / 2, padding.top + h + 30);
 
-        // Y-axis label
-        histCtx.save();
-        histCtx.translate(20, padding.top + h / 2);
-        histCtx.rotate(-Math.PI / 2);
-        histCtx.textAlign = 'center';
-        histCtx.fillText('frequency', 0, 0);
-        histCtx.restore();
-
         if (histCountEl) histCountEl.textContent = middleYs.length + '';
-    }
-
-    // === Drawing: Brownian Bridge ===
-
-    function drawBrownianBridge() {
-        if (!bridgeCtx || !bridgeCanvas) return;
-        if (!lastSampledPath || lastSampledPath.length === 0) return;
-
-        const path = lastSampledPath;
-        const w = bridgeCanvas.width, h = bridgeCanvas.height;
-        const padding = 20;
-
-        bridgeCtx.fillStyle = '#fff';
-        bridgeCtx.fillRect(0, 0, w, h);
-
-        // Compute path-minus-diagonal
-        const totalX = path[path.length - 1][0];
-        const totalY = path[path.length - 1][1];
-        const slope = totalY / totalX;
-
-        const diffs = [];
-        for (let i = 0; i < path.length; i++) {
-            const px = path[i][0];
-            const py = path[i][1];
-            diffs.push(py - slope * px);
-        }
-
-        const maxDiff = Math.max(...diffs.map(Math.abs), 5);
-        const scaleX = (w - 2 * padding) / totalX;
-        const scaleY = (h - 2 * padding) / (2 * maxDiff);
-
-        // Zero line
-        bridgeCtx.strokeStyle = '#ccc';
-        bridgeCtx.lineWidth = 1;
-        bridgeCtx.beginPath();
-        bridgeCtx.moveTo(padding, h / 2);
-        bridgeCtx.lineTo(w - padding, h / 2);
-        bridgeCtx.stroke();
-
-        // Difference curve
-        bridgeCtx.strokeStyle = '#E57200';
-        bridgeCtx.lineWidth = 3;
-        bridgeCtx.beginPath();
-        for (let i = 0; i < path.length; i++) {
-            const px = padding + path[i][0] * scaleX;
-            const py = h / 2 - diffs[i] * scaleY;
-            if (i === 0) bridgeCtx.moveTo(px, py);
-            else bridgeCtx.lineTo(px, py);
-        }
-        bridgeCtx.stroke();
-
-        bridgeCtx.fillStyle = '#232D4B';
-        bridgeCtx.font = Math.round(h * 0.15) + 'px sans-serif';
-        bridgeCtx.textAlign = 'center';
-        bridgeCtx.fillText('path minus diagonal', w / 2, h - Math.round(h * 0.05));
     }
 
     // === Reset ===
 
     function resetAll() {
         currentStep = 0;
-        wasmSamples = [];
         middleYs = [];
         cachedInitialBits = null;
-        lastSampledPath = null;
+        bridgeMoves = null;
 
         hideElement('fg-insight');
-
+        hideElement('fg-bridge-container');
+        hideElement('fg-histogram-canvas');
+        hideElement('fg-histogram-label');
         if (histCountEl) histCountEl.textContent = '0';
-        drawHistogram();
 
-        if (bridgeCtx && bridgeCanvas) {
-            bridgeCtx.fillStyle = '#fff';
-            bridgeCtx.fillRect(0, 0, bridgeCanvas.width, bridgeCanvas.height);
+        if (histCtx) {
+            histCtx.fillStyle = '#fff';
+            histCtx.fillRect(0, 0, histCanvas.width, histCanvas.height);
         }
     }
 
@@ -361,51 +373,46 @@ function initFluctuationsGaussianSim() {
         currentStep = step;
 
         if (step === 1) {
-            // Init WASM + GPU, run CFTP + collect ~20 samples
+            // Show histogram, init WASM, collect ~20 samples
+            showElement('fg-histogram-canvas');
+            showElement('fg-histogram-label');
             await tryInitGPU();
             const wasmOk = await initWASM();
             if (wasmOk) {
-                wasmSamples = [];
                 middleYs = [];
                 cachedInitialBits = null;
+                drawHistogram();
                 await runCFTP();
                 await collectSamples(19);
             }
         } else if (step === 2) {
-            // Accumulate to 1000
+            showElement('fg-histogram-canvas');
+            showElement('fg-histogram-label');
             const needed = 1000 - middleYs.length;
-            if (needed > 0) {
-                await collectSamples(needed);
-            }
+            if (needed > 0) await collectSamples(needed);
         } else if (step === 3) {
-            // Accumulate to 5000
+            showElement('fg-histogram-canvas');
+            showElement('fg-histogram-label');
             const needed = 5000 - middleYs.length;
-            if (needed > 0) {
-                await collectSamples(needed);
-            }
+            if (needed > 0) await collectSamples(needed);
         } else if (step === 4) {
-            // Show Brownian bridge insight
             showElement('fg-insight');
-            drawBrownianBridge();
+            showElement('fg-bridge-container');
+            drawBridge();
         }
     }
 
     function onStepBack(step) {
         currentStep = step;
-
         if (step < 4) {
             hideElement('fg-insight');
+            hideElement('fg-bridge-container');
         }
-
-        // Redraw histogram for current state
-        if (step >= 1) {
-            drawHistogram();
+        if (step < 1) {
+            hideElement('fg-histogram-canvas');
+            hideElement('fg-histogram-label');
         }
-
-        if (step === 0) {
-            // Back to initial: keep samples but show current histogram
-            drawHistogram();
-        }
+        if (step >= 1) drawHistogram();
     }
 
     // === Register ===

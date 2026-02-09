@@ -1,26 +1,34 @@
 /**
- * Random Path Simulation (simplified for visual talk)
- * Shows random lattice path with local zoom view
- * No Brownian bridge phase, no WASM/GPU sampling
+ * Random Path Simulation (visual talk)
+ * Progressive grid sizes, limit shape reveal, local zoom with Bernoulli claim
  */
 
 (function() {
     'use strict';
 
     const canvas = document.getElementById('random-path-canvas');
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const localCanvas = document.getElementById('local-view-canvas');
     const localCtx = localCanvas.getContext('2d');
     const sizeSpan = document.getElementById('random-path-size');
-    const localTitle = document.getElementById('local-view-title');
-    const localViewContainer = document.getElementById('local-view-container');
     const bernoulliEl = document.getElementById('bernoulli-explanation');
-    const globalEl = document.getElementById('global-observation');
+    const localViewContainer = document.getElementById('local-view-container');
 
-    const A = 100, B = 60;  // Grid size
+    // Grid sizes for progressive builds
+    const sizes = [
+        { a: 10, b: 6 },
+        { a: 50, b: 30 },
+        { a: 100, b: 60 },
+        { a: 200, b: 120 },
+        { a: 400, b: 240 }
+    ];
+
+    let currentSizeIdx = 0;
     let currentPath = null;
-    let highlightLen = 16;     // Length of highlighted region
-    let highlightStart = Math.floor((A + B) / 2 - highlightLen / 2);  // Always middle
+    let showDiagonal = false;
+    let currentStep = 0;
+    let highlightLen = 16;
 
     function generateRandomPath(a, b) {
         const moves = [];
@@ -46,20 +54,25 @@
         return moves;
     }
 
-    function drawMainPath(showHighlight = false) {
+    function currentSize() {
+        return sizes[currentSizeIdx];
+    }
+
+    function drawMainPath() {
+        const { a, b } = currentSize();
         const w = canvas.width, h = canvas.height;
         ctx.fillStyle = '#fff';
         ctx.fillRect(0, 0, w, h);
 
         if (!currentPath) {
-            currentPath = generateRandomPath(A, B);
+            currentPath = generateRandomPath(a, b);
         }
 
         const padding = 50;
         const gridW = w - 2 * padding;
         const gridH = h - 2 * padding;
-        const stepX = gridW / A;
-        const stepY = gridH / B;
+        const stepX = gridW / a;
+        const stepY = gridH / b;
         const baseX = padding;
         const baseY = padding;
 
@@ -68,19 +81,21 @@
         ctx.lineWidth = 2;
         ctx.strokeRect(baseX, baseY, gridW, gridH);
 
-        // Draw diagonal (limit shape)
-        ctx.strokeStyle = '#232D4B';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([8, 4]);
-        ctx.beginPath();
-        ctx.moveTo(baseX, baseY + gridH);
-        ctx.lineTo(baseX + gridW, baseY);
-        ctx.stroke();
-        ctx.setLineDash([]);
+        // Draw diagonal (limit shape) if revealed
+        if (showDiagonal) {
+            ctx.strokeStyle = '#232D4B';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([10, 6]);
+            ctx.beginPath();
+            ctx.moveTo(baseX, baseY + gridH);
+            ctx.lineTo(baseX + gridW, baseY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
 
         // Draw path
         ctx.strokeStyle = '#E57200';
-        ctx.lineWidth = 4;
+        ctx.lineWidth = a <= 10 ? 18 : a <= 50 ? 12 : a <= 100 ? 9 : a <= 200 ? 6 : 4;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -93,9 +108,9 @@
         }
         ctx.stroke();
 
-        // Draw highlighted region box if enabled
-        if (showHighlight) {
-            // Find coordinates at start and end of highlight region
+        // Draw highlighted region if local view is showing
+        if (currentStep >= 6) {
+            const highlightStart = Math.floor((a + b) / 2 - highlightLen / 2);
             let hx = 0, hy = 0;
             for (let i = 0; i < highlightStart; i++) {
                 if (currentPath[i] === 'R') hx++;
@@ -108,7 +123,6 @@
             }
             const endX = hx, endY = hy;
 
-            // Draw orange box around highlighted region
             const boxPad = 8;
             const boxX1 = baseX + startX * stepX - boxPad;
             const boxY1 = baseY + gridH - endY * stepY - boxPad;
@@ -117,10 +131,8 @@
 
             ctx.strokeStyle = '#E57200';
             ctx.lineWidth = 4;
-            ctx.setLineDash([]);
             ctx.strokeRect(boxX1, boxY1, boxX2 - boxX1, boxY2 - boxY1);
 
-            // Draw the highlighted segment thicker
             ctx.strokeStyle = '#E57200';
             ctx.lineWidth = 8;
             ctx.beginPath();
@@ -146,26 +158,25 @@
         ctx.fillText('(0,0)', baseX, baseY + gridH + 5);
         ctx.textAlign = 'right';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(`(${A},${B})`, baseX + gridW, baseY - 5);
+        ctx.fillText(`(${a},${b})`, baseX + gridW, baseY - 5);
     }
 
     function drawLocalView() {
+        const { a, b } = currentSize();
         const w = localCanvas.width, h = localCanvas.height;
         localCtx.fillStyle = '#fff';
         localCtx.fillRect(0, 0, w, h);
 
         if (!currentPath) return;
 
-        // Extract the highlighted segment
+        const highlightStart = Math.floor((a + b) / 2 - highlightLen / 2);
         const segment = currentPath.slice(highlightStart, highlightStart + highlightLen);
-        const segLen = segment.length;
-        if (segLen === 0) return;
+        if (segment.length === 0) return;
 
         const padding = 80;
         const availW = w - 2 * padding;
         const availH = h - 2 * padding - 50;
 
-        // Count R's and U's in segment
         let segR = 0, segU = 0;
         for (const m of segment) {
             if (m === 'R') segR++;
@@ -174,7 +185,6 @@
         if (segR === 0) segR = 1;
         if (segU === 0) segU = 1;
 
-        // Use same step size for both directions (square grid cells)
         const step = Math.min(availW / segR, availH / segU);
         const gridW = segR * step;
         const gridH = segU * step;
@@ -197,16 +207,14 @@
             localCtx.stroke();
         }
 
-        // Draw path segments - track x,y in grid coordinates
+        // Draw path segments
         let x = 0, y = 0;
-
         for (let i = 0; i < segment.length; i++) {
             const move = segment[i];
             const fromPx = baseX + x * step;
             const fromPy = baseY - y * step;
 
             if (move === 'R') {
-                // Draw R segment in orange (horizontal)
                 localCtx.strokeStyle = '#E57200';
                 localCtx.lineWidth = 6;
                 localCtx.beginPath();
@@ -215,7 +223,6 @@
                 localCtx.stroke();
                 x++;
             } else {
-                // Draw U segment in navy (vertical)
                 localCtx.strokeStyle = '#232D4B';
                 localCtx.lineWidth = 6;
                 localCtx.beginPath();
@@ -226,7 +233,7 @@
             }
         }
 
-        // Draw dots at vertices
+        // Dots at vertices
         localCtx.fillStyle = '#232D4B';
         x = 0; y = 0;
         localCtx.beginPath();
@@ -240,50 +247,99 @@
             localCtx.fill();
         }
 
-        // Draw annotation
+        // Annotation
         localCtx.fillStyle = '#666';
         const localFontSize = Math.round(window.innerHeight * 0.025);
         localCtx.font = `${localFontSize}px sans-serif`;
         localCtx.textAlign = 'center';
         localCtx.textBaseline = 'top';
-        localCtx.fillText('Each step: independent Bernoulli trial', w / 2, baseY + 20);
+        localCtx.fillText('Each step: independent coin flip', w / 2, baseY + 20);
     }
 
-    function resample() {
-        currentPath = generateRandomPath(A, B);
-        // Keep highlight in the middle
+    function setSize(idx) {
+        currentSizeIdx = idx;
+        const { a, b } = currentSize();
+        sizeSpan.textContent = `${a} × ${b}`;
+        currentPath = generateRandomPath(a, b);
     }
 
-    // Click to resample
-    canvas.addEventListener('click', () => {
-        resample();
-        drawAll();
-    });
+    function showElement(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.opacity = '1';
+    }
+    function hideElement(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.opacity = '0';
+    }
 
-    let currentStep = 0;
-
-    function drawAll() {
-        // Show highlight box only on step 3+
-        const showHighlight = currentStep >= 3;
-        drawMainPath(showHighlight);
-        if (currentStep >= 3) {
-            drawLocalView();
-        }
+    function showPanel(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
+    }
+    function hidePanel(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
     }
 
     function reset() {
         currentStep = 0;
-        currentPath = null;
-        localCanvas.style.opacity = '0';
-        localTitle.style.opacity = '0';
-        bernoulliEl.style.opacity = '0';
-        globalEl.style.opacity = '0';
-        resample();
-        drawMainPath(false);
+        showDiagonal = false;
+        hidePanel('local-view-container');
+        hideElement('bernoulli-explanation');
+        hideElement('limit-shape-label');
+        setSize(0);
+        drawMainPath();
     }
 
-    // Register with slideEngine
-    // Steps: 0=initial, 1-2=resample, 3-5=zoom+resample, 6=Bernoulli, 7=global (LLN)
+    // Step 0: 10×6
+    // Step 1: 50×30
+    // Step 2: 100×60
+    // Step 3: 200×120
+    // Step 4: 400×240
+    // Step 5: show diagonal (limit shape)
+    // Step 6: local zoom
+    // Step 7: Bernoulli explanation
+    // Step 8: resample path
+    // Step 9: resample path again
+
+    function applyStep(step) {
+        currentStep = step;
+
+        if (step <= 4) {
+            showDiagonal = false;
+            hideElement('limit-shape-label');
+            hidePanel('local-view-container');
+            hideElement('bernoulli-explanation');
+            setSize(step);
+            drawMainPath();
+        } else if (step === 5) {
+            showDiagonal = true;
+            showElement('limit-shape-label');
+            hidePanel('local-view-container');
+            hideElement('bernoulli-explanation');
+            drawMainPath();
+        } else if (step === 6) {
+            showDiagonal = true;
+            showElement('limit-shape-label');
+            showPanel('local-view-container');
+            hideElement('bernoulli-explanation');
+            drawMainPath();
+            drawLocalView();
+        } else if (step >= 7) {
+            // Steps 8, 9: resample the path
+            if (step >= 8) {
+                const { a, b } = currentSize();
+                currentPath = generateRandomPath(a, b);
+            }
+            showDiagonal = true;
+            showElement('limit-shape-label');
+            showPanel('local-view-container');
+            showElement('bernoulli-explanation');
+            drawMainPath();
+            drawLocalView();
+        }
+    }
+
     function waitForSlideEngine() {
         if (!window.slideEngine) {
             setTimeout(waitForSlideEngine, 50);
@@ -292,52 +348,15 @@
         window.slideEngine.registerSimulation('random-path', {
             start() {},
             pause() {},
-            steps: 7,
+            steps: 9,
             onStep(step) {
-                currentStep = step;
-                if (step === 1 || step === 2) {
-                    // Resample without zoom
-                    resample();
-                    drawMainPath(false);
-                } else if (step === 3) {
-                    // Show zoom inset + resample
-                    resample();
-                    localCanvas.style.opacity = '1';
-                    localTitle.style.opacity = '1';
-                    drawAll();
-                } else if (step === 4 || step === 5) {
-                    // Resample with zoom showing
-                    resample();
-                    drawAll();
-                } else if (step === 6) {
-                    // Show Bernoulli explanation
-                    bernoulliEl.style.opacity = '1';
-                    drawAll();
-                } else if (step === 7) {
-                    // Show global observation (LLN)
-                    globalEl.style.opacity = '1';
-                    drawAll();
-                }
+                applyStep(step);
             },
             onStepBack(step) {
-                currentStep = step;
-                if (step === 0 || step === 1 || step === 2) {
-                    // Hide zoom panel
-                    localCanvas.style.opacity = '0';
-                    localTitle.style.opacity = '0';
-                    bernoulliEl.style.opacity = '0';
-                    globalEl.style.opacity = '0';
-                    resample();
-                    drawMainPath(false);
-                } else if (step === 3 || step === 4 || step === 5) {
-                    bernoulliEl.style.opacity = '0';
-                    globalEl.style.opacity = '0';
-                    resample();
-                    drawAll();
-                } else if (step === 6) {
-                    globalEl.style.opacity = '0';
-                    drawAll();
-                }
+                applyStep(step);
+            },
+            reset() {
+                reset();
             },
             onSlideEnter() {
                 reset();

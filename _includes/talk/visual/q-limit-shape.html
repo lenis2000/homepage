@@ -14,9 +14,9 @@
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw;">
                 <strong style="color: var(--slide-navy);">Entropy vs gravity:</strong>
                 <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
-                    <li><strong>Entropy</strong> wants the straight diagonal (most paths look like it)</li>
-                    <li><strong>Gravity</strong> (\(q<1\)) pulls the path down (less area preferred)</li>
-                    <li>The <strong>compromise</strong> is a curve: the limit shape</li>
+                    <li><strong>Entropy</strong> wants the straight diagonal (straight line has the most discrete paths approximating it)</li>
+                    <li><strong>Gravity/energy</strong>: pulls the path up for \(q<1\) (less area above is preferred)</li>
+                    <li>The <strong>compromise is a curve</strong>: the limit shape</li>
                 </ul>
             </div>
 
@@ -24,7 +24,8 @@
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
                 <strong style="color: var(--slide-accent);">Variational principle:</strong><br>
                 The limit shape \(y=f(x)\) maximizes<br>
-                <strong style="color: #232D4B; font-size: clamp(1.4rem, 2.5vw, 2rem);">entropy − γ · area</strong>
+                <strong style="color: #232D4B; font-size: clamp(1.4rem, 2.5vw, 2rem);">entropy − γ · area</strong>,
+                where \(\gamma\) is the normalized bias \(q\)
             </div>
         </div>
 
@@ -46,7 +47,7 @@
             <canvas id="q-limit-canvas" width="1200" height="900" style="height: 55vh; width: auto;"></canvas>
             <!-- Fluctuations block -->
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.5vh 1vw; width: 100%; box-sizing: border-box;">
-                <strong style="color: var(--slide-accent); font-size: clamp(1rem, 1.8vw, 1.4rem);">Fluctuations:</strong>
+                <strong style="color: var(--slide-accent); font-size: clamp(1rem, 1.8vw, 1.4rem);">Fluctuations are also Brownian bridge:</strong>
                 <span style="font-size: clamp(1rem, 1.8vw, 1.4rem);">Random curve minus limit shape</span><br>
                 <canvas id="fluctuations-canvas" width="800" height="200" style="width: 100%; height: 12vh;"></canvas>
             </div>

@@ -495,6 +495,7 @@ class SlideEngine {
             this.showFragmentsUpTo(nextSlide, 0);
             this.currentFragment = 0;
             this.currentSimStep = 0;
+            this.resetAllSimulations(nextSlide.id);
             this.pauseAllSimulations(nextSlide.id);
             // Start step-0 sims (auto-start)
             this.startSimulationsUpToStep(nextSlide.id, 0);
@@ -511,10 +512,11 @@ class SlideEngine {
             this.startSimulationsUpToStep(nextSlide.id, 0);
             this.restoreSimStepsTo(nextSlide.id, targetSimStep);
         } else {
-            // Jump (from menu/hash) - always start fresh
+            // Jump (from menu/hash/Option+arrow) - always start fresh
             this.showFragmentsUpTo(nextSlide, 0);
             this.currentFragment = 0;
             this.currentSimStep = 0;
+            this.resetAllSimulations(nextSlide.id);
             this.pauseAllSimulations(nextSlide.id);
             // Start step-0 sims (auto-start)
             this.startSimulationsUpToStep(nextSlide.id, 0);
@@ -663,6 +665,15 @@ class SlideEngine {
         if (sims.length === 0) return 0;
         // Consider both legacy 'step' (single step number) and new 'steps' (total step count)
         return Math.max(...sims.map(s => s.sim.steps || s.step || 0));
+    }
+
+    resetAllSimulations(slideId) {
+        const sims = this.getSimsForSlide(slideId);
+        sims.forEach(({ sim }) => {
+            if (typeof sim.reset === 'function') {
+                sim.reset();
+            }
+        });
     }
 
     pauseAllSimulations(slideId) {

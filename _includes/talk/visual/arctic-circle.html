@@ -1,35 +1,73 @@
 <section class="slide slide-top" id="arctic-circle" data-title="Frozen vs Liquid">
     <h2 class="slide-title">Frozen vs Liquid Regions</h2>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 2vh; width: 95%;">
-        <!-- Left: Explanation -->
-        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Frozen corners:</strong><br>
-                Near the edges of the box, the tiling is <strong>forced</strong> — all lozenges point the same way. No randomness here.
-            </div>
-
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-navy);">Liquid center:</strong><br>
-                In the middle, the tiling is <strong>random</strong> — all three types of lozenges appear, and the surface looks smooth.
-            </div>
-
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Arctic boundary:</strong><br>
-                A sharp curve separates the frozen and liquid regions. In the hexagon, this boundary is an <strong>inscribed ellipse</strong>.
-                <span style="color: var(--slide-muted);">[Jockusch–Propp–Shor 1998], [Cohn–Larsen–Propp 1998]</span>
-            </div>
+    <!-- Top row: explanation panes -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5vw; margin-top: 1vh; width: 95%; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.2vw; text-align: left;">
+            <strong style="color: var(--slide-accent);">Frozen regions:</strong><br>
+            Near the edges, the tiling is <strong>forced</strong> — no randomness.
         </div>
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.2vw; text-align: left;">
+            <strong style="color: var(--slide-navy);">Liquid region:</strong><br>
+            In the middle, the tiling is <strong>random</strong> — all lozenge types appear.
+        </div>
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.2vw; text-align: left;">
+            <strong style="color: var(--slide-accent);">Arctic boundary:</strong><br>
+            A sharp <strong>algebraic curve</strong> separates frozen from liquid.
+            <span style="color: var(--slide-muted);">[Kenyon–Okounkov 2007]</span>
+        </div>
+    </div>
 
-        <!-- Right: Pre-sampled image -->
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vh;">
-            <div style="position: relative;">
-                <img src="images/frozen_sample.png" alt="Hexagon tiling with frozen and liquid regions" style="max-height: 55vh; max-width: 100%; object-fit: contain;">
-                <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.3vh 0.6vw; border-radius: 3px; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold;">pre-sampled</div>
+    <!-- Middle row: three examples -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5vw; margin-top: 1.5vh; width: 95%;">
+        <!-- Hexagon -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="position: relative; background: #f0f0f0; border: 2px solid #ddd; width: 100%; height: 30vh; display: flex; align-items: center; justify-content: center;">
+                <img src="images/frozen_sample.png" alt="Hexagon tiling with inscribed ellipse" style="max-height: 29vh; max-width: 95%; object-fit: contain;">
+                <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.2vh 0.5vw; border-radius: 3px; font-size: clamp(0.6rem, 1vw, 0.85rem); font-weight: bold;">pre-sampled</div>
             </div>
-            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; font-style: italic; color: var(--slide-navy);">
-                Near the edges: forced. In the middle: random.
+            <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); margin-top: 0.5vh; text-align: center; font-weight: bold; color: var(--slide-accent);">Hexagon: ellipse</div>
+        </div>
+        <!-- Cardioid stub -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="position: relative; background: #f0f0f0; border: 2px dashed #bbb; width: 100%; height: 30vh; display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: clamp(1.2rem, 2vw, 1.6rem); color: #999;">cardioid example<br>(image TODO)</span>
             </div>
+            <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); margin-top: 0.5vh; text-align: center; font-weight: bold; color: var(--slide-navy);">Sawtooth: cardioid</div>
+        </div>
+        <!-- General shape -->
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <div style="position: relative; background: #f0f0f0; border: 2px solid #ddd; width: 100%; height: 30vh; display: flex; align-items: center; justify-content: center;">
+                <img src="images/lozenge_small_sample.png" alt="General polygonal domain with algebraic arctic boundary" style="max-height: 29vh; max-width: 95%; object-fit: contain;">
+                <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.2vh 0.5vw; border-radius: 3px; font-size: clamp(0.6rem, 1vw, 0.85rem); font-weight: bold;">pre-sampled</div>
+            </div>
+            <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); margin-top: 0.5vh; text-align: center; font-weight: bold; color: var(--slide-accent);">General: algebraic curve</div>
+        </div>
+    </div>
+
+    <!-- Bottom row: equations + graphs -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5vw; margin-top: 1.5vh; width: 95%; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.2vw; text-align: left; display: flex; align-items: center; gap: 1.5vw;">
+            <div>
+                <strong style="color: var(--slide-navy);">Ellipse</strong> (hexagon):<br>
+                \(\displaystyle \frac{x^2}{a^2} + \frac{y^2}{b^2} = 1\)
+            </div>
+            <svg viewBox="-2.2 -1.6 4.4 3.2" style="height: 12vh; flex-shrink: 0;" xmlns="http://www.w3.org/2000/svg">
+                <line x1="-2" y1="0" x2="2" y2="0" stroke="#ccc" stroke-width="0.04"/>
+                <line x1="0" y1="-1.4" x2="0" y2="1.4" stroke="#ccc" stroke-width="0.04"/>
+                <ellipse cx="0" cy="0" rx="1.7" ry="1.1" fill="none" stroke="#232D4B" stroke-width="0.08"/>
+            </svg>
+        </div>
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.2vw; text-align: left; display: flex; align-items: center; gap: 1.5vw;">
+            <div>
+                <strong style="color: var(--slide-accent);">Cardioid</strong> (sawtooth):<br>
+                \(\displaystyle (x^2 + y^2 - x)^2 = x^2 + y^2\)
+            </div>
+            <svg viewBox="-0.6 -1.6 3.0 3.2" style="height: 12vh; flex-shrink: 0;" xmlns="http://www.w3.org/2000/svg">
+                <line x1="-0.4" y1="0" x2="2.3" y2="0" stroke="#ccc" stroke-width="0.04"/>
+                <line x1="0" y1="-1.4" x2="0" y2="1.4" stroke="#ccc" stroke-width="0.04"/>
+                <path d="M 2.00 0.00 L 1.90 -0.51 L 1.62 -0.93 L 1.21 -1.21 L 0.75 -1.30 L 0.33 -1.22 L 0.00 -1.00 L -0.19 -0.72 L -0.25 -0.43 L -0.21 -0.21 L -0.12 -0.07 L -0.03 -0.01 L 0.00 0.00 L -0.03 0.01 L -0.12 0.07 L -0.21 0.21 L -0.25 0.43 L -0.19 0.72 L 0.00 1.00 L 0.33 1.22 L 0.75 1.30 L 1.21 1.21 L 1.62 0.93 L 1.90 0.51 Z" fill="none" stroke="#E57200" stroke-width="0.08"/>
+            </svg>
         </div>
     </div>
 </section>
