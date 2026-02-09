@@ -68,7 +68,7 @@ const PRECACHE_ASSETS = [
   '/talk/visual/js/q-deformation-sim.js',
   '/talk/visual/js/q-limit-shape-sim.js',
   // Simulation JS files — Part II
-  '/talk/waterfall/js/2to3d-sim.js',
+  '/talk/visual/js/2to3d-sim.js',
   '/talk/visual/js/limit-shape-sim.js',
   '/talk/visual/js/energy-sim.js',
   '/talk/visual/js/gff-simplified-sim.js',
