@@ -1,0 +1,28 @@
+<section class="slide" id="grid-paths" data-title="Grid Paths">
+    <h2 class="slide-title">Paths on a Grid</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 3vw; align-items: start; margin-top: 2vh;">
+        <!-- Left column: grid visual, text and formula -->
+        <div>
+            <canvas id="grid-demo-canvas" width="400" height="400" style="width: 30vw; height: 30vw; max-width: 350px; max-height: 350px; margin-bottom: 2vh;"></canvas>
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+                Start at (0, 0), end at (a, b)<br>
+                Move only right (R) or up (U)
+                <div id="grid-paths-question" style="margin-top: 1vh; font-size: clamp(1.5rem, 2.5vw, 2rem); color: var(--slide-navy); font-weight: bold; opacity: 0; transition: opacity 0.3s;">
+                    How many paths are there?
+                </div>
+                <div id="grid-paths-answer" style="margin-top: 1vh; font-size: clamp(1.5rem, 2.5vw, 2rem); color: var(--slide-accent); opacity: 0; transition: opacity 0.3s;">
+                    \(\displaystyle\binom{a+b}{a} = \frac{(a+b)!}{a!\, b!}\) paths
+                </div>
+            </div>
+        </div>
+        <!-- Right column: simulation -->
+        <div id="grid-paths-sim">
+            <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1vh;">
+                <label style="font-size: clamp(0.9rem, 1.5vw, 1.1rem);">a = <input type="number" id="path-a" value="2" min="1" max="7" style="width: 3rem; font-size: 1rem;"></label>
+                <label style="font-size: clamp(0.9rem, 1.5vw, 1.1rem);">b = <input type="number" id="path-b" value="2" min="1" max="7" style="width: 3rem; font-size: 1rem;"></label>
+                <span id="path-count" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--uva-orange); margin-left: 1rem;"></span>
+            </div>
+            <canvas id="paths-canvas" width="700" height="500" style="width: 100%; height: auto;"></canvas>
+        </div>
+    </div>
+</section>

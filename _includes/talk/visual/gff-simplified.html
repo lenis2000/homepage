@@ -1,0 +1,34 @@
+<section class="slide slide-top" id="gff-simplified" data-title="Fluctuations in 3D">
+    <h2 class="slide-title">Height Fluctuations in 3D</h2>
+
+    <div style="display: grid; grid-template-columns: 42vw 50vw; gap: 2vw; margin-top: 1vh; padding: 0 1vw;">
+        <!-- Left: text -->
+        <div style="display: flex; flex-direction: column; gap: 1.2vh;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+                <strong style="color: var(--slide-accent);">Gaussian Free Field</strong><br>
+                Like the Brownian bridge, but with <strong>two-dimensional time</strong>
+                <div style="text-align: center; margin-top: 1vh; font-size: clamp(1.5rem, 2.5vw, 2rem);">
+                    \(\displaystyle \text{GFF} \approx \frac{h_1 - h_2}{\sqrt{2}}\)
+                </div>
+                <div style="margin-top: 0.5vh;">
+                    where \(h_1, h_2\) are two independent samples of the height function.
+                </div>
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+                <strong style="color: var(--slide-navy);">Surprisingly flat!</strong><br>
+                Fluctuations around the limit shape are only \(O(\sqrt{\log N})\) — much smaller than in 2D (\(\sqrt{N}\)).
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+                <strong style="color: var(--slide-accent);">Universal:</strong> same GFF for all simply-connected domains.
+                <span style="color: var(--slide-muted);">[Kenyon 2001], [Petrov 2014], [Bufetov–Gorin 2018]</span>
+            </div>
+        </div>
+
+        <!-- Right: 3D GFF surface -->
+        <div style="display: flex; align-items: center; justify-content: center;">
+            <canvas id="gff-canvas" width="1200" height="900" style="height: 60vh; width: auto;"></canvas>
+        </div>
+    </div>
+</section>

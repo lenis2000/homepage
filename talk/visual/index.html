@@ -111,25 +111,77 @@ Promise.all([
     loadScript(wasmSrc),
     loadScript(qpartSrc)
 ]).then(() => {
-    // Load WebGPU Q-partition engine for GPU Glauber sampling, then signal ready
-    loadScript('/js/webgpu-qpartition-engine.js')
-        .catch(e => console.log('WebGPU engine not available'))
-        .finally(() => window.dispatchEvent(new Event('wasm-loaded')));
+    // Load WebGPU engines, then signal ready
+    Promise.all([
+        loadScript('/js/webgpu-qpartition-engine.js').catch(e => console.log('WebGPU Q-partition engine not available')),
+        loadScript('/js/webgpu-lozenge-engine.js').catch(e => console.log('WebGPU lozenge engine not available'))
+    ]).finally(() => window.dispatchEvent(new Event('wasm-loaded')));
 });
 </script>
 
 <!-- ==================== SLIDES ==================== -->
 
+<!-- Part I: Counting and Randomness -->
 {% include talk/visual/title.html %}
-
 {% include talk/visual/nature-builds.html %}
+{% include talk/visual/part1-intro.html %}
+{% include talk/visual/grid-paths.html %}
+{% include talk/visual/random-path.html %}
+{% include talk/visual/fluctuations-gaussian.html %}
+{% include talk/visual/q-deformation.html %}
+{% include talk/visual/q-limit-shape.html %}
+{% include talk/visual/q-local.html %}
 
+<!-- Part II: Random Surfaces -->
+{% include talk/visual/part2-intro.html %}
+{% include talk/waterfall/2to3d.html %}
+{% include talk/visual/limit-shape.html %}
+{% include talk/visual/arctic-circle.html %}
+{% include talk/visual/energy.html %}
+{% include talk/visual/gff-simplified.html %}
+{% include talk/visual/q-volume-visual.html %}
+
+<!-- Part III: How to Make Pictures -->
+{% include talk/visual/part3-intro.html %}
+{% include talk/visual/glauber-dynamics.html %}
+{% include talk/visual/cftp.html %}
+{% include talk/visual/hard-to-sample.html %}
+{% include talk/visual/gallery.html %}
+
+<!-- Closing -->
+{% include talk/visual/summary-visual.html %}
 {% include talk/visual/thankyou.html %}
 
 <!-- ==================== SIMULATION SCRIPTS ==================== -->
 <!-- Loaded with defer to run after DOM is ready -->
+
+<!-- Shared utilities -->
+<script src="js/shared/wasm-loader.js" defer></script>
+<script src="js/shared/threejs-setup.js" defer></script>
+<script src="js/shared/lozenge-utils.js" defer></script>
+<script src="js/shared/height-function.js" defer></script>
+
+<!-- Part I sims -->
 <script src="js/title-sim.js" defer></script>
 <script src="js/nature-builds-sim.js" defer></script>
+<script src="js/grid-paths-sim.js" defer></script>
+<script src="js/random-path-sim.js" defer></script>
+<script src="js/fluctuations-gaussian-sim.js" defer></script>
+<script src="js/q-deformation-sim.js" defer></script>
+<script src="js/q-limit-shape-sim.js" defer></script>
+<script src="js/q-local-sim.js" defer></script>
+
+<!-- Part II sims -->
+<script src="/talk/waterfall/js/2to3d-sim.js" defer></script>
+<script src="js/limit-shape-sim.js" defer></script>
+<script src="js/energy-sim.js" defer></script>
+<script src="js/gff-simplified-sim.js" defer></script>
+<script src="js/q-volume-visual-sim.js" defer></script>
+
+<!-- Part III sims -->
+<script src="js/glauber-dynamics-sim.js" defer></script>
+<script src="js/cftp-sim.js" defer></script>
+<script src="js/hard-to-sample-sim.js" defer></script>
 
 <!-- Global: Escape/Enter key blurs input fields for slide navigation -->
 <script>

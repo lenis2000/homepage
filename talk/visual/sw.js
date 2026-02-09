@@ -1,5 +1,5 @@
 // Service Worker for Visual Talk — Aggressive Precaching
-const CACHE_NAME = 'visual-talk-v1';
+const CACHE_NAME = 'visual-talk-v2';
 
 // All assets to precache
 const PRECACHE_ASSETS = [
@@ -13,6 +13,7 @@ const PRECACHE_ASSETS = [
   '/js/slide-engine.js',
   '/js/theme-toggle.js',
   '/js/webgpu-qpartition-engine.js',
+  '/js/webgpu-lozenge-engine.js',
 
   // WASM modules
   '/talk/visual/sim/visual-lozenge.js',
@@ -58,9 +59,27 @@ const PRECACHE_ASSETS = [
   '/katex-0.16.9/fonts/KaTeX_Size4-Regular.woff2',
   '/katex-0.16.9/fonts/KaTeX_Typewriter-Regular.woff2',
 
-  // Simulation JS files
+  // Simulation JS files — Part I
   '/talk/visual/js/title-sim.js',
   '/talk/visual/js/nature-builds-sim.js',
+  '/talk/waterfall/js/grid-paths-sim.js',
+  '/talk/visual/js/random-path-sim.js',
+  '/talk/visual/js/fluctuations-gaussian-sim.js',
+  '/talk/visual/js/q-deformation-sim.js',
+  '/talk/visual/js/q-limit-shape-sim.js',
+  '/talk/visual/js/q-local-sim.js',
+
+  // Simulation JS files — Part II
+  '/talk/waterfall/js/2to3d-sim.js',
+  '/talk/visual/js/limit-shape-sim.js',
+  '/talk/visual/js/energy-sim.js',
+  '/talk/visual/js/gff-simplified-sim.js',
+  '/talk/visual/js/q-volume-visual-sim.js',
+
+  // Simulation JS files — Part III
+  '/talk/visual/js/glauber-dynamics-sim.js',
+  '/talk/visual/js/cftp-sim.js',
+  '/talk/visual/js/hard-to-sample-sim.js',
 
   // Shared utilities
   '/talk/visual/js/shared/wasm-loader.js',

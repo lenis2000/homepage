@@ -1,0 +1,23 @@
+<section class="slide slide-center" id="limit-shape" data-title="Limit Shape in 3D">
+    <h2 class="slide-title">Limit Shape in 3D</h2>
+    <div style="position: relative; width: 85vw; height: 52vh;">
+        <canvas id="limit-shape-3d-canvas" style="width: 100%; height: 100%;"></canvas>
+        <div id="limit-shape-presampled-label" style="position: absolute; top: 1vh; right: 1vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.5vh 1vw; border-radius: 4px; font-size: clamp(0.9rem, 1.5vw, 1.2rem); font-weight: bold; opacity: 0; transition: opacity 0.5s;">pre-sampled</div>
+    </div>
+    <div id="limit-shape-3d-status" style="font-size: clamp(0.9rem, 1.5vw, 1.2rem); margin-top: 0.5vh;"></div>
+    <div id="limit-shape-panels" style="opacity: 0; transition: opacity 0.5s; margin-top: 1vh; width: 85vw; display: grid; grid-template-columns: 2fr 1fr; gap: 2vw; text-align: left;">
+        <div>
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+                <strong style="color: var(--slide-accent);">Concentration:</strong><br>
+                As the box grows, the random surface concentrates around a <strong>deterministic limit shape</strong>.
+                <span style="color: var(--slide-muted);">[Cohn–Kenyon–Propp 2000]</span>
+            </div>
+            <div style="margin-top: 1vh; background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+                Just like in 2D: the limit shape is <strong style="color: var(--slide-navy);">"curved"</strong> — the same entropy-vs-boundary compromise, now in three dimensions.
+            </div>
+        </div>
+        <div id="limit-shape-image-panel" style="display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.5s;">
+            <img src="images/lozenge_small_sample.png" alt="Small lozenge tiling as stepped surface" style="max-height: 30vh; max-width: 100%; object-fit: contain;">
+        </div>
+    </div>
+</section>

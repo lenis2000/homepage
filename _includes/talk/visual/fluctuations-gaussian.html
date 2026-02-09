@@ -1,0 +1,33 @@
+<section class="slide slide-top" id="fluctuations-gaussian" data-title="Gaussian Fluctuations">
+    <h2 class="slide-title">Fluctuations are Gaussian</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
+        <!-- Left: Explanation -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Central Limit Theorem:</strong><br>
+                The random path follows the diagonal (LLN), but <strong>fluctuates</strong> around it by \(O(\sqrt{N})\).
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-navy);">At the midpoint:</strong><br>
+                \(\displaystyle \frac{Y_{\text{mid}} - \mathbb{E}[Y_{\text{mid}}]}{\sqrt{N}} \to \mathcal{N}(0, \sigma^2)\)<br>
+                The histogram of midpoint heights converges to a <strong>Gaussian bell curve</strong>.
+            </div>
+
+            <div id="fg-insight" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left; opacity: 0; transition: opacity 0.3s;">
+                <strong style="color: var(--slide-accent);">Brownian bridge:</strong><br>
+                The full fluctuation process (path minus diagonal) converges to a <strong>Brownian bridge</strong> — a Gaussian process pinned at both ends.
+            </div>
+        </div>
+
+        <!-- Right: Histogram + bridge canvas -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
+            <canvas id="fg-histogram-canvas" width="800" height="500" style="height: 35vh; width: auto;"></canvas>
+            <div style="font-size: clamp(0.9rem, 1.5vw, 1.1rem); color: var(--slide-muted);">
+                Samples: <span id="fg-histogram-count">0</span>
+            </div>
+            <canvas id="fg-bridge-canvas" width="800" height="300" style="height: 20vh; width: auto; border: 1px solid #ccc; opacity: 0; transition: opacity 0.3s;"></canvas>
+        </div>
+    </div>
+</section>
