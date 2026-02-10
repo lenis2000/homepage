@@ -453,6 +453,27 @@ function initEnergySim() {
             renderer.render(scene, camera);
         }
 
+        let sampling = false;
+        let pendingSample = null;
+
+        async function sampleQueued(A, B, resetCamera = true) {
+            if (sampling) {
+                pendingSample = { A, B, resetCamera };
+                return;
+            }
+            sampling = true;
+            try {
+                await sample(A, B, resetCamera);
+            } finally {
+                sampling = false;
+                if (pendingSample) {
+                    const next = pendingSample;
+                    pendingSample = null;
+                    sampleQueued(next.A, next.B, next.resetCamera);
+                }
+            }
+        }
+
         async function sample(A, B, resetCamera = true) {
             const triangles = generateTriangles(A, B);
 
@@ -548,7 +569,7 @@ function initEnergySim() {
         if (btn && inputA && inputB) {
             btn.addEventListener('click', () => {
                 if (!renderer) return;
-                sample(parseFloat(inputA.value), parseFloat(inputB.value));
+                sampleQueued(parseFloat(inputA.value), parseFloat(inputB.value));
             });
         }
 
@@ -595,7 +616,7 @@ function initEnergySim() {
                     const { A, B } = presets[idx];
                     document.getElementById('gradient-a').value = A;
                     document.getElementById('gradient-b').value = B;
-                    sample(A, B, resetCamera);
+                    sampleQueued(A, B, resetCamera);
                 }
 
                 window.slideEngine.registerSimulation('energy', {
