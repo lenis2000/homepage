@@ -1,17 +1,19 @@
 <section class="slide slide-top" id="fluctuations-gaussian" data-title="Gaussian Fluctuations">
-    <h2 class="slide-title">Fluctuations are Gaussian</h2>
+    <h2 class="slide-title">Fluctuations Around the Diagonal</h2>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1vh; width: 95%;">
         <!-- Left: Explanation -->
         <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-accent);">Central Limit Theorem:</strong><br>
-                The random path follows the diagonal (LLN), but <strong>fluctuates</strong> around it by \(O(\sqrt{N})\).
+                The random path has <strong>fluctuations</strong> of size \(O(\sqrt{N})\) (where \(N=a+b\) is the number of steps).
             </div>
 
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-navy);">At the midpoint:</strong><br>
-                \(\displaystyle \frac{Y_{\text{mid}} - \mathbb{E}[Y_{\text{mid}}]}{\sqrt{N}} \to \mathcal{N}(0, \sigma^2)\)<br>
+                <div style="height: 0.5em;"></div>
+                \(\displaystyle \frac{Y_{\text{mid}} - \mathbb{E}[Y_{\text{mid}}]}{\sqrt{N}} \to \mathcal{N}(0, \sigma^2)\)
+                <div style="height: 0.9em;"></div>
                 The histogram of midpoint heights converges to a <strong>Gaussian bell curve</strong>.
             </div>
 
@@ -28,6 +30,8 @@
                 Midpoint height samples: <span id="fg-histogram-count">0</span>
             </div>
             <div id="fg-bridge-container" style="opacity: 0; transition: opacity 0.3s;">
+                <br>
+                <br>
                 <div style="font-size: clamp(1.1rem, 2vw, 1.6rem); color: var(--slide-navy); font-weight: bold;">
                     Path minus diagonal <span style="font-weight: normal; color: var(--slide-muted);">(100 × 60)</span>
                 </div>

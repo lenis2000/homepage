@@ -9,7 +9,7 @@
             </div>
             <canvas id="random-path-canvas" width="1200" height="720" style="height: 55vh; width: auto;"></canvas>
             <div id="limit-shape-label" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-top: 0.5vh; color: var(--slide-navy); font-weight: bold; opacity: 0; transition: opacity 0.3s;">
-                The random path gets close to a straight line!
+                As the mesh goes to zero, the random path gets close to a straight line!
             </div>
         </div>
         <!-- Right: Local view -->
@@ -25,7 +25,8 @@
 
     <!-- Bernoulli explanation -->
     <div id="bernoulli-explanation" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.8rem, 3.5vw, 2.8rem); text-align: left; margin-top: 2vh; opacity: 0; transition: opacity 0.3s;">
-        <strong style="color: var(--slide-accent);">Coin flipping!</strong>
-        At each step, flip a biased coin: <span style="color: #E57200; font-weight: bold;">R</span> with prob. \(\frac{a}{a+b}\), <span style="color: #232D4B; font-weight: bold;">U</span> with prob. \(\frac{b}{a+b}\) — independent trials.
+        <strong style="color: var(--slide-accent);">Coin flipping:</strong>
+        At each step independently, flip a biased coin: <span style="color: #E57200; font-weight: bold;">R</span> with prob. \(\frac{a}{a+b}\), <span style="color: #232D4B; font-weight: bold;">U</span> with prob. \(\frac{b}{a+b}\).
+        This describes the random boxed path at the <strong style="color: var(--slide-accent);">local lattice scale</strong>.
     </div>
 </section>

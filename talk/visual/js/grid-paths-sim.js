@@ -71,7 +71,7 @@
         gridCtx.fillStyle = '#232D4B';
         gridCtx.font = `${Math.round(gridCanvas.height * 0.053)}px sans-serif`;
         gridCtx.fillText('(0,0)', padding - 10, h - padding + Math.round(h * 0.067));
-        gridCtx.fillText('(a,b)', w - padding - 5, padding - Math.round(h * 0.033));
+        gridCtx.fillText('(a,b)', w - padding - 25, padding - Math.round(h * 0.033));
     }
     drawGridDemo();
 

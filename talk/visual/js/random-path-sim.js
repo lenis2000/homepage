@@ -253,7 +253,7 @@
         localCtx.font = `${localFontSize}px sans-serif`;
         localCtx.textAlign = 'center';
         localCtx.textBaseline = 'top';
-        localCtx.fillText('Each step: independent coin flip', w / 2, baseY + 20);
+        localCtx.fillText('Locally, steps look like independent coin flips', w / 2, baseY + 20);
     }
 
     function setSize(idx) {

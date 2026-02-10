@@ -53,7 +53,7 @@ simulations: simulations/YYYY-MM-DD-slug/    # optional
 ### Talk Structure
 - Each talk lives at `/talk/<name>/index.html` with slides in `_includes/talk/<name>/*.html`
 - **Waterfall talk** (`/talk/waterfall/`): Multiple variants (applied-math, pure-math colloquium). ~18 slides per variant.
-- **Visual talk** (`/talk/visual/`): PWA with service worker + loading bar. Currently a stub (title, nature-builds, thankyou).
+- **Visual talk** (`/talk/visual/`): PWA with service worker + loading bar. ~23 slides across 3 parts (Counting/Randomness, Random Surfaces, How to Make Pictures) plus title/closing.
 - Both talks share WASM modules from `/talk/visual/sim/` and WebGPU engines from `/js/`
 
 ### Waterfall talk
