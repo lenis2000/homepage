@@ -20,8 +20,8 @@ function initBeyondGffSim() {
         const exportDimersWasm = wasm.cwrap('exportDimers', 'number', []);
         const freeString = wasm.cwrap('freeString', null, ['number']);
 
-        // Escher grayscale colors
-        const ESCHER_COLORS = ['#F5F5F5', '#D0D0D0', '#A8A8A8'];
+        // UVA colors
+        const UVA_COLORS = ['#E57200', '#232D4B', '#F9DCBF'];
 
         // Geometry helpers
         const slope = 1 / Math.sqrt(3);
@@ -146,7 +146,7 @@ function initBeyondGffSim() {
             for (const d of dimers) {
                 const verts = getVertexKeys(d);
                 const v3d = verts.map(([n,j]) => to3D(n, j, heights.get(`${n},${j}`) || 0));
-                addQuad(v3d[0], v3d[1], v3d[2], v3d[3], ESCHER_COLORS[d.t]);
+                addQuad(v3d[0], v3d[1], v3d[2], v3d[3], UVA_COLORS[d.t]);
             }
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
             geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
@@ -155,7 +155,7 @@ function initBeyondGffSim() {
             const mat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, flatShading: true, roughness: 0.5, metalness: 0.15 });
             meshGroup.add(new THREE.Mesh(geometry, mat));
             const edges = new THREE.EdgesGeometry(geometry, 10);
-            meshGroup.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x888888, opacity: 0.4, transparent: true })));
+            meshGroup.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x444466, opacity: 0.4, transparent: true })));
         }
 
         function centerCamera(sc, heights) {
