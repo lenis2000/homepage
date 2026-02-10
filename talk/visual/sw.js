@@ -1,5 +1,5 @@
 // Service Worker for Visual Talk — Aggressive Precaching
-const CACHE_NAME = 'visual-talk-v3';
+const CACHE_NAME = 'visual-talk-v4';
 
 // All assets to precache
 const PRECACHE_ASSETS = [
@@ -81,6 +81,9 @@ const PRECACHE_ASSETS = [
   '/talk/visual/js/glauber-dynamics-sim.js',
   '/talk/visual/js/cftp-sim.js',
   '/talk/visual/js/hard-to-sample-sim.js',
+  '/talk/visual/js/q-local-sim.js',
+  '/talk/visual/js/summary-visual-sim.js',
+  '/talk/visual/js/thankyou-sim.js',
 
   // Shared utilities
   '/talk/visual/js/shared/wasm-loader.js',
@@ -123,6 +126,8 @@ const PRECACHE_ASSETS = [
   '/talk/visual/images/non_planar_orientable.png',
   '/talk/visual/images/non_orientable.png',
   '/talk/visual/images/gff_ecsher.png',
+  '/talk/visual/images/lozenge_small_sample.png',
+  '/talk/visual/images/nonsimplyconn_sample.png',
 
   // Manifest
   '/talk/visual/manifest.json',

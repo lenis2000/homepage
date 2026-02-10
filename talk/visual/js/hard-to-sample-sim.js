@@ -1,8 +1,15 @@
 /**
- * Hard to Sample Slide — Slow CFTP with periodic weights
+ * Hard to Sample Slide — q-Racah CFTP (monotone sandwich)
  *
- * Same as CFTP slide but with extreme periodic q-bias (checkerboard)
- * that creates competing forces → exponentially slow coalescence.
+ * Forward-coupled CFTP on a hexagonal lozenge tiling with q-Racah weights:
+ * each horizontal lozenge at height h has weight q^(h-N/2) + q^(-(h-N/2)).
+ * Height h ranges from 0 (floor) to N (ceiling).
+ *
+ * Shows the monotone sandwich (min/max bounds) collapsing slowly,
+ * demonstrating that exact sampling via CFTP is hard for these weights.
+ *
+ * Uses WASM for initialization (extremal states from CFTP).
+ * Coupled Glauber dynamics runs in pure JS with height-dependent acceptance.
  *
  * Slide ID: 'hard-to-sample'
  * Canvas: hard-to-sample-canvas
@@ -20,14 +27,33 @@
     if (!canvas) return;
 
     // ===================================================================
-    // WASM setup (isolated modularized instance)
+    // Configuration
+    // ===================================================================
+
+    const HEX_SIDE = 30;
+    const Q_PARAM = 0.7;
+
+    // Precompute q-Racah weight w(h) = q^(h-N/2) + q^(-(h-N/2))
+    // and acceptance ratios for all valid h
+    const qRW = new Float64Array(HEX_SIDE + 2);
+    const ratioUp = new Float64Array(HEX_SIDE + 1);   // min(1, w(h+1)/w(h))
+    const ratioDown = new Float64Array(HEX_SIDE + 1); // min(1, w(h-1)/w(h))
+    for (let h = 0; h <= HEX_SIDE + 1; h++) {
+        const a = h - HEX_SIDE / 2;
+        qRW[h] = Math.pow(Q_PARAM, a) + Math.pow(Q_PARAM, -a);
+    }
+    for (let h = 0; h <= HEX_SIDE; h++) {
+        ratioUp[h] = (h < HEX_SIDE) ? Math.min(1.0, qRW[h + 1] / qRW[h]) : 0;
+        ratioDown[h] = (h > 0) ? Math.min(1.0, qRW[h - 1] / qRW[h]) : 0;
+    }
+
+    // ===================================================================
+    // WASM setup (for initialization only)
     // ===================================================================
 
     let wasm = null;
     let funcs = null;
     let wasmInitPromise = null;
-
-    const HEX_SIDE = 20;
 
     function generateHexagonTriangles(a) {
         const slope = 1 / Math.sqrt(3);
@@ -110,15 +136,10 @@
                 funcs = {
                     initFromTriangles: wasm.cwrap('initFromTriangles', 'number', ['number', 'number']),
                     initCFTP: wasm.cwrap('initCFTP', 'number', []),
-                    forwardCoupledStep: wasm.cwrap('forwardCoupledStep', 'number', ['number']),
-                    finalizeCFTP: wasm.cwrap('finalizeCFTP', 'number', []),
-                    exportCFTPMinDimers: wasm.cwrap('exportCFTPMinDimers', 'number', []),
-                    exportCFTPMaxDimers: wasm.cwrap('exportCFTPMaxDimers', 'number', []),
-                    exportDimers: wasm.cwrap('exportDimers', 'number', []),
+                    getGridBounds: wasm.cwrap('getGridBounds', 'number', []),
+                    getCFTPMinGridData: wasm.cwrap('getCFTPMinGridData', 'number', []),
+                    getCFTPMaxGridData: wasm.cwrap('getCFTPMaxGridData', 'number', []),
                     freeString: wasm.cwrap('freeString', null, ['number']),
-                    setQBias: wasm.cwrap('setQBias', null, ['number']),
-                    setPeriodicQBias: wasm.cwrap('setPeriodicQBias', null, ['number', 'number']),
-                    setUsePeriodicWeights: wasm.cwrap('setUsePeriodicWeights', null, ['number']),
                 };
                 return true;
             } catch (e) {
@@ -130,27 +151,257 @@
         return wasmInitPromise;
     }
 
-    function loadShapeIntoWasm() {
-        if (!wasm || !funcs) return;
-        const triArr = generateHexagonTriangles(HEX_SIDE);
-        const ptr = wasm._malloc(triArr.length * 4);
-        for (let i = 0; i < triArr.length; i++) {
-            wasm.setValue(ptr + i * 4, triArr[i], 'i32');
-        }
-        funcs.initFromTriangles(ptr, triArr.length);
-        wasm._free(ptr);
-    }
-
-    function setPeriodicWeights() {
-        if (!wasm || !funcs) return;
-        funcs.setQBias(0.9);
-    }
-
     function wasmCallJSON(fn) {
         const ptr = fn();
         const str = wasm.UTF8ToString(ptr);
         funcs.freeString(ptr);
         return JSON.parse(str);
+    }
+
+    // ===================================================================
+    // JS CFTP state (two coupled chains: min and max)
+    // ===================================================================
+
+    let jsGridMin = null;        // Int8Array: dimer grid for min (lower) chain
+    let jsGridMax = null;        // Int8Array: dimer grid for max (upper) chain
+    let heightAtMin = null;      // Map<"n,j", number>: height function for min chain
+    let heightAtMax = null;      // Map<"n,j", number>: height function for max chain
+    let blackTriangles = [];     // [{n, j}, ...]: all black triangles in region
+    let internalVerts = [];      // [{n, j}, ...]: rotatable vertices
+    let gridMinN, gridMaxN, gridMinJ, gridMaxJ, gridStrideJ, gridSize;
+    let totalSteps = 0;
+    let cachedTriArr = null;
+
+    function jsIdx(n, j) {
+        return (n - gridMinN) * gridStrideJ + (j - gridMinJ);
+    }
+
+    function gridGet(grid, n, j) {
+        if (n < gridMinN || n > gridMaxN || j < gridMinJ || j > gridMaxJ) return -1;
+        return grid[jsIdx(n, j)];
+    }
+
+    function gridSet(grid, n, j, type) {
+        grid[jsIdx(n, j)] = type;
+    }
+
+    // Build list of internal vertices where Glauber rotations can occur.
+    function buildInternalVerts() {
+        const blackTriSet = new Set();
+        for (const bt of blackTriangles) blackTriSet.add(`${bt.n},${bt.j}`);
+
+        internalVerts = [];
+        const candidates = new Set();
+        for (const bt of blackTriangles) {
+            candidates.add(`${bt.n},${bt.j - 1}`);
+            candidates.add(`${bt.n},${bt.j}`);
+            candidates.add(`${bt.n + 1},${bt.j - 1}`);
+        }
+        for (const key of candidates) {
+            const [n, j] = key.split(',').map(Number);
+            if (blackTriSet.has(`${n},${j + 1}`) &&
+                blackTriSet.has(`${n},${j}`) &&
+                blackTriSet.has(`${n - 1},${j + 1}`)) {
+                internalVerts.push({n, j});
+            }
+        }
+    }
+
+    // Compute height function from a dimer grid via BFS.
+    // Normalizes so minimum height = 0.
+    function computeHeightsFromGrid(grid) {
+        const heightMap = new Map();
+        const dimers = [];
+        for (const bt of blackTriangles) {
+            const type = gridGet(grid, bt.n, bt.j);
+            if (type >= 0 && type <= 2) dimers.push({bn: bt.n, bj: bt.j, t: type});
+        }
+        if (dimers.length === 0) return heightMap;
+
+        const vertexToDimers = new Map();
+        for (const d of dimers) {
+            const verts = getVertexKeys(d);
+            for (const [vn, vj] of verts) {
+                const key = `${vn},${vj}`;
+                if (!vertexToDimers.has(key)) vertexToDimers.set(key, []);
+                vertexToDimers.get(key).push(d);
+            }
+        }
+
+        const firstVerts = getVertexKeys(dimers[0]);
+        const startKey = `${firstVerts[0][0]},${firstVerts[0][1]}`;
+        heightMap.set(startKey, 0);
+        const queue = [startKey];
+        const visited = new Set();
+
+        while (queue.length > 0) {
+            const currentKey = queue.shift();
+            if (visited.has(currentKey)) continue;
+            visited.add(currentKey);
+            const currentH = heightMap.get(currentKey);
+            const [cn, cj] = currentKey.split(',').map(Number);
+
+            for (const d of vertexToDimers.get(currentKey) || []) {
+                const verts = getVertexKeys(d);
+                const pattern = getHeightPattern(d.t);
+                const myIdx = verts.findIndex(([n, j]) => n === cn && j === cj);
+                if (myIdx >= 0) {
+                    for (let i = 0; i < 4; i++) {
+                        const vkey = `${verts[i][0]},${verts[i][1]}`;
+                        if (!heightMap.has(vkey)) {
+                            heightMap.set(vkey, currentH + (pattern[i] - pattern[myIdx]));
+                            queue.push(vkey);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Normalize so min height is 0
+        let minH = Infinity;
+        for (const h of heightMap.values()) minH = Math.min(minH, h);
+        if (minH !== 0) {
+            for (const [k, v] of heightMap) heightMap.set(k, v - minH);
+        }
+        return heightMap;
+    }
+
+    // Execute rotation on a grid (even→odd or odd→even)
+    function executeRotation(grid, n, j, evenToOdd) {
+        if (evenToOdd) {
+            gridSet(grid, n, j + 1, 2);
+            gridSet(grid, n, j, 0);
+            gridSet(grid, n - 1, j + 1, 1);
+        } else {
+            gridSet(grid, n, j + 1, 1);
+            gridSet(grid, n, j, 2);
+            gridSet(grid, n - 1, j + 1, 0);
+        }
+    }
+
+    // One coupled sweep: visit all internal vertices with shared random coins.
+    // Coupling strategy: single coin determines direction (up/down).
+    // Each chain executes only if it can move in that direction.
+    // This preserves monotonicity: chains never move in opposite directions.
+    function coupledSweep() {
+        for (let vi = 0; vi < internalVerts.length; vi++) {
+            const {n, j} = internalVerts[vi];
+            const u = Math.random();
+
+            // Min chain state at vertex (n, j)
+            const dMin1 = gridGet(jsGridMin, n, j + 1);
+            const dMin2 = gridGet(jsGridMin, n, j);
+            const dMin3 = gridGet(jsGridMin, n - 1, j + 1);
+            const minEven = (dMin1 === 1 && dMin2 === 2 && dMin3 === 0);
+            const minOdd = (dMin1 === 2 && dMin2 === 0 && dMin3 === 1);
+
+            // Max chain state at vertex (n, j)
+            const dMax1 = gridGet(jsGridMax, n, j + 1);
+            const dMax2 = gridGet(jsGridMax, n, j);
+            const dMax3 = gridGet(jsGridMax, n - 1, j + 1);
+            const maxEven = (dMax1 === 1 && dMax2 === 2 && dMax3 === 0);
+            const maxOdd = (dMax1 === 2 && dMax2 === 0 && dMax3 === 1);
+
+            if (!minEven && !minOdd && !maxEven && !maxOdd) continue;
+
+            const hMin = heightAtMin.get(`${n},${j}`);
+            const hMax = heightAtMax.get(`${n},${j}`);
+            if (hMin === undefined || hMax === undefined) continue;
+
+            if (u < 0.5) {
+                // Try DOWN (even→odd): height decreases
+                const uScaled = u * 2; // ∈ [0, 1)
+                if (minEven && hMin > 0 && uScaled < ratioDown[hMin]) {
+                    executeRotation(jsGridMin, n, j, true);
+                    heightAtMin.set(`${n},${j}`, hMin - 1);
+                }
+                if (maxEven && hMax > 0 && uScaled < ratioDown[hMax]) {
+                    executeRotation(jsGridMax, n, j, true);
+                    heightAtMax.set(`${n},${j}`, hMax - 1);
+                }
+            } else {
+                // Try UP (odd→even): height increases
+                const uScaled = (u - 0.5) * 2; // ∈ [0, 1)
+                if (minOdd && hMin < HEX_SIDE && uScaled < ratioUp[hMin]) {
+                    executeRotation(jsGridMin, n, j, false);
+                    heightAtMin.set(`${n},${j}`, hMin + 1);
+                }
+                if (maxOdd && hMax < HEX_SIDE && uScaled < ratioUp[hMax]) {
+                    executeRotation(jsGridMax, n, j, false);
+                    heightAtMax.set(`${n},${j}`, hMax + 1);
+                }
+            }
+        }
+        totalSteps += internalVerts.length;
+    }
+
+    // Check if the two grids have coalesced (are identical)
+    function checkCoalesced() {
+        for (let i = 0; i < gridSize; i++) {
+            if (jsGridMin[i] !== jsGridMax[i]) return false;
+        }
+        return true;
+    }
+
+    // Export grid to dimer list for rendering
+    function exportDimerListFromGrid(grid) {
+        const dimers = [];
+        for (const bt of blackTriangles) {
+            const type = gridGet(grid, bt.n, bt.j);
+            if (type >= 0 && type <= 2) dimers.push({bn: bt.n, bj: bt.j, t: type});
+        }
+        return dimers;
+    }
+
+    // ===================================================================
+    // WASM initialization: get min and max extremal tilings
+    // ===================================================================
+
+    async function initFromWasm() {
+        cachedTriArr = generateHexagonTriangles(HEX_SIDE);
+        const ptr = wasm._malloc(cachedTriArr.length * 4);
+        for (let i = 0; i < cachedTriArr.length; i++) {
+            wasm.setValue(ptr + i * 4, cachedTriArr[i], 'i32');
+        }
+        funcs.initFromTriangles(ptr, cachedTriArr.length);
+        wasm._free(ptr);
+
+        // Get grid bounds
+        const boundsPtr = funcs.getGridBounds();
+        const bounds = JSON.parse(wasm.UTF8ToString(boundsPtr));
+        funcs.freeString(boundsPtr);
+
+        gridMinN = bounds.minN;
+        gridMaxN = bounds.maxN;
+        gridMinJ = bounds.minJ;
+        gridMaxJ = bounds.maxJ;
+        gridStrideJ = bounds.maxJ - bounds.minJ + 1;
+        gridSize = bounds.size;
+
+        // Get min and max extremal states
+        wasmCallJSON(funcs.initCFTP);
+
+        const minPtr = funcs.getCFTPMinGridData();
+        const maxPtr = funcs.getCFTPMaxGridData();
+
+        jsGridMin = new Int8Array(gridSize);
+        jsGridMax = new Int8Array(gridSize);
+        for (let i = 0; i < gridSize; i++) {
+            jsGridMin[i] = wasm.getValue(minPtr + i * 4, 'i32');
+            jsGridMax[i] = wasm.getValue(maxPtr + i * 4, 'i32');
+        }
+        wasm._free(minPtr);
+        wasm._free(maxPtr);
+
+        // Build black triangle list
+        blackTriangles = [];
+        for (let i = 0; i < cachedTriArr.length; i += 3) {
+            if (cachedTriArr[i + 2] === 1) {
+                blackTriangles.push({n: cachedTriArr[i], j: cachedTriArr[i + 1]});
+            }
+        }
+
+        totalSteps = 0;
     }
 
     // ===================================================================
@@ -196,11 +447,10 @@
         meshGroup = new THREE.Group();
         scene.add(meshGroup);
 
-        // Camera for N=20 hexagon
-        camera.position.set(21, 11, 41);
-        camera.zoom = 1.0;
+        camera.position.set(32.6, -9.4, 31.3);
+        camera.zoom = 0.90;
         camera.updateProjectionMatrix();
-        controls.target.set(-10, -12, 6);
+        controls.target.set(-16.6, -14.4, 14.8);
         controls.update();
 
         resize();
@@ -259,7 +509,7 @@
     }
 
     // ===================================================================
-    // Dimer → 3D geometry (same as cftp-sim.js)
+    // Dimer → 3D geometry
     // ===================================================================
 
     const getVertexKeys = (dimer) => {
@@ -394,72 +644,83 @@
     }
 
     // ===================================================================
-    // Animated CFTP with slow convergence
+    // Animated CFTP with q-Racah weights (slow convergence)
     // ===================================================================
 
-    const STEP_DELAY = 600;
-    const MILESTONES = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000];
-    const AFTER_MILESTONES = 50000;
-
-    function getNextMilestone(currentStep) {
-        for (const m of MILESTONES) {
-            if (m > currentStep) return m;
-        }
-        const last = MILESTONES[MILESTONES.length - 1];
-        const beyond = currentStep - last;
-        return last + (Math.floor(beyond / AFTER_MILESTONES) + 1) * AFTER_MILESTONES;
-    }
+    const RENDER_INTERVAL = 500;  // ms between redraws
+    const BATCH_SIZE = 50;        // sweeps per batch before yielding
+    const YIELD_MS = 10;          // ms to yield to browser between batches
 
     let stepGeneration = 0;
+
+    function formatSweeps(n) {
+        if (n < 1000) return '' + n;
+        if (n < 1e6) return (n / 1e3).toFixed(1) + 'K';
+        return (n / 1e6).toFixed(1) + 'M';
+    }
 
     async function runAnimated(gen) {
         if (!wasm || !funcs) return;
         animating = true;
         autoRotating = false;
 
-        loadShapeIntoWasm();
-        setPeriodicWeights();
-        wasmCallJSON(funcs.initCFTP);
+        await initFromWasm();
+        if (gen !== stepGeneration) return;
+
+        // Compute initial height functions for both chains
+        heightAtMin = computeHeightsFromGrid(jsGridMin);
+        heightAtMax = computeHeightsFromGrid(jsGridMax);
+        buildInternalVerts();
 
         // Show initial min/max bounds
         if (meshGroup) {
-            const minD = wasmCallJSON(funcs.exportCFTPMinDimers);
-            const maxD = wasmCallJSON(funcs.exportCFTPMaxDimers);
-            renderBounds(minD.dimers, maxD.dimers);
+            const minDimers = exportDimerListFromGrid(jsGridMin);
+            const maxDimers = exportDimerListFromGrid(jsGridMax);
+            renderBounds(minDimers, maxDimers);
         }
-        if (statusEl) statusEl.textContent = 'coupled Glauber: step 0';
-        await new Promise(r => setTimeout(r, STEP_DELAY));
-        if (gen !== stepGeneration) return;
+        if (statusEl) statusEl.textContent = 'Waterfall CFTP: sweep 0';
 
-        let totalSteps = 0;
+        // Coupled sweep loop: run in small batches, render periodically
+        let sweepCount = 0;
+        let lastRender = performance.now();
+
         while (animating && gen === stepGeneration) {
-            const nextMilestone = getNextMilestone(totalSteps);
-            const stepsToRun = nextMilestone - totalSteps;
-            const result = wasmCallJSON(() => funcs.forwardCoupledStep(stepsToRun));
-            totalSteps = nextMilestone;
-
-            if (result.status === 'coalesced') {
-                if (statusEl) statusEl.textContent = 'coalesced at step ' + (result.step || '?');
-                break;
-            } else if (result.status === 'in_progress') {
-                if (meshGroup) {
-                    const minD = wasmCallJSON(funcs.exportCFTPMinDimers);
-                    const maxD = wasmCallJSON(funcs.exportCFTPMaxDimers);
-                    renderBounds(minD.dimers, maxD.dimers);
-                }
-                if (statusEl) statusEl.textContent = 'coupled Glauber: step ' + result.step;
-                await new Promise(r => setTimeout(r, STEP_DELAY));
-                if (gen !== stepGeneration) return;
-            } else {
-                break;
+            // Run a small batch of sweeps
+            for (let s = 0; s < BATCH_SIZE; s++) {
+                coupledSweep();
             }
+            sweepCount += BATCH_SIZE;
+
+            const now = performance.now();
+            if (now - lastRender >= RENDER_INTERVAL) {
+                lastRender = now;
+
+                // Check for coalescence
+                if (checkCoalesced()) {
+                    if (statusEl) statusEl.textContent = 'Coalesced at sweep ' + formatSweeps(sweepCount);
+                    break;
+                }
+
+                // Render current bounds
+                if (meshGroup) {
+                    const minDimers = exportDimerListFromGrid(jsGridMin);
+                    const maxDimers = exportDimerListFromGrid(jsGridMax);
+                    renderBounds(minDimers, maxDimers);
+                }
+                if (statusEl) {
+                    statusEl.textContent = 'Waterfall CFTP: sweep ' + formatSweeps(sweepCount);
+                }
+            }
+
+            // Yield to browser to stay responsive
+            await new Promise(r => setTimeout(r, YIELD_MS));
+            if (gen !== stepGeneration) return;
         }
 
         // If coalesced, show final surface
         if (animating && meshGroup && gen === stepGeneration) {
-            wasmCallJSON(funcs.finalizeCFTP);
-            const dimersResult = wasmCallJSON(funcs.exportDimers);
-            renderCoalesced(dimersResult.dimers || []);
+            const dimers = exportDimerListFromGrid(jsGridMin); // min = max after coalescence
+            renderCoalesced(dimers);
             autoRotating = true;
         }
         animating = false;
@@ -473,6 +734,12 @@
         stepGeneration++;
         animating = false;
         autoRotating = false;
+        jsGridMin = null;
+        jsGridMax = null;
+        heightAtMin = null;
+        heightAtMax = null;
+        blackTriangles = [];
+        internalVerts = [];
         disposeThreeJS();
         if (statusEl) statusEl.textContent = '';
     }
@@ -492,18 +759,28 @@
     window.slideEngine.registerSimulation('hard-to-sample', {
         steps: 1,
 
-        onSlideEnter: function() {},
+        onSlideEnter: function() {
+            startAnimation();
+        },
 
         onSlideLeave: function() {
             disposeAll();
         },
 
         onStep: function(step) {
-            if (step === 1) startAnimation();
+            if (step === 1) {
+                // Stop the CFTP animation
+                stepGeneration++;
+                animating = false;
+                autoRotating = false;
+            }
         },
 
         onStepBack: function(step) {
-            if (step === 0) disposeAll();
+            if (step === 0) {
+                // Resume CFTP
+                startAnimation();
+            }
         },
 
         reset: function() {
