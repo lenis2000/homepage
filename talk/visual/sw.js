@@ -75,6 +75,7 @@ const PRECACHE_ASSETS = [
   '/talk/visual/js/energy-sim.js',
   '/talk/visual/js/gff-simplified-sim.js',
   '/talk/visual/js/q-volume-visual-sim.js',
+  '/talk/visual/js/beyond-gff-sim.js',
 
   // Simulation JS files — Part III
   '/talk/visual/js/glauber-dynamics-sim.js',
@@ -103,6 +104,7 @@ const PRECACHE_ASSETS = [
   '/letters/cardio.json',
   '/letters/shape_for_arctic_small.json',
   '/letters/big_snoflake.json',
+  '/letters/SHAPE.json',
 
   // 3D models
   '/talk/visual/images/big_shape.obj',
