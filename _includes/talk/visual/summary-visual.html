@@ -1,25 +1,37 @@
-<section class="slide slide-center" id="summary-visual" data-title="Summary">
+<section class="slide slide-top" id="summary-visual" data-title="Summary">
     <h2 class="slide-title">Summary</h2>
 
-    <div style="display: flex; flex-direction: column; gap: 2vh; margin-top: 3vh; max-width: 75vw; text-align: left;">
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 2vw; font-size: clamp(1.4rem, 2.6vw, 2.1rem);">
-            <strong style="color: var(--slide-accent);">Counting:</strong>
-            Random paths and surfaces concentrate around deterministic <strong>limit shapes</strong>
+    <div style="display: grid; grid-template-columns: 48vw 42vw; gap: 2vw; margin-top: 2vh; padding: 0 2vw;">
+        <!-- Left column: takeaways -->
+        <div style="display: flex; flex-direction: column; gap: 2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Limit shapes</strong><br>
+                Random paths and surfaces concentrate around deterministic shapes as mesh shrinks (\(=\) size grows).
+            </div>
+
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1.5vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-navy);">Universality</strong><br>
+                    <ul style="margin: 0; padding-left: 1.2em; line-height: 1.4;">
+                        <li>Local statistics everywhere share the same nature, independent of boundary shape.</li>
+                        <li>Gaussian fluctuations on the global scale.</li>
+                    </ul>
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Exact sampling</strong><br>
+                Almost every picture in this talk was an <strong>exact</strong> random sample, computed live as we went along.
+            </div>
+
+            <div style="font-size: clamp(1.4rem, 2.6vw, 2rem); font-style: italic; color: var(--slide-navy); margin-top: 1vh; text-align: left;">
+                How can something random have a predictable shape?
+<br><div style="height: 0.5em;"></div>
+                — Through a careful balance of entropy and energy: Local rules create global structures.
+            </div>
         </div>
 
-        <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1.5vh 2vw; font-size: clamp(1.4rem, 2.6vw, 2.1rem);">
-            <strong style="color: var(--slide-navy);">Local patches:</strong>
-            Zooming in reveals <strong>universal local behavior</strong> — the same IID structure everywhere
-        </div>
-
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 2vw; font-size: clamp(1.4rem, 2.6vw, 2.1rem);">
-            <strong style="color: var(--slide-accent);">Sampling:</strong>
-            Coupling From The Past gives <strong>exact</strong> samples — every picture in this talk was generated on-the-fly
+        <!-- Right column: striking image -->
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <img src="images/nonsimplyconn_sample.png" alt="Random lozenge tiling of a non-simply-connected domain" style="max-height: 58vh; max-width: 100%; object-fit: contain;">
         </div>
     </div>
-
-    <p style="font-size: clamp(1.5rem, 2.8vw, 2.2rem); margin-top: 4vh; text-align: center; font-style: italic; color: var(--slide-navy);">
-        How can something random have a predictable shape?<br>
-        Through the competition between entropy and energy — and now we can see it.
-    </p>
 </section>

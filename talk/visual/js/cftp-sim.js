@@ -534,14 +534,23 @@
             disposeAll();
         },
 
+        start: function() {
+            showElement('cftp-explain');
+        },
+
         onStep: function(step) {
             if (step === 1) {
+                showElement('cftp-explain');
                 showElement('cftp-why-works');
             }
             if (step === 2) {
+                showElement('cftp-explain');
+                showElement('cftp-why-works');
                 startCFTPAnimation();
             }
             if (step === 3) {
+                showElement('cftp-explain');
+                showElement('cftp-why-works');
                 showElement('cftp-exact');
             }
         },
@@ -551,10 +560,13 @@
                 hideElement('cftp-exact');
             }
             if (step === 1) {
+                hideElement('cftp-exact');
                 disposeAll();
             }
             if (step === 0) {
                 hideElement('cftp-why-works');
+                hideElement('cftp-exact');
+                disposeAll();
             }
         },
 

@@ -6,22 +6,26 @@
         <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-accent);">CFTP can be slow:</strong><br>
-                <strong>Exponentially slow</strong> in \(N\) — prohibitively long to get an exact sample.
-                The monotone sandwich may take \(\sim e^{cN}\) steps to collapse.
+                <strong>Exponentially slow</strong> in \(N\) — prohibitively long to get an exact sample:
+                the monotone sandwich may take \(\sim e^{cN}\) steps to collapse.
+                <br>
+                <div style="height: 0.5em;"></div>
+                This happens in the <strong>waterfall model</strong> <span style="color: var(--slide-muted);">[Knizel–P. 2025]</span>
+                and also in multi-\(q\)-weighted models.
             </div>
 
             <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-navy);">Waterfall model</strong>
-                    <span style="color: var(--slide-muted);">[Knizel–P. 2025]</span>:<br>
-                The interpolation between \(q^{\text{volume}}\) and \(q^{-\text{volume}}\) produces a <strong>waterfall</strong> — a collapse of 2D randomness into a 1D interface. No known CFTP for this model.
+                <strong style="color: var(--slide-navy);">Why?</strong>
+                <br>
+                The CFTP needs to go through local moves, and some local configurations are exponentially unlikely.
+                For example, in the waterfall, we do not have horizontal pieces in the middle — but to mix, horizontal pieces need to cross this gap.
             </div>
 
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Alternative approaches:</strong>
+                <strong style="color: var(--slide-accent);">Alternatives come from algebra in specific cases:</strong>
                 <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
-                    <li>Algebraic exact sampling <span style="color: var(--slide-muted);">[Borodin–Gorin–Rains 2009]</span></li>
-                    <li>Schur process sampling</li>
-                    <li>Determinantal point processes</li>
+                    <li>Commuting Markov matrices<br><span style="color: var(--slide-muted);">[Borodin–Gorin–Rains 2009]</span></li>
+                    <li>Powerful local equivalence relations that transform the lattice and weights in algebraically tractable manner (Yang–Baxter equation / urban renewal / spider move)</li>
                 </ul>
             </div>
         </div>
