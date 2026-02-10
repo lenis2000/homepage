@@ -1112,6 +1112,7 @@ function init2to3dHexagonSim() {
                             if (macmahonEl) macmahonEl.style.opacity = '0';
                             if (macmahonExEl) macmahonExEl.style.opacity = '0';
                         } else if (step === 12) {
+                            stopAutoRotate();
                             if (macmahonEl) macmahonEl.style.opacity = '1';
                             if (macmahonExEl) macmahonExEl.style.opacity = '1';
                             if (window.MathJax) MathJax.typeset();
