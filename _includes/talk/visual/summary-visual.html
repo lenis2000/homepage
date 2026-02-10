@@ -1,7 +1,7 @@
 <section class="slide slide-top" id="summary-visual" data-title="Summary">
     <h2 class="slide-title">Summary</h2>
 
-    <div style="display: grid; grid-template-columns: 48vw 42vw; gap: 2vw; margin-top: 2vh; padding: 0 2vw;">
+    <div style="display: grid; grid-template-columns: 42vw 50vw; gap: 2vw; margin-top: 2vh; padding: 0 2vw;">
         <!-- Left column: takeaways -->
         <div style="display: flex; flex-direction: column; gap: 2vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; text-align: left;">
@@ -29,9 +29,11 @@
             </div>
         </div>
 
-        <!-- Right column: striking image -->
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <img src="images/nonsimplyconn_sample.png" alt="Random lozenge tiling of a non-simply-connected domain" style="max-height: 58vh; max-width: 100%; object-fit: contain;">
+        <!-- Right column: 3 live Escher tilings, staggered zigzag -->
+        <div style="position: relative; height: 78vh;">
+            <canvas id="summary-hex-6" width="1600" height="1400" style="position: absolute; top: 0; left: 0;  right: -2vw; height: 40vh; width: auto;"></canvas>
+            <canvas id="summary-hex-16" width="1600" height="1400" style="position: absolute; top: 20vh; right: 7vw; height: 40vh; width: auto; transform: scaleX(-1);"></canvas>
+            <canvas id="summary-hex-22" width="1600" height="1400" style="position: absolute; top: 40vh; left: 0; right: -2vw; height: 40vh; width: auto;"></canvas>
         </div>
     </div>
 </section>
