@@ -292,7 +292,7 @@ function initArcticCircleSim() {
             const [hexResp, cardioResp, generalResp] = await Promise.all([
                 fetch('/letters/hex.json'),
                 fetch('/letters/cardio.json'),
-                fetch('/letters/shape_for_arctic_small.json')
+                fetch('/letters/shape_for_arctic.json')
             ]);
             const [hexData, cardioData, generalData] = await Promise.all([
                 hexResp.json(),

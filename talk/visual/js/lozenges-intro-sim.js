@@ -234,8 +234,12 @@ function initLozIntroSim() {
                 ? new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide })
                 : new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, flatShading: true, roughness: 0.5, metalness: 0.15 });
             meshGroup.add(new THREE.Mesh(geometry, mat));
-            const edges = new THREE.EdgesGeometry(geometry, 10);
-            meshGroup.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000, opacity: 0.5, transparent: true })));
+            const edgeAngle = flat ? 1 : 10;
+            const edges = new THREE.EdgesGeometry(geometry, edgeAngle);
+            const edgeMat = flat
+                ? new THREE.LineBasicMaterial({ color: 0x000000 })
+                : new THREE.LineBasicMaterial({ color: 0x000000, opacity: 0.5, transparent: true });
+            meshGroup.add(new THREE.LineSegments(edges, edgeMat));
         }
 
         // ===== State =====
@@ -292,7 +296,7 @@ function initLozIntroSim() {
             }
 
             // Camera along (1,-1,-1) — the "height" direction in to3D coords
-            hexScene.camera.position.set(25.8, -36.1, -27.3);
+            hexScene.camera.position.set(-32.0, 21.5, 30.5);
             hexScene.camera.zoom = 1.240;
             hexScene.camera.updateProjectionMatrix();
             hexScene.controls.target.set(-3.1, -7.3, 1.6);
