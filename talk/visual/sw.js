@@ -1,5 +1,5 @@
 // Service Worker for Visual Talk — Aggressive Precaching
-const CACHE_NAME = 'visual-talk-v4';
+const CACHE_NAME = 'visual-talk-v5';
 
 // All assets to precache
 const PRECACHE_ASSETS = [
@@ -14,6 +14,7 @@ const PRECACHE_ASSETS = [
   '/js/theme-toggle.js',
   '/js/webgpu-qpartition-engine.js',
   '/js/webgpu-lozenge-engine.js',
+  '/js/2025-06-08-q-vol-3d.js',
 
   // WASM modules
   '/talk/visual/sim/visual-lozenge.js',
