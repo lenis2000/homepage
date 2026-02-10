@@ -1,5 +1,5 @@
 <section class="slide slide-top" id="beyond-gff" data-title="What Else Can We Tile?">
-    <h2 class="slide-title">What Else Can We Tile?</h2>
+    <h2 class="slide-title">What Else Can We Tile by Lozenges?</h2>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5vw; margin-top: 2vh; width: 95%;">
         <!-- Left: 3D tiling of non-simply-connected shape -->
@@ -19,11 +19,15 @@
         </div>
     </div>
 
-    <!-- Reference pane -->
-    <div style="margin-top: 2vh; width: 95%;">
+    <!-- Bottom: image left, reference pane right -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 4vh; width: 95%; align-items: center;">
+        <div id="beyond-gff-img" style="display: flex; justify-content: center; opacity: 0; transition: opacity 0.5s;">
+            <img src="images/gff_ecsher.png" alt="GFF on Escher-like domain" style="max-height: 30vh; max-width: 100%; object-fit: contain;">
+        </div>
         <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1.5vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
-            <strong style="color: var(--slide-navy);">State of the art:</strong> GFF universality for non-simply-connected, non-planar, and non-orientable domains.
-            <span style="color: var(--slide-muted);">[Borot–Gorin–Guionnet 2026]</span><br>
+            <strong style="color: var(--slide-navy);">State of the art</strong>
+           <span style="color: var(--slide-muted);">[Borot–Gorin–Guionnet 2026]</span>: Universal Gaussian fluctuations  for some non-simply-connected, non-planar, or non-orientable domains.<br>
+           <div style="height: 0.7em;"></div>
             Generic simply-connected domains: <strong>still open!</strong>
         </div>
     </div>

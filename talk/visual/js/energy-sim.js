@@ -30,7 +30,7 @@ function initEnergySim() {
             const aspect = w / h;
             camera = new THREE.OrthographicCamera(
                 -frustumSize * aspect / 2, frustumSize * aspect / 2,
-                frustumSize / 2, -frustumSize / 2, 0.1, 1000
+                frustumSize / 2, -frustumSize / 2, -50000, 50000
             );
             camera.position.set(50, 50, 40);
             camera.lookAt(0, 0, 0);
@@ -111,7 +111,6 @@ function initEnergySim() {
         const getGridBoundsWasm = wasm.cwrap('getGridBounds', 'number', []);
         const getCFTPMinGridDataWasm = wasm.cwrap('getCFTPMinGridData', 'number', []);
         const getCFTPMaxGridDataWasm = wasm.cwrap('getCFTPMaxGridData', 'number', []);
-        const getBlackTrianglesWasm = wasm.cwrap('getBlackTriangles', 'number', []);
 
         let gpuEngine = null;
         let gpuAvailable = false;
@@ -159,11 +158,14 @@ function initEnergySim() {
             return data;
         }
 
-        function getBlackTriangles() {
-            const ptr = getBlackTrianglesWasm();
-            const jsonStr = wasm.UTF8ToString(ptr);
-            freeString(ptr);
-            return JSON.parse(jsonStr);
+        function getBlackTrianglesFromFlat(flatArr) {
+            const result = [];
+            for (let i = 0; i < flatArr.length; i += 3) {
+                if (flatArr[i + 2] === 1) {
+                    result.push({ n: flatArr[i], j: flatArr[i + 1] });
+                }
+            }
+            return result;
         }
 
         const N = 50;
@@ -530,7 +532,7 @@ function initEnergySim() {
 
                             if (coalesced) {
                                 const resultGrid = await gpuEngine.getCFTPResult();
-                                const blackTriangles = getBlackTriangles();
+                                const blackTriangles = getBlackTrianglesFromFlat(triangles);
                                 dimers = gpuEngine.gridToDimers(resultGrid, blackTriangles);
                                 gpuEngine.destroyCFTP();
                             } else {
@@ -572,6 +574,141 @@ function initEnergySim() {
                 if (!renderer) return;
                 sampleQueued(parseFloat(inputA.value), parseFloat(inputB.value));
             });
+        }
+
+        // ===== OBJ LOADING FOR FINAL STEP =====
+        let objMeshCached = null;
+        let cameraAnimId = null;
+
+        function loadOBJLoader() {
+            return new Promise((resolve, reject) => {
+                if (typeof THREE.OBJLoader !== 'undefined') { resolve(); return; }
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+        }
+
+        function animateCamera(targetPos, targetLookAt, targetZoom, duration) {
+            if (cameraAnimId) cancelAnimationFrame(cameraAnimId);
+            if (!camera || !controls) return;
+
+            const startPos = camera.position.clone();
+            const startTarget = controls.target.clone();
+            const startZoom = camera.zoom;
+            const endPos = new THREE.Vector3(targetPos.x, targetPos.y, targetPos.z);
+            const endTarget = new THREE.Vector3(targetLookAt.x, targetLookAt.y, targetLookAt.z);
+            const t0 = performance.now();
+
+            function step() {
+                if (!camera || !controls) { cameraAnimId = null; return; }
+                const elapsed = performance.now() - t0;
+                const progress = Math.min(elapsed / duration, 1);
+                const t = easeInOutCubic(progress);
+
+                camera.position.lerpVectors(startPos, endPos, t);
+                controls.target.lerpVectors(startTarget, endTarget, t);
+                camera.zoom = startZoom + (targetZoom - startZoom) * t;
+                camera.updateProjectionMatrix();
+                controls.update();
+                if (renderer) renderer.render(scene, camera);
+
+                if (progress < 1) {
+                    cameraAnimId = requestAnimationFrame(step);
+                } else {
+                    cameraAnimId = null;
+                }
+            }
+            step();
+        }
+
+        async function showBigOBJ() {
+            if (!meshGroup || !renderer) return;
+            stopAutoRotate();
+
+            // Clear current mesh
+            while (meshGroup.children.length > 0) {
+                const child = meshGroup.children[0];
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+                meshGroup.remove(child);
+            }
+
+            try {
+                await loadOBJLoader();
+                if (!meshGroup) return;
+
+                if (!objMeshCached) {
+                    const loader = new THREE.OBJLoader();
+                    objMeshCached = await new Promise((resolve, reject) => {
+                        loader.load('/talk/visual/images/big_shape.obj', resolve, undefined, reject);
+                    });
+                    if (!meshGroup) return;
+                }
+
+                const clone = objMeshCached.clone();
+                const objMaterial = new THREE.MeshStandardMaterial({
+                    side: THREE.DoubleSide,
+                    flatShading: true,
+                    roughness: 0.3,
+                    metalness: 0.35,
+                    color: 0xddeeff
+                });
+                clone.traverse(child => {
+                    if (child.isMesh) {
+                        child.material = objMaterial;
+                    }
+                });
+                meshGroup.add(clone);
+
+                // Compute bounding box
+                const box = new THREE.Box3().setFromObject(clone);
+                const center = new THREE.Vector3();
+                box.getCenter(center);
+                const size = new THREE.Vector3();
+                box.getSize(size);
+                const maxDim = Math.max(size.x, size.y, size.z);
+
+                // Unlock polar angle for 3D viewing
+                controls.minPolarAngle = 0;
+                controls.maxPolarAngle = Math.PI;
+
+                // Hardcoded camera positions from user testing
+                controls.target.set(-210.1, -592.0, 542.7);
+                camera.position.set(-245.7, -546.0, 599.4);
+                camera.zoom = 0.270;
+                camera.updateProjectionMatrix();
+                controls.update();
+                renderer.render(scene, camera);
+
+            } catch (e) {
+                console.error('[energy] Failed to load big_shape.obj:', e);
+            }
+        }
+
+        function zoomOutOBJ() {
+            if (!camera || !controls) return;
+            animateCamera(
+                { x: -262.2, y: -629.0, z: 592.9 },
+                { x: -210.1, y: -592.0, z: 542.7 },
+                0.009,
+                3000
+            );
+        }
+
+        function restoreFlatTiling(presetIdx) {
+            if (cameraAnimId) { cancelAnimationFrame(cameraAnimId); cameraAnimId = null; }
+            if (!controls) return;
+            // Restore polar angle lock
+            const fixedPolar = Math.PI / 3;
+            controls.minPolarAngle = fixedPolar;
+            controls.maxPolarAngle = fixedPolar;
         }
 
         let autoRotateId = null;
@@ -620,17 +757,39 @@ function initEnergySim() {
                     sampleQueued(A, B, resetCamera);
                 }
 
+                const objShowStep = presets.length;     // step 5: show OBJ zoomed in
+                const objZoomStep = presets.length + 1; // step 6: zoom out
+
                 window.slideEngine.registerSimulation('energy', {
                     start() { startAutoRotate(); },
                     pause() { stopAutoRotate(); },
-                    steps: presets.length - 1,
+                    steps: objZoomStep,
                     onStep(step) {
-                        if (step >= 1 && step < presets.length) {
+                        if (step === objShowStep) {
+                            stopAutoRotate();
+                            showBigOBJ();
+                        } else if (step === objZoomStep) {
+                            zoomOutOBJ();
+                        } else if (step >= 1 && step < presets.length) {
                             applyPreset(step, false);
                         }
                     },
                     onStepBack(step) {
-                        if (step >= 0 && step < presets.length) {
+                        if (step === objShowStep) {
+                            // Coming back from zoom-out: restore zoomed-in view
+                            if (cameraAnimId) { cancelAnimationFrame(cameraAnimId); cameraAnimId = null; }
+                            camera.position.set(-245.7, -546.0, 599.4);
+                            controls.target.set(-210.1, -592.0, 542.7);
+                            camera.zoom = 0.270;
+                            camera.updateProjectionMatrix();
+                            controls.update();
+                            if (renderer) renderer.render(scene, camera);
+                        } else if (step === objShowStep - 1) {
+                            // Coming back from OBJ to flat tiling
+                            restoreFlatTiling(step);
+                            applyPreset(step, false);
+                            startAutoRotate();
+                        } else if (step >= 0 && step < presets.length) {
                             applyPreset(step, false);
                         }
                     },
@@ -652,6 +811,7 @@ function initEnergySim() {
                         initWhenReady();
                     },
                     onSlideLeave() {
+                        if (cameraAnimId) { cancelAnimationFrame(cameraAnimId); cameraAnimId = null; }
                         stopAutoRotate();
                         disposeThreeJS();
                         initialSampleDone = false;

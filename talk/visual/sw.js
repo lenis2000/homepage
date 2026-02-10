@@ -120,6 +120,9 @@ const PRECACHE_ASSETS = [
   '/talk/visual/images/salt-halite-lavinsky-irocks-cc-by-sa-3.jpg',
   '/talk/visual/images/salt-micro-public-domain.jpg',
   '/talk/visual/images/salt-smooth-deadsea-xta11-cc-by-sa-4.jpg',
+  '/talk/visual/images/non_planar_orientable.png',
+  '/talk/visual/images/non_orientable.png',
+  '/talk/visual/images/gff_ecsher.png',
 
   // Manifest
   '/talk/visual/manifest.json',
