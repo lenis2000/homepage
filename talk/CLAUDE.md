@@ -5,6 +5,7 @@ Slides live in `/talk/<name>/index.html` (URL: `/talk/<name>/`).
 ## Approved (Frozen) Slides
 - Files with `<!-- APPROVED: Do not modify without explicit user request -->` (HTML) or `// APPROVED: ...` (JS) at the top are frozen — do NOT edit them unless the user explicitly asks
 - **Visual talk Part 1** is fully approved: `title`, `nature-builds`, `part1-intro`, `grid-paths`, `random-path`, `fluctuations-gaussian`, `q-deformation`, `q-limit-shape` (both HTML and JS)
+- **Visual talk Part 2** (in progress): `2to3d` (both HTML and JS)
 
 **Key files:**
 - `/js/slide-engine.js` - Navigation, hash routing, simulation lifecycle

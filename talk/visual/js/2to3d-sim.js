@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * From Paths to 3D: Asymmetric hexagon a×12×9 with WASM CFTP sampling
  * Two simulations: 3D hexagon (Three.js) + Snowflake (2D Canvas)
