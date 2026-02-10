@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Limit Shape 3D Visualization
  * Three.js + WASM + WebGPU CFTP
