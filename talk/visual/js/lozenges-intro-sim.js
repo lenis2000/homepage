@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Lozenges Intro: rotating unit cube (left) + static 9×12×9 hexagon (right)
  */

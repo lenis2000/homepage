@@ -1,0 +1,35 @@
+<section class="slide slide-top" id="beyond-gff" data-title="What Else Can We Tile?">
+    <h2 class="slide-title">What Else Can We Tile?</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5vw; margin-top: 2vh; width: 95%;">
+        <!-- Left: non-simply-connected tiling -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
+            <img src="images/nonsimplyconn_sample.png" alt="Non-simply-connected tiling" style="max-height: 40vh; max-width: 100%; object-fit: contain;">
+            <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); text-align: center; font-weight: bold; color: var(--slide-accent);">Non-simply-connected</div>
+        </div>
+        <!-- Center: non-planar orientable -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
+            <img src="images/non_planar_orientable.png" alt="Non-planar orientable surface" style="max-height: 40vh; max-width: 100%; object-fit: contain;">
+            <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); text-align: center; font-weight: bold; color: var(--slide-navy);">Non-planar orientable</div>
+        </div>
+        <!-- Right: non-orientable -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
+            <img src="images/non_orientable.png" alt="Non-orientable surface" style="max-height: 40vh; max-width: 100%; object-fit: contain;">
+            <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); text-align: center; font-weight: bold; color: var(--slide-accent);">Non-orientable</div>
+        </div>
+    </div>
+
+    <!-- Reference pane -->
+    <div style="margin-top: 2vh; width: 95%;">
+        <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1.5vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+            <strong style="color: var(--slide-navy);">State of the art:</strong> GFF universality for non-simply-connected, non-planar, and non-orientable domains.
+            <span style="color: var(--slide-muted);">[Borot–Gorin–Guionnet 2026]</span><br>
+            Generic simply-connected domains: <strong>still open!</strong>
+        </div>
+    </div>
+
+    <!-- Escher 3D tiling -->
+    <div style="display: flex; align-items: center; justify-content: center; margin-top: 2vh;">
+        <canvas id="beyond-escher-canvas" style="width: 50vw; height: 30vh;"></canvas>
+    </div>
+</section>

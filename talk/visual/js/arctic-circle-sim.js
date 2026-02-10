@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Arctic Circle slide: live CFTP sampling for 3 shapes
  * Uses GPU CFTP (WebGPULozengeEngine) with WASM fallback.
@@ -410,7 +411,7 @@ function initArcticCircleSim() {
                     sampleAll();
                 }
             }
-            // Step 1: equations + curve names
+            // Step 1: equations + curve names + sigma formula
             else if (step === 1) {
                 if (frozenPane) frozenPane.style.display = '';
                 if (liquidPane) liquidPane.style.display = '';

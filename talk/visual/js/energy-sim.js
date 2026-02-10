@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Energy Slide 3D Tiling (Lazy WebGL loading)
  * Flat (sloped) tilings as universal local limits

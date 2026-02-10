@@ -1,3 +1,4 @@
+<!-- APPROVED: Do not modify without explicit user request -->
 <section class="slide slide-top" id="energy" data-title="Local Patches">
     <h2 class="slide-title">Local Patches</h2>
 
@@ -10,15 +11,23 @@
                 <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
                     <li>Approximate the surface by piecewise-planar patches</li>
                     <li>Each patch is a <strong>flat random tiling</strong> with a given slope \((s_1, s_2)\)</li>
-                    <li>The limit shape picks slopes that <strong>maximize</strong> the total entropy \(\sigma\)</li>
+                    <li>For a given slope, the number of approximating surfaces is \(\approx e^{N^2\cdot \sigma(s_1,s_2) }\)</li>
                 </ul>
             </div>
 
             <!-- Variational principle -->
             <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1.5vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-navy);">Variational principle:</strong><br>
-                Limit shape \(z=h(x,y)\) maximizes \(\displaystyle\iint \sigma(\nabla h)\, dxdy\)<br>
-                subject to boundary conditions
+                <strong style="color: var(--slide-navy);">Variational principle</strong> <span style="color: var(--slide-muted);">[Cohn–Kenyon–Propp 2000]</span><strong style="color: var(--slide-navy);">:</strong><br>
+                Limit shape \(z=h(x,y)\) maximizes
+                \[\displaystyle\iint \sigma(\nabla h)\, dxdy\]
+                subject to boundary conditions on \(h(x,y)\)
+            </div>
+
+            <!-- Sigma formula -->
+            <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); color: var(--slide-muted); text-align: left; margin-top: 0.5vh;">
+                \(\sigma(s_1,s_2) = \tfrac{1}{\pi}\bigl[\Lambda(\pi s_1) + \Lambda(\pi s_2) + \Lambda(\pi (1\!-\!s_1\!-\!s_2))\bigr]\),
+                <div style="height: 1.4em;"></div>
+                    \(\Lambda(\theta)=-\!\int_0^\theta \ln|2\sin t|\,dt\) &ensp; <strong>(Lobachevsky function)</strong>
             </div>
 
         </div>
@@ -26,8 +35,8 @@
         <!-- Right: 3D tiling canvas -->
         <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 1vh;">
             <!-- Text above canvas -->
-            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center;">
-                Flat (sloped) tilings are the <strong>universal local limits</strong>
+            <div style="font-size: clamp(0.96rem, 1.76vw, 1.44rem); text-align: center;">
+                Other 3D building blocks besides squares of three directions: <span style="color: var(--slide-muted);">[Kenyon–Okounkov–Sheffield 2006]</span>
             </div>
             <!-- 3D tiling canvas (main) -->
             <canvas id="energy-tiling-canvas" width="1200" height="1000" style="height: 70vh; width:44vw; border: 1px solid #ccc;"></canvas>
