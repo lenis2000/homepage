@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Grid Paths Simulation (visual talk version)
  * Interactive quiz: explore paths, then reveal counting formula

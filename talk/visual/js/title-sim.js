@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Title Slide Simulation
  * Glauber dynamics on the Rotunda shape (lozenge tiling)

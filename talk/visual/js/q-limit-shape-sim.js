@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * q-Limit Shape Simulation
  * CFTP sampling for q-weighted lattice paths with limit shape visualization

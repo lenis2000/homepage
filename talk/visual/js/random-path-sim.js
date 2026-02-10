@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Random Path Simulation (visual talk)
  * Progressive grid sizes, limit shape reveal, local zoom with Bernoulli claim

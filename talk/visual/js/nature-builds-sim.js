@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Nature Builds Simulation
  * 3D Hexagon Glauber simulation - Complete JS port of ultimate-lozenge.cpp

@@ -1,3 +1,4 @@
+<!-- APPROVED: Do not modify without explicit user request -->
 <section class="slide slide-top" id="fluctuations-gaussian" data-title="Gaussian Fluctuations">
     <h2 class="slide-title">Fluctuations Around the Diagonal</h2>
 
@@ -21,6 +22,20 @@
                 <strong style="color: var(--slide-accent);">Brownian bridge:</strong><br>
                 The full fluctuation process (path minus diagonal) converges to the <strong>Brownian bridge</strong> — the Brownian motion pinned at both ends.
             </div>
+
+            <div id="fg-universality" style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left; opacity: 0; transition: opacity 0.3s;">
+                <strong style="color: var(--slide-navy);">Universality:</strong><br>
+                The Brownian motion and Brownian bridge appear as scaling limits in
+                most of probability theory, including
+                <strong>random walks</strong>,
+                <strong>random permutations</strong>,
+                <strong>queuing theory</strong>,
+                <strong>Kolmogorov–Smirnov statistics</strong>,
+                <strong>random matrices</strong>,
+                <strong>random graphs</strong>,
+                <strong>financial models</strong>,
+                and many other settings.
+            </div>
         </div>
 
         <!-- Right: Bridge canvas (top) + Histogram (below) -->
@@ -33,7 +48,7 @@
                 <br>
                 <br>
                 <div style="font-size: clamp(1.1rem, 2vw, 1.6rem); color: var(--slide-navy); font-weight: bold;">
-                    Path minus diagonal <span style="font-weight: normal; color: var(--slide-muted);">(100 × 60)</span>
+                    Path minus diagonal <span style="font-weight: normal; color: var(--slide-muted);">(210 × 120)</span>
                 </div>
                 <canvas id="fg-bridge-canvas" width="800" height="350" style="height: 29vh; width: auto;"></canvas>
             </div>

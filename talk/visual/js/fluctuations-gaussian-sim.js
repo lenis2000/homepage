@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Fluctuations Gaussian Simulation
  * Shows path-minus-diagonal (Brownian bridge) immediately with pure JS 100×60 path.
@@ -9,6 +10,7 @@
  *   2: Collect to 1000 samples
  *   3: Collect to 5000 samples
  *   4: Show fg-insight (Brownian bridge explanation text)
+ *   5: Show fg-universality (universality of Brownian bridge)
  */
 
 function initFluctuationsGaussianSim() {
@@ -28,7 +30,7 @@ function initFluctuationsGaussianSim() {
     function hideElement(id) { var el = document.getElementById(id); if (el) el.style.opacity = '0'; }
 
     // === Pure JS path generation for bridge display ===
-    const BRIDGE_A = 100, BRIDGE_B = 60;
+    const BRIDGE_A = 210, BRIDGE_B = 120;
 
     function generateRandomPath(a, b) {
         const moves = [];
@@ -79,6 +81,24 @@ function initFluctuationsGaussianSim() {
         bridgeCtx.lineTo(padding + plotW, zeroY);
         bridgeCtx.stroke();
         bridgeCtx.setLineDash([]);
+
+        // Midpoint vertical line
+        const midStep = Math.floor(N / 2);
+        const midPx = padding + midStep * stepX;
+        bridgeCtx.strokeStyle = '#232D4B';
+        bridgeCtx.lineWidth = 1.5;
+        bridgeCtx.setLineDash([6, 4]);
+        bridgeCtx.beginPath();
+        bridgeCtx.moveTo(midPx, padding);
+        bridgeCtx.lineTo(midPx, padding + plotH);
+        bridgeCtx.stroke();
+        bridgeCtx.setLineDash([]);
+        // Midpoint label
+        bridgeCtx.fillStyle = '#232D4B';
+        bridgeCtx.font = '14px sans-serif';
+        bridgeCtx.textAlign = 'center';
+        bridgeCtx.textBaseline = 'top';
+        bridgeCtx.fillText('mid', midPx, padding + plotH + 8);
 
         // Fluctuation curve
         bridgeCtx.strokeStyle = '#E57200';
@@ -161,8 +181,9 @@ function initFluctuationsGaussianSim() {
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         if (!isMobile && typeof WebGPUQPartitionEngine !== 'undefined' && WebGPUQPartitionEngine.isAvailable()) {
             try {
-                gpuEngine = new WebGPUQPartitionEngine();
-                await gpuEngine.init();
+                const engine = new WebGPUQPartitionEngine();
+                await engine.init();
+                gpuEngine = engine; // Only expose after init completes
             } catch (e) {
                 gpuEngine = null;
             }
@@ -272,6 +293,7 @@ function initFluctuationsGaussianSim() {
     }
 
     async function collectSamples(count) {
+        if (!cachedInitialBits || !wasm) return;
         if (gpuEngine) await collectSamplesGPU(count);
         else await collectSamplesCPU(count);
     }
@@ -355,6 +377,7 @@ function initFluctuationsGaussianSim() {
         cachedInitialBits = null;
         bridgeMoves = null;
 
+        hideElement('fg-universality');
         hideElement('fg-insight');
         hideElement('fg-bridge-container');
         hideElement('fg-histogram-canvas');
@@ -372,10 +395,23 @@ function initFluctuationsGaussianSim() {
     async function onStep(step) {
         currentStep = step;
 
-        if (step === 1) {
-            // Show histogram, init WASM, collect ~20 samples
+        // Each step fully establishes its visual state
+        // (slide engine restores steps without awaiting async results)
+        if (step >= 1) {
             showElement('fg-histogram-canvas');
             showElement('fg-histogram-label');
+        }
+        if (step >= 4) {
+            showElement('fg-insight');
+            showElement('fg-bridge-container');
+            drawBridge();
+        }
+        if (step >= 5) {
+            showElement('fg-universality');
+        }
+
+        if (step === 1) {
+            // Init WASM, collect ~20 samples
             await tryInitGPU();
             const wasmOk = await initWASM();
             if (wasmOk) {
@@ -386,24 +422,23 @@ function initFluctuationsGaussianSim() {
                 await collectSamples(19);
             }
         } else if (step === 2) {
-            showElement('fg-histogram-canvas');
-            showElement('fg-histogram-label');
-            const needed = 1000 - middleYs.length;
-            if (needed > 0) await collectSamples(needed);
+            if (cachedInitialBits) {
+                const needed = 1000 - middleYs.length;
+                if (needed > 0) await collectSamples(needed);
+            }
         } else if (step === 3) {
-            showElement('fg-histogram-canvas');
-            showElement('fg-histogram-label');
-            const needed = 5000 - middleYs.length;
-            if (needed > 0) await collectSamples(needed);
-        } else if (step === 4) {
-            showElement('fg-insight');
-            showElement('fg-bridge-container');
-            drawBridge();
+            if (cachedInitialBits) {
+                const needed = 5000 - middleYs.length;
+                if (needed > 0) await collectSamples(needed);
+            }
         }
     }
 
     function onStepBack(step) {
         currentStep = step;
+
+        // Hide what shouldn't be visible
+        if (step < 5) hideElement('fg-universality');
         if (step < 4) {
             hideElement('fg-insight');
             hideElement('fg-bridge-container');
@@ -411,6 +446,16 @@ function initFluctuationsGaussianSim() {
         if (step < 1) {
             hideElement('fg-histogram-canvas');
             hideElement('fg-histogram-label');
+        }
+
+        // Show what should be visible
+        if (step >= 4) {
+            showElement('fg-insight');
+            showElement('fg-bridge-container');
+            drawBridge();
+        }
+        if (step >= 5) {
+            showElement('fg-universality');
         }
         if (step >= 1) drawHistogram();
     }
@@ -425,12 +470,12 @@ function initFluctuationsGaussianSim() {
         window.slideEngine.registerSimulation('fluctuations-gaussian', {
             start() {},
             pause() {},
-            steps: 4,
+            steps: 5,
             onStep: onStep,
             onStepBack: onStepBack,
-            async onSlideEnter() {
-                await tryInitGPU();
+            onSlideEnter() {
                 resetAll();
+                tryInitGPU(); // fire-and-forget; gpuEngine set only after init completes
             },
             onSlideLeave() { resetAll(); }
         }, 0);

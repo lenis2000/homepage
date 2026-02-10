@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * q-Deformation Simulation
  * Shows all 35 paths weighted by q^area
