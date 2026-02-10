@@ -1,9 +1,8 @@
 /**
- * Hard to Sample Slide — Coupled Glauber Dynamics with q-bias weights
- * Pure JS implementation (no WASM needed for N=8)
+ * Hard to Sample Slide — Slow CFTP with periodic weights
  *
- * Parameters: N=8, q=0.5, weight w(h) = q^h + q^{-h}
- * Heat-bath: accept up with R/(1+R), down with 1/(1+R), R = w(h+1)/w(h)
+ * Same as CFTP slide but with extreme periodic q-bias (checkerboard)
+ * that creates competing forces → exponentially slow coalescence.
  *
  * Slide ID: 'hard-to-sample'
  * Canvas: hard-to-sample-canvas
@@ -20,130 +19,150 @@
     const statusEl = document.getElementById('hard-to-sample-status');
     if (!canvas) return;
 
-    const N = 8;
-    const T = 2 * N;
-    const Q = 0.5;
-    const LN_Q = Math.log(Q);
-
     // ===================================================================
-    // Path representation: N non-intersecting ±1 paths
-    // Path k (k=0 topmost) goes from (0, N-1-k) to (T, 2N-1-k)
+    // WASM setup (isolated modularized instance)
     // ===================================================================
 
-    function makeMinPaths() {
-        const paths = [];
-        for (let k = 0; k < N; k++) {
-            const row = new Float64Array(T + 1);
-            for (let t = 0; t <= T; t++)
-                row[t] = (N - 1 - k) + Math.max(0, t - N);
-            paths.push(row);
+    let wasm = null;
+    let funcs = null;
+    let wasmInitPromise = null;
+
+    const HEX_SIDE = 20;
+
+    function generateHexagonTriangles(a) {
+        const slope = 1 / Math.sqrt(3);
+        const deltaC = 2 / Math.sqrt(3);
+
+        function getVertex(n, j) {
+            return { x: n, y: slope * n + j * deltaC };
         }
-        return paths;
-    }
 
-    function makeMaxPaths() {
-        const paths = [];
-        for (let k = 0; k < N; k++) {
-            const row = new Float64Array(T + 1);
-            for (let t = 0; t <= T; t++)
-                row[t] = (N - 1 - k) + Math.min(t, N);
-            paths.push(row);
+        function getRightCentroid(n, j) {
+            const v1 = getVertex(n, j), v2 = getVertex(n, j - 1), v3 = getVertex(n + 1, j - 1);
+            return { x: (v1.x + v2.x + v3.x) / 3, y: (v1.y + v2.y + v3.y) / 3 };
         }
-        return paths;
-    }
 
-    // ===================================================================
-    // Weight ratio: w(h) = q^h + q^{-h}, R(z) = w(h+1)/w(h), h = z - N
-    // ===================================================================
+        function getLeftCentroid(n, j) {
+            const v1 = getVertex(n, j), v2 = getVertex(n + 1, j), v3 = getVertex(n + 1, j - 1);
+            return { x: (v1.x + v2.x + v3.x) / 3, y: (v1.y + v2.y + v3.y) / 3 };
+        }
 
-    function weightRatio(z) {
-        const h = z - N;
-        const qh = Math.exp(LN_Q * h);
-        const qh1 = qh * Q;
-        return (qh1 + 1 / qh1) / (qh + 1 / qh);
-    }
-
-    // ===================================================================
-    // Coupled Glauber dynamics
-    // ===================================================================
-
-    function coupledSweep(pathsMin, pathsMax) {
-        for (let k = 0; k < N; k++) {
-            for (let tc = 1; tc < T; tc++) {
-                const direction = Math.random() < 0.5 ? 1 : -1;
-                const u = Math.random();
-                tryFlip(pathsMin, k, tc, direction, u);
-                tryFlip(pathsMax, k, tc, direction, u);
+        const directions = [[1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1]];
+        const boundary = [];
+        let bn = 0, bj = 0;
+        for (let dir = 0; dir < 6; dir++) {
+            const [dn, dj] = directions[dir];
+            for (let step = 0; step < a; step++) {
+                boundary.push(getVertex(bn, bj));
+                bn += dn; bj += dj;
             }
         }
-    }
 
-    function tryFlip(paths, k, tc, direction, u) {
-        const cur = paths[k][tc];
-        const proposed = cur + direction;
-        if (proposed < 0 || proposed > T) return;
-
-        const left = paths[k][tc - 1];
-        const right = paths[k][tc + 1];
-        if (Math.abs(proposed - left) !== 1 || Math.abs(proposed - right) !== 1) return;
-
-        // Non-intersection (strict inequality)
-        if (k > 0 && proposed >= paths[k - 1][tc]) return;
-        if (k < N - 1 && proposed <= paths[k + 1][tc]) return;
-
-        // Heat-bath acceptance
-        let acceptProb;
-        if (direction === 1) {
-            const R = weightRatio(cur);
-            acceptProb = R / (1 + R);
-        } else {
-            const R = weightRatio(cur - 1);
-            acceptProb = 1 / (1 + R);
-        }
-
-        if (u < acceptProb) paths[k][tc] = proposed;
-    }
-
-    function countDisagreements(pathsMin, pathsMax) {
-        let count = 0;
-        for (let k = 0; k < N; k++)
-            for (let t = 0; t <= T; t++)
-                if (pathsMin[k][t] !== pathsMax[k][t]) count++;
-        return count;
-    }
-
-    // ===================================================================
-    // Paths → plane partition π(a,b)
-    // π(a,b) = #{k : paths[k][a+b] ≤ a + (N-1-k)}
-    // ===================================================================
-
-    function pathsToPi(paths) {
-        const pi = [];
-        for (let a = 0; a < N; a++) {
-            pi[a] = [];
-            for (let b = 0; b < N; b++) {
-                let count = 0;
-                const t = a + b;
-                for (let k = 0; k < N; k++) {
-                    if (paths[k][t] <= a + (N - 1 - k)) count++;
+        function pointInPolygon(px, py, poly) {
+            let inside = false;
+            for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+                const xi = poly[i].x, yi = poly[i].y;
+                const xj = poly[j].x, yj = poly[j].y;
+                if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+                    inside = !inside;
                 }
-                pi[a][b] = count;
+            }
+            return inside;
+        }
+
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const v of boundary) {
+            minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+            minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+        }
+        const searchMinN = Math.floor(minX) - 2;
+        const searchMaxN = Math.ceil(maxX) + 2;
+        const nRange = searchMaxN - searchMinN;
+        const searchMinJ = Math.floor(minY / deltaC) - nRange - 5;
+        const searchMaxJ = Math.ceil(maxY / deltaC) + nRange + 5;
+
+        const triangles = [];
+        for (let n = searchMinN; n <= searchMaxN; n++) {
+            for (let j = searchMinJ; j <= searchMaxJ; j++) {
+                const rc = getRightCentroid(n, j);
+                if (pointInPolygon(rc.x, rc.y, boundary)) {
+                    triangles.push(n, j, 1);
+                }
+                const lc = getLeftCentroid(n, j);
+                if (pointInPolygon(lc.x, lc.y, boundary)) {
+                    triangles.push(n, j, 2);
+                }
             }
         }
-        return pi;
+        return triangles;
+    }
+
+    async function initWasm() {
+        if (wasm) return true;
+        if (wasmInitPromise) return wasmInitPromise;
+        wasmInitPromise = (async () => {
+            if (typeof LozengeModule === 'undefined') {
+                console.warn('hard-to-sample: LozengeModule not available');
+                return false;
+            }
+            try {
+                wasm = await LozengeModule();
+                funcs = {
+                    initFromTriangles: wasm.cwrap('initFromTriangles', 'number', ['number', 'number']),
+                    initCFTP: wasm.cwrap('initCFTP', 'number', []),
+                    forwardCoupledStep: wasm.cwrap('forwardCoupledStep', 'number', ['number']),
+                    finalizeCFTP: wasm.cwrap('finalizeCFTP', 'number', []),
+                    exportCFTPMinDimers: wasm.cwrap('exportCFTPMinDimers', 'number', []),
+                    exportCFTPMaxDimers: wasm.cwrap('exportCFTPMaxDimers', 'number', []),
+                    exportDimers: wasm.cwrap('exportDimers', 'number', []),
+                    freeString: wasm.cwrap('freeString', null, ['number']),
+                    setQBias: wasm.cwrap('setQBias', null, ['number']),
+                    setPeriodicQBias: wasm.cwrap('setPeriodicQBias', null, ['number', 'number']),
+                    setUsePeriodicWeights: wasm.cwrap('setUsePeriodicWeights', null, ['number']),
+                };
+                return true;
+            } catch (e) {
+                console.error('hard-to-sample: Failed to init LozengeModule:', e);
+                wasm = null;
+                return false;
+            }
+        })();
+        return wasmInitPromise;
+    }
+
+    function loadShapeIntoWasm() {
+        if (!wasm || !funcs) return;
+        const triArr = generateHexagonTriangles(HEX_SIDE);
+        const ptr = wasm._malloc(triArr.length * 4);
+        for (let i = 0; i < triArr.length; i++) {
+            wasm.setValue(ptr + i * 4, triArr[i], 'i32');
+        }
+        funcs.initFromTriangles(ptr, triArr.length);
+        wasm._free(ptr);
+    }
+
+    function setPeriodicWeights() {
+        if (!wasm || !funcs) return;
+        funcs.setQBias(0.9);
+    }
+
+    function wasmCallJSON(fn) {
+        const ptr = fn();
+        const str = wasm.UTF8ToString(ptr);
+        funcs.freeString(ptr);
+        return JSON.parse(str);
     }
 
     // ===================================================================
-    // Three.js setup (matching CFTP dark metallic style)
+    // Three.js (same metallic style as CFTP slide)
     // ===================================================================
 
     let scene = null, renderer = null, camera = null, controls = null, meshGroup = null;
     let renderLoopId = null;
-    let autoRotating = false;
     let animating = false;
-    let stepGeneration = 0;
+    let autoRotating = false;
 
-    const frustumSize = 16;
+    const frustumSize = 40;
 
     function initThreeJS() {
         if (renderer) return;
@@ -177,19 +196,12 @@
         meshGroup = new THREE.Group();
         scene.add(meshGroup);
 
-        // Camera for N=8 hexagon (will tune after visual test)
-        camera.position.set(10, 5, 18);
+        // Camera for N=20 hexagon
+        camera.position.set(21, 11, 41);
         camera.zoom = 1.0;
         camera.updateProjectionMatrix();
-        controls.target.set(-3, -5.5, 2);
+        controls.target.set(-10, -12, 6);
         controls.update();
-
-        // Debug: log camera position on move
-        controls.addEventListener('change', () => {
-            console.log('Camera pos:', camera.position.x.toFixed(1), camera.position.y.toFixed(1), camera.position.z.toFixed(1),
-                        '| Target:', controls.target.x.toFixed(1), controls.target.y.toFixed(1), controls.target.z.toFixed(1),
-                        '| Zoom:', camera.zoom.toFixed(2));
-        });
 
         resize();
     }
@@ -216,8 +228,7 @@
                 const cosA = Math.cos(0.003), sinA = Math.sin(0.003);
                 const newX = offset.x * cosA - offset.y * sinA;
                 const newY = offset.x * sinA + offset.y * cosA;
-                offset.x = newX;
-                offset.y = newY;
+                offset.x = newX; offset.y = newY;
                 camera.position.copy(controls.target).add(offset);
             }
             controls.update();
@@ -248,70 +259,84 @@
     }
 
     // ===================================================================
-    // Build 3D surface from plane partition
-    // to3D(a,b,c) maps box coords to isometric 3D (same as cftp-sim)
+    // Dimer → 3D geometry (same as cftp-sim.js)
     // ===================================================================
 
-    function to3D(a, b, c) {
-        return { x: c, y: -a - c, z: b - c };
+    const getVertexKeys = (dimer) => {
+        const { bn, bj, t } = dimer;
+        if (t === 0) return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+        if (t === 1) return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+        return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+    };
+
+    const getHeightPattern = (t) => {
+        if (t === 0) return [0, 0, 0, 0];
+        if (t === 1) return [1, 0, 0, 1];
+        return [1, 1, 0, 0];
+    };
+
+    const to3D = (n, j, h) => ({ x: h, y: -n - h, z: j - h });
+
+    function computeHeights(dimers) {
+        const vertexToDimers = new Map();
+        for (const dimer of dimers) {
+            for (const [n, j] of getVertexKeys(dimer)) {
+                const key = `${n},${j}`;
+                if (!vertexToDimers.has(key)) vertexToDimers.set(key, []);
+                vertexToDimers.get(key).push(dimer);
+            }
+        }
+        const heights = new Map();
+        if (dimers.length > 0) {
+            const firstVerts = getVertexKeys(dimers[0]);
+            const startKey = `${firstVerts[0][0]},${firstVerts[0][1]}`;
+            heights.set(startKey, 0);
+            const queue = [startKey];
+            const visited = new Set();
+            while (queue.length > 0) {
+                const currentKey = queue.shift();
+                if (visited.has(currentKey)) continue;
+                visited.add(currentKey);
+                const currentH = heights.get(currentKey);
+                const [cn, cj] = currentKey.split(',').map(Number);
+                for (const dimer of vertexToDimers.get(currentKey) || []) {
+                    const verts = getVertexKeys(dimer);
+                    const pattern = getHeightPattern(dimer.t);
+                    const myIdx = verts.findIndex(([n, j]) => n === cn && j === cj);
+                    if (myIdx >= 0) {
+                        for (let i = 0; i < 4; i++) {
+                            const vkey = `${verts[i][0]},${verts[i][1]}`;
+                            if (!heights.has(vkey)) {
+                                heights.set(vkey, currentH + (pattern[i] - pattern[myIdx]));
+                                queue.push(vkey);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return heights;
     }
 
-    function buildSurfaceFromPi(pi, opacity, colorMod) {
+    function buildSurface(dimers, heights, opacity, colorMod) {
         const geometry = new THREE.BufferGeometry();
         const vertices = [], normals = [], vertexColors = [], indices = [];
 
-        function addQuad(v0, v1, v2, v3, color) {
+        for (const dimer of dimers) {
+            const verts = getVertexKeys(dimer);
+            const v3d = verts.map(([n, j]) => to3D(n, j, heights.get(`${n},${j}`) || 0));
             const baseIndex = vertices.length / 3;
-            vertices.push(v0.x, v0.y, v0.z, v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
-            // Compute normal from cross product
-            const e1x = v1.x - v0.x, e1y = v1.y - v0.y, e1z = v1.z - v0.z;
-            const e2x = v3.x - v0.x, e2y = v3.y - v0.y, e2z = v3.z - v0.z;
-            const nx = e1y * e2z - e1z * e2y;
-            const ny = e1z * e2x - e1x * e2z;
-            const nz = e1x * e2y - e1y * e2x;
-            const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
-            for (let i = 0; i < 4; i++) normals.push(nx / len, ny / len, nz / len);
-            const c = new THREE.Color(color);
+            for (const v of v3d) vertices.push(v.x, v.y, v.z);
+            const e1 = { x: v3d[1].x-v3d[0].x, y: v3d[1].y-v3d[0].y, z: v3d[1].z-v3d[0].z };
+            const e2 = { x: v3d[3].x-v3d[0].x, y: v3d[3].y-v3d[0].y, z: v3d[3].z-v3d[0].z };
+            const nx = e1.y*e2.z - e1.z*e2.y, ny = e1.z*e2.x - e1.x*e2.z, nz = e1.x*e2.y - e1.y*e2.x;
+            const len = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1;
+            for (let i = 0; i < 4; i++) normals.push(nx/len, ny/len, nz/len);
+            const c = new THREE.Color('#FFFFFF');
             c.r *= colorMod; c.g *= colorMod; c.b *= colorMod;
             for (let i = 0; i < 4; i++) vertexColors.push(c.r, c.g, c.b);
-            indices.push(baseIndex, baseIndex + 1, baseIndex + 2, baseIndex, baseIndex + 2, baseIndex + 3);
+            indices.push(baseIndex, baseIndex+1, baseIndex+2, baseIndex, baseIndex+2, baseIndex+3);
         }
-
-        for (let a = 0; a < N; a++) {
-            for (let b = 0; b < N; b++) {
-                const h = pi[a][b];
-                if (h <= 0) continue;
-
-                // Top face at height h
-                addQuad(to3D(a, b, h), to3D(a + 1, b, h), to3D(a + 1, b + 1, h), to3D(a, b + 1, h), '#FFFFFF');
-
-                // Front faces (a-direction): visible where pi(a,b) > pi(a+1,b)
-                const hFront = (a + 1 < N) ? pi[a + 1][b] : 0;
-                for (let c = hFront; c < h; c++)
-                    addQuad(to3D(a + 1, b, c), to3D(a + 1, b + 1, c), to3D(a + 1, b + 1, c + 1), to3D(a + 1, b, c + 1), '#FFFFFF');
-
-                // Side faces (b-direction): visible where pi(a,b) > pi(a,b+1)
-                const hSide = (b + 1 < N) ? pi[a][b + 1] : 0;
-                for (let c = hSide; c < h; c++)
-                    addQuad(to3D(a, b + 1, c), to3D(a + 1, b + 1, c), to3D(a + 1, b + 1, c + 1), to3D(a, b + 1, c + 1), '#FFFFFF');
-            }
-        }
-
-        // Back wall (a=0)
-        for (let b = 0; b < N; b++) {
-            const h = pi[0][b];
-            for (let c = 0; c < h; c++)
-                addQuad(to3D(0, b, c), to3D(0, b + 1, c), to3D(0, b + 1, c + 1), to3D(0, b, c + 1), '#FFFFFF');
-        }
-
-        // Side wall (b=0)
-        for (let a = 0; a < N; a++) {
-            const h = pi[a][0];
-            for (let c = 0; c < h; c++)
-                addQuad(to3D(a, 0, c), to3D(a + 1, 0, c), to3D(a + 1, 0, c + 1), to3D(a, 0, c + 1), '#FFFFFF');
-        }
-
-        if (vertices.length === 0) return null;
 
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
         geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
@@ -327,7 +352,7 @@
     }
 
     // ===================================================================
-    // Rendering helpers
+    // Rendering
     // ===================================================================
 
     function clearMesh() {
@@ -340,21 +365,27 @@
         }
     }
 
-    function renderBounds(pathsMin, pathsMax) {
+    function renderBounds(minDimers, maxDimers) {
         clearMesh();
         if (!meshGroup) return;
-        const meshMax = buildSurfaceFromPi(pathsToPi(pathsMax), 0.6, 1.0);
-        if (meshMax) meshGroup.add(meshMax);
-        const meshMin = buildSurfaceFromPi(pathsToPi(pathsMin), 0.6, 0.7);
-        if (meshMin) meshGroup.add(meshMin);
+        if (maxDimers && maxDimers.length > 0) {
+            const maxH = computeHeights(maxDimers);
+            meshGroup.add(buildSurface(maxDimers, maxH, 0.6, 1.0));
+        }
+        if (minDimers && minDimers.length > 0) {
+            const minH = computeHeights(minDimers);
+            meshGroup.add(buildSurface(minDimers, minH, 0.6, 0.7));
+        }
     }
 
-    function renderCoalesced(paths) {
+    function renderCoalesced(dimers) {
         clearMesh();
         if (!meshGroup) return;
-        const mesh = buildSurfaceFromPi(pathsToPi(paths), 1.0, 1.0);
-        if (mesh) {
-            meshGroup.add(mesh);
+        if (!dimers || dimers.length === 0) return;
+        const heights = computeHeights(dimers);
+        const mesh = buildSurface(dimers, heights, 1.0, 1.0);
+        meshGroup.add(mesh);
+        if (mesh.geometry) {
             const edgesGeometry = new THREE.EdgesGeometry(mesh.geometry, 10);
             meshGroup.add(new THREE.LineSegments(edgesGeometry, new THREE.LineBasicMaterial({
                 color: 0x444466, opacity: 0.4, transparent: true
@@ -363,50 +394,79 @@
     }
 
     // ===================================================================
-    // Animation
+    // Animated CFTP with slow convergence
     // ===================================================================
 
-    const STEP_DELAY = 400;
-    const SWEEPS_PER_FRAME = 50;
+    const STEP_DELAY = 600;
+    const MILESTONES = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000];
+    const AFTER_MILESTONES = 50000;
 
-    async function runCoupledAnimation(gen) {
+    function getNextMilestone(currentStep) {
+        for (const m of MILESTONES) {
+            if (m > currentStep) return m;
+        }
+        const last = MILESTONES[MILESTONES.length - 1];
+        const beyond = currentStep - last;
+        return last + (Math.floor(beyond / AFTER_MILESTONES) + 1) * AFTER_MILESTONES;
+    }
+
+    let stepGeneration = 0;
+
+    async function runAnimated(gen) {
+        if (!wasm || !funcs) return;
         animating = true;
         autoRotating = false;
 
-        const pathsMin = makeMinPaths();
-        const pathsMax = makeMaxPaths();
+        loadShapeIntoWasm();
+        setPeriodicWeights();
+        wasmCallJSON(funcs.initCFTP);
 
-        renderBounds(pathsMin, pathsMax);
-        let totalSweeps = 0;
-        let disagreements = countDisagreements(pathsMin, pathsMax);
-        if (statusEl) statusEl.textContent = 'coupled Glauber: sweep ' + totalSweeps + ' | disagreements: ' + disagreements;
-
+        // Show initial min/max bounds
+        if (meshGroup) {
+            const minD = wasmCallJSON(funcs.exportCFTPMinDimers);
+            const maxD = wasmCallJSON(funcs.exportCFTPMaxDimers);
+            renderBounds(minD.dimers, maxD.dimers);
+        }
+        if (statusEl) statusEl.textContent = 'coupled Glauber: step 0';
         await new Promise(r => setTimeout(r, STEP_DELAY));
         if (gen !== stepGeneration) return;
 
-        while (animating && gen === stepGeneration && disagreements > 0) {
-            for (let i = 0; i < SWEEPS_PER_FRAME; i++)
-                coupledSweep(pathsMin, pathsMax);
-            totalSweeps += SWEEPS_PER_FRAME;
+        let totalSteps = 0;
+        while (animating && gen === stepGeneration) {
+            const nextMilestone = getNextMilestone(totalSteps);
+            const stepsToRun = nextMilestone - totalSteps;
+            const result = wasmCallJSON(() => funcs.forwardCoupledStep(stepsToRun));
+            totalSteps = nextMilestone;
 
-            disagreements = countDisagreements(pathsMin, pathsMax);
-            renderBounds(pathsMin, pathsMax);
-            if (statusEl) statusEl.textContent = 'coupled Glauber: sweep ' + totalSweeps + ' | disagreements: ' + disagreements;
-
-            await new Promise(r => setTimeout(r, STEP_DELAY));
-            if (gen !== stepGeneration) return;
+            if (result.status === 'coalesced') {
+                if (statusEl) statusEl.textContent = 'coalesced at step ' + (result.step || '?');
+                break;
+            } else if (result.status === 'in_progress') {
+                if (meshGroup) {
+                    const minD = wasmCallJSON(funcs.exportCFTPMinDimers);
+                    const maxD = wasmCallJSON(funcs.exportCFTPMaxDimers);
+                    renderBounds(minD.dimers, maxD.dimers);
+                }
+                if (statusEl) statusEl.textContent = 'coupled Glauber: step ' + result.step;
+                await new Promise(r => setTimeout(r, STEP_DELAY));
+                if (gen !== stepGeneration) return;
+            } else {
+                break;
+            }
         }
 
+        // If coalesced, show final surface
         if (animating && meshGroup && gen === stepGeneration) {
-            if (statusEl) statusEl.textContent = 'coalesced at sweep ' + totalSweeps;
-            renderCoalesced(pathsMin);
+            wasmCallJSON(funcs.finalizeCFTP);
+            const dimersResult = wasmCallJSON(funcs.exportDimers);
+            renderCoalesced(dimersResult.dimers || []);
             autoRotating = true;
         }
         animating = false;
     }
 
     // ===================================================================
-    // Slide engine registration
+    // Slide engine
     // ===================================================================
 
     function disposeAll() {
@@ -419,9 +479,14 @@
 
     function startAnimation() {
         const gen = ++stepGeneration;
-        initThreeJS();
-        startRenderLoop();
-        runCoupledAnimation(gen).catch(e => console.error('hard-to-sample error:', e));
+        (async () => {
+            const ok = await initWasm();
+            if (!ok) { console.warn('hard-to-sample: WASM not available'); return; }
+            if (gen !== stepGeneration) return;
+            initThreeJS();
+            startRenderLoop();
+            await runAnimated(gen);
+        })().catch(e => console.error('hard-to-sample error:', e));
     }
 
     window.slideEngine.registerSimulation('hard-to-sample', {
