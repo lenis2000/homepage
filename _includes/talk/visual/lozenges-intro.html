@@ -1,0 +1,23 @@
+<section class="slide slide-top" id="lozenges-intro" data-title="Lozenges = Stepped Surfaces">
+    <h2 class="slide-title">Lozenge Tilings</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 2vh; width: 95%;">
+        <!-- Left: rotating unit cube + explanation -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left; font-size: clamp(1.2rem, 2.2vw, 1.8rem); width: 100%; box-sizing: border-box;">
+                <strong style="color: var(--slide-accent);">3 types of lozenges:</strong><br>
+                Rhombi of 3 orientations, projections of cube faces onto the \(x+y+z=0\) plane.
+            </div>
+            <div style="position: relative; width: 100%; flex: 1; min-height: 90vh;">
+                <canvas id="li-cube-canvas" style="width: 100%; height: 100%;"></canvas>
+            </div>
+        </div>
+
+        <!-- Right: 9x12x9 hexagon (static 3D) -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
+            <div style="position: relative; width: 100%; flex: 1; min-height: 90vh;">
+                <canvas id="li-hex-canvas" style="width: 100%; height: 100%;"></canvas>
+            </div>
+        </div>
+    </div>
+</section>

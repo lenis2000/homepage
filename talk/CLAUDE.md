@@ -258,6 +258,22 @@ controls.addEventListener('change', () => {
 4. Remove logging from that slide when done
 5. Repeat for next slide - keep logs scoped to current work
 
+**Visual debugging with agent-browser:**
+`agent-browser` (installed at `/opt/homebrew/bin/agent-browser`) enables headless browser automation for inspecting slides without user involvement.
+```bash
+agent-browser open http://localhost:4000/talk/visual/#slide-id
+agent-browser set viewport 1920 1080    # Match projector resolution
+# Advance through build steps
+for i in $(seq 1 N); do agent-browser press ArrowRight; sleep 0.3; done
+agent-browser screenshot /tmp/slide-check.png   # Capture current state
+agent-browser eval "document.getElementById('el').style.opacity"  # Check JS state
+agent-browser close
+```
+- Always set viewport to `1920 1080` for accurate projector layout testing
+- Read the PNG screenshot with the Read tool to visually inspect
+- Use `press ArrowRight` to advance through fragments and simulation steps
+- Use `eval` to query DOM state or run JS expressions
+
 **Slow Step-by-Step Animation:**
 ```javascript
 const SLOW_STEP_DELAY = 800;  // ms between steps

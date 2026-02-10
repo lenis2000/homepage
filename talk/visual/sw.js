@@ -1,5 +1,5 @@
 // Service Worker for Visual Talk — Aggressive Precaching
-const CACHE_NAME = 'visual-talk-v2';
+const CACHE_NAME = 'visual-talk-v3';
 
 // All assets to precache
 const PRECACHE_ASSETS = [
@@ -70,6 +70,8 @@ const PRECACHE_ASSETS = [
   // Simulation JS files — Part II
   '/talk/visual/js/2to3d-sim.js',
   '/talk/visual/js/limit-shape-sim.js',
+  '/talk/visual/js/lozenges-intro-sim.js',
+  '/talk/visual/js/arctic-circle-sim.js',
   '/talk/visual/js/energy-sim.js',
   '/talk/visual/js/gff-simplified-sim.js',
   '/talk/visual/js/q-volume-visual-sim.js',
@@ -95,6 +97,12 @@ const PRECACHE_ASSETS = [
   '/letters/Y.json',
   '/letters/O.json',
   '/letters/U.json',
+
+  // Shape data (for arctic-circle, limit-shape, 2to3d slides)
+  '/letters/hex.json',
+  '/letters/cardio.json',
+  '/letters/shape_for_arctic_small.json',
+  '/letters/big_snoflake.json',
 
   // 3D models
   '/talk/visual/images/big_shape.obj',

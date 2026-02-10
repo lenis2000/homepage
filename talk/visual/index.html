@@ -44,6 +44,10 @@ description: "Interactive talk on random lozenge tilings and their limit shapes"
     '/letters/Y.json',
     '/letters/O.json',
     '/letters/U.json',
+    '/letters/hex.json',
+    '/letters/cardio.json',
+    '/letters/shape_for_arctic_small.json',
+    '/letters/big_snoflake.json',
     '/katex-0.16.9/katex.min.js',
     '/katex-0.16.9/katex.min.css',
     '/talk/visual/images/big_shape.obj'
@@ -136,6 +140,7 @@ Promise.all([
 {% include talk/visual/part2-intro.html %}
 {% include talk/visual/2to3d.html %}
 {% include talk/visual/limit-shape.html %}
+{% include talk/visual/lozenges-intro.html %}
 {% include talk/visual/arctic-circle.html %}
 {% include talk/visual/energy.html %}
 {% include talk/visual/gff-simplified.html %}
@@ -174,6 +179,8 @@ Promise.all([
 <!-- Part II sims -->
 <script src="js/2to3d-sim.js" defer></script>
 <script src="js/limit-shape-sim.js" defer></script>
+<script src="js/lozenges-intro-sim.js" defer></script>
+<script src="js/arctic-circle-sim.js" defer></script>
 <script src="js/energy-sim.js" defer></script>
 <script src="js/gff-simplified-sim.js" defer></script>
 <script src="js/q-volume-visual-sim.js" defer></script>
