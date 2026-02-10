@@ -4,11 +4,11 @@
     <div style="display: flex; gap: 0.8vw; justify-content: center; margin-top: 1vh;">
         <div style="display: flex; flex-direction: column; align-items: center; width: 16vw;">
             <canvas id="qvol-canvas-0" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
-            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-0" value="0.7" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
+            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-0" value="0.8" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
         </div>
         <div style="display: flex; flex-direction: column; align-items: center; width: 16vw;">
             <canvas id="qvol-canvas-1" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
-            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-1" value="0.9" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
+            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-1" value="0.93" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
         </div>
         <div style="display: flex; flex-direction: column; align-items: center; width: 16vw;">
             <canvas id="qvol-canvas-2" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
@@ -16,11 +16,11 @@
         </div>
         <div style="display: flex; flex-direction: column; align-items: center; width: 16vw;">
             <canvas id="qvol-canvas-3" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
-            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-3" value="1.1" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
+            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-3" value="1.07" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
         </div>
         <div style="display: flex; flex-direction: column; align-items: center; width: 16vw;">
             <canvas id="qvol-canvas-4" width="400" height="400" style="width: 16vw; height: 16vw; border: 1px solid #ccc;"></canvas>
-            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-4" value="1.4" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
+            <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-4" value="1.2" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
         </div>
     </div>
 
@@ -61,12 +61,10 @@
                     one sees a collapse of 2D random behavior into a new
                     1D random interface, the <strong>waterfall</strong>.
             </div>
-            <!-- Pre-sampled waterfall image -->
-            <div style="display: flex; justify-content: center;">
-                <div style="position: relative;">
-                    <img src="images/q_1.025.png" alt="Weighted lozenge tiling" style="max-height: 18vh; max-width: 100%; object-fit: contain;">
-                    <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.3vh 0.6vw; border-radius: 3px; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold;">pre-sampled</div>
-                </div>
+            <!-- Live waterfall tiling (Three.js 3D) -->
+            <div id="qvol-waterfall-wrap" style="opacity: 0; transition: opacity 0.5s; flex: 1; display: flex; align-items: center; justify-content: center;">
+                <canvas id="qvol-waterfall-canvas" width="800" height="500"
+                        style="width: 100%; height: 100%; background: #ffffff;"></canvas>
             </div>
         </div>
     </div>

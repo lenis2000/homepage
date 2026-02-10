@@ -115,10 +115,11 @@ Promise.all([
     loadScript(wasmSrc),
     loadScript(qpartSrc)
 ]).then(() => {
-    // Load WebGPU engines, then signal ready
+    // Load WebGPU engines + waterfall WASM, then signal ready
     Promise.all([
         loadScript('/js/webgpu-qpartition-engine.js').catch(e => console.log('WebGPU Q-partition engine not available')),
-        loadScript('/js/webgpu-lozenge-engine.js').catch(e => console.log('WebGPU lozenge engine not available'))
+        loadScript('/js/webgpu-lozenge-engine.js').catch(e => console.log('WebGPU lozenge engine not available')),
+        loadScript('/js/2025-06-08-q-vol-3d.js').catch(e => console.log('Waterfall WASM not available'))
     ]).finally(() => window.dispatchEvent(new Event('wasm-loaded')));
 });
 </script>

@@ -506,38 +506,40 @@
     // ===================================================================
     // Slide engine registration — 3-step build order
     // ===================================================================
-    // Step 1: Show CFTP explanation + start CFTP animation
-    // Step 2: Show "Why works" (monotone coupling)
+    // On enter: Show CFTP explanation pane
+    // Step 1: Show "Monotone sandwich" pane
+    // Step 2: Start CFTP sandwich dynamics animation
     // Step 3: Show "Exactly random" highlight
+
+    function startCFTPAnimation() {
+        const gen = ++stepGeneration;
+        (async () => {
+            const ok = await initCFTPWasm();
+            if (!ok) { console.warn('cftp: CFTP wasm not available'); return; }
+            if (gen !== stepGeneration) return;
+            initCFTPThreeJS();
+            startCFTPRenderLoop();
+            await runCFTPAnimated(gen);
+        })().catch(e => console.error('cftp error:', e));
+    }
 
     window.slideEngine.registerSimulation('cftp', {
         steps: 3,
 
         onSlideEnter: function() {
-            console.log('[cftp] onSlideEnter');
+            showElement('cftp-explain');
         },
 
         onSlideLeave: function() {
-            console.log('[cftp] onSlideLeave');
             disposeAll();
         },
 
         onStep: function(step) {
-            console.log('[cftp] onStep(' + step + ')');
             if (step === 1) {
-                showElement('cftp-explain');
-                const gen = ++stepGeneration;
-                (async () => {
-                    const ok = await initCFTPWasm();
-                    if (!ok) { console.warn('cftp: CFTP wasm not available'); return; }
-                    if (gen !== stepGeneration) return;
-                    initCFTPThreeJS();
-                    startCFTPRenderLoop();
-                    await runCFTPAnimated(gen);
-                })().catch(e => console.error('cftp error:', e));
+                showElement('cftp-why-works');
             }
             if (step === 2) {
-                showElement('cftp-why-works');
+                startCFTPAnimation();
             }
             if (step === 3) {
                 showElement('cftp-exact');
@@ -545,24 +547,18 @@
         },
 
         onStepBack: function(step) {
-            console.log('[cftp] onStepBack(' + step + ')');
             if (step === 2) {
-                // Undo step 3: hide "exactly random"
                 hideElement('cftp-exact');
             }
             if (step === 1) {
-                // Undo step 2: hide "why works"
-                hideElement('cftp-why-works');
+                disposeAll();
             }
             if (step === 0) {
-                // Undo step 1: dispose CFTP, hide explanation
-                disposeAll();
-                hideElement('cftp-explain');
+                hideElement('cftp-why-works');
             }
         },
 
         reset: function() {
-            console.log('[cftp] reset');
             disposeAll();
             hideElement('cftp-explain');
             hideElement('cftp-why-works');

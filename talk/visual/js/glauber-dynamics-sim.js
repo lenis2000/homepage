@@ -33,7 +33,7 @@
     let animationId = null;
     let isRunning = false;
 
-    const HEX_SIDE = 15; // Smaller hex for 2D canvas rendering
+    const HEX_SIDE = 25;
 
     // Triangular lattice constants
     const slope = 1 / Math.sqrt(3);
@@ -123,7 +123,12 @@
                     runCFTP: wasm.cwrap('runCFTP', 'number', []),
                     exportDimers: wasm.cwrap('exportDimers', 'number', []),
                     performGlauberSteps: wasm.cwrap('performGlauberSteps', 'number', ['number']),
-                    freeString: wasm.cwrap('freeString', null, ['number'])
+                    freeString: wasm.cwrap('freeString', null, ['number']),
+                    setUseRandomSweeps: wasm.cwrap('setUseRandomSweeps', null, ['number']),
+                    initCFTP: wasm.cwrap('initCFTP', 'number', []),
+                    getGridBounds: wasm.cwrap('getGridBounds', 'number', []),
+                    getCFTPMaxGridData: wasm.cwrap('getCFTPMaxGridData', 'number', []),
+                    setDimers: wasm.cwrap('setDimers', 'number', ['number', 'number'])
                 };
                 return true;
             } catch (e) {
@@ -222,30 +227,44 @@
 
     // === Animation Loop ===
 
-    const GLAUBER_STEPS_PER_FRAME = 200;
+    let boosted = false;
     let totalGlauberSteps = 0;
+    const BASE_STEPS = 100;
+    const BOOST_STEPS = 50000;
+    const BOOST_INTERVAL = 500; // ms between redraws when boosted
 
     function animationLoop() {
         if (!isRunning || !wasm || !wasmFuncs) return;
 
-        // Perform Glauber steps
-        const resultPtr = wasmFuncs.performGlauberSteps(GLAUBER_STEPS_PER_FRAME);
-        if (resultPtr) {
-            const str = wasm.UTF8ToString(resultPtr);
-            wasmFuncs.freeString(resultPtr);
-            // Result may contain updated dimer info
-        }
-        totalGlauberSteps += GLAUBER_STEPS_PER_FRAME;
-
-        // Export and redraw periodically
-        if (totalGlauberSteps % 1000 < GLAUBER_STEPS_PER_FRAME) {
+        if (boosted) {
+            // Boosted: do many steps, redraw every BOOST_INTERVAL ms
+            const resultPtr = wasmFuncs.performGlauberSteps(BOOST_STEPS);
+            if (resultPtr) { wasm.UTF8ToString(resultPtr); wasmFuncs.freeString(resultPtr); }
+            totalGlauberSteps += BOOST_STEPS;
             const dimerResult = wasmCallJSON(wasmFuncs.exportDimers);
             dimers = dimerResult.dimers || [];
             drawTiling();
-            if (statusEl) statusEl.textContent = 'Glauber steps: ' + totalGlauberSteps;
+            if (statusEl) {
+                const n = totalGlauberSteps;
+                const fmt = n < 1000 ? '' + n : n < 1e6 ? (n / 1e3).toFixed(1) + 'K' : (n / 1e6).toFixed(1) + 'M';
+                statusEl.textContent = 'Attempted rotations: ' + fmt;
+            }
+            animationId = setTimeout(animationLoop, BOOST_INTERVAL);
+        } else {
+            // Normal: small steps, redraw every frame
+            const resultPtr = wasmFuncs.performGlauberSteps(BASE_STEPS);
+            if (resultPtr) { wasm.UTF8ToString(resultPtr); wasmFuncs.freeString(resultPtr); }
+            totalGlauberSteps += BASE_STEPS;
+            const dimerResult = wasmCallJSON(wasmFuncs.exportDimers);
+            dimers = dimerResult.dimers || [];
+            drawTiling();
+            if (statusEl) {
+                const n = totalGlauberSteps;
+                const fmt = n < 1000 ? '' + n : n < 1e6 ? (n / 1e3).toFixed(1) + 'K' : (n / 1e6).toFixed(1) + 'M';
+                statusEl.textContent = 'Attempted rotations: ' + fmt;
+            }
+            animationId = requestAnimationFrame(animationLoop);
         }
-
-        animationId = requestAnimationFrame(animationLoop);
     }
 
     function startAnimation() {
@@ -257,7 +276,8 @@
     function stopAnimation() {
         isRunning = false;
         if (animationId) {
-            cancelAnimationFrame(animationId);
+            if (boosted) clearTimeout(animationId);
+            else cancelAnimationFrame(animationId);
             animationId = null;
         }
     }
@@ -279,10 +299,42 @@
         }
         wasmFuncs.initFromTriangles(ptr, triArr.length);
         wasm._free(ptr);
+        wasmFuncs.setUseRandomSweeps(1);
 
-        // Run CFTP to get initial tiling
-        if (statusEl) statusEl.textContent = 'sampling initial tiling...';
-        wasmCallJSON(wasmFuncs.runCFTP);
+        // Set to maximal configuration via CFTP extremal state
+        wasmCallJSON(wasmFuncs.initCFTP);
+        const boundsPtr = wasmFuncs.getGridBounds();
+        const bounds = JSON.parse(wasm.UTF8ToString(boundsPtr));
+        wasmFuncs.freeString(boundsPtr);
+
+        const maxPtr = wasmFuncs.getCFTPMaxGridData();
+        const strideJ = bounds.maxJ - bounds.minJ + 1;
+        const dimerData = [];
+        for (let i = 0; i < triArr.length; i += 3) {
+            if (triArr[i + 2] === 1) { // black triangle
+                const bn = triArr[i], bj = triArr[i + 1];
+                const gridIdx = (bn - bounds.minN) * strideJ + (bj - bounds.minJ);
+                if (gridIdx >= 0 && gridIdx < bounds.size) {
+                    const type = wasm.getValue(maxPtr + gridIdx * 4, 'i32');
+                    if (type >= 0 && type <= 2) {
+                        let wn, wj;
+                        if (type === 0) { wn = bn; wj = bj; }
+                        else if (type === 1) { wn = bn; wj = bj - 1; }
+                        else { wn = bn - 1; wj = bj; }
+                        dimerData.push(bn, bj, wn, wj, type);
+                    }
+                }
+            }
+        }
+        wasm._free(maxPtr);
+
+        const dPtr = wasm._malloc(dimerData.length * 4);
+        for (let i = 0; i < dimerData.length; i++) {
+            wasm.setValue(dPtr + i * 4, dimerData[i], 'i32');
+        }
+        wasmCallJSON(() => wasmFuncs.setDimers(dPtr, dimerData.length));
+        wasm._free(dPtr);
+
         const dimerResult = wasmCallJSON(wasmFuncs.exportDimers);
         dimers = dimerResult.dimers || [];
         if (statusEl) statusEl.textContent = '';
@@ -295,7 +347,7 @@
     // === Slide Engine Registration ===
 
     window.slideEngine.registerSimulation('glauber-dynamics', {
-        steps: 2,
+        steps: 3,
 
         onSlideEnter: function() {
             console.log('[glauber-dynamics] onSlideEnter');
@@ -315,19 +367,30 @@
         },
 
         onStep: function(step) {
-            console.log('[glauber-dynamics] onStep(' + step + ')');
             if (step === 1) {
                 showElement('gd-markov');
             }
             if (step === 2) {
                 showElement('gd-convergence');
+                stopAnimation();
+                boosted = true;
+                startAnimation();
+            }
+            if (step === 3) {
+                stopAnimation();
             }
         },
 
         onStepBack: function(step) {
-            console.log('[glauber-dynamics] onStepBack(' + step + ')');
+            if (step === 2) {
+                boosted = true;
+                startAnimation();
+            }
             if (step === 1) {
                 hideElement('gd-convergence');
+                stopAnimation();
+                boosted = false;
+                startAnimation();
             }
             if (step === 0) {
                 hideElement('gd-markov');
@@ -335,10 +398,10 @@
         },
 
         reset: function() {
-            console.log('[glauber-dynamics] reset');
             stopAnimation();
             dimers = [];
             totalGlauberSteps = 0;
+            boosted = false;
             hideElement('gd-markov');
             hideElement('gd-convergence');
             if (statusEl) statusEl.textContent = '';

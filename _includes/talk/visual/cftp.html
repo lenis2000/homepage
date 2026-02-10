@@ -1,5 +1,5 @@
-<section class="slide slide-top" id="cftp" data-title="Exact Sampling">
-    <h2 class="slide-title">Exact Sampling</h2>
+<section class="slide slide-top" id="cftp" data-title="Exact Sampling: I need to know when to stop">
+    <h2 class="slide-title">Exact Sampling: I need to know when to stop waiting</h2>
 
     <div style="display: grid; grid-template-columns: 48vw 44vw; gap: 2vw; margin-top: 2vh; padding: 0 2vw;">
         <!-- Left column: CFTP explanation -->
@@ -26,6 +26,12 @@
             <!-- Key point -->
             <div id="cftp-exact" style="background: #fff3e0; border-left: 4px solid #E57200; padding: 1.5vh 1.5vw; text-align: left; opacity: 0; transition: opacity 0.3s;">
                 <strong style="color: #E57200; font-size: 1.1em;">Not approximately random — EXACTLY random.</strong>
+                <div style="margin-top: 0.5vh;">
+                    Compare with calculus: we know \(1/n \to 0\), but for which \(n\) is it equal to zero?
+                    <br>
+                    <div style="height: 0.5em;"></div>
+                        Here we reach the limit <strong>exactly</strong> — but at a <strong>random</strong> time.
+                </div>
             </div>
         </div>
 
@@ -33,11 +39,14 @@
         <div style="display: flex; flex-direction: column; gap: 1vh; align-items: center;">
             <canvas id="cftp-sim-canvas" width="1200" height="800" style="height: 52vh; width: auto; border-radius: 8px;"></canvas>
             <div id="cftp-sim-status" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--slide-muted); min-height: 1.5em;"></div>
-            <!-- QR code for lozenge-draw -->
-            <a id="cftp-qr" href="https://lpetrov.cc/lozenge-draw/" target="_blank" style="display: flex; align-items: center; gap: 1vw; text-decoration: none; transition: opacity 0.3s;">
-                <img src="images/qr-lozenge-draw.png" alt="QR code to lozenge-draw" style="height: 15vh; width: auto;">
-                <span style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--slide-muted);">lpetrov.cc/lozenge-draw</span>
-            </a>
         </div>
+    </div>
+
+    <!-- QR code centered below -->
+    <div style="text-align: center; margin-top: 1.5vh;">
+        <a id="cftp-qr" href="https://lpetrov.cc/lozenge-draw/" target="_blank" style="display: inline-flex; align-items: center; gap: 1vw; text-decoration: none;">
+            <img src="images/qr-lozenge-draw.png" alt="QR code to lozenge-draw" style="height: 12vh; width: auto;">
+            <span style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--slide-muted);">lpetrov.cc/lozenge-draw</span>
+        </a>
     </div>
 </section>
