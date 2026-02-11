@@ -35,6 +35,7 @@ description: "Interactive talk on random lozenge tilings and their limit shapes"
     '/talk/visual/sim/visual-lozenge.js',
     '/talk/visual/sim/visual-lozenge-threaded.js',
     '/talk/visual/sim/q-partition-cftp.js',
+    '/talk/visual/sim/qracah-coupled.js',
     '/letters/Rotunda.json',
     '/letters/T.json',
     '/letters/H.json',
@@ -110,10 +111,12 @@ function loadScript(src) {
 
 const wasmSrc = '/talk/visual/sim/visual-lozenge' + (window.VISUAL_THREADED ? '-threaded' : '') + '.js';
 const qpartSrc = '/talk/visual/sim/q-partition-cftp.js';
+const qracahSrc = '/talk/visual/sim/qracah-coupled.js';
 
 Promise.all([
     loadScript(wasmSrc),
-    loadScript(qpartSrc)
+    loadScript(qpartSrc),
+    loadScript(qracahSrc)
 ]).then(() => {
     // Load WebGPU engines + waterfall WASM, then signal ready
     Promise.all([
