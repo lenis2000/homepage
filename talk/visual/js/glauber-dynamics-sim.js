@@ -229,7 +229,10 @@
 
     let boosted = false;
     let totalGlauberSteps = 0;
-    const BASE_STEPS = 100;
+    const INITIAL_STEPS = 5;
+    const MAX_BASE_STEPS = 100;
+    const RAMP_FRAMES = 120; // frames to ramp from INITIAL_STEPS to MAX_BASE_STEPS
+    let frameCount = 0;
     const BOOST_STEPS = 50000;
     const BOOST_INTERVAL = 500; // ms between redraws when boosted
 
@@ -251,10 +254,13 @@
             }
             animationId = setTimeout(animationLoop, BOOST_INTERVAL);
         } else {
-            // Normal: small steps, redraw every frame
-            const resultPtr = wasmFuncs.performGlauberSteps(BASE_STEPS);
+            // Normal: ramp up steps per frame for a slow start
+            const t = Math.min(frameCount / RAMP_FRAMES, 1);
+            const stepsThisFrame = Math.round(INITIAL_STEPS + (MAX_BASE_STEPS - INITIAL_STEPS) * t * t);
+            frameCount++;
+            const resultPtr = wasmFuncs.performGlauberSteps(stepsThisFrame);
             if (resultPtr) { wasm.UTF8ToString(resultPtr); wasmFuncs.freeString(resultPtr); }
-            totalGlauberSteps += BASE_STEPS;
+            totalGlauberSteps += stepsThisFrame;
             const dimerResult = wasmCallJSON(wasmFuncs.exportDimers);
             dimers = dimerResult.dimers || [];
             drawTiling();
@@ -402,6 +408,7 @@
             dimers = [];
             totalGlauberSteps = 0;
             boosted = false;
+            frameCount = 0;
             hideElement('gd-markov');
             hideElement('gd-convergence');
             if (statusEl) statusEl.textContent = '';

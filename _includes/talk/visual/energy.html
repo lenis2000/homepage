@@ -10,8 +10,8 @@
                 <strong style="color: var(--slide-accent);">Local patches:</strong>
                 <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
                     <li>Approximate the surface by piecewise-planar patches</li>
-                    <li>Each patch is a <strong>flat random tiling</strong> with a given slope \((s_1, s_2)\)</li>
-                    <li>For a given slope, the number of approximating surfaces is \(\approx e^{N^2\cdot \sigma(s_1,s_2) }\)</li>
+                    <li>Each patch is a <strong>flat random surface</strong> with a given slope \((s_1, s_2)\)</li>
+                    <li>For a given slope, the number of approximating 3D surfaces is \(\approx e^{N^2\cdot \sigma(s_1,s_2) }\)</li>
                 </ul>
             </div>
 
@@ -24,8 +24,8 @@
             </div>
 
             <!-- Sigma formula -->
-            <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); color: var(--slide-muted); text-align: left; margin-top: 0.5vh;">
-                \(\sigma(s_1,s_2) = \tfrac{1}{\pi}\bigl[\Lambda(\pi s_1) + \Lambda(\pi s_2) + \Lambda(\pi (1\!-\!s_1\!-\!s_2))\bigr]\),
+            <div style="font-size: clamp(1.2rem, 2vw, 1.6rem); color: var(--slide-muted); text-align: left; margin-top: 0.5vh;">
+                \(\sigma(s_1,s_2) = \tfrac{1}{\pi}\bigl[\Lambda(\pi s_1) + \Lambda(\pi s_2) + \Lambda(\pi (1\!-\!s_1\!-\!s_2))\bigr]\):q
                 <div style="height: 1.4em;"></div>
                     \(\Lambda(\theta)=-\!\int_0^\theta \ln|2\sin t|\,dt\) &ensp; <strong>(Lobachevsky function)</strong>
             </div>

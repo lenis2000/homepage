@@ -30,7 +30,7 @@
     // Configuration
     // ===================================================================
 
-    const HEX_SIDE = 30;
+    const HEX_SIDE = 35;
     const Q_PARAM = 0.7;
 
     // Precompute q-Racah weight w(h) = q^(h-N/2) + q^(-(h-N/2))
@@ -164,10 +164,18 @@
 
     let jsGridMin = null;        // Int8Array: dimer grid for min (lower) chain
     let jsGridMax = null;        // Int8Array: dimer grid for max (upper) chain
-    let heightAtMin = null;      // Map<"n,j", number>: height function for min chain
-    let heightAtMax = null;      // Map<"n,j", number>: height function for max chain
+    let heightArrMin = null;     // Int32Array: height function for min chain (indexed by grid pos)
+    let heightArrMax = null;     // Int32Array: height function for max chain
     let blackTriangles = [];     // [{n, j}, ...]: all black triangles in region
-    let internalVerts = [];      // [{n, j}, ...]: rotatable vertices
+    let vertN = null;            // Int32Array: n-coordinates of internal vertices (flat)
+    let vertJ = null;            // Int32Array: j-coordinates of internal vertices (flat)
+    let vertIdx = null;          // Int32Array: pre-computed grid indices for internal vertices
+    let numVerts = 0;
+    // Pre-computed grid index offsets for the 3 triangles around a vertex (n,j):
+    // tri1 = (n, j+1), tri2 = (n, j), tri3 = (n-1, j+1)
+    let vertIdx1 = null;         // Int32Array: grid index for (n, j+1)
+    let vertIdx2 = null;         // Int32Array: grid index for (n, j)
+    let vertIdx3 = null;         // Int32Array: grid index for (n-1, j+1)
     let gridMinN, gridMaxN, gridMinJ, gridMaxJ, gridStrideJ, gridSize;
     let totalSteps = 0;
     let cachedTriArr = null;
@@ -186,153 +194,203 @@
     }
 
     // Build list of internal vertices where Glauber rotations can occur.
+    // Stores as flat typed arrays for fast iteration.
     function buildInternalVerts() {
-        const blackTriSet = new Set();
-        for (const bt of blackTriangles) blackTriSet.add(`${bt.n},${bt.j}`);
-
-        internalVerts = [];
-        const candidates = new Set();
+        // Use a flat boolean array instead of string Set
+        const blackTriGrid = new Uint8Array(gridSize);
         for (const bt of blackTriangles) {
-            candidates.add(`${bt.n},${bt.j - 1}`);
-            candidates.add(`${bt.n},${bt.j}`);
-            candidates.add(`${bt.n + 1},${bt.j - 1}`);
+            blackTriGrid[jsIdx(bt.n, bt.j)] = 1;
         }
-        for (const key of candidates) {
-            const [n, j] = key.split(',').map(Number);
-            if (blackTriSet.has(`${n},${j + 1}`) &&
-                blackTriSet.has(`${n},${j}`) &&
-                blackTriSet.has(`${n - 1},${j + 1}`)) {
-                internalVerts.push({n, j});
+
+        const tempN = [], tempJ = [];
+        const seen = new Uint8Array(gridSize);
+        for (const bt of blackTriangles) {
+            const candidates = [[bt.n, bt.j - 1], [bt.n, bt.j], [bt.n + 1, bt.j - 1]];
+            for (const [cn, cj] of candidates) {
+                if (cn < gridMinN || cn > gridMaxN || cj < gridMinJ || cj > gridMaxJ) continue;
+                const ci = jsIdx(cn, cj);
+                if (seen[ci]) continue;
+                seen[ci] = 1;
+                // Check 3 neighboring black triangles exist
+                const n = cn, j = cj;
+                if (n >= gridMinN && n <= gridMaxN && j + 1 >= gridMinJ && j + 1 <= gridMaxJ &&
+                    n >= gridMinN && n <= gridMaxN && j >= gridMinJ && j <= gridMaxJ &&
+                    n - 1 >= gridMinN && n - 1 <= gridMaxN && j + 1 >= gridMinJ && j + 1 <= gridMaxJ &&
+                    blackTriGrid[jsIdx(n, j + 1)] &&
+                    blackTriGrid[jsIdx(n, j)] &&
+                    blackTriGrid[jsIdx(n - 1, j + 1)]) {
+                    tempN.push(n);
+                    tempJ.push(j);
+                }
             }
+        }
+        numVerts = tempN.length;
+        vertN = new Int32Array(tempN);
+        vertJ = new Int32Array(tempJ);
+        vertIdx = new Int32Array(numVerts);
+        vertIdx1 = new Int32Array(numVerts);
+        vertIdx2 = new Int32Array(numVerts);
+        vertIdx3 = new Int32Array(numVerts);
+        for (let i = 0; i < numVerts; i++) {
+            vertIdx[i] = jsIdx(vertN[i], vertJ[i]);
+            vertIdx1[i] = jsIdx(vertN[i], vertJ[i] + 1);
+            vertIdx2[i] = jsIdx(vertN[i], vertJ[i]);
+            vertIdx3[i] = jsIdx(vertN[i] - 1, vertJ[i] + 1);
         }
     }
 
     // Compute height function from a dimer grid via BFS.
-    // Normalizes so minimum height = 0.
+    // Returns Int32Array indexed by grid position.
     function computeHeightsFromGrid(grid) {
-        const heightMap = new Map();
+        const heights = new Int32Array(gridSize);
+        const visited = new Uint8Array(gridSize);
         const dimers = [];
         for (const bt of blackTriangles) {
             const type = gridGet(grid, bt.n, bt.j);
             if (type >= 0 && type <= 2) dimers.push({bn: bt.n, bj: bt.j, t: type});
         }
-        if (dimers.length === 0) return heightMap;
+        if (dimers.length === 0) return heights;
 
-        const vertexToDimers = new Map();
-        for (const d of dimers) {
-            const verts = getVertexKeys(d);
+        // Build vertex→dimer adjacency using grid indices
+        // Each vertex can appear in up to ~6 dimers; use a flat structure
+        const adjCount = new Uint8Array(gridSize);
+        const adjData = [];  // will store [dimerIdx, vertIdxInDimer] pairs per grid cell
+        const adjOffset = new Int32Array(gridSize + 1);
+
+        // First pass: count adjacencies
+        for (let di = 0; di < dimers.length; di++) {
+            const verts = getVertexKeys(dimers[di]);
             for (const [vn, vj] of verts) {
-                const key = `${vn},${vj}`;
-                if (!vertexToDimers.has(key)) vertexToDimers.set(key, []);
-                vertexToDimers.get(key).push(d);
+                if (vn >= gridMinN && vn <= gridMaxN && vj >= gridMinJ && vj <= gridMaxJ) {
+                    adjCount[jsIdx(vn, vj)]++;
+                }
+            }
+        }
+        // Compute offsets
+        adjOffset[0] = 0;
+        for (let i = 0; i < gridSize; i++) adjOffset[i + 1] = adjOffset[i] + adjCount[i];
+        const totalAdj = adjOffset[gridSize];
+        const adjDimerIdx = new Int32Array(totalAdj);
+        const adjVertPos = new Int32Array(totalAdj);
+        const adjFill = new Int32Array(gridSize);
+
+        // Second pass: fill adjacency
+        for (let di = 0; di < dimers.length; di++) {
+            const verts = getVertexKeys(dimers[di]);
+            for (let vi = 0; vi < verts.length; vi++) {
+                const [vn, vj] = verts[vi];
+                if (vn >= gridMinN && vn <= gridMaxN && vj >= gridMinJ && vj <= gridMaxJ) {
+                    const gi = jsIdx(vn, vj);
+                    const pos = adjOffset[gi] + adjFill[gi];
+                    adjDimerIdx[pos] = di;
+                    adjVertPos[pos] = vi;
+                    adjFill[gi]++;
+                }
             }
         }
 
+        // BFS using grid indices
         const firstVerts = getVertexKeys(dimers[0]);
-        const startKey = `${firstVerts[0][0]},${firstVerts[0][1]}`;
-        heightMap.set(startKey, 0);
-        const queue = [startKey];
-        const visited = new Set();
+        const startIdx = jsIdx(firstVerts[0][0], firstVerts[0][1]);
+        heights[startIdx] = 0;
+        visited[startIdx] = 1;
+        const queue = [startIdx, firstVerts[0][0], firstVerts[0][1]];
+        let qHead = 0;
 
-        while (queue.length > 0) {
-            const currentKey = queue.shift();
-            if (visited.has(currentKey)) continue;
-            visited.add(currentKey);
-            const currentH = heightMap.get(currentKey);
-            const [cn, cj] = currentKey.split(',').map(Number);
+        while (qHead < queue.length) {
+            const curIdx = queue[qHead];
+            const curN = queue[qHead + 1];
+            const curJ = queue[qHead + 2];
+            qHead += 3;
+            const curH = heights[curIdx];
 
-            for (const d of vertexToDimers.get(currentKey) || []) {
+            for (let a = adjOffset[curIdx]; a < adjOffset[curIdx] + adjCount[curIdx]; a++) {
+                const d = dimers[adjDimerIdx[a]];
+                const myPos = adjVertPos[a];
                 const verts = getVertexKeys(d);
                 const pattern = getHeightPattern(d.t);
-                const myIdx = verts.findIndex(([n, j]) => n === cn && j === cj);
-                if (myIdx >= 0) {
-                    for (let i = 0; i < 4; i++) {
-                        const vkey = `${verts[i][0]},${verts[i][1]}`;
-                        if (!heightMap.has(vkey)) {
-                            heightMap.set(vkey, currentH + (pattern[i] - pattern[myIdx]));
-                            queue.push(vkey);
+                for (let i = 0; i < 4; i++) {
+                    const [vn, vj] = verts[i];
+                    if (vn >= gridMinN && vn <= gridMaxN && vj >= gridMinJ && vj <= gridMaxJ) {
+                        const vi = jsIdx(vn, vj);
+                        if (!visited[vi]) {
+                            visited[vi] = 1;
+                            heights[vi] = curH + (pattern[i] - pattern[myPos]);
+                            queue.push(vi, vn, vj);
                         }
                     }
                 }
             }
         }
 
-        // Normalize so min height is 0
+        // Normalize so min height = 0
         let minH = Infinity;
-        for (const h of heightMap.values()) minH = Math.min(minH, h);
+        for (let i = 0; i < gridSize; i++) {
+            if (visited[i]) minH = Math.min(minH, heights[i]);
+        }
         if (minH !== 0) {
-            for (const [k, v] of heightMap) heightMap.set(k, v - minH);
+            for (let i = 0; i < gridSize; i++) {
+                if (visited[i]) heights[i] -= minH;
+            }
         }
-        return heightMap;
+        return heights;
     }
 
-    // Execute rotation on a grid (even→odd or odd→even)
-    function executeRotation(grid, n, j, evenToOdd) {
-        if (evenToOdd) {
-            gridSet(grid, n, j + 1, 2);
-            gridSet(grid, n, j, 0);
-            gridSet(grid, n - 1, j + 1, 1);
-        } else {
-            gridSet(grid, n, j + 1, 1);
-            gridSet(grid, n, j, 2);
-            gridSet(grid, n - 1, j + 1, 0);
-        }
-    }
-
-    // One coupled sweep: visit all internal vertices with shared random coins.
-    // Coupling strategy: single coin determines direction (up/down).
-    // Each chain executes only if it can move in that direction.
-    // This preserves monotonicity: chains never move in opposite directions.
+    // One coupled step: visit all internal vertices with shared random coins.
+    // Uses flat typed arrays — no string allocation in hot loop.
     function coupledSweep() {
-        for (let vi = 0; vi < internalVerts.length; vi++) {
-            const {n, j} = internalVerts[vi];
-            const u = Math.random();
+        const gMin = jsGridMin, gMax = jsGridMax;
+        const hMin = heightArrMin, hMax = heightArrMax;
+        const rUp = ratioUp, rDown = ratioDown;
+        const nv = numVerts;
 
-            // Min chain state at vertex (n, j)
-            const dMin1 = gridGet(jsGridMin, n, j + 1);
-            const dMin2 = gridGet(jsGridMin, n, j);
-            const dMin3 = gridGet(jsGridMin, n - 1, j + 1);
+        for (let vi = 0; vi < nv; vi++) {
+            const i1 = vertIdx1[vi];
+            const i2 = vertIdx2[vi];
+            const i3 = vertIdx3[vi];
+
+            // Min chain state
+            const dMin1 = gMin[i1], dMin2 = gMin[i2], dMin3 = gMin[i3];
             const minEven = (dMin1 === 1 && dMin2 === 2 && dMin3 === 0);
             const minOdd = (dMin1 === 2 && dMin2 === 0 && dMin3 === 1);
 
-            // Max chain state at vertex (n, j)
-            const dMax1 = gridGet(jsGridMax, n, j + 1);
-            const dMax2 = gridGet(jsGridMax, n, j);
-            const dMax3 = gridGet(jsGridMax, n - 1, j + 1);
+            // Max chain state
+            const dMax1 = gMax[i1], dMax2 = gMax[i2], dMax3 = gMax[i3];
             const maxEven = (dMax1 === 1 && dMax2 === 2 && dMax3 === 0);
             const maxOdd = (dMax1 === 2 && dMax2 === 0 && dMax3 === 1);
 
             if (!minEven && !minOdd && !maxEven && !maxOdd) continue;
 
-            const hMin = heightAtMin.get(`${n},${j}`);
-            const hMax = heightAtMax.get(`${n},${j}`);
-            if (hMin === undefined || hMax === undefined) continue;
+            const u = Math.random();
+            const idx = vertIdx[vi];
+            const hmn = hMin[idx];
+            const hmx = hMax[idx];
 
             if (u < 0.5) {
                 // Try DOWN (even→odd): height decreases
-                const uScaled = u * 2; // ∈ [0, 1)
-                if (minEven && hMin > 0 && uScaled < ratioDown[hMin]) {
-                    executeRotation(jsGridMin, n, j, true);
-                    heightAtMin.set(`${n},${j}`, hMin - 1);
+                const uScaled = u * 2;
+                if (minEven && hmn > 0 && uScaled < rDown[hmn]) {
+                    gMin[i1] = 2; gMin[i2] = 0; gMin[i3] = 1;
+                    hMin[idx] = hmn - 1;
                 }
-                if (maxEven && hMax > 0 && uScaled < ratioDown[hMax]) {
-                    executeRotation(jsGridMax, n, j, true);
-                    heightAtMax.set(`${n},${j}`, hMax - 1);
+                if (maxEven && hmx > 0 && uScaled < rDown[hmx]) {
+                    gMax[i1] = 2; gMax[i2] = 0; gMax[i3] = 1;
+                    hMax[idx] = hmx - 1;
                 }
             } else {
                 // Try UP (odd→even): height increases
-                const uScaled = (u - 0.5) * 2; // ∈ [0, 1)
-                if (minOdd && hMin < HEX_SIDE && uScaled < ratioUp[hMin]) {
-                    executeRotation(jsGridMin, n, j, false);
-                    heightAtMin.set(`${n},${j}`, hMin + 1);
+                const uScaled = (u - 0.5) * 2;
+                if (minOdd && hmn < HEX_SIDE && uScaled < rUp[hmn]) {
+                    gMin[i1] = 1; gMin[i2] = 2; gMin[i3] = 0;
+                    hMin[idx] = hmn + 1;
                 }
-                if (maxOdd && hMax < HEX_SIDE && uScaled < ratioUp[hMax]) {
-                    executeRotation(jsGridMax, n, j, false);
-                    heightAtMax.set(`${n},${j}`, hMax + 1);
+                if (maxOdd && hmx < HEX_SIDE && uScaled < rUp[hmx]) {
+                    gMax[i1] = 1; gMax[i2] = 2; gMax[i3] = 0;
+                    hMax[idx] = hmx + 1;
                 }
             }
         }
-        totalSteps += internalVerts.length;
+        totalSteps += nv;
     }
 
     // Check if the two grids have coalesced (are identical)
@@ -447,10 +505,10 @@
         meshGroup = new THREE.Group();
         scene.add(meshGroup);
 
-        camera.position.set(32.6, -9.4, 31.3);
-        camera.zoom = 0.90;
+        camera.position.set(27.9, -7.7, 41.8);
+        camera.zoom = 0.77;
         camera.updateProjectionMatrix();
-        controls.target.set(-16.6, -14.4, 14.8);
+        controls.target.set(-17.0, -17.6, 17.2);
         controls.update();
 
         resize();
@@ -647,8 +705,10 @@
     // Animated CFTP with q-Racah weights (slow convergence)
     // ===================================================================
 
-    const RENDER_INTERVAL = 500;  // ms between redraws
-    const BATCH_SIZE = 50;        // sweeps per batch before yielding
+    const RENDER_INTERVAL_SLOW = 500;   // ms between redraws before threshold
+    const RENDER_INTERVAL_FAST = 2000;  // ms between redraws after threshold
+    const BATCH_SIZE = 50;        // steps per batch before yielding
+    const BOOST_THRESHOLD = 100000;
     const YIELD_MS = 10;          // ms to yield to browser between batches
 
     let stepGeneration = 0;
@@ -668,8 +728,8 @@
         if (gen !== stepGeneration) return;
 
         // Compute initial height functions for both chains
-        heightAtMin = computeHeightsFromGrid(jsGridMin);
-        heightAtMax = computeHeightsFromGrid(jsGridMax);
+        heightArrMin = computeHeightsFromGrid(jsGridMin);
+        heightArrMax = computeHeightsFromGrid(jsGridMax);
         buildInternalVerts();
 
         // Show initial min/max bounds
@@ -678,26 +738,27 @@
             const maxDimers = exportDimerListFromGrid(jsGridMax);
             renderBounds(minDimers, maxDimers);
         }
-        if (statusEl) statusEl.textContent = 'Waterfall CFTP: sweep 0';
+        if (statusEl) statusEl.textContent = 'coupled Glauber: step 0';
 
-        // Coupled sweep loop: run in small batches, render periodically
-        let sweepCount = 0;
+        // Coupled step loop: run in small batches, render periodically
+        let stepCount = 0;
         let lastRender = performance.now();
 
         while (animating && gen === stepGeneration) {
-            // Run a small batch of sweeps
+            // Run a batch of steps
             for (let s = 0; s < BATCH_SIZE; s++) {
                 coupledSweep();
             }
-            sweepCount += BATCH_SIZE;
+            stepCount += BATCH_SIZE;
 
+            const renderInterval = stepCount < BOOST_THRESHOLD ? RENDER_INTERVAL_SLOW : RENDER_INTERVAL_FAST;
             const now = performance.now();
-            if (now - lastRender >= RENDER_INTERVAL) {
+            if (now - lastRender >= renderInterval) {
                 lastRender = now;
 
                 // Check for coalescence
                 if (checkCoalesced()) {
-                    if (statusEl) statusEl.textContent = 'Coalesced at sweep ' + formatSweeps(sweepCount);
+                    if (statusEl) statusEl.textContent = 'coalesced at step ' + formatSweeps(stepCount);
                     break;
                 }
 
@@ -708,7 +769,7 @@
                     renderBounds(minDimers, maxDimers);
                 }
                 if (statusEl) {
-                    statusEl.textContent = 'Waterfall CFTP: sweep ' + formatSweeps(sweepCount);
+                    statusEl.textContent = 'coupled Glauber: step ' + formatSweeps(stepCount);
                 }
             }
 
@@ -736,10 +797,10 @@
         autoRotating = false;
         jsGridMin = null;
         jsGridMax = null;
-        heightAtMin = null;
-        heightAtMax = null;
+        heightArrMin = null;
+        heightArrMax = null;
         blackTriangles = [];
-        internalVerts = [];
+        vertN = null; vertJ = null; vertIdx = null; vertIdx1 = null; vertIdx2 = null; vertIdx3 = null; numVerts = 0;
         disposeThreeJS();
         if (statusEl) statusEl.textContent = '';
     }
@@ -760,6 +821,7 @@
         steps: 1,
 
         onSlideEnter: function() {
+            disposeAll();
             startAnimation();
         },
 
@@ -769,16 +831,16 @@
 
         onStep: function(step) {
             if (step === 1) {
-                // Stop the CFTP animation
-                stepGeneration++;
-                animating = false;
-                autoRotating = false;
+                // Stop and restart fresh
+                disposeAll();
+                startAnimation();
             }
         },
 
         onStepBack: function(step) {
             if (step === 0) {
-                // Resume CFTP
+                // Restart fresh
+                disposeAll();
                 startAnimation();
             }
         },

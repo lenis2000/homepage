@@ -35,7 +35,7 @@
     let wasmInitPromise = null;
 
     // Generate regular hexagonal region of side length a
-    const HEX_SIDE = 30;
+    const HEX_SIDE = 35;
 
     function generateHexagonTriangles(a) {
         const slope = 1 / Math.sqrt(3);
@@ -198,10 +198,10 @@
         cftpScene.add(cftpMeshGroup);
 
         // Camera position for hexagonal tiling
-        cftpCamera.position.set(31.0, 15.6, 60.1);
-        cftpCamera.zoom = 1.0;
+        cftpCamera.position.set(19.0, 4.2, 74.2);
+        cftpCamera.zoom = 1.11;
         cftpCamera.updateProjectionMatrix();
-        cftpControls.target.set(-15.1, -17.6, 9.0);
+        cftpControls.target.set(-20.9, -18.6, 13.1);
         cftpControls.update();
 
         resizeCFTP();
@@ -408,8 +408,8 @@
 
     // --- Forward coupled Glauber animation (no T-doubling) ---
 
-    const CFTP_STEP_DELAY = 600;
-    const CFTP_MILESTONES = [10, 20, 50, 100, 200, 300, 500, 700];
+    const CFTP_STEP_DELAY = 800;
+    const CFTP_MILESTONES = [2, 5, 10, 15, 20, 30, 50, 75, 100, 150, 200, 300, 500, 700];
     const CFTP_AFTER_MILESTONES = 200;
 
     function getNextMilestone(currentStep) {
@@ -524,7 +524,7 @@
     }
 
     window.slideEngine.registerSimulation('cftp', {
-        steps: 3,
+        steps: 2,
 
         onSlideEnter: function() {
             showElement('cftp-explain');
@@ -541,31 +541,23 @@
         onStep: function(step) {
             if (step === 1) {
                 showElement('cftp-explain');
-                showElement('cftp-why-works');
+                showElement('cftp-hex-label');
+                startCFTPAnimation();
             }
             if (step === 2) {
                 showElement('cftp-explain');
-                showElement('cftp-why-works');
-                startCFTPAnimation();
-            }
-            if (step === 3) {
-                showElement('cftp-explain');
-                showElement('cftp-why-works');
+                showElement('cftp-hex-label');
                 showElement('cftp-exact');
             }
         },
 
         onStepBack: function(step) {
-            if (step === 2) {
-                hideElement('cftp-exact');
-            }
             if (step === 1) {
                 hideElement('cftp-exact');
-                disposeAll();
             }
             if (step === 0) {
-                hideElement('cftp-why-works');
                 hideElement('cftp-exact');
+                hideElement('cftp-hex-label');
                 disposeAll();
             }
         },
@@ -573,7 +565,7 @@
         reset: function() {
             disposeAll();
             hideElement('cftp-explain');
-            hideElement('cftp-why-works');
+            hideElement('cftp-hex-label');
             hideElement('cftp-exact');
             if (statusEl) statusEl.textContent = '';
         }
