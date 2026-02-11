@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Flatland Summary Simulation
  * q-weighted path sample (a=240, b=180, q=0.99) with local zoom and fluctuations

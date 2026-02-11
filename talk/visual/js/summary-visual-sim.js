@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Summary Visual Slide — Three Static Escher Tilings
  * Loads SHAPE.json (non-simply-connected), sets hole winding to 6, 16, 22.

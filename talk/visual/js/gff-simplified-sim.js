@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * GFF Fluctuations: 3D surface from two independent lozenge tiling CFTP samples
  * GFF ≈ (h₁ - h₂) / √2

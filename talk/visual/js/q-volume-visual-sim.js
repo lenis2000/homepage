@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Q-volume Slide Simulation
  * Five canvases showing q-weighted tilings + live waterfall animation

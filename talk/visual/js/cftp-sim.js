@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * CFTP Slide — 3D CFTP Visualization
  * Build order:
@@ -166,7 +167,7 @@
     function initCFTPThreeJS() {
         if (cftpRenderer) return;
         cftpScene = new THREE.Scene();
-        cftpScene.background = new THREE.Color(0x1a1a2e);
+        cftpScene.background = new THREE.Color(0xffffff);
         cftpRenderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         cftpRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -178,30 +179,32 @@
         );
 
         cftpControls = new THREE.OrbitControls(cftpCamera, cftpRenderer.domElement);
-        cftpControls.enableDamping = false;
+        cftpControls.enableDamping = true;
+        cftpControls.dampingFactor = 0.1;
+        cftpControls.rotateSpeed = 0.8;
         cftpControls.enablePan = true;
         cftpControls.enableZoom = true;
 
-        // Lighting (metallic style)
-        cftpScene.add(new THREE.AmbientLight(0xffffff, 0.35));
-        const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.25);
+        // Lighting (UVA preset)
+        cftpScene.add(new THREE.AmbientLight(0xffffff, 0.4));
+        const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
         hemi.position.set(0, 20, 0);
         cftpScene.add(hemi);
-        const dir = new THREE.DirectionalLight(0xffffff, 1.2);
-        dir.position.set(15, 20, 5);
+        const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+        dir.position.set(10, 10, 15);
         cftpScene.add(dir);
-        const fill = new THREE.DirectionalLight(0xffffff, 0.3);
-        fill.position.set(-10, 5, -5);
+        const fill = new THREE.DirectionalLight(0xffffff, 0.25);
+        fill.position.set(-10, -5, -10);
         cftpScene.add(fill);
 
         cftpMeshGroup = new THREE.Group();
         cftpScene.add(cftpMeshGroup);
 
         // Camera position for hexagonal tiling
-        cftpCamera.position.set(19.0, 4.2, 74.2);
+        cftpCamera.position.set(-28.2, 2.6, 87.9);
         cftpCamera.zoom = 1.11;
         cftpCamera.updateProjectionMatrix();
-        cftpControls.target.set(-20.9, -18.6, 13.1);
+        cftpControls.target.set(-11.9, -18.2, 16.2);
         cftpControls.update();
 
         resizeCFTP();
@@ -328,8 +331,9 @@
         return heights;
     }
 
+    const UVA_COLORS = ['#E57200', '#232D4B', '#F9DCBF'];
+
     function buildSurface(dimers, heights, opacity, colorMod) {
-        const colors = ['#FFFFFF', '#FFFFFF', '#FFFFFF'];
         const geometry = new THREE.BufferGeometry();
         const vertices = [], normals = [], vertexColors = [], indices = [];
 
@@ -343,7 +347,7 @@
             const nx = e1.y*e2.z - e1.z*e2.y, ny = e1.z*e2.x - e1.x*e2.z, nz = e1.x*e2.y - e1.y*e2.x;
             const len = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1;
             for (let i = 0; i < 4; i++) normals.push(nx/len, ny/len, nz/len);
-            const c = new THREE.Color(colors[dimer.t]);
+            const c = new THREE.Color(UVA_COLORS[dimer.t]);
             c.r *= colorMod; c.g *= colorMod; c.b *= colorMod;
             for (let i = 0; i < 4; i++) vertexColors.push(c.r, c.g, c.b);
             indices.push(baseIndex, baseIndex+1, baseIndex+2, baseIndex, baseIndex+2, baseIndex+3);
@@ -357,7 +361,7 @@
 
         const material = new THREE.MeshStandardMaterial({
             vertexColors: true, side: THREE.DoubleSide, flatShading: true,
-            roughness: 0.3, metalness: 0.35, color: 0xddeeff,
+            roughness: 0.5, metalness: 0.15,
             transparent: true, opacity: opacity, depthWrite: opacity > 0.9
         });
 
@@ -401,7 +405,7 @@
         if (mesh && mesh.geometry) {
             const edgesGeometry = new THREE.EdgesGeometry(mesh.geometry, 10);
             cftpMeshGroup.add(new THREE.LineSegments(edgesGeometry, new THREE.LineBasicMaterial({
-                color: 0x444466, opacity: 0.4, transparent: true
+                color: 0x000000, opacity: 0.6, transparent: true
             })));
         }
     }

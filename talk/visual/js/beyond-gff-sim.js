@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Beyond GFF slide: 3D tiling of non-simply-connected shape
  * Step 0: small CFTP sample (live)

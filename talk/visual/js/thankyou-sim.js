@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Thank You Slide Simulation
  * Animated lozenge tiling letters using WASM

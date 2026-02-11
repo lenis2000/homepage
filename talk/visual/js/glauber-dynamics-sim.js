@@ -1,3 +1,4 @@
+// APPROVED: Do not modify without explicit user request
 /**
  * Glauber Dynamics Slide — Stub Simulation
  * Shows a small hexagonal lozenge tiling with animated Glauber dynamics flips.
