@@ -1,0 +1,62 @@
+<section class="slide slide-top" id="flatland-summary" data-title="Flatland Summary">
+    <h2 class="slide-title">Summary of Flatland Exploration</h2>
+
+    <div style="display: grid; grid-template-columns: 36vw 56vw; gap: 2vw; margin-top: 1vh; width: 95%;">
+        <!-- Left: Summary bullet points -->
+        <div style="display: flex; flex-direction: column; gap: 0.8vh; font-size: clamp(1.1rem, 2vw, 1.6rem);">
+            <!-- 1. Local rules -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1vw;">
+                <strong style="color: var(--slide-accent);">Local rules</strong> —
+                paths go up or right
+            </div>
+
+            <!-- 2. Boundary conditions -->
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.6vh 1vw;">
+                <strong style="color: var(--slide-navy);">Boundary conditions</strong> —
+                paths live in a box
+            </div>
+
+            <!-- 3. Limit shape -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1vw;">
+                <strong style="color: var(--slide-accent);">Limit shape</strong> —
+                from entropy/energy balance
+            </div>
+
+            <!-- 4. Local universality -->
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.6vh 1vw;">
+                <strong style="color: var(--slide-navy);">Local universality</strong> —
+                Coin-flipping sequences locally, with probability \(p\)
+                of up step equal to the slope of the limit shape
+            </div>
+
+            <!-- 5. Global Gaussian fluctuations -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1vw;">
+                <strong style="color: var(--slide-accent);">Global Gaussian fluctuations</strong> —
+                time-changed Brownian bridge
+            </div>
+        </div>
+
+        <!-- Right: Simulation -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5vh;">
+            <!-- Status above canvas -->
+            <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); color: var(--slide-muted); text-align: center;">
+                a=240, b=180, q=0.99 · <span id="fs-status">Loading...</span>
+            </div>
+            <!-- Main path canvas -->
+            <canvas id="fs-main-canvas" width="1200" height="900" style="height: 40vh; width: auto;"></canvas>
+            <!-- Bottom row: local zoom + fluctuations -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1vw; width: 100%;">
+                <!-- Local zoom -->
+                <div>
+                    <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); color: var(--slide-muted); text-align: center;">Local zoom — IID Bernoulli</div>
+                    <canvas id="fs-zoom-canvas" width="600" height="400" style="width: 100%; height: 28vh;"></canvas>
+                </div>
+                <!-- Fluctuations / Brownian bridge -->
+                <div>
+                    <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); color: var(--slide-muted); text-align: center;">Path − limit shape ≈ time-changed BB</div>
+                    <canvas id="fs-fluc-canvas" width="600" height="400" style="width: 100%; height: 28vh;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
