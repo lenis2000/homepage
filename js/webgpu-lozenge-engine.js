@@ -197,34 +197,34 @@ class WebGPULozengeEngine {
 
         const workgroupCount = Math.ceil(this.gridBuffer.size / 4 / 64);
 
-        // Pre-write uniform data for all 4 colors
+        // Pre-allocate uniform data template
         // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, _pad
-        for (let color = 0; color < 4; color++) {
-            const uniformData = new ArrayBuffer(40);
-            const intView = new Int32Array(uniformData);
-            const floatView = new Float32Array(uniformData);
-            const uintView = new Uint32Array(uniformData);
+        const uniformData = new ArrayBuffer(40);
+        const intView = new Int32Array(uniformData);
+        const floatView = new Float32Array(uniformData);
+        const uintView = new Uint32Array(uniformData);
 
-            intView[0] = this.gridParams.minN;
-            intView[1] = this.gridParams.maxN;
-            intView[2] = this.gridParams.minJ;
-            intView[3] = this.gridParams.maxJ;
-            intView[4] = this.gridParams.strideJ;
-            intView[5] = color;
-            floatView[6] = qBias;
-            uintView[7] = this.useWeights ? 1 : 0;
-            uintView[8] = Math.floor(Math.random() * 4294967295);
-            uintView[9] = 0;  // padding
+        intView[0] = this.gridParams.minN;
+        intView[1] = this.gridParams.maxN;
+        intView[2] = this.gridParams.minJ;
+        intView[3] = this.gridParams.maxJ;
+        intView[4] = this.gridParams.strideJ;
+        floatView[6] = qBias;
+        uintView[7] = this.useWeights ? 1 : 0;
+        uintView[9] = 0;  // padding
 
-            this.device.queue.writeBuffer(this.uniformBuffers[color], 0, uniformData);
-        }
-
-        // Batch all sweeps into a single command buffer
-        // Each color pass uses its own bind group with pre-written uniforms
-        const commandEncoder = this.device.createCommandEncoder();
-
+        // Per-step writeBuffer + submit: each step gets a fresh RNG seed.
+        // writeBuffer and submit are ordered by the queue, so the GPU sees
+        // correct uniforms for each step without needing per-step await.
         for (let i = 0; i < numSteps; i++) {
-            // Four color passes per step (parallel-safe chromatic sweep)
+            const seed = Math.floor(Math.random() * 4294967295);
+            for (let color = 0; color < 4; color++) {
+                intView[5] = color;
+                uintView[8] = seed;
+                this.device.queue.writeBuffer(this.uniformBuffers[color], 0, uniformData);
+            }
+
+            const commandEncoder = this.device.createCommandEncoder();
             for (let color = 0; color < 4; color++) {
                 const passEncoder = commandEncoder.beginComputePass();
                 passEncoder.setPipeline(this.pipeline);
@@ -232,9 +232,8 @@ class WebGPULozengeEngine {
                 passEncoder.dispatchWorkgroups(workgroupCount);
                 passEncoder.end();
             }
+            this.device.queue.submit([commandEncoder.finish()]);
         }
-
-        this.device.queue.submit([commandEncoder.finish()]);
 
         // Wait for GPU work to complete
         await this.device.queue.onSubmittedWorkDone();
@@ -341,6 +340,7 @@ class WebGPULozengeEngine {
         }
         this.bindGroups = [];
         this.destroyCFTP();
+        this.destroyFluctuationsCFTP();
     }
 
     // =========================================================================
@@ -691,9 +691,11 @@ class WebGPULozengeEngine {
         commandEncoder.copyBufferToBuffer(this.upperGridBuffer, 0, this.upperStagingBuffer, 0, this.upperGridBuffer.size);
         this.device.queue.submit([commandEncoder.finish()]);
 
-        // Read back both grids
-        await this.lowerStagingBuffer.mapAsync(GPUMapMode.READ);
-        await this.upperStagingBuffer.mapAsync(GPUMapMode.READ);
+        // Read back both grids in parallel
+        await Promise.all([
+            this.lowerStagingBuffer.mapAsync(GPUMapMode.READ),
+            this.upperStagingBuffer.mapAsync(GPUMapMode.READ)
+        ]);
 
         const lowerData = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
         const upperData = new Int32Array(this.upperStagingBuffer.getMappedRange().slice(0));
@@ -1057,8 +1059,10 @@ class WebGPULozengeEngine {
         commandEncoder.copyBufferToBuffer(this.fluctGridBuffers[2], 0, this.fluctStagingBuffers[2], 0, this.fluctGridBuffers[2].size);
         this.device.queue.submit([commandEncoder.finish()]);
 
-        await this.fluctStagingBuffers[0].mapAsync(GPUMapMode.READ);
-        await this.fluctStagingBuffers[2].mapAsync(GPUMapMode.READ);
+        await Promise.all([
+            this.fluctStagingBuffers[0].mapAsync(GPUMapMode.READ),
+            this.fluctStagingBuffers[2].mapAsync(GPUMapMode.READ)
+        ]);
 
         const data0 = new Int32Array(this.fluctStagingBuffers[0].getMappedRange().slice(0));
         const data2 = new Int32Array(this.fluctStagingBuffers[2].getMappedRange().slice(0));

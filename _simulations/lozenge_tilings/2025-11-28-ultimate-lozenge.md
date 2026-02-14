@@ -9630,6 +9630,7 @@ function initLozengeApp() {
 
         if (useGpuFluct) {
             console.log('Fluctuations: starting (GPU)');
+            isGpuBusy = true;
             runGpuFluctuations();
         } else {
             const isThreaded = window.LOZENGE_THREADED || false;
@@ -9656,6 +9657,7 @@ function initLozengeApp() {
             // Initialize GPU fluctuations CFTP
             const gpuOk = await gpuEngine.initFluctuationsCFTP(minGridData, maxGridData);
             if (!gpuOk) {
+                isGpuBusy = false;
                 console.error('GPU fluctuations init failed, falling back to WASM');
                 runWasmFluctuations();
                 return;
@@ -9797,6 +9799,7 @@ function initLozengeApp() {
         }
 
         function resetButtons() {
+            isGpuBusy = false;
             el.fluctuationsBtn.textContent = originalText;
             el.fluctuationsBtn.disabled = false;
             el.cftpBtn.disabled = false;
@@ -9940,6 +9943,7 @@ function initLozengeApp() {
             inDoubleDimerMode = true;
             inFluctuationMode = false;
 
+            isGpuBusy = false;
             const elapsed = ((performance.now() - ddStartTime) / 1000).toFixed(2);
             el.doubleDimerProgress.textContent = `Done (${elapsed}s)`;
             el.doubleDimerBtn.textContent = originalText;
@@ -9954,6 +9958,7 @@ function initLozengeApp() {
 
         if (useGpuDD) {
             // GPU path - reuse fluctuations CFTP infrastructure
+            isGpuBusy = true;
             // Initialize WASM CFTP to get extremal states
             sim.initCFTP();
 
@@ -9961,6 +9966,7 @@ function initLozengeApp() {
             const maxGridData = sim.getCFTPMaxRawGridData();
 
             if (!minGridData || !maxGridData) {
+                isGpuBusy = false;
                 el.doubleDimerProgress.textContent = 'Error: no grid data';
                 el.doubleDimerBtn.textContent = originalText;
                 el.doubleDimerBtn.disabled = false;
@@ -9972,6 +9978,7 @@ function initLozengeApp() {
 
             const gpuDDOk = await gpuEngine.initFluctuationsCFTP(minGridData, maxGridData);
             if (!gpuDDOk) {
+                isGpuBusy = false;
                 console.warn('GPU Double Dimer init failed, falling back to WASM');
             } else {
                 const qBias = parseFloat(el.qInput.value) || 1.0;
@@ -9985,6 +9992,7 @@ function initLozengeApp() {
                 async function gpuDDStep() {
                     if (doubleDimerCancelled) {
                         gpuEngine.destroyFluctuationsCFTP();
+                        isGpuBusy = false;
                         el.doubleDimerProgress.textContent = 'stopped';
                         el.doubleDimerBtn.textContent = originalText;
                         el.doubleDimerBtn.disabled = false;
@@ -10021,6 +10029,7 @@ function initLozengeApp() {
                         finishDoubleDimerWithSamples(samples.sample0, samples.sample1);
                     } else if (T >= maxT) {
                         gpuEngine.destroyFluctuationsCFTP();
+                        isGpuBusy = false;
                         el.doubleDimerProgress.textContent = 'timeout';
                         el.doubleDimerBtn.textContent = originalText;
                         el.doubleDimerBtn.disabled = false;
