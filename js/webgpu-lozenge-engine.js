@@ -341,6 +341,10 @@ class WebGPULozengeEngine {
         this.bindGroups = [];
         this.destroyCFTP();
         this.destroyFluctuationsCFTP();
+        // Pipelines are stateless and shared across CFTP/fluctuations sessions;
+        // only null them on full engine teardown.
+        this.cftpPipeline = null;
+        this.coalescePipeline = null;
     }
 
     // =========================================================================
@@ -748,8 +752,9 @@ class WebGPULozengeEngine {
         this.coalesceBindGroup = null;
         this.lowerBindGroups = [];
         this.upperBindGroups = [];
-        this.cftpPipeline = null;
-        this.coalescePipeline = null;
+        // Note: cftpPipeline and coalescePipeline are NOT nulled here -- they are
+        // stateless, reusable across CFTP/fluctuations sessions, and re-creating them
+        // requires shader recompilation. They are cleaned up in destroy() instead.
         this.cftpInitialized = false;
     }
 
@@ -1017,9 +1022,13 @@ class WebGPULozengeEngine {
 
             // Early coalescence check at batch boundary
             if (checkInterval > 0 && stepsRun < numSteps) {
-                const coalesced = await this.checkFluctuationsCoalescence();
-                if (coalesced[0] && coalesced[1]) {
-                    return { coalesced, stepsRun };
+                try {
+                    const coalesced = await this.checkFluctuationsCoalescence();
+                    if (coalesced[0] && coalesced[1]) {
+                        return { coalesced, stepsRun };
+                    }
+                } catch (e) {
+                    console.error('[GPU] Early fluctuations coalescence check failed, continuing:', e);
                 }
             }
         }
