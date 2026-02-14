@@ -1,6 +1,6 @@
 // CFTP (Coupling From The Past) Compute Shader
-// Runs one chain (lower or upper) using pre-generated random numbers
-// Both chains use identical randoms for coupling
+// Runs one chain (lower or upper) using GPU-side RNG with shared seed for coupling
+// Both chains use identical seed per step, preserving coupling
 // Matches C++ implementation exactly
 // Supports periodic weights via per-cell q values
 
@@ -13,14 +13,24 @@ struct CFTPParams {
     color_pass: i32,    // 0, 1, 2, or 3 for 4-color scheme
     q_bias: f32,        // Global q bias (used when use_weights=0)
     use_weights: u32,   // 0 = use global q_bias, 1 = use per-cell weights buffer
-    num_vertices: u32,
+    rand_seed: u32,     // Per-step seed for GPU-side RNG (same for both chains = coupling)
     _pad: u32,          // Padding for alignment
 }
 
 @group(0) @binding(0) var<storage, read_write> grid: array<i32>;
-@group(0) @binding(1) var<storage, read> randoms: array<f32>;
-@group(0) @binding(2) var<uniform> params: CFTPParams;
-@group(0) @binding(3) var<storage, read> weights: array<f32>;  // Per-cell q values
+@group(0) @binding(1) var<uniform> params: CFTPParams;
+@group(0) @binding(2) var<storage, read> weights: array<f32>;  // Per-cell q values
+
+// PCG Hash for fast RNG (same as lozenge_compute.wgsl)
+fn pcg_hash(input: u32) -> u32 {
+    let state = input * 747796405u + 2891336453u;
+    let word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+
+fn get_float_rng(id: u32, seed: u32) -> f32 {
+    return f32(pcg_hash(id ^ seed)) / 4294967295.0;
+}
 
 // Get grid index - returns -1 if out of bounds
 fn get_grid_idx(n: i32, j: i32) -> i32 {
@@ -104,8 +114,8 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID: vec3<u32>) {
         return;
     }
 
-    // Get pre-generated random for this vertex
-    let u = randoms[u32(index) % params.num_vertices];
+    // Generate random for this vertex using GPU-side RNG with shared seed
+    let u = get_float_rng(u32(index), params.rand_seed);
 
     // Get q value for this vertex
     var q: f32;

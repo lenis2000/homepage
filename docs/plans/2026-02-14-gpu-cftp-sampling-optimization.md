@@ -43,15 +43,15 @@ Optimize the WebGPU CFTP (Coupling From The Past) sampling algorithm to achieve 
 
 The CFTP shader currently reads pre-generated randoms from a storage buffer. Change it to generate randoms on-GPU using PCG hash (same approach as the Glauber shader), keyed by a seed uniform. Both chains get the same seed per step, preserving coupling.
 
-- [ ] Add `pcg_hash` and `get_float_rng` functions to `cftp_compute.wgsl` (copy from `lozenge_compute.wgsl`)
-- [ ] Replace `randoms` storage buffer binding with a `rand_seed` field in the `CFTPParams` uniform (reuse the existing `num_vertices` slot or pad field)
-- [ ] Change the shader to compute `let u = get_float_rng(u32(index), params.rand_seed)` instead of `let u = randoms[...]`
-- [ ] Update `js/webgpu-lozenge-engine.js`:
+- [x] Add `pcg_hash` and `get_float_rng` functions to `cftp_compute.wgsl` (copy from `lozenge_compute.wgsl`)
+- [x] Replace `randoms` storage buffer binding with a `rand_seed` field in the `CFTPParams` uniform (reuse the existing `num_vertices` slot or pad field)
+- [x] Change the shader to compute `let u = get_float_rng(u32(index), params.rand_seed)` instead of `let u = randoms[...]`
+- [x] Update `js/webgpu-lozenge-engine.js`:
   - Remove `randomBuffer` creation in `initCFTP()`
   - Remove `randomData` generation loop and `writeBuffer` call in `stepCFTP()`
   - Instead, write a different `rand_seed` per step into the uniform buffer
   - Update bind group to not include the random buffer (or keep as dummy if layout change is complex)
-- [ ] Same changes for fluctuations CFTP: remove `fluctRandomBuffers`, use seed-based RNG
+- [x] Same changes for fluctuations CFTP: remove `fluctRandomBuffers`, use seed-based RNG
 
 ### Task 2: Batch multiple CFTP steps per command buffer
 

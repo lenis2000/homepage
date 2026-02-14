@@ -397,15 +397,10 @@ class WebGPULozengeEngine {
         new Int32Array(this.upperGridBuffer.getMappedRange()).set(maxStateData);
         this.upperGridBuffer.unmap();
 
-        // Create random buffer (one float per grid cell)
         const numCells = minStateData.length;
-        this.randomBuffer = this.device.createBuffer({
-            size: numCells * 4, // float32
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
-        });
 
         // Create 4 CFTP uniform buffers (one per color pass for batching)
-        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, num_vertices, _pad
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, _pad
         this.cftpUniformBuffers = [];
         for (let color = 0; color < 4; color++) {
             this.cftpUniformBuffers.push(this.device.createBuffer({
@@ -435,6 +430,7 @@ class WebGPULozengeEngine {
         });
 
         // Create bind groups for lower and upper chains (4 per chain, one per color)
+        // Shader bindings: 0=grid, 1=params(uniform), 2=weights
         this.lowerBindGroups = [];
         this.upperBindGroups = [];
         for (let color = 0; color < 4; color++) {
@@ -442,18 +438,16 @@ class WebGPULozengeEngine {
                 layout: this.cftpPipeline.getBindGroupLayout(0),
                 entries: [
                     { binding: 0, resource: { buffer: this.lowerGridBuffer } },
-                    { binding: 1, resource: { buffer: this.randomBuffer } },
-                    { binding: 2, resource: { buffer: this.cftpUniformBuffers[color] } },
-                    { binding: 3, resource: { buffer: this.cftpWeightsBuffer } }
+                    { binding: 1, resource: { buffer: this.cftpUniformBuffers[color] } },
+                    { binding: 2, resource: { buffer: this.cftpWeightsBuffer } }
                 ]
             }));
             this.upperBindGroups.push(this.device.createBindGroup({
                 layout: this.cftpPipeline.getBindGroupLayout(0),
                 entries: [
                     { binding: 0, resource: { buffer: this.upperGridBuffer } },
-                    { binding: 1, resource: { buffer: this.randomBuffer } },
-                    { binding: 2, resource: { buffer: this.cftpUniformBuffers[color] } },
-                    { binding: 3, resource: { buffer: this.cftpWeightsBuffer } }
+                    { binding: 1, resource: { buffer: this.cftpUniformBuffers[color] } },
+                    { binding: 2, resource: { buffer: this.cftpWeightsBuffer } }
                 ]
             }));
         }
@@ -525,40 +519,37 @@ class WebGPULozengeEngine {
         const qBias = this.cftpQBias || 1.0;
         const useWeights = this.cftpUseWeights ? 1 : 0;
 
-        // Pre-write uniform data for all 4 colors
-        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, num_vertices, _pad
-        for (let color = 0; color < 4; color++) {
-            const uniformData = new ArrayBuffer(40);
-            const intView = new Int32Array(uniformData);
-            const floatView = new Float32Array(uniformData);
-            const uintView = new Uint32Array(uniformData);
+        // Pre-allocate uniform data template
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, _pad
+        const uniformData = new ArrayBuffer(40);
+        const intView = new Int32Array(uniformData);
+        const floatView = new Float32Array(uniformData);
+        const uintView = new Uint32Array(uniformData);
 
-            intView[0] = this.gridParams.minN;
-            intView[1] = this.gridParams.maxN;
-            intView[2] = this.gridParams.minJ;
-            intView[3] = this.gridParams.maxJ;
-            intView[4] = this.gridParams.strideJ;
-            intView[5] = color;
-            floatView[6] = qBias;
-            uintView[7] = useWeights;
-            uintView[8] = this.cftpNumCells;
-            uintView[9] = 0;  // padding
+        intView[0] = this.gridParams.minN;
+        intView[1] = this.gridParams.maxN;
+        intView[2] = this.gridParams.minJ;
+        intView[3] = this.gridParams.maxJ;
+        intView[4] = this.gridParams.strideJ;
+        // intView[5] = color (set per color below)
+        floatView[6] = qBias;
+        uintView[7] = useWeights;
+        // uintView[8] = rand_seed (set per step below)
+        uintView[9] = 0;  // padding
 
-            this.device.queue.writeBuffer(this.cftpUniformBuffers[color], 0, uniformData);
-        }
-
-        // Pre-allocate random data buffer
-        const randomData = new Float32Array(this.cftpNumCells);
         let stepsRun = 0;
 
         for (let step = 0; step < numSteps; step++) {
-            // Generate random numbers for this step (same for both chains)
-            for (let i = 0; i < this.cftpNumCells; i++) {
-                randomData[i] = Math.random();
-            }
+            // Generate a single random seed for this step (same for both chains = coupling)
+            const seed = Math.floor(Math.random() * 4294967295);
 
             try {
-                this.device.queue.writeBuffer(this.randomBuffer, 0, randomData);
+                // Write uniform data for all 4 colors with this step's seed
+                for (let color = 0; color < 4; color++) {
+                    intView[5] = color;
+                    uintView[8] = seed;
+                    this.device.queue.writeBuffer(this.cftpUniformBuffers[color], 0, uniformData);
+                }
 
                 // Batch all 8 dispatches (4 colors × 2 chains) in a single command buffer
                 const commandEncoder = this.device.createCommandEncoder();
@@ -571,7 +562,7 @@ class WebGPULozengeEngine {
                     lowerPass.dispatchWorkgroups(workgroupCount);
                     lowerPass.end();
 
-                    // Dispatch upper chain for this color (same randoms)
+                    // Dispatch upper chain for this color (same seed = coupling)
                     const upperPass = commandEncoder.beginComputePass();
                     upperPass.setPipeline(this.cftpPipeline);
                     upperPass.setBindGroup(0, this.upperBindGroups[color]);
@@ -726,7 +717,6 @@ class WebGPULozengeEngine {
     destroyCFTP() {
         if (this.lowerGridBuffer) { this.lowerGridBuffer.destroy(); this.lowerGridBuffer = null; }
         if (this.upperGridBuffer) { this.upperGridBuffer.destroy(); this.upperGridBuffer = null; }
-        if (this.randomBuffer) { this.randomBuffer.destroy(); this.randomBuffer = null; }
         if (this.cftpWeightsBuffer) { this.cftpWeightsBuffer.destroy(); this.cftpWeightsBuffer = null; }
         if (this.cftpUniformBuffers) {
             for (const buf of this.cftpUniformBuffers) buf.destroy();
@@ -797,22 +787,16 @@ class WebGPULozengeEngine {
             this.fluctGridBuffers.push(buf);
         }
 
-        // Create 2 random buffers (one per pair for independence)
-        this.fluctRandomBuffers = [];
-        for (let i = 0; i < 2; i++) {
-            this.fluctRandomBuffers.push(this.device.createBuffer({
-                size: numCells * 4,
-                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
-            }));
-        }
-
-        // Create uniform buffers (4 colors × 2 pairs = 8, but we can reuse 4 since params are same)
+        // Create uniform buffers: 4 colors × 2 pairs = 8
+        // Each pair needs its own seed, so we need separate uniform buffers per pair
         this.fluctUniformBuffers = [];
-        for (let color = 0; color < 4; color++) {
-            this.fluctUniformBuffers.push(this.device.createBuffer({
-                size: 40,
-                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-            }));
+        for (let pair = 0; pair < 2; pair++) {
+            for (let color = 0; color < 4; color++) {
+                this.fluctUniformBuffers.push(this.device.createBuffer({
+                    size: 40,
+                    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+                }));
+            }
         }
 
         // Create weights buffer for fluctuations
@@ -833,20 +817,22 @@ class WebGPULozengeEngine {
             }));
         }
 
-        // Create bind groups: 4 colors × 4 grids = 16 bind groups
+        // Create bind groups: 4 grids × 4 colors = 16 bind groups
         // fluctBindGroups[gridIdx][colorIdx]
+        // Shader bindings: 0=grid, 1=params(uniform), 2=weights
+        // Each pair shares the same seed (for coupling), so grids in same pair use same uniform buffer
         this.fluctBindGroups = [];
         for (let gridIdx = 0; gridIdx < 4; gridIdx++) {
             const pairIdx = Math.floor(gridIdx / 2); // 0,1 -> pair0, 2,3 -> pair1
             const colorGroups = [];
             for (let color = 0; color < 4; color++) {
+                const uniformIdx = pairIdx * 4 + color;
                 colorGroups.push(this.device.createBindGroup({
                     layout: this.cftpPipeline.getBindGroupLayout(0),
                     entries: [
                         { binding: 0, resource: { buffer: this.fluctGridBuffers[gridIdx] } },
-                        { binding: 1, resource: { buffer: this.fluctRandomBuffers[pairIdx] } },
-                        { binding: 2, resource: { buffer: this.fluctUniformBuffers[color] } },
-                        { binding: 3, resource: { buffer: this.fluctWeightsBuffer } }
+                        { binding: 1, resource: { buffer: this.fluctUniformBuffers[uniformIdx] } },
+                        { binding: 2, resource: { buffer: this.fluctWeightsBuffer } }
                     ]
                 }));
             }
@@ -913,39 +899,38 @@ class WebGPULozengeEngine {
         const qBias = this.fluctQBias || 1.0;
         const useWeights = this.fluctUseWeights ? 1 : 0;
 
-        // Pre-write uniform data for all 4 colors
-        for (let color = 0; color < 4; color++) {
-            const uniformData = new ArrayBuffer(40);
-            const intView = new Int32Array(uniformData);
-            const floatView = new Float32Array(uniformData);
-            const uintView = new Uint32Array(uniformData);
+        // Pre-allocate uniform data template
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, _pad
+        const uniformData = new ArrayBuffer(40);
+        const intView = new Int32Array(uniformData);
+        const floatView = new Float32Array(uniformData);
+        const uintView = new Uint32Array(uniformData);
 
-            intView[0] = this.gridParams.minN;
-            intView[1] = this.gridParams.maxN;
-            intView[2] = this.gridParams.minJ;
-            intView[3] = this.gridParams.maxJ;
-            intView[4] = this.gridParams.strideJ;
-            intView[5] = color;
-            floatView[6] = qBias;
-            uintView[7] = useWeights;
-            uintView[8] = this.fluctNumCells;
-            uintView[9] = 0;
+        intView[0] = this.gridParams.minN;
+        intView[1] = this.gridParams.maxN;
+        intView[2] = this.gridParams.minJ;
+        intView[3] = this.gridParams.maxJ;
+        intView[4] = this.gridParams.strideJ;
+        floatView[6] = qBias;
+        uintView[7] = useWeights;
+        uintView[9] = 0;  // padding
 
-            this.device.queue.writeBuffer(this.fluctUniformBuffers[color], 0, uniformData);
-        }
-
-        const randomData0 = new Float32Array(this.fluctNumCells);
-        const randomData1 = new Float32Array(this.fluctNumCells);
         let stepsRun = 0;
 
         for (let step = 0; step < numSteps; step++) {
-            // Generate independent randoms for each pair
-            for (let i = 0; i < this.fluctNumCells; i++) {
-                randomData0[i] = Math.random();
-                randomData1[i] = Math.random();
+            // Generate independent seeds for each pair (coupling within pair, independence between pairs)
+            const seed0 = Math.floor(Math.random() * 4294967295);
+            const seed1 = Math.floor(Math.random() * 4294967295);
+
+            // Write uniform data for both pairs × 4 colors
+            for (let pair = 0; pair < 2; pair++) {
+                const seed = pair === 0 ? seed0 : seed1;
+                for (let color = 0; color < 4; color++) {
+                    intView[5] = color;
+                    uintView[8] = seed;
+                    this.device.queue.writeBuffer(this.fluctUniformBuffers[pair * 4 + color], 0, uniformData);
+                }
             }
-            this.device.queue.writeBuffer(this.fluctRandomBuffers[0], 0, randomData0);
-            this.device.queue.writeBuffer(this.fluctRandomBuffers[1], 0, randomData1);
 
             // Batch all dispatches: 4 colors × 4 grids = 16 dispatches
             const commandEncoder = this.device.createCommandEncoder();
@@ -1061,10 +1046,6 @@ class WebGPULozengeEngine {
         if (this.fluctGridBuffers) {
             for (const buf of this.fluctGridBuffers) buf.destroy();
             this.fluctGridBuffers = null;
-        }
-        if (this.fluctRandomBuffers) {
-            for (const buf of this.fluctRandomBuffers) buf.destroy();
-            this.fluctRandomBuffers = null;
         }
         if (this.fluctUniformBuffers) {
             for (const buf of this.fluctUniformBuffers) buf.destroy();
