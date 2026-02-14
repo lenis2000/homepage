@@ -9322,20 +9322,24 @@ function initLozengeApp() {
                         } else {
                             // Draw bounds at end of each epoch >= drawInterval
                             if (T >= drawInterval) {
-                                const bounds = await gpuEngine.getCFTPBounds(sim.blackTriangles);
-                                if (bounds.maxDimers.length > 0) {
-                                    if (is3DView && renderer3D) {
-                                        renderer3D.cftpBoundsTo3D(bounds.minDimers, bounds.maxDimers);
-                                    } else if (renderer.showDimerView) {
-                                        renderer.draw(sim, activeTriangles, isValid);
-                                        const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
-                                        renderer.drawDoubleDimerView(renderer.ctx, sim, bounds.minDimers, bounds.maxDimers, centerX, centerY, scale);
-                                    } else {
-                                        const savedDimers = sim.dimers;
-                                        sim.dimers = bounds.maxDimers;
-                                        draw();
-                                        sim.dimers = savedDimers;
+                                try {
+                                    const bounds = await gpuEngine.getCFTPBounds(sim.blackTriangles);
+                                    if (bounds.maxDimers.length > 0) {
+                                        if (is3DView && renderer3D) {
+                                            renderer3D.cftpBoundsTo3D(bounds.minDimers, bounds.maxDimers);
+                                        } else if (renderer.showDimerView) {
+                                            renderer.draw(sim, activeTriangles, isValid);
+                                            const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+                                            renderer.drawDoubleDimerView(renderer.ctx, sim, bounds.minDimers, bounds.maxDimers, centerX, centerY, scale);
+                                        } else {
+                                            const savedDimers = sim.dimers;
+                                            sim.dimers = bounds.maxDimers;
+                                            draw();
+                                            sim.dimers = savedDimers;
+                                        }
                                     }
+                                } catch (boundsErr) {
+                                    console.error('[CFTP] getCFTPBounds error:', boundsErr);
                                 }
                             }
                             // Double T and try again

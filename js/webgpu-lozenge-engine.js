@@ -442,7 +442,13 @@ class WebGPULozengeEngine {
         });
 
         // GPU-side coalescence check buffers (4-byte diff count instead of full grid readback)
-        await this._initCoalescePipeline();
+        try {
+            await this._initCoalescePipeline();
+        } catch (e) {
+            console.error("Failed to init coalesce pipeline:", e);
+            this.destroyCFTP();
+            return false;
+        }
         this.coalesceResultBuffer = this.device.createBuffer({
             size: 4,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
@@ -835,7 +841,13 @@ class WebGPULozengeEngine {
         ];
 
         // GPU-side coalescence check buffers for 2 pairs (4-byte diff count each)
-        await this._initCoalescePipeline();
+        try {
+            await this._initCoalescePipeline();
+        } catch (e) {
+            console.error("Failed to init coalesce pipeline:", e);
+            this.destroyFluctuationsCFTP();
+            return false;
+        }
         this.fluctCoalesceResultBuffers = [];
         this.fluctCoalesceStagingBuffers = [];
         this.fluctCoalesceBindGroups = [];
