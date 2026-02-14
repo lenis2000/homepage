@@ -257,10 +257,12 @@ class WebGPULozengeEngine {
         this.device.queue.submit([commandEncoder.finish()]);
 
         await this.stagingBuffer.mapAsync(GPUMapMode.READ);
-        const data = new Int32Array(this.stagingBuffer.getMappedRange().slice(0));
-        this.stagingBuffer.unmap();
-
-        return data;
+        try {
+            const data = new Int32Array(this.stagingBuffer.getMappedRange().slice(0));
+            return data;
+        } finally {
+            this.stagingBuffer.unmap();
+        }
     }
 
     /**
@@ -684,10 +686,12 @@ class WebGPULozengeEngine {
         this.device.queue.submit([commandEncoder.finish()]);
 
         await this.lowerStagingBuffer.mapAsync(GPUMapMode.READ);
-        const data = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
-        this.lowerStagingBuffer.unmap();
-
-        return data;
+        try {
+            const data = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
+            return data;
+        } finally {
+            this.lowerStagingBuffer.unmap();
+        }
     }
 
     /**
@@ -995,30 +999,35 @@ class WebGPULozengeEngine {
 
             // Submit per-step command buffers in a tight loop without awaiting.
             // writeBuffer + submit per step are ordered by the queue.
-            for (let s = 0; s < stepsThisBatch; s++) {
-                const seed0 = Math.floor(Math.random() * 4294967295);
-                const seed1 = Math.floor(Math.random() * 4294967295);
+            try {
+                for (let s = 0; s < stepsThisBatch; s++) {
+                    const seed0 = Math.floor(Math.random() * 4294967295);
+                    const seed1 = Math.floor(Math.random() * 4294967295);
 
-                for (let pair = 0; pair < 2; pair++) {
-                    const seed = pair === 0 ? seed0 : seed1;
+                    for (let pair = 0; pair < 2; pair++) {
+                        const seed = pair === 0 ? seed0 : seed1;
+                        for (let color = 0; color < 4; color++) {
+                            intView[5] = color;
+                            uintView[8] = seed;
+                            this.device.queue.writeBuffer(this.fluctUniformBuffers[pair * 4 + color], 0, uniformData);
+                        }
+                    }
+
+                    const commandEncoder = this.device.createCommandEncoder();
                     for (let color = 0; color < 4; color++) {
-                        intView[5] = color;
-                        uintView[8] = seed;
-                        this.device.queue.writeBuffer(this.fluctUniformBuffers[pair * 4 + color], 0, uniformData);
+                        for (let gridIdx = 0; gridIdx < 4; gridIdx++) {
+                            const pass = commandEncoder.beginComputePass();
+                            pass.setPipeline(this.cftpPipeline);
+                            pass.setBindGroup(0, this.fluctBindGroups[gridIdx][color]);
+                            pass.dispatchWorkgroups(workgroupCount);
+                            pass.end();
+                        }
                     }
+                    this.device.queue.submit([commandEncoder.finish()]);
                 }
-
-                const commandEncoder = this.device.createCommandEncoder();
-                for (let color = 0; color < 4; color++) {
-                    for (let gridIdx = 0; gridIdx < 4; gridIdx++) {
-                        const pass = commandEncoder.beginComputePass();
-                        pass.setPipeline(this.cftpPipeline);
-                        pass.setBindGroup(0, this.fluctBindGroups[gridIdx][color]);
-                        pass.dispatchWorkgroups(workgroupCount);
-                        pass.end();
-                    }
-                }
-                this.device.queue.submit([commandEncoder.finish()]);
+            } catch (e) {
+                console.error('[GPU] Fluct compute dispatch failed at step', stepsRun, ':', e);
+                throw e;
             }
 
             stepsRun += stepsThisBatch;
