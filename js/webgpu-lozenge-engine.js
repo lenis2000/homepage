@@ -347,6 +347,18 @@ class WebGPULozengeEngine {
     // CFTP (Coupling From The Past) Methods
     // =========================================================================
 
+    async _initCoalescePipeline() {
+        if (this.coalescePipeline) return;
+        const response = await fetch('/shaders/cftp_coalesce.wgsl');
+        if (!response.ok) throw new Error(`Failed to load coalesce shader: ${response.status}`);
+        const code = await response.text();
+        const module = this.device.createShaderModule({ code });
+        this.coalescePipeline = this.device.createComputePipeline({
+            layout: 'auto',
+            compute: { module, entryPoint: 'main' }
+        });
+    }
+
     /**
      * Initialize CFTP with lower and upper chain buffers
      * @param {Int32Array} minStateData - Extremal min state from WASM
@@ -419,7 +431,7 @@ class WebGPULozengeEngine {
         cftpWeights.fill(1.0);  // Default q=1.0
         this.cftpWeightsBuffer.unmap();
 
-        // Create staging buffers for coalescence check
+        // Staging buffers for result/bounds readback (getCFTPResult, getCFTPBounds)
         this.lowerStagingBuffer = this.device.createBuffer({
             size: gridSize,
             usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
@@ -427,6 +439,25 @@ class WebGPULozengeEngine {
         this.upperStagingBuffer = this.device.createBuffer({
             size: gridSize,
             usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
+        });
+
+        // GPU-side coalescence check buffers (4-byte diff count instead of full grid readback)
+        await this._initCoalescePipeline();
+        this.coalesceResultBuffer = this.device.createBuffer({
+            size: 4,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
+        });
+        this.coalesceStagingBuffer = this.device.createBuffer({
+            size: 4,
+            usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
+        });
+        this.coalesceBindGroup = this.device.createBindGroup({
+            layout: this.coalescePipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: this.lowerGridBuffer } },
+                { binding: 1, resource: { buffer: this.upperGridBuffer } },
+                { binding: 2, resource: { buffer: this.coalesceResultBuffer } }
+            ]
         });
 
         // Create bind groups for lower and upper chains (4 per chain, one per color)
@@ -605,54 +636,27 @@ class WebGPULozengeEngine {
     }
 
     /**
-     * Check if lower and upper chains have coalesced
-     * @returns {Promise<boolean>} True if chains are identical
+     * GPU-side coalescence check: dispatch coalesce shader and read back 4-byte diff count
      */
     async checkCoalescence() {
         if (!this.cftpInitialized) return false;
 
-        // Copy both grids to staging buffers
-        let commandEncoder;
-        try {
-            commandEncoder = this.device.createCommandEncoder();
-        } catch (e) {
-            console.error('[GPU] createCommandEncoder failed in checkCoalescence:', e);
-            return false;
-        }
-        commandEncoder.copyBufferToBuffer(this.lowerGridBuffer, 0, this.lowerStagingBuffer, 0, this.lowerGridBuffer.size);
-        commandEncoder.copyBufferToBuffer(this.upperGridBuffer, 0, this.upperStagingBuffer, 0, this.upperGridBuffer.size);
+        const workgroupCount = Math.ceil(this.cftpNumCells / 64);
+        const commandEncoder = this.device.createCommandEncoder();
+        // Clear result to 0
+        commandEncoder.clearBuffer(this.coalesceResultBuffer);
+        const pass = commandEncoder.beginComputePass();
+        pass.setPipeline(this.coalescePipeline);
+        pass.setBindGroup(0, this.coalesceBindGroup);
+        pass.dispatchWorkgroups(workgroupCount);
+        pass.end();
+        commandEncoder.copyBufferToBuffer(this.coalesceResultBuffer, 0, this.coalesceStagingBuffer, 0, 4);
         this.device.queue.submit([commandEncoder.finish()]);
 
-        // Read back both grids with error handling
-        let lowerMapped = false, upperMapped = false;
-        try {
-            await this.lowerStagingBuffer.mapAsync(GPUMapMode.READ);
-            lowerMapped = true;
-            await this.upperStagingBuffer.mapAsync(GPUMapMode.READ);
-            upperMapped = true;
-
-            const lowerData = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
-            const upperData = new Int32Array(this.upperStagingBuffer.getMappedRange().slice(0));
-
-            this.lowerStagingBuffer.unmap();
-            lowerMapped = false;
-            this.upperStagingBuffer.unmap();
-            upperMapped = false;
-
-            // Compare grids
-            for (let i = 0; i < lowerData.length; i++) {
-                if (lowerData[i] !== upperData[i]) {
-                    return false;
-                }
-            }
-            return true;
-        } catch (e) {
-            console.error('[GPU] mapAsync failed in checkCoalescence:', e);
-            // Clean up any mapped buffers
-            try { if (lowerMapped) this.lowerStagingBuffer.unmap(); } catch (e2) {}
-            try { if (upperMapped) this.upperStagingBuffer.unmap(); } catch (e2) {}
-            throw e; // Re-throw to let caller handle
-        }
+        await this.coalesceStagingBuffer.mapAsync(GPUMapMode.READ);
+        const diffCount = new Uint32Array(this.coalesceStagingBuffer.getMappedRange().slice(0))[0];
+        this.coalesceStagingBuffer.unmap();
+        return diffCount === 0;
     }
 
     /**
@@ -728,6 +732,9 @@ class WebGPULozengeEngine {
         }
         if (this.lowerStagingBuffer) { this.lowerStagingBuffer.destroy(); this.lowerStagingBuffer = null; }
         if (this.upperStagingBuffer) { this.upperStagingBuffer.destroy(); this.upperStagingBuffer = null; }
+        if (this.coalesceResultBuffer) { this.coalesceResultBuffer.destroy(); this.coalesceResultBuffer = null; }
+        if (this.coalesceStagingBuffer) { this.coalesceStagingBuffer.destroy(); this.coalesceStagingBuffer = null; }
+        this.coalesceBindGroup = null;
         this.lowerBindGroups = [];
         this.upperBindGroups = [];
         this.cftpInitialized = false;
@@ -812,12 +819,38 @@ class WebGPULozengeEngine {
         new Float32Array(this.fluctWeightsBuffer.getMappedRange()).fill(1.0);
         this.fluctWeightsBuffer.unmap();
 
-        // Create staging buffers for coalescence check (4 grids)
-        this.fluctStagingBuffers = [];
-        for (let i = 0; i < 4; i++) {
-            this.fluctStagingBuffers.push(this.device.createBuffer({
-                size: gridSize,
+        // Staging buffers for sample readback (grids 0 and 2 = lower chains)
+        this.fluctStagingBuffers = [
+            this.device.createBuffer({ size: gridSize, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }),
+            null,  // not used
+            this.device.createBuffer({ size: gridSize, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }),
+            null   // not used
+        ];
+
+        // GPU-side coalescence check buffers for 2 pairs (4-byte diff count each)
+        await this._initCoalescePipeline();
+        this.fluctCoalesceResultBuffers = [];
+        this.fluctCoalesceStagingBuffers = [];
+        this.fluctCoalesceBindGroups = [];
+        for (let pair = 0; pair < 2; pair++) {
+            const resultBuf = this.device.createBuffer({
+                size: 4,
+                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
+            });
+            const stagingBuf = this.device.createBuffer({
+                size: 4,
                 usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
+            });
+            this.fluctCoalesceResultBuffers.push(resultBuf);
+            this.fluctCoalesceStagingBuffers.push(stagingBuf);
+            // Bind group comparing lower (pair*2) vs upper (pair*2+1)
+            this.fluctCoalesceBindGroups.push(this.device.createBindGroup({
+                layout: this.coalescePipeline.getBindGroupLayout(0),
+                entries: [
+                    { binding: 0, resource: { buffer: this.fluctGridBuffers[pair * 2] } },
+                    { binding: 1, resource: { buffer: this.fluctGridBuffers[pair * 2 + 1] } },
+                    { binding: 2, resource: { buffer: resultBuf } }
+                ]
             }));
         }
 
@@ -980,44 +1013,33 @@ class WebGPULozengeEngine {
     async checkFluctuationsCoalescence() {
         if (!this.fluctInitialized) return [false, false];
 
-        // Copy all 4 grids to staging
+        const workgroupCount = Math.ceil(this.fluctNumCells / 64);
         const commandEncoder = this.device.createCommandEncoder();
-        for (let i = 0; i < 4; i++) {
+        // Clear both result buffers and dispatch coalesce for each pair
+        for (let pair = 0; pair < 2; pair++) {
+            commandEncoder.clearBuffer(this.fluctCoalesceResultBuffers[pair]);
+            const pass = commandEncoder.beginComputePass();
+            pass.setPipeline(this.coalescePipeline);
+            pass.setBindGroup(0, this.fluctCoalesceBindGroups[pair]);
+            pass.dispatchWorkgroups(workgroupCount);
+            pass.end();
             commandEncoder.copyBufferToBuffer(
-                this.fluctGridBuffers[i], 0,
-                this.fluctStagingBuffers[i], 0,
-                this.fluctGridBuffers[i].size
+                this.fluctCoalesceResultBuffers[pair], 0,
+                this.fluctCoalesceStagingBuffers[pair], 0, 4
             );
         }
         this.device.queue.submit([commandEncoder.finish()]);
 
-        // Map and compare
-        const dataArrays = [];
-        for (let i = 0; i < 4; i++) {
-            await this.fluctStagingBuffers[i].mapAsync(GPUMapMode.READ);
-            dataArrays.push(new Int32Array(this.fluctStagingBuffers[i].getMappedRange().slice(0)));
-            this.fluctStagingBuffers[i].unmap();
+        // Read back 8 bytes total (4 per pair)
+        const results = [];
+        for (let pair = 0; pair < 2; pair++) {
+            await this.fluctCoalesceStagingBuffers[pair].mapAsync(GPUMapMode.READ);
+            const diffCount = new Uint32Array(this.fluctCoalesceStagingBuffers[pair].getMappedRange().slice(0))[0];
+            this.fluctCoalesceStagingBuffers[pair].unmap();
+            results.push(diffCount === 0);
         }
 
-        // Check pair 0 (grids 0 and 1)
-        let pair0Coalesced = true;
-        for (let i = 0; i < dataArrays[0].length; i++) {
-            if (dataArrays[0][i] !== dataArrays[1][i]) {
-                pair0Coalesced = false;
-                break;
-            }
-        }
-
-        // Check pair 1 (grids 2 and 3)
-        let pair1Coalesced = true;
-        for (let i = 0; i < dataArrays[2].length; i++) {
-            if (dataArrays[2][i] !== dataArrays[3][i]) {
-                pair1Coalesced = false;
-                break;
-            }
-        }
-
-        this.fluctCoalesced = [pair0Coalesced, pair1Coalesced];
+        this.fluctCoalesced = results;
         return this.fluctCoalesced;
     }
 
@@ -1067,9 +1089,18 @@ class WebGPULozengeEngine {
             this.fluctWeightsBuffer = null;
         }
         if (this.fluctStagingBuffers) {
-            for (const buf of this.fluctStagingBuffers) buf.destroy();
+            for (const buf of this.fluctStagingBuffers) { if (buf) buf.destroy(); }
             this.fluctStagingBuffers = null;
         }
+        if (this.fluctCoalesceResultBuffers) {
+            for (const buf of this.fluctCoalesceResultBuffers) buf.destroy();
+            this.fluctCoalesceResultBuffers = null;
+        }
+        if (this.fluctCoalesceStagingBuffers) {
+            for (const buf of this.fluctCoalesceStagingBuffers) buf.destroy();
+            this.fluctCoalesceStagingBuffers = null;
+        }
+        this.fluctCoalesceBindGroups = null;
         this.fluctBindGroups = null;
         this.fluctInitialized = false;
     }

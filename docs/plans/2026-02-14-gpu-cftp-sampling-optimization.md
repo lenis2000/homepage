@@ -75,15 +75,15 @@ Currently `stepCFTP()` creates one command encoder per step. Instead, batch many
 
 Currently `checkCoalescence()` copies both grids to staging, maps them to CPU, and compares cell-by-cell. Replace with a GPU reduction shader.
 
-- [ ] Create `shaders/cftp_coalesce.wgsl`: a compute shader that compares two grid buffers and atomically increments a "difference count" counter
+- [x] Create `shaders/cftp_coalesce.wgsl`: a compute shader that compares two grid buffers and atomically increments a "difference count" counter
   - Input: two `array<i32>` storage buffers (lower, upper), one `atomic<u32>` output buffer
   - Each thread compares grid[index] between lower and upper, atomicAdd to diff_count if different
-- [ ] In `js/webgpu-lozenge-engine.js`:
+- [x] In `js/webgpu-lozenge-engine.js`:
   - Create the coalesce pipeline on first use (lazy init like cftpPipeline)
   - Create a small result buffer (4 bytes) for the diff count, plus staging buffer
   - `checkCoalescence()`: clear result buffer, dispatch coalesce shader, readback 4 bytes instead of 2 full grids
   - This reduces readback from ~60KB (2 x 15K i32) to 4 bytes
-- [ ] Apply same optimization to `checkFluctuationsCoalescence()` (check 2 pairs, read back 8 bytes)
+- [x] Apply same optimization to `checkFluctuationsCoalescence()` (check 2 pairs, read back 8 bytes)
 
 ### Task 4: Optimize the CFTP loop structure in the calling code
 
