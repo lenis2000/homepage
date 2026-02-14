@@ -654,9 +654,12 @@ class WebGPULozengeEngine {
         this.device.queue.submit([commandEncoder.finish()]);
 
         await this.coalesceStagingBuffer.mapAsync(GPUMapMode.READ);
-        const diffCount = new Uint32Array(this.coalesceStagingBuffer.getMappedRange().slice(0))[0];
-        this.coalesceStagingBuffer.unmap();
-        return diffCount === 0;
+        try {
+            const diffCount = new Uint32Array(this.coalesceStagingBuffer.getMappedRange().slice(0))[0];
+            return diffCount === 0;
+        } finally {
+            this.coalesceStagingBuffer.unmap();
+        }
     }
 
     /**
@@ -1036,9 +1039,12 @@ class WebGPULozengeEngine {
         const results = [];
         for (let pair = 0; pair < 2; pair++) {
             await this.fluctCoalesceStagingBuffers[pair].mapAsync(GPUMapMode.READ);
-            const diffCount = new Uint32Array(this.fluctCoalesceStagingBuffers[pair].getMappedRange().slice(0))[0];
-            this.fluctCoalesceStagingBuffers[pair].unmap();
-            results.push(diffCount === 0);
+            try {
+                const diffCount = new Uint32Array(this.fluctCoalesceStagingBuffers[pair].getMappedRange().slice(0))[0];
+                results.push(diffCount === 0);
+            } finally {
+                this.fluctCoalesceStagingBuffers[pair].unmap();
+            }
         }
 
         this.fluctCoalesced = results;

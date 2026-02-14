@@ -9320,8 +9320,8 @@ function initLozengeApp() {
                             el.cftpBtn.disabled = false;
                             el.cftpStopBtn.style.display = 'none';
                         } else {
-                            // Draw bounds only at end of epoch 16384 (GPU is fast, no need for earlier draws)
-                            if (T == drawInterval) {
+                            // Draw bounds at end of each epoch >= drawInterval
+                            if (T >= drawInterval) {
                                 const bounds = await gpuEngine.getCFTPBounds(sim.blackTriangles);
                                 if (bounds.maxDimers.length > 0) {
                                     if (is3DView && renderer3D) {
