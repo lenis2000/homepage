@@ -1069,16 +1069,21 @@ class WebGPULozengeEngine {
         }
         this.device.queue.submit([commandEncoder.finish()]);
 
-        // Read back 8 bytes total (4 per pair)
+        // Read back 8 bytes total (4 per pair) in parallel
+        await Promise.all([
+            this.fluctCoalesceStagingBuffers[0].mapAsync(GPUMapMode.READ),
+            this.fluctCoalesceStagingBuffers[1].mapAsync(GPUMapMode.READ)
+        ]);
+
         const results = [];
-        for (let pair = 0; pair < 2; pair++) {
-            await this.fluctCoalesceStagingBuffers[pair].mapAsync(GPUMapMode.READ);
-            try {
+        try {
+            for (let pair = 0; pair < 2; pair++) {
                 const diffCount = new Uint32Array(this.fluctCoalesceStagingBuffers[pair].getMappedRange().slice(0))[0];
                 results.push(diffCount === 0);
-            } finally {
-                this.fluctCoalesceStagingBuffers[pair].unmap();
             }
+        } finally {
+            this.fluctCoalesceStagingBuffers[0].unmap();
+            this.fluctCoalesceStagingBuffers[1].unmap();
         }
 
         this.fluctCoalesced = results;
