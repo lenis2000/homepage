@@ -710,11 +710,14 @@ class WebGPULozengeEngine {
             this.upperStagingBuffer.mapAsync(GPUMapMode.READ)
         ]);
 
-        const lowerData = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
-        const upperData = new Int32Array(this.upperStagingBuffer.getMappedRange().slice(0));
-
-        this.lowerStagingBuffer.unmap();
-        this.upperStagingBuffer.unmap();
+        let lowerData, upperData;
+        try {
+            lowerData = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
+            upperData = new Int32Array(this.upperStagingBuffer.getMappedRange().slice(0));
+        } finally {
+            this.lowerStagingBuffer.unmap();
+            this.upperStagingBuffer.unmap();
+        }
 
         // Convert to dimer arrays
         const minDimers = this.gridToDimers(lowerData, blackTriangles);
@@ -1039,7 +1042,7 @@ class WebGPULozengeEngine {
         } catch (e) {
             console.error('[GPU] onSubmittedWorkDone failed:', e);
         }
-        return { coalesced: this.fluctCoalesced, stepsRun };
+        return { coalesced: [false, false], stepsRun };
     }
 
     /**
@@ -1101,11 +1104,14 @@ class WebGPULozengeEngine {
             this.fluctStagingBuffers[2].mapAsync(GPUMapMode.READ)
         ]);
 
-        const data0 = new Int32Array(this.fluctStagingBuffers[0].getMappedRange().slice(0));
-        const data2 = new Int32Array(this.fluctStagingBuffers[2].getMappedRange().slice(0));
-
-        this.fluctStagingBuffers[0].unmap();
-        this.fluctStagingBuffers[2].unmap();
+        let data0, data2;
+        try {
+            data0 = new Int32Array(this.fluctStagingBuffers[0].getMappedRange().slice(0));
+            data2 = new Int32Array(this.fluctStagingBuffers[2].getMappedRange().slice(0));
+        } finally {
+            this.fluctStagingBuffers[0].unmap();
+            this.fluctStagingBuffers[2].unmap();
+        }
 
         return {
             sample0: this.gridToDimers(data0, blackTriangles),
