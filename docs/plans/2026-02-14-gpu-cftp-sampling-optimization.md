@@ -117,7 +117,7 @@ Tune the batch sizes and check intervals now that GPU steps are much cheaper.
 
 Secondary optimization: replace per-lozenge Canvas 2D drawing with WebGL2 instanced rendering. This improves the draw() path which runs after each sample.
 
-- [ ] Add a `WebGLLozengeRenderer` class using WebGL2 instanced drawing
-- [ ] Replace the per-lozenge Canvas 2D loop in `drawLozengeView()` with a single `drawArraysInstanced()` call
-- [ ] Handle outlines, colors, dark mode through the WebGL path
-- [ ] Keep Canvas 2D as fallback
+- [x] Add a `WebGLLozengeRenderer` class using WebGL2 instanced drawing
+- [x] Replace the per-lozenge Canvas 2D loop in `drawLozengeView()` with a single `drawArraysInstanced()` call
+- [x] Handle outlines, colors, dark mode through the WebGL path
+- [x] Keep Canvas 2D as fallback
