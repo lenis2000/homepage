@@ -197,34 +197,34 @@ class WebGPULozengeEngine {
 
         const workgroupCount = Math.ceil(this.gridBuffer.size / 4 / 64);
 
-        // Pre-write uniform data for all 4 colors
+        // Pre-allocate uniform data template
         // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, _pad
-        for (let color = 0; color < 4; color++) {
-            const uniformData = new ArrayBuffer(40);
-            const intView = new Int32Array(uniformData);
-            const floatView = new Float32Array(uniformData);
-            const uintView = new Uint32Array(uniformData);
+        const uniformData = new ArrayBuffer(40);
+        const intView = new Int32Array(uniformData);
+        const floatView = new Float32Array(uniformData);
+        const uintView = new Uint32Array(uniformData);
 
-            intView[0] = this.gridParams.minN;
-            intView[1] = this.gridParams.maxN;
-            intView[2] = this.gridParams.minJ;
-            intView[3] = this.gridParams.maxJ;
-            intView[4] = this.gridParams.strideJ;
-            intView[5] = color;
-            floatView[6] = qBias;
-            uintView[7] = this.useWeights ? 1 : 0;
-            uintView[8] = Math.floor(Math.random() * 4294967295);
-            uintView[9] = 0;  // padding
+        intView[0] = this.gridParams.minN;
+        intView[1] = this.gridParams.maxN;
+        intView[2] = this.gridParams.minJ;
+        intView[3] = this.gridParams.maxJ;
+        intView[4] = this.gridParams.strideJ;
+        floatView[6] = qBias;
+        uintView[7] = this.useWeights ? 1 : 0;
+        uintView[9] = 0;  // padding
 
-            this.device.queue.writeBuffer(this.uniformBuffers[color], 0, uniformData);
-        }
-
-        // Batch all sweeps into a single command buffer
-        // Each color pass uses its own bind group with pre-written uniforms
-        const commandEncoder = this.device.createCommandEncoder();
-
+        // Per-step writeBuffer + submit: each step gets a fresh RNG seed.
+        // writeBuffer and submit are ordered by the queue, so the GPU sees
+        // correct uniforms for each step without needing per-step await.
         for (let i = 0; i < numSteps; i++) {
-            // Four color passes per step (parallel-safe chromatic sweep)
+            const seed = Math.floor(Math.random() * 4294967295);
+            for (let color = 0; color < 4; color++) {
+                intView[5] = color;
+                uintView[8] = seed;
+                this.device.queue.writeBuffer(this.uniformBuffers[color], 0, uniformData);
+            }
+
+            const commandEncoder = this.device.createCommandEncoder();
             for (let color = 0; color < 4; color++) {
                 const passEncoder = commandEncoder.beginComputePass();
                 passEncoder.setPipeline(this.pipeline);
@@ -232,9 +232,8 @@ class WebGPULozengeEngine {
                 passEncoder.dispatchWorkgroups(workgroupCount);
                 passEncoder.end();
             }
+            this.device.queue.submit([commandEncoder.finish()]);
         }
-
-        this.device.queue.submit([commandEncoder.finish()]);
 
         // Wait for GPU work to complete
         await this.device.queue.onSubmittedWorkDone();
@@ -258,10 +257,12 @@ class WebGPULozengeEngine {
         this.device.queue.submit([commandEncoder.finish()]);
 
         await this.stagingBuffer.mapAsync(GPUMapMode.READ);
-        const data = new Int32Array(this.stagingBuffer.getMappedRange().slice(0));
-        this.stagingBuffer.unmap();
-
-        return data;
+        try {
+            const data = new Int32Array(this.stagingBuffer.getMappedRange().slice(0));
+            return data;
+        } finally {
+            this.stagingBuffer.unmap();
+        }
     }
 
     /**
@@ -341,11 +342,28 @@ class WebGPULozengeEngine {
         }
         this.bindGroups = [];
         this.destroyCFTP();
+        this.destroyFluctuationsCFTP();
+        // Pipelines are stateless and shared across CFTP/fluctuations sessions;
+        // only null them on full engine teardown.
+        this.cftpPipeline = null;
+        this.coalescePipeline = null;
     }
 
     // =========================================================================
     // CFTP (Coupling From The Past) Methods
     // =========================================================================
+
+    async _initCoalescePipeline() {
+        if (this.coalescePipeline) return;
+        const response = await fetch('/shaders/cftp_coalesce.wgsl');
+        if (!response.ok) throw new Error(`Failed to load coalesce shader: ${response.status}`);
+        const code = await response.text();
+        const module = this.device.createShaderModule({ code });
+        this.coalescePipeline = this.device.createComputePipeline({
+            layout: 'auto',
+            compute: { module, entryPoint: 'main' }
+        });
+    }
 
     /**
      * Initialize CFTP with lower and upper chain buffers
@@ -397,15 +415,10 @@ class WebGPULozengeEngine {
         new Int32Array(this.upperGridBuffer.getMappedRange()).set(maxStateData);
         this.upperGridBuffer.unmap();
 
-        // Create random buffer (one float per grid cell)
         const numCells = minStateData.length;
-        this.randomBuffer = this.device.createBuffer({
-            size: numCells * 4, // float32
-            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
-        });
 
         // Create 4 CFTP uniform buffers (one per color pass for batching)
-        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, num_vertices, _pad
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, _pad
         this.cftpUniformBuffers = [];
         for (let color = 0; color < 4; color++) {
             this.cftpUniformBuffers.push(this.device.createBuffer({
@@ -424,7 +437,7 @@ class WebGPULozengeEngine {
         cftpWeights.fill(1.0);  // Default q=1.0
         this.cftpWeightsBuffer.unmap();
 
-        // Create staging buffers for coalescence check
+        // Staging buffers for result/bounds readback (getCFTPResult, getCFTPBounds)
         this.lowerStagingBuffer = this.device.createBuffer({
             size: gridSize,
             usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
@@ -434,7 +447,33 @@ class WebGPULozengeEngine {
             usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
         });
 
+        // GPU-side coalescence check buffers (4-byte diff count instead of full grid readback)
+        try {
+            await this._initCoalescePipeline();
+        } catch (e) {
+            console.error("Failed to init coalesce pipeline:", e);
+            this.destroyCFTP();
+            return false;
+        }
+        this.coalesceResultBuffer = this.device.createBuffer({
+            size: 4,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
+        });
+        this.coalesceStagingBuffer = this.device.createBuffer({
+            size: 4,
+            usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
+        });
+        this.coalesceBindGroup = this.device.createBindGroup({
+            layout: this.coalescePipeline.getBindGroupLayout(0),
+            entries: [
+                { binding: 0, resource: { buffer: this.lowerGridBuffer } },
+                { binding: 1, resource: { buffer: this.upperGridBuffer } },
+                { binding: 2, resource: { buffer: this.coalesceResultBuffer } }
+            ]
+        });
+
         // Create bind groups for lower and upper chains (4 per chain, one per color)
+        // Shader bindings: 0=grid, 1=params(uniform), 2=weights
         this.lowerBindGroups = [];
         this.upperBindGroups = [];
         for (let color = 0; color < 4; color++) {
@@ -442,18 +481,16 @@ class WebGPULozengeEngine {
                 layout: this.cftpPipeline.getBindGroupLayout(0),
                 entries: [
                     { binding: 0, resource: { buffer: this.lowerGridBuffer } },
-                    { binding: 1, resource: { buffer: this.randomBuffer } },
-                    { binding: 2, resource: { buffer: this.cftpUniformBuffers[color] } },
-                    { binding: 3, resource: { buffer: this.cftpWeightsBuffer } }
+                    { binding: 1, resource: { buffer: this.cftpUniformBuffers[color] } },
+                    { binding: 2, resource: { buffer: this.cftpWeightsBuffer } }
                 ]
             }));
             this.upperBindGroups.push(this.device.createBindGroup({
                 layout: this.cftpPipeline.getBindGroupLayout(0),
                 entries: [
                     { binding: 0, resource: { buffer: this.upperGridBuffer } },
-                    { binding: 1, resource: { buffer: this.randomBuffer } },
-                    { binding: 2, resource: { buffer: this.cftpUniformBuffers[color] } },
-                    { binding: 3, resource: { buffer: this.cftpWeightsBuffer } }
+                    { binding: 1, resource: { buffer: this.cftpUniformBuffers[color] } },
+                    { binding: 2, resource: { buffer: this.cftpWeightsBuffer } }
                 ]
             }));
         }
@@ -510,6 +547,9 @@ class WebGPULozengeEngine {
 
     /**
      * Run CFTP coupled steps on GPU with early stopping
+     * Batches multiple steps: builds per-step command buffers, submits all at once.
+     * writeBuffer + submit per step ensures correct seed ordering; batching
+     * avoids per-step await and reduces JS-to-GPU round trips.
      * @param {number} numSteps - Number of coupled steps to run
      * @param {number} checkInterval - Check coalescence every N steps (0 = no early check)
      * @returns {Promise<{coalesced: boolean, stepsRun: number}>}
@@ -525,69 +565,68 @@ class WebGPULozengeEngine {
         const qBias = this.cftpQBias || 1.0;
         const useWeights = this.cftpUseWeights ? 1 : 0;
 
-        // Pre-write uniform data for all 4 colors
-        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, num_vertices, _pad
-        for (let color = 0; color < 4; color++) {
-            const uniformData = new ArrayBuffer(40);
-            const intView = new Int32Array(uniformData);
-            const floatView = new Float32Array(uniformData);
-            const uintView = new Uint32Array(uniformData);
+        // Pre-allocate uniform data template
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, _pad
+        const uniformData = new ArrayBuffer(40);
+        const intView = new Int32Array(uniformData);
+        const floatView = new Float32Array(uniformData);
+        const uintView = new Uint32Array(uniformData);
 
-            intView[0] = this.gridParams.minN;
-            intView[1] = this.gridParams.maxN;
-            intView[2] = this.gridParams.minJ;
-            intView[3] = this.gridParams.maxJ;
-            intView[4] = this.gridParams.strideJ;
-            intView[5] = color;
-            floatView[6] = qBias;
-            uintView[7] = useWeights;
-            uintView[8] = this.cftpNumCells;
-            uintView[9] = 0;  // padding
+        intView[0] = this.gridParams.minN;
+        intView[1] = this.gridParams.maxN;
+        intView[2] = this.gridParams.minJ;
+        intView[3] = this.gridParams.maxJ;
+        intView[4] = this.gridParams.strideJ;
+        floatView[6] = qBias;
+        uintView[7] = useWeights;
+        uintView[9] = 0;  // padding
 
-            this.device.queue.writeBuffer(this.cftpUniformBuffers[color], 0, uniformData);
-        }
-
-        // Pre-allocate random data buffer
-        const randomData = new Float32Array(this.cftpNumCells);
         let stepsRun = 0;
 
-        for (let step = 0; step < numSteps; step++) {
-            // Generate random numbers for this step (same for both chains)
-            for (let i = 0; i < this.cftpNumCells; i++) {
-                randomData[i] = Math.random();
-            }
+        // Determine batch boundaries: split at checkInterval points
+        const batchSize = (checkInterval > 0) ? checkInterval : numSteps;
+
+        while (stepsRun < numSteps) {
+            const stepsThisBatch = Math.min(batchSize, numSteps - stepsRun);
 
             try {
-                this.device.queue.writeBuffer(this.randomBuffer, 0, randomData);
+                // Build and submit per-step command buffers in a tight loop without awaiting.
+                // Each step: writeBuffer (queue op) then submit (queue op) are ordered by the queue.
+                // No await between steps means the GPU driver pipelines them efficiently.
+                for (let s = 0; s < stepsThisBatch; s++) {
+                    const seed = Math.floor(Math.random() * 4294967295);
 
-                // Batch all 8 dispatches (4 colors × 2 chains) in a single command buffer
-                const commandEncoder = this.device.createCommandEncoder();
+                    for (let color = 0; color < 4; color++) {
+                        intView[5] = color;
+                        uintView[8] = seed;
+                        this.device.queue.writeBuffer(this.cftpUniformBuffers[color], 0, uniformData);
+                    }
 
-                for (let color = 0; color < 4; color++) {
-                    // Dispatch lower chain for this color
-                    const lowerPass = commandEncoder.beginComputePass();
-                    lowerPass.setPipeline(this.cftpPipeline);
-                    lowerPass.setBindGroup(0, this.lowerBindGroups[color]);
-                    lowerPass.dispatchWorkgroups(workgroupCount);
-                    lowerPass.end();
+                    const commandEncoder = this.device.createCommandEncoder();
+                    for (let color = 0; color < 4; color++) {
+                        const lowerPass = commandEncoder.beginComputePass();
+                        lowerPass.setPipeline(this.cftpPipeline);
+                        lowerPass.setBindGroup(0, this.lowerBindGroups[color]);
+                        lowerPass.dispatchWorkgroups(workgroupCount);
+                        lowerPass.end();
 
-                    // Dispatch upper chain for this color (same randoms)
-                    const upperPass = commandEncoder.beginComputePass();
-                    upperPass.setPipeline(this.cftpPipeline);
-                    upperPass.setBindGroup(0, this.upperBindGroups[color]);
-                    upperPass.dispatchWorkgroups(workgroupCount);
-                    upperPass.end();
+                        const upperPass = commandEncoder.beginComputePass();
+                        upperPass.setPipeline(this.cftpPipeline);
+                        upperPass.setBindGroup(0, this.upperBindGroups[color]);
+                        upperPass.dispatchWorkgroups(workgroupCount);
+                        upperPass.end();
+                    }
+                    this.device.queue.submit([commandEncoder.finish()]);
                 }
-
-                this.device.queue.submit([commandEncoder.finish()]);
             } catch (e) {
-                console.error('[GPU] Compute dispatch failed at step', step, ':', e);
-                throw e; // Re-throw to stop CFTP
+                console.error('[GPU] Compute dispatch failed at step', stepsRun, ':', e);
+                throw e;
             }
-            stepsRun++;
 
-            // Early coalescence check
-            if (checkInterval > 0 && stepsRun % checkInterval === 0) {
+            stepsRun += stepsThisBatch;
+
+            // Early coalescence check at batch boundary
+            if (checkInterval > 0 && stepsRun < numSteps) {
                 try {
                     const coalesced = await this.checkCoalescence();
                     if (coalesced) {
@@ -595,12 +634,11 @@ class WebGPULozengeEngine {
                     }
                 } catch (e) {
                     console.error('[GPU] Early coalescence check failed, continuing:', e);
-                    // Continue without early stopping - will check at end of epoch
                 }
             }
         }
 
-        // Wait for GPU to finish
+        // Wait for GPU to finish after all batches
         try {
             await this.device.queue.onSubmittedWorkDone();
         } catch (e) {
@@ -610,53 +648,29 @@ class WebGPULozengeEngine {
     }
 
     /**
-     * Check if lower and upper chains have coalesced
-     * @returns {Promise<boolean>} True if chains are identical
+     * GPU-side coalescence check: dispatch coalesce shader and read back 4-byte diff count
      */
     async checkCoalescence() {
         if (!this.cftpInitialized) return false;
 
-        // Copy both grids to staging buffers
-        let commandEncoder;
-        try {
-            commandEncoder = this.device.createCommandEncoder();
-        } catch (e) {
-            console.error('[GPU] createCommandEncoder failed in checkCoalescence:', e);
-            return false;
-        }
-        commandEncoder.copyBufferToBuffer(this.lowerGridBuffer, 0, this.lowerStagingBuffer, 0, this.lowerGridBuffer.size);
-        commandEncoder.copyBufferToBuffer(this.upperGridBuffer, 0, this.upperStagingBuffer, 0, this.upperGridBuffer.size);
+        const workgroupCount = Math.ceil(this.cftpNumCells / 64);
+        const commandEncoder = this.device.createCommandEncoder();
+        // Clear result to 0
+        commandEncoder.clearBuffer(this.coalesceResultBuffer);
+        const pass = commandEncoder.beginComputePass();
+        pass.setPipeline(this.coalescePipeline);
+        pass.setBindGroup(0, this.coalesceBindGroup);
+        pass.dispatchWorkgroups(workgroupCount);
+        pass.end();
+        commandEncoder.copyBufferToBuffer(this.coalesceResultBuffer, 0, this.coalesceStagingBuffer, 0, 4);
         this.device.queue.submit([commandEncoder.finish()]);
 
-        // Read back both grids with error handling
-        let lowerMapped = false, upperMapped = false;
+        await this.coalesceStagingBuffer.mapAsync(GPUMapMode.READ);
         try {
-            await this.lowerStagingBuffer.mapAsync(GPUMapMode.READ);
-            lowerMapped = true;
-            await this.upperStagingBuffer.mapAsync(GPUMapMode.READ);
-            upperMapped = true;
-
-            const lowerData = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
-            const upperData = new Int32Array(this.upperStagingBuffer.getMappedRange().slice(0));
-
-            this.lowerStagingBuffer.unmap();
-            lowerMapped = false;
-            this.upperStagingBuffer.unmap();
-            upperMapped = false;
-
-            // Compare grids
-            for (let i = 0; i < lowerData.length; i++) {
-                if (lowerData[i] !== upperData[i]) {
-                    return false;
-                }
-            }
-            return true;
-        } catch (e) {
-            console.error('[GPU] mapAsync failed in checkCoalescence:', e);
-            // Clean up any mapped buffers
-            try { if (lowerMapped) this.lowerStagingBuffer.unmap(); } catch (e2) {}
-            try { if (upperMapped) this.upperStagingBuffer.unmap(); } catch (e2) {}
-            throw e; // Re-throw to let caller handle
+            const diffCount = new Uint32Array(this.coalesceStagingBuffer.getMappedRange().slice(0))[0];
+            return diffCount === 0;
+        } finally {
+            this.coalesceStagingBuffer.unmap();
         }
     }
 
@@ -672,10 +686,12 @@ class WebGPULozengeEngine {
         this.device.queue.submit([commandEncoder.finish()]);
 
         await this.lowerStagingBuffer.mapAsync(GPUMapMode.READ);
-        const data = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
-        this.lowerStagingBuffer.unmap();
-
-        return data;
+        try {
+            const data = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
+            return data;
+        } finally {
+            this.lowerStagingBuffer.unmap();
+        }
     }
 
     /**
@@ -692,15 +708,20 @@ class WebGPULozengeEngine {
         commandEncoder.copyBufferToBuffer(this.upperGridBuffer, 0, this.upperStagingBuffer, 0, this.upperGridBuffer.size);
         this.device.queue.submit([commandEncoder.finish()]);
 
-        // Read back both grids
-        await this.lowerStagingBuffer.mapAsync(GPUMapMode.READ);
-        await this.upperStagingBuffer.mapAsync(GPUMapMode.READ);
+        // Read back both grids in parallel
+        await Promise.all([
+            this.lowerStagingBuffer.mapAsync(GPUMapMode.READ),
+            this.upperStagingBuffer.mapAsync(GPUMapMode.READ)
+        ]);
 
-        const lowerData = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
-        const upperData = new Int32Array(this.upperStagingBuffer.getMappedRange().slice(0));
-
-        this.lowerStagingBuffer.unmap();
-        this.upperStagingBuffer.unmap();
+        let lowerData, upperData;
+        try {
+            lowerData = new Int32Array(this.lowerStagingBuffer.getMappedRange().slice(0));
+            upperData = new Int32Array(this.upperStagingBuffer.getMappedRange().slice(0));
+        } finally {
+            this.lowerStagingBuffer.unmap();
+            this.upperStagingBuffer.unmap();
+        }
 
         // Convert to dimer arrays
         const minDimers = this.gridToDimers(lowerData, blackTriangles);
@@ -712,7 +733,7 @@ class WebGPULozengeEngine {
     /**
      * Copy CFTP result to main grid buffer
      */
-    async finalizeCFTP() {
+    finalizeCFTP() {
         if (!this.cftpInitialized || !this.gridBuffer) return;
 
         const commandEncoder = this.device.createCommandEncoder();
@@ -726,7 +747,6 @@ class WebGPULozengeEngine {
     destroyCFTP() {
         if (this.lowerGridBuffer) { this.lowerGridBuffer.destroy(); this.lowerGridBuffer = null; }
         if (this.upperGridBuffer) { this.upperGridBuffer.destroy(); this.upperGridBuffer = null; }
-        if (this.randomBuffer) { this.randomBuffer.destroy(); this.randomBuffer = null; }
         if (this.cftpWeightsBuffer) { this.cftpWeightsBuffer.destroy(); this.cftpWeightsBuffer = null; }
         if (this.cftpUniformBuffers) {
             for (const buf of this.cftpUniformBuffers) buf.destroy();
@@ -734,8 +754,14 @@ class WebGPULozengeEngine {
         }
         if (this.lowerStagingBuffer) { this.lowerStagingBuffer.destroy(); this.lowerStagingBuffer = null; }
         if (this.upperStagingBuffer) { this.upperStagingBuffer.destroy(); this.upperStagingBuffer = null; }
+        if (this.coalesceResultBuffer) { this.coalesceResultBuffer.destroy(); this.coalesceResultBuffer = null; }
+        if (this.coalesceStagingBuffer) { this.coalesceStagingBuffer.destroy(); this.coalesceStagingBuffer = null; }
+        this.coalesceBindGroup = null;
         this.lowerBindGroups = [];
         this.upperBindGroups = [];
+        // Note: cftpPipeline and coalescePipeline are NOT nulled here -- they are
+        // stateless, reusable across CFTP/fluctuations sessions, and re-creating them
+        // requires shader recompilation. They are cleaned up in destroy() instead.
         this.cftpInitialized = false;
     }
 
@@ -797,22 +823,16 @@ class WebGPULozengeEngine {
             this.fluctGridBuffers.push(buf);
         }
 
-        // Create 2 random buffers (one per pair for independence)
-        this.fluctRandomBuffers = [];
-        for (let i = 0; i < 2; i++) {
-            this.fluctRandomBuffers.push(this.device.createBuffer({
-                size: numCells * 4,
-                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
-            }));
-        }
-
-        // Create uniform buffers (4 colors × 2 pairs = 8, but we can reuse 4 since params are same)
+        // Create uniform buffers: 4 colors × 2 pairs = 8
+        // Each pair needs its own seed, so we need separate uniform buffers per pair
         this.fluctUniformBuffers = [];
-        for (let color = 0; color < 4; color++) {
-            this.fluctUniformBuffers.push(this.device.createBuffer({
-                size: 40,
-                usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-            }));
+        for (let pair = 0; pair < 2; pair++) {
+            for (let color = 0; color < 4; color++) {
+                this.fluctUniformBuffers.push(this.device.createBuffer({
+                    size: 40,
+                    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+                }));
+            }
         }
 
         // Create weights buffer for fluctuations
@@ -824,29 +844,63 @@ class WebGPULozengeEngine {
         new Float32Array(this.fluctWeightsBuffer.getMappedRange()).fill(1.0);
         this.fluctWeightsBuffer.unmap();
 
-        // Create staging buffers for coalescence check (4 grids)
-        this.fluctStagingBuffers = [];
-        for (let i = 0; i < 4; i++) {
-            this.fluctStagingBuffers.push(this.device.createBuffer({
-                size: gridSize,
+        // Staging buffers for sample readback (grids 0 and 2 = lower chains)
+        this.fluctStagingBuffers = [
+            this.device.createBuffer({ size: gridSize, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }),
+            null,  // not used
+            this.device.createBuffer({ size: gridSize, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST }),
+            null   // not used
+        ];
+
+        // GPU-side coalescence check buffers for 2 pairs (4-byte diff count each)
+        try {
+            await this._initCoalescePipeline();
+        } catch (e) {
+            console.error("Failed to init coalesce pipeline:", e);
+            this.destroyFluctuationsCFTP();
+            return false;
+        }
+        this.fluctCoalesceResultBuffers = [];
+        this.fluctCoalesceStagingBuffers = [];
+        this.fluctCoalesceBindGroups = [];
+        for (let pair = 0; pair < 2; pair++) {
+            const resultBuf = this.device.createBuffer({
+                size: 4,
+                usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST
+            });
+            const stagingBuf = this.device.createBuffer({
+                size: 4,
                 usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST
+            });
+            this.fluctCoalesceResultBuffers.push(resultBuf);
+            this.fluctCoalesceStagingBuffers.push(stagingBuf);
+            // Bind group comparing lower (pair*2) vs upper (pair*2+1)
+            this.fluctCoalesceBindGroups.push(this.device.createBindGroup({
+                layout: this.coalescePipeline.getBindGroupLayout(0),
+                entries: [
+                    { binding: 0, resource: { buffer: this.fluctGridBuffers[pair * 2] } },
+                    { binding: 1, resource: { buffer: this.fluctGridBuffers[pair * 2 + 1] } },
+                    { binding: 2, resource: { buffer: resultBuf } }
+                ]
             }));
         }
 
-        // Create bind groups: 4 colors × 4 grids = 16 bind groups
+        // Create bind groups: 4 grids × 4 colors = 16 bind groups
         // fluctBindGroups[gridIdx][colorIdx]
+        // Shader bindings: 0=grid, 1=params(uniform), 2=weights
+        // Each pair shares the same seed (for coupling), so grids in same pair use same uniform buffer
         this.fluctBindGroups = [];
         for (let gridIdx = 0; gridIdx < 4; gridIdx++) {
             const pairIdx = Math.floor(gridIdx / 2); // 0,1 -> pair0, 2,3 -> pair1
             const colorGroups = [];
             for (let color = 0; color < 4; color++) {
+                const uniformIdx = pairIdx * 4 + color;
                 colorGroups.push(this.device.createBindGroup({
                     layout: this.cftpPipeline.getBindGroupLayout(0),
                     entries: [
                         { binding: 0, resource: { buffer: this.fluctGridBuffers[gridIdx] } },
-                        { binding: 1, resource: { buffer: this.fluctRandomBuffers[pairIdx] } },
-                        { binding: 2, resource: { buffer: this.fluctUniformBuffers[color] } },
-                        { binding: 3, resource: { buffer: this.fluctWeightsBuffer } }
+                        { binding: 1, resource: { buffer: this.fluctUniformBuffers[uniformIdx] } },
+                        { binding: 2, resource: { buffer: this.fluctWeightsBuffer } }
                     ]
                 }));
             }
@@ -902,79 +956,102 @@ class WebGPULozengeEngine {
 
     /**
      * Run fluctuations CFTP steps (both pairs in parallel)
+     * Submits per-step command buffers in a tight loop without awaiting.
+     * Coalescence checks happen at batch boundaries (every checkInterval steps).
      * @param {number} numSteps - Steps to run
      * @param {number} checkInterval - Check coalescence every N steps
      * @returns {Promise<{coalesced: boolean[], stepsRun: number}>}
      */
     async stepFluctuationsCFTP(numSteps, checkInterval = 0) {
         if (!this.fluctInitialized) return { coalesced: [false, false], stepsRun: 0 };
+        if (this.deviceLost) {
+            console.error('[GPU] Device was lost, cannot step fluctuations CFTP');
+            throw new Error('GPU device lost');
+        }
 
         const workgroupCount = Math.ceil(this.fluctNumCells / 64);
         const qBias = this.fluctQBias || 1.0;
         const useWeights = this.fluctUseWeights ? 1 : 0;
 
-        // Pre-write uniform data for all 4 colors
-        for (let color = 0; color < 4; color++) {
-            const uniformData = new ArrayBuffer(40);
-            const intView = new Int32Array(uniformData);
-            const floatView = new Float32Array(uniformData);
-            const uintView = new Uint32Array(uniformData);
+        // Pre-allocate uniform data template
+        // Layout: minN, maxN, minJ, maxJ, strideJ, color_pass, q_bias, use_weights, rand_seed, _pad
+        const uniformData = new ArrayBuffer(40);
+        const intView = new Int32Array(uniformData);
+        const floatView = new Float32Array(uniformData);
+        const uintView = new Uint32Array(uniformData);
 
-            intView[0] = this.gridParams.minN;
-            intView[1] = this.gridParams.maxN;
-            intView[2] = this.gridParams.minJ;
-            intView[3] = this.gridParams.maxJ;
-            intView[4] = this.gridParams.strideJ;
-            intView[5] = color;
-            floatView[6] = qBias;
-            uintView[7] = useWeights;
-            uintView[8] = this.fluctNumCells;
-            uintView[9] = 0;
+        intView[0] = this.gridParams.minN;
+        intView[1] = this.gridParams.maxN;
+        intView[2] = this.gridParams.minJ;
+        intView[3] = this.gridParams.maxJ;
+        intView[4] = this.gridParams.strideJ;
+        floatView[6] = qBias;
+        uintView[7] = useWeights;
+        uintView[9] = 0;  // padding
 
-            this.device.queue.writeBuffer(this.fluctUniformBuffers[color], 0, uniformData);
-        }
-
-        const randomData0 = new Float32Array(this.fluctNumCells);
-        const randomData1 = new Float32Array(this.fluctNumCells);
         let stepsRun = 0;
 
-        for (let step = 0; step < numSteps; step++) {
-            // Generate independent randoms for each pair
-            for (let i = 0; i < this.fluctNumCells; i++) {
-                randomData0[i] = Math.random();
-                randomData1[i] = Math.random();
-            }
-            this.device.queue.writeBuffer(this.fluctRandomBuffers[0], 0, randomData0);
-            this.device.queue.writeBuffer(this.fluctRandomBuffers[1], 0, randomData1);
+        // Determine batch boundaries: split at checkInterval points
+        const batchSize = (checkInterval > 0) ? checkInterval : numSteps;
 
-            // Batch all dispatches: 4 colors × 4 grids = 16 dispatches
-            const commandEncoder = this.device.createCommandEncoder();
+        while (stepsRun < numSteps) {
+            const stepsThisBatch = Math.min(batchSize, numSteps - stepsRun);
 
-            for (let color = 0; color < 4; color++) {
-                // All 4 grids for this color (pairs run in parallel)
-                for (let gridIdx = 0; gridIdx < 4; gridIdx++) {
-                    const pass = commandEncoder.beginComputePass();
-                    pass.setPipeline(this.cftpPipeline);
-                    pass.setBindGroup(0, this.fluctBindGroups[gridIdx][color]);
-                    pass.dispatchWorkgroups(workgroupCount);
-                    pass.end();
+            // Submit per-step command buffers in a tight loop without awaiting.
+            // writeBuffer + submit per step are ordered by the queue.
+            try {
+                for (let s = 0; s < stepsThisBatch; s++) {
+                    const seed0 = Math.floor(Math.random() * 4294967295);
+                    const seed1 = Math.floor(Math.random() * 4294967295);
+
+                    for (let pair = 0; pair < 2; pair++) {
+                        const seed = pair === 0 ? seed0 : seed1;
+                        for (let color = 0; color < 4; color++) {
+                            intView[5] = color;
+                            uintView[8] = seed;
+                            this.device.queue.writeBuffer(this.fluctUniformBuffers[pair * 4 + color], 0, uniformData);
+                        }
+                    }
+
+                    const commandEncoder = this.device.createCommandEncoder();
+                    for (let color = 0; color < 4; color++) {
+                        for (let gridIdx = 0; gridIdx < 4; gridIdx++) {
+                            const pass = commandEncoder.beginComputePass();
+                            pass.setPipeline(this.cftpPipeline);
+                            pass.setBindGroup(0, this.fluctBindGroups[gridIdx][color]);
+                            pass.dispatchWorkgroups(workgroupCount);
+                            pass.end();
+                        }
+                    }
+                    this.device.queue.submit([commandEncoder.finish()]);
                 }
+            } catch (e) {
+                console.error('[GPU] Fluct compute dispatch failed at step', stepsRun, ':', e);
+                throw e;
             }
 
-            this.device.queue.submit([commandEncoder.finish()]);
-            stepsRun++;
+            stepsRun += stepsThisBatch;
 
-            // Early coalescence check
-            if (checkInterval > 0 && stepsRun % checkInterval === 0) {
-                const coalesced = await this.checkFluctuationsCoalescence();
-                if (coalesced[0] && coalesced[1]) {
-                    return { coalesced, stepsRun };
+            // Early coalescence check at batch boundary
+            if (checkInterval > 0 && stepsRun < numSteps) {
+                try {
+                    const coalesced = await this.checkFluctuationsCoalescence();
+                    if (coalesced[0] && coalesced[1]) {
+                        return { coalesced, stepsRun };
+                    }
+                } catch (e) {
+                    console.error('[GPU] Early fluctuations coalescence check failed, continuing:', e);
                 }
             }
         }
 
-        await this.device.queue.onSubmittedWorkDone();
-        return { coalesced: this.fluctCoalesced, stepsRun };
+        // Wait for GPU to finish after all batches
+        try {
+            await this.device.queue.onSubmittedWorkDone();
+        } catch (e) {
+            console.error('[GPU] onSubmittedWorkDone failed:', e);
+        }
+        return { coalesced: [false, false], stepsRun };
     }
 
     /**
@@ -984,44 +1061,41 @@ class WebGPULozengeEngine {
     async checkFluctuationsCoalescence() {
         if (!this.fluctInitialized) return [false, false];
 
-        // Copy all 4 grids to staging
+        const workgroupCount = Math.ceil(this.fluctNumCells / 64);
         const commandEncoder = this.device.createCommandEncoder();
-        for (let i = 0; i < 4; i++) {
+        // Clear both result buffers and dispatch coalesce for each pair
+        for (let pair = 0; pair < 2; pair++) {
+            commandEncoder.clearBuffer(this.fluctCoalesceResultBuffers[pair]);
+            const pass = commandEncoder.beginComputePass();
+            pass.setPipeline(this.coalescePipeline);
+            pass.setBindGroup(0, this.fluctCoalesceBindGroups[pair]);
+            pass.dispatchWorkgroups(workgroupCount);
+            pass.end();
             commandEncoder.copyBufferToBuffer(
-                this.fluctGridBuffers[i], 0,
-                this.fluctStagingBuffers[i], 0,
-                this.fluctGridBuffers[i].size
+                this.fluctCoalesceResultBuffers[pair], 0,
+                this.fluctCoalesceStagingBuffers[pair], 0, 4
             );
         }
         this.device.queue.submit([commandEncoder.finish()]);
 
-        // Map and compare
-        const dataArrays = [];
-        for (let i = 0; i < 4; i++) {
-            await this.fluctStagingBuffers[i].mapAsync(GPUMapMode.READ);
-            dataArrays.push(new Int32Array(this.fluctStagingBuffers[i].getMappedRange().slice(0)));
-            this.fluctStagingBuffers[i].unmap();
-        }
+        // Read back 8 bytes total (4 per pair) in parallel
+        await Promise.all([
+            this.fluctCoalesceStagingBuffers[0].mapAsync(GPUMapMode.READ),
+            this.fluctCoalesceStagingBuffers[1].mapAsync(GPUMapMode.READ)
+        ]);
 
-        // Check pair 0 (grids 0 and 1)
-        let pair0Coalesced = true;
-        for (let i = 0; i < dataArrays[0].length; i++) {
-            if (dataArrays[0][i] !== dataArrays[1][i]) {
-                pair0Coalesced = false;
-                break;
+        const results = [];
+        try {
+            for (let pair = 0; pair < 2; pair++) {
+                const diffCount = new Uint32Array(this.fluctCoalesceStagingBuffers[pair].getMappedRange().slice(0))[0];
+                results.push(diffCount === 0);
             }
+        } finally {
+            this.fluctCoalesceStagingBuffers[0].unmap();
+            this.fluctCoalesceStagingBuffers[1].unmap();
         }
 
-        // Check pair 1 (grids 2 and 3)
-        let pair1Coalesced = true;
-        for (let i = 0; i < dataArrays[2].length; i++) {
-            if (dataArrays[2][i] !== dataArrays[3][i]) {
-                pair1Coalesced = false;
-                break;
-            }
-        }
-
-        this.fluctCoalesced = [pair0Coalesced, pair1Coalesced];
+        this.fluctCoalesced = results;
         return this.fluctCoalesced;
     }
 
@@ -1039,14 +1113,19 @@ class WebGPULozengeEngine {
         commandEncoder.copyBufferToBuffer(this.fluctGridBuffers[2], 0, this.fluctStagingBuffers[2], 0, this.fluctGridBuffers[2].size);
         this.device.queue.submit([commandEncoder.finish()]);
 
-        await this.fluctStagingBuffers[0].mapAsync(GPUMapMode.READ);
-        await this.fluctStagingBuffers[2].mapAsync(GPUMapMode.READ);
+        await Promise.all([
+            this.fluctStagingBuffers[0].mapAsync(GPUMapMode.READ),
+            this.fluctStagingBuffers[2].mapAsync(GPUMapMode.READ)
+        ]);
 
-        const data0 = new Int32Array(this.fluctStagingBuffers[0].getMappedRange().slice(0));
-        const data2 = new Int32Array(this.fluctStagingBuffers[2].getMappedRange().slice(0));
-
-        this.fluctStagingBuffers[0].unmap();
-        this.fluctStagingBuffers[2].unmap();
+        let data0, data2;
+        try {
+            data0 = new Int32Array(this.fluctStagingBuffers[0].getMappedRange().slice(0));
+            data2 = new Int32Array(this.fluctStagingBuffers[2].getMappedRange().slice(0));
+        } finally {
+            this.fluctStagingBuffers[0].unmap();
+            this.fluctStagingBuffers[2].unmap();
+        }
 
         return {
             sample0: this.gridToDimers(data0, blackTriangles),
@@ -1062,10 +1141,6 @@ class WebGPULozengeEngine {
             for (const buf of this.fluctGridBuffers) buf.destroy();
             this.fluctGridBuffers = null;
         }
-        if (this.fluctRandomBuffers) {
-            for (const buf of this.fluctRandomBuffers) buf.destroy();
-            this.fluctRandomBuffers = null;
-        }
         if (this.fluctUniformBuffers) {
             for (const buf of this.fluctUniformBuffers) buf.destroy();
             this.fluctUniformBuffers = null;
@@ -1075,9 +1150,18 @@ class WebGPULozengeEngine {
             this.fluctWeightsBuffer = null;
         }
         if (this.fluctStagingBuffers) {
-            for (const buf of this.fluctStagingBuffers) buf.destroy();
+            for (const buf of this.fluctStagingBuffers) { if (buf) buf.destroy(); }
             this.fluctStagingBuffers = null;
         }
+        if (this.fluctCoalesceResultBuffers) {
+            for (const buf of this.fluctCoalesceResultBuffers) buf.destroy();
+            this.fluctCoalesceResultBuffers = null;
+        }
+        if (this.fluctCoalesceStagingBuffers) {
+            for (const buf of this.fluctCoalesceStagingBuffers) buf.destroy();
+            this.fluctCoalesceStagingBuffers = null;
+        }
+        this.fluctCoalesceBindGroups = null;
         this.fluctBindGroups = null;
         this.fluctInitialized = false;
     }

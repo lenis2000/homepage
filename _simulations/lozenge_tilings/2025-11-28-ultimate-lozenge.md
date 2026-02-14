@@ -3940,6 +3940,301 @@ function initLozengeApp() {
     }
 
     // ========================================================================
+    // WEBGL2 INSTANCED LOZENGE RENDERER
+    // ========================================================================
+    class WebGLLozengeRenderer {
+        constructor() {
+            this.glCanvas = document.createElement('canvas');
+            this.gl = null;
+            this.program = null;
+            this.instanceBuffer = null;
+            this.vertexBuffer = null;
+            this.maxInstances = 0;
+            this.ready = false;
+        }
+
+        init() {
+            const gl = this.glCanvas.getContext('webgl2', { alpha: true, premultipliedAlpha: false, antialias: true });
+            if (!gl) return false;
+            this.gl = gl;
+
+            // Vertex shader: computes lozenge vertex positions from (bn, bj, type)
+            // Uses the same coordinate math as getVertex + toCanvas
+            const vsSource = `#version 300 es
+            // Per-vertex: which corner of the rhombus (0-5 for 2 triangles)
+            in float a_vertexId;
+            // Per-instance: bn, bj, type
+            in vec3 a_instance;
+
+            uniform vec2 u_resolution;  // canvas size in CSS pixels
+            uniform float u_scale;
+            uniform vec2 u_center;      // centerX, centerY in CSS pixels
+            uniform float u_rotated;    // 0.0 or 1.0
+
+            out vec2 v_uv;  // parametric coords for edge detection
+            flat out int v_type;
+
+            const float SLOPE = 0.5773502691896258;  // 1/sqrt(3)
+            const float DELTA_C = 1.1547005383792517; // 2/sqrt(3)
+
+            // getVertex(n, j) -> (x, y) in world coords
+            vec2 getVertex(float n, float j) {
+                return vec2(n, SLOPE * n + j * DELTA_C);
+            }
+
+            // toCanvas(x, y) -> canvas pixel coords
+            vec2 toCanvas(vec2 world) {
+                if (u_rotated > 0.5) {
+                    return vec2(u_center.x + world.y * u_scale, u_center.y + world.x * u_scale);
+                }
+                return vec2(u_center.x + world.x * u_scale, u_center.y - world.y * u_scale);
+            }
+
+            void main() {
+                float bn = a_instance.x;
+                float bj = a_instance.y;
+                int type = int(a_instance.z);
+                v_type = type;
+
+                // 4 corners of the rhombus in lattice coords (n, j)
+                // Vertex order: 0=v0, 1=v1, 2=v2, 3=v3
+                // Two triangles: (0,1,2) and (0,2,3)
+                vec2 corners[4];
+                if (type == 0) {
+                    corners[0] = vec2(bn, bj);
+                    corners[1] = vec2(bn + 1.0, bj);
+                    corners[2] = vec2(bn + 1.0, bj - 1.0);
+                    corners[3] = vec2(bn, bj - 1.0);
+                } else if (type == 1) {
+                    corners[0] = vec2(bn, bj);
+                    corners[1] = vec2(bn + 1.0, bj - 1.0);
+                    corners[2] = vec2(bn + 1.0, bj - 2.0);
+                    corners[3] = vec2(bn, bj - 1.0);
+                } else {
+                    corners[0] = vec2(bn - 1.0, bj);
+                    corners[1] = vec2(bn, bj);
+                    corners[2] = vec2(bn + 1.0, bj - 1.0);
+                    corners[3] = vec2(bn, bj - 1.0);
+                }
+
+                // Map vertex ID to corner index and UV
+                int vid = int(a_vertexId);
+                // Triangle 1: 0,1,2  Triangle 2: 0,2,3
+                int cornerIdx;
+                vec2 uv;
+                if (vid == 0) { cornerIdx = 0; uv = vec2(0.0, 0.0); }
+                else if (vid == 1) { cornerIdx = 1; uv = vec2(1.0, 0.0); }
+                else if (vid == 2) { cornerIdx = 2; uv = vec2(1.0, 1.0); }
+                else if (vid == 3) { cornerIdx = 0; uv = vec2(0.0, 0.0); }
+                else if (vid == 4) { cornerIdx = 2; uv = vec2(1.0, 1.0); }
+                else { cornerIdx = 3; uv = vec2(0.0, 1.0); }
+
+                v_uv = uv;
+
+                // Convert lattice -> world -> canvas -> NDC
+                vec2 world = getVertex(corners[cornerIdx].x, corners[cornerIdx].y);
+                vec2 pixel = toCanvas(world);
+
+                // Canvas pixel coords -> NDC: x: [0, width] -> [-1, 1], y: [0, height] -> [1, -1]
+                gl_Position = vec4(
+                    2.0 * pixel.x / u_resolution.x - 1.0,
+                    1.0 - 2.0 * pixel.y / u_resolution.y,
+                    0.0, 1.0
+                );
+            }`;
+
+            const fsSource = `#version 300 es
+            precision mediump float;
+
+            in vec2 v_uv;
+            flat in int v_type;
+
+            uniform vec3 u_colors[3];      // RGB for each type
+            uniform vec3 u_outlineColor;
+            uniform float u_outlineWidth;  // in UV-space (0 = no outline)
+
+            out vec4 fragColor;
+
+            void main() {
+                // Distance to nearest edge in UV space
+                float edgeDist = min(min(v_uv.x, 1.0 - v_uv.x), min(v_uv.y, 1.0 - v_uv.y));
+
+                vec3 color;
+                if (v_type == 0) color = u_colors[0];
+                else if (v_type == 1) color = u_colors[1];
+                else color = u_colors[2];
+
+                if (u_outlineWidth > 0.0 && edgeDist < u_outlineWidth) {
+                    // Smooth edge with anti-aliasing
+                    float aa = fwidth(edgeDist);
+                    float t = smoothstep(u_outlineWidth - aa, u_outlineWidth, edgeDist);
+                    color = mix(u_outlineColor, color, t);
+                }
+
+                fragColor = vec4(color, 1.0);
+            }`;
+
+            const vs = this._compileShader(gl, gl.VERTEX_SHADER, vsSource);
+            const fs = this._compileShader(gl, gl.FRAGMENT_SHADER, fsSource);
+            if (!vs || !fs) return false;
+
+            const program = gl.createProgram();
+            gl.attachShader(program, vs);
+            gl.attachShader(program, fs);
+            gl.linkProgram(program);
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error('WebGL program link error:', gl.getProgramInfoLog(program));
+                return false;
+            }
+            this.program = program;
+
+            // Get attribute/uniform locations
+            this.loc = {
+                vertexId: gl.getAttribLocation(program, 'a_vertexId'),
+                instance: gl.getAttribLocation(program, 'a_instance'),
+                resolution: gl.getUniformLocation(program, 'u_resolution'),
+                scale: gl.getUniformLocation(program, 'u_scale'),
+                center: gl.getUniformLocation(program, 'u_center'),
+                rotated: gl.getUniformLocation(program, 'u_rotated'),
+                colors: gl.getUniformLocation(program, 'u_colors'),
+                outlineColor: gl.getUniformLocation(program, 'u_outlineColor'),
+                outlineWidth: gl.getUniformLocation(program, 'u_outlineWidth'),
+            };
+
+            // Create vertex buffer: 6 vertex IDs (0-5) for the two triangles
+            this.vertexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 1, 2, 3, 4, 5]), gl.STATIC_DRAW);
+
+            // Create VAO
+            this.vao = gl.createVertexArray();
+            gl.bindVertexArray(this.vao);
+
+            // Vertex ID attribute (per-vertex)
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
+            gl.enableVertexAttribArray(this.loc.vertexId);
+            gl.vertexAttribPointer(this.loc.vertexId, 1, gl.FLOAT, false, 0, 0);
+
+            // Instance attribute (per-instance) - will be filled later
+            this.instanceBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer);
+            gl.enableVertexAttribArray(this.loc.instance);
+            gl.vertexAttribPointer(this.loc.instance, 3, gl.FLOAT, false, 0, 0);
+            gl.vertexAttribDivisor(this.loc.instance, 1);
+
+            gl.bindVertexArray(null);
+
+            this.ready = true;
+            return true;
+        }
+
+        _compileShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('WebGL shader compile error:', gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        _hexToRGB(hex) {
+            const r = parseInt(hex.slice(1, 3), 16) / 255;
+            const g = parseInt(hex.slice(3, 5), 16) / 255;
+            const b = parseInt(hex.slice(5, 7), 16) / 255;
+            return [r, g, b];
+        }
+
+        /**
+         * Draw lozenges using WebGL2 instanced rendering.
+         * @param {CanvasRenderingContext2D} ctx2d - The 2D canvas context to draw onto
+         * @param {Array} dimers - Array of {bn, bj, t} objects
+         * @param {number} centerX - View center X in CSS pixels
+         * @param {number} centerY - View center Y in CSS pixels
+         * @param {number} scale - Pixels per world unit
+         * @param {boolean} rotated - Whether view is rotated
+         * @param {Array} colors - Array of 3 hex color strings
+         * @param {string} outlineColor - Hex color for outlines
+         * @param {number} outlineWidth - Outline width (0 = no outlines)
+         * @param {number} displayWidth - Canvas CSS width
+         * @param {number} displayHeight - Canvas CSS height
+         * @param {number} dpr - Device pixel ratio
+         */
+        draw(ctx2d, dimers, centerX, centerY, scale, rotated, colors, outlineColor, outlineWidth, displayWidth, displayHeight, dpr) {
+            if (!this.ready || dimers.length === 0) return false;
+
+            const gl = this.gl;
+            const count = dimers.length;
+
+            // Resize GL canvas to match the 2D canvas physical size
+            const physW = Math.round(displayWidth * dpr);
+            const physH = Math.round(displayHeight * dpr);
+            if (this.glCanvas.width !== physW || this.glCanvas.height !== physH) {
+                this.glCanvas.width = physW;
+                this.glCanvas.height = physH;
+            }
+
+            // Upload instance data
+            if (count > this.maxInstances) {
+                this.maxInstances = Math.max(count, this.maxInstances * 2 || 1024);
+                this.instanceData = new Float32Array(this.maxInstances * 3);
+            }
+            const data = this.instanceData;
+            for (let i = 0; i < count; i++) {
+                const d = dimers[i];
+                const off = i * 3;
+                data[off] = d.bn;
+                data[off + 1] = d.bj;
+                data[off + 2] = d.t;
+            }
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.buffer, 0, count * 3), gl.DYNAMIC_DRAW);
+
+            // Set viewport and clear
+            gl.viewport(0, 0, physW, physH);
+            gl.clearColor(0, 0, 0, 0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            gl.useProgram(this.program);
+            gl.bindVertexArray(this.vao);
+
+            // Uniforms - scale coordinates by dpr since GL canvas is in physical pixels
+            gl.uniform2f(this.loc.resolution, displayWidth * dpr, displayHeight * dpr);
+            gl.uniform1f(this.loc.scale, scale * dpr);
+            gl.uniform2f(this.loc.center, centerX * dpr, centerY * dpr);
+            gl.uniform1f(this.loc.rotated, rotated ? 1.0 : 0.0);
+
+            // Colors
+            const c0 = this._hexToRGB(colors[0]);
+            const c1 = this._hexToRGB(colors[1]);
+            const c2 = this._hexToRGB(colors[2]);
+            gl.uniform3fv(this.loc.colors, new Float32Array([...c0, ...c1, ...c2]));
+
+            const oc = this._hexToRGB(outlineColor);
+            gl.uniform3f(this.loc.outlineColor, oc[0], oc[1], oc[2]);
+            // Convert outline width from pixel-like units to UV space
+            // A lozenge in UV space spans [0,1] x [0,1]; in pixel space it spans ~scale pixels
+            // outlineWidth is already a fraction (e.g., 0.1 scaled by density)
+            // We need it in UV space: outlineWidth_uv = outlineWidth_pixels / lozenge_size_pixels
+            // lozenge_size_pixels ~ scale (since each lozenge edge is ~1 world unit)
+            const lozengePixelSize = scale * dpr;
+            const outlineUV = lozengePixelSize > 0 ? (outlineWidth * dpr * 0.5) / lozengePixelSize : 0;
+            gl.uniform1f(this.loc.outlineWidth, outlineUV);
+
+            // Draw instanced
+            gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, count);
+
+            gl.bindVertexArray(null);
+
+            // Blit GL canvas onto 2D canvas
+            ctx2d.drawImage(this.glCanvas, 0, 0, physW, physH, 0, 0, displayWidth, displayHeight);
+            return true;
+        }
+    }
+
+    // ========================================================================
     // RENDERER
     // ========================================================================
     class LozengeRenderer {
@@ -3976,6 +4271,10 @@ function initLozengeApp() {
             this.panY = 0;
             this.minZoom = 0.02;
             this.maxZoom = 10;
+            // WebGL2 instanced renderer for fast lozenge drawing
+            this.glRenderer = new WebGLLozengeRenderer();
+            this.useWebGL = this.glRenderer.init();
+            if (this.useWebGL) console.log('WebGL2 instanced lozenge renderer enabled');
             this.setupCanvas();
         }
 
@@ -4319,6 +4618,19 @@ function initLozengeApp() {
             const outlineWidth = this.outlineWidthPct * (refDimerCount / dimerCount);
             const outlineColor = isDarkMode ? '#aaaaaa' : '#000000';
 
+            // Try WebGL2 instanced path
+            if (this.useWebGL && this.glRenderer) {
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                const ok = this.glRenderer.draw(
+                    ctx, sim.dimers,
+                    centerX, centerY, scale, this.rotated,
+                    colors, outlineColor, outlineWidth,
+                    this.displayWidth, this.displayHeight, dpr
+                );
+                if (ok) return;
+            }
+
+            // Canvas 2D fallback
             for (const dimer of sim.dimers) {
                 const verts = this.getLozengeVertices(dimer);
                 const canvasVerts = verts.map(v => this.toCanvas(v.x, v.y, centerX, centerY, scale));
@@ -8859,28 +9171,16 @@ function initLozengeApp() {
 
         setTimeout(async () => {
             // Initialize CFTP in WASM (creates extremal states)
-            console.log('[CFTP] Starting CFTP, useGpuCFTP=' + useGpuCFTP);
+            console.log('[CFTP] Starting' + (useGpuCFTP ? ' (GPU)' : ' (WASM)'));
             sim.initCFTP();
 
             if (useGpuCFTP) {
                 // ========== WebGPU CFTP Path ==========
-                console.log('[GPU-CFTP] Starting GPU path');
-                console.log('[GPU-CFTP] gpuEngine state:', {
-                    exists: !!gpuEngine,
-                    isInitialized: gpuEngine?.isInitialized?.(),
-                    device: !!gpuEngine?.device
-                });
-
                 // Get extremal states from WASM as raw grid data
                 const minGridData = sim.getCFTPMinRawGridData();
                 const maxGridData = sim.getCFTPMaxRawGridData();
-                console.log('[GPU-CFTP] Got extremal states from WASM:', {
-                    minGridData: minGridData ? minGridData.length : null,
-                    maxGridData: maxGridData ? maxGridData.length : null
-                });
 
                 if (!minGridData || !maxGridData) {
-                    console.error('[GPU-CFTP] Failed to get CFTP extremal states');
                     el.cftpSteps.textContent = 'error';
                     el.cftpBtn.textContent = originalText;
                     el.cftpBtn.disabled = false;
@@ -8897,15 +9197,11 @@ function initLozengeApp() {
                         draw(); // Redraw to refresh rendering state after buffer flush
                     } catch(e) {}
 
-                    console.log('[GPU-CFTP] Calling gpuEngine.initCFTP()...');
                     gpuCftpOk = await gpuEngine.initCFTP(minGridData, maxGridData);
-                    console.log('[GPU-CFTP] initCFTP returned:', gpuCftpOk);
                 } catch (initErr) {
-                    console.error('[GPU-CFTP] initCFTP threw error:', initErr);
-                    console.error('[GPU-CFTP] Error stack:', initErr.stack);
+                    console.error('[CFTP] initCFTP error:', initErr);
                 }
                 if (!gpuCftpOk) {
-                    console.error('[GPU-CFTP] Failed to initialize GPU CFTP, falling back to WASM');
                     // Fall through to WASM path below
                 } else {
                     // Set CFTP weights (periodic or global q_bias)
@@ -8915,10 +9211,8 @@ function initLozengeApp() {
                     // GPU CFTP loop with epoch doubling and early stopping
                     let T = 1;
                     const maxT = 1073741824; // Safety limit (2^30)
-                    const stepsPerBatch = 1000; // Run steps between UI updates
-                    const checkInterval = 1000; // Check coalescence every N steps within batch
+                    const checkInterval = 4000; // Check coalescence every N steps within epoch
                     const drawInterval = 16384;  // Draw min/max bounds every N steps
-                    let lastDrawnBlock = -1;
 
                     async function gpuCftpStep() {
                         if (cftpCancelled) {
@@ -8936,7 +9230,7 @@ function initLozengeApp() {
                         try {
                             gpuEngine.resetCFTPChains(minGridData, maxGridData);
                         } catch (resetErr) {
-                            console.error('[GPU-CFTP] resetCFTPChains error:', resetErr);
+                            console.error('[CFTP] resetCFTPChains error:', resetErr);
                             isGpuBusy = false;
                             try { gpuEngine.destroyCFTP(); } catch (e) {}
                             el.cftpSteps.textContent = 'GPU error - tap Sample to retry';
@@ -8947,70 +9241,31 @@ function initLozengeApp() {
                         }
                         el.cftpSteps.textContent = 'T=' + T;
                         el.cftpBtn.textContent = 'T=' + T;
-                        lastDrawnBlock = -1; // Reset for new epoch
 
-                        // Run T steps in batches with early coalescence checking
-                        let totalStepsRun = 0;
-                        let coalesced = false;
-
-                        while (totalStepsRun < T && !cftpCancelled && !coalesced) {
-                            const batchSize = Math.min(stepsPerBatch, T - totalStepsRun);
-                            // Pass checkInterval for early stopping within batch
-                            let result;
-                            try {
-                                result = await gpuEngine.stepCFTP(batchSize, checkInterval);
-                            } catch (stepErr) {
-                                console.error('[GPU-CFTP] stepCFTP error:', stepErr);
-                                console.error('[GPU-CFTP] Error name:', stepErr.name);
-                                console.error('[GPU-CFTP] Error stack:', stepErr.stack);
-                                isGpuBusy = false;
-                                try { gpuEngine.destroyCFTP(); } catch (e) {}
-                                el.cftpSteps.textContent = 'GPU error - tap Sample to retry';
-                                el.cftpBtn.textContent = originalText;
-                                el.cftpBtn.disabled = false;
-                                el.cftpStopBtn.style.display = 'none';
-                                return;
-                            }
-                            totalStepsRun += result.stepsRun;
-                            coalesced = result.coalesced;
-
-                            // Update progress display
-                            el.cftpSteps.textContent = 'T=' + T + ' @' + totalStepsRun + (coalesced ? ' ✓' : '');
-                            el.cftpBtn.textContent = T + ':' + totalStepsRun;
-
-                            // Draw min/max bounds every drawInterval steps (like WASM version)
-                            if (T > drawInterval && !coalesced) {
-                                const currentBlock = Math.floor(totalStepsRun / drawInterval);
-                                if (currentBlock > lastDrawnBlock) {
-                                    lastDrawnBlock = currentBlock;
-                                    try {
-                                        const bounds = await gpuEngine.getCFTPBounds(sim.blackTriangles);
-                                        if (bounds.maxDimers.length > 0) {
-                                            if (is3DView && renderer3D) {
-                                                renderer3D.cftpBoundsTo3D(bounds.minDimers, bounds.maxDimers);
-                                            } else if (renderer.showDimerView) {
-                                                // Draw double dimer view in 2D dimer mode
-                                                renderer.draw(sim, activeTriangles, isValid);
-                                                const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
-                                                renderer.drawDoubleDimerView(renderer.ctx, sim, bounds.minDimers, bounds.maxDimers, centerX, centerY, scale);
-                                            } else {
-                                                // Lozenge view - just show max
-                                                const savedDimers = sim.dimers;
-                                                sim.dimers = bounds.maxDimers;
-                                                draw();
-                                                sim.dimers = savedDimers;
-                                            }
-                                        }
-                                    } catch (boundsErr) {
-                                        console.error('[GPU-CFTP] getCFTPBounds error:', boundsErr);
-                                        // Continue without drawing bounds
-                                    }
-                                }
-                            }
-
-                            // Yield to UI
-                            await new Promise(r => setTimeout(r, 0));
+                        // Run full epoch as single batch - GPU coalescence check is cheap,
+                        // so let stepCFTP handle early stopping via checkInterval internally
+                        let result;
+                        const epochStart = performance.now();
+                        try {
+                            result = await gpuEngine.stepCFTP(T, checkInterval);
+                        } catch (stepErr) {
+                            console.error('[CFTP] stepCFTP error:', stepErr);
+                            isGpuBusy = false;
+                            try { gpuEngine.destroyCFTP(); } catch (e) {}
+                            el.cftpSteps.textContent = 'GPU error - tap Sample to retry';
+                            el.cftpBtn.textContent = originalText;
+                            el.cftpBtn.disabled = false;
+                            el.cftpStopBtn.style.display = 'none';
+                            return;
                         }
+                        const totalStepsRun = result.stepsRun;
+                        let coalesced = result.coalesced;
+                        const epochMs = performance.now() - epochStart;
+                        console.log(`[CFTP] epoch T=${T}: ${totalStepsRun} steps in ${epochMs.toFixed(1)}ms${coalesced ? ' (coalesced)' : ''}`);
+
+                        // Update progress display
+                        el.cftpSteps.textContent = 'T=' + T + ' @' + totalStepsRun + (coalesced ? ' ✓' : '');
+                        el.cftpBtn.textContent = T + ':' + totalStepsRun;
 
                         if (cftpCancelled) {
                             isGpuBusy = false;
@@ -9028,7 +9283,7 @@ function initLozengeApp() {
                             try {
                                 coalesced = await gpuEngine.checkCoalescence();
                             } catch (coalErr) {
-                                console.error('[GPU-CFTP] checkCoalescence error:', coalErr);
+                                console.error('[CFTP] checkCoalescence error:', coalErr);
                             }
                         }
 
@@ -9042,12 +9297,13 @@ function initLozengeApp() {
                                 sim.setDimers(sim.dimers);
                                 draw();
                             } catch (finalErr) {
-                                console.error('[GPU-CFTP] finalizeCFTP/getDimers error:', finalErr);
+                                console.error('[CFTP] finalizeCFTP error:', finalErr);
                             }
 
                             isGpuBusy = false;
                             gpuEngine.destroyCFTP();
                             const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                            console.log(`[CFTP] GPU sampling complete: T=${T}, ${totalStepsRun} steps, ${elapsed}s total`);
                             // Show T@step if coalesced early, otherwise just T
                             const stepInfo = totalStepsRun < T ? T + '@' + totalStepsRun : T;
                             el.cftpSteps.textContent = stepInfo + ' (' + elapsed + 's, GPU)';
@@ -9064,22 +9320,26 @@ function initLozengeApp() {
                             el.cftpBtn.disabled = false;
                             el.cftpStopBtn.style.display = 'none';
                         } else {
-                            // Draw bounds only at end of epoch 16384 (GPU is fast, no need for earlier draws)
-                            if (T == drawInterval) {
-                                const bounds = await gpuEngine.getCFTPBounds(sim.blackTriangles);
-                                if (bounds.maxDimers.length > 0) {
-                                    if (is3DView && renderer3D) {
-                                        renderer3D.cftpBoundsTo3D(bounds.minDimers, bounds.maxDimers);
-                                    } else if (renderer.showDimerView) {
-                                        renderer.draw(sim, activeTriangles, isValid);
-                                        const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
-                                        renderer.drawDoubleDimerView(renderer.ctx, sim, bounds.minDimers, bounds.maxDimers, centerX, centerY, scale);
-                                    } else {
-                                        const savedDimers = sim.dimers;
-                                        sim.dimers = bounds.maxDimers;
-                                        draw();
-                                        sim.dimers = savedDimers;
+                            // Draw bounds at end of each epoch >= drawInterval
+                            if (T >= drawInterval) {
+                                try {
+                                    const bounds = await gpuEngine.getCFTPBounds(sim.blackTriangles);
+                                    if (bounds.maxDimers.length > 0) {
+                                        if (is3DView && renderer3D) {
+                                            renderer3D.cftpBoundsTo3D(bounds.minDimers, bounds.maxDimers);
+                                        } else if (renderer.showDimerView) {
+                                            renderer.draw(sim, activeTriangles, isValid);
+                                            const { centerX, centerY, scale } = renderer.getTransform(activeTriangles);
+                                            renderer.drawDoubleDimerView(renderer.ctx, sim, bounds.minDimers, bounds.maxDimers, centerX, centerY, scale);
+                                        } else {
+                                            const savedDimers = sim.dimers;
+                                            sim.dimers = bounds.maxDimers;
+                                            draw();
+                                            sim.dimers = savedDimers;
+                                        }
                                     }
+                                } catch (boundsErr) {
+                                    console.error('[CFTP] getCFTPBounds error:', boundsErr);
                                 }
                             }
                             // Double T and try again
@@ -9090,7 +9350,6 @@ function initLozengeApp() {
 
                     // LOCK: Prevent reinitialize() from destroying GPU buffers during CFTP
                     isGpuBusy = true;
-                    console.log('[GPU-CFTP] Starting gpuCftpStep loop, isGpuBusy=true');
                     gpuCftpStep();
                     return; // Don't fall through to WASM path
                 }
@@ -9144,17 +9403,20 @@ function initLozengeApp() {
                     sim.finalizeCFTP();
                     draw();
                     const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                    console.log(`[CFTP] WASM sampling complete: T=${res.T}, ${elapsed}s total`);
                     el.cftpSteps.textContent = res.T + ' (' + elapsed + 's)';
                     el.cftpBtn.textContent = originalText;
                     el.cftpBtn.disabled = false;
                     el.cftpStopBtn.style.display = 'none';
                 } else if (res.status === 'timeout') {
                     const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                    console.log(`[CFTP] WASM timeout: ${elapsed}s`);
                     el.cftpSteps.textContent = 'timeout (' + elapsed + 's)';
                     el.cftpBtn.textContent = originalText;
                     el.cftpBtn.disabled = false;
                     el.cftpStopBtn.style.display = 'none';
                 } else if (res.status === 'not_coalesced') {
+                    console.log(`[CFTP] WASM epoch T=${res.prevT} not coalesced, doubling to T=${res.T}`);
                     el.cftpSteps.textContent = 'T=' + res.T;
                     el.cftpBtn.textContent = 'T=' + res.T;
                     lastDrawnBlock = -1; // Reset for new epoch
@@ -9372,6 +9634,7 @@ function initLozengeApp() {
 
         if (useGpuFluct) {
             console.log('Fluctuations: starting (GPU)');
+            isGpuBusy = true;
             runGpuFluctuations();
         } else {
             const isThreaded = window.LOZENGE_THREADED || false;
@@ -9398,6 +9661,7 @@ function initLozengeApp() {
             // Initialize GPU fluctuations CFTP
             const gpuOk = await gpuEngine.initFluctuationsCFTP(minGridData, maxGridData);
             if (!gpuOk) {
+                isGpuBusy = false;
                 console.error('GPU fluctuations init failed, falling back to WASM');
                 runWasmFluctuations();
                 return;
@@ -9411,8 +9675,7 @@ function initLozengeApp() {
             // GPU CFTP loop with epoch doubling
             let T = 1;
             const maxT = 1073741824; // 2^30
-            const stepsPerBatch = 1000;
-            const checkInterval = 1000;
+            const checkInterval = 4000;
 
             async function gpuFluctStep() {
                 if (fluctCancelled) {
@@ -9427,29 +9690,52 @@ function initLozengeApp() {
                 el.fluctProgress.textContent = `T=${T} (GPU)`;
                 el.fluctuationsBtn.textContent = `T=${T}`;
 
-                // Run T steps
-                let totalStepsRun = 0;
-                let coalesced = [false, false];
+                // Run full epoch as single batch - GPU checks coalescence every checkInterval steps
+                const epochStart = performance.now();
+                let result;
+                try {
+                    result = await gpuEngine.stepFluctuationsCFTP(T, checkInterval);
+                } catch (stepErr) {
+                    console.error('[Fluct-CFTP] stepFluctuationsCFTP error:', stepErr);
+                    try { gpuEngine.destroyFluctuationsCFTP(); } catch (e) {}
+                    resetButtons();
+                    return;
+                }
+                const totalStepsRun = result.stepsRun;
+                let coalesced = result.coalesced;
+                const epochMs = performance.now() - epochStart;
+                const pairStatus = `${coalesced[0]?'✓':'○'}${coalesced[1]?'✓':'○'}`;
+                console.log(`[Fluct-CFTP] epoch T=${T}: ${totalStepsRun} steps in ${epochMs.toFixed(1)}ms (${pairStatus})`);
 
-                while (totalStepsRun < T && !fluctCancelled && !(coalesced[0] && coalesced[1])) {
-                    const batchSize = Math.min(stepsPerBatch, T - totalStepsRun);
-                    const result = await gpuEngine.stepFluctuationsCFTP(batchSize, checkInterval);
-                    totalStepsRun += result.stepsRun;
-                    coalesced = result.coalesced;
+                const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+                const status = coalesced[0] && coalesced[1] ? ' ✓' : ` (${pairStatus})`;
+                el.fluctProgress.textContent = `T=${T} @${totalStepsRun}${status} (${elapsed}s, GPU)`;
 
-                    const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
-                    const status = coalesced[0] && coalesced[1] ? ' ✓' : ` (${coalesced[0]?'✓':'○'}${coalesced[1]?'✓':'○'})`;
-                    el.fluctProgress.textContent = `T=${T} @${totalStepsRun}${status} (${elapsed}s, GPU)`;
+                // Check final coalescence if not detected during run
+                if (!(coalesced[0] && coalesced[1])) {
+                    try {
+                        const finalCoalesced = await gpuEngine.checkFluctuationsCoalescence();
+                        coalesced = finalCoalesced;
+                    } catch (checkErr) {
+                        console.error('[Fluct-CFTP] coalescence check error:', checkErr);
+                        try { gpuEngine.destroyFluctuationsCFTP(); } catch (e) {}
+                        resetButtons();
+                        return;
+                    }
                 }
 
-                // Check final coalescence
-                const finalCoalesced = await gpuEngine.checkFluctuationsCoalescence();
-
-                if (finalCoalesced[0] && finalCoalesced[1]) {
+                if (coalesced[0] && coalesced[1]) {
                     // Both pairs coalesced - get samples and finish
-                    const samples = await gpuEngine.getFluctuationsSamples(sim.blackTriangles);
-                    gpuEngine.destroyFluctuationsCFTP();
-                    finishFluctuationsWithSamples(samples.sample0, samples.sample1);
+                    try {
+                        const samples = await gpuEngine.getFluctuationsSamples(sim.blackTriangles);
+                        gpuEngine.destroyFluctuationsCFTP();
+                        console.log(`[Fluct-CFTP] GPU sampling complete: T=${T}, ${((performance.now() - startTime) / 1000).toFixed(2)}s total`);
+                        finishFluctuationsWithSamples(samples.sample0, samples.sample1);
+                    } catch (e) {
+                        console.error('[Fluct-CFTP] getFluctuationsSamples error:', e);
+                        try { gpuEngine.destroyFluctuationsCFTP(); } catch (e2) {}
+                        resetButtons();
+                    }
                 } else if (T >= maxT) {
                     el.fluctProgress.textContent = 'max T reached';
                     gpuEngine.destroyFluctuationsCFTP();
@@ -9538,6 +9824,7 @@ function initLozengeApp() {
         }
 
         function resetButtons() {
+            isGpuBusy = false;
             el.fluctuationsBtn.textContent = originalText;
             el.fluctuationsBtn.disabled = false;
             el.cftpBtn.disabled = false;
@@ -9681,6 +9968,7 @@ function initLozengeApp() {
             inDoubleDimerMode = true;
             inFluctuationMode = false;
 
+            isGpuBusy = false;
             const elapsed = ((performance.now() - ddStartTime) / 1000).toFixed(2);
             el.doubleDimerProgress.textContent = `Done (${elapsed}s)`;
             el.doubleDimerBtn.textContent = originalText;
@@ -9695,6 +9983,7 @@ function initLozengeApp() {
 
         if (useGpuDD) {
             // GPU path - reuse fluctuations CFTP infrastructure
+            isGpuBusy = true;
             // Initialize WASM CFTP to get extremal states
             sim.initCFTP();
 
@@ -9702,6 +9991,7 @@ function initLozengeApp() {
             const maxGridData = sim.getCFTPMaxRawGridData();
 
             if (!minGridData || !maxGridData) {
+                isGpuBusy = false;
                 el.doubleDimerProgress.textContent = 'Error: no grid data';
                 el.doubleDimerBtn.textContent = originalText;
                 el.doubleDimerBtn.disabled = false;
@@ -9713,6 +10003,7 @@ function initLozengeApp() {
 
             const gpuDDOk = await gpuEngine.initFluctuationsCFTP(minGridData, maxGridData);
             if (!gpuDDOk) {
+                isGpuBusy = false;
                 console.warn('GPU Double Dimer init failed, falling back to WASM');
             } else {
                 const qBias = parseFloat(el.qInput.value) || 1.0;
@@ -9721,13 +10012,12 @@ function initLozengeApp() {
 
                 let T = 1;
                 const maxT = 1073741824;
-                const stepsPerBatch = 1000;
-                const checkInterval = 1000;
-                const drawInterval = 16384;
+                const checkInterval = 4000;
 
                 async function gpuDDStep() {
                     if (doubleDimerCancelled) {
                         gpuEngine.destroyFluctuationsCFTP();
+                        isGpuBusy = false;
                         el.doubleDimerProgress.textContent = 'stopped';
                         el.doubleDimerBtn.textContent = originalText;
                         el.doubleDimerBtn.disabled = false;
@@ -9738,29 +10028,72 @@ function initLozengeApp() {
                     }
 
                     gpuEngine.resetFluctuationsChains();
-                    let stepsRun = 0;
-                    let coalesced = [false, false];
 
-                    while (stepsRun < T && !doubleDimerCancelled) {
-                        const batchSize = Math.min(stepsPerBatch, T - stepsRun);
-                        await gpuEngine.stepFluctuationsCFTP(batchSize, checkInterval);
-                        stepsRun += batchSize;
+                    // Run full epoch as single batch - GPU checks coalescence every checkInterval steps
+                    const epochStart = performance.now();
+                    let result;
+                    try {
+                        result = await gpuEngine.stepFluctuationsCFTP(T, checkInterval);
+                    } catch (stepErr) {
+                        console.error('[DD-CFTP] stepFluctuationsCFTP error:', stepErr);
+                        try { gpuEngine.destroyFluctuationsCFTP(); } catch (e) {}
+                        isGpuBusy = false;
+                        el.doubleDimerProgress.textContent = 'GPU error';
+                        el.doubleDimerBtn.textContent = originalText;
+                        el.doubleDimerBtn.disabled = false;
+                        el.cftpBtn.disabled = false;
+                        el.fluctuationsBtn.disabled = false;
+                        el.averageBtn.disabled = false;
+                        return;
+                    }
+                    const stepsRun = result.stepsRun;
+                    let coalesced = result.coalesced;
+                    const epochMs = performance.now() - epochStart;
+                    const pairStatus = `${coalesced[0]?'✓':'○'}${coalesced[1]?'✓':'○'}`;
+                    console.log(`[DD-CFTP] epoch T=${T}: ${stepsRun} steps in ${epochMs.toFixed(1)}ms (${pairStatus})`);
 
-                        coalesced = await gpuEngine.checkFluctuationsCoalescence();
-                        if (coalesced[0] && coalesced[1]) break;
+                    const elapsed = ((performance.now() - ddStartTime) / 1000).toFixed(1);
+                    const status = coalesced[0] && coalesced[1] ? ' ✓' : ` (${pairStatus})`;
+                    el.doubleDimerProgress.textContent = `T=${T} @${stepsRun}${status} (${elapsed}s, GPU)`;
 
-                        const elapsed = ((performance.now() - ddStartTime) / 1000).toFixed(1);
-                        const status = coalesced[0] && coalesced[1] ? ' ✓' : ` (${coalesced[0]?'✓':'○'}${coalesced[1]?'✓':'○'})`;
-                        el.doubleDimerProgress.textContent = `T=${T} @${stepsRun}${status} (${elapsed}s, GPU)`;
-                        await new Promise(r => setTimeout(r, 0));
+                    // Check final coalescence if not detected during run
+                    if (!(coalesced[0] && coalesced[1])) {
+                        try {
+                            coalesced = await gpuEngine.checkFluctuationsCoalescence();
+                        } catch (checkErr) {
+                            console.error('[DD-CFTP] coalescence check error:', checkErr);
+                            try { gpuEngine.destroyFluctuationsCFTP(); } catch (e) {}
+                            isGpuBusy = false;
+                            el.doubleDimerProgress.textContent = 'GPU error';
+                            el.doubleDimerBtn.textContent = originalText;
+                            el.doubleDimerBtn.disabled = false;
+                            el.cftpBtn.disabled = false;
+                            el.fluctuationsBtn.disabled = false;
+                            el.averageBtn.disabled = false;
+                            return;
+                        }
                     }
 
                     if (coalesced[0] && coalesced[1]) {
-                        const samples = await gpuEngine.getFluctuationsSamples(sim.blackTriangles);
-                        gpuEngine.destroyFluctuationsCFTP();
-                        finishDoubleDimerWithSamples(samples.sample0, samples.sample1);
+                        try {
+                            const samples = await gpuEngine.getFluctuationsSamples(sim.blackTriangles);
+                            gpuEngine.destroyFluctuationsCFTP();
+                            console.log(`[DD-CFTP] GPU sampling complete: T=${T}, ${((performance.now() - ddStartTime) / 1000).toFixed(2)}s total`);
+                            finishDoubleDimerWithSamples(samples.sample0, samples.sample1);
+                        } catch (e) {
+                            console.error('[DD-CFTP] getFluctuationsSamples error:', e);
+                            try { gpuEngine.destroyFluctuationsCFTP(); } catch (e2) {}
+                            isGpuBusy = false;
+                            el.doubleDimerProgress.textContent = 'GPU error';
+                            el.doubleDimerBtn.textContent = originalText;
+                            el.doubleDimerBtn.disabled = false;
+                            el.cftpBtn.disabled = false;
+                            el.fluctuationsBtn.disabled = false;
+                            el.averageBtn.disabled = false;
+                        }
                     } else if (T >= maxT) {
                         gpuEngine.destroyFluctuationsCFTP();
+                        isGpuBusy = false;
                         el.doubleDimerProgress.textContent = 'timeout';
                         el.doubleDimerBtn.textContent = originalText;
                         el.doubleDimerBtn.disabled = false;
