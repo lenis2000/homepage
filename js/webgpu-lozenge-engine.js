@@ -716,7 +716,7 @@ class WebGPULozengeEngine {
     /**
      * Copy CFTP result to main grid buffer
      */
-    async finalizeCFTP() {
+    finalizeCFTP() {
         if (!this.cftpInitialized || !this.gridBuffer) return;
 
         const commandEncoder = this.device.createCommandEncoder();
@@ -742,6 +742,8 @@ class WebGPULozengeEngine {
         this.coalesceBindGroup = null;
         this.lowerBindGroups = [];
         this.upperBindGroups = [];
+        this.cftpPipeline = null;
+        this.coalescePipeline = null;
         this.cftpInitialized = false;
     }
 
@@ -938,6 +940,10 @@ class WebGPULozengeEngine {
      */
     async stepFluctuationsCFTP(numSteps, checkInterval = 0) {
         if (!this.fluctInitialized) return { coalesced: [false, false], stepsRun: 0 };
+        if (this.deviceLost) {
+            console.error('[GPU] Device was lost, cannot step fluctuations CFTP');
+            throw new Error('GPU device lost');
+        }
 
         const workgroupCount = Math.ceil(this.fluctNumCells / 64);
         const qBias = this.fluctQBias || 1.0;
@@ -1007,7 +1013,11 @@ class WebGPULozengeEngine {
         }
 
         // Wait for GPU to finish after all batches
-        await this.device.queue.onSubmittedWorkDone();
+        try {
+            await this.device.queue.onSubmittedWorkDone();
+        } catch (e) {
+            console.error('[GPU] onSubmittedWorkDone failed:', e);
+        }
         return { coalesced: this.fluctCoalesced, stepsRun };
     }
 
