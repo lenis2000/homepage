@@ -92,10 +92,10 @@ Currently `checkCoalescence()` copies both grids to staging, maps them to CPU, a
 
 Tune the batch sizes and check intervals now that GPU steps are much cheaper.
 
-- [ ] Increase `stepsPerBatch` from 1000 to a larger value (e.g., 4000-8000) since steps are now much cheaper without CPU random gen
-- [ ] Reduce frequency of `await new Promise(r => setTimeout(r, 0))` UI yields - maybe only yield every few batches
-- [ ] Consider: instead of checking coalescence every `checkInterval` steps within a batch, run the full epoch T steps as one batch and check once at the end (since GPU coalescence check is now cheap)
-- [ ] Same tuning for the fluctuations CFTP loop
+- [x] Increase `stepsPerBatch` from 1000 to a larger value (e.g., 4000-8000) since steps are now much cheaper without CPU random gen
+- [x] Reduce frequency of `await new Promise(r => setTimeout(r, 0))` UI yields - maybe only yield every few batches
+- [x] Consider: instead of checking coalescence every `checkInterval` steps within a batch, run the full epoch T steps as one batch and check once at the end (since GPU coalescence check is now cheap)
+- [x] Same tuning for the fluctuations CFTP loop
 
 ### Task 5: Add benchmarking and verify correctness
 
