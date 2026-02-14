@@ -9688,7 +9688,15 @@ function initLozengeApp() {
 
                 // Run full epoch as single batch - GPU checks coalescence every checkInterval steps
                 const epochStart = performance.now();
-                const result = await gpuEngine.stepFluctuationsCFTP(T, checkInterval);
+                let result;
+                try {
+                    result = await gpuEngine.stepFluctuationsCFTP(T, checkInterval);
+                } catch (stepErr) {
+                    console.error('[Fluct-CFTP] stepFluctuationsCFTP error:', stepErr);
+                    try { gpuEngine.destroyFluctuationsCFTP(); } catch (e) {}
+                    resetButtons();
+                    return;
+                }
                 const totalStepsRun = result.stepsRun;
                 let coalesced = result.coalesced;
                 const epochMs = performance.now() - epochStart;
@@ -9701,8 +9709,15 @@ function initLozengeApp() {
 
                 // Check final coalescence if not detected during run
                 if (!(coalesced[0] && coalesced[1])) {
-                    const finalCoalesced = await gpuEngine.checkFluctuationsCoalescence();
-                    coalesced = finalCoalesced;
+                    try {
+                        const finalCoalesced = await gpuEngine.checkFluctuationsCoalescence();
+                        coalesced = finalCoalesced;
+                    } catch (checkErr) {
+                        console.error('[Fluct-CFTP] coalescence check error:', checkErr);
+                        try { gpuEngine.destroyFluctuationsCFTP(); } catch (e) {}
+                        resetButtons();
+                        return;
+                    }
                 }
 
                 if (coalesced[0] && coalesced[1]) {
@@ -10006,7 +10021,21 @@ function initLozengeApp() {
 
                     // Run full epoch as single batch - GPU checks coalescence every checkInterval steps
                     const epochStart = performance.now();
-                    const result = await gpuEngine.stepFluctuationsCFTP(T, checkInterval);
+                    let result;
+                    try {
+                        result = await gpuEngine.stepFluctuationsCFTP(T, checkInterval);
+                    } catch (stepErr) {
+                        console.error('[DD-CFTP] stepFluctuationsCFTP error:', stepErr);
+                        try { gpuEngine.destroyFluctuationsCFTP(); } catch (e) {}
+                        isGpuBusy = false;
+                        el.doubleDimerProgress.textContent = 'GPU error';
+                        el.doubleDimerBtn.textContent = originalText;
+                        el.doubleDimerBtn.disabled = false;
+                        el.cftpBtn.disabled = false;
+                        el.fluctuationsBtn.disabled = false;
+                        el.averageBtn.disabled = false;
+                        return;
+                    }
                     const stepsRun = result.stepsRun;
                     let coalesced = result.coalesced;
                     const epochMs = performance.now() - epochStart;
@@ -10019,7 +10048,20 @@ function initLozengeApp() {
 
                     // Check final coalescence if not detected during run
                     if (!(coalesced[0] && coalesced[1])) {
-                        coalesced = await gpuEngine.checkFluctuationsCoalescence();
+                        try {
+                            coalesced = await gpuEngine.checkFluctuationsCoalescence();
+                        } catch (checkErr) {
+                            console.error('[DD-CFTP] coalescence check error:', checkErr);
+                            try { gpuEngine.destroyFluctuationsCFTP(); } catch (e) {}
+                            isGpuBusy = false;
+                            el.doubleDimerProgress.textContent = 'GPU error';
+                            el.doubleDimerBtn.textContent = originalText;
+                            el.doubleDimerBtn.disabled = false;
+                            el.cftpBtn.disabled = false;
+                            el.fluctuationsBtn.disabled = false;
+                            el.averageBtn.disabled = false;
+                            return;
+                        }
                     }
 
                     if (coalesced[0] && coalesced[1]) {
