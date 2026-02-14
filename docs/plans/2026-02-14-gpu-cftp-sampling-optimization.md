@@ -102,13 +102,13 @@ Tune the batch sizes and check intervals now that GPU steps are much cheaper.
 **Files:**
 - Modify: `_simulations/lozenge_tilings/2025-11-28-ultimate-lozenge.md`
 
-- [ ] Add timing instrumentation: log per-epoch time and total CFTP time to console
-- [ ] Test with hexagon presets: size 30 (~1350 lozenges) and size 50 (~3750 lozenges)
-- [ ] Verify CFTP still produces valid perfect samples (visual inspection - should show frozen boundary)
-- [ ] Verify coalescence detection still works (convergence should happen, not timeout)
-- [ ] Compare before/after timing for the same hexagon sizes
-- [ ] Test both regular CFTP and fluctuations CFTP paths
-- [ ] Clean up any debug logging
+- [x] Add timing instrumentation: log per-epoch time and total CFTP time to console
+- [x] Test with hexagon presets: size 30 (~1350 lozenges) and size 50 (~3750 lozenges)
+- [x] Verify CFTP still produces valid perfect samples (visual inspection - should show frozen boundary)
+- [x] Verify coalescence detection still works (convergence should happen, not timeout)
+- [x] Compare before/after timing for the same hexagon sizes
+- [x] Test both regular CFTP and fluctuations CFTP paths
+- [x] Clean up any debug logging
 
 ### Task 6: (Bonus) WebGL2 instanced lozenge drawing
 

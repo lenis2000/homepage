@@ -8859,28 +8859,16 @@ function initLozengeApp() {
 
         setTimeout(async () => {
             // Initialize CFTP in WASM (creates extremal states)
-            console.log('[CFTP] Starting CFTP, useGpuCFTP=' + useGpuCFTP);
+            console.log('[CFTP] Starting' + (useGpuCFTP ? ' (GPU)' : ' (WASM)'));
             sim.initCFTP();
 
             if (useGpuCFTP) {
                 // ========== WebGPU CFTP Path ==========
-                console.log('[GPU-CFTP] Starting GPU path');
-                console.log('[GPU-CFTP] gpuEngine state:', {
-                    exists: !!gpuEngine,
-                    isInitialized: gpuEngine?.isInitialized?.(),
-                    device: !!gpuEngine?.device
-                });
-
                 // Get extremal states from WASM as raw grid data
                 const minGridData = sim.getCFTPMinRawGridData();
                 const maxGridData = sim.getCFTPMaxRawGridData();
-                console.log('[GPU-CFTP] Got extremal states from WASM:', {
-                    minGridData: minGridData ? minGridData.length : null,
-                    maxGridData: maxGridData ? maxGridData.length : null
-                });
 
                 if (!minGridData || !maxGridData) {
-                    console.error('[GPU-CFTP] Failed to get CFTP extremal states');
                     el.cftpSteps.textContent = 'error';
                     el.cftpBtn.textContent = originalText;
                     el.cftpBtn.disabled = false;
@@ -8897,15 +8885,11 @@ function initLozengeApp() {
                         draw(); // Redraw to refresh rendering state after buffer flush
                     } catch(e) {}
 
-                    console.log('[GPU-CFTP] Calling gpuEngine.initCFTP()...');
                     gpuCftpOk = await gpuEngine.initCFTP(minGridData, maxGridData);
-                    console.log('[GPU-CFTP] initCFTP returned:', gpuCftpOk);
                 } catch (initErr) {
-                    console.error('[GPU-CFTP] initCFTP threw error:', initErr);
-                    console.error('[GPU-CFTP] Error stack:', initErr.stack);
+                    console.error('[CFTP] initCFTP error:', initErr);
                 }
                 if (!gpuCftpOk) {
-                    console.error('[GPU-CFTP] Failed to initialize GPU CFTP, falling back to WASM');
                     // Fall through to WASM path below
                 } else {
                     // Set CFTP weights (periodic or global q_bias)
@@ -8934,7 +8918,7 @@ function initLozengeApp() {
                         try {
                             gpuEngine.resetCFTPChains(minGridData, maxGridData);
                         } catch (resetErr) {
-                            console.error('[GPU-CFTP] resetCFTPChains error:', resetErr);
+                            console.error('[CFTP] resetCFTPChains error:', resetErr);
                             isGpuBusy = false;
                             try { gpuEngine.destroyCFTP(); } catch (e) {}
                             el.cftpSteps.textContent = 'GPU error - tap Sample to retry';
@@ -8949,12 +8933,11 @@ function initLozengeApp() {
                         // Run full epoch as single batch - GPU coalescence check is cheap,
                         // so let stepCFTP handle early stopping via checkInterval internally
                         let result;
+                        const epochStart = performance.now();
                         try {
                             result = await gpuEngine.stepCFTP(T, checkInterval);
                         } catch (stepErr) {
-                            console.error('[GPU-CFTP] stepCFTP error:', stepErr);
-                            console.error('[GPU-CFTP] Error name:', stepErr.name);
-                            console.error('[GPU-CFTP] Error stack:', stepErr.stack);
+                            console.error('[CFTP] stepCFTP error:', stepErr);
                             isGpuBusy = false;
                             try { gpuEngine.destroyCFTP(); } catch (e) {}
                             el.cftpSteps.textContent = 'GPU error - tap Sample to retry';
@@ -8965,6 +8948,8 @@ function initLozengeApp() {
                         }
                         const totalStepsRun = result.stepsRun;
                         let coalesced = result.coalesced;
+                        const epochMs = performance.now() - epochStart;
+                        console.log(`[CFTP] epoch T=${T}: ${totalStepsRun} steps in ${epochMs.toFixed(1)}ms${coalesced ? ' (coalesced)' : ''}`);
 
                         // Update progress display
                         el.cftpSteps.textContent = 'T=' + T + ' @' + totalStepsRun + (coalesced ? ' ✓' : '');
@@ -8986,7 +8971,7 @@ function initLozengeApp() {
                             try {
                                 coalesced = await gpuEngine.checkCoalescence();
                             } catch (coalErr) {
-                                console.error('[GPU-CFTP] checkCoalescence error:', coalErr);
+                                console.error('[CFTP] checkCoalescence error:', coalErr);
                             }
                         }
 
@@ -9000,12 +8985,13 @@ function initLozengeApp() {
                                 sim.setDimers(sim.dimers);
                                 draw();
                             } catch (finalErr) {
-                                console.error('[GPU-CFTP] finalizeCFTP/getDimers error:', finalErr);
+                                console.error('[CFTP] finalizeCFTP error:', finalErr);
                             }
 
                             isGpuBusy = false;
                             gpuEngine.destroyCFTP();
                             const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                            console.log(`[CFTP] GPU sampling complete: T=${T}, ${totalStepsRun} steps, ${elapsed}s total`);
                             // Show T@step if coalesced early, otherwise just T
                             const stepInfo = totalStepsRun < T ? T + '@' + totalStepsRun : T;
                             el.cftpSteps.textContent = stepInfo + ' (' + elapsed + 's, GPU)';
@@ -9048,7 +9034,6 @@ function initLozengeApp() {
 
                     // LOCK: Prevent reinitialize() from destroying GPU buffers during CFTP
                     isGpuBusy = true;
-                    console.log('[GPU-CFTP] Starting gpuCftpStep loop, isGpuBusy=true');
                     gpuCftpStep();
                     return; // Don't fall through to WASM path
                 }
@@ -9102,17 +9087,20 @@ function initLozengeApp() {
                     sim.finalizeCFTP();
                     draw();
                     const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                    console.log(`[CFTP] WASM sampling complete: T=${res.T}, ${elapsed}s total`);
                     el.cftpSteps.textContent = res.T + ' (' + elapsed + 's)';
                     el.cftpBtn.textContent = originalText;
                     el.cftpBtn.disabled = false;
                     el.cftpStopBtn.style.display = 'none';
                 } else if (res.status === 'timeout') {
                     const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
+                    console.log(`[CFTP] WASM timeout: ${elapsed}s`);
                     el.cftpSteps.textContent = 'timeout (' + elapsed + 's)';
                     el.cftpBtn.textContent = originalText;
                     el.cftpBtn.disabled = false;
                     el.cftpStopBtn.style.display = 'none';
                 } else if (res.status === 'not_coalesced') {
+                    console.log(`[CFTP] WASM epoch T=${res.prevT} not coalesced, doubling to T=${res.T}`);
                     el.cftpSteps.textContent = 'T=' + res.T;
                     el.cftpBtn.textContent = 'T=' + res.T;
                     lastDrawnBlock = -1; // Reset for new epoch
@@ -9385,12 +9373,16 @@ function initLozengeApp() {
                 el.fluctuationsBtn.textContent = `T=${T}`;
 
                 // Run full epoch as single batch - GPU checks coalescence every checkInterval steps
+                const epochStart = performance.now();
                 const result = await gpuEngine.stepFluctuationsCFTP(T, checkInterval);
                 const totalStepsRun = result.stepsRun;
                 let coalesced = result.coalesced;
+                const epochMs = performance.now() - epochStart;
+                const pairStatus = `${coalesced[0]?'✓':'○'}${coalesced[1]?'✓':'○'}`;
+                console.log(`[Fluct-CFTP] epoch T=${T}: ${totalStepsRun} steps in ${epochMs.toFixed(1)}ms (${pairStatus})`);
 
                 const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
-                const status = coalesced[0] && coalesced[1] ? ' ✓' : ` (${coalesced[0]?'✓':'○'}${coalesced[1]?'✓':'○'})`;
+                const status = coalesced[0] && coalesced[1] ? ' ✓' : ` (${pairStatus})`;
                 el.fluctProgress.textContent = `T=${T} @${totalStepsRun}${status} (${elapsed}s, GPU)`;
 
                 // Check final coalescence if not detected during run
@@ -9403,6 +9395,7 @@ function initLozengeApp() {
                     // Both pairs coalesced - get samples and finish
                     const samples = await gpuEngine.getFluctuationsSamples(sim.blackTriangles);
                     gpuEngine.destroyFluctuationsCFTP();
+                    console.log(`[Fluct-CFTP] GPU sampling complete: T=${T}, ${((performance.now() - startTime) / 1000).toFixed(2)}s total`);
                     finishFluctuationsWithSamples(samples.sample0, samples.sample1);
                 } else if (T >= maxT) {
                     el.fluctProgress.textContent = 'max T reached';
@@ -9692,12 +9685,16 @@ function initLozengeApp() {
                     gpuEngine.resetFluctuationsChains();
 
                     // Run full epoch as single batch - GPU checks coalescence every checkInterval steps
+                    const epochStart = performance.now();
                     const result = await gpuEngine.stepFluctuationsCFTP(T, checkInterval);
                     const stepsRun = result.stepsRun;
                     let coalesced = result.coalesced;
+                    const epochMs = performance.now() - epochStart;
+                    const pairStatus = `${coalesced[0]?'✓':'○'}${coalesced[1]?'✓':'○'}`;
+                    console.log(`[DD-CFTP] epoch T=${T}: ${stepsRun} steps in ${epochMs.toFixed(1)}ms (${pairStatus})`);
 
                     const elapsed = ((performance.now() - ddStartTime) / 1000).toFixed(1);
-                    const status = coalesced[0] && coalesced[1] ? ' ✓' : ` (${coalesced[0]?'✓':'○'}${coalesced[1]?'✓':'○'})`;
+                    const status = coalesced[0] && coalesced[1] ? ' ✓' : ` (${pairStatus})`;
                     el.doubleDimerProgress.textContent = `T=${T} @${stepsRun}${status} (${elapsed}s, GPU)`;
 
                     // Check final coalescence if not detected during run
@@ -9708,6 +9705,7 @@ function initLozengeApp() {
                     if (coalesced[0] && coalesced[1]) {
                         const samples = await gpuEngine.getFluctuationsSamples(sim.blackTriangles);
                         gpuEngine.destroyFluctuationsCFTP();
+                        console.log(`[DD-CFTP] GPU sampling complete: T=${T}, ${((performance.now() - ddStartTime) / 1000).toFixed(2)}s total`);
                         finishDoubleDimerWithSamples(samples.sample0, samples.sample1);
                     } else if (T >= maxT) {
                         gpuEngine.destroyFluctuationsCFTP();
