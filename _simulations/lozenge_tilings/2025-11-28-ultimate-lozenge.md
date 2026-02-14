@@ -8184,9 +8184,30 @@ function initLozengeApp() {
         if (activeTriangles.size === 0) return;
         if (doubleMeshBtn.disabled) return;
         const dimerCount = sim.dimers ? sim.dimers.length : 0;
+        // Capture hole relative heights before scaling
+        let savedHoleHeights = [];
+        if (isValid) {
+            const holesInfo = sim.getAllHolesInfo();
+            const wasmHoles = holesInfo.holes || [];
+            savedHoleHeights = wasmHoles.map(h => h.currentWinding - h.baseHeight);
+        }
         saveState();
         activeTriangles = doubleMesh(activeTriangles);
         reinitialize();
+        // Restore hole heights scaled by 2x
+        if (isValid && savedHoleHeights.length > 0) {
+            const newHoleCount = sim.getHoleCount();
+            const count = Math.min(savedHoleHeights.length, newHoleCount);
+            for (let i = 0; i < count; i++) {
+                const scaledHeight = savedHoleHeights[i] * 2;
+                if (scaledHeight !== 0) {
+                    sim.adjustHoleWinding(i, scaledHeight);
+                }
+            }
+            if (count > 0) {
+                sim.refreshDimers();
+            }
+        }
         renderer.fitToRegion(activeTriangles);
         draw();
         // Prevent multi-clicking for large regions
