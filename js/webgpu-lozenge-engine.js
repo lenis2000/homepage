@@ -504,6 +504,9 @@ class WebGPULozengeEngine {
 
     /**
      * Run CFTP coupled steps on GPU with early stopping
+     * Batches multiple steps: builds per-step command buffers, submits all at once.
+     * writeBuffer + submit per step ensures correct seed ordering; batching
+     * avoids per-step await and reduces JS-to-GPU round trips.
      * @param {number} numSteps - Number of coupled steps to run
      * @param {number} checkInterval - Check coalescence every N steps (0 = no early check)
      * @returns {Promise<{coalesced: boolean, stepsRun: number}>}
@@ -531,54 +534,56 @@ class WebGPULozengeEngine {
         intView[2] = this.gridParams.minJ;
         intView[3] = this.gridParams.maxJ;
         intView[4] = this.gridParams.strideJ;
-        // intView[5] = color (set per color below)
         floatView[6] = qBias;
         uintView[7] = useWeights;
-        // uintView[8] = rand_seed (set per step below)
         uintView[9] = 0;  // padding
 
         let stepsRun = 0;
 
-        for (let step = 0; step < numSteps; step++) {
-            // Generate a single random seed for this step (same for both chains = coupling)
-            const seed = Math.floor(Math.random() * 4294967295);
+        // Determine batch boundaries: split at checkInterval points
+        const batchSize = (checkInterval > 0) ? checkInterval : numSteps;
+
+        while (stepsRun < numSteps) {
+            const stepsThisBatch = Math.min(batchSize, numSteps - stepsRun);
 
             try {
-                // Write uniform data for all 4 colors with this step's seed
-                for (let color = 0; color < 4; color++) {
-                    intView[5] = color;
-                    uintView[8] = seed;
-                    this.device.queue.writeBuffer(this.cftpUniformBuffers[color], 0, uniformData);
+                // Build and submit per-step command buffers in a tight loop without awaiting.
+                // Each step: writeBuffer (queue op) then submit (queue op) are ordered by the queue.
+                // No await between steps means the GPU driver pipelines them efficiently.
+                for (let s = 0; s < stepsThisBatch; s++) {
+                    const seed = Math.floor(Math.random() * 4294967295);
+
+                    for (let color = 0; color < 4; color++) {
+                        intView[5] = color;
+                        uintView[8] = seed;
+                        this.device.queue.writeBuffer(this.cftpUniformBuffers[color], 0, uniformData);
+                    }
+
+                    const commandEncoder = this.device.createCommandEncoder();
+                    for (let color = 0; color < 4; color++) {
+                        const lowerPass = commandEncoder.beginComputePass();
+                        lowerPass.setPipeline(this.cftpPipeline);
+                        lowerPass.setBindGroup(0, this.lowerBindGroups[color]);
+                        lowerPass.dispatchWorkgroups(workgroupCount);
+                        lowerPass.end();
+
+                        const upperPass = commandEncoder.beginComputePass();
+                        upperPass.setPipeline(this.cftpPipeline);
+                        upperPass.setBindGroup(0, this.upperBindGroups[color]);
+                        upperPass.dispatchWorkgroups(workgroupCount);
+                        upperPass.end();
+                    }
+                    this.device.queue.submit([commandEncoder.finish()]);
                 }
-
-                // Batch all 8 dispatches (4 colors × 2 chains) in a single command buffer
-                const commandEncoder = this.device.createCommandEncoder();
-
-                for (let color = 0; color < 4; color++) {
-                    // Dispatch lower chain for this color
-                    const lowerPass = commandEncoder.beginComputePass();
-                    lowerPass.setPipeline(this.cftpPipeline);
-                    lowerPass.setBindGroup(0, this.lowerBindGroups[color]);
-                    lowerPass.dispatchWorkgroups(workgroupCount);
-                    lowerPass.end();
-
-                    // Dispatch upper chain for this color (same seed = coupling)
-                    const upperPass = commandEncoder.beginComputePass();
-                    upperPass.setPipeline(this.cftpPipeline);
-                    upperPass.setBindGroup(0, this.upperBindGroups[color]);
-                    upperPass.dispatchWorkgroups(workgroupCount);
-                    upperPass.end();
-                }
-
-                this.device.queue.submit([commandEncoder.finish()]);
             } catch (e) {
-                console.error('[GPU] Compute dispatch failed at step', step, ':', e);
-                throw e; // Re-throw to stop CFTP
+                console.error('[GPU] Compute dispatch failed at step', stepsRun, ':', e);
+                throw e;
             }
-            stepsRun++;
 
-            // Early coalescence check
-            if (checkInterval > 0 && stepsRun % checkInterval === 0) {
+            stepsRun += stepsThisBatch;
+
+            // Early coalescence check at batch boundary
+            if (checkInterval > 0 && stepsRun < numSteps) {
                 try {
                     const coalesced = await this.checkCoalescence();
                     if (coalesced) {
@@ -586,12 +591,11 @@ class WebGPULozengeEngine {
                     }
                 } catch (e) {
                     console.error('[GPU] Early coalescence check failed, continuing:', e);
-                    // Continue without early stopping - will check at end of epoch
                 }
             }
         }
 
-        // Wait for GPU to finish
+        // Wait for GPU to finish after all batches
         try {
             await this.device.queue.onSubmittedWorkDone();
         } catch (e) {
@@ -888,6 +892,8 @@ class WebGPULozengeEngine {
 
     /**
      * Run fluctuations CFTP steps (both pairs in parallel)
+     * Submits per-step command buffers in a tight loop without awaiting.
+     * Coalescence checks happen at batch boundaries (every checkInterval steps).
      * @param {number} numSteps - Steps to run
      * @param {number} checkInterval - Check coalescence every N steps
      * @returns {Promise<{coalesced: boolean[], stepsRun: number}>}
@@ -917,40 +923,44 @@ class WebGPULozengeEngine {
 
         let stepsRun = 0;
 
-        for (let step = 0; step < numSteps; step++) {
-            // Generate independent seeds for each pair (coupling within pair, independence between pairs)
-            const seed0 = Math.floor(Math.random() * 4294967295);
-            const seed1 = Math.floor(Math.random() * 4294967295);
+        // Determine batch boundaries: split at checkInterval points
+        const batchSize = (checkInterval > 0) ? checkInterval : numSteps;
 
-            // Write uniform data for both pairs × 4 colors
-            for (let pair = 0; pair < 2; pair++) {
-                const seed = pair === 0 ? seed0 : seed1;
+        while (stepsRun < numSteps) {
+            const stepsThisBatch = Math.min(batchSize, numSteps - stepsRun);
+
+            // Submit per-step command buffers in a tight loop without awaiting.
+            // writeBuffer + submit per step are ordered by the queue.
+            for (let s = 0; s < stepsThisBatch; s++) {
+                const seed0 = Math.floor(Math.random() * 4294967295);
+                const seed1 = Math.floor(Math.random() * 4294967295);
+
+                for (let pair = 0; pair < 2; pair++) {
+                    const seed = pair === 0 ? seed0 : seed1;
+                    for (let color = 0; color < 4; color++) {
+                        intView[5] = color;
+                        uintView[8] = seed;
+                        this.device.queue.writeBuffer(this.fluctUniformBuffers[pair * 4 + color], 0, uniformData);
+                    }
+                }
+
+                const commandEncoder = this.device.createCommandEncoder();
                 for (let color = 0; color < 4; color++) {
-                    intView[5] = color;
-                    uintView[8] = seed;
-                    this.device.queue.writeBuffer(this.fluctUniformBuffers[pair * 4 + color], 0, uniformData);
+                    for (let gridIdx = 0; gridIdx < 4; gridIdx++) {
+                        const pass = commandEncoder.beginComputePass();
+                        pass.setPipeline(this.cftpPipeline);
+                        pass.setBindGroup(0, this.fluctBindGroups[gridIdx][color]);
+                        pass.dispatchWorkgroups(workgroupCount);
+                        pass.end();
+                    }
                 }
+                this.device.queue.submit([commandEncoder.finish()]);
             }
 
-            // Batch all dispatches: 4 colors × 4 grids = 16 dispatches
-            const commandEncoder = this.device.createCommandEncoder();
+            stepsRun += stepsThisBatch;
 
-            for (let color = 0; color < 4; color++) {
-                // All 4 grids for this color (pairs run in parallel)
-                for (let gridIdx = 0; gridIdx < 4; gridIdx++) {
-                    const pass = commandEncoder.beginComputePass();
-                    pass.setPipeline(this.cftpPipeline);
-                    pass.setBindGroup(0, this.fluctBindGroups[gridIdx][color]);
-                    pass.dispatchWorkgroups(workgroupCount);
-                    pass.end();
-                }
-            }
-
-            this.device.queue.submit([commandEncoder.finish()]);
-            stepsRun++;
-
-            // Early coalescence check
-            if (checkInterval > 0 && stepsRun % checkInterval === 0) {
+            // Early coalescence check at batch boundary
+            if (checkInterval > 0 && stepsRun < numSteps) {
                 const coalesced = await this.checkFluctuationsCoalescence();
                 if (coalesced[0] && coalesced[1]) {
                     return { coalesced, stepsRun };
@@ -958,6 +968,7 @@ class WebGPULozengeEngine {
             }
         }
 
+        // Wait for GPU to finish after all batches
         await this.device.queue.onSubmittedWorkDone();
         return { coalesced: this.fluctCoalesced, stepsRun };
     }

@@ -60,12 +60,12 @@ The CFTP shader currently reads pre-generated randoms from a storage buffer. Cha
 
 Currently `stepCFTP()` creates one command encoder per step. Instead, batch many steps into a single command buffer, only varying the seed uniform per step.
 
-- [ ] In `stepCFTP()`: create a single command encoder, loop through `numSteps` encoding 4 color passes per step (8 dispatches total per step for 2 chains), with different seed uniforms per step
-- [ ] Challenge: uniforms must differ per step. Solution: use dynamic uniform offsets, or pre-create N uniform buffers (one per step in batch), or use a storage buffer with per-step seeds
-- [ ] Recommended approach: add a `seedBuffer` (storage buffer of u32 seeds, one per step), pass step index via push constant or index into the seed buffer by step. Alternatively, simpler: write all seeds to a single storage buffer, have shader index by step
-- [ ] Actually simplest: keep current 4 uniform buffers per color but update rand_seed per step. Since we encode all steps before submit, use write-then-encode pattern: for each step, write seed to uniform buffers, then encode 8 passes. WebGPU guarantees writeBuffer ordering relative to subsequent dispatches within the same queue timeline.
-- [ ] Apply same batching to `stepFluctuationsCFTP()` (16 dispatches per step instead of 8)
-- [ ] Remove the `await device.queue.onSubmittedWorkDone()` from the inner loop - only await once after submitting the full batch
+- [x] In `stepCFTP()`: create a single command encoder, loop through `numSteps` encoding 4 color passes per step (8 dispatches total per step for 2 chains), with different seed uniforms per step
+- [x] Challenge: uniforms must differ per step. Solution: use dynamic uniform offsets, or pre-create N uniform buffers (one per step in batch), or use a storage buffer with per-step seeds
+- [x] Recommended approach: add a `seedBuffer` (storage buffer of u32 seeds, one per step), pass step index via push constant or index into the seed buffer by step. Alternatively, simpler: write all seeds to a single storage buffer, have shader index by step
+- [x] Actually simplest: keep current 4 uniform buffers per color but update rand_seed per step. Since we encode all steps before submit, use write-then-encode pattern: for each step, write seed to uniform buffers, then encode 8 passes. WebGPU guarantees writeBuffer ordering relative to subsequent dispatches within the same queue timeline.
+- [x] Apply same batching to `stepFluctuationsCFTP()` (16 dispatches per step instead of 8)
+- [x] Remove the `await device.queue.onSubmittedWorkDone()` from the inner loop - only await once after submitting the full batch
 
 ### Task 3: GPU-side coalescence check
 
