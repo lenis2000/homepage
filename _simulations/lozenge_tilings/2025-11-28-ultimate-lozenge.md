@@ -9726,10 +9726,16 @@ function initLozengeApp() {
 
                 if (coalesced[0] && coalesced[1]) {
                     // Both pairs coalesced - get samples and finish
-                    const samples = await gpuEngine.getFluctuationsSamples(sim.blackTriangles);
-                    gpuEngine.destroyFluctuationsCFTP();
-                    console.log(`[Fluct-CFTP] GPU sampling complete: T=${T}, ${((performance.now() - startTime) / 1000).toFixed(2)}s total`);
-                    finishFluctuationsWithSamples(samples.sample0, samples.sample1);
+                    try {
+                        const samples = await gpuEngine.getFluctuationsSamples(sim.blackTriangles);
+                        gpuEngine.destroyFluctuationsCFTP();
+                        console.log(`[Fluct-CFTP] GPU sampling complete: T=${T}, ${((performance.now() - startTime) / 1000).toFixed(2)}s total`);
+                        finishFluctuationsWithSamples(samples.sample0, samples.sample1);
+                    } catch (e) {
+                        console.error('[Fluct-CFTP] getFluctuationsSamples error:', e);
+                        try { gpuEngine.destroyFluctuationsCFTP(); } catch (e2) {}
+                        resetButtons();
+                    }
                 } else if (T >= maxT) {
                     el.fluctProgress.textContent = 'max T reached';
                     gpuEngine.destroyFluctuationsCFTP();
@@ -10069,10 +10075,22 @@ function initLozengeApp() {
                     }
 
                     if (coalesced[0] && coalesced[1]) {
-                        const samples = await gpuEngine.getFluctuationsSamples(sim.blackTriangles);
-                        gpuEngine.destroyFluctuationsCFTP();
-                        console.log(`[DD-CFTP] GPU sampling complete: T=${T}, ${((performance.now() - ddStartTime) / 1000).toFixed(2)}s total`);
-                        finishDoubleDimerWithSamples(samples.sample0, samples.sample1);
+                        try {
+                            const samples = await gpuEngine.getFluctuationsSamples(sim.blackTriangles);
+                            gpuEngine.destroyFluctuationsCFTP();
+                            console.log(`[DD-CFTP] GPU sampling complete: T=${T}, ${((performance.now() - ddStartTime) / 1000).toFixed(2)}s total`);
+                            finishDoubleDimerWithSamples(samples.sample0, samples.sample1);
+                        } catch (e) {
+                            console.error('[DD-CFTP] getFluctuationsSamples error:', e);
+                            try { gpuEngine.destroyFluctuationsCFTP(); } catch (e2) {}
+                            isGpuBusy = false;
+                            el.doubleDimerProgress.textContent = 'GPU error';
+                            el.doubleDimerBtn.textContent = originalText;
+                            el.doubleDimerBtn.disabled = false;
+                            el.cftpBtn.disabled = false;
+                            el.fluctuationsBtn.disabled = false;
+                            el.averageBtn.disabled = false;
+                        }
                     } else if (T >= maxT) {
                         gpuEngine.destroyFluctuationsCFTP();
                         isGpuBusy = false;
