@@ -21,21 +21,33 @@
     {% assign month = date_parts[1] | plus: 0 %}
     {% assign day = date_parts[2] | plus: 0 %}
     
-    {% comment %} Check if date is after July 1, 2022 {% endcomment %}
+    {% comment %} Check if date is in range July 1, 2022 – June 30, 2026 {% endcomment %}
+    {% assign after_start = false %}
     {% if year > 2022 %}
+      {% assign after_start = true %}
+    {% elsif year == 2022 %}
+      {% if month > 7 %}
+        {% assign after_start = true %}
+      {% elsif month == 7 and day >= 1 %}
+        {% assign after_start = true %}
+      {% endif %}
+    {% endif %}
+
+    {% assign before_end = false %}
+    {% if year < 2026 %}
+      {% assign before_end = true %}
+    {% elsif year == 2026 %}
+      {% if month < 6 %}
+        {% assign before_end = true %}
+      {% elsif month == 6 and day <= 30 %}
+        {% assign before_end = true %}
+      {% endif %}
+    {% endif %}
+
+    {% if after_start and before_end %}
       <div style="text-align: center; font-size: 0.8em; margin-top: 50px; color: #666;">
         This material is based upon work supported by the National Science Foundation under Grant DMS-2153869
       </div>
-    {% elsif year == 2022 %}
-      {% if month > 7 %}
-        <div style="text-align: center; font-size: 0.8em; margin-top: 50px; color: #666;">
-          This material is based upon work supported by the National Science Foundation under Grant DMS-2153869
-        </div>
-      {% elsif month == 7 and day >= 1 %}
-        <div style="text-align: center; font-size: 0.8em; margin-top: 50px; color: #666;">
-          This material is based upon work supported by the National Science Foundation under Grant DMS-2153869
-        </div>
-      {% endif %}
     {% endif %}
   {% endif %}
 {% endif %}
