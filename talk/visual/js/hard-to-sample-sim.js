@@ -425,7 +425,7 @@
         return heights;
     }
 
-    const UVA_COLORS = ['#E57200', '#232D4B', '#F9DCBF'];
+    const UVA_COLORS = ['#F9DCBF', '#232D4B', '#E57200'];
 
     function buildSurface(dimers, heights, opacity, colorMod) {
         const geometry = new THREE.BufferGeometry();
