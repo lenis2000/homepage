@@ -231,10 +231,15 @@
     }
 
     // === Slide engine ===
+    // onSlideEnter is called BEFORE reset/start in slide-engine.js.
+    // Both onSlideEnter and start call initAll() — the gen counter handles the race:
+    //   Normal nav: onSlideEnter's initAll gets cancelled by reset's disposeAll,
+    //               then start's initAll succeeds.
+    //   Late registration: only onSlideEnter fires, and its initAll succeeds.
     window.slideEngine.registerSimulation('summary-visual', {
         onSlideEnter: function() { initAll(); },
         onSlideLeave: function() { disposeAll(); },
-        start: function() {},
+        start: function() { initAll(); },
         reset: function() { disposeAll(); }
     }, 0);
 })();

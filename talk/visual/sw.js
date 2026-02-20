@@ -1,5 +1,5 @@
 // Service Worker for Visual Talk — Aggressive Precaching
-const CACHE_NAME = 'visual-talk-v8';
+const CACHE_NAME = 'visual-talk-v9';
 
 // All assets to precache
 const PRECACHE_ASSETS = [
