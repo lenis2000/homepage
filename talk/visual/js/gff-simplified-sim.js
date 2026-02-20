@@ -2,7 +2,7 @@
 /**
  * GFF Fluctuations: 3D surface from two independent lozenge tiling CFTP samples
  * GFF ≈ (h₁ - h₂) / √2
- * Uses Rotunda shape, WebGPU CFTP with CPU fallback (same pattern as limit-shape-sim)
+ * Uses big Rotunda shape, WebGPU CFTP with CPU fallback (same pattern as limit-shape-sim)
  */
 
 function initGFFFluctuationsSim() {
@@ -27,9 +27,10 @@ function initGFFFluctuationsSim() {
         const getGridBoundsWasm = wasm.cwrap('getGridBounds', 'number', []);
         const getCFTPMinGridDataWasm = wasm.cwrap('getCFTPMinGridData', 'number', []);
         const getCFTPMaxGridDataWasm = wasm.cwrap('getCFTPMaxGridData', 'number', []);
+        const getHoleCountWasm = wasm.cwrap('getHoleCount', 'number', []);
+        const getAllHolesInfoWasm = wasm.cwrap('getAllHolesInfo', 'number', []);
+        const adjustHoleWindingWasm = wasm.cwrap('adjustHoleWindingExport', 'number', ['number', 'number']);
         const performGlauberSteps = wasm.cwrap('performGlauberSteps', 'number', ['number']);
-
-        console.log('[GFF] WASM ready');
 
         // ---- WebGPU engine ----
         let gpuEngine = null;
@@ -38,17 +39,14 @@ function initGFFFluctuationsSim() {
         async function initGPU() {
             if (gpuEngine) return gpuAvailable;
             if (typeof WebGPULozengeEngine === 'undefined') {
-                console.log('[GFF] WebGPULozengeEngine not available');
                 return false;
             }
             try {
                 gpuEngine = new WebGPULozengeEngine();
                 await gpuEngine.init();
                 gpuAvailable = true;
-                console.log('[GFF] WebGPU engine initialized');
                 return true;
             } catch (e) {
-                console.log('[GFF] WebGPU not available:', e.message);
                 gpuAvailable = false;
                 return false;
             }
@@ -88,12 +86,49 @@ function initGFFFluctuationsSim() {
             return shapeTrianglesObj.filter(t => t.type === 1).map(t => ({ n: t.n, j: t.j }));
         }
 
+        function applyMiddleHoleHeightOffset(delta) {
+            const holeCount = getHoleCountWasm();
+            if (!holeCount) return;
+
+            let holes = [];
+            try {
+                const infoPtr = getAllHolesInfoWasm();
+                const parsed = JSON.parse(wasm.UTF8ToString(infoPtr));
+                freeString(infoPtr);
+                holes = Array.isArray(parsed.holes) ? parsed.holes : [];
+            } catch (e) {
+                console.warn('[GFF] Failed to load hole info:', e);
+                return;
+            }
+            if (holes.length === 0) return;
+
+            const minX = Math.min(...holes.map(h => h.centroidX));
+            const maxX = Math.max(...holes.map(h => h.centroidX));
+            const centerX = 0.5 * (minX + maxX);
+
+            const middleHole = holes.slice().sort((a, b) => {
+                const da = Math.abs(a.centroidX - centerX);
+                const db = Math.abs(b.centroidX - centerX);
+                if (da !== db) return da - db;
+                // Prefer the lower hole if two are aligned in the same column.
+                return a.centroidY - b.centroidY;
+            })[0];
+
+            try {
+                const adjPtr = adjustHoleWindingWasm(middleHole.idx, delta);
+                JSON.parse(wasm.UTF8ToString(adjPtr));
+                freeString(adjPtr);
+            } catch (e) {
+                console.warn('[GFF] Failed to adjust middle hole height:', e);
+            }
+        }
+
         // ---- Load shape ----
         let shapeTrianglesObj = null; // original objects for gridToDimers
         let shapeTrianglesFlat = null; // flat Int32Array for WASM init
 
         try {
-            const resp = await fetch('/letters/Rotunda.json');
+            const resp = await fetch('/letters/big_rotunda.json');
             const data = await resp.json();
             shapeTrianglesObj = data.triangles;
             shapeTrianglesFlat = new Int32Array(data.triangles.length * 3);
@@ -103,7 +138,7 @@ function initGFFFluctuationsSim() {
                 shapeTrianglesFlat[i * 3 + 2] = data.triangles[i].type;
             }
         } catch (e) {
-            console.error('[GFF] Failed to load Rotunda.json:', e);
+            console.error('[GFF] Failed to load big_rotunda.json:', e);
             return;
         }
 
@@ -115,12 +150,23 @@ function initGFFFluctuationsSim() {
         const initPtr = initFromTriangles(triPtr, shapeTrianglesFlat.length);
         freeString(initPtr);
         wasm._free(triPtr);
+        applyMiddleHoleHeightOffset(4);
 
         // ---- Constants ----
         const slope = 1 / Math.sqrt(3);
         const deltaC = 2 / Math.sqrt(3);
         const Z_SCALE = 20.0;
         const frustumSize = 30;
+        const DEFAULT_CAMERA = {
+            pos: { x: 9.4, y: -57.5, z: 108.2 },
+            target: { x: 47.4, y: 18.7, z: -5.4 },
+            zoom: 0.10
+        };
+        const FLAT_CAMERA = {
+            pos: { x: 48.7, y: 37.5, z: 139.1 },
+            target: { x: 48.7, y: 37.5, z: -2.9 },
+            zoom: 0.09
+        };
 
         // ---- State ----
         let sampleGeneration = 0;
@@ -373,31 +419,21 @@ function initGFFFluctuationsSim() {
         }
 
         // ---- Camera ----
-        function centerCamera(gff) {
+        function applyDefaultCamera() {
             if (!camera || !controls) return;
-            camera.position.set(11.1, -54.6, 110.7);
-            controls.target.set(49.1, 21.6, -2.9);
-            camera.zoom = 0.20;
+            camera.position.set(DEFAULT_CAMERA.pos.x, DEFAULT_CAMERA.pos.y, DEFAULT_CAMERA.pos.z);
+            controls.target.set(DEFAULT_CAMERA.target.x, DEFAULT_CAMERA.target.y, DEFAULT_CAMERA.target.z);
+            camera.zoom = DEFAULT_CAMERA.zoom;
             camera.updateProjectionMatrix();
             controls.update();
         }
 
+        function centerCamera(gff) {
+            applyDefaultCamera();
+        }
+
         function centerCameraFlat(vertexSet) {
-            if (!camera || !controls) return;
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            for (const key of vertexSet) {
-                const [n, j] = key.split(',').map(Number);
-                const x = n, y = slope * n + j * deltaC;
-                if (x < minX) minX = x; if (x > maxX) maxX = x;
-                if (y < minY) minY = y; if (y > maxY) maxY = y;
-            }
-            const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-            const size = Math.max(maxX - minX, maxY - minY) || 10;
-            controls.target.set(cx, cy, 0);
-            camera.position.set(cx - size * 0.3, cy - size * 0.5, size * 0.7);
-            camera.zoom = frustumSize / (size * 1.1);
-            camera.updateProjectionMatrix();
-            controls.update();
+            applyDefaultCamera();
         }
 
         // ---- Boundary ----
@@ -586,19 +622,16 @@ function initGFFFluctuationsSim() {
                                 const blackTriangles = getBlackTriangles();
                                 const dimers = gpuEngine.gridToDimers(resultGrid, blackTriangles);
                                 gpuEngine.destroyCFTP();
-                                console.log('[GFF] GPU CFTP completed, T=' + T + ', dimers=' + dimers.length);
                                 return dimers;
                             }
                             gpuEngine.destroyCFTP();
                         }
                     }
                 } catch (e) {
-                    console.log('[GFF] GPU CFTP failed, falling back to WASM:', e.message);
                 }
             }
 
             // CPU fallback
-            console.log('[GFF] Using WASM CFTP');
             freeString(runCFTPWasm());
             const strPtr = exportDimersWasm();
             const jsonStr = wasm.UTF8ToString(strPtr);
@@ -631,7 +664,6 @@ function initGFFFluctuationsSim() {
             const t0 = performance.now();
             const dimers1 = await sampleOneCFTP();
             const t1 = performance.now();
-            console.log('[GFF] Sample 1: ' + ((t1 - t0) / 1000).toFixed(1) + 's');
 
             if (gen !== sampleGeneration || !meshGroup) { samplingActive = false; hideStatus(); return; }
 
@@ -640,8 +672,6 @@ function initGFFFluctuationsSim() {
             // Sample 2 (RNG state already advanced from first initCFTP seed generation)
             const dimers2 = await sampleOneCFTP();
             const t2 = performance.now();
-            console.log('[GFF] Sample 2: ' + ((t2 - t1) / 1000).toFixed(1) + 's');
-            console.log('[GFF] Total: ' + ((t2 - t0) / 1000).toFixed(1) + 's');
 
             if (gen !== sampleGeneration || !meshGroup) { samplingActive = false; hideStatus(); return; }
 
@@ -693,9 +723,9 @@ function initGFFFluctuationsSim() {
                         if (step === 2) {
                             // Animate to top-down view
                             animateCamera(
-                                { x: 50.1, y: 28.8, z: 139.1 },
-                                { x: 50.1, y: 28.8, z: -2.9 },
-                                0.19,
+                                { x: FLAT_CAMERA.pos.x, y: FLAT_CAMERA.pos.y, z: FLAT_CAMERA.pos.z },
+                                { x: FLAT_CAMERA.target.x, y: FLAT_CAMERA.target.y, z: FLAT_CAMERA.target.z },
+                                FLAT_CAMERA.zoom,
                                 500
                             );
                         }
@@ -705,9 +735,9 @@ function initGFFFluctuationsSim() {
                         if (step === 1) {
                             // Animate back to 3/4 view
                             animateCamera(
-                                { x: 11.1, y: -54.6, z: 110.7 },
-                                { x: 49.1, y: 21.6, z: -2.9 },
-                                0.20,
+                                { x: DEFAULT_CAMERA.pos.x, y: DEFAULT_CAMERA.pos.y, z: DEFAULT_CAMERA.pos.z },
+                                { x: DEFAULT_CAMERA.target.x, y: DEFAULT_CAMERA.target.y, z: DEFAULT_CAMERA.target.z },
+                                DEFAULT_CAMERA.zoom,
                                 500
                             );
                         }
