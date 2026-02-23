@@ -1,0 +1,13 @@
+defaults:
+  format: svg
+  sampler: cftp
+  outline: 0.3
+  output_size: 3600x3600
+
+designs:
+  - name: fabric-tiles
+    region: hexagon
+    sizes: [10]
+    schemes: [all]
+    product: fabric
+    variations_per_combo: 1

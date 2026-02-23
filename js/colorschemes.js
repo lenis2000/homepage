@@ -90,6 +90,13 @@ const ColorSchemes = [
     // Domino Tilings Default (4 colors: yellow, green, blue, red for domino types)
     { name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] },  // Yellow, forest green, cobalt blue, crimson
 
+    // Rose Collection
+    { name: 'Dusty Rose', colors: ['#C08081', '#D4A5A5', '#F5E6E8', '#9B5D5E'] },  // Muted mauve rose, light dusty pink, cream blush, deep rose
+    { name: 'Blush Pink', colors: ['#F4978E', '#F8AD9D', '#FFDAB9', '#E07A5F'] },  // Warm blush, peach rose, light peach, terracotta
+    { name: 'Rosewood', colors: ['#8E3B46', '#B85C69', '#F2D7D9', '#5C1A1B'] },  // Deep rosewood, medium rose, pale pink, dark burgundy
+    { name: 'Pink Champagne', colors: ['#F5C6D0', '#EDAFB8', '#FAE3D9', '#D69FB0'] },  // Light champagne pink, medium pink, cream, deeper pink
+    { name: 'Valentina', colors: ['#E63946', '#F1AEBB', '#FFF0F3', '#A4133C'] },  // Bright red-rose, soft pink, near-white blush, deep crimson
+
     // Pencil Drawing / Escher Style
     { name: 'Escher', colors: ['#F5F5F5', '#D0D0D0', '#A8A8A8', '#E0E0E0'] }  // Light gray, medium gray, darker gray (lozenges); 4th for dominoes
 ];

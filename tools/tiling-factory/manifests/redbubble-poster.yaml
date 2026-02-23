@@ -1,0 +1,19 @@
+defaults:
+  format: png
+  sampler: cftp
+  outline: 0.5
+  output_size: 4500x5400
+
+designs:
+  - name: hex-collection
+    region: hexagon
+    sizes: [8, 12, 16, 20]
+    schemes: [all]
+    variations_per_combo: 3
+
+  - name: weighted-hex
+    region: hexagon
+    sizes: [15]
+    schemes: [UVA, Albina, Ocean Breeze, Cherry Blossom]
+    q_bias: [0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0]
+    variations_per_combo: 1

@@ -1,0 +1,20 @@
+defaults:
+  format: png
+  sampler: cftp
+  outline: 0.3
+  output_size: 1500x1500
+
+designs:
+  - name: hex-stickers
+    region: hexagon
+    sizes: [6, 8, 10]
+    schemes: [UVA, Albina, Cherry Blossom, Ocean Breeze, Escher, Dracula, Nord]
+    product: sticker
+    variations_per_combo: 2
+
+  - name: heart-stickers
+    region: heart
+    sizes: [8, 10]
+    schemes: [Cherry Blossom, Rose Garden, Coral Reef, Sunset Glow]
+    product: sticker
+    variations_per_combo: 2
