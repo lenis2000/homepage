@@ -9282,9 +9282,10 @@ function initLozengeApp() {
                         const epochMs = performance.now() - epochStart;
                         console.log(`[CFTP] epoch T=${T}: ${totalStepsRun} steps in ${epochMs.toFixed(1)}ms${coalesced ? ' (coalesced)' : ''}`);
 
-                        // Update progress display
-                        el.cftpSteps.textContent = 'T=' + T + ' @' + totalStepsRun + (coalesced ? ' ✓' : '');
-                        el.cftpBtn.textContent = T + ':' + totalStepsRun;
+                        // Update progress display with elapsed time
+                        const elapsedSoFar = ((performance.now() - cftpStartTime) / 1000).toFixed(1);
+                        el.cftpSteps.textContent = 'T=' + T + (coalesced ? ' ✓' : '') + ' (' + elapsedSoFar + 's)';
+                        el.cftpBtn.textContent = 'T=' + T;
 
                         if (cftpCancelled) {
                             isGpuBusy = false;
@@ -9388,7 +9389,8 @@ function initLozengeApp() {
 
                 const res = sim.stepCFTP();
                 if (res.status === 'in_progress') {
-                    el.cftpSteps.textContent = 'T=' + res.T + ' @' + res.step;
+                    const elapsedSoFar = ((performance.now() - cftpStartTime) / 1000).toFixed(1);
+                    el.cftpSteps.textContent = 'T=' + res.T + ' @' + res.step + ' (' + elapsedSoFar + 's)';
                     el.cftpBtn.textContent = res.T + ':' + res.step;
                     // Draw every 16384 steps when T > 16384
                     if (res.T > 16384) {
@@ -9433,8 +9435,9 @@ function initLozengeApp() {
                     el.cftpBtn.disabled = false;
                     el.cftpStopBtn.style.display = 'none';
                 } else if (res.status === 'not_coalesced') {
-                    console.log(`[CFTP] WASM epoch T=${res.prevT} not coalesced, doubling to T=${res.T}`);
-                    el.cftpSteps.textContent = 'T=' + res.T;
+                    const elapsedSoFar = ((performance.now() - cftpStartTime) / 1000).toFixed(1);
+                    console.log(`[CFTP] WASM epoch T=${res.prevT} not coalesced, doubling to T=${res.T} (${elapsedSoFar}s)`);
+                    el.cftpSteps.textContent = 'T=' + res.T + ' (' + elapsedSoFar + 's)';
                     el.cftpBtn.textContent = 'T=' + res.T;
                     lastDrawnBlock = -1; // Reset for new epoch
                     // Draw both surfaces only at end of epochs 4096, 8192, 16384
