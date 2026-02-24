@@ -625,17 +625,8 @@ class WebGPULozengeEngine {
 
             stepsRun += stepsThisBatch;
 
-            // Early coalescence check at batch boundary
-            if (checkInterval > 0 && stepsRun < numSteps) {
-                try {
-                    const coalesced = await this.checkCoalescence();
-                    if (coalesced) {
-                        return { coalesced: true, stepsRun };
-                    }
-                } catch (e) {
-                    console.error('[GPU] Early coalescence check failed, continuing:', e);
-                }
-            }
+            // Pure doubling: no early coalescence check mid-epoch.
+            // Coalescence is checked only after running all T steps.
         }
 
         // Wait for GPU to finish after all batches

@@ -2188,18 +2188,19 @@ char* stepCFTP() {
     }
     cftp_currentStep += stepsToRun;
 
-    // Check coalescence after each batch - early exit if coalesced
-    if (cftp_lower.grid == cftp_upper.grid) {
-        cftp_coalesced = true;
-        std::string json = "{\"status\":\"coalesced\", \"T\":" + std::to_string(cftp_currentStep) + "}";
+    // Pure doubling: only check coalescence after running ALL T steps
+    if (cftp_currentStep < cftp_T) {
+        std::string json = "{\"status\":\"in_progress\", \"T\":" + std::to_string(cftp_T) +
+                          ", \"step\":" + std::to_string(cftp_currentStep) + "}";
         char* out = (char*)malloc(json.size() + 1);
         strcpy(out, json.c_str());
         return out;
     }
 
-    if (cftp_currentStep < cftp_T) {
-        std::string json = "{\"status\":\"in_progress\", \"T\":" + std::to_string(cftp_T) +
-                          ", \"step\":" + std::to_string(cftp_currentStep) + "}";
+    // Epoch complete - check coalescence
+    if (cftp_lower.grid == cftp_upper.grid) {
+        cftp_coalesced = true;
+        std::string json = "{\"status\":\"coalesced\", \"T\":" + std::to_string(cftp_T) + "}";
         char* out = (char*)malloc(json.size() + 1);
         strcpy(out, json.c_str());
         return out;

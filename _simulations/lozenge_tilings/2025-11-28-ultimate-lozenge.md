@@ -9229,10 +9229,9 @@ function initLozengeApp() {
                     const qBias = parseFloat(el.qInput.value) || 1.0;
                     const usePeriodic = usePeriodicCheckbox.checked;
                     gpuEngine.setCFTPWeights(currentPeriodicQ, currentPeriodicK, usePeriodic, qBias);
-                    // GPU CFTP loop with epoch doubling and early stopping
+                    // GPU CFTP loop with pure epoch doubling (no early stopping)
                     let T = 1;
                     const maxT = 1073741824; // Safety limit (2^30)
-                    const checkInterval = 4000; // Check coalescence every N steps within epoch
                     const drawInterval = 16384;  // Draw min/max bounds every N steps
 
                     async function gpuCftpStep() {
@@ -9263,12 +9262,11 @@ function initLozengeApp() {
                         el.cftpSteps.textContent = 'T=' + T;
                         el.cftpBtn.textContent = 'T=' + T;
 
-                        // Run full epoch as single batch - GPU coalescence check is cheap,
-                        // so let stepCFTP handle early stopping via checkInterval internally
+                        // Run full epoch as single batch (pure doubling, no early stopping)
                         let result;
                         const epochStart = performance.now();
                         try {
-                            result = await gpuEngine.stepCFTP(T, checkInterval);
+                            result = await gpuEngine.stepCFTP(T, 0);
                         } catch (stepErr) {
                             console.error('[CFTP] stepCFTP error:', stepErr);
                             isGpuBusy = false;
@@ -9324,10 +9322,8 @@ function initLozengeApp() {
                             isGpuBusy = false;
                             gpuEngine.destroyCFTP();
                             const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
-                            console.log(`[CFTP] GPU sampling complete: T=${T}, ${totalStepsRun} steps, ${elapsed}s total`);
-                            // Show T@step if coalesced early, otherwise just T
-                            const stepInfo = totalStepsRun < T ? T + '@' + totalStepsRun : T;
-                            el.cftpSteps.textContent = stepInfo + ' (' + elapsed + 's, GPU)';
+                            console.log(`[CFTP] GPU sampling complete: T=${T}, ${elapsed}s total`);
+                            el.cftpSteps.textContent = T + ' (' + elapsed + 's, GPU)';
                             el.cftpBtn.textContent = originalText;
                             el.cftpBtn.disabled = false;
                             el.cftpStopBtn.style.display = 'none';
