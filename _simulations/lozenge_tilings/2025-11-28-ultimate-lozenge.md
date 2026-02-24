@@ -2770,6 +2770,10 @@ Cmd-click: complete lasso</div>
         <input type="number" id="obj-thickness" value="2" min="0" step="1" style="width: 40px;" aria-label="OBJ export thickness in millimeters">
         <span style="font-size: 13px; color: #888;">mm</span>
       </div>
+      <div class="export-divider"></div>
+      <div class="export-group" style="justify-content: center;">
+        <a href="https://www.redbubble.com/people/tilinger/shop" target="_blank" rel="noopener" style="font-size: 13px; color: #E57200; text-decoration: none; font-weight: 600;">Get a lozenge design printed on anything!</a>
+      </div>
       <div id="height-csv-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 100%;">Height CSV Coordinates:
 
 • n, j: Integer lattice coordinates on the triangular grid
