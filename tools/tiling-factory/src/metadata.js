@@ -24,6 +24,9 @@ const SCHEME_COLOR_TAGS = {
     'Sunset Glow': ['orange art', 'sunset colors', 'warm pattern'],
     'Arctic Frost': ['ice blue art', 'winter pattern', 'cool geometric'],
     'Escher': ['grayscale art', 'monochrome pattern', 'minimalist geometric'],
+    'Rainbow Pride': ['pride art', 'rainbow heart', 'LGBTQ art', 'pride geometric'],
+    'Trans Pride': ['trans pride art', 'trans flag heart', 'trans geometric', 'pink blue white'],
+    'Bi Pride': ['bi pride art', 'bisexual flag heart', 'bi geometric', 'pink purple blue'],
 };
 
 const PRODUCT_TAGS = {

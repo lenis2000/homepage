@@ -22,14 +22,17 @@ export function renderTiling(dimers, colorScheme, options = {}) {
         outlineColor = '#000000',
         backgroundColor = '#FFFFFF',
         antiAlias = true,
+        colorFn = null,         // optional (dimer, bbox) => color string; overrides flat colors
     } = options;
 
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Background
-    ctx.fillStyle = backgroundColor;
-    ctx.fillRect(0, 0, width, height);
+    // Background (null = transparent)
+    if (backgroundColor) {
+        ctx.fillStyle = backgroundColor;
+        ctx.fillRect(0, 0, width, height);
+    }
 
     if (dimers.length === 0) return canvas;
 
@@ -72,8 +75,8 @@ export function renderTiling(dimers, colorScheme, options = {}) {
         }
         ctx.closePath();
 
-        // Fill with type color
-        ctx.fillStyle = colors[d.t];
+        // Fill with type color or gradient function
+        ctx.fillStyle = colorFn ? colorFn(d, bbox) : colors[d.t];
         ctx.fill();
 
         // Outline

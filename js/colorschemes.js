@@ -97,6 +97,10 @@ const ColorSchemes = [
     { name: 'Pink Champagne', colors: ['#F5C6D0', '#EDAFB8', '#FAE3D9', '#D69FB0'] },  // Light champagne pink, medium pink, cream, deeper pink
     { name: 'Valentina', colors: ['#E63946', '#F1AEBB', '#FFF0F3', '#A4133C'] },  // Bright red-rose, soft pink, near-white blush, deep crimson
 
+    // Pride Palettes
+    { name: 'Trans Pride', colors: ['#FFFFFF', '#F5A9B8', '#5BCEFA', '#F5A9B8'] },  // White top, pink front, blue side
+    { name: 'Bi Pride', colors: ['#D60270', '#9B4F96', '#0038A8', '#9B4F96'] },  // Magenta top, purple front, blue side
+
     // Pencil Drawing / Escher Style
     { name: 'Escher', colors: ['#F5F5F5', '#D0D0D0', '#A8A8A8', '#E0E0E0'] }  // Light gray, medium gray, darker gray (lozenges); 4th for dominoes
 ];
