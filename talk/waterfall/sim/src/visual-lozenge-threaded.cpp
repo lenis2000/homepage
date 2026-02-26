@@ -77,6 +77,24 @@ inline int getRandomInt(int n) {
     return (int)fastRandomRange((uint32_t)n);
 }
 
+// Thread-safe RNG overloads using a local state (for coupledStep in threaded context)
+inline uint64_t xorshift64(uint64_t& state) {
+    state ^= state >> 12;
+    state ^= state << 25;
+    state ^= state >> 27;
+    return state * 0x2545F4914F6CDD1DULL;
+}
+
+inline double getRandom01(uint64_t& state) {
+    return (xorshift64(state) >> 11) * (1.0 / 9007199254740992.0);
+}
+
+inline uint32_t fastRandomRange(uint64_t& state, uint32_t range) {
+    uint64_t random64 = xorshift64(state);
+    uint64_t hi = (uint64_t)(((unsigned __int128)random64 * range) >> 64);
+    return (uint32_t)hi;
+}
+
 // Triangle geometry constants
 const double slope = 1.0 / std::sqrt(3.0);
 const double deltaC = 2.0 / std::sqrt(3.0);
@@ -1643,19 +1661,18 @@ inline int fastCheckRotationTypeLUT(const int8_t* gridData, size_t gridSize,
 }
 
 void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
-    uint64_t savedRng = rng_state;
-    rng_state = seed;
+    uint64_t local_rng = seed;  // Use local state for thread safety
 
     const size_t N = triangularVertices.size();
-    if (N == 0) { rng_state = savedRng; return; }
+    if (N == 0) return;
 
     const size_t gridSize = lower.grid.size();
 
     if (useRandomSweeps) {
         // Random site selection with LUT optimization
         for (size_t i = 0; i < N; i++) {
-            const uint32_t idx = fastRandomRange((uint32_t)N);
-            const double u = getRandom01();
+            const uint32_t idx = fastRandomRange(local_rng, (uint32_t)N);
+            const double u = getRandom01(local_rng);
             const TriVertex& v = triangularVertices[idx];
             const CachedHexIndices& hex = cachedHexIndices[idx];
             const float pRemove = cachedProbs[idx].probDown;
@@ -1689,7 +1706,7 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
             const auto& verts = colorVertices[color];
             for (size_t vi = 0; vi < verts.size(); vi++) {
                 const uint32_t idx = verts[vi];
-                const double u = getRandom01();
+                const double u = getRandom01(local_rng);
 
                 const TriVertex& v = triangularVertices[idx];
                 const CachedHexIndices& hex = cachedHexIndices[idx];
@@ -1720,8 +1737,6 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
             }
         }
     }
-
-    rng_state = savedRng;
 }
 
 // ============================================================================
