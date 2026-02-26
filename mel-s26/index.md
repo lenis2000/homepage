@@ -29,6 +29,19 @@ Imagine you have a 100x100x100 room, and you stack some number of 1x1x1 unit cub
 - Meeting 3: Thursday, April 23rd, 5-6pm, in Kerchof 111: Final presentations (15 minutes + time for questions). Food will be provided.
 
 
+### Notes
+
+- (Feb 19) Dimers on bipartite graph (blackboard photos)
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+<a href="{{site.storage_url}}/mel-s26/IMG_4649.jpg"><img src="{{site.storage_url}}/mel-s26/IMG_4649.jpg" alt="Dimers on bipartite graph" style="height:180px;border-radius:4px"></a>
+<a href="{{site.storage_url}}/mel-s26/IMG_4650.jpg"><img src="{{site.storage_url}}/mel-s26/IMG_4650.jpg" alt="Dimers on bipartite graph" style="height:180px;border-radius:4px"></a>
+<a href="{{site.storage_url}}/mel-s26/IMG_4651.jpg"><img src="{{site.storage_url}}/mel-s26/IMG_4651.jpg" alt="Dimers on bipartite graph" style="height:180px;border-radius:4px"></a>
+</div>
+
+<br>
+
+- (Feb 26) [Dinic's Algorithm and Lozenge Tilings: the Undo Mechanic]({{site.storage_url}}/mel-s26/2026-02-26-dinic-algorithm.pdf) (PDF)
+
 ### Useful links
 
 <ul>
