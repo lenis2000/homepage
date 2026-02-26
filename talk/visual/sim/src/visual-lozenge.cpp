@@ -2118,18 +2118,24 @@ char* runCFTP() {
     makeExtremalState(minState, -1);
     makeExtremalState(maxState, 1);
 
+    std::vector<uint64_t> allSeeds;
     int T = 1;
     bool coalesced = false;
 
     while (!coalesced) {
-        std::vector<uint64_t> currentSeeds(T);
-        for (int i = 0; i < T; i++) currentSeeds[i] = xorshift64();
+        // Prepend new seeds for earlier time period (reuse existing later-time seeds)
+        int newCount = T - (int)allSeeds.size();
+        if (newCount > 0) {
+            std::vector<uint64_t> newSeeds(newCount);
+            for (int i = 0; i < newCount; i++) newSeeds[i] = xorshift64();
+            allSeeds.insert(allSeeds.begin(), newSeeds.begin(), newSeeds.end());
+        }
 
         GridState lower, upper;
         lower.cloneFrom(minState.grid);
         upper.cloneFrom(maxState.grid);
 
-        for (int t = 0; t < T; t++) coupledStep(lower, upper, currentSeeds[t]);
+        for (size_t t = 0; t < allSeeds.size(); t++) coupledStep(lower, upper, allSeeds[t]);
 
         if (lower.grid == upper.grid) {
             coalesced = true;
