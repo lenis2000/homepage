@@ -3,7 +3,7 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
+import { join, dirname, resolve } from 'path';
 import yaml from 'js-yaml';
 import { createRegion } from './regions.js';
 import { sample, initWasm } from './sampler.js';
@@ -38,6 +38,8 @@ export async function runBatch(manifestPath, options = {}) {
         const variationsPerCombo = design.variations_per_combo || 1;
         const qBiases = design.q_bias || [1.0];
         const product = design.product || 'poster';
+        const shapePath = design.shape || defaults.shape || null;
+        const holeRecipe = design.hole_recipe || defaults.hole_recipe || null;
 
         // Parse output size
         const outputSizeStr = design.output_size || defaults.output_size || '4500x5400';
@@ -68,10 +70,18 @@ export async function runBatch(manifestPath, options = {}) {
                             qBias: q, variation: v,
                         });
 
-                        const triangles = createRegion(region, size);
+                        let triangles;
+                        if (shapePath) {
+                            const shapeData = JSON.parse(readFileSync(resolve(dirname(manifestPath), shapePath), 'utf-8'));
+                            const arr = [];
+                            for (const t of shapeData.triangles) arr.push(t.n, t.j, t.type);
+                            triangles = new Int32Array(arr);
+                        } else {
+                            triangles = createRegion(region, size);
+                        }
 
                         try {
-                            const dimers = await sample(triangles, { method: sampler, q });
+                            const dimers = await sample(triangles, { method: sampler, q, holeRecipe });
 
                             if (format === 'svg') {
                                 const svg = renderSVG(dimers, scheme, {

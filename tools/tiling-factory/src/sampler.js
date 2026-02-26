@@ -17,6 +17,7 @@ export async function initWasm() {
     moduleInstance = await LozengeModule();
 
     wasmFns = {
+        seedRng: moduleInstance.cwrap('seedRng', null, ['number', 'number']),
         initFromTriangles: moduleInstance.cwrap('initFromTriangles', 'number', ['number', 'number']),
         performGlauberSteps: moduleInstance.cwrap('performGlauberSteps', 'number', ['number']),
         exportDimers: moduleInstance.cwrap('exportDimers', 'number', []),
@@ -146,17 +147,24 @@ export function exportDimers() {
  * @returns {Array} Array of dimer objects
  */
 export async function sample(triangles, options = {}) {
-    const { method = 'cftp', q = 1.0, glauberSteps = 10000, holeHeight = 0 } = options;
+    const { method = 'cftp', q = 1.0, glauberSteps = 10000, holeHeight = 0, holeRecipe = null } = options;
 
     await initWasm();
+
+    // Save RNG state by advancing it first, then reinit region (which resets RNG), then re-seed
+    const savedSeed = (Date.now() & 0xFFFFFFFF) ^ (Math.random() * 0xFFFFFFFF >>> 0);
+    const savedSeedHi = (Math.random() * 0xFFFFFFFF >>> 0);
 
     const initResult = initRegion(triangles);
     if (initResult.startsWith('Error')) {
         throw new Error(`Region init failed: ${initResult}`);
     }
 
-    // Set hole heights if the region has holes
-    if (holeHeight !== 0) {
+    // Re-seed after initRegion (which resets RNG to deterministic state)
+    moduleInstance._seedRng(savedSeed, savedSeedHi);
+
+    // Set uniform hole height constraint before sampling (if no recipe)
+    if (!holeRecipe && holeHeight !== 0) {
         const holeCount = getHoleCount();
         if (holeCount > 0) {
             console.log(`  Holes detected: ${holeCount}, setting height=${holeHeight}`);
@@ -171,6 +179,19 @@ export async function sample(triangles, options = {}) {
 
     if (q !== 1.0) {
         setQBias(q);
+    }
+
+    // Apply hole recipe BEFORE CFTP as winding constraints
+    // (applying after CFTP would use Dinic's rebuild which erases randomness)
+    if (holeRecipe && holeRecipe.length > 0) {
+        const holeCount = getHoleCount();
+        console.log(`  Holes detected: ${holeCount}, applying ${holeRecipe.length} recipe steps as constraints`);
+        let ok = 0, fail = 0;
+        for (const step of holeRecipe) {
+            const result = adjustHoleWinding(step.hole, step.delta);
+            if (result.success) ok++; else fail++;
+        }
+        console.log(`  Constraints: ${ok} succeeded, ${fail} failed`);
     }
 
     if (method === 'cftp') {

@@ -7189,6 +7189,9 @@ function initLozengeApp() {
         });
     }
 
+    // History of successful hole adjustments (for recipe save/replay)
+    const holeAdjustHistory = [];
+
     // Update the holes UI - creates overlay controls inside each hole
     function updateHolesUI() {
         // Clear existing overlays
@@ -7202,6 +7205,12 @@ function initLozengeApp() {
         const wasmHoles = holesInfo.holes || [];
 
         if (wasmHoles.length === 0) return;
+
+        // Log hole info to console
+        const holeSummary = wasmHoles.map(h =>
+            `hole${h.idx}: ${h.currentWinding - h.baseHeight}`
+        ).join('  ');
+        console.log('Holes: ' + holeSummary);
 
         // Check dimer count to decide UI mode
         const dimerCount = sim.dimers ? sim.dimers.length : 0;
@@ -7251,6 +7260,7 @@ function initLozengeApp() {
                     plusBtn.disabled = true;
                     setTimeout(() => {
                         sim.adjustHoleWinding(holeIdx, delta);
+                        holeAdjustHistory.push({ hole: holeIdx, delta: delta });
                         sim.refreshDimers();
                         draw();
                         updateHolesUI();
@@ -7270,6 +7280,7 @@ function initLozengeApp() {
                 setTimeout(() => {
                     const result = sim.adjustHoleWinding(holeIdx, -1);
                     if (result.success) {
+                        holeAdjustHistory.push({ hole: holeIdx, delta: -1 });
                         sim.refreshDimers();
                         draw();
                     }
@@ -7287,6 +7298,7 @@ function initLozengeApp() {
                 setTimeout(() => {
                     const result = sim.adjustHoleWinding(holeIdx, 1);
                     if (result.success) {
+                        holeAdjustHistory.push({ hole: holeIdx, delta: 1 });
                         sim.refreshDimers();
                         draw();
                     }
@@ -11549,26 +11561,16 @@ function initLozengeApp() {
     window._renderer = renderer;
     window._getHoleHeights = getHoleHeights;
 
-    // Save current tiling (shape + dimers) to a downloadable JSON file
-    window._saveTiling = function() {
-        const triangles = [];
-        for (const [key, tri] of activeTriangles) {
-            triangles.push({ n: tri.n, j: tri.j, type: tri.type });
-        }
-        const data = {
-            version: 1,
-            triangles: triangles,
-            dimers: sim.dimers.map(d => [d.bn, d.bj, d.wn, d.wj, d.t])
-        };
-        const json = JSON.stringify(data);
-        const blob = new Blob([json], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'lozenge_tiling_n' + sim.dimers.length + '.json';
-        a.click();
-        URL.revokeObjectURL(url);
-        console.log('Saved ' + sim.dimers.length + ' dimers + ' + triangles.length + ' triangles');
+    // Show hole adjustment history — copy this and give to the offline pipeline
+    window._showHoleHistory = function() {
+        console.log(JSON.stringify(holeAdjustHistory));
+        return holeAdjustHistory;
+    };
+
+    // Clear history (after fresh CFTP before new adjustments)
+    window._clearHoleHistory = function() {
+        holeAdjustHistory.length = 0;
+        console.log('History cleared');
     };
 
     console.log('Ultimate Lozenge Tiling ready (WASM with Dinic\'s Algorithm) - ' + (window.LOZENGE_THREADED ? 'THREADED' : 'single-threaded'));

@@ -53,6 +53,7 @@ program
     .option('--background <color>', 'Background color', '#FFFFFF')
     .option('--glauber-steps <n>', 'Steps for Glauber dynamics', parseInt, 10000)
     .option('--hole-height <n>', 'Hole winding height (for shapes with holes)', parseInt, 0)
+    .option('--hole-recipe <json>', 'Hole adjustment recipe: JSON array of {hole, delta} steps, or path to .json file')
     .option('--no-outline', 'Disable outlines')
     .action(async (opts) => {
         const [outW, outH] = opts.outputSize.split('x').map(Number);
@@ -82,11 +83,28 @@ program
         console.log(`Generating ${regionLabel} with ${scheme.name}...`);
         console.log(`  Region: ${triangles.length / 3} triangles`);
 
+        // Parse hole recipe if provided
+        let holeRecipe = null;
+        if (opts.holeRecipe) {
+            try {
+                // Try as file path first, then as inline JSON
+                if (opts.holeRecipe.endsWith('.json')) {
+                    holeRecipe = JSON.parse(readFileSync(resolve(opts.holeRecipe), 'utf-8'));
+                } else {
+                    holeRecipe = JSON.parse(opts.holeRecipe);
+                }
+                console.log(`  Hole recipe: ${holeRecipe.length} steps`);
+            } catch (e) {
+                console.error(`  Failed to parse hole recipe: ${e.message}`);
+            }
+        }
+
         const dimers = await sample(triangles, {
             method: opts.sampler,
             q: opts.q,
             glauberSteps: opts.glauberSteps,
             holeHeight: opts.holeHeight,
+            holeRecipe,
         });
         console.log(`  Sampled: ${dimers.length} dimers`);
 
