@@ -18,6 +18,7 @@
                 <ul style="margin: 0.5vh 0 0 1.2em; padding: 0;">
                     <li>Run Markov chain from <strong>all possible initial states</strong> simultaneously</li>
                     <li>When all chains <strong>couple</strong> (agree), stop</li>
+                    <li>Use <strong>backward-doubling protocol</strong>: start at times \(-1, -2, -4, -8, \ldots\), check coupling at time \(0\)</li>
                     <li>Output is an <strong>exact</strong> sample from the stationary distribution</li>
                 </ul>
             </div>
