@@ -19,7 +19,6 @@ emcc 2026-01-04-q-partition-cftp-general.cpp -o ../../js/2026-01-04-q-partition-
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <cmath>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -68,29 +67,30 @@ static std::vector<int> path;         // Current path
 static std::vector<int> lowerPath;    // CFTP lower bound (empty partition)
 static std::vector<int> upperPath;    // CFTP upper bound (boundary partition)
 static std::vector<int> boundaryPath; // Path encoding of boundary (for constraint checking)
-static std::vector<uint64_t> cftpSeeds;  // Accumulated seeds for backward doubling
-static int cftp_T = 1;                   // Current epoch window size
+
+// Block-based CFTP seed storage: O(log T) memory instead of O(T)
+// Each block stores one seed that deterministically generates all steps in that block
+struct EpochBlock {
+    uint64_t seed;
+    int64_t length;  // number of steps in this block
+};
+static std::vector<EpochBlock> epochBlocks;
+static int64_t cftp_T = 0;           // Total CFTP time window
 static RNG globalRng;
 
 // Convert partition to path representation
-// Path goes from (0,M) to (N,0): right steps (0) and up steps (1)
-// For partition parts[], we alternate: go right to parts[row], then up
 inline void partitionToPath(const std::vector<int>& parts, std::vector<int>& p) {
     p.assign(M + N, 0);
     int idx = 0;
     int col = 0;
-    // Go through rows from bottom (M-1) to top (0)
     for (int row = M - 1; row >= 0; row--) {
         int targetCol = parts[row];
-        // Go right to targetCol
         while (col < targetCol) {
-            p[idx++] = 0;  // right step
+            p[idx++] = 0;
             col++;
         }
-        // Go up
-        p[idx++] = 1;  // up step
+        p[idx++] = 1;
     }
-    // Go right to N
     while (col < N) {
         p[idx++] = 0;
         col++;
@@ -101,7 +101,7 @@ inline void partitionToPath(const std::vector<int>& parts, std::vector<int>& p) 
 inline void pathToPartition(const std::vector<int>& p, std::vector<int>& parts) {
     parts.assign(M, 0);
     int col = 0;
-    int row = M - 1;  // Start from bottom row
+    int row = M - 1;
     for (int i = 0; i < M + N; i++) {
         if (p[i] == 0) {
             col++;
@@ -126,73 +126,46 @@ inline std::vector<int> parseIntArray(const char* str) {
 
 extern "C" {
 
-// Initialize simulation with a boundary partition (comma-separated string)
-// e.g., "50,50,50,40,30,20,10" for a partition with those row lengths
 void initSimulationWithBoundary(const char* boundaryStr, double qVal) {
     boundary = parseIntArray(boundaryStr);
     if (boundary.empty()) {
-        // Default to 50x50 rectangle
         boundary.assign(50, 50);
     }
 
     M = boundary.size();
-    N = boundary[0];  // Max width is the first (largest) row
+    N = boundary[0];
     q = qVal;
 
-    // Validate boundary is a valid partition (non-increasing)
     for (int i = 1; i < M; i++) {
         if (boundary[i] > boundary[i-1]) {
-            boundary[i] = boundary[i-1];  // Fix invalid input
+            boundary[i] = boundary[i-1];
         }
     }
 
-    // Create boundary path
     partitionToPath(boundary, boundaryPath);
 
-    // Initialize path to empty partition
-    // Empty partition = all up steps first, then all right steps
     path.assign(M + N, 0);
     for (int i = 0; i < M; i++) path[i] = 1;
 
-    // Lower bound: empty partition (M ones then N zeros)
     lowerPath.assign(M + N, 0);
     for (int i = 0; i < M; i++) lowerPath[i] = 1;
 
-    // Upper bound: boundary partition
     upperPath = boundaryPath;
 
-    cftpSeeds.clear();
-    cftp_T = 1;
+    epochBlocks.clear();
+    cftp_T = 0;
     globalRng = RNG((uint64_t)time(nullptr));
 }
 
 int getM() { return M; }
 int getN() { return N; }
-int getCftpT() { return cftp_T; }
+double getCftpT() { return (double)cftp_T; }
 
 void setQ(double qVal) {
     q = qVal;
 }
 
-// Check if a path is dominated by the boundary path
-// Path p is valid if for each position, the partition it represents
-// is contained in the boundary partition
-// In path terms: at any prefix, #zeros in p <= #zeros in boundaryPath
-inline bool isValidPath(const std::vector<int>& p) {
-    int zerosP = 0;
-    int zerosBoundary = 0;
-    for (int i = 0; i < M + N; i++) {
-        if (p[i] == 0) zerosP++;
-        if (boundaryPath[i] == 0) zerosBoundary++;
-        if (zerosP > zerosBoundary) return false;
-    }
-    return true;
-}
-
 // Glauber step on a path with boundary constraint
-// Pick random position i, look at (path[i], path[i+1])
-// 10 (outer corner) -> 01 with prob q/(1+q), if still valid
-// 01 (inner corner) -> 10 with prob 1/(1+q)
 inline void glauberStepPath(std::vector<int>& p, RNG& rng) {
     int len = M + N;
     if (len < 2) return;
@@ -201,26 +174,18 @@ inline void glauberStepPath(std::vector<int>& p, RNG& rng) {
     double u = rng.uniform();
 
     if (p[i] == 1 && p[i+1] == 0) {
-        // 10 = outer corner (can add box), flip to 01 with prob q/(1+q)
-        // But must check boundary constraint
         if (u < q / (1.0 + q)) {
-            // Check if flip would violate boundary
-            // After flip, we'd have more 0s at position i, same at i+1
-            // Count zeros up to and including position i in both paths
             int zerosP = 0, zerosBoundary = 0;
             for (int j = 0; j <= i; j++) {
                 if (p[j] == 0) zerosP++;
                 if (boundaryPath[j] == 0) zerosBoundary++;
             }
-            // After flip, zerosP would increase by 1 at position i
             if (zerosP + 1 <= zerosBoundary) {
                 p[i] = 0;
                 p[i+1] = 1;
             }
         }
     } else if (p[i] == 0 && p[i+1] == 1) {
-        // 01 = inner corner (can remove box), flip to 10 with prob 1/(1+q)
-        // Removing a box always respects boundary (makes partition smaller)
         if (u < 1.0 / (1.0 + q)) {
             p[i] = 1;
             p[i+1] = 0;
@@ -229,8 +194,8 @@ inline void glauberStepPath(std::vector<int>& p, RNG& rng) {
 }
 
 // Coupled Glauber step for CFTP with boundary constraint
-inline void coupledGlauberStepPath(std::vector<int>& lower, std::vector<int>& upper, uint64_t seed) {
-    RNG rng(seed);
+// Takes RNG by reference (sequential draws within a block)
+inline void coupledGlauberStepPath(std::vector<int>& lower, std::vector<int>& upper, RNG& rng) {
     int len = M + N;
     if (len < 2) return;
 
@@ -240,9 +205,7 @@ inline void coupledGlauberStepPath(std::vector<int>& lower, std::vector<int>& up
     bool wantAdd = (u < q / (1.0 + q));
 
     if (wantAdd) {
-        // Try to add (flip 10->01) on both chains, respecting boundary
         if (lower[i] == 1 && lower[i+1] == 0) {
-            // Check boundary constraint for lower
             int zerosL = 0, zerosB = 0;
             for (int j = 0; j <= i; j++) {
                 if (lower[j] == 0) zerosL++;
@@ -254,7 +217,6 @@ inline void coupledGlauberStepPath(std::vector<int>& lower, std::vector<int>& up
             }
         }
         if (upper[i] == 1 && upper[i+1] == 0) {
-            // Check boundary constraint for upper
             int zerosU = 0, zerosB = 0;
             for (int j = 0; j <= i; j++) {
                 if (upper[j] == 0) zerosU++;
@@ -266,7 +228,6 @@ inline void coupledGlauberStepPath(std::vector<int>& lower, std::vector<int>& up
             }
         }
     } else {
-        // Try to remove (flip 01->10) on both chains
         if (lower[i] == 0 && lower[i+1] == 1) {
             lower[i] = 1;
             lower[i+1] = 0;
@@ -278,7 +239,6 @@ inline void coupledGlauberStepPath(std::vector<int>& lower, std::vector<int>& up
     }
 }
 
-// Compute area from path
 int getArea() {
     int area = 0;
     int ones = 0;
@@ -292,7 +252,6 @@ int getArea() {
     return area;
 }
 
-// Compute gap between lower and upper paths
 int getGap() {
     int gap = 0;
     for (int i = 0; i < M + N; i++) {
@@ -301,7 +260,6 @@ int getGap() {
     return gap / 2;
 }
 
-// Check if lower == upper
 bool isCoalesced() {
     for (int i = 0; i < M + N; i++) {
         if (lowerPath[i] != upperPath[i]) return false;
@@ -310,48 +268,41 @@ bool isCoalesced() {
 }
 
 // Run one backward-doubling epoch of CFTP
-// Returns: 0=not coalesced (doubled T), 1=coalesced (exact sample ready)
+// Block-based: stores one seed per epoch block (O(log T) memory)
+// Returns: 0=not coalesced, 1=coalesced (exact sample ready)
 int runCFTPEpoch() {
-    // Prepend new seeds for earlier time period
-    int newCount = cftp_T - (int)cftpSeeds.size();
-    if (newCount > 0) {
-        std::vector<uint64_t> newSeeds(newCount);
-        for (int i = 0; i < newCount; i++) newSeeds[i] = globalRng.next();
-        cftpSeeds.insert(cftpSeeds.begin(), newSeeds.begin(), newSeeds.end());
-    }
+    // New block length: first call adds 1, subsequent calls double
+    int64_t blockLen = (cftp_T == 0) ? 1 : cftp_T;
+    epochBlocks.insert(epochBlocks.begin(), EpochBlock{globalRng.next(), blockLen});
+    cftp_T += blockLen;  // 0->1, 1->2, 2->4, 4->8, ...
 
     // Reset to extremal states
     lowerPath.assign(M + N, 0);
     for (int i = 0; i < M; i++) lowerPath[i] = 1;
     upperPath = boundaryPath;
 
-    // Apply ALL seeds from -T to 0
-    for (size_t t = 0; t < cftpSeeds.size(); t++) {
-        coupledGlauberStepPath(lowerPath, upperPath, cftpSeeds[t]);
+    // Replay all blocks in chronological order (earliest first)
+    for (const auto& block : epochBlocks) {
+        RNG blockRng(block.seed);
+        for (int64_t s = 0; s < block.length; s++) {
+            coupledGlauberStepPath(lowerPath, upperPath, blockRng);
+        }
     }
 
-    // Check coalescence at time 0 only
     if (isCoalesced()) {
         path = lowerPath;
         return 1;
     }
 
-    // Double for next epoch
-    cftp_T *= 2;
-    if (cftp_T > 33554432) {  // 2^25 safety limit
-        return -1;  // timeout
-    }
     return 0;
 }
 
-// Run multiple Glauber steps on the current path
 void runGlauberSteps(int numSteps) {
     for (int i = 0; i < numSteps; i++) {
         glauberStepPath(path, globalRng);
     }
 }
 
-// Get partition data as JSON string
 char* getPartitionData() {
     std::vector<int> parts;
     pathToPartition(path, parts);
@@ -368,7 +319,6 @@ char* getPartitionData() {
     return result;
 }
 
-// Get lower bound data as JSON string
 char* getLowerData() {
     std::vector<int> parts;
     pathToPartition(lowerPath, parts);
@@ -385,7 +335,6 @@ char* getLowerData() {
     return result;
 }
 
-// Get upper bound data as JSON string
 char* getUpperData() {
     std::vector<int> parts;
     pathToPartition(upperPath, parts);
@@ -402,7 +351,6 @@ char* getUpperData() {
     return result;
 }
 
-// Get boundary partition as JSON string
 char* getBoundaryData() {
     std::ostringstream oss;
     oss << "[";

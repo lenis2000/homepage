@@ -6,7 +6,7 @@ Compile with (run from this directory):
 
 emcc 2025-12-28-q-partition-cftp.cpp -o ../../js/2025-12-28-q-partition-cftp.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initSimulation','_runCFTPEpoch','_runGlauberSteps','_getPartitionData','_getLowerData','_getUpperData','_freeString','_getM','_getN','_getArea','_getGap','_getCftpT']" \
+  -s "EXPORTED_FUNCTIONS=['_initSimulation','_runCFTPEpoch','_runGlauberSteps','_getPartitionData','_getLowerData','_getUpperData','_freeString','_getM','_getN','_getArea','_getGap','_setQ','_getCftpT']" \
   -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=64MB \
@@ -249,7 +249,7 @@ int runCFTPEpoch() {
 
     // Double for next epoch
     cftp_T *= 2;
-    if (cftp_T > 33554432) {  // 2^25 safety limit
+    if (cftp_T > 1073741824) {  // 2^30 safety limit
         return -1;  // timeout
     }
     return 0;
