@@ -2177,6 +2177,7 @@ char* initCFTP() {
     cftp_initialized = true;
     cftp_coalesced = false;
     cftp_currentStep = 0;
+    cftp_seeds.clear();
     cftp_lower.cloneFrom(cftp_minState.grid);
     cftp_upper.cloneFrom(cftp_maxState.grid);
 
@@ -2203,8 +2204,13 @@ char* stepCFTP() {
     }
 
     if (cftp_currentStep == 0) {
-        cftp_seeds.resize(cftp_T);
-        for (int i = 0; i < cftp_T; i++) cftp_seeds[i] = xorshift64();
+        // Prepend new seeds for earlier time period (reuse existing later-time seeds)
+        int newCount = cftp_T - (int)cftp_seeds.size();
+        if (newCount > 0) {
+            std::vector<uint64_t> newSeeds(newCount);
+            for (int i = 0; i < newCount; i++) newSeeds[i] = xorshift64();
+            cftp_seeds.insert(cftp_seeds.begin(), newSeeds.begin(), newSeeds.end());
+        }
         cftp_lower.cloneFrom(cftp_minState.grid);
         cftp_upper.cloneFrom(cftp_maxState.grid);
     }
