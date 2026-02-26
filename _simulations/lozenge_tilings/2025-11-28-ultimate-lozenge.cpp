@@ -2676,22 +2676,12 @@ char* stepFluctuationsCFTP() {
             fluct_coalesced[s] = true;
             fluct_samples[s] = lower;  // Store coalesced sample
         } else {
-            // Double T and generate new seeds
-            int newT = fluct_T[s] * 2;
-            std::vector<uint64_t> newSeeds(newT);
-
-            // Generate seeds deterministically
-            uint64_t seedBase = fluct_seeds[s][0] ^ (s * 12345);
-            uint64_t tempRng = seedBase;
-            for (int i = 0; i < newT; i++) {
-                tempRng ^= tempRng >> 12;
-                tempRng ^= tempRng << 25;
-                tempRng ^= tempRng >> 27;
-                newSeeds[i] = tempRng * 0x2545F4914F6CDD1DULL;
-            }
-
-            fluct_seeds[s] = std::move(newSeeds);
-            fluct_T[s] = newT;
+            // Prepend new seeds for earlier time period (reuse existing later-time seeds)
+            int newCount = fluct_T[s];
+            std::vector<uint64_t> newSeeds(newCount);
+            for (int i = 0; i < newCount; i++) newSeeds[i] = xorshift64();
+            fluct_seeds[s].insert(fluct_seeds[s].begin(), newSeeds.begin(), newSeeds.end());
+            fluct_T[s] *= 2;
         }
     }
 
