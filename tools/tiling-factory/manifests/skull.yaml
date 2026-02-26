@@ -5,34 +5,21 @@ defaults:
   output_size: 10000x10000
   shape: ../shapes/skull.json
   hole_recipe:
-    - {hole: 5, delta: 1}
-    - {hole: 5, delta: 1}
-    - {hole: 5, delta: 1}
-    - {hole: 5, delta: 1}
-    - {hole: 2, delta: -1}
-    - {hole: 2, delta: -1}
-    - {hole: 3, delta: 1}
-    - {hole: 3, delta: -1}
-    - {hole: 3, delta: -1}
-    - {hole: 3, delta: -1}
-    - {hole: 4, delta: 1}
-    - {hole: 4, delta: 1}
-    - {hole: 0, delta: 1}
-    - {hole: 0, delta: 1}
-    - {hole: 5, delta: 1}
-    - {hole: 5, delta: 1}
+    - {hole: 2, delta: 1}
+    - {hole: 2, delta: 1}
     - {hole: 5, delta: 1}
     - {hole: 5, delta: 1}
     - {hole: 2, delta: -1}
     - {hole: 2, delta: -1}
-    - {hole: 2, delta: -1}
-    - {hole: 3, delta: -1}
-    - {hole: 3, delta: -1}
-    - {hole: 4, delta: 1}
-    - {hole: 4, delta: 1}
 
 designs:
-  - name: skull-prints
-    schemes: [all]
+  - name: skull-samples
+    schemes: [Skull Bone, Skull Neon, Skull Gothic, Skull Poison, Skull Gilded]
     sizes: [1]
+    variations_per_combo: 1
+
+  - name: skull-samples
+    schemes: [Skull Muertos]
+    sizes: [1]
+    outline: 5.0
     variations_per_combo: 1

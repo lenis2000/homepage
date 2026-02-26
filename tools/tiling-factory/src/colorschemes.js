@@ -17,7 +17,19 @@ if (!match) throw new Error('Failed to parse colorschemes.js');
 
 const ColorSchemes = eval(match[1]);
 
+// Skull-specific color schemes
+const SkullSchemes = [
+    { name: 'Skull Bone', colors: ['#F5F4F2', '#D0CCC6', '#8A857E', '#A8A4A0'] },
+    { name: 'Skull Neon', colors: ['#FF006E', '#8338EC', '#3A86FF', '#222222'] },
+    { name: 'Skull Muertos', colors: ['#FF4081', '#FFD740', '#00E5FF', '#111111'] },
+    { name: 'Skull Gothic', colors: ['#2D1B36', '#6B3FA0', '#C77DBA', '#1A0F20'] },
+    { name: 'Skull Poison', colors: ['#0D1B0E', '#39FF14', '#00CC66', '#061208'] },
+    { name: 'Skull Gilded', colors: ['#1A1A2E', '#C9A84C', '#F4E4BA', '#0F0F1C'] },
+];
+ColorSchemes.push(...SkullSchemes);
+
 export default ColorSchemes;
+export { SkullSchemes };
 
 export function getScheme(name) {
     if (name === 'all') return ColorSchemes;

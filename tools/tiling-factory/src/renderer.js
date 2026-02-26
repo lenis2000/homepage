@@ -20,7 +20,7 @@ export function renderTiling(dimers, colorScheme, options = {}) {
         padding = 0.08,         // fraction of canvas size for padding
         outlineWidth = 0.5,     // outline width in pixels (0 = no outline)
         outlineColor = '#000000',
-        backgroundColor = '#FFFFFF',
+        backgroundColor = null,
         antiAlias = true,
         colorFn = null,         // optional (dimer, bbox) => color string; overrides flat colors
     } = options;

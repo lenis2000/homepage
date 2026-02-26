@@ -8413,7 +8413,9 @@ function initLozengeApp() {
             { value: '*', label: 'Snowflake' },
             { value: '***', label: 'Snowman' },
             { value: 'christmas-tree', label: 'Christmas Tree', theme: 'New Year' },
-            { value: 'Rotunda', label: 'Rotunda', theme: 'UVA' }
+            { value: 'Rotunda', label: 'Rotunda', theme: 'UVA' },
+            { value: 'skull', label: 'Skull' },
+            { value: 'cardio', label: 'Cardioid' }
         ];
         for (const shape of specialShapes) {
             const opt = document.createElement('option');

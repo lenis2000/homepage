@@ -50,7 +50,7 @@ program
     .option('--outline <width>', 'Outline width in pixels', parseFloat, 0.5)
     .option('--output <path>', 'Output file path')
     .option('--render-3d', 'Use 3D isometric renderer')
-    .option('--background <color>', 'Background color', '#FFFFFF')
+    .option('--background <color>', 'Background color (default: transparent)')
     .option('--glauber-steps <n>', 'Steps for Glauber dynamics', parseInt, 10000)
     .option('--hole-height <n>', 'Hole winding height (for shapes with holes)', parseInt, 0)
     .option('--hole-recipe <json>', 'Hole adjustment recipe: JSON array of {hole, delta} steps, or path to .json file')

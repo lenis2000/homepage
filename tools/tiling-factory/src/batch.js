@@ -35,6 +35,7 @@ export async function runBatch(manifestPath, options = {}) {
         const format = design.format || defaults.format || 'png';
         const sampler = design.sampler || defaults.sampler || 'cftp';
         const outline = design.outline ?? defaults.outline ?? 0.5;
+        const backgroundColor = design.background ?? defaults.background ?? null;
         const variationsPerCombo = design.variations_per_combo || 1;
         const qBiases = design.q_bias || [1.0];
         const product = design.product || 'poster';
@@ -94,6 +95,7 @@ export async function runBatch(manifestPath, options = {}) {
                                 const png = renderTilingPNG(dimers, scheme, {
                                     width: outW, height: outH,
                                     outlineWidth: outline,
+                                    backgroundColor: backgroundColor === 'transparent' ? null : backgroundColor,
                                 });
                                 const pngPath = join(designDir, `${meta.filename}.png`);
                                 writeFileSync(pngPath, png);
