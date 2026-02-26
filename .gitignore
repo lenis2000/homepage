@@ -134,3 +134,4 @@ progress*.txt
 
 .gemini/
 gha-creds-*.json
+/docs/plans/2026-02-26-fix-cftp-correctness.md
