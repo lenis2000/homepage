@@ -25,7 +25,6 @@ Usage in JavaScript (modularized):
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <cmath>
 #include <vector>
 #include <string>
 #include <sstream>
@@ -157,7 +156,7 @@ void initSimulation(int n, int m, double qVal) {
 }
 
 // Run one backward-doubling epoch of CFTP
-// Returns 1 if coalesced (exact sample ready), 0 if not (doubled T)
+// Returns 1 if coalesced (exact sample ready), 0 if not (doubled T), -1 if timeout
 int runCFTPBatch() {
     if (coalesced) return 1;
 

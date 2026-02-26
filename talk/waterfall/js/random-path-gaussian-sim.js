@@ -353,7 +353,7 @@ function initRandomPathGaussianSim() {
         return new Promise((resolve) => {
             function step() {
                 const done = wasmFunctions.runCFTPBatch();
-                if (done) {
+                if (done === 1) {
                     const ptr = wasmFunctions.getPartitionPath();
                     const str = wasm.UTF8ToString(ptr);
                     wasmFunctions.freeString(ptr);
@@ -365,6 +365,10 @@ function initRandomPathGaussianSim() {
                     drawHistogram();
                     wasmIsRunning = false;
                     resolve(path);
+                } else if (done === -1) {
+                    // Timeout — discard this sample
+                    wasmIsRunning = false;
+                    resolve(null);
                 } else {
                     requestAnimationFrame(step);
                 }
@@ -433,6 +437,7 @@ function initRandomPathGaussianSim() {
     }
 
     async function collectSamples(count) {
+        if (!cachedInitialBits || !wasm) return;
         if (gpuEngine) {
             await collectSamplesGPU(count);
         } else {
