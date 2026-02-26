@@ -1033,6 +1033,15 @@ var Module = {
         return;
       }
 
+      if (result === -1) {
+        // Timeout - T exceeded safety limit
+        setStatus(`CFTP timeout: T=${cftpT.toLocaleString()} exceeded limit`, 'error');
+        updateStats();
+        draw();
+        stopSimulation();
+        return;
+      }
+
       // Still running - update status
       setStatus(`CFTP running: T=${cftpT.toLocaleString()}, gap=${gap}`, 'running');
       updateStats();

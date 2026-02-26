@@ -72,20 +72,25 @@
 
         initSimulation(N, M, q);
 
-        let totalSteps = 0;
-        const batchSize = 10000000;
+        let epochs = 0;
 
-        while (!getCoalesced()) {
-            runCFTPBatch();
-            totalSteps += batchSize;
-            statusEl.textContent = `Sampling... ${(totalSteps / 1e6).toFixed(0)}M steps`;
+        while (true) {
+            const status = runCFTPBatch();
+            epochs++;
+            if (status === 1) break;  // coalesced
+            if (status === -1) {      // timeout
+                statusEl.textContent = `Timeout after ${epochs} epochs`;
+                isRunning = false;
+                return;
+            }
+            statusEl.textContent = `Sampling... epoch ${epochs}`;
             await new Promise(r => setTimeout(r, 1));
         }
 
         const result = getPathFromWasm();
         pathCoords = result.coords;
         pathMoves = result.moves;
-        statusEl.textContent = `Sampled in ${(totalSteps / 1e6).toFixed(1)}M steps`;
+        statusEl.textContent = `Sampled in ${epochs} epochs`;
         isRunning = false;
         drawAll();
     }

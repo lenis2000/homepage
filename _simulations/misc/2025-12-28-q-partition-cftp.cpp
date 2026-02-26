@@ -249,6 +249,9 @@ int runCFTPEpoch() {
 
     // Double for next epoch
     cftp_T *= 2;
+    if (cftp_T > 33554432) {  // 2^25 safety limit
+        return -1;  // timeout
+    }
     return 0;
 }
 

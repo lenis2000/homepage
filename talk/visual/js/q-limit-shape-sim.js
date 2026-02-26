@@ -62,18 +62,23 @@
 
         initSimulation(N, M, q);
 
-        let totalSteps = 0;
-        const batchSize = 10000000;  // Hardcoded in WASM
+        let epochs = 0;
 
-        while (!getCoalesced()) {
-            runCFTPBatch();
-            totalSteps += batchSize;
-            statusEl.textContent = `Sampling... ${(totalSteps / 1e6).toFixed(0)}M steps`;
+        while (true) {
+            const result = runCFTPBatch();
+            epochs++;
+            if (result === 1) break;  // coalesced
+            if (result === -1) {      // timeout
+                statusEl.textContent = `Timeout after ${epochs} epochs`;
+                isRunning = false;
+                return;
+            }
+            statusEl.textContent = `Sampling... epoch ${epochs}`;
             await new Promise(r => setTimeout(r, 1));
         }
 
         partitionPath = getPathFromWasm();
-        statusEl.textContent = `Sampled in ${(totalSteps / 1e6).toFixed(1)}M steps`;
+        statusEl.textContent = `Sampled in ${epochs} epochs`;
         isRunning = false;
         draw();
     }
