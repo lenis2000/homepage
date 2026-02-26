@@ -131,3 +131,6 @@ tools/tiling-factory/src/wasm/*.js
 
 # ralphex progress logs
 progress*.txt
+
+.gemini/
+gha-creds-*.json

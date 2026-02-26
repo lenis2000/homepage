@@ -10660,7 +10660,11 @@ function initLozengeApp() {
             version: 1,
             triangles: triangles
         };
-        const json = JSON.stringify(data, null, 2);
+        // Include dimers if we have a valid tiling
+        if (sim.dimers && sim.dimers.length > 0) {
+            data.dimers = sim.dimers.map(d => [d.bn, d.bj, d.wn, d.wj, d.t]);
+        }
+        const json = JSON.stringify(data);
         const blob = new Blob([json], { type: 'application/json' });
         downloadFile(blob, generateExportFilename('json', 'shape'));
     });
@@ -11014,6 +11018,17 @@ function initLozengeApp() {
                 }
 
                 reinitialize();
+
+                // Restore dimers if present in JSON (skips need for CFTP)
+                if (data.dimers && Array.isArray(data.dimers) && data.dimers.length > 0) {
+                    const dimers = data.dimers.map(d => ({
+                        bn: d[0], bj: d[1], wn: d[2], wj: d[3], t: d[4]
+                    }));
+                    sim.setDimers(dimers);
+                    sim.refreshDimers();
+                    console.log('Restored ' + dimers.length + ' dimers from JSON');
+                }
+
                 renderer.fitToRegion(activeTriangles);
                 draw();
             } catch (err) {
@@ -11482,6 +11497,79 @@ function initLozengeApp() {
         }
         draw();
     }, 100);
+
+    // getHoleHeights: compute actual heights at hole centroids using JS height function
+    function getHoleHeights() {
+        const heights = computeHeightFunction(sim.dimers);
+        const holesInfo = sim.getAllHolesInfo();
+        const wasmHoles = holesInfo.holes || [];
+        const result = [];
+        for (let i = 0; i < wasmHoles.length; i++) {
+            const hole = wasmHoles[i];
+            // Sample height at hole centroid by finding nearest vertex
+            const cx = hole.centroidX, cy = hole.centroidY;
+            // Convert centroid to lattice coords: x = n + 0.5*j, y = j*sqrt(3)/2
+            const j_approx = cy / (Math.sqrt(3) / 2);
+            const n_approx = cx - 0.5 * j_approx;
+            // Check nearby integer vertices
+            let minDist = Infinity, holeHeight = null;
+            for (let dj = -2; dj <= 2; dj++) {
+                for (let dn = -2; dn <= 2; dn++) {
+                    const vn = Math.round(n_approx) + dn;
+                    const vj = Math.round(j_approx) + dj;
+                    const key = `${vn},${vj}`;
+                    if (heights.has(key)) {
+                        const vx = vn + 0.5 * vj;
+                        const vy = vj * Math.sqrt(3) / 2;
+                        const dist = (vx - cx) ** 2 + (vy - cy) ** 2;
+                        if (dist < minDist) {
+                            minDist = dist;
+                            holeHeight = heights.get(key);
+                        }
+                    }
+                }
+            }
+            result.push({
+                hole: i,
+                centroidX: cx, centroidY: cy,
+                currentWinding: hole.currentWinding,
+                baseHeight: hole.baseHeight,
+                relativeHeight: hole.currentWinding - hole.baseHeight,
+                computedHeight: holeHeight
+            });
+        }
+        return result;
+    }
+
+    // Expose internals for console scripting
+    window._sim = sim;
+    window._draw = draw;
+    window._updateHolesUI = updateHolesUI;
+    window._computeHeightFunction = computeHeightFunction;
+    window._renderer = renderer;
+    window._getHoleHeights = getHoleHeights;
+
+    // Save current tiling (shape + dimers) to a downloadable JSON file
+    window._saveTiling = function() {
+        const triangles = [];
+        for (const [key, tri] of activeTriangles) {
+            triangles.push({ n: tri.n, j: tri.j, type: tri.type });
+        }
+        const data = {
+            version: 1,
+            triangles: triangles,
+            dimers: sim.dimers.map(d => [d.bn, d.bj, d.wn, d.wj, d.t])
+        };
+        const json = JSON.stringify(data);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'lozenge_tiling_n' + sim.dimers.length + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        console.log('Saved ' + sim.dimers.length + ' dimers + ' + triangles.length + ' triangles');
+    };
 
     console.log('Ultimate Lozenge Tiling ready (WASM with Dinic\'s Algorithm) - ' + (window.LOZENGE_THREADED ? 'THREADED' : 'single-threaded'));
 }
