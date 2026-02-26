@@ -3522,33 +3522,45 @@ Cmd-click: complete lasso</div>
             return false;
         }
 
-        // Upload CPU-computed extremal tilings to GPU
-        await gpuEngine.uploadExtremalTilings(minState.edges, maxState.edges);
-
-        // Epoch doubling loop
-        let T = 1;
+        // Block-based backward-doubling CFTP (O(log T) memory)
+        // Each block stores a seed for deterministic replay.
+        // Epoch k adds a new block of length T_k to the front (earliest in time),
+        // then replays ALL blocks chronologically from time -T to 0.
+        const epochBlocks = []; // [{seed, length}, ...] in chronological order
+        let cftp_T = 0;
         const maxEpochs = 30;
         let totalSteps = 0;
-        const checkInterval = 1000;
 
         for (let epoch = 0; epoch < maxEpochs && isCFTPRunning; epoch++) {
-            // Reset chains to CPU-computed extremal tilings
+            // New block length: first epoch adds 1, subsequent epochs double
+            const blockLen = (cftp_T === 0) ? 1 : cftp_T;
+            const seed = Math.floor(Math.random() * 2**32);
+            epochBlocks.unshift({seed, length: blockLen});
+            cftp_T += blockLen;
+
+            el.cftpSteps.textContent = `GPU T=${cftp_T}`;
+            el.cftpBtn.textContent = `GPU:${cftp_T}`;
+
+            // Reset chains to extremal states
             await gpuEngine.resetCFTPChainsWithTilings(minState.edges, maxState.edges);
 
-            el.cftpSteps.textContent = `GPU T=${T}`;
-            el.cftpBtn.textContent = `GPU:${T}`;
+            // Replay all blocks chronologically (same seeds reproduce same randoms)
+            let coalesced = false;
+            for (const block of epochBlocks) {
+                const result = await gpuEngine.stepCFTP(block.length, 0, block.seed);
+                totalSteps += result.stepsRun;
 
-            const result = await gpuEngine.stepCFTP(T, checkInterval);
-            totalSteps += result.stepsRun;
+                // Check coalescence after each block (early termination)
+                if (result.coalesced) { coalesced = true; break; }
+            }
 
-            if (result.coalesced) {
+            if (coalesced) {
                 dominoes = await gpuEngine.finalizeCFTP();
                 const elapsed = ((performance.now() - cftpStartTime) / 1000).toFixed(2);
                 el.cftpSteps.textContent = `${formatNumber(totalSteps)} GPU (${elapsed}s)`;
+                console.log(`[GPU CFTP] Coalesced at T=${cftp_T}, ${epochBlocks.length} blocks, ${totalSteps} total steps`);
                 return true;
             }
-
-            T *= 2;
 
             // Yield to UI
             await new Promise(r => setTimeout(r, 0));

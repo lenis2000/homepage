@@ -12,6 +12,19 @@
  * Used by: _simulations/domino_tilings/2025-12-05-ultimate-domino.md
  */
 
+// Seedable PRNG (mulberry32) for deterministic CFTP replay
+class SeedableRNG {
+    constructor(seed) {
+        this.state = seed | 0;
+    }
+    next() {
+        this.state = (this.state + 0x6D2B79F5) | 0;
+        let t = Math.imul(this.state ^ (this.state >>> 15), 1 | this.state);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+}
+
 class WebGPUDominoEngine {
     constructor() {
         this.device = null;
@@ -311,22 +324,20 @@ class WebGPUDominoEngine {
         const minGrid = this.edgesToGrid(minEdges);
         const maxGrid = this.edgesToGrid(maxEdges);
 
-        // Count edges in grids for debugging
-        let minCount = 0, maxCount = 0;
+        // Count edges and differences for debugging
+        let minCount = 0, maxCount = 0, cellDiffs = 0;
         for (let i = 0; i < minGrid.length; i++) {
             if (minGrid[i] & 1) minCount++;
             if (minGrid[i] & 2) minCount++;
             if (maxGrid[i] & 1) maxCount++;
             if (maxGrid[i] & 2) maxCount++;
+            if ((minGrid[i] & 3) !== (maxGrid[i] & 3)) cellDiffs++;
         }
-        console.log(`[GPU] uploadExtremalTilings: minEdges=${minEdges.length}, maxEdges=${maxEdges.length}`);
-        console.log(`[GPU] Grid edge counts: minGrid=${minCount}, maxGrid=${maxCount}`);
+        console.log(`[GPU] uploadExtremalTilings: min=${minCount} edges, max=${maxCount} edges, ${cellDiffs} cells differ`);
 
         this.device.queue.writeBuffer(this.lowerGridBuffer, 0, minGrid);
         this.device.queue.writeBuffer(this.upperGridBuffer, 0, maxGrid);
-
         await this.device.queue.onSubmittedWorkDone();
-        console.log("[GPU] Extremal tilings uploaded to buffers");
     }
 
     /**
@@ -340,37 +351,34 @@ class WebGPUDominoEngine {
 
     /**
      * Reset CFTP chains to extremal states (for new epoch)
+     * NOTE: Use resetCFTPChainsWithTilings() instead — this method requires
+     * pre-computed extremal tilings which must be passed in.
      */
     async resetCFTPChains() {
         if (!this.cftpInitialized) return;
-
-        // Clear both buffers
-        const zeros = new Int32Array(this.numCells);
-        this.device.queue.writeBuffer(this.lowerGridBuffer, 0, zeros);
-        this.device.queue.writeBuffer(this.upperGridBuffer, 0, zeros);
-
-        // Recompute extremal tilings
-        await this.computeExtremalTilings();
+        console.error('[GPU] resetCFTPChains() called without tilings — use resetCFTPChainsWithTilings() instead');
     }
 
     /**
      * Run CFTP coupled steps on GPU with 4-color chromatic sweep
      * @param {number} numSteps - Number of coupled steps to run
-     * @param {number} checkInterval - Check coalescence every N steps (0 = no early check)
+     * @param {number} checkInterval - Check coalescence every N steps (0 = only at end)
+     * @param {number|null} seed - Deterministic seed for PRNG (null = use Math.random)
      * @returns {Promise<{coalesced: boolean, stepsRun: number}>}
      */
-    async stepCFTP(numSteps, checkInterval = 0) {
+    async stepCFTP(numSteps, checkInterval = 0, seed = null) {
         if (!this.cftpInitialized) return { coalesced: false, stepsRun: 0 };
 
         const faceWorkgroups = Math.ceil(this.numFaces / 64);
         const randomDataSize = Math.max(this.numFaces, 1);
         const randomData = new Float32Array(randomDataSize);
+        const rng = seed !== null ? new SeedableRNG(seed) : null;
         let stepsRun = 0;
 
         for (let step = 0; step < numSteps; step++) {
             // Generate random numbers for this step (same for both chains - coupling!)
             for (let i = 0; i < randomDataSize; i++) {
-                randomData[i] = Math.random();
+                randomData[i] = rng ? rng.next() : Math.random();
             }
             this.device.queue.writeBuffer(this.randomBuffer, 0, randomData);
 
@@ -410,7 +418,7 @@ class WebGPUDominoEngine {
             }
         }
 
-        // Final coalescence check at end of epoch
+        // Final coalescence check at end
         await this.device.queue.onSubmittedWorkDone();
         const finalCoalesced = await this.checkCoalescence();
         return { coalesced: finalCoalesced, stepsRun };
