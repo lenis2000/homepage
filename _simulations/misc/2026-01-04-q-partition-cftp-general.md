@@ -490,7 +490,7 @@ var Module = {
   let wasmReady = false;
   let initSimulationWithBoundary, runCFTPEpoch, runGlauberSteps, setQ;
   let getPartitionData, getLowerData, getUpperData, getBoundaryData, freeString;
-  let getM, getN, getArea, getGap;
+  let getM, getN, getArea, getGap, getCftpT;
 
   window.onWASMReady = function() {
     initSimulationWithBoundary = Module.cwrap('initSimulationWithBoundary', null, ['string', 'number']);
@@ -506,6 +506,7 @@ var Module = {
     getArea = Module.cwrap('getArea', 'number', []);
     getGap = Module.cwrap('getGap', 'number', []);
     setQ = Module.cwrap('setQ', null, ['number']);
+    getCftpT = Module.cwrap('getCftpT', 'number', []);
     wasmReady = true;
     updateParams();
     reset();
@@ -1044,7 +1045,8 @@ var Module = {
       lowerBound = new Partition(wasmM, wasmN, lowerArr);
       upperBound = new Partition(wasmM, wasmN, upperArr);
 
-      cftpT = batch * 50000000;
+      // Get actual epoch window size from WASM
+      cftpT = getCftpT();
       stepCount = cftpT;
 
       if (result === 1) {
@@ -1052,14 +1054,23 @@ var Module = {
         currentPartition = new Partition(wasmM, wasmN, partArr);
         lowerBound = null;
         upperBound = null;
-        setStatus(`CFTP coalesced! Steps=${cftpT.toLocaleString()}, size=${currentPartition.size()}`, 'success');
+        setStatus(`CFTP coalesced! T=${cftpT.toLocaleString()}, size=${currentPartition.size()}`, 'success');
         updateStats();
         draw();
         stopSimulation();
         return;
       }
 
-      setStatus(`CFTP running: ${cftpT.toLocaleString()} steps, gap=${gap}`, 'running');
+      if (result === -1) {
+        // Timeout - T exceeded safety limit
+        setStatus(`CFTP timeout: T=${cftpT.toLocaleString()} exceeded limit`, 'error');
+        updateStats();
+        draw();
+        stopSimulation();
+        return;
+      }
+
+      setStatus(`CFTP running: T=${cftpT.toLocaleString()}, gap=${gap}`, 'running');
       updateStats();
       draw();
 

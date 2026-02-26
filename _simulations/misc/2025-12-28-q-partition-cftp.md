@@ -406,7 +406,7 @@ var Module = {
   let wasmReady = false;
   let initSimulation, runCFTPEpoch, runGlauberSteps, setQ;
   let getPartitionData, getLowerData, getUpperData, freeString;
-  let getM, getN, getArea, getGap;
+  let getM, getN, getArea, getGap, getCftpT;
 
   window.onWASMReady = function() {
     initSimulation = Module.cwrap('initSimulation', null, ['number', 'number', 'number']);
@@ -421,6 +421,7 @@ var Module = {
     getArea = Module.cwrap('getArea', 'number', []);
     getGap = Module.cwrap('getGap', 'number', []);
     setQ = Module.cwrap('setQ', null, ['number']);
+    getCftpT = Module.cwrap('getCftpT', 'number', []);
     wasmReady = true;
     updateParams();
     reset();
@@ -1003,7 +1004,7 @@ var Module = {
 
       batch++;
 
-      // Run one batch (50M steps) in WASM
+      // Run one backward-doubling epoch in WASM
       const result = runCFTPEpoch();
       const gap = getGap();
       const wasmM = getM();
@@ -1015,8 +1016,8 @@ var Module = {
       lowerBound = new Partition(wasmM, wasmN, lowerArr);
       upperBound = new Partition(wasmM, wasmN, upperArr);
 
-      // Steps = batch * 50M
-      cftpT = batch * 50000000;
+      // Get actual epoch window size from WASM
+      cftpT = getCftpT();
       stepCount = cftpT;
 
       if (result === 1) {
@@ -1025,7 +1026,16 @@ var Module = {
         currentPartition = new Partition(wasmM, wasmN, partArr);
         lowerBound = null;
         upperBound = null;
-        setStatus(`CFTP coalesced! Steps=${cftpT.toLocaleString()}, size=${currentPartition.size()}`, 'success');
+        setStatus(`CFTP coalesced! T=${cftpT.toLocaleString()}, size=${currentPartition.size()}`, 'success');
+        updateStats();
+        draw();
+        stopSimulation();
+        return;
+      }
+
+      if (result === -1) {
+        // Timeout - T exceeded safety limit
+        setStatus(`CFTP timeout: T=${cftpT.toLocaleString()} exceeded limit`, 'error');
         updateStats();
         draw();
         stopSimulation();
@@ -1033,7 +1043,7 @@ var Module = {
       }
 
       // Still running - update status
-      setStatus(`CFTP running: ${cftpT.toLocaleString()} steps, gap=${gap}`, 'running');
+      setStatus(`CFTP running: T=${cftpT.toLocaleString()}, gap=${gap}`, 'running');
       updateStats();
       draw();
 

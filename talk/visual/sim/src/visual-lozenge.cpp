@@ -2118,18 +2118,24 @@ char* runCFTP() {
     makeExtremalState(minState, -1);
     makeExtremalState(maxState, 1);
 
+    std::vector<uint64_t> allSeeds;
     int T = 1;
     bool coalesced = false;
 
     while (!coalesced) {
-        std::vector<uint64_t> currentSeeds(T);
-        for (int i = 0; i < T; i++) currentSeeds[i] = xorshift64();
+        // Prepend new seeds for earlier time period (reuse existing later-time seeds)
+        int newCount = T - (int)allSeeds.size();
+        if (newCount > 0) {
+            std::vector<uint64_t> newSeeds(newCount);
+            for (int i = 0; i < newCount; i++) newSeeds[i] = xorshift64();
+            allSeeds.insert(allSeeds.begin(), newSeeds.begin(), newSeeds.end());
+        }
 
         GridState lower, upper;
         lower.cloneFrom(minState.grid);
         upper.cloneFrom(maxState.grid);
 
-        for (int t = 0; t < T; t++) coupledStep(lower, upper, currentSeeds[t]);
+        for (size_t t = 0; t < allSeeds.size(); t++) coupledStep(lower, upper, allSeeds[t]);
 
         if (lower.grid == upper.grid) {
             coalesced = true;
@@ -2171,6 +2177,7 @@ char* initCFTP() {
     cftp_initialized = true;
     cftp_coalesced = false;
     cftp_currentStep = 0;
+    cftp_seeds.clear();
     cftp_lower.cloneFrom(cftp_minState.grid);
     cftp_upper.cloneFrom(cftp_maxState.grid);
 
@@ -2197,8 +2204,13 @@ char* stepCFTP() {
     }
 
     if (cftp_currentStep == 0) {
-        cftp_seeds.resize(cftp_T);
-        for (int i = 0; i < cftp_T; i++) cftp_seeds[i] = xorshift64();
+        // Prepend new seeds for earlier time period (reuse existing later-time seeds)
+        int newCount = cftp_T - (int)cftp_seeds.size();
+        if (newCount > 0) {
+            std::vector<uint64_t> newSeeds(newCount);
+            for (int i = 0; i < newCount; i++) newSeeds[i] = xorshift64();
+            cftp_seeds.insert(cftp_seeds.begin(), newSeeds.begin(), newSeeds.end());
+        }
         cftp_lower.cloneFrom(cftp_minState.grid);
         cftp_upper.cloneFrom(cftp_maxState.grid);
     }
@@ -2209,18 +2221,19 @@ char* stepCFTP() {
     }
     cftp_currentStep += stepsToRun;
 
-    // Check coalescence after each batch - early exit if coalesced
-    if (cftp_lower.grid == cftp_upper.grid) {
-        cftp_coalesced = true;
-        std::string json = "{\"status\":\"coalesced\", \"T\":" + std::to_string(cftp_currentStep) + "}";
+    // Only check coalescence after running ALL T steps
+    if (cftp_currentStep < cftp_T) {
+        std::string json = "{\"status\":\"in_progress\", \"T\":" + std::to_string(cftp_T) +
+                          ", \"step\":" + std::to_string(cftp_currentStep) + "}";
         char* out = (char*)malloc(json.size() + 1);
         strcpy(out, json.c_str());
         return out;
     }
 
-    if (cftp_currentStep < cftp_T) {
-        std::string json = "{\"status\":\"in_progress\", \"T\":" + std::to_string(cftp_T) +
-                          ", \"step\":" + std::to_string(cftp_currentStep) + "}";
+    // Epoch complete - check coalescence at time 0
+    if (cftp_lower.grid == cftp_upper.grid) {
+        cftp_coalesced = true;
+        std::string json = "{\"status\":\"coalesced\", \"T\":" + std::to_string(cftp_T) + "}";
         char* out = (char*)malloc(json.size() + 1);
         strcpy(out, json.c_str());
         return out;
@@ -2721,22 +2734,12 @@ char* stepFluctuationsCFTP() {
             fluct_coalesced[s] = true;
             fluct_samples[s] = lower;  // Store coalesced sample
         } else {
-            // Double T and generate new seeds
-            int newT = fluct_T[s] * 2;
-            std::vector<uint64_t> newSeeds(newT);
-
-            // Generate seeds deterministically
-            uint64_t seedBase = fluct_seeds[s][0] ^ (s * 12345);
-            uint64_t tempRng = seedBase;
-            for (int i = 0; i < newT; i++) {
-                tempRng ^= tempRng >> 12;
-                tempRng ^= tempRng << 25;
-                tempRng ^= tempRng >> 27;
-                newSeeds[i] = tempRng * 0x2545F4914F6CDD1DULL;
-            }
-
-            fluct_seeds[s] = std::move(newSeeds);
-            fluct_T[s] = newT;
+            // Prepend new seeds for earlier time period (reuse existing later-time seeds)
+            int newCount = fluct_T[s];
+            std::vector<uint64_t> newSeeds(newCount);
+            for (int i = 0; i < newCount; i++) newSeeds[i] = xorshift64();
+            fluct_seeds[s].insert(fluct_seeds[s].begin(), newSeeds.begin(), newSeeds.end());
+            fluct_T[s] *= 2;
         }
     }
 

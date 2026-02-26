@@ -218,7 +218,7 @@ function initFluctuationsGaussianSim() {
         return new Promise((resolve) => {
             function step() {
                 const done = wasmFunctions.runCFTPBatch();
-                if (done) {
+                if (done === 1) {
                     const ptr = wasmFunctions.getPartitionPath();
                     const str = wasm.UTF8ToString(ptr);
                     wasmFunctions.freeString(ptr);
@@ -228,6 +228,10 @@ function initFluctuationsGaussianSim() {
                     drawHistogram();
                     wasmIsRunning = false;
                     resolve(path);
+                } else if (done === -1) {
+                    // Timeout — discard this sample
+                    wasmIsRunning = false;
+                    resolve(null);
                 } else {
                     requestAnimationFrame(step);
                 }

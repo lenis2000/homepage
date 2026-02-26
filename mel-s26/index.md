@@ -42,6 +42,10 @@ Imagine you have a 100x100x100 room, and you stack some number of 1x1x1 unit cub
 
 - (Feb 26) [Dinic's Algorithm and Lozenge Tilings: the Undo Mechanic]({{site.storage_url}}/mel-s26/2026-02-26-dinic-algorithm.pdf) (PDF)
 
+- (Mar 11) [Coupling From the Past: Why Doubling With Reuse is Essential]({{site.storage_url}}/mel-s26/2026-03-11-coupling-from-the-past.pdf) (PDF)
+
+- (Mar 11) [Height Functions and Extremal Matchings on General Planar Bipartite Graphs]({{site.storage_url}}/mel-s26/height-functions-planar-bipartite.pdf) (PDF)
+
 ### Useful links
 
 <ul>

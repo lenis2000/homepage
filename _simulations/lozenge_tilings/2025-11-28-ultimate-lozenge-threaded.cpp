@@ -70,6 +70,24 @@ inline int getRandomInt(int n) {
     return (int)fastRandomRange((uint32_t)n);
 }
 
+// Thread-safe RNG overloads using a local state (for coupledStep in threaded context)
+inline uint64_t xorshift64(uint64_t& state) {
+    state ^= state >> 12;
+    state ^= state << 25;
+    state ^= state >> 27;
+    return state * 0x2545F4914F6CDD1DULL;
+}
+
+inline double getRandom01(uint64_t& state) {
+    return (xorshift64(state) >> 11) * (1.0 / 9007199254740992.0);
+}
+
+inline uint32_t fastRandomRange(uint64_t& state, uint32_t range) {
+    uint64_t random64 = xorshift64(state);
+    uint64_t hi = (uint64_t)(((unsigned __int128)random64 * range) >> 64);
+    return (uint32_t)hi;
+}
+
 // Triangle geometry constants
 const double slope = 1.0 / std::sqrt(3.0);
 const double deltaC = 2.0 / std::sqrt(3.0);
@@ -1636,19 +1654,18 @@ inline int fastCheckRotationTypeLUT(const int8_t* gridData, size_t gridSize,
 }
 
 void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
-    uint64_t savedRng = rng_state;
-    rng_state = seed;
+    uint64_t local_rng = seed;  // Use local state for thread safety
 
     const size_t N = triangularVertices.size();
-    if (N == 0) { rng_state = savedRng; return; }
+    if (N == 0) return;
 
     const size_t gridSize = lower.grid.size();
 
     if (useRandomSweeps) {
         // Random site selection with LUT optimization
         for (size_t i = 0; i < N; i++) {
-            const uint32_t idx = fastRandomRange((uint32_t)N);
-            const double u = getRandom01();
+            const uint32_t idx = fastRandomRange(local_rng, (uint32_t)N);
+            const double u = getRandom01(local_rng);
             const TriVertex& v = triangularVertices[idx];
             const CachedHexIndices& hex = cachedHexIndices[idx];
             const float pRemove = cachedProbs[idx].probDown;
@@ -1682,7 +1699,7 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
             const auto& verts = colorVertices[color];
             for (size_t vi = 0; vi < verts.size(); vi++) {
                 const uint32_t idx = verts[vi];
-                const double u = getRandom01();
+                const double u = getRandom01(local_rng);
 
                 const TriVertex& v = triangularVertices[idx];
                 const CachedHexIndices& hex = cachedHexIndices[idx];
@@ -1713,8 +1730,6 @@ void coupledStep(GridState& lower, GridState& upper, uint64_t seed) {
             }
         }
     }
-
-    rng_state = savedRng;
 }
 
 // ============================================================================
@@ -2103,18 +2118,24 @@ char* runCFTP() {
     makeExtremalState(minState, -1);
     makeExtremalState(maxState, 1);
 
+    std::vector<uint64_t> allSeeds;
     int T = 1;
     bool coalesced = false;
 
     while (!coalesced) {
-        std::vector<uint64_t> currentSeeds(T);
-        for (int i = 0; i < T; i++) currentSeeds[i] = xorshift64();
+        // Prepend new seeds for earlier time period (reuse existing later-time seeds)
+        int newCount = T - (int)allSeeds.size();
+        if (newCount > 0) {
+            std::vector<uint64_t> newSeeds(newCount);
+            for (int i = 0; i < newCount; i++) newSeeds[i] = xorshift64();
+            allSeeds.insert(allSeeds.begin(), newSeeds.begin(), newSeeds.end());
+        }
 
         GridState lower, upper;
         lower.cloneFrom(minState.grid);
         upper.cloneFrom(maxState.grid);
 
-        for (int t = 0; t < T; t++) coupledStep(lower, upper, currentSeeds[t]);
+        for (size_t t = 0; t < allSeeds.size(); t++) coupledStep(lower, upper, allSeeds[t]);
 
         if (lower.grid == upper.grid) {
             coalesced = true;
@@ -2152,6 +2173,7 @@ char* initCFTP() {
     cftp_initialized = true;
     cftp_coalesced = false;
     cftp_currentStep = 0;
+    cftp_seeds.clear();
 
     std::string json = "{\"status\":\"cftp_initialized\", \"T\":" + std::to_string(cftp_T) + "}";
     char* out = (char*)malloc(json.size() + 1);
@@ -2176,8 +2198,13 @@ char* stepCFTP() {
     }
 
     if (cftp_currentStep == 0) {
-        cftp_seeds.resize(cftp_T);
-        for (int i = 0; i < cftp_T; i++) cftp_seeds[i] = xorshift64();
+        // Prepend new seeds for earlier time period (reuse existing later-time seeds)
+        int newCount = cftp_T - (int)cftp_seeds.size();
+        if (newCount > 0) {
+            std::vector<uint64_t> newSeeds(newCount);
+            for (int i = 0; i < newCount; i++) newSeeds[i] = xorshift64();
+            cftp_seeds.insert(cftp_seeds.begin(), newSeeds.begin(), newSeeds.end());
+        }
         cftp_lower.cloneFrom(cftp_minState.grid);
         cftp_upper.cloneFrom(cftp_maxState.grid);
     }
@@ -2819,22 +2846,12 @@ char* stepFluctuationsCFTP() {
                     fluct_coalesced[s] = true;
                     fluct_samples[s] = lower;  // Store coalesced sample
                 } else {
-                    // Double T and generate new seeds
-                    int newT = fluct_T[s] * 2;
-                    std::vector<uint64_t> newSeeds(newT);
-
-                    // Generate seeds deterministically
-                    uint64_t seedBase = fluct_seeds[s][0] ^ (s * 12345);
-                    uint64_t tempRng = seedBase;
-                    for (int i = 0; i < newT; i++) {
-                        tempRng ^= tempRng >> 12;
-                        tempRng ^= tempRng << 25;
-                        tempRng ^= tempRng >> 27;
-                        newSeeds[i] = tempRng * 0x2545F4914F6CDD1DULL;
-                    }
-
-                    fluct_seeds[s] = std::move(newSeeds);
-                    fluct_T[s] = newT;
+                    // Prepend new seeds for earlier time period (reuse existing later-time seeds)
+                    int newCount = fluct_T[s];
+                    std::vector<uint64_t> newSeeds(newCount);
+                    for (int i = 0; i < newCount; i++) newSeeds[i] = xorshift64();
+                    fluct_seeds[s].insert(fluct_seeds[s].begin(), newSeeds.begin(), newSeeds.end());
+                    fluct_T[s] *= 2;
                 }
             });
         }

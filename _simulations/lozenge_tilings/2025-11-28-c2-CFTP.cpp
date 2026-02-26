@@ -959,15 +959,18 @@ char* runCFTP() {
     makeExtremalState(minState, -1);  // Min: all boxes removed
     makeExtremalState(maxState, 1);   // Max: all boxes filled
 
+    std::vector<uint64_t> allSeeds;
     int T = 1;
     bool coalesced = false;
 
-    // CFTP Loop with doubling
+    // CFTP Loop with backward doubling and seed reuse
     while (!coalesced) {
-        // Generate T seeds for this run
-        std::vector<uint64_t> currentSeeds(T);
-        for (int i = 0; i < T; i++) {
-            currentSeeds[i] = xorshift64();
+        // Prepend new seeds for earlier time period (reuse existing later-time seeds)
+        int newCount = T - (int)allSeeds.size();
+        if (newCount > 0) {
+            std::vector<uint64_t> newSeeds(newCount);
+            for (int i = 0; i < newCount; i++) newSeeds[i] = xorshift64();
+            allSeeds.insert(allSeeds.begin(), newSeeds.begin(), newSeeds.end());
         }
 
         // Reset chains to extremal states
@@ -975,12 +978,12 @@ char* runCFTP() {
         lower.cloneFrom(minState.grid);
         upper.cloneFrom(maxState.grid);
 
-        // Run forward from -T to 0
-        for (int t = 0; t < T; t++) {
-            coupledStep(lower, upper, currentSeeds[t]);
+        // Apply ALL seeds from -T to 0 (reusing later-time seeds from previous epochs)
+        for (size_t t = 0; t < allSeeds.size(); t++) {
+            coupledStep(lower, upper, allSeeds[t]);
         }
 
-        // Check coalescence
+        // Check coalescence at time 0
         if (lower.grid == upper.grid) {
             coalesced = true;
             // Apply result to global state
@@ -1024,6 +1027,8 @@ char* initCFTP() {
     cftp_T = 1;
     cftp_initialized = true;
     cftp_coalesced = false;
+    cftp_currentStep = 0;
+    cftp_seeds.clear();
 
     std::string json = "{\"status\":\"cftp_initialized\", \"T\":" + std::to_string(cftp_T) + "}";
     char* out = (char*)malloc(json.size() + 1);
@@ -1049,9 +1054,12 @@ char* stepCFTP() {
 
     // If starting a new epoch (currentStep == 0), generate seeds and reset chains
     if (cftp_currentStep == 0) {
-        cftp_seeds.resize(cftp_T);
-        for (int i = 0; i < cftp_T; i++) {
-            cftp_seeds[i] = xorshift64();
+        // Prepend new seeds for earlier time period (reuse existing later-time seeds)
+        int newCount = cftp_T - (int)cftp_seeds.size();
+        if (newCount > 0) {
+            std::vector<uint64_t> newSeeds(newCount);
+            for (int i = 0; i < newCount; i++) newSeeds[i] = xorshift64();
+            cftp_seeds.insert(cftp_seeds.begin(), newSeeds.begin(), newSeeds.end());
         }
         cftp_lower.cloneFrom(cftp_minState.grid);
         cftp_upper.cloneFrom(cftp_maxState.grid);

@@ -2055,18 +2055,17 @@ char* stepCFTP() {
         sweepsThisBatch++;
     }
 
-    // Check coalescence every 1000 sweeps
-    if (tilingsEqual(cftpMin, cftpMax)) {
-        std::string json = "{\"status\":\"coalesced\",\"T\":" + std::to_string(cftpCurrentT) +
-                          ",\"sweep\":" + std::to_string(cftpCurrentSweepIdx) +
-                          ",\"totalSweeps\":" + std::to_string(cftpTotalSweeps) + "}";
-        char* result = (char*)malloc(json.size() + 1);
-        strcpy(result, json.c_str());
-        return result;
-    }
-
-    // If finished this epoch's sweeps without coalescence
+    // If finished this epoch's sweeps — check coalescence at time 0 only
     if (cftpCurrentSweepIdx >= cftpSweepSeeds.size()) {
+        if (tilingsEqual(cftpMin, cftpMax)) {
+            std::string json = "{\"status\":\"coalesced\",\"T\":" + std::to_string(cftpCurrentT) +
+                              ",\"sweep\":" + std::to_string(cftpCurrentSweepIdx) +
+                              ",\"totalSweeps\":" + std::to_string(cftpTotalSweeps) + "}";
+            char* result = (char*)malloc(json.size() + 1);
+            strcpy(result, json.c_str());
+            return result;
+        }
+
         // Safety limit
         if (cftpTotalEpochs >= 30) {
             std::string json = "{\"status\":\"timeout\",\"T\":" + std::to_string(cftpCurrentT) +
@@ -2582,11 +2581,13 @@ char* stepFluctuationsCFTP() {
             sweeps0++;
         }
 
-        // Check coalescence
-        if (tilingsEqual(fluctMin0, fluctMax0)) {
-            fluctCoalesced0 = true;
-        } else if (fluctCurrentSweepIdx0 >= fluctSeeds0.size()) {
-            fluctEpochSize0 *= 2;
+        // Check coalescence only at epoch completion
+        if (fluctCurrentSweepIdx0 >= fluctSeeds0.size()) {
+            if (tilingsEqual(fluctMin0, fluctMax0)) {
+                fluctCoalesced0 = true;
+            } else {
+                fluctEpochSize0 *= 2;
+            }
         }
     }
 
@@ -2616,11 +2617,13 @@ char* stepFluctuationsCFTP() {
             sweeps1++;
         }
 
-        // Check coalescence
-        if (tilingsEqual(fluctMin1, fluctMax1)) {
-            fluctCoalesced1 = true;
-        } else if (fluctCurrentSweepIdx1 >= fluctSeeds1.size()) {
-            fluctEpochSize1 *= 2;
+        // Check coalescence only at epoch completion
+        if (fluctCurrentSweepIdx1 >= fluctSeeds1.size()) {
+            if (tilingsEqual(fluctMin1, fluctMax1)) {
+                fluctCoalesced1 = true;
+            } else {
+                fluctEpochSize1 *= 2;
+            }
         }
     }
 
