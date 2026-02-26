@@ -6,7 +6,7 @@ Compile with (run from this directory):
 
 emcc 2025-12-28-q-partition-cftp.cpp -o ../../js/2025-12-28-q-partition-cftp.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initSimulation','_runCFTPEpoch','_runGlauberSteps','_getPartitionData','_getLowerData','_getUpperData','_freeString','_getM','_getN','_getArea','_getGap']" \
+  -s "EXPORTED_FUNCTIONS=['_initSimulation','_runCFTPEpoch','_runGlauberSteps','_getPartitionData','_getLowerData','_getUpperData','_freeString','_getM','_getN','_getArea','_getGap','_getCftpT']" \
   -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=64MB \
@@ -69,7 +69,6 @@ static std::vector<int> lowerPath;    // CFTP lower bound (all 0s first, then al
 static std::vector<int> upperPath;    // CFTP upper bound (all 1s first, then all 0s = full partition)
 static std::vector<uint64_t> cftpSeeds;  // Accumulated seeds for backward doubling
 static int cftp_T = 1;                   // Current epoch window size (doubles each epoch)
-static int currentT = 0;                 // Total steps applied
 static RNG globalRng;
 
 // Convert path to partition representation
@@ -112,11 +111,11 @@ void initSimulation(int n, double a, double qVal) {
 
     cftpSeeds.clear();
     cftp_T = 1;
-    currentT = 0;
     globalRng = RNG((uint64_t)time(nullptr));
 }
 
 int getM() { return M; }
+int getCftpT() { return cftp_T; }
 
 // Update just q without resetting path
 void setQ(double qVal) {
@@ -241,7 +240,6 @@ int runCFTPEpoch() {
     for (size_t t = 0; t < cftpSeeds.size(); t++) {
         coupledGlauberStepPath(lowerPath, upperPath, cftpSeeds[t]);
     }
-    currentT = cftpSeeds.size();
 
     // Check coalescence at time 0 only
     if (isCoalesced()) {

@@ -73,7 +73,6 @@ static double q = 1.0;       // Weight parameter
 static std::vector<int> path;         // Current/result path
 static std::vector<int> lowerPath;    // CFTP lower bound
 static std::vector<int> upperPath;    // CFTP upper bound
-static int totalSteps = 0;
 static bool coalesced = false;
 static std::vector<uint64_t> cftpSeeds;  // Accumulated seeds for backward doubling
 static int cftp_T = 1;                   // Current epoch window size
@@ -151,7 +150,6 @@ void initSimulation(int n, int m, double qVal) {
     path.assign(M + N, 0);
     for (int i = 0; i < M; i++) path[i] = 1;
 
-    totalSteps = 0;
     coalesced = false;
     cftpSeeds.clear();
     cftp_T = 1;
@@ -181,7 +179,6 @@ int runCFTPBatch() {
     for (size_t t = 0; t < cftpSeeds.size(); t++) {
         coupledGlauberStep(lowerPath, upperPath, cftpSeeds[t]);
     }
-    totalSteps = cftpSeeds.size();
 
     // Check coalescence at time 0 only
     if (isCoalesced()) {

@@ -6,7 +6,7 @@ Compile with (run from this directory):
 
 emcc 2026-01-04-q-partition-cftp-general.cpp -o ../../js/2026-01-04-q-partition-cftp-general.js \
   -s WASM=1 \
-  -s "EXPORTED_FUNCTIONS=['_initSimulationWithBoundary','_runCFTPEpoch','_runGlauberSteps','_getPartitionData','_getLowerData','_getUpperData','_getBoundaryData','_freeString','_getM','_getN','_getArea','_getGap','_setQ']" \
+  -s "EXPORTED_FUNCTIONS=['_initSimulationWithBoundary','_runCFTPEpoch','_runGlauberSteps','_getPartitionData','_getLowerData','_getUpperData','_getBoundaryData','_freeString','_getM','_getN','_getArea','_getGap','_setQ','_getCftpT']" \
   -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=64MB \
@@ -70,7 +70,6 @@ static std::vector<int> upperPath;    // CFTP upper bound (boundary partition)
 static std::vector<int> boundaryPath; // Path encoding of boundary (for constraint checking)
 static std::vector<uint64_t> cftpSeeds;  // Accumulated seeds for backward doubling
 static int cftp_T = 1;                   // Current epoch window size
-static int currentT = 0;
 static RNG globalRng;
 
 // Convert partition to path representation
@@ -164,12 +163,12 @@ void initSimulationWithBoundary(const char* boundaryStr, double qVal) {
 
     cftpSeeds.clear();
     cftp_T = 1;
-    currentT = 0;
     globalRng = RNG((uint64_t)time(nullptr));
 }
 
 int getM() { return M; }
 int getN() { return N; }
+int getCftpT() { return cftp_T; }
 
 void setQ(double qVal) {
     q = qVal;
@@ -330,7 +329,6 @@ int runCFTPEpoch() {
     for (size_t t = 0; t < cftpSeeds.size(); t++) {
         coupledGlauberStepPath(lowerPath, upperPath, cftpSeeds[t]);
     }
-    currentT = cftpSeeds.size();
 
     // Check coalescence at time 0 only
     if (isCoalesced()) {

@@ -1027,6 +1027,7 @@ char* initCFTP() {
     cftp_T = 1;
     cftp_initialized = true;
     cftp_coalesced = false;
+    cftp_currentStep = 0;
     cftp_seeds.clear();
 
     std::string json = "{\"status\":\"cftp_initialized\", \"T\":" + std::to_string(cftp_T) + "}";
