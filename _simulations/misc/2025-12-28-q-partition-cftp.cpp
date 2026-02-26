@@ -67,9 +67,9 @@ static double q = 1.0;       // Weight parameter
 static std::vector<int> path;         // Current path
 static std::vector<int> lowerPath;    // CFTP lower bound (all 0s first, then all 1s = empty partition)
 static std::vector<int> upperPath;    // CFTP upper bound (all 1s first, then all 0s = full partition)
-static std::vector<uint64_t> seeds;   // Seeds for CFTP
-static int currentT = 0;              // Current T in CFTP
-static int currentEpoch = 0;          // Current epoch
+static std::vector<uint64_t> cftpSeeds;  // Accumulated seeds for backward doubling
+static int cftp_T = 1;                   // Current epoch window size (doubles each epoch)
+static int currentT = 0;                 // Total steps applied
 static RNG globalRng;
 
 // Convert path to partition representation
@@ -110,9 +110,9 @@ void initSimulation(int n, double a, double qVal) {
     upperPath.assign(M + N, 0);
     for (int i = N; i < M + N; i++) upperPath[i] = 1;
 
-    seeds.clear();
+    cftpSeeds.clear();
+    cftp_T = 1;
     currentT = 0;
-    currentEpoch = 0;
     globalRng = RNG((uint64_t)time(nullptr));
 }
 
@@ -220,41 +220,37 @@ bool isCoalesced() {
     return true;
 }
 
-// Run a batch of CFTP steps, return: 0=not coalesced, 1=coalesced
-// Runs 50M steps per call for progress updates
+// Run one backward-doubling epoch of CFTP
+// Returns: 0=not coalesced (doubled T), 1=coalesced (exact sample ready)
 int runCFTPEpoch() {
-    const int BATCH_SIZE = 50000000;  // 50M steps per batch
-
-    // First call: initialize extremal states
-    if (currentT == 0) {
-        // Lower: empty partition = 111...000 (M ones then N zeros)
-        lowerPath.assign(M + N, 0);
-        for (int i = 0; i < M; i++) lowerPath[i] = 1;
-
-        // Upper: full partition = 000...111 (N zeros then M ones)
-        upperPath.assign(M + N, 0);
-        for (int i = N; i < M + N; i++) upperPath[i] = 1;
+    // Prepend new seeds for earlier time period
+    int newCount = cftp_T - (int)cftpSeeds.size();
+    if (newCount > 0) {
+        std::vector<uint64_t> newSeeds(newCount);
+        for (int i = 0; i < newCount; i++) newSeeds[i] = globalRng.next();
+        cftpSeeds.insert(cftpSeeds.begin(), newSeeds.begin(), newSeeds.end());
     }
 
-    // Run batch of coupled steps
-    for (int t = 0; t < BATCH_SIZE; t++) {
-        uint64_t seed = globalRng.next();
-        coupledGlauberStepPath(lowerPath, upperPath, seed);
-        currentT++;
+    // Reset to extremal states
+    lowerPath.assign(M + N, 0);
+    for (int i = 0; i < M; i++) lowerPath[i] = 1;
+    upperPath.assign(M + N, 0);
+    for (int i = N; i < M + N; i++) upperPath[i] = 1;
 
-        // Check coalescence periodically
-        if ((currentT % 1000000) == 0 && isCoalesced()) {
-            path = lowerPath;
-            return 1;
-        }
+    // Apply ALL seeds from -T to 0
+    for (size_t t = 0; t < cftpSeeds.size(); t++) {
+        coupledGlauberStepPath(lowerPath, upperPath, cftpSeeds[t]);
     }
+    currentT = cftpSeeds.size();
 
-    // Final check after batch
+    // Check coalescence at time 0 only
     if (isCoalesced()) {
         path = lowerPath;
         return 1;
     }
 
+    // Double for next epoch
+    cftp_T *= 2;
     return 0;
 }
 

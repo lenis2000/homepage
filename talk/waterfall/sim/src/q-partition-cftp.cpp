@@ -75,10 +75,13 @@ static std::vector<int> lowerPath;    // CFTP lower bound
 static std::vector<int> upperPath;    // CFTP upper bound
 static int totalSteps = 0;
 static bool coalesced = false;
+static std::vector<uint64_t> cftpSeeds;  // Accumulated seeds for backward doubling
+static int cftp_T = 1;                   // Current epoch window size
 static RNG globalRng;
 
-// Coupled Glauber step for CFTP
-inline void coupledGlauberStep(std::vector<int>& lower, std::vector<int>& upper, RNG& rng) {
+// Coupled Glauber step for CFTP (seed-based for backward doubling)
+inline void coupledGlauberStep(std::vector<int>& lower, std::vector<int>& upper, uint64_t seed) {
+    RNG rng(seed);
     int len = M + N;
     if (len < 2) return;
 
@@ -150,35 +153,45 @@ void initSimulation(int n, int m, double qVal) {
 
     totalSteps = 0;
     coalesced = false;
+    cftpSeeds.clear();
+    cftp_T = 1;
     globalRng = RNG((uint64_t)time(nullptr) ^ (uint64_t)n ^ ((uint64_t)m << 16));
 }
 
-// Run a batch of CFTP steps (10M per call for UI responsiveness)
-// Returns 1 if coalesced, 0 if still running
+// Run one backward-doubling epoch of CFTP
+// Returns 1 if coalesced (exact sample ready), 0 if not (doubled T)
 int runCFTPBatch() {
     if (coalesced) return 1;
 
-    const int BATCH_SIZE = 10000000;  // 10M steps per batch
-
-    for (int t = 0; t < BATCH_SIZE; t++) {
-        coupledGlauberStep(lowerPath, upperPath, globalRng);
-        totalSteps++;
-
-        // Check coalescence periodically
-        if ((totalSteps % 500000) == 0 && isCoalesced()) {
-            path = lowerPath;
-            coalesced = true;
-            return 1;
-        }
+    // Prepend new seeds for earlier time period
+    int newCount = cftp_T - (int)cftpSeeds.size();
+    if (newCount > 0) {
+        std::vector<uint64_t> newSeeds(newCount);
+        for (int i = 0; i < newCount; i++) newSeeds[i] = globalRng.next();
+        cftpSeeds.insert(cftpSeeds.begin(), newSeeds.begin(), newSeeds.end());
     }
 
-    // Final check after batch
+    // Reset to extremal states
+    lowerPath.assign(M + N, 0);
+    for (int i = 0; i < M; i++) lowerPath[i] = 1;
+    upperPath.assign(M + N, 0);
+    for (int i = N; i < M + N; i++) upperPath[i] = 1;
+
+    // Apply ALL seeds from -T to 0
+    for (size_t t = 0; t < cftpSeeds.size(); t++) {
+        coupledGlauberStep(lowerPath, upperPath, cftpSeeds[t]);
+    }
+    totalSteps = cftpSeeds.size();
+
+    // Check coalescence at time 0 only
     if (isCoalesced()) {
         path = lowerPath;
         coalesced = true;
         return 1;
     }
 
+    // Double for next epoch
+    cftp_T *= 2;
     return 0;
 }
 

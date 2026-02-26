@@ -68,8 +68,9 @@ static std::vector<int> path;         // Current path
 static std::vector<int> lowerPath;    // CFTP lower bound (empty partition)
 static std::vector<int> upperPath;    // CFTP upper bound (boundary partition)
 static std::vector<int> boundaryPath; // Path encoding of boundary (for constraint checking)
+static std::vector<uint64_t> cftpSeeds;  // Accumulated seeds for backward doubling
+static int cftp_T = 1;                   // Current epoch window size
 static int currentT = 0;
-static int currentEpoch = 0;
 static RNG globalRng;
 
 // Convert partition to path representation
@@ -161,8 +162,9 @@ void initSimulationWithBoundary(const char* boundaryStr, double qVal) {
     // Upper bound: boundary partition
     upperPath = boundaryPath;
 
+    cftpSeeds.clear();
+    cftp_T = 1;
     currentT = 0;
-    currentEpoch = 0;
     globalRng = RNG((uint64_t)time(nullptr));
 }
 
@@ -308,35 +310,36 @@ bool isCoalesced() {
     return true;
 }
 
-// Run a batch of CFTP steps
+// Run one backward-doubling epoch of CFTP
+// Returns: 0=not coalesced (doubled T), 1=coalesced (exact sample ready)
 int runCFTPEpoch() {
-    const int BATCH_SIZE = 50000000;
-
-    if (currentT == 0) {
-        // Lower: empty partition
-        lowerPath.assign(M + N, 0);
-        for (int i = 0; i < M; i++) lowerPath[i] = 1;
-
-        // Upper: boundary partition
-        upperPath = boundaryPath;
+    // Prepend new seeds for earlier time period
+    int newCount = cftp_T - (int)cftpSeeds.size();
+    if (newCount > 0) {
+        std::vector<uint64_t> newSeeds(newCount);
+        for (int i = 0; i < newCount; i++) newSeeds[i] = globalRng.next();
+        cftpSeeds.insert(cftpSeeds.begin(), newSeeds.begin(), newSeeds.end());
     }
 
-    for (int t = 0; t < BATCH_SIZE; t++) {
-        uint64_t seed = globalRng.next();
-        coupledGlauberStepPath(lowerPath, upperPath, seed);
-        currentT++;
+    // Reset to extremal states
+    lowerPath.assign(M + N, 0);
+    for (int i = 0; i < M; i++) lowerPath[i] = 1;
+    upperPath = boundaryPath;
 
-        if ((currentT % 1000000) == 0 && isCoalesced()) {
-            path = lowerPath;
-            return 1;
-        }
+    // Apply ALL seeds from -T to 0
+    for (size_t t = 0; t < cftpSeeds.size(); t++) {
+        coupledGlauberStepPath(lowerPath, upperPath, cftpSeeds[t]);
     }
+    currentT = cftpSeeds.size();
 
+    // Check coalescence at time 0 only
     if (isCoalesced()) {
         path = lowerPath;
         return 1;
     }
 
+    // Double for next epoch
+    cftp_T *= 2;
     return 0;
 }
 
