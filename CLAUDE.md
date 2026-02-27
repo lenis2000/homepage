@@ -68,6 +68,21 @@ simulations: simulations/YYYY-MM-DD-slug/    # optional
 - Create `abstract.txt` with plain text title, authors, and abstract (keep `$...$` math)
 - Use single hyphens in abstract (arXiv style), not `--` em-dashes
 
+## Travel Page
+- Travel posts live in `_posts/travel/`, one per year (e.g., `2025-07-25-travel-2026.md`)
+- Format: `##### Month` headers, entries as `dates &bull; location &bull; [Event Name](url) description`
+- Empty months are commented out: `<!-- ##### Month -->`
+- Category: `travel travel-plans blog`
+
+## CV (LaTeX)
+- CV source: `/Users/leo/__FORMER_DPBX/Sci/CV_GitHub/__petrovCV__.tex`
+- Publication list generated from Jekyll via `_includes/cv_publist.html`
+- Key CV sections (in order): Publications, Students/postdocs, Organization/service, Talks and conferences (commented-out numbered list), Seminar talks (`longtable`), Conference talks (`etaremune`), Research programs (`etaremune`)
+- When adding travel/events, update BOTH the homepage travel post AND the CV — they are separate files
+- Research programs/thematic programmes go in "Research programs and focused collaborations" section
+- Conference/workshop talks go in "Conference talks" section
+- Seminar/colloquium talks go in "Seminar talks" section
+
 ## User Preferences
 - **No co-author line in commits** — do NOT add `Co-Authored-By: Claude` to git commit messages
 - Don't run Jekyll builds - user handles deployment
