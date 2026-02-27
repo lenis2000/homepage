@@ -102,7 +102,10 @@ const ColorSchemes = [
     { name: 'Bi Pride', colors: ['#D60270', '#9B4F96', '#0038A8', '#9B4F96'] },  // Magenta top, purple front, blue side
 
     // Pencil Drawing / Escher Style
-    { name: 'Escher', colors: ['#F5F5F5', '#D0D0D0', '#A8A8A8', '#E0E0E0'] }  // Light gray, medium gray, darker gray (lozenges); 4th for dominoes
+    { name: 'Escher', colors: ['#F5F5F5', '#D0D0D0', '#A8A8A8', '#E0E0E0'] },  // Light gray, medium gray, darker gray (lozenges); 4th for dominoes
+
+    // Skull / Poison
+    { name: 'Skull Poison', colors: ['#0D1B0E', '#39FF14', '#00CC66', '#061208'] }  // Deep dark green, neon green, medium green, darkest green
 ];
 
 // Export for module systems (if needed)

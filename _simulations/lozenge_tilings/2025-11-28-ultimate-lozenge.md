@@ -8510,6 +8510,18 @@ function initLozengeApp() {
         } catch (e) {
             console.warn('Could not load theme:', e);
         }
+        // Force dark mode
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme-preference', 'dark');
+        const themeSwitch = document.getElementById('theme-switch');
+        if (themeSwitch) themeSwitch.checked = true;
+
+        // Set hole color to black
+        renderer.holeColor = '#000000';
+        if (renderer3D) renderer3D.holeColor = '#000000';
+        const hcp = document.getElementById('holeColorPicker');
+        if (hcp) hcp.value = '#000000';
+
         reinitialize();
 
         // Load and apply hole height from HOLE_HEIGHT.txt
