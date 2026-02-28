@@ -1875,7 +1875,7 @@ async function initializeApp() {
     const baseY = (h - heightPts * baseScale) / 2 - (minY - 20) * baseScale;
 
     // Check if we need to re-render the cache (data change, style change, or resize)
-    const hiresMultiplier = currentN <= 100 ? 3 : currentN <= 300 ? 2 : 1;
+    const hiresMultiplier = 3;
     const hiresCacheScale = dpr * hiresMultiplier;
     const currentParams = `${showParticles}|${borderWidth}|${rotation}|${showDiagonalHighlights}|${getCurrentColors().join(',')}`;
     const needsCacheUpdate = canvasCacheRenderedVersion !== canvasCacheVersion ||
