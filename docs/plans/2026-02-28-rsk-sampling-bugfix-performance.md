@@ -37,13 +37,13 @@ calls `JSON.parse()` and if parsing fails (e.g. null pointer from malloc failure
 The key optimization is refactoring the growth diagram from a full (n+1)x(n+1) grid to a 2-row rolling buffer. This reduces
 memory from O(n^2 * partition_size) to O(n * partition_size) - roughly 50-200x less memory for n=200.
 
-- [ ] Fix infinity sentinel in `sampleVHq`: when k=0, compute `f_k = oneMinusQtoN(q, lam_0 - mu_0 + 1)` directly (denominator is 1.0) instead of calling computeF with nu_bar_k_minus_1=10^9. This avoids an expensive Boost pow(q, ~10^9) call
-- [ ] Add early-return optimization in `oneMinusQtoN`: for n > 1000 with any q < 1, return 1.0 directly (since q^1000 < 10^-22 for q <= 0.95)
-- [ ] Refactor `aztecDiamondSample` to use 2-row rolling buffer: replace `vector<vector<Partition>> tau(n+1, vector<Partition>(n+1))` with two vectors `prevRow` and `currRow`, each of size n+1. Extract boundary partitions (tau[i][n+1-i] and tau[i][n-i]) into a boundary cache during the main loop
-- [ ] Reconstruct the output partition sequence from the boundary cache instead of the full tau grid. Output order: empty, boundaryA[n], boundaryB[n-1], boundaryA[n-1], ..., boundaryB[1], boundaryA[1], empty
-- [ ] Pre-allocate partition vectors in the rolling buffer to avoid repeated heap allocation: reserve capacity for the expected maximum partition size (e.g., n/2 parts)
-- [ ] Reuse partition vectors via `swap()` instead of copy when moving data between rows
-- [ ] Recompile WASM and test: n=200 x=2 y=1 q=0.95 should complete without error 10/10 times
+- [x] Fix infinity sentinel in `sampleVHq`: when k=0, compute `f_k = oneMinusQtoN(q, lam_0 - mu_0 + 1)` directly (denominator is 1.0) instead of calling computeF with nu_bar_k_minus_1=10^9. This avoids an expensive Boost pow(q, ~10^9) call
+- [x] Add early-return optimization in `oneMinusQtoN`: for n > 1000 with any q < 1, return 1.0 directly (since q^1000 < 10^-22 for q <= 0.95)
+- [x] Refactor `aztecDiamondSample` to use 2-row rolling buffer: replace `vector<vector<Partition>> tau(n+1, vector<Partition>(n+1))` with two vectors `prevRow` and `currRow`, each of size n+1. Extract boundary partitions (tau[i][n+1-i] and tau[i][n-i]) into a boundary cache during the main loop
+- [x] Reconstruct the output partition sequence from the boundary cache instead of the full tau grid. Output order: empty, boundaryA[n], boundaryB[n-1], boundaryA[n-1], ..., boundaryB[1], boundaryA[1], empty
+- [x] Pre-allocate partition vectors in the rolling buffer to avoid repeated heap allocation: reserve capacity for the expected maximum partition size (e.g., n/2 parts)
+- [x] Reuse partition vectors via `swap()` instead of copy when moving data between rows
+- [x] Recompile WASM and test: n=200 x=2 y=1 q=0.95 should complete without error 10/10 times
 
 ### Task 2: JavaScript error handling and robustness
 

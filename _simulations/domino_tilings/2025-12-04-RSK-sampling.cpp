@@ -74,6 +74,7 @@ inline double oneMinusQtoN_fast(double q, int n) {
     if (n <= 0) return 0.0;
     if (q <= 0.0) return 1.0;
     if (q >= 1.0) return 0.0;
+    if (n > 1000) return 1.0; // q^1000 < 10^-22 for q <= 0.95
     // 1 - q^n = 1 - exp(n*log(q)) = -expm1(n*log1p(q-1))
     return -expm1(static_cast<double>(n) * log1p(q - 1.0));
 }
@@ -84,6 +85,7 @@ inline double oneMinusQtoN_boost(double q, int n) {
     if (n <= 0) return 0.0;
     if (q <= 0.0) return 1.0;
     if (q >= 1.0) return 0.0;
+    if (n > 1000) return 1.0; // q^1000 < 10^-22 for q <= 0.95
 
     // Use local mp_float to avoid static initialization issues in WASM
     mp_float mp_q_local(q);
@@ -128,7 +130,7 @@ static vector<int> s_nuParts;
 // q-Whittaker version of the VH bijection for the Aztec diamond growth diagram
 // Implements exact dynamics from arXiv:1504.00666 Section 5.1
 // For q=0, reduces to the deterministic Schur case
-Partition sampleVHq(const Partition& lam, const Partition& mu, const Partition& kappa, int bit, double q) {
+void sampleVHq(const Partition& lam, const Partition& mu, const Partition& kappa, int bit, double q, Partition& out) {
     const int maxLen = max({(int)lam.size(), (int)mu.size(), (int)kappa.size()}) + 2;
 
     // Reuse static buffers
@@ -172,7 +174,6 @@ Partition sampleVHq(const Partition& lam, const Partition& mu, const Partition& 
         const int k = island.first;
         const int m = island.second;
         const int nu_bar_k = getPart(mu, k);
-        const int nu_bar_k_minus_1 = (k > 0) ? getPart(mu, k - 1) : 1000000000; // Large value as infinity
 
         // Case 1: bit=1 and k=0 (island contains first particle)
         if (bit == 1 && k == 0) {
@@ -196,7 +197,14 @@ Partition sampleVHq(const Partition& lam, const Partition& mu, const Partition& 
         } else {
             // q-Whittaker case: probabilistic sampling
             const int lam_k = getPart(lam, k);
-            const double f_k = computeF(lam_k, nu_bar_k, nu_bar_k_minus_1, q);
+            double f_k;
+            if (k == 0) {
+                // When k=0, nu_bar_{-1} = +infinity, so denominator is 1.0
+                int delta_lam = lam_k - nu_bar_k + 1;
+                f_k = (delta_lam <= 0) ? 0.0 : oneMinusQtoN(q, delta_lam);
+            } else {
+                f_k = computeF(lam_k, nu_bar_k, getPart(mu, k - 1), q);
+            }
 
             if (uniform01(rng) < f_k) {
                 stoppedAt = k;
@@ -231,7 +239,7 @@ Partition sampleVHq(const Partition& lam, const Partition& mu, const Partition& 
         trimLen--;
     }
 
-    return Partition(s_nuParts.begin(), s_nuParts.begin() + trimLen);
+    out.assign(s_nuParts.begin(), s_nuParts.begin() + trimLen);
 }
 
 // Sample Aztec diamond partition sequence using RSK growth diagram
@@ -248,10 +256,20 @@ vector<Partition> aztecDiamondSample(int n, const vector<double>& x_in, const ve
     while ((int)x.size() < n) x.push_back(1.0);
     while ((int)y.size() < n) y.push_back(1.0);
 
-    // Initialize growth diagram with 2D vector (much faster than map<string>)
-    // tau[i][j] stores partition at position (i,j)
-    vector<vector<Partition>> tau(n + 1, vector<Partition>(n + 1));
-    // Boundaries are already empty partitions by default
+    // Rolling buffer: only keep two rows instead of full (n+1)x(n+1) grid
+    // Reduces memory from O(n^2 * partition_size) to O(n * partition_size)
+    vector<Partition> prevRow(n + 1);  // tau[i-1][.]
+    vector<Partition> currRow(n + 1);  // tau[i][.]
+
+    // Pre-allocate partition capacity to avoid repeated heap allocation
+    for (int j = 0; j <= n; j++) {
+        prevRow[j].reserve(n / 2);
+        currRow[j].reserve(n / 2);
+    }
+
+    // Boundary caches for output reconstruction
+    vector<Partition> boundaryA(n + 1); // boundaryA[i] = tau[i][n+1-i]
+    vector<Partition> boundaryB(n);     // boundaryB[i] = tau[i][n-i], i=1..n-1
 
     // Fill staircase row by row
     const int totalCells = n * (n + 1) / 2;
@@ -263,18 +281,22 @@ vector<Partition> aztecDiamondSample(int n, const vector<double>& x_in, const ve
         const double xi_base = x[i - 1];
 
         for (int j = 1; j <= rowLen; j++) {
-            const Partition& lam = tau[i-1][j];
-            const Partition& mu = tau[i][j-1];
-            const Partition& kappa = tau[i-1][j-1];
-
             // Schur process Bernoulli: p = x_i * y_j / (1 + x_i * y_j)
             const double xi = xi_base * y[j - 1];
             const double p = xi / (1.0 + xi);
             const int bit = (uniform01(rng) < p) ? 1 : 0;
 
-            tau[i][j] = sampleVHq(lam, mu, kappa, bit, q);
+            sampleVHq(prevRow[j], currRow[j-1], prevRow[j-1], bit, q, currRow[j]);
 
             cellsDone++;
+        }
+
+        // Extract boundary values before swapping rows
+        // boundaryA[i] = currRow[n+1-i] (rightmost cell, not read by next row)
+        boundaryA[i] = std::move(currRow[n + 1 - i]);
+        // boundaryB[i] = currRow[n-i] (copy, since next row reads prevRow[n-i])
+        if (i < n) {
+            boundaryB[i] = currRow[n - i];
         }
 
         // Update progress and yield less frequently
@@ -282,28 +304,23 @@ vector<Partition> aztecDiamondSample(int n, const vector<double>& x_in, const ve
         if (i % sleepInterval == 0) {
             emscripten_sleep(0); // Yield to update UI
         }
+
+        // Swap rows: currRow becomes prevRow for next iteration (O(1) swap)
+        swap(prevRow, currRow);
     }
 
-    // Extract output path along staircase boundary
-    // Path goes from (0,n) to (n,0)
-    vector<pair<int, int>> outputPath;
-    int i = 0, j = n;
-    outputPath.push_back({i, j});
-    while (i != n || j != 0) {
-        if (j <= n - i && i < n) {
-            i++;
-        } else {
-            j--;
-        }
-        outputPath.push_back({i, j});
-    }
-
-    // Reverse to get correct order: λ⁰ first (empty), then growing, then shrinking back to λⁿ (empty)
+    // Reconstruct output partition sequence from boundary cache
+    // Order: empty, A[n], B[n-1], A[n-1], B[n-2], ..., B[1], A[1], empty
     vector<Partition> result;
-    result.reserve(outputPath.size());
-    for (auto it = outputPath.rbegin(); it != outputPath.rend(); ++it) {
-        result.push_back(tau[it->first][it->second]);
+    result.reserve(2 * n + 1);
+    result.emplace_back(); // empty partition at start
+    for (int i = n; i >= 1; i--) {
+        result.push_back(std::move(boundaryA[i]));
+        if (i > 1) {
+            result.push_back(std::move(boundaryB[i - 1]));
+        }
     }
+    result.emplace_back(); // empty partition at end
 
     return result;
 }
