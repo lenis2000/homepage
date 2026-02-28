@@ -244,6 +244,7 @@ code:
 <div id="zoom-export-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
   <div id="zoom-controls-container"></div>
   <div style="display: flex; align-items: center; gap: 6px; font-size: 0.9em;">
+    <button type="button" id="fullres-btn" title="Open full-resolution image in new tab">Full Res</button>
     <button type="button" id="export-png-btn">PNG</button>
     <span style="font-size: 10px; color: #666;">Q:</span>
     <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 50px;">
@@ -289,7 +290,7 @@ code:
 
 <!-- Visual Controls -->
 <div id="visual-controls" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 8px; padding: 6px 10px; background: #f5f5f5; border-radius: 5px; font-size: 0.9em;">
-  <span>
+  <span style="display: none;">
     <input type="radio" id="renderer-canvas" name="renderer" value="canvas" checked>
     <label for="renderer-canvas">Canvas</label>
     <input type="radio" id="renderer-svg" name="renderer" value="svg" style="margin-left: 6px;">
@@ -1758,6 +1759,7 @@ async function initializeApp() {
 
   // Render tiling content to a target canvas context (used by both cache and export)
   function renderCanvasContent(tctx, dominoes, latticePoints, showParticles, borderWidth, rotation) {
+    console.time('  colorGrouping');
     // Batch dominoes by color: group rects, fill once per color
     const colorGroups = {};
     for (let i = 0; i < dominoes.length; i++) {
@@ -1766,12 +1768,14 @@ async function initializeApp() {
       if (!colorGroups[color]) colorGroups[color] = [];
       colorGroups[color].push(d);
     }
+    console.timeEnd('  colorGrouping');
 
     if (rotation !== 0) {
       tctx.rotate(rotation * Math.PI / 180);
     }
 
     // Draw all dominoes batched by color (one fillStyle + beginPath + fill per group)
+    console.time('  dominoFill');
     for (const color in colorGroups) {
       const group = colorGroups[color];
       tctx.fillStyle = color;
@@ -1782,9 +1786,11 @@ async function initializeApp() {
       }
       tctx.fill();
     }
+    console.timeEnd('  dominoFill');
 
-    // Draw all borders in one batch if enabled
-    if (borderWidth > 0) {
+    // Draw borders — skip when dominoes are too numerous (borders invisible at that scale)
+    console.time('  borderStroke');
+    if (borderWidth > 0 && dominoes.length <= 10000) {
       tctx.strokeStyle = "#000";
       tctx.lineWidth = borderWidth;
       tctx.beginPath();
@@ -1794,6 +1800,7 @@ async function initializeApp() {
       }
       tctx.stroke();
     }
+    console.timeEnd('  borderStroke');
 
     // Draw particles if enabled (batched: black fills, then white fills, then all strokes)
     if (showParticles) {
@@ -1874,23 +1881,27 @@ async function initializeApp() {
       !canvasCacheCanvas || canvasCacheWidth !== w * dpr || canvasCacheHeight !== h * dpr;
 
     if (needsCacheUpdate) {
+      console.time('  cacheRender');
       // Create or resize cache canvas
-      if (!canvasCacheCanvas || canvasCacheWidth !== w * dpr || canvasCacheHeight !== h * dpr) {
+      const cacheScale = dpr * 3;  // 3x CSS resolution for sharp zoom
+      if (!canvasCacheCanvas || canvasCacheWidth !== w * cacheScale || canvasCacheHeight !== h * cacheScale) {
         canvasCacheCanvas = document.createElement('canvas');
-        canvasCacheWidth = w * dpr;
-        canvasCacheHeight = h * dpr;
+        canvasCacheWidth = w * cacheScale;
+        canvasCacheHeight = h * cacheScale;
       }
       canvasCacheCanvas.width = canvasCacheWidth;
       canvasCacheCanvas.height = canvasCacheHeight;
       const cctx = canvasCacheCanvas.getContext('2d');
+      console.log(`  cache canvas size: ${canvasCacheWidth}x${canvasCacheHeight}, cacheScale=${cacheScale}`);
 
       // Render tiling at neutral position (no zoom/pan) to cache
-      cctx.scale(dpr, dpr);
+      cctx.scale(cacheScale, cacheScale);
       cctx.translate(baseX, baseY);
       cctx.scale(baseScale, baseScale);
       renderCanvasContent(cctx, dominoes, latticePoints, showParticles, borderWidth, rotation);
       canvasCacheRenderedVersion = canvasCacheVersion;
       canvasCacheParams = currentParams;
+      console.timeEnd('  cacheRender');
     }
 
     // Draw background
@@ -1959,11 +1970,19 @@ async function initializeApp() {
   }
 
   // Main render function - dispatches to canvas or SVG
-  function renderParticles() {
+  // Async with yield points to prevent page freeze at large n
+  async function renderParticles() {
+    const isLargeN = currentN >= 50;
+    console.time('renderParticles total');
+
+    if (isLargeN) { progressElem.innerText = "Computing lattice..."; await new Promise(r => setTimeout(r, 0)); }
+    console.time('generateLatticePoints');
     const { latticePoints, geomDiagonals, bounds } = generateLatticePoints();
+    console.timeEnd('generateLatticePoints');
     const diagKeys = Object.keys(geomDiagonals).map(Number).sort((a, b) => a - b);
 
     // Convert partitions to subsets
+    console.time('partitionToSubset loop');
     const subsetsByDiag = {};
     for (let idx = 0; idx < currentPartitions.length && idx < diagKeys.length; idx++) {
       const diagKey = diagKeys[idx];
@@ -1979,16 +1998,24 @@ async function initializeApp() {
       const subset = subsetsByDiag[p.diag];
       p.inSubset = subset ? subset.has(p.posInDiag) : false;
     }
+    console.timeEnd('partitionToSubset loop');
 
     // Compute dominoes
+    if (isLargeN) { progressElem.innerText = "Computing tiling..."; await new Promise(r => setTimeout(r, 0)); }
+    console.time('computeDominoes');
     const dominoes = computeDominoes(latticePoints);
+    console.timeEnd('computeDominoes');
 
     // Cache for redraw on style changes
     cachedDominoes = dominoes;
     cachedLatticePoints = latticePoints;
     cachedBounds = bounds;
+    console.time('buildActiveCells');
     cachedActiveCells = buildActiveCells(latticePoints);
+    console.timeEnd('buildActiveCells');
     invalidateCanvasCache();
+
+    if (isLargeN) { progressElem.innerText = "Rendering..."; await new Promise(r => setTimeout(r, 0)); }
 
     const showParticles = document.getElementById("show-particles-cb").checked;
     const borderWidth = parseFloat(document.getElementById("border-slider").value);
@@ -2000,12 +2027,18 @@ async function initializeApp() {
     if (useCanvas) {
       canvas.style.display = "block";
       svg.style("display", "none");
+      console.time('renderCanvas');
       renderCanvas(dominoes, latticePoints, bounds, showParticles, borderWidth, rotation);
+      console.timeEnd('renderCanvas');
     } else {
       canvas.style.display = "none";
       svg.style("display", "block").style("pointer-events", "auto");
       renderSVG(dominoes, latticePoints, bounds, showParticles, borderWidth, rotation);
     }
+
+    if (isLargeN) { progressElem.innerText = ""; }
+    console.timeEnd('renderParticles total');
+    console.log(`  n=${currentN}, latticePoints=${latticePoints.length}, dominoes=${dominoes.length}`);
   }
 
   // ========== Dimer Rendering (2-color scheme) ==========
@@ -2870,6 +2903,12 @@ async function initializeApp() {
     currentN = newN;
     updateParamsForN(currentN);
 
+    // Auto-disable particles and borders for large n (too many to be useful/visible)
+    if (currentN > 100) {
+      document.getElementById("show-particles-cb").checked = false;
+      document.getElementById("border-slider").value = "0";
+    }
+
     // Clear second sample caches
     secondPartitions = null;
     cachedDominoes2 = null;
@@ -2883,7 +2922,7 @@ async function initializeApp() {
     const q = parseFloat(document.getElementById("q-input").value);
     currentPartitions = await aztecDiamondSample(currentN, x, y, q);
     try {
-      renderParticles();
+      await renderParticles();
       displaySubsets();
       await update3DView();  // Update 3D view if active
     } catch (renderErr) {
@@ -2947,7 +2986,7 @@ async function initializeApp() {
     const y = parseCSV(document.getElementById("y-params").value);
     const q = parseFloat(document.getElementById("q-input").value);
     currentPartitions = await aztecDiamondSample(currentN, x, y, q);
-    renderParticles();
+    await renderParticles();
     displaySubsets();
 
     // Build active cells for first sample
@@ -3019,7 +3058,7 @@ async function initializeApp() {
 
     currentPartitions = await aztecDiamondSample(currentN, x, y, q);
     try {
-      renderParticles();  // This updates cachedDominoes and cachedLatticePoints
+      await renderParticles();  // This updates cachedDominoes and cachedLatticePoints
     } catch (renderErr) {
       console.error("Rendering error after sampling:", renderErr);
       progressElem.innerText = "Rendering failed: " + renderErr.message;
@@ -3052,7 +3091,7 @@ async function initializeApp() {
 
     currentPartitions = await aztecDiamondSample(currentN, x, y, q);
     try {
-      renderParticles();  // This updates cachedDominoes and cachedLatticePoints
+      await renderParticles();  // This updates cachedDominoes and cachedLatticePoints
     } catch (renderErr) {
       console.error("Rendering error after sampling:", renderErr);
       progressElem.innerText = "Rendering failed: " + renderErr.message;
@@ -3381,6 +3420,18 @@ async function initializeApp() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    }, 'image/png');
+  });
+
+  // Full Res - open high-res image in new tab
+  document.getElementById("fullres-btn").addEventListener("click", function(e) {
+    e.preventDefault();
+    const exportCanvas = createExportCanvas();
+    if (!exportCanvas) return;
+    exportCanvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     }, 'image/png');
   });
 
@@ -5419,7 +5470,7 @@ async function initializeApp() {
     const initY = parseCSV(document.getElementById("y-params").value);
     const initQ = parseFloat(document.getElementById("q-input").value);
     currentPartitions = await aztecDiamondSample(currentN, initX, initY, initQ);
-    renderParticles();
+    await renderParticles();
     displaySubsets();
   } catch (e) {
     console.error('Initial sample failed:', e);
