@@ -87,9 +87,9 @@ x 2 draws = 500K canvas ops per frame), this drops below 15fps.
 
 ### Task 5: Verify all improvements
 
-- [ ] Bug fix: sample 10 times with n=200, x=2, y=1, q=0.95 (both high-precision and fast mode) - all should succeed
-- [ ] Bug fix: sample with n=200, x=10, y=0.1, q=0.99 - should succeed
-- [ ] Performance: sample n=500 with default params - C++ sampling should complete in < 3s
-- [ ] 3D rendering: open 3D panel with n=200, verify smooth rotation and correct coloring
-- [ ] 2D zoom: with n=500 on canvas renderer, zoom in/out and pan - should be fluid
-- [ ] Edge cases: n=1, n=1000, q=0, q=0.999 - no crashes
+- [x] Bug fix: sample 10 times with n=200, x=2, y=1, q=0.95 (both high-precision and fast mode) - all should succeed
+- [x] Bug fix: sample with n=200, x=10, y=0.1, q=0.99 - should succeed
+- [x] Performance: sample n=500 with default params - C++ sampling should complete in < 3s
+- [x] 3D rendering: open 3D panel with n=200, verify smooth rotation and correct coloring
+- [x] 2D zoom: with n=500 on canvas renderer, zoom in/out and pan - should be fluid
+- [x] Edge cases: n=1, n=1000, q=0, q=0.999 - no crashes
