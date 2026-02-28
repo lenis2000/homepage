@@ -34,53 +34,53 @@
 ## Implementation Steps
 
 ### Task 1: Elevate the hook screen typography and atmosphere
-- [ ] Replace Georgia serif with a more distinctive display font — use a system font stack that reads as contemporary art (e.g., `'Didot', 'Bodoni MT', 'Noto Serif Display', Georgia, serif`)
-- [ ] Increase the question text size and add letter-spacing for gallery presence
-- [ ] Add a subtle atmospheric element — faint animated particle field, slow gradient pulse, or barely-perceptible lozenge shapes in the background
-- [ ] Refine the "Click to enter" hint — make it feel like a gallery invitation, not a website CTA
-- [ ] Verify with agent-browser: hook screen should arrest attention at 1920x1080
+- [x] Replace Georgia serif with a more distinctive display font — use a system font stack that reads as contemporary art (e.g., `'Didot', 'Bodoni MT', 'Noto Serif Display', Georgia, serif`)
+- [x] Increase the question text size and add letter-spacing for gallery presence
+- [x] Add a subtle atmospheric element — faint animated particle field, slow gradient pulse, or barely-perceptible lozenge shapes in the background
+- [x] Refine the "Click to enter" hint — make it feel like a gallery invitation, not a website CTA
+- [x] Verify with agent-browser: hook screen should arrest attention at 1920x1080
 
 ### Task 2: Refine the color palette for visual impact
-- [ ] Replace flat Escher grayscale with a more sophisticated palette — consider: warm grays with subtle color temperature shifts per lozenge type, or a restrained palette with one accent direction (e.g., cool blue-grays for two types, warm amber for the third)
-- [ ] Ensure the three lozenge types remain clearly distinguishable while feeling like a unified palette
-- [ ] Add subtle gradient or lighting effect to individual lozenges for depth (simulating the 3D cube illusion more convincingly)
-- [ ] Refine boundary stroke — the white 2px boundary may be too harsh; consider a softer treatment
-- [ ] Verify with agent-browser: frozen Penrose triangle should feel dimensional and gallery-worthy
+- [x] Replace flat Escher grayscale with a more sophisticated palette — consider: warm grays with subtle color temperature shifts per lozenge type, or a restrained palette with one accent direction (e.g., cool blue-grays for two types, warm amber for the third)
+- [x] Ensure the three lozenge types remain clearly distinguishable while feeling like a unified palette
+- [x] Add subtle gradient or lighting effect to individual lozenges for depth (simulating the 3D cube illusion more convincingly)
+- [x] Refine boundary stroke — the white 2px boundary may be too harsh; consider a softer treatment
+- [x] Verify with agent-browser: frozen Penrose triangle should feel dimensional and gallery-worthy
 
 ### Task 3: Polish the chaos→order animation arc
-- [ ] During chaos phase, add subtle visual energy — slight color vibration, or brief flash of warm color that cools as order emerges
-- [ ] Improve the annealing visual — consider the background transitioning from pure black to a very subtle dark tone as the piece "warms up"
-- [ ] Tune the animation timing: evaluate whether 4s chaos + 15s annealing is optimal (compare 3+12 and 5+18 if needed)
-- [ ] Add a very subtle vignette effect around the edges of the canvas to focus attention on the triangle
-- [ ] Verify with agent-browser: the full animation arc from chaos to frozen should feel like a revelation
+- [x] During chaos phase, add subtle visual energy — slight color vibration, or brief flash of warm color that cools as order emerges
+- [x] Improve the annealing visual — consider the background transitioning from pure black to a very subtle dark tone as the piece "warms up"
+- [x] Tune the animation timing: evaluate whether 4s chaos + 15s annealing is optimal (compare 3+12 and 5+18 if needed)
+- [x] Add a very subtle vignette effect around the edges of the canvas to focus attention on the triangle
+- [x] Verify with agent-browser: the full animation arc from chaos to frozen should feel like a revelation
 
 ### Task 4: Refine the frozen state and UI elements
-- [ ] Improve the caption "Local Truth, Global Paradox" — evaluate typography, position, and whether the text is strong enough
-- [ ] Refine the entropy slider design — make it feel like a minimal gallery control, not a web UI widget
-- [ ] Consider adding a subtle title/attribution line (artist name, piece title) in very small text, gallery-style
-- [ ] Ensure the frozen Penrose triangle rendering is pixel-perfect — no aliasing seams between lozenges, clean edges
-- [ ] Verify with agent-browser: the final state should look exhibition-ready
+- [x] Improve the caption "Local Truth, Global Paradox" — evaluate typography, position, and whether the text is strong enough
+- [x] Refine the entropy slider design — make it feel like a minimal gallery control, not a web UI widget
+- [x] Consider adding a subtle title/attribution line (artist name, piece title) in very small text, gallery-style
+- [x] Ensure the frozen Penrose triangle rendering is pixel-perfect — no aliasing seams between lozenges, clean edges
+- [x] Verify with agent-browser: the final state should look exhibition-ready
 
 ### Task 5: Display resilience and responsive behavior
-- [ ] Test and fix at common display resolutions: 1920x1080, 2560x1440, 1280x720
-- [ ] Ensure the piece scales properly — the triangle should be centered and well-proportioned at all sizes
-- [ ] Verify the animation loops or can be restarted — a gallery display needs to work for months
-- [ ] Add a subtle auto-restart: after the interactive phase runs for e.g. 2 minutes with no interaction, smoothly return to hook screen
-- [ ] Verify with agent-browser at multiple viewports
+- [x] Test and fix at common display resolutions: 1920x1080, 2560x1440, 1280x720
+- [x] Ensure the piece scales properly — the triangle should be centered and well-proportioned at all sizes
+- [x] Verify the animation loops or can be restarted — a gallery display needs to work for months
+- [x] Add a subtle auto-restart: after the interactive phase runs for e.g. 2 minutes with no interaction, smoothly return to hook screen
+- [x] Verify with agent-browser at multiple viewports
 
 ### Task 6: Audio and performance polish
-- [ ] Evaluate the sonification — is the pentatonic mapping effective? Consider a simpler, more ambient sound design (single sustained tone that shifts pitch with order/entropy)
-- [ ] Ensure the piece runs smoothly at 60fps during the animation phase
-- [ ] Verify no memory leaks from repeated plays (WASM module re-creation)
-- [ ] Optimize canvas rendering if needed — the 3072 triangles should render without jank
-- [ ] Verify with agent-browser: smooth animation, no visual glitches
+- [x] Evaluate the sonification — is the pentatonic mapping effective? Consider a simpler, more ambient sound design (single sustained tone that shifts pitch with order/entropy)
+- [x] Ensure the piece runs smoothly at 60fps during the animation phase
+- [x] Verify no memory leaks from repeated plays (WASM module re-creation)
+- [x] Optimize canvas rendering if needed — the 3072 triangles should render without jank
+- [x] Verify with agent-browser: smooth animation, no visual glitches
 
 ### Task 7: Final competition readiness
-- [ ] Set a proper page title (not "Truth" — something like the actual piece name)
-- [ ] Add meta tags for proper social sharing if submitted as URL
-- [ ] Create/verify the piece has a strong opening when viewed for the first time
-- [ ] Do a final comprehensive visual review at 1920x1080 with agent-browser
-- [ ] Ensure the piece is self-contained and works at the hosted URL
+- [x] Set a proper page title (not "Truth" — something like the actual piece name)
+- [x] Add meta tags for proper social sharing if submitted as URL
+- [x] Create/verify the piece has a strong opening when viewed for the first time
+- [x] Do a final comprehensive visual review at 1920x1080 with agent-browser
+- [x] Ensure the piece is self-contained and works at the hosted URL
 
 ## Post-Completion
 *Items requiring manual action — not for ralphex*

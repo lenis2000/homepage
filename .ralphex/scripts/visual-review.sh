@@ -9,6 +9,8 @@ PROMPT_FILE="${1:-}"
 PROJECT_DIR="/Users/leo/Homepage"
 PORT=8769
 SCREENSHOT_DIR="/tmp/ralphex-art-review-$$"
+AB=/opt/homebrew/bin/agent-browser
+SESSION="ralphex-review-$$"
 
 mkdir -p "$SCREENSHOT_DIR"
 
@@ -19,21 +21,35 @@ SERVER_PID=$!
 sleep 2
 
 # Capture screenshots at key moments using agent-browser
-/opt/homebrew/bin/agent-browser <<CMDS
-open http://localhost:${PORT}/data-art/triangle.html
-set viewport 1920 1080
-sleep 3000
-screenshot ${SCREENSHOT_DIR}/01-hook.png
-click 960 540
-sleep 5000
-screenshot ${SCREENSHOT_DIR}/02-chaos.png
-sleep 10000
-screenshot ${SCREENSHOT_DIR}/03-annealing.png
-sleep 8000
-screenshot ${SCREENSHOT_DIR}/04-frozen.png
-sleep 3000
-screenshot ${SCREENSHOT_DIR}/05-final-with-ui.png
-CMDS
+# Each command is a separate invocation; session keeps the browser alive between them.
+$AB --session "$SESSION" open "http://localhost:${PORT}/data-art/triangle.html"
+$AB --session "$SESSION" set viewport 1920 1080
+$AB --session "$SESSION" wait 3000
+$AB --session "$SESSION" screenshot "${SCREENSHOT_DIR}/01-hook.png"
+
+# Click the hook screen to start the cycle (click center of viewport)
+$AB --session "$SESSION" mouse move 960 540
+$AB --session "$SESSION" mouse down
+$AB --session "$SESSION" mouse up
+
+# Chaos phase
+$AB --session "$SESSION" wait 5000
+$AB --session "$SESSION" screenshot "${SCREENSHOT_DIR}/02-chaos.png"
+
+# Annealing phase
+$AB --session "$SESSION" wait 10000
+$AB --session "$SESSION" screenshot "${SCREENSHOT_DIR}/03-annealing.png"
+
+# Frozen phase
+$AB --session "$SESSION" wait 8000
+$AB --session "$SESSION" screenshot "${SCREENSHOT_DIR}/04-frozen.png"
+
+# Final with UI
+$AB --session "$SESSION" wait 3000
+$AB --session "$SESSION" screenshot "${SCREENSHOT_DIR}/05-final-with-ui.png"
+
+# Close browser session
+$AB --session "$SESSION" close 2>/dev/null || true
 
 # Kill server
 kill "$SERVER_PID" 2>/dev/null || true
@@ -73,5 +89,5 @@ echo "  - Fix: concrete CSS/JS change"
 echo ""
 echo "If no issues found, output: NO ISSUES FOUND"
 
-# Cleanup
+# Cleanup screenshots (Claude will have already read them via the prompt)
 rm -rf "$SCREENSHOT_DIR"

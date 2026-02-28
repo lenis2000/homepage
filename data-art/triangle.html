@@ -7,14 +7,22 @@ permalink: triangle/
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Truth</title>
+    <title>Does Chaos Hide the Truth? — Leonid Petrov</title>
+    <meta name="description" content="An interactive data art piece where impossible geometry emerges from probabilistic truth. MCMC-sampled lozenge tilings anneal from chaos into a Penrose triangle.">
+    <meta property="og:title" content="Does Chaos Hide the Truth?">
+    <meta property="og:description" content="Impossible geometry emerges from probabilistic truth. An interactive data art piece by Leonid Petrov.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://lpetrov.cc/triangle/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Does Chaos Hide the Truth?">
+    <meta name="twitter:description" content="Impossible geometry emerges from probabilistic truth. An interactive data art piece by Leonid Petrov.">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
             width: 100%; height: 100%;
             overflow: hidden;
             background: #000;
-            font-family: 'Georgia', serif;
+            font-family: 'Didot', 'Bodoni MT', 'Noto Serif Display', 'Georgia', serif;
         }
 
         #canvas {
@@ -39,20 +47,33 @@ permalink: triangle/
 
         #hook-screen .question {
             color: #fff;
-            font-size: clamp(1.5rem, 4vw, 3rem);
+            font-size: clamp(2rem, 5vw, 4rem);
             font-style: italic;
+            font-weight: 300;
+            letter-spacing: 0.12em;
             text-align: center;
             padding: 0 2rem;
             opacity: 0;
-            animation: fadeIn 2s ease-out forwards;
+            animation: fadeIn 2.5s ease-out forwards;
+        }
+
+        #hook-bg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
         }
 
         #hook-screen .hint {
-            color: rgba(255, 255, 255, 0.4);
-            font-size: clamp(0.8rem, 2vw, 1rem);
-            margin-top: 3rem;
+            color: rgba(255, 255, 255, 0.35);
+            font-size: clamp(0.7rem, 1.5vw, 0.85rem);
+            font-family: 'Helvetica Neue', 'Arial', sans-serif;
+            font-weight: 300;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            margin-top: 4rem;
             opacity: 0;
-            animation: fadeIn 1s ease-out 1.5s forwards;
+            animation: fadeIn 1s ease-out 2s forwards, pulse 3s ease-in-out 3s infinite;
         }
 
         @keyframes fadeIn {
@@ -64,21 +85,19 @@ permalink: triangle/
             50% { opacity: 0.7; }
         }
 
-        #hook-screen .hint {
-            animation: fadeIn 1s ease-out 1.5s forwards, pulse 2s ease-in-out 2.5s infinite;
-        }
-
         /* Caption */
         #caption {
             position: absolute;
             bottom: 10vh;
             left: 0; right: 0;
             text-align: center;
-            color: #fff;
-            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            color: rgba(255, 255, 255, 0.85);
+            font-size: clamp(0.85rem, 1.8vw, 1.15rem);
             font-style: italic;
+            font-weight: 300;
+            letter-spacing: 0.18em;
             opacity: 0;
-            transition: opacity 2s ease-in;
+            transition: opacity 2.5s ease-in;
             pointer-events: none;
             z-index: 5;
         }
@@ -87,16 +106,16 @@ permalink: triangle/
             opacity: 1;
         }
 
-        /* Entropy slider - minimalist */
+        /* Entropy slider - gallery control */
         #controls {
             position: absolute;
             bottom: 4vh;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
-            gap: 0.4rem;
+            gap: 1rem;
             opacity: 0;
             transition: opacity 1.5s ease-in;
             z-index: 5;
@@ -106,22 +125,22 @@ permalink: triangle/
             opacity: 1;
         }
 
-        #controls label {
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 0.65rem;
-            font-family: 'Arial', sans-serif;
+        #controls .slider-label {
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 0.55rem;
+            font-family: 'Helvetica Neue', 'Arial', sans-serif;
             text-transform: uppercase;
-            letter-spacing: 3px;
+            letter-spacing: 0.25em;
             font-weight: 300;
+            white-space: nowrap;
         }
 
         #entropy {
-            width: 180px;
+            width: 200px;
             height: 1px;
             -webkit-appearance: none;
             appearance: none;
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 0;
+            background: rgba(255, 255, 255, 0.2);
             outline: none;
             cursor: pointer;
         }
@@ -129,26 +148,46 @@ permalink: triangle/
         #entropy::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 10px;
-            height: 10px;
-            background: rgba(255, 255, 255, 0.8);
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.6);
             border-radius: 50%;
             cursor: pointer;
-            transition: transform 0.2s, background 0.2s;
+            transition: transform 0.3s ease, background 0.3s ease;
         }
 
         #entropy::-webkit-slider-thumb:hover {
-            transform: scale(1.3);
-            background: #fff;
+            transform: scale(1.4);
+            background: rgba(255, 255, 255, 0.9);
         }
 
         #entropy::-moz-range-thumb {
-            width: 10px;
-            height: 10px;
-            background: rgba(255, 255, 255, 0.8);
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.6);
             border: none;
             border-radius: 50%;
             cursor: pointer;
+        }
+
+        /* Gallery attribution */
+        #attribution {
+            position: absolute;
+            bottom: 1.2vh;
+            right: 2vw;
+            color: rgba(255, 255, 255, 0.18);
+            font-size: 0.5rem;
+            font-family: 'Helvetica Neue', 'Arial', sans-serif;
+            font-weight: 300;
+            letter-spacing: 0.15em;
+            opacity: 0;
+            transition: opacity 2s ease-in;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        #attribution.visible {
+            opacity: 1;
         }
 
         /* Loading indicator */
@@ -165,8 +204,9 @@ permalink: triangle/
 </head>
 <body>
     <div id="hook-screen">
-        <p class="question">"Does Chaos hide the Truth?"</p>
-        <p class="hint">Click to enter</p>
+        <canvas id="hook-bg"></canvas>
+        <p class="question">"Does Chaos Hide the Truth?"</p>
+        <p class="hint">Enter</p>
     </div>
 
     <canvas id="canvas"></canvas>
@@ -174,9 +214,12 @@ permalink: triangle/
     <div id="caption">Local Truth, Global Paradox</div>
 
     <div id="controls">
-        <input type="range" id="entropy" min="0" max="100" value="0">
-        <label>ENTROPY</label>
+        <span class="slider-label">Order</span>
+        <input type="range" id="entropy" min="0" max="100" value="0" aria-label="Entropy: Order to Chaos">
+        <span class="slider-label">Chaos</span>
     </div>
+
+    <div id="attribution">Leonid Petrov &middot; Does Chaos Hide the Truth? &middot; 2026</div>
 
     <div id="loading">Loading...</div>
 
@@ -186,10 +229,98 @@ permalink: triangle/
         'use strict';
 
         // ========================================================================
+        // HOOK BACKGROUND — faint drifting lozenges
+        // ========================================================================
+        const hookBg = document.getElementById('hook-bg');
+        const hookCtx = hookBg.getContext('2d');
+        let hookAnimId = null;
+
+        function initHookBg() {
+            const dpr = window.devicePixelRatio || 1;
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            hookBg.width = w * dpr;
+            hookBg.height = h * dpr;
+            hookCtx.scale(dpr, dpr);
+        }
+
+        // Generate a set of slowly drifting lozenge particles
+        const NUM_PARTICLES = 24;
+        const particles = [];
+        function seedParticles() {
+            particles.length = 0;
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            for (let i = 0; i < NUM_PARTICLES; i++) {
+                particles.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    size: 8 + Math.random() * 20,
+                    rotation: Math.random() * Math.PI * 2,
+                    drift: 0.08 + Math.random() * 0.15,
+                    rotSpeed: (Math.random() - 0.5) * 0.003,
+                    alpha: 0.02 + Math.random() * 0.04
+                });
+            }
+        }
+
+        function drawLozenge(cx, cy, size, rotation, alpha) {
+            const aspect = 0.58; // lozenge aspect ratio
+            hookCtx.save();
+            hookCtx.translate(cx, cy);
+            hookCtx.rotate(rotation);
+            hookCtx.beginPath();
+            hookCtx.moveTo(0, -size);
+            hookCtx.lineTo(size * aspect, 0);
+            hookCtx.lineTo(0, size);
+            hookCtx.lineTo(-size * aspect, 0);
+            hookCtx.closePath();
+            hookCtx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            hookCtx.fill();
+            hookCtx.restore();
+        }
+
+        function animateHookBg() {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            hookCtx.clearRect(0, 0, w, h);
+
+            for (const p of particles) {
+                p.y -= p.drift;
+                p.rotation += p.rotSpeed;
+                // Wrap around
+                if (p.y < -p.size * 2) {
+                    p.y = h + p.size * 2;
+                    p.x = Math.random() * w;
+                }
+                drawLozenge(p.x, p.y, p.size, p.rotation, p.alpha);
+            }
+            hookAnimId = requestAnimationFrame(animateHookBg);
+        }
+
+        function startHookBg() {
+            initHookBg();
+            seedParticles();
+            animateHookBg();
+        }
+
+        function stopHookBg() {
+            if (hookAnimId) {
+                cancelAnimationFrame(hookAnimId);
+                hookAnimId = null;
+            }
+        }
+
+        // ========================================================================
         // CONFIGURATION
         // ========================================================================
-        const ESCHER_COLORS = ['#F5F5F5', '#D0D0D0', '#A8A8A8'];
-        const SCALE_ITERATIONS = 4; // 12 * 2^4 = 3072 triangles
+        // Sophisticated palette — warm light, cool shadow for 3D depth
+        const LOZENGE_PALETTE = [
+            { light: '#EDE8E0', dark: '#E0DBD3' },  // Type 0 (top): warm cream
+            { light: '#A0ADB8', dark: '#8A97A2' },  // Type 1 (right): cool blue-gray
+            { light: '#CCC0B0', dark: '#B8AC9C' }   // Type 2 (left): warm taupe
+        ];
+        const SCALE_ITERATIONS = 4; // 12 * 4^4 = 3072 triangles
         const STEPS_PER_FRAME = 5000;
 
         // Narrative Timeline
@@ -231,6 +362,13 @@ permalink: triangle/
         let activeTriangles = new Map();
         let animationId = null;
         let sonifier = null;
+
+        // Animation phase state — drives visual effects during chaos→order
+        let animPhase = {
+            chaosEnergy: 0,   // 0–1: how much warm color vibration to apply
+            annealProgress: 0, // 0–1: how far through annealing (0=chaos, 1=frozen)
+            time: 0            // raw timestamp for oscillation effects
+        };
 
         // Rendering
         const canvas = document.getElementById('canvas');
@@ -390,83 +528,166 @@ permalink: triangle/
                 }
                 // Scale using WASM boundaries
                 triangles = doubleMeshWithBoundaries(triangles, simInterface.boundaries);
-                console.log(`Scale iteration ${i + 1}: ${triangles.size} triangles`);
             }
 
             return triangles;
         }
 
         // ========================================================================
-        // AUDIO SONIFICATION
+        // AUDIO SONIFICATION — ambient drone that shifts with order/chaos
         // ========================================================================
         class FlipSonifier {
             constructor() {
                 this.audioCtx = null;
                 this.masterGain = null;
-                this.lastFlipTime = 0;
-                this.minInterval = 5;
-                this.enabled = true;
+                this.drone = null;
+                this.droneGain = null;
+                this.droneFilter = null;
             }
 
             init() {
                 this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                // Explicitly resume in case browser suspended it
                 if (this.audioCtx.state === 'suspended') {
                     this.audioCtx.resume();
                 }
                 this.masterGain = this.audioCtx.createGain();
                 this.masterGain.connect(this.audioCtx.destination);
-                this.masterGain.gain.value = 0.3;
-            }
+                this.masterGain.gain.value = 0.25;
 
-            playFlipSound(flipCount) {
-                if (!this.enabled || !this.audioCtx) return;
-
-                const now = performance.now();
-                if (now - this.lastFlipTime < this.minInterval) return;
-                this.lastFlipTime = now;
-
-                const osc = this.audioCtx.createOscillator();
-                const gain = this.audioCtx.createGain();
-                const panner = this.audioCtx.createStereoPanner();
-
-                // Pitch based on flip count - more flips = higher pitch
-                // Pentatonic scale for musical coherence
-                const pentatonic = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21];
-                const baseFreq = 110; // A2
-                // Map flip count to note index (higher flips = higher notes)
-                const normalized = Math.min(flipCount / 100000, 1); // normalize to 0-1
-                const noteIndex = Math.min(Math.floor(normalized * pentatonic.length), pentatonic.length - 1);
-                const freq = baseFreq * Math.pow(2, pentatonic[noteIndex] / 12);
-
-                osc.frequency.value = freq;
-                osc.type = 'triangle';
-
-                // Random stereo position for spatial interest
-                panner.pan.value = Math.random() * 2 - 1;
-
-                // Volume scales with flip count
-                const vol = Math.min(0.15, 0.03 + normalized * 0.12);
+                // Sustained drone: two detuned sine oscillators for warmth
                 const t = this.audioCtx.currentTime;
-                gain.gain.setValueAtTime(vol, t);
-                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
 
-                osc.connect(gain);
-                gain.connect(panner);
-                panner.connect(this.masterGain);
-                osc.start(t);
-                osc.stop(t + 0.1);
+                this.droneGain = this.audioCtx.createGain();
+                this.droneGain.gain.setValueAtTime(0, t);
+
+                this.droneFilter = this.audioCtx.createBiquadFilter();
+                this.droneFilter.type = 'lowpass';
+                this.droneFilter.frequency.value = 800;
+                this.droneFilter.Q.value = 1;
+
+                // Oscillator 1: fundamental
+                const osc1 = this.audioCtx.createOscillator();
+                osc1.type = 'sine';
+                osc1.frequency.value = 110; // A2
+                const g1 = this.audioCtx.createGain();
+                g1.gain.value = 0.5;
+                osc1.connect(g1);
+                g1.connect(this.droneGain);
+
+                // Oscillator 2: detuned +3 cents for subtle beating
+                const osc2 = this.audioCtx.createOscillator();
+                osc2.type = 'sine';
+                osc2.frequency.value = 110;
+                osc2.detune.value = 3;
+                const g2 = this.audioCtx.createGain();
+                g2.gain.value = 0.4;
+                osc2.connect(g2);
+                g2.connect(this.droneGain);
+
+                // Oscillator 3: octave above, very quiet shimmer
+                const osc3 = this.audioCtx.createOscillator();
+                osc3.type = 'sine';
+                osc3.frequency.value = 220;
+                const g3 = this.audioCtx.createGain();
+                g3.gain.value = 0.1;
+                osc3.connect(g3);
+                g3.connect(this.droneGain);
+
+                this.droneGain.connect(this.droneFilter);
+                this.droneFilter.connect(this.masterGain);
+
+                osc1.start(t);
+                osc2.start(t);
+                osc3.start(t);
+
+                this.drone = [osc1, osc2, osc3];
+
+                // Fade in over 1s
+                this.droneGain.gain.setTargetAtTime(1, t, 0.3);
             }
 
-            setFlipRate(rate) {
-                if (!this.masterGain) return;
-                const vol = Math.max(0.05, 0.4 - rate / 5000);
-                this.masterGain.gain.setTargetAtTime(vol, this.audioCtx.currentTime, 0.1);
+            // Update drone based on current entropy (0 = ordered, 1 = chaotic)
+            setEntropy(entropy) {
+                if (!this.audioCtx || !this.drone) return;
+                const t = this.audioCtx.currentTime;
+
+                // Pitch: chaos = higher (A2 → D3), order = lower (A2)
+                const baseFreq = 110;
+                const chaosFreq = 147; // D3
+                const freq = baseFreq + (chaosFreq - baseFreq) * entropy;
+
+                this.drone[0].frequency.setTargetAtTime(freq, t, 0.15);
+                this.drone[1].frequency.setTargetAtTime(freq, t, 0.15);
+                this.drone[2].frequency.setTargetAtTime(freq * 2, t, 0.15);
+
+                // Detune increases with chaos for more unsettled sound
+                this.drone[1].detune.setTargetAtTime(3 + entropy * 12, t, 0.15);
+
+                // Filter opens with chaos, closes with order
+                const filterFreq = 400 + entropy * 1200;
+                this.droneFilter.frequency.setTargetAtTime(filterFreq, t, 0.1);
+
+                // Volume: slightly louder during chaos
+                const vol = 0.6 + entropy * 0.4;
+                this.droneGain.gain.setTargetAtTime(vol, t, 0.1);
             }
 
             fadeOut(duration = 2000) {
-                if (!this.masterGain) return;
-                this.masterGain.gain.setTargetAtTime(0, this.audioCtx.currentTime, duration / 3000);
+                if (!this.masterGain || !this.audioCtx) return;
+                const t = this.audioCtx.currentTime;
+                this.masterGain.gain.setTargetAtTime(0, t, duration / 3000);
+                // Stop oscillators after fade completes
+                if (this.drone) {
+                    for (const osc of this.drone) {
+                        osc.stop(t + duration / 1000 + 1);
+                    }
+                    // Keep this.drone reference so restartDrone() can stop them immediately
+                }
+            }
+
+            // Re-create oscillators after fadeOut (stopped oscillators can't restart)
+            restartDrone() {
+                if (!this.audioCtx || !this.droneGain) return;
+                // Stop any existing oscillators
+                if (this.drone) {
+                    for (const osc of this.drone) {
+                        try { osc.stop(); } catch(e) {}
+                    }
+                }
+                const t = this.audioCtx.currentTime;
+                this.masterGain.gain.setValueAtTime(0.25, t);
+
+                const osc1 = this.audioCtx.createOscillator();
+                osc1.type = 'sine'; osc1.frequency.value = 110;
+                const g1 = this.audioCtx.createGain(); g1.gain.value = 0.5;
+                osc1.connect(g1); g1.connect(this.droneGain);
+
+                const osc2 = this.audioCtx.createOscillator();
+                osc2.type = 'sine'; osc2.frequency.value = 110; osc2.detune.value = 3;
+                const g2 = this.audioCtx.createGain(); g2.gain.value = 0.4;
+                osc2.connect(g2); g2.connect(this.droneGain);
+
+                const osc3 = this.audioCtx.createOscillator();
+                osc3.type = 'sine'; osc3.frequency.value = 220;
+                const g3 = this.audioCtx.createGain(); g3.gain.value = 0.1;
+                osc3.connect(g3); g3.connect(this.droneGain);
+
+                osc1.start(t); osc2.start(t); osc3.start(t);
+                this.drone = [osc1, osc2, osc3];
+                this.droneGain.gain.setTargetAtTime(0.6, t, 0.3);
+            }
+
+            destroy() {
+                if (this.drone) {
+                    for (const osc of this.drone) {
+                        try { osc.stop(); } catch(e) {}
+                    }
+                    this.drone = null;
+                }
+                if (this.audioCtx) {
+                    this.audioCtx.close();
+                    this.audioCtx = null;
+                }
             }
         }
 
@@ -486,12 +707,8 @@ permalink: triangle/
                 this.freeStringWasm = Module.cwrap('freeString', null, ['number']);
 
                 this.dimers = [];
-                this.blackTriangles = [];
-                this.whiteTriangles = [];
                 this.boundaries = [];
                 this.isValid = false;
-                this.totalSteps = 0;
-                this.flipCount = 0;
             }
 
             initFromTriangles(trianglesMap) {
@@ -517,8 +734,6 @@ permalink: triangle/
 
                 const result = JSON.parse(jsonStr);
                 this.isValid = result.status === 'valid';
-                this.totalSteps = 0;
-                this.flipCount = 0;
 
                 if (this.isValid) {
                     this.refreshDimers();
@@ -532,8 +747,6 @@ permalink: triangle/
                 const jsonStr = Module.UTF8ToString(ptr);
                 this.freeStringWasm(ptr);
                 const result = JSON.parse(jsonStr);
-                this.totalSteps = result.totalSteps || 0;
-                this.flipCount = result.flipCount || 0;
                 this.refreshDimers();
                 return result;
             }
@@ -545,8 +758,6 @@ permalink: triangle/
                 const result = JSON.parse(jsonStr);
                 this.boundaries = result.boundaries || [];
                 this.dimers = result.dimers;
-                this.blackTriangles = result.black;
-                this.whiteTriangles = result.white;
             }
 
             setQBias(q) {
@@ -649,39 +860,148 @@ permalink: triangle/
             }
         }
 
+        // Parse hex color to RGB components
+        function hexToRgb(hex) {
+            const n = parseInt(hex.slice(1), 16);
+            return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+        }
+
+        // Pre-compute palette RGB values once
+        const PALETTE_RGB = LOZENGE_PALETTE.map(p => {
+            const light = hexToRgb(p.light);
+            const dark = hexToRgb(p.dark);
+            return {
+                light, dark,
+                mid: light.map((c, i) => Math.round((c + dark[i]) / 2))
+            };
+        });
+
+        // Blend two RGB arrays by factor t (0=a, 1=b)
+        function lerpColor(a, b, t) {
+            return [
+                Math.round(a[0] + (b[0] - a[0]) * t),
+                Math.round(a[1] + (b[1] - a[1]) * t),
+                Math.round(a[2] + (b[2] - a[2]) * t)
+            ];
+        }
+
+        function rgbStr(c) { return `rgb(${c[0]},${c[1]},${c[2]})`; }
+
+        // Warm accent color for chaos energy — amber glow
+        const WARM_ACCENT = [200, 140, 60];
+
         function draw() {
-            ctx.fillStyle = '#000000';
+            // Background: pure black in chaos, subtle dark warm tone as annealing progresses
+            const bgR = Math.round(8 * animPhase.annealProgress);
+            const bgG = Math.round(6 * animPhase.annealProgress);
+            const bgB = Math.round(4 * animPhase.annealProgress);
+            ctx.fillStyle = `rgb(${bgR},${bgG},${bgB})`;
             ctx.fillRect(0, 0, displayWidth, displayHeight);
 
             if (!sim || !sim.isValid || sim.dimers.length === 0) return;
 
             const { centerX, centerY, scale } = getTransform();
 
-            // Draw lozenges
-            for (const dimer of sim.dimers) {
+            // Chaos energy: warm color pulse that fades as order emerges
+            const energy = animPhase.chaosEnergy;
+            const warmPulse = energy * (0.5 + 0.5 * Math.sin(animPhase.time * 0.004));
+
+            // Pre-compute per-type colors for this frame (avoids redundant per-lozenge computation)
+            const useGradients = energy < 0.7; // skip gradients during peak chaos — visual noise masks them
+            const frameColors = PALETTE_RGB.map(pal => {
+                let lightC = pal.light;
+                let darkC = pal.dark;
+                let midC = pal.mid;
+                if (warmPulse > 0.01) {
+                    lightC = lerpColor(lightC, WARM_ACCENT, warmPulse * 0.15);
+                    darkC = lerpColor(darkC, WARM_ACCENT, warmPulse * 0.10);
+                    midC = lerpColor(lightC, darkC, 0.5);
+                }
+                return {
+                    lightStr: rgbStr(lightC),
+                    darkStr: rgbStr(darkC),
+                    midStr: rgbStr(midC),
+                    lightC, darkC
+                };
+            });
+
+            // Draw lozenges — two passes for seam-free rendering
+            // Pass 1: fill each lozenge + matching-color stroke to cover anti-aliasing gaps
+            ctx.lineWidth = 0.6;
+            ctx.lineJoin = 'round';
+
+            const dimers = sim.dimers;
+            const numDimers = dimers.length;
+            // Pre-allocate canvas coord array (reused across lozenges)
+            const cvBuf = [[0,0],[0,0],[0,0],[0,0]];
+
+            // Build separation line path alongside fill pass (avoids recomputing vertices)
+            const sepPath = new Path2D();
+
+            for (let d = 0; d < numDimers; d++) {
+                const dimer = dimers[d];
                 const verts = getLozengeVertices(dimer);
-                const canvasVerts = verts.map(v => toCanvas(v.x, v.y, centerX, centerY, scale));
+
+                // Inline toCanvas for performance
+                for (let vi = 0; vi < 4; vi++) {
+                    cvBuf[vi][0] = centerX + verts[vi].x * scale;
+                    cvBuf[vi][1] = centerY - verts[vi].y * scale;
+                }
+
+                const fc = frameColors[dimer.t];
 
                 ctx.beginPath();
-                ctx.moveTo(canvasVerts[0][0], canvasVerts[0][1]);
-                for (let i = 1; i < canvasVerts.length; i++) {
-                    ctx.lineTo(canvasVerts[i][0], canvasVerts[i][1]);
-                }
+                ctx.moveTo(cvBuf[0][0], cvBuf[0][1]);
+                ctx.lineTo(cvBuf[1][0], cvBuf[1][1]);
+                ctx.lineTo(cvBuf[2][0], cvBuf[2][1]);
+                ctx.lineTo(cvBuf[3][0], cvBuf[3][1]);
                 ctx.closePath();
 
-                ctx.fillStyle = ESCHER_COLORS[dimer.t];
-                ctx.fill();
+                if (useGradients) {
+                    // Gradient for 3D depth — direction follows face orientation
+                    let gx0, gy0, gx1, gy1;
+                    if (dimer.t === 0) {
+                        gx0 = (cvBuf[0][0] + cvBuf[1][0]) * 0.5; gy0 = (cvBuf[0][1] + cvBuf[1][1]) * 0.5;
+                        gx1 = (cvBuf[2][0] + cvBuf[3][0]) * 0.5; gy1 = (cvBuf[2][1] + cvBuf[3][1]) * 0.5;
+                    } else if (dimer.t === 1) {
+                        gx0 = cvBuf[0][0]; gy0 = cvBuf[0][1];
+                        gx1 = cvBuf[2][0]; gy1 = cvBuf[2][1];
+                    } else {
+                        gx0 = (cvBuf[0][0] + cvBuf[1][0]) * 0.5; gy0 = (cvBuf[0][1] + cvBuf[1][1]) * 0.5;
+                        gx1 = (cvBuf[2][0] + cvBuf[3][0]) * 0.5; gy1 = (cvBuf[2][1] + cvBuf[3][1]) * 0.5;
+                    }
+                    const grad = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
+                    grad.addColorStop(0, fc.lightStr);
+                    grad.addColorStop(1, fc.darkStr);
+                    ctx.fillStyle = grad;
+                } else {
+                    // Flat fill during chaos — faster, visually indistinguishable
+                    ctx.fillStyle = fc.midStr;
+                }
 
-                // Subtle outline
-                ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-                ctx.lineWidth = 0.5;
+                ctx.fill();
+                ctx.strokeStyle = fc.midStr;
                 ctx.stroke();
+
+                // Accumulate separation line into batched path
+                sepPath.moveTo(cvBuf[0][0], cvBuf[0][1]);
+                sepPath.lineTo(cvBuf[1][0], cvBuf[1][1]);
+                sepPath.lineTo(cvBuf[2][0], cvBuf[2][1]);
+                sepPath.lineTo(cvBuf[3][0], cvBuf[3][1]);
+                sepPath.lineTo(cvBuf[0][0], cvBuf[0][1]);
             }
 
-            // Draw boundary
+            // Stroke batched separation lines for tile definition
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+            ctx.lineWidth = 0.3;
+            ctx.lineJoin = 'miter';
+            ctx.stroke(sepPath);
+
+            // Draw boundary — soft warm glow instead of harsh white
             if (sim.boundaries && sim.boundaries.length > 0) {
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 2;
+                ctx.strokeStyle = 'rgba(255, 252, 245, 0.4)';
+                ctx.lineWidth = 1.5;
+                ctx.lineJoin = 'round';
                 for (const boundary of sim.boundaries) {
                     if (boundary.length < 2) continue;
                     ctx.beginPath();
@@ -695,6 +1015,16 @@ permalink: triangle/
                     ctx.stroke();
                 }
             }
+
+            // Vignette — radial darkening around edges to focus attention
+            const vx = displayWidth / 2;
+            const vy = displayHeight / 2;
+            const vr = Math.max(displayWidth, displayHeight) * 0.75;
+            const vignette = ctx.createRadialGradient(vx, vy, vr * 0.4, vx, vy, vr);
+            vignette.addColorStop(0, 'rgba(0,0,0,0)');
+            vignette.addColorStop(1, 'rgba(0,0,0,0.55)');
+            ctx.fillStyle = vignette;
+            ctx.fillRect(0, 0, displayWidth, displayHeight);
         }
 
         // ========================================================================
@@ -702,20 +1032,50 @@ permalink: triangle/
         // ========================================================================
         function enterHook() {
             currentState = STATES.HOOK;
-            document.getElementById('hook-screen').style.display = 'flex';
+            const hookEl = document.getElementById('hook-screen');
+            hookEl.style.display = 'flex';
             canvas.style.display = 'none';
 
-            document.getElementById('hook-screen').addEventListener('click', enterLoading, { once: true });
+            // Reset hook text animations for re-entry
+            const question = hookEl.querySelector('.question');
+            const hint = hookEl.querySelector('.hint');
+            question.style.animation = 'none';
+            hint.style.animation = 'none';
+            // Force reflow to restart animations
+            void question.offsetWidth;
+            question.style.animation = '';
+            hint.style.animation = '';
+
+            startHookBg();
+
+            // Start on click or Enter/Space key
+            function startFromHook(e) {
+                if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+                if (e.type === 'keydown') e.preventDefault();
+                hookEl.removeEventListener('click', startFromHook);
+                document.removeEventListener('keydown', startFromHook);
+                enterLoading();
+            }
+            hookEl.addEventListener('click', startFromHook);
+            document.addEventListener('keydown', startFromHook);
         }
 
         async function enterLoading() {
             currentState = STATES.LOADING;
+            stopHookBg();
             document.getElementById('hook-screen').style.display = 'none';
+            document.getElementById('loading').textContent = 'Loading\u2026';
             document.getElementById('loading').style.display = 'block';
 
-            // Initialize audio (requires user gesture)
-            sonifier = new FlipSonifier();
-            sonifier.init();
+            // Initialize audio (requires user gesture) — non-fatal if unavailable
+            try {
+                sonifier = new FlipSonifier();
+                sonifier.init();
+            } catch (e) {
+                console.warn('Audio unavailable:', e);
+                try { sonifier.destroy(); } catch(ignored) {}
+                sonifier = null;
+            }
 
             // Initialize WASM first
             sim = new SimulatorInterface();
@@ -732,9 +1092,8 @@ permalink: triangle/
                     const holeCount = sim.getHoleCount();
                     if (holeCount > 0) {
                         const HOLE_HEIGHT_INCREASE = 8;
+                        const initialInfo = sim.getAllHolesInfo();
                         for (let i = 0; i < holeCount; i++) {
-                            // Get initial winding before adjustment
-                            const initialInfo = sim.getAllHolesInfo();
                             const baseWinding = initialInfo.holes[i].currentWinding;
 
                             // Increase winding by 8 for the impossible illusion
@@ -746,35 +1105,16 @@ permalink: triangle/
                             // Set base height to initial (before +8) to allow downward fluctuation
                             sim.setHoleBaseHeight(i, baseWinding);
                         }
-                        const holesInfo = sim.getAllHolesInfo();
-                        console.log('Hole setup - base:', holesInfo.holes[0].baseHeight, 'current:', holesInfo.holes[0].currentWinding);
-                        sim.refreshDimers();
                     }
 
                     if (sim.isValid) {
-                        // CALIBRATION (Invisible Step)
-                        // Freeze to ground state briefly to get the "perfect" volume for reference
-                        sim.setQBias(0.001);
-                        sim.step(100000);
-                        sim.refreshDimers();
-
-                        // Calculate "Target Volume" (The Truth)
-                        let targetVolume = 0;
-                        for (const d of sim.dimers) {
-                            const h = (d.t === 0) ? 0 : ((d.t === 1) ? d.bj : -d.bj);
-                            targetVolume += h;
-                        }
-                        sim.targetVolume = targetVolume;
-                        console.log('Calibrated target volume (Truth):', targetVolume);
-
                         // RANDOMIZATION - Melt to chaos BEFORE first draw
                         sim.setQBias(Q_CHAOS);
                         sim.step(200000);
-                        sim.refreshDimers();
-                        console.log('Randomized to chaos');
 
                         // Launch Visuals - first draw will be messy/chaotic
                         document.getElementById('loading').style.display = 'none';
+                        canvas.style.opacity = '1';
                         canvas.style.display = 'block';
                         resizeCanvas();
                         fitToRegion();
@@ -783,10 +1123,23 @@ permalink: triangle/
                         enterTransforming();
                     } else {
                         document.getElementById('loading').textContent = 'Error: Invalid shape';
+                        setTimeout(() => {
+                            document.getElementById('loading').style.display = 'none';
+                            if (sonifier) { sonifier.destroy(); sonifier = null; }
+                            sim = null;
+                            enterHook();
+                        }, 3000);
                     }
                 } catch (err) {
                     console.error('Error:', err);
                     document.getElementById('loading').textContent = 'Error: ' + err.message;
+                    // Auto-recover after 3s so kiosk mode doesn't get stuck
+                    setTimeout(() => {
+                        document.getElementById('loading').style.display = 'none';
+                        if (sonifier) { sonifier.destroy(); sonifier = null; }
+                        sim = null;
+                        enterHook();
+                    }, 3000);
                 }
             }, 50);
         }
@@ -795,26 +1148,31 @@ permalink: triangle/
             currentState = STATES.TRANSFORMING;
             const startTime = performance.now();
 
-            // Initial state tracking
-            let lastFlipCount = sim.flipCount;
             let currentQ = Q_CHAOS;
 
             function animationLoop(timestamp) {
                 if (currentState !== STATES.TRANSFORMING) return;
 
                 const elapsed = timestamp - startTime;
+                animPhase.time = elapsed;
 
                 // --- TIMELINE LOGIC ---
                 if (elapsed < CHAOS_DURATION) {
-                    // Phase 1: Pure Chaos
+                    // Phase 1: Pure Chaos — full energy, no annealing
                     currentQ = Q_CHAOS;
+                    animPhase.chaosEnergy = 1.0;
+                    animPhase.annealProgress = 0;
                 } else if (elapsed < CHAOS_DURATION + ANNEAL_DURATION) {
                     // Phase 2: The Emergence (Cubic Annealing)
                     const progress = (elapsed - CHAOS_DURATION) / ANNEAL_DURATION;
-                    // Cubic curve feels more natural for crystallization
                     currentQ = Q_CHAOS + (Q_ORDER - Q_CHAOS) * Math.pow(progress, 3);
+                    // Energy fades out as order emerges (quadratic decay for snappy cooling)
+                    animPhase.chaosEnergy = Math.max(0, 1.0 - progress * progress);
+                    animPhase.annealProgress = progress;
                 } else {
                     // Phase 3: Truth Reached
+                    animPhase.chaosEnergy = 0;
+                    animPhase.annealProgress = 1;
                     enterFrozen();
                     return;
                 }
@@ -823,12 +1181,9 @@ permalink: triangle/
                 sim.setQBias(currentQ);
                 sim.step(STEPS_PER_FRAME);
 
-                // Audio Logic - sound corresponds to accepted flips
-                const newFlips = sim.flipCount - lastFlipCount;
-                lastFlipCount = sim.flipCount;
-
-                if (newFlips > 0 && sonifier) {
-                    sonifier.playFlipSound(newFlips);
+                // Audio — drone pitch tracks chaos/order state
+                if (sonifier) {
+                    sonifier.setEntropy(animPhase.chaosEnergy);
                 }
 
                 draw();
@@ -841,6 +1196,10 @@ permalink: triangle/
         function enterFrozen() {
             currentState = STATES.FROZEN;
 
+            // Lock visual state to fully annealed
+            animPhase.chaosEnergy = 0;
+            animPhase.annealProgress = 1;
+
             // Final polish - lock in the Truth
             sim.setQBias(Q_ORDER);
             sim.step(10000);
@@ -849,62 +1208,130 @@ permalink: triangle/
 
             if (sonifier) sonifier.fadeOut(2000);
 
-            // UI Reveal
-            setTimeout(() => {
-                document.getElementById('caption').classList.add('visible');
-            }, 500);
+            // Start inactivity timer for auto-restart
+            resetInactivityTimer();
 
-            setTimeout(() => {
+            // UI Reveal (track handles so returnToHook can cancel them)
+            frozenTimers = [];
+            frozenTimers.push(setTimeout(() => {
+                document.getElementById('caption').classList.add('visible');
+            }, 500));
+
+            frozenTimers.push(setTimeout(() => {
                 document.getElementById('controls').classList.add('visible');
+                document.getElementById('attribution').classList.add('visible');
                 enterInteractive();
-            }, 2000);
+            }, 2000));
         }
 
         function enterInteractive() {
             currentState = STATES.INTERACTIVE;
 
-            const slider = document.getElementById('entropy');
-            let lastFlipCount = sim.flipCount;
+            // Restart audio drone (oscillators were stopped by fadeOut in enterFrozen)
+            if (sonifier) sonifier.restartDrone();
 
-            function interactiveLoop() {
-                if (currentState !== STATES.INTERACTIVE) return;
+            const slider = document.getElementById('entropy');
+
+            let lastSliderVal = -1; // track slider changes to avoid redundant redraws
+
+            function interactiveLoop(timestamp) {
+                if (currentState !== STATES.INTERACTIVE || !sim) return;
 
                 // Get slider value (0 = Frozen, 100 = Chaos)
                 const val = parseInt(slider.value);
                 const e = val / 100;
+
+                // Skip simulation + redraw when slider hasn't changed and is at 0 (fully ordered)
+                if (val === 0 && lastSliderVal === 0) {
+                    animationId = requestAnimationFrame(interactiveLoop);
+                    return;
+                }
+                lastSliderVal = val;
+
                 // Map slider to Q: 0 -> Q_ORDER, 100 -> Q_CHAOS
                 const targetQ = Q_ORDER * Math.pow(Q_CHAOS / Q_ORDER, e);
+
+                // Visual effects respond to entropy slider
+                animPhase.chaosEnergy = e;
+                animPhase.annealProgress = 1 - e;
+                animPhase.time = timestamp || performance.now();
 
                 sim.setQBias(targetQ);
                 sim.step(STEPS_PER_FRAME);
 
-                // Audio feedback on interaction
-                const newFlips = sim.flipCount - lastFlipCount;
-                lastFlipCount = sim.flipCount;
-
-                if (newFlips > 0 && sonifier && val > 5) {
-                    sonifier.playFlipSound(newFlips);
+                // Audio — drone pitch tracks slider entropy
+                if (sonifier) {
+                    sonifier.setEntropy(e);
                 }
 
                 draw();
                 animationId = requestAnimationFrame(interactiveLoop);
             }
 
-            interactiveLoop();
+            animationId = requestAnimationFrame(interactiveLoop);
         }
 
-        function updateEntropy(value) {
-            // Map 0-100 to q bias
-            // entropy=0 → q=100 (frozen/ordered), entropy=100 → q=1 (chaotic)
-            const e = value / 100;
-            const q = 100 * Math.pow(0.01, e); // q goes from 100 to 1
-            sim.setQBias(q);
+        // ========================================================================
+        // AUTO-RESTART — return to hook after inactivity (gallery/kiosk mode)
+        // ========================================================================
+        let inactivityTimer = null;
+        let frozenTimers = []; // track setTimeout handles from enterFrozen
+        const INACTIVITY_TIMEOUT = 120000; // 2 minutes
 
-            // Audio volume scales with entropy
-            if (sonifier && sonifier.masterGain) {
-                const vol = 0.3 * (value / 100);
-                sonifier.masterGain.gain.setTargetAtTime(vol, sonifier.audioCtx.currentTime, 0.1);
+        function resetInactivityTimer() {
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+            if (currentState === STATES.INTERACTIVE || currentState === STATES.FROZEN) {
+                inactivityTimer = setTimeout(returnToHook, INACTIVITY_TIMEOUT);
             }
+        }
+
+        function returnToHook() {
+            // Set state immediately to prevent re-entrance during fade-out
+            currentState = STATES.HOOK;
+
+            // Cancel any running animation
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            if (inactivityTimer) {
+                clearTimeout(inactivityTimer);
+                inactivityTimer = null;
+            }
+            // Cancel pending frozen-state timers
+            for (const t of frozenTimers) clearTimeout(t);
+            frozenTimers = [];
+
+            // Destroy audio context to prevent memory leaks
+            if (sonifier) {
+                sonifier.destroy();
+                sonifier = null;
+            }
+
+            // Hide UI elements (CSS transition fades them out)
+            document.getElementById('caption').classList.remove('visible');
+            document.getElementById('controls').classList.remove('visible');
+            document.getElementById('attribution').classList.remove('visible');
+
+            // Reset slider
+            document.getElementById('entropy').value = 0;
+
+            // Reset animation phase
+            animPhase.chaosEnergy = 0;
+            animPhase.annealProgress = 0;
+            animPhase.time = 0;
+
+            // Clean up WASM sim
+            sim = null;
+
+            // Smooth fade-out: transition canvas opacity, then hide and show hook
+            canvas.style.transition = 'opacity 1.5s ease-out';
+            canvas.style.opacity = '0';
+            setTimeout(() => {
+                canvas.style.transition = '';
+                canvas.style.display = 'none';
+                enterHook();
+            }, 1500);
         }
 
         // ========================================================================
@@ -913,12 +1340,36 @@ permalink: triangle/
         window.addEventListener('resize', () => {
             if (canvas.style.display !== 'none') {
                 resizeCanvas();
+                fitToRegion();
                 draw();
+            }
+            // Also resize hook background if visible
+            if (hookAnimId) {
+                initHookBg();
+                seedParticles();
             }
         });
 
-        document.getElementById('entropy').addEventListener('input', (e) => {
-            updateEntropy(parseInt(e.target.value));
+        document.getElementById('entropy').addEventListener('input', () => {
+            resetInactivityTimer();
+        });
+
+        // Reset inactivity on any pointer/keyboard activity
+        ['pointermove', 'pointerdown', 'keydown'].forEach(evt => {
+            document.addEventListener(evt, resetInactivityTimer, { passive: true });
+        });
+
+        // Pause inactivity timer when tab is hidden to prevent
+        // auto-restart while user is simply on another tab
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (inactivityTimer) {
+                    clearTimeout(inactivityTimer);
+                    inactivityTimer = null;
+                }
+            } else {
+                resetInactivityTimer();
+            }
         });
 
         // ========================================================================
@@ -927,10 +1378,13 @@ permalink: triangle/
         // Wait for WASM to be ready
         if (typeof Module !== 'undefined' && Module.calledRun) {
             enterHook();
-        } else {
+        } else if (typeof Module !== 'undefined') {
             Module.onRuntimeInitialized = function() {
                 enterHook();
             };
+        } else {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loading').textContent = 'Error: Failed to load simulation engine';
         }
 
     })();
