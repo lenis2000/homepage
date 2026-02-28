@@ -1774,17 +1774,15 @@ async function initializeApp() {
       tctx.rotate(rotation * Math.PI / 180);
     }
 
-    // Draw all dominoes batched by color (one fillStyle + beginPath + fill per group)
+    // Draw all dominoes — fillRect per domino (faster than building giant paths)
     console.time('  dominoFill');
     for (const color in colorGroups) {
       const group = colorGroups[color];
       tctx.fillStyle = color;
-      tctx.beginPath();
       for (let i = 0; i < group.length; i++) {
         const d = group[i];
-        tctx.rect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
+        tctx.fillRect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
       }
-      tctx.fill();
     }
     console.timeEnd('  dominoFill');
 
