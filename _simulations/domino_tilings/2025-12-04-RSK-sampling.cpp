@@ -74,7 +74,8 @@ inline double oneMinusQtoN_fast(double q, int n) {
     if (n <= 0) return 0.0;
     if (q <= 0.0) return 1.0;
     if (q >= 1.0) return 0.0;
-    if (n > 1000) return 1.0; // q^1000 < 10^-22 for q <= 0.95
+    // For large n, skip if q^n is negligible (exp(n*ln(q)) < 10^-22)
+    if (n > 50 && static_cast<double>(n) * log1p(q - 1.0) < -50.0) return 1.0;
     // 1 - q^n = 1 - exp(n*log(q)) = -expm1(n*log1p(q-1))
     return -expm1(static_cast<double>(n) * log1p(q - 1.0));
 }
@@ -85,7 +86,8 @@ inline double oneMinusQtoN_boost(double q, int n) {
     if (n <= 0) return 0.0;
     if (q <= 0.0) return 1.0;
     if (q >= 1.0) return 0.0;
-    if (n > 1000) return 1.0; // q^1000 < 10^-22 for q <= 0.95
+    // For large n, skip expensive Boost computation if q^n is negligible
+    if (n > 50 && static_cast<double>(n) * log1p(q - 1.0) < -50.0) return 1.0;
 
     // Use local mp_float to avoid static initialization issues in WASM
     mp_float mp_q_local(q);

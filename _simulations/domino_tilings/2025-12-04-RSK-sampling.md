@@ -1336,6 +1336,7 @@ async function initializeApp() {
   }
 
   function startProgressPolling() {
+    if (progressInterval) clearInterval(progressInterval);
     progressElem.innerText = "Sampling... (0%)";
     progressInterval = setInterval(() => {
       if (!simulationActive) {
@@ -1598,23 +1599,9 @@ async function initializeApp() {
   // Generate lattice points for visualization
   function generateLatticePoints() {
     const scale = 20;
+    const latticePoints = [];
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
 
-    // Pre-count points to avoid dynamic array growth
-    let count = 0;
-    for (let hx = -currentN - 0.5; hx <= currentN + 0.5; hx += 1) {
-      for (let hy = -currentN - 0.5; hy <= currentN + 0.5; hy += 1) {
-        if (Math.abs(hx % 1) !== 0.5 || Math.abs(hy % 1) !== 0.5) continue;
-        if (Math.abs(hx) + Math.abs(hy) > currentN + 0.5) continue;
-        count++;
-      }
-    }
-
-    // Pre-allocate array and typed coordinate arrays
-    const latticePoints = new Array(count);
-    const xCoords = new Float64Array(count);
-    const yCoords = new Float64Array(count);
-
-    let idx = 0;
     for (let hx = -currentN - 0.5; hx <= currentN + 0.5; hx += 1) {
       for (let hy = -currentN - 0.5; hy <= currentN + 0.5; hy += 1) {
         if (Math.abs(hx % 1) !== 0.5 || Math.abs(hy % 1) !== 0.5) continue;
@@ -1624,17 +1611,17 @@ async function initializeApp() {
         const screenY = -hy * scale;  // Flip y-axis so positive y is up
         const diag = Math.round(hx + hy);
 
-        latticePoints[idx] = { hx, hy, x: screenX, y: screenY, diag };
-        xCoords[idx] = screenX;
-        yCoords[idx] = screenY;
-        idx++;
+        latticePoints.push({ hx, hy, x: screenX, y: screenY, diag });
+        if (screenX < minX) minX = screenX;
+        if (screenX > maxX) maxX = screenX;
+        if (screenY < minY) minY = screenY;
+        if (screenY > maxY) maxY = screenY;
       }
     }
 
     // Group by diagonal and assign positions
     const geomDiagonals = {};
-    for (let i = 0; i < count; i++) {
-      const p = latticePoints[i];
+    for (const p of latticePoints) {
       if (!geomDiagonals[p.diag]) geomDiagonals[p.diag] = [];
       geomDiagonals[p.diag].push(p);
     }
@@ -1643,17 +1630,8 @@ async function initializeApp() {
       geomDiagonals[d].forEach((p, i) => { p.posInDiag = i + 1; });
     }
 
-    // Compute bounds from typed arrays (faster than d3.min/max on objects)
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (let i = 0; i < count; i++) {
-      if (xCoords[i] < minX) minX = xCoords[i];
-      if (xCoords[i] > maxX) maxX = xCoords[i];
-      if (yCoords[i] < minY) minY = yCoords[i];
-      if (yCoords[i] > maxY) maxY = yCoords[i];
-    }
     const bounds = { minX, minY, maxX, maxY };
-
-    return { latticePoints, geomDiagonals, xCoords, yCoords, bounds };
+    return { latticePoints, geomDiagonals, bounds };
   }
 
   // Integer key for lattice point lookups (avoids string allocation)
@@ -2740,12 +2718,7 @@ async function initializeApp() {
       return;
     }
 
-    const bounds = cachedBounds || {
-      minX: d3.min(cachedLatticePoints, d => d.x),
-      minY: d3.min(cachedLatticePoints, d => d.y),
-      maxX: d3.max(cachedLatticePoints, d => d.x),
-      maxY: d3.max(cachedLatticePoints, d => d.y)
-    };
+    const bounds = cachedBounds;
 
     const showParticles = document.getElementById("show-particles-cb").checked;
     const borderWidth = parseFloat(document.getElementById("border-slider").value);
@@ -3719,7 +3692,6 @@ async function initializeApp() {
       const k = island.start;
       const m = island.end;
       const nu_bar_k = getPart(mu, k);
-      const nu_bar_k_minus_1 = (k > 0) ? getPart(mu, k - 1) : 1000000000;
 
       // Case 1: bit=1 and k=0 (island contains first particle)
       if (bit === 1 && k === 0) {
@@ -3754,16 +3726,24 @@ async function initializeApp() {
       } else {
         // q-Whittaker case: probabilistic sampling
         const lam_k = getPart(lam, k);
-        const f_k = computeF(lam_k, nu_bar_k, nu_bar_k_minus_1, q);
+        let f_k;
+        if (k === 0) {
+          // When k=0, nu_bar_{-1} = +infinity, so denominator is 1.0
+          const delta_lam = lam_k - nu_bar_k + 1;
+          f_k = (delta_lam <= 0) ? 0.0 : oneMinusQtoN(q, delta_lam);
+        } else {
+          f_k = computeF(lam_k, nu_bar_k, getPart(mu, k - 1), q);
+        }
         const u_f = Math.random();
 
+        const nu_bar_km1 = (k > 0) ? getPart(mu, k - 1) : Infinity;
         details.fValues.push({
           k: k,
           lam_k: lam_k,
           nu_bar_k: nu_bar_k,
-          nu_bar_k_minus_1: nu_bar_k_minus_1,
+          nu_bar_k_minus_1: nu_bar_km1,
           delta_lam: lam_k - nu_bar_k + 1,
-          delta_nu: nu_bar_k_minus_1 - nu_bar_k + 1,
+          delta_nu: (k > 0) ? (nu_bar_km1 - nu_bar_k + 1) : Infinity,
           f_k: f_k,
           u: u_f,
           stopped: u_f < f_k
