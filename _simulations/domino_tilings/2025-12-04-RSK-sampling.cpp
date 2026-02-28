@@ -398,7 +398,15 @@ char* sampleAztecRSK(int n, const char* xJson, const char* yJson, double q) {
 
     } catch (const exception& e) {
         progressCounter = 100;
-        string errorMsg = string("{\"error\":\"") + e.what() + "\"}";
+        // Escape quotes/backslashes in error message for valid JSON
+        string what_str = e.what();
+        string escaped;
+        escaped.reserve(what_str.size());
+        for (char c : what_str) {
+            if (c == '"' || c == '\\') escaped += '\\';
+            escaped += c;
+        }
+        string errorMsg = string("{\"error\":\"") + escaped + "\"}";
         char* out = (char*)malloc(errorMsg.size() + 1);
         if (out) {
             strcpy(out, errorMsg.c_str());
