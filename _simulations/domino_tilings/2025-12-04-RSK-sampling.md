@@ -2203,6 +2203,7 @@ async function initializeApp() {
       if (visited.has(startVertex)) continue;
 
       const component = [];
+      const componentSet = new Set();
       const stack = [startVertex];
 
       while (stack.length > 0) {
@@ -2212,7 +2213,8 @@ async function initializeApp() {
 
         const neighbors = vertexAdj.get(v) || [];
         for (const { edgeKey, neighbor } of neighbors) {
-          if (!component.includes(edgeKey)) {
+          if (!componentSet.has(edgeKey)) {
+            componentSet.add(edgeKey);
             component.push(edgeKey);
           }
           if (!visited.has(neighbor)) {
@@ -2713,7 +2715,7 @@ async function initializeApp() {
 
   // Fast redraw for style changes only (no recomputation)
   function redrawOnly() {
-    if (!cachedDominoes || !cachedLatticePoints) {
+    if (!cachedDominoes || !cachedLatticePoints || !cachedBounds) {
       renderParticles();
       return;
     }
