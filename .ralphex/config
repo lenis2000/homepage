@@ -1,0 +1,18 @@
+# ralphex local config for data-art project
+# art critique agents + agent-browser visual review
+
+# fewer iterations - this is a single-file art polish, not a large codebase
+max_iterations = 20
+
+# skip codex external review - use custom visual review instead
+external_review_tool = custom
+custom_review_script = .ralphex/scripts/visual-review.sh
+
+# max external (visual review) iterations
+max_external_iterations = 5
+
+# enable finalize to clean up commits
+finalize_enabled = true
+
+# plans directory
+plans_dir = docs/plans

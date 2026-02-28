@@ -1,0 +1,61 @@
+# task execution prompt for data-art project
+# art-specific: uses agent-browser for visual verification instead of unit tests
+#
+# available variables:
+#   {{PLAN_FILE}} - path to the plan file being executed
+#   {{PROGRESS_FILE}} - path to the progress log file
+#   {{GOAL}} - human-readable goal description
+#   {{DEFAULT_BRANCH}} - default branch name (main, master, trunk, etc.)
+
+# Read the plan file at {{PLAN_FILE}}. Find the FIRST Task section (### Task N: or ### Iteration N:) that has uncompleted checkboxes ([ ]).
+
+# NOTE: Progress is logged to {{PROGRESS_FILE}} - this file contains detailed execution steps and can be reviewed for debugging.
+
+# CRITICAL CONSTRAINT: Complete ONE Task section per iteration.
+# A Task section is a "### Task N:" or "### Iteration N:" header with all its checkboxes underneath.
+# Complete ALL checkboxes in that section, then STOP.
+# Do NOT continue to the next section - the external loop will call you again for it.
+
+# STEP 0 - ANNOUNCE:
+# Before starting work, output a brief overview (up to 200 words) explaining:
+# - Which task number you picked and its title
+# - What the task will accomplish
+# - Key visual or aesthetic changes involved
+
+# STEP 1 - IMPLEMENT:
+# - Read the plan's Overview and Context sections to understand the work
+# - Implement ALL items in the current Task section (all [ ] checkboxes under it)
+# - This is a single-file art project: data-art/triangle.html
+# - Changes are CSS, JavaScript (canvas rendering), or HTML structure
+
+# STEP 2 - VISUAL VERIFICATION:
+# Verify your changes using agent-browser:
+# - Run: cd /Users/leo/Homepage && python3 -m http.server 8768 &
+# - Wait 2 seconds
+# - Use agent-browser to screenshot the result:
+#   /opt/homebrew/bin/agent-browser <<'CMDS'
+#   open http://localhost:8768/data-art/triangle.html
+#   set viewport 1920 1080
+#   sleep 3000
+#   screenshot /tmp/ralphex-task-verify.png
+#   click 960 540
+#   sleep 22000
+#   screenshot /tmp/ralphex-task-frozen.png
+#   CMDS
+# - Read the screenshot PNGs to visually verify the change looks correct
+# - Kill the server: kill %1 2>/dev/null
+# - If the visual result is wrong, fix and re-verify
+# - There are no unit tests - visual verification is the validation
+
+# STEP 3 - COMPLETE (after visual verification passes):
+# - Update progress: edit {{PLAN_FILE}} and change [ ] to [x] for each checkbox you implemented in the current Task section
+# - Commit all changes (code + updated plan) with message: feat: <brief task description>
+# - Check if any [ ] checkboxes remain in other sections
+# - If NO more [ ] checkboxes in the entire plan, output exactly: <<<RALPHEX:ALL_TASKS_DONE>>>
+# - If more sections have [ ] checkboxes, STOP HERE - do not continue
+
+# If any phase fails after reasonable fix attempts, output exactly: <<<RALPHEX:TASK_FAILED>>>
+
+# REMINDER: ONE section (Task/Iteration) per loop cycle. After commit, STOP and let the loop handle the next section.
+
+# OUTPUT FORMAT: No markdown formatting (no **bold**, `code`, # headers). Plain text and - lists are fine. Do not echo phase names or step numbers - just do the work.

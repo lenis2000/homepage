@@ -1,0 +1,79 @@
+# first review prompt for data-art project
+# art-specific: launches 4 parallel art critique agents instead of code review agents
+#
+# available variables:
+#   {{PLAN_FILE}} - path to the plan file being executed
+#   {{PROGRESS_FILE}} - path to the progress log (task execution + previous reviews)
+#   {{GOAL}} - human-readable goal description
+#   {{DEFAULT_BRANCH}} - default branch name (main, master, trunk, etc.)
+#   {{agent:<name>}} - expands to Task tool instructions for the named agent
+
+# Art critique review of: {{GOAL}}
+
+# Progress log: {{PROGRESS_FILE}} (contains task execution and previous review iterations)
+
+## Step 1: Get Branch Context
+
+# Run both commands to understand what was changed:
+# - `git log {{DEFAULT_BRANCH}}..HEAD --oneline` - see commit history
+# - `git diff {{DEFAULT_BRANCH}}...HEAD` - see actual code changes
+
+## Step 2: Launch ALL 4 Art Critique Agents IN PARALLEL
+
+# All Task tool calls MUST be in the same message for parallel foreground execution.
+# Do NOT use run_in_background.
+
+# CRITICAL: Do NOT proceed to Step 3 until ALL 4 agents have returned results.
+
+# Agents to launch:
+# {{agent:visual-aesthetics}}
+# {{agent:narrative}}
+# {{agent:art-critique}}
+# {{agent:competition-fit}}
+
+# Each agent prompt should instruct the agent to:
+# 1. Read data-art/triangle.html to understand the full implementation
+# 2. Use agent-browser (at /opt/homebrew/bin/agent-browser) to take screenshots and visually inspect
+# 3. Each agent should use a DIFFERENT port for its local server (8770-8773) to avoid conflicts
+# 4. Report problems only - no positive observations
+
+## Step 3: Collect, Verify, and Fix Findings
+
+# After agents complete:
+
+### 3.1 Collect and Deduplicate
+# - Merge findings from all agents
+# - Same visual issue reported by multiple agents -> merge
+# - Prioritize by competition impact (what would judges notice most?)
+
+### 3.2 Verify EVERY Finding
+# For EACH issue:
+# 1. Read the actual code in data-art/triangle.html
+# 2. Use agent-browser to verify the visual issue is real:
+#    - Run: cd /Users/leo/Homepage && python3 -m http.server 8774 &
+#    - Take targeted screenshots to confirm the issue
+#    - Kill server after verification
+# 3. Classify as:
+#    - CONFIRMED: Real visual/aesthetic issue, fix it
+#    - FALSE POSITIVE: Doesn't exist or subjective preference - discard
+
+### 3.3 Fix All Confirmed Issues
+# 1. Fix all CONFIRMED issues in data-art/triangle.html
+# 2. Re-verify with agent-browser that fixes look correct
+# 3. Commit fixes: `git commit -m "fix: address art critique findings"`
+
+## Step 4: Signal Completion
+
+# REVIEW_DONE means "this iteration found ZERO issues" - NOT "I finished fixing issues".
+
+# Path A - NO confirmed issues found:
+# - Output: <<<RALPHEX:REVIEW_DONE>>>
+
+# Path B - Issues found AND fixed:
+# - STOP HERE. Do NOT output any signal.
+# - The external loop will run another review iteration to verify fixes.
+
+# Path C - Issues found but cannot fix:
+# - Output: <<<RALPHEX:TASK_FAILED>>>
+
+# OUTPUT FORMAT: No markdown formatting. Plain text and - lists are fine.

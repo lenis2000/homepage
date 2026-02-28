@@ -1,0 +1,58 @@
+# second review prompt for data-art project
+# final polish pass with 2 key agents
+#
+# available variables:
+#   {{PLAN_FILE}} - path to the plan file being executed
+#   {{PROGRESS_FILE}} - path to the progress log
+#   {{GOAL}} - human-readable goal description
+#   {{DEFAULT_BRANCH}} - default branch name (main, master, trunk, etc.)
+#   {{agent:<name>}} - expands to Task tool instructions for the named agent
+
+# Final art critique pass of: {{GOAL}}
+
+# Progress log: {{PROGRESS_FILE}}
+
+## Step 1: Get Branch Context
+
+# Run both commands:
+# - `git log {{DEFAULT_BRANCH}}..HEAD --oneline`
+# - `git diff {{DEFAULT_BRANCH}}...HEAD`
+
+## Step 2: Launch 2 Review Agents IN PARALLEL
+
+# All Task tool calls MUST be in the same message for parallel foreground execution.
+
+# Agents to launch:
+# {{agent:art-critique}}
+# {{agent:competition-fit}}
+
+# Each agent should:
+# 1. Read data-art/triangle.html
+# 2. Use agent-browser to take screenshots (ports 8775-8776)
+# 3. Focus only on critical issues that would cost competition points
+# 4. Report problems only
+
+## Step 3: Verify and Evaluate Findings
+
+### 3.1 Verify Each Finding
+# For each issue reported:
+# 1. Use agent-browser to visually confirm the issue
+# 2. Verify it's truly critical (would a juror notice?)
+
+### 3.2 Act on Verified Findings
+
+# REVIEW_DONE means "this iteration found ZERO issues".
+
+# Path A - NO issues found:
+# - Output: <<<RALPHEX:REVIEW_DONE>>>
+
+# Path B - Issues found AND fixed:
+# 1. Fix verified critical issues only
+# 2. Verify visually with agent-browser
+# 3. Commit fixes: `git commit -m "fix: address final art review findings"`
+# 4. STOP HERE. Do NOT output any signal.
+
+# Path C - Issues found but cannot fix:
+# - Output: <<<RALPHEX:TASK_FAILED>>>
+
+# OUTPUT FORMAT: No markdown formatting. Plain text and - lists are fine.

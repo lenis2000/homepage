@@ -1,0 +1,61 @@
+# custom evaluation prompt for visual review output
+# evaluates the agent-browser screenshot findings from the visual review script
+#
+# available variables:
+#   {{PLAN_FILE}} - path to the plan file being executed
+#   {{GOAL}} - human-readable goal description
+#   {{DEFAULT_BRANCH}} - default branch name (main, master, trunk, etc.)
+#   {{CUSTOM_OUTPUT}} - output from the visual review script
+
+# Visual review evaluation for data art piece.
+
+# The visual review tool captured screenshots and reported:
+
+# ---
+# {{CUSTOM_OUTPUT}}
+# ---
+
+## Your Task
+
+# The visual review script captured screenshots at different animation phases.
+# The screenshots may still exist in /tmp/ralphex-art-review-*/ directories.
+
+# 1. If screenshot files are referenced, read them to visually inspect the art piece
+# 2. For each reported issue, verify by reading the code at data-art/triangle.html
+# 3. Assess whether the issue genuinely weakens the piece for competition
+
+# Categorize each finding:
+# - Valid: Real visual/aesthetic issue that would cost competition points. Fix it.
+# - Invalid: Subjective preference or false positive. Explain why.
+
+# IMPORTANT: This is an art piece, not a codebase. Issues are about:
+# - Visual composition, color, typography
+# - Narrative pacing and emotional arc
+# - Gallery display readiness
+# - Competition criteria alignment (creativity, aesthetics, storytelling, data integration)
+# NOT about code quality, testing, or engineering patterns.
+
+## After Evaluation
+
+# If there were actionable issues to fix:
+# - Fix them in data-art/triangle.html
+# - Use agent-browser to verify the fix looks correct:
+#   cd /Users/leo/Homepage && python3 -m http.server 8777 &
+#   /opt/homebrew/bin/agent-browser to screenshot and verify
+#   kill %1
+# - Do NOT commit yet - more review iterations may follow
+# - STOP and let the external loop run the review tool again
+
+# If you dismissed ALL findings as invalid:
+# - Explain why each finding doesn't apply
+# - Do NOT commit anything
+# - STOP here
+
+# If the review tool reports NO actionable issues (empty output, "NO ISSUES FOUND"):
+# - Run `git diff` to review ALL uncommitted changes
+# - Commit all fixes with message: "fix: address visual review findings"
+# - Output exactly: <<<RALPHEX:CODEX_REVIEW_DONE>>>
+
+# CRITICAL: Never run the visual review script yourself. The external loop handles it.
+
+# OUTPUT FORMAT: No markdown formatting. Plain text and - lists are fine.
