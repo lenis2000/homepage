@@ -79,11 +79,11 @@ n=100 this means 50,000 objects and 20,000+ draw calls.
 Current bottleneck: every zoom/pan gesture triggers full `renderCanvas()` which loops over all dominoes. For n=500 (250K dominoes
 x 2 draws = 500K canvas ops per frame), this drops below 15fps.
 
-- [ ] Batch canvas drawing by color: group dominoes by fill color, call `ctx.fillStyle` once per group, use `ctx.rect()` to accumulate rects then `ctx.fill()` once per color
-- [ ] Implement cached rendering for zoom/pan: render the full tiling to an OffscreenCanvas once, then during zoom/pan draw the cached image with `ctx.drawImage()` (only re-render when tiling data changes)
-- [ ] Optimize `computeDominoes`: replace string-key object lookups (`pointLookup["x,y"]`) with integer-keyed Map for O(1) neighbor lookups
-- [ ] Optimize `generateLatticePoints`: replace per-point object allocation with typed arrays for coordinates
-- [ ] Test: n=500 should show smooth zoom/pan at 30+ fps
+- [x] Batch canvas drawing by color: group dominoes by fill color, call `ctx.fillStyle` once per group, use `ctx.rect()` to accumulate rects then `ctx.fill()` once per color
+- [x] Implement cached rendering for zoom/pan: render the full tiling to an OffscreenCanvas once, then during zoom/pan draw the cached image with `ctx.drawImage()` (only re-render when tiling data changes)
+- [x] Optimize `computeDominoes`: replace string-key object lookups (`pointLookup["x,y"]`) with integer-keyed Map for O(1) neighbor lookups
+- [x] Optimize `generateLatticePoints`: replace per-point object allocation with typed arrays for coordinates
+- [x] Test: n=500 should show smooth zoom/pan at 30+ fps
 
 ### Task 5: Verify all improvements
 

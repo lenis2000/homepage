@@ -563,6 +563,19 @@ async function initializeApp() {
   // Cache for computed domino data
   let cachedDominoes = null;
   let cachedLatticePoints = null;
+  let cachedBounds = null;
+
+  // OffscreenCanvas cache for fast zoom/pan (avoids re-rendering all dominoes)
+  let canvasCacheCanvas = null;
+  let canvasCacheVersion = 0;  // incremented when data changes
+  let canvasCacheRenderedVersion = -1;  // version last rendered to cache
+  let canvasCacheWidth = 0;
+  let canvasCacheHeight = 0;
+  let canvasCacheParams = null;  // style params used for current cache
+
+  function invalidateCanvasCache() {
+    canvasCacheVersion++;
+  }
 
   // Diagonal highlight state (when partition details are open)
   let showDiagonalHighlights = false;
@@ -1585,55 +1598,87 @@ async function initializeApp() {
   // Generate lattice points for visualization
   function generateLatticePoints() {
     const scale = 20;
-    const cx = 0;
-    const cy = 0;
 
-    const latticePoints = [];
+    // Pre-count points to avoid dynamic array growth
+    let count = 0;
+    for (let hx = -currentN - 0.5; hx <= currentN + 0.5; hx += 1) {
+      for (let hy = -currentN - 0.5; hy <= currentN + 0.5; hy += 1) {
+        if (Math.abs(hx % 1) !== 0.5 || Math.abs(hy % 1) !== 0.5) continue;
+        if (Math.abs(hx) + Math.abs(hy) > currentN + 0.5) continue;
+        count++;
+      }
+    }
+
+    // Pre-allocate array and typed coordinate arrays
+    const latticePoints = new Array(count);
+    const xCoords = new Float64Array(count);
+    const yCoords = new Float64Array(count);
+
+    let idx = 0;
     for (let hx = -currentN - 0.5; hx <= currentN + 0.5; hx += 1) {
       for (let hy = -currentN - 0.5; hy <= currentN + 0.5; hy += 1) {
         if (Math.abs(hx % 1) !== 0.5 || Math.abs(hy % 1) !== 0.5) continue;
         if (Math.abs(hx) + Math.abs(hy) > currentN + 0.5) continue;
 
-        const screenX = cx + hx * scale;
-        const screenY = cy - hy * scale;  // Flip y-axis so positive y is up
+        const screenX = hx * scale;
+        const screenY = -hy * scale;  // Flip y-axis so positive y is up
         const diag = Math.round(hx + hy);
 
-        latticePoints.push({
-          hx, hy,
-          x: screenX, y: screenY,
-          diag
-        });
+        latticePoints[idx] = { hx, hy, x: screenX, y: screenY, diag };
+        xCoords[idx] = screenX;
+        yCoords[idx] = screenY;
+        idx++;
       }
     }
 
     // Group by diagonal and assign positions
     const geomDiagonals = {};
-    latticePoints.forEach(p => {
+    for (let i = 0; i < count; i++) {
+      const p = latticePoints[i];
       if (!geomDiagonals[p.diag]) geomDiagonals[p.diag] = [];
       geomDiagonals[p.diag].push(p);
-    });
+    }
     for (const d in geomDiagonals) {
       geomDiagonals[d].sort((a, b) => (a.hx - a.hy) - (b.hx - b.hy));
-      geomDiagonals[d].forEach((p, idx) => { p.posInDiag = idx + 1; });
+      geomDiagonals[d].forEach((p, i) => { p.posInDiag = i + 1; });
     }
 
-    return { latticePoints, geomDiagonals };
+    // Compute bounds from typed arrays (faster than d3.min/max on objects)
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let i = 0; i < count; i++) {
+      if (xCoords[i] < minX) minX = xCoords[i];
+      if (xCoords[i] > maxX) maxX = xCoords[i];
+      if (yCoords[i] < minY) minY = yCoords[i];
+      if (yCoords[i] > maxY) maxY = yCoords[i];
+    }
+    const bounds = { minX, minY, maxX, maxY };
+
+    return { latticePoints, geomDiagonals, xCoords, yCoords, bounds };
+  }
+
+  // Integer key for lattice point lookups (avoids string allocation)
+  function latticeKey(hx, hy) {
+    // hx, hy are half-integers. Multiply by 2 and shift to positive.
+    const ix = Math.round(hx * 2) + 2 * currentN + 1;
+    const iy = Math.round(hy * 2) + 2 * currentN + 1;
+    return ix * (4 * currentN + 3) + iy;
   }
 
   // Compute dominoes from lattice points (cached for redrawing)
   function computeDominoes(latticePoints) {
-    // Create lookup by (hx, hy) coordinates
-    const pointLookup = {};
-    latticePoints.forEach(p => {
-      pointLookup[`${p.hx},${p.hy}`] = p;
-    });
+    // Create lookup by integer key (faster than string-key object)
+    const pointLookup = new Map();
+    for (let i = 0; i < latticePoints.length; i++) {
+      const p = latticePoints[i];
+      pointLookup.set(latticeKey(p.hx, p.hy), p);
+    }
 
     function getNeighbors(p) {
       const neighbors = [];
-      const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-      for (const [dx, dy] of directions) {
-        const key = `${p.hx + dx},${p.hy + dy}`;
-        if (pointLookup[key]) neighbors.push(pointLookup[key]);
+      const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+      for (let d = 0; d < 4; d++) {
+        const n = pointLookup.get(latticeKey(p.hx + dirs[d][0], p.hy + dirs[d][1]));
+        if (n) neighbors.push(n);
       }
       return neighbors;
     }
@@ -1649,8 +1694,9 @@ async function initializeApp() {
     const matchedParticles = new Set();
     const particleDominoes = [];
     for (const p of particles) {
-      if (matchedParticles.has(`${p.hx},${p.hy}`)) continue;
-      const neighbors = getNeighbors(p).filter(n => n.inSubset && !matchedParticles.has(`${n.hx},${n.hy}`));
+      const pk = latticeKey(p.hx, p.hy);
+      if (matchedParticles.has(pk)) continue;
+      const neighbors = getNeighbors(p).filter(n => n.inSubset && !matchedParticles.has(latticeKey(n.hx, n.hy)));
       if (neighbors.length > 0) {
         neighbors.sort((a, b) => {
           const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
@@ -1658,8 +1704,8 @@ async function initializeApp() {
           return (a.hx - a.hy) - (b.hx - b.hy);
         });
         const neighbor = neighbors[0];
-        matchedParticles.add(`${p.hx},${p.hy}`);
-        matchedParticles.add(`${neighbor.hx},${neighbor.hy}`);
+        matchedParticles.add(pk);
+        matchedParticles.add(latticeKey(neighbor.hx, neighbor.hy));
         particleDominoes.push({ p1: p, p2: neighbor });
       }
     }
@@ -1675,8 +1721,9 @@ async function initializeApp() {
     const matchedHoles = new Set();
     const holeDominoes = [];
     for (const p of holes) {
-      if (matchedHoles.has(`${p.hx},${p.hy}`)) continue;
-      const neighbors = getNeighbors(p).filter(n => !n.inSubset && !matchedHoles.has(`${n.hx},${n.hy}`));
+      const pk = latticeKey(p.hx, p.hy);
+      if (matchedHoles.has(pk)) continue;
+      const neighbors = getNeighbors(p).filter(n => !n.inSubset && !matchedHoles.has(latticeKey(n.hx, n.hy)));
       if (neighbors.length > 0) {
         neighbors.sort((a, b) => {
           const sumA = a.hx + a.hy, sumB = b.hx + b.hy;
@@ -1684,16 +1731,19 @@ async function initializeApp() {
           return (b.hx - b.hy) - (a.hx - a.hy);
         });
         const neighbor = neighbors[0];
-        matchedHoles.add(`${p.hx},${p.hy}`);
-        matchedHoles.add(`${neighbor.hx},${neighbor.hy}`);
+        matchedHoles.add(pk);
+        matchedHoles.add(latticeKey(neighbor.hx, neighbor.hy));
         holeDominoes.push({ p1: p, p2: neighbor });
       }
     }
 
     const scale = 20;
-    return [...particleDominoes.map(d => {
+    const result = new Array(particleDominoes.length + holeDominoes.length);
+    let ri = 0;
+    for (let i = 0; i < particleDominoes.length; i++) {
+      const d = particleDominoes[i];
       const isHorizontal = Math.abs(d.p1.hx - d.p2.hx) > 0.5;
-      return {
+      result[ri++] = {
         cx: (d.p1.x + d.p2.x) / 2,
         cy: (d.p1.y + d.p2.y) / 2,
         width: isHorizontal ? 2 * scale : scale,
@@ -1701,9 +1751,11 @@ async function initializeApp() {
         type: 'particle',
         isHorizontal
       };
-    }), ...holeDominoes.map(d => {
+    }
+    for (let i = 0; i < holeDominoes.length; i++) {
+      const d = holeDominoes[i];
       const isHorizontal = Math.abs(d.p1.hx - d.p2.hx) > 0.5;
-      return {
+      result[ri++] = {
         cx: (d.p1.x + d.p2.x) / 2,
         cy: (d.p1.y + d.p2.y) / 2,
         width: isHorizontal ? 2 * scale : scale,
@@ -1711,7 +1763,8 @@ async function initializeApp() {
         type: 'hole',
         isHorizontal
       };
-    })];
+    }
+    return result;
   }
 
   // Get domino color based on type and orientation
@@ -1725,78 +1778,153 @@ async function initializeApp() {
     }
   }
 
-  // Canvas rendering function
-  function renderCanvas(dominoes, latticePoints, bounds, showParticles, borderWidth, rotation) {
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-
-    const { minX, minY, maxX, maxY } = bounds;
-    const widthPts = maxX - minX + 40;
-    const heightPts = maxY - minY + 40;
-    const baseScale = Math.min(rect.width / widthPts, rect.height / heightPts) * 0.9;
-    const baseX = (rect.width - widthPts * baseScale) / 2 - (minX - 20) * baseScale;
-    const baseY = (rect.height - heightPts * baseScale) / 2 - (minY - 20) * baseScale;
-
-    ctx.clearRect(0, 0, rect.width, rect.height);
-    ctx.fillStyle = "#fafafa";
-    ctx.fillRect(0, 0, rect.width, rect.height);
-
-    ctx.save();
-    ctx.translate(canvasTransform.x + baseX * canvasTransform.scale, canvasTransform.y + baseY * canvasTransform.scale);
-    ctx.scale(baseScale * canvasTransform.scale, baseScale * canvasTransform.scale);
+  // Render tiling content to a target canvas context (used by both cache and export)
+  function renderCanvasContent(tctx, dominoes, latticePoints, showParticles, borderWidth, rotation) {
+    // Batch dominoes by color: group rects, fill once per color
+    const colorGroups = {};
+    for (let i = 0; i < dominoes.length; i++) {
+      const d = dominoes[i];
+      const color = getDominoColor(d.type, d.isHorizontal, showParticles);
+      if (!colorGroups[color]) colorGroups[color] = [];
+      colorGroups[color].push(d);
+    }
 
     if (rotation !== 0) {
-      ctx.rotate(rotation * Math.PI / 180);
+      tctx.rotate(rotation * Math.PI / 180);
     }
 
-    // Draw all dominoes
-    for (const d of dominoes) {
-      ctx.fillStyle = getDominoColor(d.type, d.isHorizontal, showParticles);
-      ctx.fillRect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
-      if (borderWidth > 0) {
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = borderWidth;
-        ctx.strokeRect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
+    // Draw all dominoes batched by color (one fillStyle + beginPath + fill per group)
+    for (const color in colorGroups) {
+      const group = colorGroups[color];
+      tctx.fillStyle = color;
+      tctx.beginPath();
+      for (let i = 0; i < group.length; i++) {
+        const d = group[i];
+        tctx.rect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
       }
+      tctx.fill();
     }
 
-    // Draw particles if enabled
+    // Draw all borders in one batch if enabled
+    if (borderWidth > 0) {
+      tctx.strokeStyle = "#000";
+      tctx.lineWidth = borderWidth;
+      tctx.beginPath();
+      for (let i = 0; i < dominoes.length; i++) {
+        const d = dominoes[i];
+        tctx.rect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
+      }
+      tctx.stroke();
+    }
+
+    // Draw particles if enabled (batched: black fills, then white fills, then all strokes)
     if (showParticles) {
-      for (const p of latticePoints) {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 5, 0, 2 * Math.PI);
-        ctx.fillStyle = p.inSubset ? "#000000" : "#ffffff";
-        ctx.fill();
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 1;
-        ctx.stroke();
+      // Black particles (inSubset)
+      tctx.fillStyle = "#000000";
+      tctx.beginPath();
+      for (let i = 0; i < latticePoints.length; i++) {
+        const p = latticePoints[i];
+        if (p.inSubset) {
+          tctx.moveTo(p.x + 5, p.y);
+          tctx.arc(p.x, p.y, 5, 0, 2 * Math.PI);
+        }
       }
+      tctx.fill();
+      // White particles (holes)
+      tctx.fillStyle = "#ffffff";
+      tctx.beginPath();
+      for (let i = 0; i < latticePoints.length; i++) {
+        const p = latticePoints[i];
+        if (!p.inSubset) {
+          tctx.moveTo(p.x + 5, p.y);
+          tctx.arc(p.x, p.y, 5, 0, 2 * Math.PI);
+        }
+      }
+      tctx.fill();
+      // All particle outlines
+      tctx.strokeStyle = "#000";
+      tctx.lineWidth = 1;
+      tctx.beginPath();
+      for (let i = 0; i < latticePoints.length; i++) {
+        const p = latticePoints[i];
+        tctx.moveTo(p.x + 5, p.y);
+        tctx.arc(p.x, p.y, 5, 0, 2 * Math.PI);
+      }
+      tctx.stroke();
     }
 
     // Draw diagonal highlight lines when partition details are open
     if (showDiagonalHighlights && latticePoints.length > 0) {
       const scale = 20;
-      ctx.strokeStyle = "rgba(255, 0, 0, 0.4)";
-      ctx.lineWidth = 2;
-      // All diagonals same length: extend to full diamond extent
+      tctx.strokeStyle = "rgba(255, 0, 0, 0.4)";
+      tctx.lineWidth = 2;
       const fullExtent = currentN + 0.5;
+      tctx.beginPath();
       for (let d = -currentN; d <= currentN; d++) {
-        // Diagonal line hx + hy = d, all same length
-        // Line from (d/2 - ext, -d/2 - ext) to (d/2 + ext, -d/2 + ext) in screen coords
         const x1 = (d / 2 - fullExtent) * scale;
         const y1 = -(d / 2 + fullExtent) * scale;
         const x2 = (d / 2 + fullExtent) * scale;
         const y2 = -(d / 2 - fullExtent) * scale;
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
+        tctx.moveTo(x1, y1);
+        tctx.lineTo(x2, y2);
       }
+      tctx.stroke();
+    }
+  }
+
+  // Canvas rendering function with OffscreenCanvas caching for fast zoom/pan
+  function renderCanvas(dominoes, latticePoints, bounds, showParticles, borderWidth, rotation) {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const w = rect.width;
+    const h = rect.height;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+
+    const { minX, minY, maxX, maxY } = bounds;
+    const widthPts = maxX - minX + 40;
+    const heightPts = maxY - minY + 40;
+    const baseScale = Math.min(w / widthPts, h / heightPts) * 0.9;
+    const baseX = (w - widthPts * baseScale) / 2 - (minX - 20) * baseScale;
+    const baseY = (h - heightPts * baseScale) / 2 - (minY - 20) * baseScale;
+
+    // Check if we need to re-render the cache (data change, style change, or resize)
+    const currentParams = `${showParticles}|${borderWidth}|${rotation}|${showDiagonalHighlights}|${getCurrentColors().join(',')}`;
+    const needsCacheUpdate = canvasCacheRenderedVersion !== canvasCacheVersion ||
+      canvasCacheParams !== currentParams ||
+      !canvasCacheCanvas || canvasCacheWidth !== w * dpr || canvasCacheHeight !== h * dpr;
+
+    if (needsCacheUpdate) {
+      // Create or resize cache canvas
+      if (!canvasCacheCanvas || canvasCacheWidth !== w * dpr || canvasCacheHeight !== h * dpr) {
+        canvasCacheCanvas = document.createElement('canvas');
+        canvasCacheWidth = w * dpr;
+        canvasCacheHeight = h * dpr;
+      }
+      canvasCacheCanvas.width = canvasCacheWidth;
+      canvasCacheCanvas.height = canvasCacheHeight;
+      const cctx = canvasCacheCanvas.getContext('2d');
+
+      // Render tiling at neutral position (no zoom/pan) to cache
+      cctx.scale(dpr, dpr);
+      cctx.translate(baseX, baseY);
+      cctx.scale(baseScale, baseScale);
+      renderCanvasContent(cctx, dominoes, latticePoints, showParticles, borderWidth, rotation);
+      canvasCacheRenderedVersion = canvasCacheVersion;
+      canvasCacheParams = currentParams;
     }
 
+    // Draw background
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = "#fafafa";
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw cached image with zoom/pan transform
+    ctx.save();
+    ctx.translate(canvasTransform.x, canvasTransform.y);
+    ctx.scale(canvasTransform.scale, canvasTransform.scale);
+    ctx.drawImage(canvasCacheCanvas, 0, 0, canvasCacheWidth, canvasCacheHeight, 0, 0, w, h);
     ctx.restore();
   }
 
@@ -1854,7 +1982,7 @@ async function initializeApp() {
 
   // Main render function - dispatches to canvas or SVG
   function renderParticles() {
-    const { latticePoints, geomDiagonals } = generateLatticePoints();
+    const { latticePoints, geomDiagonals, bounds } = generateLatticePoints();
     const diagKeys = Object.keys(geomDiagonals).map(Number).sort((a, b) => a - b);
 
     // Convert partitions to subsets
@@ -1868,17 +1996,11 @@ async function initializeApp() {
       subsetsByDiag[diagKey] = new Set(subset);
     }
 
-    latticePoints.forEach(p => {
+    for (let i = 0; i < latticePoints.length; i++) {
+      const p = latticePoints[i];
       const subset = subsetsByDiag[p.diag];
       p.inSubset = subset ? subset.has(p.posInDiag) : false;
-    });
-
-    // Compute bounds
-    const minX = d3.min(latticePoints, d => d.x);
-    const minY = d3.min(latticePoints, d => d.y);
-    const maxX = d3.max(latticePoints, d => d.x);
-    const maxY = d3.max(latticePoints, d => d.y);
-    const bounds = { minX, minY, maxX, maxY };
+    }
 
     // Compute dominoes
     const dominoes = computeDominoes(latticePoints);
@@ -1886,7 +2008,9 @@ async function initializeApp() {
     // Cache for redraw on style changes
     cachedDominoes = dominoes;
     cachedLatticePoints = latticePoints;
+    cachedBounds = bounds;
     cachedActiveCells = buildActiveCells(latticePoints);
+    invalidateCanvasCache();
 
     const showParticles = document.getElementById("show-particles-cb").checked;
     const borderWidth = parseFloat(document.getElementById("border-slider").value);
@@ -2616,11 +2740,12 @@ async function initializeApp() {
       return;
     }
 
-    const minX = d3.min(cachedLatticePoints, d => d.x);
-    const minY = d3.min(cachedLatticePoints, d => d.y);
-    const maxX = d3.max(cachedLatticePoints, d => d.x);
-    const maxY = d3.max(cachedLatticePoints, d => d.y);
-    const bounds = { minX, minY, maxX, maxY };
+    const bounds = cachedBounds || {
+      minX: d3.min(cachedLatticePoints, d => d.x),
+      minY: d3.min(cachedLatticePoints, d => d.y),
+      maxX: d3.max(cachedLatticePoints, d => d.x),
+      maxY: d3.max(cachedLatticePoints, d => d.y)
+    };
 
     const showParticles = document.getElementById("show-particles-cb").checked;
     const borderWidth = parseFloat(document.getElementById("border-slider").value);
