@@ -8522,26 +8522,13 @@ function initLozengeApp() {
         const hcp = document.getElementById('holeColorPicker');
         if (hcp) hcp.value = '#000000';
 
-        reinitialize();
+        // Hide grid and hole labels for shape of the month
+        renderer.showGrid = false;
+        document.getElementById('showGridCheckbox').checked = false;
+        renderer.showHoleLengths = false;
+        document.getElementById('showHoleLengthsCheckbox').checked = false;
 
-        // Load and apply hole height from HOLE_HEIGHT.txt
-        try {
-            const holeHeightResponse = await fetch(`/letters/HOLE_HEIGHT.txt?v=${Date.now()}`);
-            if (holeHeightResponse.ok) {
-                const holeHeight = parseInt((await holeHeightResponse.text()).trim());
-                if (!isNaN(holeHeight) && holeHeight !== 0 && isValid) {
-                    const holeCount = sim.getHoleCount();
-                    for (let h = 0; h < holeCount; h++) {
-                        sim.adjustHoleWinding(h, holeHeight);
-                    }
-                    sim.refreshDimers();
-                    draw();
-                    updateHolesUI();
-                }
-            }
-        } catch (e) {
-            console.warn('Could not load hole height:', e);
-        }
+        reinitialize();
     });
 
     // View toggle
