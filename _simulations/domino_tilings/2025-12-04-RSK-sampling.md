@@ -1775,13 +1775,15 @@ async function initializeApp() {
     }
 
     // Draw all dominoes — fillRect per domino (faster than building giant paths)
+    // Expand by 0.5 domain units to eliminate anti-aliasing seams between adjacent tiles
+    const pad = 0.5;
     console.time('  dominoFill');
     for (const color in colorGroups) {
       const group = colorGroups[color];
       tctx.fillStyle = color;
       for (let i = 0; i < group.length; i++) {
         const d = group[i];
-        tctx.fillRect(d.cx - d.width / 2, d.cy - d.height / 2, d.width, d.height);
+        tctx.fillRect(d.cx - d.width / 2 - pad, d.cy - d.height / 2 - pad, d.width + pad * 2, d.height + pad * 2);
       }
     }
     console.timeEnd('  dominoFill');
