@@ -64,12 +64,12 @@ memory from O(n^2 * partition_size) to O(n * partition_size) - roughly 50-200x l
 Current bottleneck: each domino creates 5 Three.js objects (BufferGeometry + Material + Mesh + EdgesGeometry + LineSegments). For
 n=100 this means 50,000 objects and 20,000+ draw calls.
 
-- [ ] Refactor `renderDominoes()`: collect all vertex/index data for each of the 4 domino color types into typed arrays, then create ONE merged BufferGeometry per type
-- [ ] Create 4 shared materials (one per color type) instead of N individual materials
-- [ ] Create 4 edge geometries (one per type) from the merged vertex data
-- [ ] Result: 8 total Three.js objects (4 meshes + 4 edges) regardless of domino count, instead of 2N objects
-- [ ] Remove per-domino `await new Promise(r => setTimeout(r, 0))` yield since batch creation is fast
-- [ ] Test: n=200 should show smooth 60fps rotation in 3D panel
+- [x] Refactor `renderDominoes()`: collect all vertex/index data for each of the 4 domino color types into typed arrays, then create ONE merged BufferGeometry per type
+- [x] Create 4 shared materials (one per color type) instead of N individual materials
+- [x] Create 4 edge geometries (one per type) from the merged vertex data
+- [x] Result: 8 total Three.js objects (4 meshes + 4 edges) regardless of domino count, instead of 2N objects
+- [x] Remove per-domino `await new Promise(r => setTimeout(r, 0))` yield since batch creation is fast
+- [x] Test: n=200 should show smooth 60fps rotation in 3D panel
 
 ### Task 4: 2D canvas zoom/pan performance for large n
 

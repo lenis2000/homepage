@@ -996,7 +996,7 @@ async function initializeApp() {
       return heights;
     }
 
-    async renderDominoes(dominoes, colors, onProgress) {
+    renderDominoes(dominoes, colors, onProgress) {
       // Clear previous geometry
       while (this.dominoGroup.children.length > 0) {
         const child = this.dominoGroup.children[0];
@@ -1008,109 +1008,116 @@ async function initializeApp() {
       if (!dominoes || dominoes.length === 0) return;
 
       const heightMap = this.calculateHeightFunction(dominoes);
-      const total = dominoes.length;
-      const batchSize = 50; // Process in batches for progress updates
 
-      for (let i = 0; i < total; i++) {
+      // Collect vertex/index data per color type (0-3)
+      const groupVerts = [[], [], [], []];
+      const groupIndices = [[], [], [], []];
+      const vertexCounts = [0, 0, 0, 0];
+
+      for (let i = 0; i < dominoes.length; i++) {
         const d = dominoes[i];
-        try {
-          const isHorizontal = (d.y1 === d.y2);
-          const x = Math.min(d.x1, d.x2);
-          const y = Math.min(d.y1, d.y2);
-          const type = d.type;
-          const hOffsets = vertexHeights[type];
+        const isHorizontal = (d.y1 === d.y2);
+        const x = Math.min(d.x1, d.x2);
+        const y = Math.min(d.y1, d.y2);
+        const type = d.type;
+        const hOffsets = vertexHeights[type];
 
-          const baseKey = `${x},${y}`;
-          const heightAtRef = heightMap.has(baseKey) ? heightMap.get(baseKey) : 0;
-          const baseH = heightAtRef - hOffsets[3];
+        const baseKey = `${x},${y}`;
+        const heightAtRef = heightMap.has(baseKey) ? heightMap.get(baseKey) : 0;
+        const baseH = heightAtRef - hOffsets[3];
 
-          let pts;
-          if (isHorizontal) {
-            pts = [
-              [x+2, y+1, baseH + hOffsets[0]],
-              [x+1, y+1, baseH + hOffsets[1]],
-              [x,   y+1, baseH + hOffsets[2]],
-              [x,   y,   baseH + hOffsets[3]],
-              [x+1, y,   baseH + hOffsets[4]],
-              [x+2, y,   baseH + hOffsets[5]]
-            ];
-          } else {
-            pts = [
-              [x+1, y+2, baseH + hOffsets[0]],
-              [x+1, y+1, baseH + hOffsets[1]],
-              [x+1, y,   baseH + hOffsets[2]],
-              [x,   y,   baseH + hOffsets[3]],
-              [x,   y+1, baseH + hOffsets[4]],
-              [x,   y+2, baseH + hOffsets[5]]
-            ];
-          }
+        let pts;
+        if (isHorizontal) {
+          pts = [
+            [x+2, y+1, baseH + hOffsets[0]],
+            [x+1, y+1, baseH + hOffsets[1]],
+            [x,   y+1, baseH + hOffsets[2]],
+            [x,   y,   baseH + hOffsets[3]],
+            [x+1, y,   baseH + hOffsets[4]],
+            [x+2, y,   baseH + hOffsets[5]]
+          ];
+        } else {
+          pts = [
+            [x+1, y+2, baseH + hOffsets[0]],
+            [x+1, y+1, baseH + hOffsets[1]],
+            [x+1, y,   baseH + hOffsets[2]],
+            [x,   y,   baseH + hOffsets[3]],
+            [x,   y+1, baseH + hOffsets[4]],
+            [x,   y+2, baseH + hOffsets[5]]
+          ];
+        }
 
-          const vertices = [];
-          for (const [px, py, h] of pts) {
-            vertices.push(px, h * 0.5, py);
-          }
+        const colorIdx = d.colorIndex !== undefined ? d.colorIndex : type;
+        const g = colorIdx;
+        const vOffset = vertexCounts[g];
 
-          const geom = new THREE.BufferGeometry();
-          geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        for (const [px, py, h] of pts) {
+          groupVerts[g].push(px, h * 0.5, py);
+        }
 
-          const indices = isHorizontal
-            ? [2,0,5, 2,5,3, 2,1,0, 3,4,5]
-            : [5,0,2, 5,2,3, 5,4,3, 0,1,2];
+        const triIndices = isHorizontal
+          ? [2,0,5, 2,5,3, 2,1,0, 3,4,5]
+          : [5,0,2, 5,2,3, 5,4,3, 0,1,2];
+        for (const idx of triIndices) {
+          groupIndices[g].push(idx + vOffset);
+        }
 
-          geom.setIndex(indices);
-          geom.computeVertexNormals();
+        vertexCounts[g] += 6;
+      }
 
-          // Use colorIndex for 2D-matching colors, fall back to type if not available
-          const colorIdx = d.colorIndex !== undefined ? d.colorIndex : type;
-          const color = colors[colorIdx] || '#888888';
-          const preset = this.getCurrentPreset();
-          const matSettings = preset.material;
-          let mat;
+      if (onProgress) onProgress(50);
 
-          if (matSettings.type === 'standard') {
-            mat = new THREE.MeshStandardMaterial({
-              color: color,
-              side: THREE.DoubleSide,
-              flatShading: matSettings.flatShading,
-              roughness: matSettings.roughness,
-              metalness: matSettings.metalness
-            });
-          } else if (matSettings.type === 'phong') {
-            mat = new THREE.MeshPhongMaterial({
-              color: color,
-              side: THREE.DoubleSide,
-              flatShading: matSettings.flatShading,
-              shininess: matSettings.shininess
-            });
-          } else {
-            mat = new THREE.MeshLambertMaterial({
-              color: color,
-              side: THREE.DoubleSide,
-              flatShading: matSettings.flatShading
-            });
-          }
+      // Create one merged mesh + one edge set per color type (8 objects total)
+      const preset = this.getCurrentPreset();
+      const matSettings = preset.material;
 
-          const mesh = new THREE.Mesh(geom, mat);
-          this.dominoGroup.add(mesh);
+      for (let g = 0; g < 4; g++) {
+        if (groupVerts[g].length === 0) continue;
 
-          const edges = new THREE.EdgesGeometry(geom, 15);
-          const lineMat = new THREE.LineBasicMaterial({
-            color: preset.edges.color,
-            linewidth: 1,
-            opacity: preset.edges.opacity,
-            transparent: preset.edges.opacity < 1
+        const vertices = new Float32Array(groupVerts[g]);
+        const indices = new Uint32Array(groupIndices[g]);
+
+        const geom = new THREE.BufferGeometry();
+        geom.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+        geom.setIndex(new THREE.BufferAttribute(indices, 1));
+        geom.computeVertexNormals();
+
+        const color = colors[g] || '#888888';
+        let mat;
+        if (matSettings.type === 'standard') {
+          mat = new THREE.MeshStandardMaterial({
+            color, side: THREE.DoubleSide,
+            flatShading: matSettings.flatShading,
+            roughness: matSettings.roughness,
+            metalness: matSettings.metalness
           });
-          const wireframe = new THREE.LineSegments(edges, lineMat);
-          this.dominoGroup.add(wireframe);
-        } catch (e) {
-          console.error('Error creating 3D domino mesh:', e);
+        } else if (matSettings.type === 'phong') {
+          mat = new THREE.MeshPhongMaterial({
+            color, side: THREE.DoubleSide,
+            flatShading: matSettings.flatShading,
+            shininess: matSettings.shininess
+          });
+        } else {
+          mat = new THREE.MeshLambertMaterial({
+            color, side: THREE.DoubleSide,
+            flatShading: matSettings.flatShading
+          });
         }
 
-        // Report progress and yield for UI updates
-        if (onProgress && (i % batchSize === 0 || i === total - 1)) {
-          onProgress((i + 1) / total * 100);
-          await new Promise(r => setTimeout(r, 0));
-        }
+        const mesh = new THREE.Mesh(geom, mat);
+        this.dominoGroup.add(mesh);
+
+        const edges = new THREE.EdgesGeometry(geom, 15);
+        const lineMat = new THREE.LineBasicMaterial({
+          color: preset.edges.color,
+          linewidth: 1,
+          opacity: preset.edges.opacity,
+          transparent: preset.edges.opacity < 1
+        });
+        const wireframe = new THREE.LineSegments(edges, lineMat);
+        this.dominoGroup.add(wireframe);
+
+        if (onProgress) onProgress(50 + (g + 1) / 4 * 50);
       }
 
       const currentCount = dominoes.length;
@@ -1262,7 +1269,7 @@ async function initializeApp() {
       }
     };
 
-    await renderer3D.renderDominoes(convertedDominoes, colors, onProgress);
+    renderer3D.renderDominoes(convertedDominoes, colors, onProgress);
 
     if (showLoading) {
       loadingOverlay.style.display = 'none';
