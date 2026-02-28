@@ -1875,15 +1875,14 @@ async function initializeApp() {
     const baseY = (h - heightPts * baseScale) / 2 - (minY - 20) * baseScale;
 
     // Check if we need to re-render the cache (data change, style change, or resize)
+    const cacheScale = dpr * 3;  // 3x CSS resolution for sharp zoom
     const currentParams = `${showParticles}|${borderWidth}|${rotation}|${showDiagonalHighlights}|${getCurrentColors().join(',')}`;
     const needsCacheUpdate = canvasCacheRenderedVersion !== canvasCacheVersion ||
       canvasCacheParams !== currentParams ||
-      !canvasCacheCanvas || canvasCacheWidth !== w * dpr || canvasCacheHeight !== h * dpr;
+      !canvasCacheCanvas || canvasCacheWidth !== w * cacheScale || canvasCacheHeight !== h * cacheScale;
 
     if (needsCacheUpdate) {
       console.time('  cacheRender');
-      // Create or resize cache canvas
-      const cacheScale = dpr * 3;  // 3x CSS resolution for sharp zoom
       if (!canvasCacheCanvas || canvasCacheWidth !== w * cacheScale || canvasCacheHeight !== h * cacheScale) {
         canvasCacheCanvas = document.createElement('canvas');
         canvasCacheWidth = w * cacheScale;
