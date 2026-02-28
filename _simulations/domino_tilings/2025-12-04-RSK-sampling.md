@@ -1284,8 +1284,16 @@ async function initializeApp() {
 
     try {
       const ptr = await sampleAztecRSK(n, xJson, yJson, q);
+      if (!ptr) {
+        throw new Error("WASM returned null pointer — likely out of memory. Try reducing n.");
+      }
       const jsonStr = Module.UTF8ToString(ptr);
       freeString(ptr);
+
+      const result = JSON.parse(jsonStr);
+      if (result && result.error) {
+        throw new Error("C++ sampling error: " + result.error);
+      }
 
       simulationActive = false;
       progressElem.innerText = "";
@@ -1295,10 +1303,13 @@ async function initializeApp() {
         timingDisplay.innerText = `(${(elapsed / 1000).toFixed(2)}s)`;
       }
 
-      return JSON.parse(jsonStr);
+      return result;
     } catch (e) {
       simulationActive = false;
-      progressElem.innerText = "Error!";
+      progressElem.innerText = "Sampling failed: " + e.message + ". Try reducing n or adjusting parameters.";
+      if (timingDisplay) {
+        timingDisplay.innerText = "";
+      }
       console.error("Sampling error:", e);
       return [[]];
     }
@@ -2764,9 +2775,14 @@ async function initializeApp() {
     const y = parseCSV(document.getElementById("y-params").value);
     const q = parseFloat(document.getElementById("q-input").value);
     currentPartitions = await aztecDiamondSample(currentN, x, y, q);
-    renderParticles();
-    displaySubsets();
-    update3DView();  // Update 3D view if active
+    try {
+      renderParticles();
+      displaySubsets();
+      update3DView();  // Update 3D view if active
+    } catch (renderErr) {
+      console.error("Rendering error after sampling:", renderErr);
+      progressElem.innerText = "Rendering failed: " + renderErr.message;
+    }
 
     // Build active cells for first sample
     cachedActiveCells = buildActiveCells(cachedLatticePoints);
@@ -2894,7 +2910,13 @@ async function initializeApp() {
     const q = parseFloat(document.getElementById("q-input").value);
 
     currentPartitions = await aztecDiamondSample(currentN, x, y, q);
-    renderParticles();  // This updates cachedDominoes and cachedLatticePoints
+    try {
+      renderParticles();  // This updates cachedDominoes and cachedLatticePoints
+    } catch (renderErr) {
+      console.error("Rendering error after sampling:", renderErr);
+      progressElem.innerText = "Rendering failed: " + renderErr.message;
+      return;
+    }
 
     progressElem.innerText = "Sampling 2nd...";
     secondPartitions = await aztecDiamondSample(currentN, x, y, q);
@@ -2921,7 +2943,13 @@ async function initializeApp() {
     const q = parseFloat(document.getElementById("q-input").value);
 
     currentPartitions = await aztecDiamondSample(currentN, x, y, q);
-    renderParticles();  // This updates cachedDominoes and cachedLatticePoints
+    try {
+      renderParticles();  // This updates cachedDominoes and cachedLatticePoints
+    } catch (renderErr) {
+      console.error("Rendering error after sampling:", renderErr);
+      progressElem.innerText = "Rendering failed: " + renderErr.message;
+      return;
+    }
 
     progressElem.innerText = "Sampling 2nd...";
     secondPartitions = await aztecDiamondSample(currentN, x, y, q);

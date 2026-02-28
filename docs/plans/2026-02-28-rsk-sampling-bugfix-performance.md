@@ -50,11 +50,11 @@ memory from O(n^2 * partition_size) to O(n * partition_size) - roughly 50-200x l
 **Files:**
 - Modify: `_simulations/domino_tilings/2025-12-04-RSK-sampling.md`
 
-- [ ] In `aztecDiamondSample`: check if ptr from sampleAztecRSK is 0 (null) before calling UTF8ToString - throw descriptive error if null
-- [ ] In `aztecDiamondSample`: after JSON.parse, check if result has `error` property (C++ error response) - throw error with the message
-- [ ] Improve catch block: show descriptive error including the caught error message, not just "Error!". Include suggestion to reduce n or check parameters
-- [ ] Add try-catch around `renderParticles()` and `update3DView()` calls in sample button handlers to prevent cascading failures
-- [ ] Clear timing display on error (currently shows stale timing from previous successful run)
+- [x] In `aztecDiamondSample`: check if ptr from sampleAztecRSK is 0 (null) before calling UTF8ToString - throw descriptive error if null
+- [x] In `aztecDiamondSample`: after JSON.parse, check if result has `error` property (C++ error response) - throw error with the message
+- [x] Improve catch block: show descriptive error including the caught error message, not just "Error!". Include suggestion to reduce n or check parameters
+- [x] Add try-catch around `renderParticles()` and `update3DView()` calls in sample button handlers to prevent cascading failures
+- [x] Clear timing display on error (currently shows stale timing from previous successful run)
 
 ### Task 3: 3D rendering performance - geometry batching
 
