@@ -1775,8 +1775,9 @@ async function initializeApp() {
     }
 
     // Draw all dominoes — fillRect per domino (faster than building giant paths)
-    // Expand by 0.5 domain units to eliminate anti-aliasing seams between adjacent tiles
-    const pad = 0.5;
+    // Expand by 1 domain unit to eliminate anti-aliasing seams (especially at hi-res downscale)
+    tctx.imageSmoothingEnabled = false;
+    const pad = 1;
     console.time('  dominoFill');
     for (const color in colorGroups) {
       const group = colorGroups[color];
@@ -1939,8 +1940,9 @@ async function initializeApp() {
     ctx.fillStyle = "#fafafa";
     ctx.fillRect(0, 0, w, h);
 
-    // Draw cached image with zoom/pan transform
+    // Draw cached image with zoom/pan transform (no smoothing to avoid Moiré seams)
     ctx.save();
+    ctx.imageSmoothingEnabled = false;
     ctx.translate(canvasTransform.x, canvasTransform.y);
     ctx.scale(canvasTransform.scale, canvasTransform.scale);
     ctx.drawImage(canvasCacheCanvas, 0, 0, canvasCacheWidth, canvasCacheHeight, 0, 0, w, h);
