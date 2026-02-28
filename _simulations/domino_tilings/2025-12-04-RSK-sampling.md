@@ -534,17 +534,28 @@ code:
 </details>
 
 <script>
-if (typeof Module === 'undefined') {
+if (typeof createRSKModule === 'undefined') {
   document.getElementById("subsets-output").textContent = 'Error: WASM Module not loaded';
 }
 
+// WASM module and wrapped functions — recreated before each sample for fresh memory
+let wasmMod = null;
+let sampleAztecRSK, freeString, getProgress, setHighPrecision, getHighPrecision;
+
+async function recreateWasm() {
+  const wasHighPrecision = wasmMod ? getHighPrecision() : 0;
+  wasmMod = await createRSKModule();
+  sampleAztecRSK = wasmMod.cwrap('sampleAztecRSK', 'number', ['number', 'string', 'string', 'number'], {async: true});
+  freeString = wasmMod.cwrap('freeString', null, ['number']);
+  getProgress = wasmMod.cwrap('getProgress', 'number', []);
+  setHighPrecision = wasmMod.cwrap('setHighPrecision', null, ['number']);
+  getHighPrecision = wasmMod.cwrap('getHighPrecision', 'number', []);
+  if (wasHighPrecision) setHighPrecision(1);
+}
+
 async function initializeApp() {
-  // Wrap WASM functions
-  const sampleAztecRSK = Module.cwrap('sampleAztecRSK', 'number', ['number', 'string', 'string', 'number'], {async: true});
-  const freeString = Module.cwrap('freeString', null, ['number']);
-  const getProgress = Module.cwrap('getProgress', 'number', []);
-  const setHighPrecision = Module.cwrap('setHighPrecision', null, ['number']);
-  const getHighPrecision = Module.cwrap('getHighPrecision', 'number', []);
+  // Create initial WASM module
+  await recreateWasm();
 
   let currentN = 4;
   const svg = d3.select("#aztec-svg");
@@ -1300,6 +1311,9 @@ async function initializeApp() {
     const xJson = JSON.stringify(x);
     const yJson = JSON.stringify(y);
 
+    // Recreate WASM module for fresh memory (prevents OOM from heap fragmentation)
+    await recreateWasm();
+
     simulationActive = true;
     startProgressPolling();
 
@@ -1308,7 +1322,7 @@ async function initializeApp() {
       if (!ptr) {
         throw new Error("WASM returned null pointer — likely out of memory. Try reducing n.");
       }
-      const jsonStr = Module.UTF8ToString(ptr);
+      const jsonStr = wasmMod.UTF8ToString(ptr);
       freeString(ptr);
 
       const result = JSON.parse(jsonStr);
@@ -1759,7 +1773,6 @@ async function initializeApp() {
 
   // Render tiling content to a target canvas context (used by both cache and export)
   function renderCanvasContent(tctx, dominoes, latticePoints, showParticles, borderWidth, rotation) {
-    console.time('  colorGrouping');
     // Batch dominoes by color: group rects, fill once per color
     const colorGroups = {};
     for (let i = 0; i < dominoes.length; i++) {
@@ -1768,8 +1781,6 @@ async function initializeApp() {
       if (!colorGroups[color]) colorGroups[color] = [];
       colorGroups[color].push(d);
     }
-    console.timeEnd('  colorGrouping');
-
     if (rotation !== 0) {
       tctx.rotate(rotation * Math.PI / 180);
     }
@@ -1778,7 +1789,6 @@ async function initializeApp() {
     // Expand by 1 domain unit to eliminate anti-aliasing seams (especially at hi-res downscale)
     tctx.imageSmoothingEnabled = false;
     const pad = 1;
-    console.time('  dominoFill');
     for (const color in colorGroups) {
       const group = colorGroups[color];
       tctx.fillStyle = color;
@@ -1787,10 +1797,7 @@ async function initializeApp() {
         tctx.fillRect(d.cx - d.width / 2 - pad, d.cy - d.height / 2 - pad, d.width + pad * 2, d.height + pad * 2);
       }
     }
-    console.timeEnd('  dominoFill');
-
     // Draw borders — skip when dominoes are too numerous (borders invisible at that scale)
-    console.time('  borderStroke');
     if (borderWidth > 0 && dominoes.length <= 10000) {
       tctx.strokeStyle = "#000";
       tctx.lineWidth = borderWidth;
@@ -1801,8 +1808,6 @@ async function initializeApp() {
       }
       tctx.stroke();
     }
-    console.timeEnd('  borderStroke');
-
     // Draw particles if enabled (batched: black fills, then white fills, then all strokes)
     if (showParticles) {
       // Black particles (inSubset)
@@ -1890,7 +1895,6 @@ async function initializeApp() {
       const loH = Math.round(h * loScale);
 
       // Fast 1x render (shows instantly)
-      console.time('  cacheRender-1x');
       canvasCacheCanvas = document.createElement('canvas');
       canvasCacheCanvas.width = loW;
       canvasCacheCanvas.height = loH;
@@ -1903,7 +1907,6 @@ async function initializeApp() {
       renderCanvasContent(lctx, dominoes, latticePoints, showParticles, borderWidth, rotation);
       canvasCacheRenderedVersion = canvasCacheVersion;
       canvasCacheParams = currentParams;
-      console.timeEnd('  cacheRender-1x');
 
       // Schedule hi-res upgrade if multiplier > 1
       if (hiresMultiplier > 1) {
@@ -1912,7 +1915,6 @@ async function initializeApp() {
         setTimeout(() => {
           // Abort if data changed since we scheduled
           if (canvasCacheVersion !== capturedVersion || canvasCacheParams !== capturedParams) return;
-          console.time('  cacheRender-hires');
           const hiW = Math.round(w * hiresCacheScale);
           const hiH = Math.round(h * hiresCacheScale);
           const hiCanvas = document.createElement('canvas');
@@ -1928,7 +1930,6 @@ async function initializeApp() {
             canvasCacheCanvas = hiCanvas;
             canvasCacheWidth = hiW;
             canvasCacheHeight = hiH;
-            console.timeEnd('  cacheRender-hires');
             redrawOnly();  // Repaint with sharp cache
           }
         }, 0);
@@ -2005,16 +2006,12 @@ async function initializeApp() {
   // Async with yield points to prevent page freeze at large n
   async function renderParticles() {
     const isLargeN = currentN >= 50;
-    console.time('renderParticles total');
 
     if (isLargeN) { progressElem.innerText = "Computing lattice..."; await new Promise(r => setTimeout(r, 0)); }
-    console.time('generateLatticePoints');
     const { latticePoints, geomDiagonals, bounds } = generateLatticePoints();
-    console.timeEnd('generateLatticePoints');
     const diagKeys = Object.keys(geomDiagonals).map(Number).sort((a, b) => a - b);
 
     // Convert partitions to subsets
-    console.time('partitionToSubset loop');
     const subsetsByDiag = {};
     for (let idx = 0; idx < currentPartitions.length && idx < diagKeys.length; idx++) {
       const diagKey = diagKeys[idx];
@@ -2030,21 +2027,16 @@ async function initializeApp() {
       const subset = subsetsByDiag[p.diag];
       p.inSubset = subset ? subset.has(p.posInDiag) : false;
     }
-    console.timeEnd('partitionToSubset loop');
 
     // Compute dominoes
     if (isLargeN) { progressElem.innerText = "Computing tiling..."; await new Promise(r => setTimeout(r, 0)); }
-    console.time('computeDominoes');
     const dominoes = computeDominoes(latticePoints);
-    console.timeEnd('computeDominoes');
 
     // Cache for redraw on style changes
     cachedDominoes = dominoes;
     cachedLatticePoints = latticePoints;
     cachedBounds = bounds;
-    console.time('buildActiveCells');
     cachedActiveCells = buildActiveCells(latticePoints);
-    console.timeEnd('buildActiveCells');
     invalidateCanvasCache();
 
     if (isLargeN) { progressElem.innerText = "Rendering..."; await new Promise(r => setTimeout(r, 0)); }
@@ -2059,9 +2051,7 @@ async function initializeApp() {
     if (useCanvas) {
       canvas.style.display = "block";
       svg.style("display", "none");
-      console.time('renderCanvas');
       renderCanvas(dominoes, latticePoints, bounds, showParticles, borderWidth, rotation);
-      console.timeEnd('renderCanvas');
     } else {
       canvas.style.display = "none";
       svg.style("display", "block").style("pointer-events", "auto");
@@ -2069,8 +2059,6 @@ async function initializeApp() {
     }
 
     if (isLargeN) { progressElem.innerText = ""; }
-    console.timeEnd('renderParticles total');
-    console.log(`  n=${currentN}, latticePoints=${latticePoints.length}, dominoes=${dominoes.length}`);
   }
 
   // ========== Dimer Rendering (2-color scheme) ==========
@@ -5510,10 +5498,6 @@ async function initializeApp() {
   }
 }
 
-// Handle both cases: module already initialized or not yet
-if (Module.calledRun) {
-  initializeApp();
-} else {
-  Module.onRuntimeInitialized = initializeApp;
-}
+// With MODULARIZE, the factory function is ready immediately — just init
+initializeApp();
 </script>

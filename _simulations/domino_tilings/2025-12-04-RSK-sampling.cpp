@@ -12,10 +12,12 @@ emcc 2025-12-04-RSK-sampling.cpp -o 2025-12-04-RSK-sampling.js \
  -I/opt/homebrew/include \
  -s WASM=1 \
  -s ASYNCIFY=1 \
+ -s MODULARIZE=1 \
+ -s "EXPORT_NAME='createRSKModule'" \
  -s "EXPORTED_FUNCTIONS=['_sampleAztecRSK','_freeString','_getProgress','_setHighPrecision','_getHighPrecision']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
- -s INITIAL_MEMORY=64MB \
+ -s INITIAL_MEMORY=128MB \
  -s ENVIRONMENT=web \
  -s SINGLE_FILE=1 \
  -O3 -flto -DNDEBUG \
@@ -29,6 +31,7 @@ emcc 2025-12-04-RSK-sampling.cpp -o 2025-12-04-RSK-sampling.js \
 #include <random>
 #include <cstring>
 #include <cstdlib>
+#include <cstdio>
 #include <algorithm>
 #include <boost/multiprecision/cpp_dec_float.hpp>
 
@@ -376,6 +379,8 @@ char* sampleAztecRSK(int n, const char* xJson, const char* yJson, double q) {
         string jsonStr;
         jsonStr.reserve(totalParts * 5 + partitions.size() * 3 + 10);
 
+        // Use stack buffer for int-to-string to avoid heap fragmentation from to_string()
+        char numBuf[16];
         jsonStr = "[";
         for (size_t i = 0; i < partitions.size(); i++) {
             if (i > 0) jsonStr += ',';
@@ -383,7 +388,8 @@ char* sampleAztecRSK(int n, const char* xJson, const char* yJson, double q) {
             const Partition& p = partitions[i];
             for (size_t j = 0; j < p.size(); j++) {
                 if (j > 0) jsonStr += ',';
-                jsonStr += to_string(p[j]);
+                int len = snprintf(numBuf, sizeof(numBuf), "%d", p[j]);
+                jsonStr.append(numBuf, len);
             }
             jsonStr += ']';
         }
