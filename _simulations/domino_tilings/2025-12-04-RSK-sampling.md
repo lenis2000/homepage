@@ -1875,32 +1875,63 @@ async function initializeApp() {
     const baseY = (h - heightPts * baseScale) / 2 - (minY - 20) * baseScale;
 
     // Check if we need to re-render the cache (data change, style change, or resize)
-    const cacheScale = dpr * 3;  // 3x CSS resolution for sharp zoom
+    const hiresMultiplier = currentN <= 100 ? 3 : currentN <= 300 ? 2 : 1;
+    const hiresCacheScale = dpr * hiresMultiplier;
     const currentParams = `${showParticles}|${borderWidth}|${rotation}|${showDiagonalHighlights}|${getCurrentColors().join(',')}`;
     const needsCacheUpdate = canvasCacheRenderedVersion !== canvasCacheVersion ||
       canvasCacheParams !== currentParams ||
-      !canvasCacheCanvas || canvasCacheWidth !== w * cacheScale || canvasCacheHeight !== h * cacheScale;
+      !canvasCacheCanvas || canvasCacheWidth !== w * hiresCacheScale || canvasCacheHeight !== h * hiresCacheScale;
 
     if (needsCacheUpdate) {
-      console.time('  cacheRender');
-      if (!canvasCacheCanvas || canvasCacheWidth !== w * cacheScale || canvasCacheHeight !== h * cacheScale) {
-        canvasCacheCanvas = document.createElement('canvas');
-        canvasCacheWidth = w * cacheScale;
-        canvasCacheHeight = h * cacheScale;
-      }
-      canvasCacheCanvas.width = canvasCacheWidth;
-      canvasCacheCanvas.height = canvasCacheHeight;
-      const cctx = canvasCacheCanvas.getContext('2d');
-      console.log(`  cache canvas size: ${canvasCacheWidth}x${canvasCacheHeight}, cacheScale=${cacheScale}`);
+      // Progressive rendering: draw at 1x immediately, then upgrade to hi-res
+      const loScale = dpr;
+      const loW = Math.round(w * loScale);
+      const loH = Math.round(h * loScale);
 
-      // Render tiling at neutral position (no zoom/pan) to cache
-      cctx.scale(cacheScale, cacheScale);
-      cctx.translate(baseX, baseY);
-      cctx.scale(baseScale, baseScale);
-      renderCanvasContent(cctx, dominoes, latticePoints, showParticles, borderWidth, rotation);
+      // Fast 1x render (shows instantly)
+      console.time('  cacheRender-1x');
+      canvasCacheCanvas = document.createElement('canvas');
+      canvasCacheCanvas.width = loW;
+      canvasCacheCanvas.height = loH;
+      canvasCacheWidth = loW;
+      canvasCacheHeight = loH;
+      const lctx = canvasCacheCanvas.getContext('2d');
+      lctx.scale(loScale, loScale);
+      lctx.translate(baseX, baseY);
+      lctx.scale(baseScale, baseScale);
+      renderCanvasContent(lctx, dominoes, latticePoints, showParticles, borderWidth, rotation);
       canvasCacheRenderedVersion = canvasCacheVersion;
       canvasCacheParams = currentParams;
-      console.timeEnd('  cacheRender');
+      console.timeEnd('  cacheRender-1x');
+
+      // Schedule hi-res upgrade if multiplier > 1
+      if (hiresMultiplier > 1) {
+        const capturedVersion = canvasCacheVersion;
+        const capturedParams = currentParams;
+        setTimeout(() => {
+          // Abort if data changed since we scheduled
+          if (canvasCacheVersion !== capturedVersion || canvasCacheParams !== capturedParams) return;
+          console.time('  cacheRender-hires');
+          const hiW = Math.round(w * hiresCacheScale);
+          const hiH = Math.round(h * hiresCacheScale);
+          const hiCanvas = document.createElement('canvas');
+          hiCanvas.width = hiW;
+          hiCanvas.height = hiH;
+          const hctx = hiCanvas.getContext('2d');
+          hctx.scale(hiresCacheScale, hiresCacheScale);
+          hctx.translate(baseX, baseY);
+          hctx.scale(baseScale, baseScale);
+          renderCanvasContent(hctx, dominoes, latticePoints, showParticles, borderWidth, rotation);
+          // Swap in hi-res cache
+          if (canvasCacheVersion === capturedVersion) {
+            canvasCacheCanvas = hiCanvas;
+            canvasCacheWidth = hiW;
+            canvasCacheHeight = hiH;
+            console.timeEnd('  cacheRender-hires');
+            redrawOnly();  // Repaint with sharp cache
+          }
+        }, 0);
+      }
     }
 
     // Draw background
