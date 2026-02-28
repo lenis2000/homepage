@@ -1242,7 +1242,7 @@ async function initializeApp() {
       if (!renderer3D) {
         renderer3D = new Domino3DRenderer(threeContainer);
       }
-      update3DView();
+      update3DView().catch(err => console.error('3D view error:', err));
     } else {
       threeContainer.style.display = 'none';
       // Restore to current renderer (canvas or svg)
@@ -2883,10 +2883,11 @@ async function initializeApp() {
     try {
       renderParticles();
       displaySubsets();
-      update3DView();  // Update 3D view if active
+      await update3DView();  // Update 3D view if active
     } catch (renderErr) {
       console.error("Rendering error after sampling:", renderErr);
       progressElem.innerText = "Rendering failed: " + renderErr.message;
+      return;
     }
 
     // Build active cells for first sample
@@ -3542,7 +3543,7 @@ async function initializeApp() {
   document.getElementById('preset3DBtn').addEventListener('click', () => {
     if (renderer3D) {
       const preset = renderer3D.cyclePreset();
-      update3DView();
+      update3DView().catch(err => console.error('3D view error:', err));
     }
   });
 
