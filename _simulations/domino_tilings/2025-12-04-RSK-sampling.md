@@ -1881,28 +1881,17 @@ async function initializeApp() {
     const baseX = (w - widthPts * baseScale) / 2 - (minX - 20) * baseScale;
     const baseY = (h - heightPts * baseScale) / 2 - (minY - 20) * baseScale;
 
-    // For small n, render directly to canvas — no cache/rescale needed
-    if (currentN <= 50) {
-      ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = "#fafafa";
-      ctx.fillRect(0, 0, w, h);
-      ctx.save();
-      ctx.translate(canvasTransform.x, canvasTransform.y);
-      ctx.scale(canvasTransform.scale, canvasTransform.scale);
-      ctx.translate(baseX, baseY);
-      ctx.scale(baseScale, baseScale);
-      renderCanvasContent(ctx, dominoes, latticePoints, showParticles, borderWidth, rotation, false);
-      ctx.restore();
-      return;
-    }
-
-    // Check if we need to re-render the cache (data change, style change, or resize)
-    const hiresMultiplier = 3;
+    // For small n: cache at native dpr (no hi-res multiplier, no seam padding)
+    // For large n: progressive lo-res → hi-res cache with seam padding
+    const smallN = currentN <= 50;
+    const hiresMultiplier = smallN ? 1 : 3;
     const hiresCacheScale = dpr * hiresMultiplier;
     const currentParams = `${showParticles}|${borderWidth}|${rotation}|${showDiagonalHighlights}|${getCurrentColors().join(',')}`;
+    const targetW = Math.round(w * hiresCacheScale);
+    const targetH = Math.round(h * hiresCacheScale);
     const needsCacheUpdate = canvasCacheRenderedVersion !== canvasCacheVersion ||
       canvasCacheParams !== currentParams ||
-      !canvasCacheCanvas || canvasCacheWidth !== w * hiresCacheScale || canvasCacheHeight !== h * hiresCacheScale;
+      !canvasCacheCanvas || canvasCacheWidth !== targetW || canvasCacheHeight !== targetH;
 
     if (needsCacheUpdate) {
       // Progressive rendering: draw at 1x immediately, then upgrade to hi-res
@@ -1920,7 +1909,7 @@ async function initializeApp() {
       lctx.scale(loScale, loScale);
       lctx.translate(baseX, baseY);
       lctx.scale(baseScale, baseScale);
-      renderCanvasContent(lctx, dominoes, latticePoints, showParticles, borderWidth, rotation, true);
+      renderCanvasContent(lctx, dominoes, latticePoints, showParticles, borderWidth, rotation, !smallN);
       canvasCacheRenderedVersion = canvasCacheVersion;
       canvasCacheParams = currentParams;
 
@@ -1940,7 +1929,7 @@ async function initializeApp() {
           hctx.scale(hiresCacheScale, hiresCacheScale);
           hctx.translate(baseX, baseY);
           hctx.scale(baseScale, baseScale);
-          renderCanvasContent(hctx, dominoes, latticePoints, showParticles, borderWidth, rotation, true);
+          renderCanvasContent(hctx, dominoes, latticePoints, showParticles, borderWidth, rotation, !smallN);
           // Swap in hi-res cache
           if (canvasCacheVersion === capturedVersion) {
             canvasCacheCanvas = hiCanvas;
@@ -3462,13 +3451,22 @@ async function initializeApp() {
   // Full Res - open high-res image in new tab
   document.getElementById("fullres-btn").addEventListener("click", function(e) {
     e.preventDefault();
-    const exportCanvas = createExportCanvas();
-    if (!exportCanvas) return;
-    exportCanvas.toBlob((blob) => {
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-    }, 'image/png');
+    const btn = document.getElementById("fullres-btn");
+    const origText = btn.textContent;
+    btn.textContent = "Rendering...";
+    btn.disabled = true;
+    // Defer to let the UI update before blocking on canvas work
+    setTimeout(() => {
+      const exportCanvas = createExportCanvas();
+      if (!exportCanvas) { btn.textContent = origText; btn.disabled = false; return; }
+      exportCanvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        btn.textContent = origText;
+        btn.disabled = false;
+      }, 'image/png');
+    }, 50);
   });
 
   // Generate SVG for vector PDF export
