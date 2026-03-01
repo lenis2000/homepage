@@ -893,7 +893,7 @@ permalink: triangle/
             });
 
             edgeMaterial = new THREE.LineBasicMaterial({
-                color: 0x444466, linewidth: 1, opacity: 0.6, transparent: true
+                color: 0x000000, linewidth: 1, opacity: 0.8, transparent: true
             });
         }
 
@@ -964,6 +964,8 @@ permalink: triangle/
         }
 
         function computeHeights(dimers) {
+            if (!dimers || dimers.length === 0) return new Map();
+
             const vertexToDimers = new Map();
             for (const dimer of dimers) {
                 for (const [n, j] of getVertexKeys(dimer)) {
@@ -1281,7 +1283,7 @@ permalink: triangle/
             // Compute 2D target positions from 3D targets
             computeTargets2D();
 
-            // Pick 1/4 random cubes to fly; rest sit at targets
+            // Pick 1/4 random cubes to fly; rest are hidden (surface mesh shows triangle)
             const indices = Array.from({ length: numCubes }, (_, i) => i);
             for (let i = indices.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -1290,34 +1292,27 @@ permalink: triangle/
             const flyCount = Math.floor(numCubes / 4);
             for (let k = 0; k < flyCount; k++) cubeFlying[indices[k]] = 1;
 
+            // Only initialize flying cubes with scatter positions
             for (let i = 0; i < numCubes; i++) {
-                if (cubeFlying[i]) {
-                    // Flying cubes: random scatter, velocity, rotation
-                    cubePos2D[i * 2]     = (Math.random() - 0.5) * visW * 0.9;
-                    cubePos2D[i * 2 + 1] = (Math.random() - 0.5) * visH * 0.9;
-                    cubeDepth[i] = (Math.random() - 0.5) * depthRange;
-                    const speed = 1.5 + Math.random() * 3;
-                    const angle = Math.random() * Math.PI * 2;
-                    cubeVel2D[i * 2]     = speed * Math.cos(angle);
-                    cubeVel2D[i * 2 + 1] = speed * Math.sin(angle);
-                    cubeRotations[i * 3]     = Math.random() * Math.PI * 2;
-                    cubeRotations[i * 3 + 1] = Math.random() * Math.PI * 2;
-                    cubeRotations[i * 3 + 2] = Math.random() * Math.PI * 2;
-                    cubeAngVel[i * 3]     = (Math.random() - 0.5) * 0.8;
-                    cubeAngVel[i * 3 + 1] = (Math.random() - 0.5) * 0.8;
-                    cubeAngVel[i * 3 + 2] = (Math.random() - 0.5) * 0.8;
-                } else {
-                    // Stationary cubes: sit at target positions (form the triangle)
-                    cubePos2D[i * 2]     = cubeTargets2D[i * 2];
-                    cubePos2D[i * 2 + 1] = cubeTargets2D[i * 2 + 1];
-                    cubeDepth[i] = cubeTargetDepth[i];
-                    // Zero velocity and rotation
-                }
+                if (!cubeFlying[i]) continue;
+                cubePos2D[i * 2]     = (Math.random() - 0.5) * visW * 0.9;
+                cubePos2D[i * 2 + 1] = (Math.random() - 0.5) * visH * 0.9;
+                cubeDepth[i] = (Math.random() - 0.5) * depthRange;
+                const speed = 1.5 + Math.random() * 3;
+                const angle = Math.random() * Math.PI * 2;
+                cubeVel2D[i * 2]     = speed * Math.cos(angle);
+                cubeVel2D[i * 2 + 1] = speed * Math.sin(angle);
+                cubeRotations[i * 3]     = Math.random() * Math.PI * 2;
+                cubeRotations[i * 3 + 1] = Math.random() * Math.PI * 2;
+                cubeRotations[i * 3 + 2] = Math.random() * Math.PI * 2;
+                cubeAngVel[i * 3]     = (Math.random() - 0.5) * 0.8;
+                cubeAngVel[i * 3 + 1] = (Math.random() - 0.5) * 0.8;
+                cubeAngVel[i * 3 + 2] = (Math.random() - 0.5) * 0.8;
             }
 
             updateCubes2Dto3D();
 
-            // Create InstancedMesh — ALL cubes visible
+            // Create InstancedMesh — only flying cubes visible (scale=0 hides rest)
             const geo = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
             const mat = new THREE.MeshStandardMaterial({
                 roughness: 0.4, metalness: 0.2
@@ -1338,20 +1333,27 @@ permalink: triangle/
             if (!cubesMesh) return;
             const n = cubesMesh.count;
             for (let i = 0; i < n; i++) {
-                _dummy.scale.set(1, 1, 1);
-                _dummy.position.set(
-                    cubePositions[i * 3],
-                    cubePositions[i * 3 + 1],
-                    cubePositions[i * 3 + 2]
-                );
-                if (cubeRotations) {
-                    _dummy.rotation.set(
-                        cubeRotations[i * 3],
-                        cubeRotations[i * 3 + 1],
-                        cubeRotations[i * 3 + 2]
-                    );
-                } else {
+                if (cubeFlying && cubeFlying[i] === 0) {
+                    // Hidden — not yet spawned
+                    _dummy.scale.set(0, 0, 0);
+                    _dummy.position.set(0, 0, 0);
                     _dummy.rotation.set(0, 0, 0);
+                } else {
+                    _dummy.scale.set(1, 1, 1);
+                    _dummy.position.set(
+                        cubePositions[i * 3],
+                        cubePositions[i * 3 + 1],
+                        cubePositions[i * 3 + 2]
+                    );
+                    if (cubeRotations) {
+                        _dummy.rotation.set(
+                            cubeRotations[i * 3],
+                            cubeRotations[i * 3 + 1],
+                            cubeRotations[i * 3 + 2]
+                        );
+                    } else {
+                        _dummy.rotation.set(0, 0, 0);
+                    }
                 }
                 _dummy.updateMatrix();
                 cubesMesh.setMatrixAt(i, _dummy.matrix);
@@ -1460,32 +1462,49 @@ permalink: triangle/
             const pos = cubePos2D;
             const vel = cubeVel2D;
 
+            // Spawn hidden cubes at target positions during first 70% of assembly
+            if (progress < 0.7 && cubeFlying) {
+                const spawnFrac = progress / 0.7;
+                const targetVisible = Math.floor(n * (0.25 + 0.75 * spawnFrac));
+                let currentVisible = 0;
+                for (let i = 0; i < n; i++) if (cubeFlying[i]) currentVisible++;
+                if (currentVisible < targetVisible) {
+                    let toSpawn = targetVisible - currentVisible;
+                    for (let i = 0; i < n && toSpawn > 0; i++) {
+                        if (!cubeFlying[i]) {
+                            cubeFlying[i] = 2; // 2 = spawned at target (no spring physics needed)
+                            pos[i * 2] = cubeTargets2D[i * 2];
+                            pos[i * 2 + 1] = cubeTargets2D[i * 2 + 1];
+                            cubeDepth[i] = cubeTargetDepth[i];
+                            toSpawn--;
+                        }
+                    }
+                }
+            }
+
             // Spring strength ramps up cubically
             const p3 = progress * progress * progress;
-            const springK = 3 + p3 * 30;        // 3 → 33
-            const damping = 1 + p3 * 8;          // 1 → 9
-            const angDamp = 3 + progress * 15;   // 3 → 18 (rotations settle fast)
+            const springK = 3 + p3 * 30;
+            const damping = 1 + p3 * 8;
+            const angDamp = 3 + progress * 15;
 
-            // Apply spring force toward target (flying cubes only; stationary already at targets)
+            // Apply spring force toward target (only originally-flying cubes, value=1)
             for (let i = 0; i < n; i++) {
-                if (!cubeFlying || !cubeFlying[i]) continue;
+                if (cubeFlying[i] !== 1) continue;
                 const dxT = cubeTargets2D[i * 2] - pos[i * 2];
                 const dyT = cubeTargets2D[i * 2 + 1] - pos[i * 2 + 1];
                 vel[i * 2]     += dxT * springK * dt;
                 vel[i * 2 + 1] += dyT * springK * dt;
                 vel[i * 2]     *= Math.max(0, 1 - damping * dt);
                 vel[i * 2 + 1] *= Math.max(0, 1 - damping * dt);
-
-                // Depth converges to target
                 cubeDepth[i] += (cubeTargetDepth[i] - cubeDepth[i]) * springK * dt;
             }
 
-            // Integrate positions; damp rotations toward zero (flying cubes only)
+            // Integrate positions; damp rotations toward zero (originally-flying cubes)
             for (let i = 0; i < n; i++) {
-                if (!cubeFlying || !cubeFlying[i]) continue;
+                if (cubeFlying[i] !== 1) continue;
                 pos[i * 2]     += vel[i * 2] * dt;
                 pos[i * 2 + 1] += vel[i * 2 + 1] * dt;
-                // Damp angular velocity hard
                 const af = Math.max(0, 1 - angDamp * dt);
                 cubeAngVel[i * 3]     *= af;
                 cubeAngVel[i * 3 + 1] *= af;
@@ -1493,18 +1512,17 @@ permalink: triangle/
                 cubeRotations[i * 3]     += cubeAngVel[i * 3] * dt;
                 cubeRotations[i * 3 + 1] += cubeAngVel[i * 3 + 1] * dt;
                 cubeRotations[i * 3 + 2] += cubeAngVel[i * 3 + 2] * dt;
-                // Also pull rotations toward zero directly
                 const rotPull = Math.min(1, angDamp * 0.5 * dt);
                 cubeRotations[i * 3]     *= (1 - rotPull);
                 cubeRotations[i * 3 + 1] *= (1 - rotPull);
                 cubeRotations[i * 3 + 2] *= (1 - rotPull);
             }
 
-            // Snap rotations to zero in final 10%
+            // Snap flying cube rotations to zero in final 10%
             if (progress > 0.9) {
-                const snap = (progress - 0.9) / 0.1; // 0→1
+                const snap = (progress - 0.9) / 0.1;
                 for (let i = 0; i < n; i++) {
-                    if (!cubeFlying || !cubeFlying[i]) continue;
+                    if (cubeFlying[i] !== 1) continue;
                     cubeRotations[i * 3]     *= (1 - snap);
                     cubeRotations[i * 3 + 1] *= (1 - snap);
                     cubeRotations[i * 3 + 2] *= (1 - snap);
@@ -1519,6 +1537,11 @@ permalink: triangle/
         // STATE MACHINE
         // ========================================================================
         const HOOK_DURATION = 15000; // title card display time
+        let hookTimerId = null;
+
+        function onHookClick() {
+            if (currentState === STATES.HOOK) enterLoading();
+        }
 
         function enterHook() {
             currentState = STATES.HOOK;
@@ -1538,15 +1561,16 @@ permalink: triangle/
 
             startHookBg();
 
-            // Auto-advance after title card duration
-            setTimeout(() => {
+            // Auto-advance after title card duration (tracked so we can cancel)
+            if (hookTimerId) clearTimeout(hookTimerId);
+            hookTimerId = setTimeout(() => {
+                hookTimerId = null;
                 if (currentState === STATES.HOOK) enterLoading();
             }, HOOK_DURATION);
 
-            // Click anywhere to skip
-            hookEl.addEventListener('click', () => {
-                if (currentState === STATES.HOOK) enterLoading();
-            });
+            // Click anywhere to skip (single named handler, safe to re-add)
+            hookEl.removeEventListener('click', onHookClick);
+            hookEl.addEventListener('click', onHookClick);
         }
 
         function runCFTPAsync() {
@@ -1574,6 +1598,7 @@ permalink: triangle/
 
         async function enterLoading() {
             currentState = STATES.LOADING;
+            if (hookTimerId) { clearTimeout(hookTimerId); hookTimerId = null; }
             stopHookBg();
             document.getElementById('hook-screen').style.display = 'none';
             document.getElementById('loading').textContent = 'Loading\u2026';
@@ -1628,20 +1653,13 @@ permalink: triangle/
                         console.timeEnd('CFTP');
                         console.log('Dimer count:', sim.dimers.length);
 
-                        // Anneal to ordered state for cube assembly targets
-                        console.time('preAnneal');
-                        sim.setQBias(Q_ORDER);
-                        sim.step(100000);
-                        sim.refreshDimers();
-                        console.timeEnd('preAnneal');
-
                         // Init Three.js
                         canvas.style.display = 'block';
                         canvas.style.opacity = '1';
                         document.getElementById('vignette').style.display = 'block';
                         initThreeScene();
 
-                        // Compute targets from ORDERED state (nice 3D Penrose surface)
+                        // Compute targets from CFTP state (the chaotic config Glauber starts from)
                         cubeTargets = computeTargets(sim.dimers);
                         positionCamera(sim.dimers);
 
@@ -1678,13 +1696,8 @@ permalink: triangle/
             stateStartTime = performance.now();
             lastTimestamp = performance.now();
 
-            // No surface mesh here — the triangle is formed by stationary cubes
-            // Flying 1/4 scatter around, 3/4 sit at ordered target positions
-
-            // Audio at high entropy
+            // Just cubes flying in empty space — no triangle yet
             if (sonifier) sonifier.setEntropy(1.0);
-
-            // Start render loop
             animationId = requestAnimationFrame(renderFrame);
         }
 
@@ -1699,10 +1712,10 @@ permalink: triangle/
             currentState = STATES.TRANSFORMING;
             stateStartTime = performance.now();
 
-            // Build surface mesh from current ordered state (before scrambling)
+            // Build surface mesh from current CFTP state (cubes assembled into this)
             buildSurfaceMesh(sim.dimers, false);
 
-            // Remove cubes (replaced by surface mesh)
+            // Remove cubes (surface mesh replaces them)
             if (cubesMesh) {
                 meshGroup.remove(cubesMesh);
                 cubesMesh.geometry.dispose();
@@ -1710,13 +1723,8 @@ permalink: triangle/
                 cubesMesh = null;
             }
 
-            // Scramble to chaos
+            // Sim is already at CFTP state (chaotic) — Glauber starts directly
             sim.setQBias(Q_CHAOS);
-            sim.step(50000);
-            sim.refreshDimers();
-
-            // Update surface mesh to chaotic state
-            updateSurfaceInPlace(sim.dimers);
         }
 
         function updateTransforming(elapsed) {
@@ -1853,16 +1861,17 @@ permalink: triangle/
                 });
             });
 
-            // After TEXT_SCREEN_DURATION, return to hook
+            // After TEXT_SCREEN_DURATION, fade out then return to hook
             frozenTimers.push(setTimeout(() => {
                 textScreen.classList.remove('visible');
                 codeBlock.querySelectorAll('.line').forEach(el => {
                     el.style.opacity = '0';
                 });
-                setTimeout(() => {
+                // Track the nested fade-out timer too
+                frozenTimers.push(setTimeout(() => {
                     textScreen.style.display = 'none';
                     returnToHook();
-                }, 2000);
+                }, 2000));
             }, TEXT_SCREEN_DURATION));
         }
 
