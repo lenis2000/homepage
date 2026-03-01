@@ -8,6 +8,7 @@ coauthors:
   - name: Leonid Petrov
 comments: false
 categories: blog math preprint
+selected: true
 # journal-ref:  PMP around 2025-08-31
 # journal-web:
 # journal-year:

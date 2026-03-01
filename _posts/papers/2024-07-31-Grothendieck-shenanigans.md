@@ -12,6 +12,7 @@ coauthors:
     web: http://www.damir.xyz/
 comments: false
 categories: blog math paper
+selected: true
 journal-ref: Advances in Mathematics, 480 (2025), Part C, 110510.
 journal-web: https://www.sciencedirect.com/science/article/pii/S0001870825004086
 journal-ref-extra: FPSAC 2025 poster

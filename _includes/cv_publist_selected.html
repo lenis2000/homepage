@@ -2,26 +2,16 @@
 \renewcommand{\labelenumi}{[\theenumi]}
 {% for post in site.posts %}
 {% if post.categories contains "preprint" or post.categories contains "paper" %}
-\item{%raw%}[{[{%endraw%}{{post.cv-number}}{%raw%}]}]{%endraw%} {% if post.categories contains "preprint" %}($*$){% endif%}
+{% if post.selected %}
+\item{%raw%}[{[{%endraw%}{{post.cv-number}}{%raw%}]}]{%endraw%}
 {% for coa in post.coauthors %}{{coa.name}}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-\emph{%raw%}{{%endraw%}{{post.title}}}, {%if post.journal-ref%}{{post.journal-ref}}. {%endif%}{% if post.journal-ref-extra %}{{post.journal-ref-extra}}. {% endif %}
+\emph{%raw%}{{%endraw%}{{post.title}}}, {%if post.journal-ref%}{{post.journal-ref}}. {%endif%}{% if post.journal-ref-extra %}{{post.journal-ref-extra}}. {% endif %}{% if post.categories contains "preprint" %}arXiv preprint. {% endif %}
 {% if post.arXiv %}\href{%raw%}{{%endraw%}https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}{%raw%}}{\texttt{{%endraw%}arXiv:{{post.arXiv}}{%raw%}}}{%endraw%}.{% endif %}
 {% if post.erratum %}{% for erratum_post in site.posts %}{% if erratum_post.categories contains "erratum" and erratum_post.cv-number == post.cv-number %}[Includes correction: {{erratum_post.journal-ref}}.]{% endif %}{% endfor %}{% endif %}
 {% endif %}
-{% endfor %}
-\end{etaremune}
-
-\subsection*{Lecture Notes \& Expository Works}
-
-\begin{enumerate}
-{% for post in site.posts %}
-{% if post.categories contains "unpublished-lecture-notes" %}
-\item{%raw%}[{[{%endraw%}{{post.cv-number}}{%raw%}]}]{% endraw%}
-{{post.link-description}}. {%if post.link-for-cv%}\href{%raw%}{{%endraw%}{{post.link-for-cv}}{%raw%}}{{%endraw%}{{post.link-text}}{%raw%}}{%endraw%}{% endif %}. \href{%raw%}{{%endraw%}{{site.storage_url}}/papers/{{post.lec-pdf}}{%raw%}}{\texttt{{%endraw%}(PDF link){%raw%}}}{%endraw%}{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%}.
 {% endif %}
 {% endfor %}
-\end{enumerate}
-
+\end{etaremune}
 
 \subsection*{Other works}
 
@@ -31,5 +21,4 @@
 	Sihan Li, Andrew Mecca, Jeewoo Kim, Giusy Caprara, Elizabeth Wagner, Ting-Ting Du, Leonid Petrov, Wenhao Xu, Runjia Cui, Ivan Rebustini, Bechara Kachar, Anthony Peng, and Jung-Bum Shin,
 	\emph{Myosin-VIIa is expressed in multiple isoforms and essential for tensioning the hair cell mechanotransduction complex}.
 	Nature Communications, 11, Article number: 2066 (2020). \url{https://www.nature.com/articles/s41467-020-15936-z}. 15 pages.
-	(Contribution: developed a mathematical model for reconstructing stereocilia length measurements from electron microscopy observations.)
 \end{etaremune}

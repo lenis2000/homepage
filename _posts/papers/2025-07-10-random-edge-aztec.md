@@ -10,6 +10,7 @@ coauthors:
     noweb: true
 comments: false
 categories: blog math preprint
+selected: true
 # journal-ref: submitted to ??? (AOP? CMP second choice?)
 # journal-web:
 # journal-year:

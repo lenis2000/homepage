@@ -9,6 +9,7 @@ arXiv: 1310.8007 [math-ph]
 date: 2013-10-30 02:00:00
 comments: false
 categories: paper math blog lecture-notes
+selected: true
 published: true
 more-text: Full abstract
 show-date: true

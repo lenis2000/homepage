@@ -9,6 +9,7 @@ arXiv: 	1608.03243 [math.PR]
 date: 2016-08-10 02:00:00
 comments: false
 categories: blog math paper
+selected: true
 published: true
 more-text: Full abstract
 show-date: true
