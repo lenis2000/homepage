@@ -927,7 +927,6 @@ permalink: triangle/
             cubePositions = null; cubePos2D = null; cubeVel2D = null; cubeDepth = null;
             cubeRotations = null; cubeAngVel = null; cubeFlying = null;
             cubeTargets = null; cubeTargets2D = null; cubeTargetDepth = null;
-            lastSpawnProgress = 0;
             camRight = null; camUp = null; camForward = null;
         }
 
@@ -1455,44 +1454,11 @@ permalink: triangle/
             }
         }
 
-        let lastSpawnProgress = 0;
-
         function updateAssemblyPhysics(dt, progress) {
             if (!cubePos2D || !cubesMesh) return;
             const n = cubesMesh.count;
             const pos = cubePos2D;
             const vel = cubeVel2D;
-
-            // Spawn hidden cubes gradually during first 70% of assembly
-            if (progress < 0.7 && cubeVisible) {
-                const spawnFrac = progress / 0.7; // 0→1 over first 70%
-                // How many should be visible now (from 25% to 100%)
-                const targetVisible = Math.floor(n * (0.25 + 0.75 * spawnFrac));
-                let currentVisible = 0;
-                for (let i = 0; i < n; i++) if (cubeVisible[i]) currentVisible++;
-                // Spawn new cubes at their target positions
-                if (currentVisible < targetVisible) {
-                    let toSpawn = targetVisible - currentVisible;
-                    for (let i = 0; i < n && toSpawn > 0; i++) {
-                        if (!cubeVisible[i]) {
-                            cubeVisible[i] = 1;
-                            // Place at target position, no velocity, no rotation
-                            pos[i * 2] = cubeTargets2D[i * 2];
-                            pos[i * 2 + 1] = cubeTargets2D[i * 2 + 1];
-                            cubeDepth[i] = cubeTargetDepth[i];
-                            vel[i * 2] = 0;
-                            vel[i * 2 + 1] = 0;
-                            cubeRotations[i * 3] = 0;
-                            cubeRotations[i * 3 + 1] = 0;
-                            cubeRotations[i * 3 + 2] = 0;
-                            cubeAngVel[i * 3] = 0;
-                            cubeAngVel[i * 3 + 1] = 0;
-                            cubeAngVel[i * 3 + 2] = 0;
-                            toSpawn--;
-                        }
-                    }
-                }
-            }
 
             // Spring strength ramps up cubically
             const p3 = progress * progress * progress;
@@ -1500,9 +1466,9 @@ permalink: triangle/
             const damping = 1 + p3 * 8;          // 1 → 9
             const angDamp = 3 + progress * 15;   // 3 → 18 (rotations settle fast)
 
-            // Apply spring force toward target + damp velocities (only visible cubes)
+            // Apply spring force toward target (flying cubes only; stationary already at targets)
             for (let i = 0; i < n; i++) {
-                if (cubeVisible && !cubeVisible[i]) continue;
+                if (!cubeFlying || !cubeFlying[i]) continue;
                 const dxT = cubeTargets2D[i * 2] - pos[i * 2];
                 const dyT = cubeTargets2D[i * 2 + 1] - pos[i * 2 + 1];
                 vel[i * 2]     += dxT * springK * dt;
@@ -1514,9 +1480,9 @@ permalink: triangle/
                 cubeDepth[i] += (cubeTargetDepth[i] - cubeDepth[i]) * springK * dt;
             }
 
-            // Integrate positions; damp rotations toward zero (only visible cubes)
+            // Integrate positions; damp rotations toward zero (flying cubes only)
             for (let i = 0; i < n; i++) {
-                if (cubeVisible && !cubeVisible[i]) continue;
+                if (!cubeFlying || !cubeFlying[i]) continue;
                 pos[i * 2]     += vel[i * 2] * dt;
                 pos[i * 2 + 1] += vel[i * 2 + 1] * dt;
                 // Damp angular velocity hard
@@ -1538,13 +1504,13 @@ permalink: triangle/
             if (progress > 0.9) {
                 const snap = (progress - 0.9) / 0.1; // 0→1
                 for (let i = 0; i < n; i++) {
+                    if (!cubeFlying || !cubeFlying[i]) continue;
                     cubeRotations[i * 3]     *= (1 - snap);
                     cubeRotations[i * 3 + 1] *= (1 - snap);
                     cubeRotations[i * 3 + 2] *= (1 - snap);
                 }
             }
 
-            // No wall bounce or collisions in late assembly
             updateCubes2Dto3D();
             updateCubeMatrices();
         }
@@ -1733,7 +1699,10 @@ permalink: triangle/
             currentState = STATES.TRANSFORMING;
             stateStartTime = performance.now();
 
-            // Remove cubes
+            // Build surface mesh from current ordered state (before scrambling)
+            buildSurfaceMesh(sim.dimers, false);
+
+            // Remove cubes (replaced by surface mesh)
             if (cubesMesh) {
                 meshGroup.remove(cubesMesh);
                 cubesMesh.geometry.dispose();
@@ -1741,19 +1710,12 @@ permalink: triangle/
                 cubesMesh = null;
             }
 
-            // Remove edges during annealing (performance)
-            if (edgeLines) {
-                meshGroup.remove(edgeLines);
-                edgeLines.geometry.dispose();
-                edgeLines = null;
-            }
-
             // Scramble to chaos
             sim.setQBias(Q_CHAOS);
             sim.step(50000);
             sim.refreshDimers();
 
-            // Update existing surface mesh to chaotic state
+            // Update surface mesh to chaotic state
             updateSurfaceInPlace(sim.dimers);
         }
 
