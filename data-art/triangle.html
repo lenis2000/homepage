@@ -349,8 +349,10 @@ permalink: triangle/
         // Timing
         const FLYING_DURATION = 5000;
         const ASSEMBLY_DURATION = 6000;
+        const CFTP_REVEAL_DURATION = 2500;
         const CHAOS_DURATION = 4000;
         const ANNEAL_DURATION = 15000;
+        const CUBE_SURFACE_BLEND_DURATION = 1600;
         const Q_CHAOS = 1.0;
         const Q_ORDER = 50.0;
 
@@ -378,6 +380,7 @@ permalink: triangle/
             LOADING: 'loading',
             FLYING_CUBES: 'flying_cubes',
             ASSEMBLY: 'assembly',
+            CFTP_REVEAL: 'cftp_reveal',
             TRANSFORMING: 'transforming',
             FROZEN: 'frozen',
             TEXT_SCREEN: 'text_screen'
@@ -420,6 +423,9 @@ permalink: triangle/
         // Render loop state
         let lastTimestamp = 0;
         let stateStartTime = 0;
+        let transformBlendComplete = false;
+        let dumpedPreGlauber = false;
+        let dumpedPostGlauber = false;
 
         const canvas = document.getElementById('canvas');
 
@@ -1008,6 +1014,57 @@ permalink: triangle/
             return heights;
         }
 
+        function hashDimers(dimers) {
+            // Small stable hash to quickly compare two dumped surfaces.
+            let h = 2166136261 >>> 0;
+            for (let i = 0; i < dimers.length; i++) {
+                const d = dimers[i];
+                h ^= (d.bn | 0); h = Math.imul(h, 16777619) >>> 0;
+                h ^= (d.bj | 0); h = Math.imul(h, 16777619) >>> 0;
+                h ^= (d.t  | 0); h = Math.imul(h, 16777619) >>> 0;
+            }
+            return h.toString(16).padStart(8, '0');
+        }
+
+        function dumpSurfaceSnapshot(label) {
+            if (!sim || !Array.isArray(sim.dimers)) return null;
+
+            const dump = {
+                label,
+                capturedAt: new Date().toISOString(),
+                state: currentState,
+                dimersCount: sim.dimers.length,
+                boundariesCount: Array.isArray(sim.boundaries) ? sim.boundaries.length : 0,
+                hash: hashDimers(sim.dimers),
+                dimers: sim.dimers.map(d => ({ bn: d.bn, bj: d.bj, t: d.t })),
+                boundaries: Array.isArray(sim.boundaries)
+                    ? JSON.parse(JSON.stringify(sim.boundaries))
+                    : []
+            };
+
+            if (!window.__triangleSurfaceDumps) window.__triangleSurfaceDumps = {};
+            window.__triangleSurfaceDumps[label] = dump;
+
+            console.log(`[SURFACE_DUMP] ${label}`, {
+                capturedAt: dump.capturedAt,
+                state: dump.state,
+                dimersCount: dump.dimersCount,
+                boundariesCount: dump.boundariesCount,
+                hash: dump.hash
+            });
+
+            if (label === 'post_glauber' && window.__triangleSurfaceDumps.pre_glauber) {
+                const pre = window.__triangleSurfaceDumps.pre_glauber;
+                console.log('[SURFACE_DUMP] pre -> post', {
+                    changed: pre.hash !== dump.hash,
+                    preHash: pre.hash,
+                    postHash: dump.hash
+                });
+            }
+
+            return dump;
+        }
+
         // Cached THREE.Color objects for lozenge types
         const colorObjs3D = LOZENGE_COLORS_3D.map(c => new THREE.Color(c));
 
@@ -1282,18 +1339,11 @@ permalink: triangle/
             // Compute 2D target positions from 3D targets
             computeTargets2D();
 
-            // Pick 1/4 random cubes to fly; rest are hidden (surface mesh shows triangle)
-            const indices = Array.from({ length: numCubes }, (_, i) => i);
-            for (let i = indices.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [indices[i], indices[j]] = [indices[j], indices[i]];
-            }
-            const flyCount = numCubes; // all cubes fly (testing)
-            for (let k = 0; k < flyCount; k++) cubeFlying[indices[k]] = 1;
+            // All cubes participate in the build-up.
+            for (let i = 0; i < numCubes; i++) cubeFlying[i] = 1;
 
-            // Only initialize flying cubes with scatter positions
+            // Initialize all cubes with scattered positions.
             for (let i = 0; i < numCubes; i++) {
-                if (!cubeFlying[i]) continue;
                 cubePos2D[i * 2]     = (Math.random() - 0.5) * visW * 0.9;
                 cubePos2D[i * 2 + 1] = (Math.random() - 0.5) * visH * 0.9;
                 cubeDepth[i] = (Math.random() - 0.5) * depthRange;
@@ -1311,7 +1361,7 @@ permalink: triangle/
 
             updateCubes2Dto3D();
 
-            // Create InstancedMesh — only flying cubes visible (scale=0 hides rest)
+            // Create InstancedMesh for all cubes.
             const geo = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
             const mat = new THREE.MeshStandardMaterial({
                 roughness: 0.4, metalness: 0.2
@@ -1461,33 +1511,13 @@ permalink: triangle/
             const pos = cubePos2D;
             const vel = cubeVel2D;
 
-            // Spawn hidden cubes at target positions during first 70% of assembly
-            if (progress < 0.7 && cubeFlying) {
-                const spawnFrac = progress / 0.7;
-                const targetVisible = Math.floor(n * (0.25 + 0.75 * spawnFrac));
-                let currentVisible = 0;
-                for (let i = 0; i < n; i++) if (cubeFlying[i]) currentVisible++;
-                if (currentVisible < targetVisible) {
-                    let toSpawn = targetVisible - currentVisible;
-                    for (let i = 0; i < n && toSpawn > 0; i++) {
-                        if (!cubeFlying[i]) {
-                            cubeFlying[i] = 2; // 2 = spawned at target (no spring physics needed)
-                            pos[i * 2] = cubeTargets2D[i * 2];
-                            pos[i * 2 + 1] = cubeTargets2D[i * 2 + 1];
-                            cubeDepth[i] = cubeTargetDepth[i];
-                            toSpawn--;
-                        }
-                    }
-                }
-            }
-
             // Spring strength ramps up cubically
             const p3 = progress * progress * progress;
             const springK = 3 + p3 * 30;
             const damping = 1 + p3 * 8;
             const angDamp = 3 + progress * 15;
 
-            // Apply spring force toward target (only originally-flying cubes, value=1)
+            // Apply spring force toward targets.
             for (let i = 0; i < n; i++) {
                 if (cubeFlying[i] !== 1) continue;
                 const dxT = cubeTargets2D[i * 2] - pos[i * 2];
@@ -1499,7 +1529,7 @@ permalink: triangle/
                 cubeDepth[i] += (cubeTargetDepth[i] - cubeDepth[i]) * springK * dt;
             }
 
-            // Integrate positions; damp rotations toward zero (originally-flying cubes)
+            // Integrate positions; damp rotations toward zero.
             for (let i = 0; i < n; i++) {
                 if (cubeFlying[i] !== 1) continue;
                 pos[i * 2]     += vel[i * 2] * dt;
@@ -1526,24 +1556,6 @@ permalink: triangle/
                     cubeRotations[i * 3 + 1] *= (1 - snap);
                     cubeRotations[i * 3 + 2] *= (1 - snap);
                 }
-            }
-
-            // Crossfade: surface mesh fades in, cubes fade out (last 30%)
-            if (progress > 0.7) {
-                if (!assemblyBlendStarted) {
-                    assemblyBlendStarted = true;
-                    buildSurfaceMesh(sim.dimers, false);
-                    if (surfaceMaterial) {
-                        surfaceMaterial.transparent = true;
-                        surfaceMaterial.opacity = 0;
-                    }
-                    if (cubesMesh && cubesMesh.material) {
-                        cubesMesh.material.transparent = true;
-                    }
-                }
-                const blend = (progress - 0.7) / 0.3; // 0→1 over last 30%
-                if (surfaceMaterial) surfaceMaterial.opacity = blend;
-                if (cubesMesh && cubesMesh.material) cubesMesh.material.opacity = 1 - blend;
             }
 
             updateCubes2Dto3D();
@@ -1721,56 +1733,107 @@ permalink: triangle/
             animationId = requestAnimationFrame(renderFrame);
         }
 
-        let assemblyBlendStarted = false;
-
         function enterAssembly() {
             console.log('[STATE] → ASSEMBLY');
             currentState = STATES.ASSEMBLY;
             stateStartTime = performance.now();
-            assemblyBlendStarted = false;
             // 2D targets already computed in initFlyingCubes
-            // Spring physics pulls flying cubes to targets
-            // Surface mesh fades in during last 30% of assembly
+            // Spring physics pulls all cubes to the CFTP targets
+        }
+
+        function snapCubesToTargets() {
+            if (!cubesMesh || !cubeTargets2D || !cubeTargetDepth) return;
+            const n = cubesMesh.count;
+            for (let i = 0; i < n; i++) {
+                cubeFlying[i] = 1;
+                cubePos2D[i * 2] = cubeTargets2D[i * 2];
+                cubePos2D[i * 2 + 1] = cubeTargets2D[i * 2 + 1];
+                cubeDepth[i] = cubeTargetDepth[i];
+                cubeVel2D[i * 2] = 0;
+                cubeVel2D[i * 2 + 1] = 0;
+                cubeAngVel[i * 3] = 0;
+                cubeAngVel[i * 3 + 1] = 0;
+                cubeAngVel[i * 3 + 2] = 0;
+                cubeRotations[i * 3] = 0;
+                cubeRotations[i * 3 + 1] = 0;
+                cubeRotations[i * 3 + 2] = 0;
+            }
+            if (cubesMesh.material) {
+                cubesMesh.material.transparent = false;
+                cubesMesh.material.opacity = 1;
+                cubesMesh.material.depthWrite = true;
+            }
+            updateCubes2Dto3D();
+            updateCubeMatrices();
+        }
+
+        function enterCftpReveal() {
+            console.log('[STATE] → CFTP_REVEAL');
+            currentState = STATES.CFTP_REVEAL;
+            stateStartTime = performance.now();
+            snapCubesToTargets();
         }
 
         function enterTransforming() {
             console.log('[STATE] → TRANSFORMING');
             currentState = STATES.TRANSFORMING;
             stateStartTime = performance.now();
+            transformBlendComplete = !cubesMesh;
+            dumpedPreGlauber = false;
+            dumpedPostGlauber = false;
 
-            // Surface mesh already built and faded in during assembly crossfade
-            // Ensure it's fully opaque
+            // Build surface from current CFTP state; fade it in over cubes.
+            buildSurfaceMesh(sim.dimers, false);
             if (surfaceMaterial) {
-                surfaceMaterial.opacity = 1;
-                surfaceMaterial.transparent = false;
+                surfaceMaterial.transparent = true;
+                surfaceMaterial.opacity = transformBlendComplete ? 1 : 0;
             }
-            // If surface wasn't built yet (e.g. click-to-skip), build now
-            if (!surfaceMesh) buildSurfaceMesh(sim.dimers, false);
-
-            // Remove cubes (already faded out)
-            if (cubesMesh) {
-                meshGroup.remove(cubesMesh);
-                cubesMesh.geometry.dispose();
-                cubesMesh.material.dispose();
-                cubesMesh = null;
+            if (cubesMesh && cubesMesh.material) {
+                cubesMesh.material.transparent = true;
+                cubesMesh.material.opacity = 1;
+                cubesMesh.material.depthWrite = false;
             }
 
             // Sim is already at CFTP state (chaotic) — Glauber starts directly
+            if (!dumpedPreGlauber) {
+                dumpSurfaceSnapshot('pre_glauber');
+                dumpedPreGlauber = true;
+            }
             sim.setQBias(Q_CHAOS);
         }
 
         function updateTransforming(elapsed) {
             animPhase.time = elapsed;
+            const dynamicElapsed = Math.max(0, elapsed - CUBE_SURFACE_BLEND_DURATION);
+
+            if (!transformBlendComplete) {
+                const blend = Math.min(1, elapsed / CUBE_SURFACE_BLEND_DURATION);
+                if (surfaceMaterial) surfaceMaterial.opacity = blend;
+                if (cubesMesh && cubesMesh.material) cubesMesh.material.opacity = 1 - blend;
+                if (blend >= 1) {
+                    if (cubesMesh) {
+                        meshGroup.remove(cubesMesh);
+                        cubesMesh.geometry.dispose();
+                        cubesMesh.material.dispose();
+                        cubesMesh = null;
+                    }
+                    if (surfaceMaterial) {
+                        surfaceMaterial.opacity = 1;
+                        surfaceMaterial.transparent = false;
+                    }
+                    transformBlendComplete = true;
+                }
+            }
 
             let currentQ;
-            if (elapsed < CHAOS_DURATION) {
+            if (dynamicElapsed < CHAOS_DURATION) {
                 // Phase 1: Pure Chaos
                 currentQ = Q_CHAOS;
                 animPhase.chaosEnergy = 1.0;
                 animPhase.annealProgress = 0;
-            } else if (elapsed < CHAOS_DURATION + ANNEAL_DURATION) {
+            } else if (dynamicElapsed < CHAOS_DURATION + ANNEAL_DURATION) {
                 // Phase 2: Cubic Annealing
-                const progress = (elapsed - CHAOS_DURATION) / ANNEAL_DURATION;
+                const progress = (dynamicElapsed - CHAOS_DURATION) / ANNEAL_DURATION;
                 currentQ = Q_CHAOS + (Q_ORDER - Q_CHAOS) * Math.pow(progress, 3);
                 animPhase.chaosEnergy = Math.max(0, 1.0 - progress * progress);
                 animPhase.annealProgress = progress;
@@ -1782,8 +1845,14 @@ permalink: triangle/
                 return;
             }
 
-            sim.setQBias(currentQ);
-            sim.step(STEPS_PER_FRAME);
+            if (transformBlendComplete) {
+                sim.setQBias(currentQ);
+                sim.step(STEPS_PER_FRAME);
+                if (!dumpedPostGlauber) {
+                    dumpSurfaceSnapshot('post_glauber');
+                    dumpedPostGlauber = true;
+                }
+            }
 
             if (sonifier) sonifier.setEntropy(animPhase.chaosEnergy);
 
@@ -1986,6 +2055,12 @@ permalink: triangle/
                 case STATES.ASSEMBLY:
                     updateAssemblyPhysics(dt, Math.min(1, elapsed / ASSEMBLY_DURATION));
                     if (elapsed >= ASSEMBLY_DURATION) {
+                        enterCftpReveal();
+                    }
+                    break;
+
+                case STATES.CFTP_REVEAL:
+                    if (elapsed >= CFTP_REVEAL_DURATION) {
                         enterTransforming();
                     }
                     break;
@@ -2066,7 +2141,8 @@ permalink: triangle/
         canvas.addEventListener('click', () => {
             switch (currentState) {
                 case STATES.FLYING_CUBES: enterAssembly(); break;
-                case STATES.ASSEMBLY: enterTransforming(); break;
+                case STATES.ASSEMBLY: enterCftpReveal(); break;
+                case STATES.CFTP_REVEAL: enterTransforming(); break;
                 case STATES.TRANSFORMING: enterFrozen(); break;
                 case STATES.FROZEN: enterTextScreen(); break;
             }
