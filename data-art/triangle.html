@@ -7,14 +7,14 @@ permalink: triangle/
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Does Chaos Hide the Truth? — Leonid Petrov</title>
+    <title>Can Chaos Hide the Truth? — Leonid Petrov</title>
     <meta name="description" content="An interactive data art piece where impossible geometry emerges from probabilistic truth. MCMC-sampled lozenge tilings anneal from chaos into a Penrose triangle.">
-    <meta property="og:title" content="Does Chaos Hide the Truth?">
+    <meta property="og:title" content="Can Chaos Hide the Truth?">
     <meta property="og:description" content="Impossible geometry emerges from probabilistic truth. An interactive data art piece by Leonid Petrov.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://lpetrov.cc/triangle/">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Does Chaos Hide the Truth?">
+    <meta name="twitter:title" content="Can Chaos Hide the Truth?">
     <meta name="twitter:description" content="Impossible geometry emerges from probabilistic truth. An interactive data art piece by Leonid Petrov.">
     <style>
         @font-face {
@@ -228,7 +228,7 @@ permalink: triangle/
 <body>
     <div id="hook-screen">
         <canvas id="hook-bg"></canvas>
-        <div class="question"><span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">01</span><span style="color: rgba(255,255,255,0.5);">// </span><span style="color: rgba(255,255,255,0.85);">Does Chaos Hide the Truth?</span>
+        <div class="question"><span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">01</span><span style="color: rgba(255,255,255,0.5);">// </span><span style="color: rgba(255,255,255,0.85);">Can Chaos Hide the Truth?</span>
 <span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">02</span><span style="color: rgba(255,255,255,0.25);">//</span>
 <span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">03</span><span style="color: rgba(255,255,255,0.25);">//</span>
 <span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">04</span><span style="color: rgba(200,160,255,0.35);">const</span> <span style="color: rgba(140,190,240,0.35);">shape</span> = <span style="color: rgba(140,190,240,0.35);">penroseTriangle</span>();
@@ -246,7 +246,7 @@ permalink: triangle/
         <div class="code-block"></div>
     </div>
 
-    <div id="attribution">Leonid Petrov &middot; Does Chaos Hide the Truth? &middot; 2026</div>
+    <div id="attribution">Leonid Petrov &middot; Can Chaos Hide the Truth? &middot; 2026</div>
 
     <div id="loading">Loading...</div>
 
@@ -344,14 +344,13 @@ permalink: triangle/
         const LOZENGE_COLORS_3D = ['#EDE8E0', '#A0ADB8', '#CCC0B0'];
         const SCALE_ITERATIONS = 4;
         const STEPS_PER_FRAME = 5000;
-        const CUBE_SIZE = 1.0;
+        const CUBE_SIZE = 1.35;
 
         // Timing
         const FLYING_DURATION = 5000;
         const ASSEMBLY_DURATION = 6000;
         const CHAOS_DURATION = 4000;
         const ANNEAL_DURATION = 15000;
-
         const Q_CHAOS = 1.0;
         const Q_ORDER = 50.0;
 
@@ -1289,7 +1288,7 @@ permalink: triangle/
                 const j = Math.floor(Math.random() * (i + 1));
                 [indices[i], indices[j]] = [indices[j], indices[i]];
             }
-            const flyCount = Math.floor(numCubes / 4);
+            const flyCount = numCubes; // all cubes fly (testing)
             for (let k = 0; k < flyCount; k++) cubeFlying[indices[k]] = 1;
 
             // Only initialize flying cubes with scatter positions
@@ -1529,6 +1528,24 @@ permalink: triangle/
                 }
             }
 
+            // Crossfade: surface mesh fades in, cubes fade out (last 30%)
+            if (progress > 0.7) {
+                if (!assemblyBlendStarted) {
+                    assemblyBlendStarted = true;
+                    buildSurfaceMesh(sim.dimers, false);
+                    if (surfaceMaterial) {
+                        surfaceMaterial.transparent = true;
+                        surfaceMaterial.opacity = 0;
+                    }
+                    if (cubesMesh && cubesMesh.material) {
+                        cubesMesh.material.transparent = true;
+                    }
+                }
+                const blend = (progress - 0.7) / 0.3; // 0→1 over last 30%
+                if (surfaceMaterial) surfaceMaterial.opacity = blend;
+                if (cubesMesh && cubesMesh.material) cubesMesh.material.opacity = 1 - blend;
+            }
+
             updateCubes2Dto3D();
             updateCubeMatrices();
         }
@@ -1544,6 +1561,7 @@ permalink: triangle/
         }
 
         function enterHook() {
+            console.log('[STATE] → HOOK');
             currentState = STATES.HOOK;
             const hookEl = document.getElementById('hook-screen');
             hookEl.style.display = 'flex';
@@ -1597,6 +1615,7 @@ permalink: triangle/
         }
 
         async function enterLoading() {
+            console.log('[STATE] → LOADING');
             currentState = STATES.LOADING;
             if (hookTimerId) { clearTimeout(hookTimerId); hookTimerId = null; }
             stopHookBg();
@@ -1692,6 +1711,7 @@ permalink: triangle/
         }
 
         function enterFlyingCubes() {
+            console.log('[STATE] → FLYING_CUBES');
             currentState = STATES.FLYING_CUBES;
             stateStartTime = performance.now();
             lastTimestamp = performance.now();
@@ -1701,21 +1721,33 @@ permalink: triangle/
             animationId = requestAnimationFrame(renderFrame);
         }
 
+        let assemblyBlendStarted = false;
+
         function enterAssembly() {
+            console.log('[STATE] → ASSEMBLY');
             currentState = STATES.ASSEMBLY;
             stateStartTime = performance.now();
+            assemblyBlendStarted = false;
             // 2D targets already computed in initFlyingCubes
-            // Spring physics will pull flying cubes to their targets
+            // Spring physics pulls flying cubes to targets
+            // Surface mesh fades in during last 30% of assembly
         }
 
         function enterTransforming() {
+            console.log('[STATE] → TRANSFORMING');
             currentState = STATES.TRANSFORMING;
             stateStartTime = performance.now();
 
-            // Build surface mesh from current CFTP state (cubes assembled into this)
-            buildSurfaceMesh(sim.dimers, false);
+            // Surface mesh already built and faded in during assembly crossfade
+            // Ensure it's fully opaque
+            if (surfaceMaterial) {
+                surfaceMaterial.opacity = 1;
+                surfaceMaterial.transparent = false;
+            }
+            // If surface wasn't built yet (e.g. click-to-skip), build now
+            if (!surfaceMesh) buildSurfaceMesh(sim.dimers, false);
 
-            // Remove cubes (surface mesh replaces them)
+            // Remove cubes (already faded out)
             if (cubesMesh) {
                 meshGroup.remove(cubesMesh);
                 cubesMesh.geometry.dispose();
@@ -1762,8 +1794,21 @@ permalink: triangle/
         const TEXT_SCREEN_DURATION = 12000; // text on black
 
         function enterFrozen() {
+            console.log('[STATE] → FROZEN');
             currentState = STATES.FROZEN;
             stateStartTime = performance.now();
+
+            // If user skips ahead during blend, ensure cubes are gone.
+            if (cubesMesh) {
+                meshGroup.remove(cubesMesh);
+                cubesMesh.geometry.dispose();
+                cubesMesh.material.dispose();
+                cubesMesh = null;
+            }
+            if (surfaceMaterial) {
+                surfaceMaterial.opacity = 1;
+                surfaceMaterial.transparent = false;
+            }
 
             animPhase.chaosEnergy = 0;
             animPhase.annealProgress = 1;
@@ -1791,7 +1836,7 @@ permalink: triangle/
 
         function buildCodeLines() {
             return [
-                { type: 'comment', text: '// Does Chaos Hide the Truth?' },
+                { type: 'comment', text: '// Can Chaos Hide the Truth?' },
                 { type: 'comment', text: '//' },
                 { type: 'code', text: '<span class="keyword">const</span> shape = <span class="fn">penroseTriangle</span>();' },
                 { type: 'code', text: '<span class="keyword">const</span> surface = <span class="fn">lozenges</span>(shape);' },
@@ -1812,6 +1857,7 @@ permalink: triangle/
         }
 
         function enterTextScreen() {
+            console.log('[STATE] → TEXT_SCREEN');
             currentState = STATES.TEXT_SCREEN;
             stateStartTime = performance.now();
 
@@ -1926,6 +1972,7 @@ permalink: triangle/
         let frozenTimers = [];
 
         function returnToHook() {
+            console.log('[STATE] → RETURN_TO_HOOK');
             currentState = STATES.HOOK;
 
             if (animationId) {
