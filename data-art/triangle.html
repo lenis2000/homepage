@@ -343,15 +343,14 @@ permalink: triangle/
         // ========================================================================
         const LOZENGE_COLORS_3D = ['#EDE8E0', '#A0ADB8', '#CCC0B0'];
         const SCALE_ITERATIONS = 4;
-        const STEPS_PER_FRAME = 5000;
+        const STEPS_PER_FRAME = 2000;
         const CUBE_SIZE = 1.35;
 
         // Timing
         const FLYING_DURATION = 5000;
         const ASSEMBLY_DURATION = 6000;
-        const CFTP_REVEAL_DURATION = 2500;
-        const CHAOS_DURATION = 4000;
-        const ANNEAL_DURATION = 15000;
+        const CHAOS_DURATION = 3000;
+        const ANNEAL_DURATION = 22000;
         const CUBE_SURFACE_BLEND_DURATION = 1600;
         const Q_CHAOS = 1.0;
         const Q_ORDER = 50.0;
@@ -380,7 +379,6 @@ permalink: triangle/
             LOADING: 'loading',
             FLYING_CUBES: 'flying_cubes',
             ASSEMBLY: 'assembly',
-            CFTP_REVEAL: 'cftp_reveal',
             TRANSFORMING: 'transforming',
             FROZEN: 'frozen',
             TEXT_SCREEN: 'text_screen'
@@ -1741,39 +1739,6 @@ permalink: triangle/
             // Spring physics pulls all cubes to the CFTP targets
         }
 
-        function snapCubesToTargets() {
-            if (!cubesMesh || !cubeTargets2D || !cubeTargetDepth) return;
-            const n = cubesMesh.count;
-            for (let i = 0; i < n; i++) {
-                cubeFlying[i] = 1;
-                cubePos2D[i * 2] = cubeTargets2D[i * 2];
-                cubePos2D[i * 2 + 1] = cubeTargets2D[i * 2 + 1];
-                cubeDepth[i] = cubeTargetDepth[i];
-                cubeVel2D[i * 2] = 0;
-                cubeVel2D[i * 2 + 1] = 0;
-                cubeAngVel[i * 3] = 0;
-                cubeAngVel[i * 3 + 1] = 0;
-                cubeAngVel[i * 3 + 2] = 0;
-                cubeRotations[i * 3] = 0;
-                cubeRotations[i * 3 + 1] = 0;
-                cubeRotations[i * 3 + 2] = 0;
-            }
-            if (cubesMesh.material) {
-                cubesMesh.material.transparent = false;
-                cubesMesh.material.opacity = 1;
-                cubesMesh.material.depthWrite = true;
-            }
-            updateCubes2Dto3D();
-            updateCubeMatrices();
-        }
-
-        function enterCftpReveal() {
-            console.log('[STATE] → CFTP_REVEAL');
-            currentState = STATES.CFTP_REVEAL;
-            stateStartTime = performance.now();
-            snapCubesToTargets();
-        }
-
         function enterTransforming() {
             console.log('[STATE] → TRANSFORMING');
             currentState = STATES.TRANSFORMING;
@@ -1832,10 +1797,10 @@ permalink: triangle/
                 animPhase.chaosEnergy = 1.0;
                 animPhase.annealProgress = 0;
             } else if (dynamicElapsed < CHAOS_DURATION + ANNEAL_DURATION) {
-                // Phase 2: Cubic Annealing
+                // Phase 2: Smooth quadratic annealing
                 const progress = (dynamicElapsed - CHAOS_DURATION) / ANNEAL_DURATION;
-                currentQ = Q_CHAOS + (Q_ORDER - Q_CHAOS) * Math.pow(progress, 3);
-                animPhase.chaosEnergy = Math.max(0, 1.0 - progress * progress);
+                currentQ = Q_CHAOS + (Q_ORDER - Q_CHAOS) * progress * progress;
+                animPhase.chaosEnergy = Math.max(0, 1.0 - progress);
                 animPhase.annealProgress = progress;
             } else {
                 // Phase 3: Done
@@ -1847,7 +1812,11 @@ permalink: triangle/
 
             if (transformBlendComplete) {
                 sim.setQBias(currentQ);
-                sim.step(STEPS_PER_FRAME);
+                // Fewer steps as q increases — slow down so ordering is visible
+                // Power-1.5 scaling: drops much faster at moderate q
+                const stepsThisFrame = Math.max(100, Math.round(STEPS_PER_FRAME / Math.pow(currentQ, 1.5)));
+                sim.step(stepsThisFrame);
+                console.log(`[ANNEAL] t=${(dynamicElapsed/1000).toFixed(1)}s q=${currentQ.toFixed(3)} steps=${stepsThisFrame} progress=${animPhase.annealProgress.toFixed(3)}`);
                 if (!dumpedPostGlauber) {
                     dumpSurfaceSnapshot('post_glauber');
                     dumpedPostGlauber = true;
@@ -1859,7 +1828,7 @@ permalink: triangle/
             updateSurfaceInPlace(sim.dimers);
         }
 
-        const ROTATION_DURATION = 6000;  // ms per full 360° rotation
+        const ROTATION_DURATION = 12000; // ms per full 360° rotation
         const PAUSE_DURATION = 2000;     // ms pause between rotations
         const TEXT_SCREEN_DURATION = 12000;
 
@@ -2055,12 +2024,6 @@ permalink: triangle/
                 case STATES.ASSEMBLY:
                     updateAssemblyPhysics(dt, Math.min(1, elapsed / ASSEMBLY_DURATION));
                     if (elapsed >= ASSEMBLY_DURATION) {
-                        enterCftpReveal();
-                    }
-                    break;
-
-                case STATES.CFTP_REVEAL:
-                    if (elapsed >= CFTP_REVEAL_DURATION) {
                         enterTransforming();
                     }
                     break;
@@ -2141,8 +2104,7 @@ permalink: triangle/
         canvas.addEventListener('click', () => {
             switch (currentState) {
                 case STATES.FLYING_CUBES: enterAssembly(); break;
-                case STATES.ASSEMBLY: enterCftpReveal(); break;
-                case STATES.CFTP_REVEAL: enterTransforming(); break;
+                case STATES.ASSEMBLY: enterTransforming(); break;
                 case STATES.TRANSFORMING: enterFrozen(); break;
                 case STATES.FROZEN: enterTextScreen(); break;
             }
