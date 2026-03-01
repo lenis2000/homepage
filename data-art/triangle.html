@@ -118,8 +118,8 @@ permalink: triangle/
             left: 0; right: 0;
             text-align: center;
             color: rgba(255, 255, 255, 0.85);
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
             font-size: clamp(0.85rem, 1.8vw, 1.15rem);
-            font-style: italic;
             font-weight: 300;
             letter-spacing: 0.18em;
             opacity: 0;
@@ -1790,15 +1790,20 @@ permalink: triangle/
             updateSurfaceInPlace(sim.dimers);
         }
 
-        const FROZEN_DURATION = 12000;   // auto-rotate reveal
-        const TEXT_SCREEN_DURATION = 12000; // text on black
+        const ROTATION_DURATION = 6000;  // ms per full 360° rotation
+        const PAUSE_DURATION = 2000;     // ms pause between rotations
+        const TEXT_SCREEN_DURATION = 12000;
+
+        // Frozen phase: rotate → pause → rotate → text screen
+        let frozenRotationAngle = 0;
 
         function enterFrozen() {
             console.log('[STATE] → FROZEN');
             currentState = STATES.FROZEN;
             stateStartTime = performance.now();
+            frozenRotationAngle = 0;
 
-            // If user skips ahead during blend, ensure cubes are gone.
+            // Ensure cubes gone, surface fully opaque
             if (cubesMesh) {
                 meshGroup.remove(cubesMesh);
                 cubesMesh.geometry.dispose();
@@ -1823,15 +1828,55 @@ permalink: triangle/
 
             if (sonifier) sonifier.fadeOut(4000);
 
-            // Auto-rotate to reveal the helical gap (impossible surface)
-            controls.autoRotate = true;
-            controls.autoRotateSpeed = 2.5;
+            // Disable OrbitControls auto-rotate — we drive rotation manually
+            controls.autoRotate = false;
 
             frozenTimers = [];
             frozenTimers.push(setTimeout(() => {
                 document.getElementById('caption').classList.add('visible');
                 document.getElementById('attribution').classList.add('visible');
             }, 500));
+        }
+
+        function updateFrozen(elapsed) {
+            const totalDuration = ROTATION_DURATION + PAUSE_DURATION + ROTATION_DURATION;
+
+            if (elapsed < ROTATION_DURATION) {
+                // First full rotation
+                const t = elapsed / ROTATION_DURATION;
+                const angle = t * Math.PI * 2;
+                setFrozenRotation(angle);
+            } else if (elapsed < ROTATION_DURATION + PAUSE_DURATION) {
+                // Pause — hold at 360° (= 0°)
+                setFrozenRotation(0);
+            } else if (elapsed < totalDuration) {
+                // Second full rotation
+                const t = (elapsed - ROTATION_DURATION - PAUSE_DURATION) / ROTATION_DURATION;
+                const angle = t * Math.PI * 2;
+                setFrozenRotation(angle);
+            } else {
+                // Done — go to text screen
+                setFrozenRotation(0);
+                enterTextScreen();
+            }
+        }
+
+        function setFrozenRotation(angle) {
+            // Rotate camera around the target (orbit in the horizontal plane)
+            if (!camera || !controls) return;
+            const dist = camera.position.distanceTo(controls.target);
+            const baseDir = new THREE.Vector3(1, -1, -1).normalize(); // isometric direction
+            // Rotate baseDir around Z axis by angle
+            const cosA = Math.cos(angle), sinA = Math.sin(angle);
+            const rx = baseDir.x * cosA - baseDir.y * sinA;
+            const ry = baseDir.x * sinA + baseDir.y * cosA;
+            const rz = baseDir.z;
+            camera.position.set(
+                controls.target.x + rx * dist,
+                controls.target.y + ry * dist,
+                controls.target.z + rz * dist
+            );
+            camera.lookAt(controls.target);
         }
 
         function buildCodeLines() {
@@ -1950,8 +1995,7 @@ permalink: triangle/
                     break;
 
                 case STATES.FROZEN:
-                    // Auto-rotate reveal, then transition to text screen
-                    if (elapsed >= FROZEN_DURATION) enterTextScreen();
+                    updateFrozen(elapsed);
                     break;
             }
 
