@@ -1772,7 +1772,8 @@ async function initializeApp() {
   }
 
   // Render tiling content to a target canvas context (used by both cache and export)
-  function renderCanvasContent(tctx, dominoes, latticePoints, showParticles, borderWidth, rotation) {
+  // seamPad: expand fills to cover anti-aliasing seams (use for cache/export, skip for direct render)
+  function renderCanvasContent(tctx, dominoes, latticePoints, showParticles, borderWidth, rotation, seamPad) {
     // Batch dominoes by color: group rects, fill once per color
     const colorGroups = {};
     for (let i = 0; i < dominoes.length; i++) {
@@ -1786,9 +1787,9 @@ async function initializeApp() {
     }
 
     // Draw all dominoes — fillRect per domino (faster than building giant paths)
-    // Expand by 1 domain unit to eliminate anti-aliasing seams (especially at hi-res downscale)
+    // Expand by pad to eliminate anti-aliasing seams (needed for hi-res downscale, not for direct render)
     tctx.imageSmoothingEnabled = false;
-    const pad = 1;
+    const pad = seamPad ? 1 : 0;
     for (const color in colorGroups) {
       const group = colorGroups[color];
       tctx.fillStyle = color;
@@ -1880,6 +1881,21 @@ async function initializeApp() {
     const baseX = (w - widthPts * baseScale) / 2 - (minX - 20) * baseScale;
     const baseY = (h - heightPts * baseScale) / 2 - (minY - 20) * baseScale;
 
+    // For small n, render directly to canvas — no cache/rescale needed
+    if (currentN <= 50) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#fafafa";
+      ctx.fillRect(0, 0, w, h);
+      ctx.save();
+      ctx.translate(canvasTransform.x, canvasTransform.y);
+      ctx.scale(canvasTransform.scale, canvasTransform.scale);
+      ctx.translate(baseX, baseY);
+      ctx.scale(baseScale, baseScale);
+      renderCanvasContent(ctx, dominoes, latticePoints, showParticles, borderWidth, rotation, false);
+      ctx.restore();
+      return;
+    }
+
     // Check if we need to re-render the cache (data change, style change, or resize)
     const hiresMultiplier = 3;
     const hiresCacheScale = dpr * hiresMultiplier;
@@ -1904,7 +1920,7 @@ async function initializeApp() {
       lctx.scale(loScale, loScale);
       lctx.translate(baseX, baseY);
       lctx.scale(baseScale, baseScale);
-      renderCanvasContent(lctx, dominoes, latticePoints, showParticles, borderWidth, rotation);
+      renderCanvasContent(lctx, dominoes, latticePoints, showParticles, borderWidth, rotation, true);
       canvasCacheRenderedVersion = canvasCacheVersion;
       canvasCacheParams = currentParams;
 
@@ -1924,7 +1940,7 @@ async function initializeApp() {
           hctx.scale(hiresCacheScale, hiresCacheScale);
           hctx.translate(baseX, baseY);
           hctx.scale(baseScale, baseScale);
-          renderCanvasContent(hctx, dominoes, latticePoints, showParticles, borderWidth, rotation);
+          renderCanvasContent(hctx, dominoes, latticePoints, showParticles, borderWidth, rotation, true);
           // Swap in hi-res cache
           if (canvasCacheVersion === capturedVersion) {
             canvasCacheCanvas = hiCanvas;
