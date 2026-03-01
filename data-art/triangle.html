@@ -17,6 +17,20 @@ permalink: triangle/
     <meta name="twitter:title" content="Does Chaos Hide the Truth?">
     <meta name="twitter:description" content="Impossible geometry emerges from probabilistic truth. An interactive data art piece by Leonid Petrov.">
     <style>
+        @font-face {
+            font-family: 'JetBrains Mono';
+            src: url('/fonts/JetBrainsMono-Light.woff2') format('woff2');
+            font-weight: 300;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'JetBrains Mono';
+            src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
             width: 100%; height: 100%;
@@ -46,12 +60,14 @@ permalink: triangle/
         }
 
         #hook-screen .question {
-            color: #fff;
-            font-size: clamp(2rem, 5vw, 4rem);
-            font-style: italic;
+            color: rgba(255, 255, 255, 0.6);
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            font-size: clamp(1.1rem, 2.2vw, 1.8rem);
             font-weight: 300;
-            letter-spacing: 0.12em;
-            text-align: center;
+            letter-spacing: 0.02em;
+            line-height: 2;
+            text-align: left;
+            white-space: pre;
             padding: 0 2rem;
             opacity: 0;
             animation: fadeIn 2.5s ease-out forwards;
@@ -64,13 +80,12 @@ permalink: triangle/
             pointer-events: none;
         }
 
-        #hook-screen .hint {
-            color: rgba(255, 255, 255, 0.35);
-            font-size: clamp(0.7rem, 1.5vw, 0.85rem);
-            font-family: 'Helvetica Neue', 'Arial', sans-serif;
+#hook-screen .hint {
+            color: rgba(255, 255, 255, 0.45);
+            font-size: clamp(0.65rem, 1.2vw, 0.8rem);
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
             font-weight: 300;
-            letter-spacing: 0.35em;
-            text-transform: uppercase;
+            letter-spacing: 0.15em;
             margin-top: 4rem;
             opacity: 0;
             animation: fadeIn 1s ease-out 2s forwards, pulse 3s ease-in-out 3s infinite;
@@ -83,6 +98,17 @@ permalink: triangle/
         @keyframes pulse {
             0%, 100% { opacity: 0.4; }
             50% { opacity: 0.7; }
+        }
+
+        /* Vignette overlay (replaces 2D canvas vignette) */
+        #vignette {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%);
+            z-index: 2;
+            display: none;
         }
 
         /* Caption */
@@ -106,68 +132,65 @@ permalink: triangle/
             opacity: 1;
         }
 
-        /* Entropy slider - gallery control */
-        #controls {
+        /* Text screen — code-styled */
+        #text-screen {
             position: absolute;
-            bottom: 4vh;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            flex-direction: row;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: none;
+            justify-content: center;
             align-items: center;
-            gap: 1rem;
+            background: #000;
+            z-index: 10;
             opacity: 0;
-            transition: opacity 1.5s ease-in;
-            z-index: 5;
+            transition: opacity 2s ease-in;
         }
 
-        #controls.visible {
+        #text-screen.visible {
             opacity: 1;
         }
 
-        #controls .slider-label {
-            color: rgba(255, 255, 255, 0.3);
-            font-size: 0.55rem;
-            font-family: 'Helvetica Neue', 'Arial', sans-serif;
-            text-transform: uppercase;
-            letter-spacing: 0.25em;
+        #text-screen .code-block {
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: clamp(0.7rem, 1.4vw, 1rem);
             font-weight: 300;
-            white-space: nowrap;
+            line-height: 1.85;
+            color: rgba(255, 255, 255, 0.6);
+            white-space: pre;
+            padding: 2vh 3vw;
         }
 
-        #entropy {
-            width: 200px;
-            height: 1px;
-            -webkit-appearance: none;
-            appearance: none;
-            background: rgba(255, 255, 255, 0.2);
-            outline: none;
-            cursor: pointer;
+        #text-screen .line {
+            display: block;
         }
 
-        #entropy::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 8px;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.6);
-            border-radius: 50%;
-            cursor: pointer;
-            transition: transform 0.3s ease, background 0.3s ease;
+        #text-screen .line-num {
+            display: inline-block;
+            width: 3ch;
+            text-align: right;
+            margin-right: 2ch;
+            color: rgba(255, 255, 255, 0.15);
+            user-select: none;
         }
 
-        #entropy::-webkit-slider-thumb:hover {
-            transform: scale(1.4);
-            background: rgba(255, 255, 255, 0.9);
+        #text-screen .comment {
+            color: rgba(255, 255, 255, 0.35);
         }
 
-        #entropy::-moz-range-thumb {
-            width: 8px;
-            height: 8px;
-            background: rgba(255, 255, 255, 0.6);
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
+        #text-screen .keyword {
+            color: rgba(200, 160, 255, 0.7);
+        }
+
+        #text-screen .string {
+            color: rgba(160, 220, 160, 0.7);
+        }
+
+        #text-screen .number {
+            color: rgba(200, 180, 140, 0.7);
+        }
+
+        #text-screen .fn {
+            color: rgba(140, 190, 240, 0.7);
         }
 
         /* Gallery attribution */
@@ -205,24 +228,30 @@ permalink: triangle/
 <body>
     <div id="hook-screen">
         <canvas id="hook-bg"></canvas>
-        <p class="question">"Does Chaos Hide the Truth?"</p>
-        <p class="hint">Enter</p>
+        <div class="question"><span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">01</span><span style="color: rgba(255,255,255,0.5);">// </span><span style="color: rgba(255,255,255,0.85);">Does Chaos Hide the Truth?</span>
+<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">02</span><span style="color: rgba(255,255,255,0.25);">//</span>
+<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">03</span><span style="color: rgba(255,255,255,0.25);">//</span>
+<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">04</span><span style="color: rgba(200,160,255,0.35);">const</span> <span style="color: rgba(140,190,240,0.35);">shape</span> = <span style="color: rgba(140,190,240,0.35);">penroseTriangle</span>();
+<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">05</span><span style="color: rgba(200,160,255,0.35);">const</span> <span style="color: rgba(140,190,240,0.35);">tiling</span> = <span style="color: rgba(140,190,240,0.35);">CFTP</span>.<span style="color: rgba(140,190,240,0.35);">sample</span>(shape);
+<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">06</span><span style="color: rgba(140,190,240,0.35);">anneal</span>(tiling, { <span style="color: rgba(140,190,240,0.35);">γ</span>: <span style="color: rgba(200,180,140,0.35);">0</span> → <span style="color: rgba(200,180,140,0.35);">∞</span> });</div>
+        <p class="hint">Leonid Petrov · lpetrov.cc</p>
     </div>
 
     <canvas id="canvas"></canvas>
+    <div id="vignette"></div>
 
     <div id="caption">Local Truth, Global Paradox</div>
 
-    <div id="controls">
-        <span class="slider-label">Order</span>
-        <input type="range" id="entropy" min="0" max="100" value="0" aria-label="Entropy: Order to Chaos">
-        <span class="slider-label">Chaos</span>
+    <div id="text-screen">
+        <div class="code-block"></div>
     </div>
 
     <div id="attribution">Leonid Petrov &middot; Does Chaos Hide the Truth? &middot; 2026</div>
 
     <div id="loading">Loading...</div>
 
+    <script src="/js/three.min.js"></script>
+    <script src="/js/OrbitControls.js"></script>
     <script src="/js/2025-11-28-ultimate-lozenge.js"></script>
     <script>
     (function() {
@@ -244,8 +273,7 @@ permalink: triangle/
             hookCtx.scale(dpr, dpr);
         }
 
-        // Generate a set of slowly drifting lozenge particles
-        const NUM_PARTICLES = 24;
+        const NUM_PARTICLES = 60;
         const particles = [];
         function seedParticles() {
             particles.length = 0;
@@ -255,17 +283,17 @@ permalink: triangle/
                 particles.push({
                     x: Math.random() * w,
                     y: Math.random() * h,
-                    size: 8 + Math.random() * 20,
+                    size: 8 + Math.random() * 25,
                     rotation: Math.random() * Math.PI * 2,
-                    drift: 0.08 + Math.random() * 0.15,
+                    drift: 0.06 + Math.random() * 0.14,
                     rotSpeed: (Math.random() - 0.5) * 0.003,
-                    alpha: 0.02 + Math.random() * 0.04
+                    alpha: 0.04 + Math.random() * 0.08
                 });
             }
         }
 
         function drawLozenge(cx, cy, size, rotation, alpha) {
-            const aspect = 0.58; // lozenge aspect ratio
+            const aspect = 0.58;
             hookCtx.save();
             hookCtx.translate(cx, cy);
             hookCtx.rotate(rotation);
@@ -288,7 +316,6 @@ permalink: triangle/
             for (const p of particles) {
                 p.y -= p.drift;
                 p.rotation += p.rotSpeed;
-                // Wrap around
                 if (p.y < -p.size * 2) {
                     p.y = h + p.size * 2;
                     p.x = Math.random() * w;
@@ -314,21 +341,19 @@ permalink: triangle/
         // ========================================================================
         // CONFIGURATION
         // ========================================================================
-        // Sophisticated palette — warm light, cool shadow for 3D depth
-        const LOZENGE_PALETTE = [
-            { light: '#EDE8E0', dark: '#E0DBD3' },  // Type 0 (top): warm cream
-            { light: '#A0ADB8', dark: '#8A97A2' },  // Type 1 (right): cool blue-gray
-            { light: '#CCC0B0', dark: '#B8AC9C' }   // Type 2 (left): warm taupe
-        ];
-        const SCALE_ITERATIONS = 4; // 12 * 4^4 = 3072 triangles
+        const LOZENGE_COLORS_3D = ['#EDE8E0', '#A0ADB8', '#CCC0B0'];
+        const SCALE_ITERATIONS = 4;
         const STEPS_PER_FRAME = 5000;
+        const CUBE_SIZE = 1.0;
 
-        // Narrative Timeline
-        const CHAOS_DURATION = 4000;    // Stay chaotic for 4s
-        const ANNEAL_DURATION = 15000;  // Slowly freeze for 15s
+        // Timing
+        const FLYING_DURATION = 5000;
+        const ASSEMBLY_DURATION = 6000;
+        const CHAOS_DURATION = 4000;
+        const ANNEAL_DURATION = 15000;
 
-        const Q_CHAOS = 1.0;    // Maximum entropy
-        const Q_ORDER = 50.0;   // Maximum order
+        const Q_CHAOS = 1.0;
+        const Q_ORDER = 50.0;
 
         // Base Penrose triangle shape (12 triangles) - creates hole with winding
         const BASE_SHAPE = [
@@ -352,9 +377,11 @@ permalink: triangle/
         const STATES = {
             HOOK: 'hook',
             LOADING: 'loading',
+            FLYING_CUBES: 'flying_cubes',
+            ASSEMBLY: 'assembly',
             TRANSFORMING: 'transforming',
             FROZEN: 'frozen',
-            INTERACTIVE: 'interactive'
+            TEXT_SCREEN: 'text_screen'
         };
 
         let currentState = STATES.HOOK;
@@ -363,18 +390,39 @@ permalink: triangle/
         let animationId = null;
         let sonifier = null;
 
-        // Animation phase state — drives visual effects during chaos→order
         let animPhase = {
-            chaosEnergy: 0,   // 0–1: how much warm color vibration to apply
-            annealProgress: 0, // 0–1: how far through annealing (0=chaos, 1=frozen)
-            time: 0            // raw timestamp for oscillation effects
+            chaosEnergy: 0,
+            annealProgress: 0,
+            time: 0
         };
 
-        // Rendering
+        // Three.js state
+        let scene = null, renderer = null, camera = null, controls = null, meshGroup = null;
+        let surfaceMesh = null, surfaceGeo = null, edgeLines = null;
+        let surfaceMaterial = null, edgeMaterial = null;
+        const frustumSize = 30;
+
+        // Flying cubes state
+        let cubesMesh = null;
+        let cubePositions = null;  // Float32Array(n*3) — 3D world positions
+        let cubePos2D = null;      // Float32Array(n*2) — 2D in camera view plane
+        let cubeVel2D = null;      // Float32Array(n*2) — 2D velocities
+        let cubeDepth = null;      // Float32Array(n) — slight depth offsets
+        let cubeRotations = null;  // Float32Array(n*3) — Euler angles (x,y,z)
+        let cubeAngVel = null;     // Float32Array(n*3) — angular velocities
+        let cubeFlying = null;     // Uint8Array(n) — 1=flying (physics), 0=stationary (at target)
+        let cubeTargets = null;    // Float32Array(n*3) — 3D target positions
+        let cubeTargets2D = null;  // Float32Array(n*2) — target positions in view plane
+        let cubeTargetDepth = null;// Float32Array(n) — target depth offsets
+        // Camera basis vectors (set by initFlyingCubes)
+        let camRight = null, camUp = null, camForward = null;
+        let cubeHalfW = 0, cubeHalfH = 0;
+
+        // Render loop state
+        let lastTimestamp = 0;
+        let stateStartTime = 0;
+
         const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        let displayWidth, displayHeight;
-        let zoom = 1, panX = 0, panY = 0;
 
         // Triangular lattice constants
         const slope = 1 / Math.sqrt(3);
@@ -392,13 +440,11 @@ permalink: triangle/
 
         function getTriangleCentroid(n, j, type) {
             if (type === 1) {
-                // Black (right-facing): (n,j), (n,j-1), (n+1,j-1)
                 const v0 = getVertex(n, j);
                 const v1 = getVertex(n, j - 1);
                 const v2 = getVertex(n + 1, j - 1);
                 return { x: (v0.x + v1.x + v2.x) / 3, y: (v0.y + v1.y + v2.y) / 3 };
             } else {
-                // White (left-facing): (n,j), (n+1,j), (n+1,j-1)
                 const v0 = getVertex(n, j);
                 const v1 = getVertex(n + 1, j);
                 const v2 = getVertex(n + 1, j - 1);
@@ -436,11 +482,9 @@ permalink: triangle/
             return { n, j };
         }
 
-        // Scale mesh using WASM-computed boundaries (from sim.boundaries)
         function doubleMeshWithBoundaries(triangles, boundaries) {
             if (triangles.size === 0 || !boundaries || boundaries.length === 0) return triangles;
 
-            // Find outer boundary (largest area)
             let outerIdx = 0;
             let maxDiag = -1;
             const latticeBoundaries = boundaries.map(b => b.map(v => worldToLattice(v.x, v.y)));
@@ -455,14 +499,12 @@ permalink: triangle/
                 if (diag > maxDiag) { maxDiag = diag; outerIdx = i; }
             });
 
-            // Anchor at centroid
             const outerLattice = latticeBoundaries[outerIdx];
             let cenN = 0, cenJ = 0;
             for (const v of outerLattice) { cenN += v.n; cenJ += v.j; }
             const anchorN = Math.round(cenN / outerLattice.length);
             const anchorJ = Math.round(cenJ / outerLattice.length);
 
-            // Scale all boundaries
             const scaledBoundaries = latticeBoundaries.map(b => {
                 return b.map(v => {
                     const newN = anchorN + (v.n - anchorN) * 2;
@@ -474,14 +516,12 @@ permalink: triangle/
             const scaledOuter = scaledBoundaries[outerIdx];
             const scaledHoles = scaledBoundaries.filter((_, i) => i !== outerIdx);
 
-            // Bounding box
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
             for (const v of scaledOuter) {
                 minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
                 minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
             }
 
-            // Rasterize
             const newTriangles = new Map();
             const searchMinN = Math.floor(minX) - 2;
             const searchMaxN = Math.ceil(maxX) + 2;
@@ -491,7 +531,6 @@ permalink: triangle/
 
             for (let n = searchMinN; n <= searchMaxN; n++) {
                 for (let j = searchMinJ; j <= searchMaxJ; j++) {
-                    // Check type 1 (black)
                     const c1 = getTriangleCentroid(n, j, 1);
                     if (pointInPolygon(c1.x, c1.y, scaledOuter)) {
                         let inHole = false;
@@ -500,7 +539,6 @@ permalink: triangle/
                         }
                         if (!inHole) newTriangles.set(`${n},${j},1`, { n, j, type: 1 });
                     }
-                    // Check type 2 (white)
                     const c2 = getTriangleCentroid(n, j, 2);
                     if (pointInPolygon(c2.x, c2.y, scaledOuter)) {
                         let inHole = false;
@@ -515,19 +553,19 @@ permalink: triangle/
             return newTriangles;
         }
 
-        // Iteratively scale using WASM boundaries
         async function generateScaledShape(simInterface) {
             let triangles = trianglesToMap(BASE_SHAPE);
 
             for (let i = 0; i < SCALE_ITERATIONS; i++) {
-                // Init WASM to get boundaries
+                console.time(`scaleIter-${i}`);
                 simInterface.initFromTriangles(triangles);
                 if (!simInterface.isValid || !simInterface.boundaries || simInterface.boundaries.length === 0) {
                     console.error('Invalid shape at iteration', i);
                     break;
                 }
-                // Scale using WASM boundaries
                 triangles = doubleMeshWithBoundaries(triangles, simInterface.boundaries);
+                console.timeEnd(`scaleIter-${i}`);
+                console.log(`  iter ${i}: ${triangles.size} triangles`);
             }
 
             return triangles;
@@ -554,7 +592,6 @@ permalink: triangle/
                 this.masterGain.connect(this.audioCtx.destination);
                 this.masterGain.gain.value = 0.25;
 
-                // Sustained drone: two detuned sine oscillators for warmth
                 const t = this.audioCtx.currentTime;
 
                 this.droneGain = this.audioCtx.createGain();
@@ -565,16 +602,14 @@ permalink: triangle/
                 this.droneFilter.frequency.value = 800;
                 this.droneFilter.Q.value = 1;
 
-                // Oscillator 1: fundamental
                 const osc1 = this.audioCtx.createOscillator();
                 osc1.type = 'sine';
-                osc1.frequency.value = 110; // A2
+                osc1.frequency.value = 110;
                 const g1 = this.audioCtx.createGain();
                 g1.gain.value = 0.5;
                 osc1.connect(g1);
                 g1.connect(this.droneGain);
 
-                // Oscillator 2: detuned +3 cents for subtle beating
                 const osc2 = this.audioCtx.createOscillator();
                 osc2.type = 'sine';
                 osc2.frequency.value = 110;
@@ -584,7 +619,6 @@ permalink: triangle/
                 osc2.connect(g2);
                 g2.connect(this.droneGain);
 
-                // Oscillator 3: octave above, very quiet shimmer
                 const osc3 = this.audioCtx.createOscillator();
                 osc3.type = 'sine';
                 osc3.frequency.value = 220;
@@ -601,33 +635,26 @@ permalink: triangle/
                 osc3.start(t);
 
                 this.drone = [osc1, osc2, osc3];
-
-                // Fade in over 1s
                 this.droneGain.gain.setTargetAtTime(1, t, 0.3);
             }
 
-            // Update drone based on current entropy (0 = ordered, 1 = chaotic)
             setEntropy(entropy) {
                 if (!this.audioCtx || !this.drone) return;
                 const t = this.audioCtx.currentTime;
 
-                // Pitch: chaos = higher (A2 → D3), order = lower (A2)
                 const baseFreq = 110;
-                const chaosFreq = 147; // D3
+                const chaosFreq = 147;
                 const freq = baseFreq + (chaosFreq - baseFreq) * entropy;
 
                 this.drone[0].frequency.setTargetAtTime(freq, t, 0.15);
                 this.drone[1].frequency.setTargetAtTime(freq, t, 0.15);
                 this.drone[2].frequency.setTargetAtTime(freq * 2, t, 0.15);
 
-                // Detune increases with chaos for more unsettled sound
                 this.drone[1].detune.setTargetAtTime(3 + entropy * 12, t, 0.15);
 
-                // Filter opens with chaos, closes with order
                 const filterFreq = 400 + entropy * 1200;
                 this.droneFilter.frequency.setTargetAtTime(filterFreq, t, 0.1);
 
-                // Volume: slightly louder during chaos
                 const vol = 0.6 + entropy * 0.4;
                 this.droneGain.gain.setTargetAtTime(vol, t, 0.1);
             }
@@ -636,19 +663,15 @@ permalink: triangle/
                 if (!this.masterGain || !this.audioCtx) return;
                 const t = this.audioCtx.currentTime;
                 this.masterGain.gain.setTargetAtTime(0, t, duration / 3000);
-                // Stop oscillators after fade completes
                 if (this.drone) {
                     for (const osc of this.drone) {
                         osc.stop(t + duration / 1000 + 1);
                     }
-                    // Keep this.drone reference so restartDrone() can stop them immediately
                 }
             }
 
-            // Re-create oscillators after fadeOut (stopped oscillators can't restart)
             restartDrone() {
                 if (!this.audioCtx || !this.droneGain) return;
-                // Stop any existing oscillators
                 if (this.drone) {
                     for (const osc of this.drone) {
                         try { osc.stop(); } catch(e) {}
@@ -705,6 +728,9 @@ permalink: triangle/
                 this.getAllHolesInfoWasm = Module.cwrap('getAllHolesInfo', 'number', []);
                 this.adjustHoleWindingWasm = Module.cwrap('adjustHoleWindingExport', 'number', ['number', 'number']);
                 this.freeStringWasm = Module.cwrap('freeString', null, ['number']);
+                this.initCFTPWasm = Module.cwrap('initCFTP', 'number', []);
+                this.stepCFTPWasm = Module.cwrap('stepCFTP', 'number', []);
+                this.finalizeCFTPWasm = Module.cwrap('finalizeCFTP', 'number', []);
 
                 this.dimers = [];
                 this.boundaries = [];
@@ -785,279 +811,799 @@ permalink: triangle/
                 this.freeStringWasm(ptr);
                 return JSON.parse(jsonStr);
             }
-        }
 
-        // ========================================================================
-        // RENDERING
-        // ========================================================================
-        function resizeCanvas() {
-            const dpr = window.devicePixelRatio || 1;
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
-            ctx.scale(dpr, dpr);
-            displayWidth = rect.width;
-            displayHeight = rect.height;
-        }
-
-        function getTransform() {
-            const baseViewSize = 20;
-            const baseScale = Math.min(displayWidth, displayHeight) / baseViewSize;
-            const scale = baseScale * zoom;
-            const centerX = displayWidth / 2 - panX * scale;
-            const centerY = displayHeight / 2 + panY * scale;
-            return { centerX, centerY, scale };
-        }
-
-        function toCanvas(x, y, centerX, centerY, scale) {
-            return [centerX + x * scale, centerY - y * scale];
-        }
-
-        function fitToRegion() {
-            if (activeTriangles.size === 0) return;
-
-            let minX = Infinity, maxX = -Infinity;
-            let minY = Infinity, maxY = -Infinity;
-
-            for (const [key, tri] of activeTriangles) {
-                let verts;
-                if (tri.type === 1) {
-                    verts = [getVertex(tri.n, tri.j), getVertex(tri.n, tri.j - 1), getVertex(tri.n + 1, tri.j - 1)];
-                } else {
-                    verts = [getVertex(tri.n, tri.j), getVertex(tri.n + 1, tri.j), getVertex(tri.n + 1, tri.j - 1)];
-                }
-                for (const v of verts) {
-                    minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
-                    minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
-                }
+            initCFTP() {
+                const ptr = this.initCFTPWasm();
+                const jsonStr = Module.UTF8ToString(ptr);
+                this.freeStringWasm(ptr);
+                return JSON.parse(jsonStr);
             }
 
-            const padding = 2;
-            minX -= padding; maxX += padding;
-            minY -= padding; maxY += padding;
+            stepCFTP() {
+                const ptr = this.stepCFTPWasm();
+                const jsonStr = Module.UTF8ToString(ptr);
+                this.freeStringWasm(ptr);
+                return JSON.parse(jsonStr);
+            }
 
-            const centerWorldX = (minX + maxX) / 2;
-            const centerWorldY = (minY + maxY) / 2;
-            const rangeX = maxX - minX;
-            const rangeY = maxY - minY;
-
-            const baseViewSize = 20;
-            const neededZoomX = displayWidth / rangeX / (Math.min(displayWidth, displayHeight) / baseViewSize);
-            const neededZoomY = displayHeight / rangeY / (Math.min(displayWidth, displayHeight) / baseViewSize);
-            zoom = Math.min(neededZoomX, neededZoomY);
-            panX = centerWorldX;
-            panY = centerWorldY;
-        }
-
-        function getLozengeVertices(dimer) {
-            const { bn, bj, t } = dimer;
-            if (t === 0) {
-                return [getVertex(bn, bj), getVertex(bn + 1, bj), getVertex(bn + 1, bj - 1), getVertex(bn, bj - 1)];
-            } else if (t === 1) {
-                return [getVertex(bn, bj), getVertex(bn + 1, bj - 1), getVertex(bn + 1, bj - 2), getVertex(bn, bj - 1)];
-            } else {
-                return [getVertex(bn - 1, bj), getVertex(bn, bj), getVertex(bn + 1, bj - 1), getVertex(bn, bj - 1)];
+            finalizeCFTP() {
+                const ptr = this.finalizeCFTPWasm();
+                const jsonStr = Module.UTF8ToString(ptr);
+                this.freeStringWasm(ptr);
+                const result = JSON.parse(jsonStr);
+                if (result.status === 'finalized') {
+                    this.refreshDimers();
+                }
+                return result;
             }
         }
 
-        // Parse hex color to RGB components
-        function hexToRgb(hex) {
-            const n = parseInt(hex.slice(1), 16);
-            return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-        }
+        // ========================================================================
+        // THREE.JS SCENE SETUP
+        // ========================================================================
+        function initThreeScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
 
-        // Pre-compute palette RGB values once
-        const PALETTE_RGB = LOZENGE_PALETTE.map(p => {
-            const light = hexToRgb(p.light);
-            const dark = hexToRgb(p.dark);
-            return {
-                light, dark,
-                mid: light.map((c, i) => Math.round((c + dark[i]) / 2))
-            };
-        });
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
 
-        // Blend two RGB arrays by factor t (0=a, 1=b)
-        function lerpColor(a, b, t) {
-            return [
-                Math.round(a[0] + (b[0] - a[0]) * t),
-                Math.round(a[1] + (b[1] - a[1]) * t),
-                Math.round(a[2] + (b[2] - a[2]) * t)
-            ];
-        }
+            const aspect = canvas.clientWidth / canvas.clientHeight || 1;
+            camera = new THREE.OrthographicCamera(
+                -frustumSize * aspect / 2, frustumSize * aspect / 2,
+                frustumSize / 2, -frustumSize / 2,
+                -5000, 6000
+            );
+            camera.up.set(0, 0, 1);
 
-        function rgbStr(c) { return `rgb(${c[0]},${c[1]},${c[2]})`; }
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.1;
+            controls.rotateSpeed = 0.8;
+            controls.panSpeed = 0.8;
+            controls.zoomSpeed = 1.2;
+            controls.enableRotate = false;
+            controls.enablePan = false;
+            controls.enableZoom = false;
 
-        // Warm accent color for chaos energy — amber glow
-        const WARM_ACCENT = [200, 140, 60];
+            // Metallic lighting for dark background
+            scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+            const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.25);
+            hemi.position.set(0, 20, 0);
+            scene.add(hemi);
+            const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+            dir.position.set(15, 20, 5);
+            scene.add(dir);
+            const fill = new THREE.DirectionalLight(0xffffff, 0.3);
+            fill.position.set(-10, 5, -5);
+            scene.add(fill);
 
-        function draw() {
-            // Background: pure black in chaos, subtle dark warm tone as annealing progresses
-            const bgR = Math.round(8 * animPhase.annealProgress);
-            const bgG = Math.round(6 * animPhase.annealProgress);
-            const bgB = Math.round(4 * animPhase.annealProgress);
-            ctx.fillStyle = `rgb(${bgR},${bgG},${bgB})`;
-            ctx.fillRect(0, 0, displayWidth, displayHeight);
+            meshGroup = new THREE.Group();
+            scene.add(meshGroup);
 
-            if (!sim || !sim.isValid || sim.dimers.length === 0) return;
-
-            const { centerX, centerY, scale } = getTransform();
-
-            // Chaos energy: warm color pulse that fades as order emerges
-            const energy = animPhase.chaosEnergy;
-            const warmPulse = energy * (0.5 + 0.5 * Math.sin(animPhase.time * 0.004));
-
-            // Pre-compute per-type colors for this frame (avoids redundant per-lozenge computation)
-            const useGradients = energy < 0.7; // skip gradients during peak chaos — visual noise masks them
-            const frameColors = PALETTE_RGB.map(pal => {
-                let lightC = pal.light;
-                let darkC = pal.dark;
-                let midC = pal.mid;
-                if (warmPulse > 0.01) {
-                    lightC = lerpColor(lightC, WARM_ACCENT, warmPulse * 0.15);
-                    darkC = lerpColor(darkC, WARM_ACCENT, warmPulse * 0.10);
-                    midC = lerpColor(lightC, darkC, 0.5);
-                }
-                return {
-                    lightStr: rgbStr(lightC),
-                    darkStr: rgbStr(darkC),
-                    midStr: rgbStr(midC),
-                    lightC, darkC
-                };
+            // Reusable materials
+            surfaceMaterial = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                side: THREE.DoubleSide,
+                flatShading: true,
+                roughness: 0.3,
+                metalness: 0.35,
+                color: 0xddeeff
             });
 
-            // Draw lozenges — two passes for seam-free rendering
-            // Pass 1: fill each lozenge + matching-color stroke to cover anti-aliasing gaps
-            ctx.lineWidth = 0.6;
-            ctx.lineJoin = 'round';
+            edgeMaterial = new THREE.LineBasicMaterial({
+                color: 0x444466, linewidth: 1, opacity: 0.6, transparent: true
+            });
+        }
 
-            const dimers = sim.dimers;
+        function disposeThreeScene() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+
+            if (cubesMesh) {
+                meshGroup.remove(cubesMesh);
+                cubesMesh.geometry.dispose();
+                cubesMesh.material.dispose();
+                cubesMesh = null;
+            }
+            if (edgeLines) {
+                meshGroup.remove(edgeLines);
+                edgeLines.geometry.dispose();
+                edgeLines = null;
+            }
+            if (surfaceMesh) {
+                meshGroup.remove(surfaceMesh);
+                surfaceMesh = null;
+            }
+            if (surfaceGeo) { surfaceGeo.dispose(); surfaceGeo = null; }
+            if (surfaceMaterial) { surfaceMaterial.dispose(); surfaceMaterial = null; }
+            if (edgeMaterial) { edgeMaterial.dispose(); edgeMaterial = null; }
+            if (controls) { controls.dispose(); controls = null; }
+            if (renderer) { renderer.dispose(); renderer = null; }
+            scene = null; camera = null; meshGroup = null;
+            cubePositions = null; cubePos2D = null; cubeVel2D = null; cubeDepth = null;
+            cubeRotations = null; cubeAngVel = null; cubeFlying = null;
+            cubeTargets = null; cubeTargets2D = null; cubeTargetDepth = null;
+            lastSpawnProgress = 0;
+            camRight = null; camUp = null; camForward = null;
+        }
+
+        function resizeThreeScene() {
+            if (!renderer || !camera) return;
+            const w = canvas.clientWidth, h = canvas.clientHeight;
+            if (w === 0 || h === 0) return;
+            renderer.setSize(w, h, false);
+            const aspect = w / h;
+            camera.left = -frustumSize * aspect / 2;
+            camera.right = frustumSize * aspect / 2;
+            camera.top = frustumSize / 2;
+            camera.bottom = -frustumSize / 2;
+            camera.updateProjectionMatrix();
+        }
+
+        // ========================================================================
+        // 3D GEOMETRY HELPERS — ported from 2to3d-sim.js
+        // ========================================================================
+        function getVertexKeys(dimer) {
+            const { bn, bj, t } = dimer;
+            if (t === 0) return [[bn, bj], [bn+1, bj], [bn+1, bj-1], [bn, bj-1]];
+            if (t === 1) return [[bn, bj], [bn+1, bj-1], [bn+1, bj-2], [bn, bj-1]];
+            return [[bn-1, bj], [bn, bj], [bn+1, bj-1], [bn, bj-1]];
+        }
+
+        function getHeightPattern(t) {
+            if (t === 0) return [0, 0, 0, 0];
+            if (t === 1) return [1, 0, 0, 1];
+            return [1, 1, 0, 0];
+        }
+
+        function to3D(n, j, h) {
+            return { x: h, y: -n - h, z: j - h };
+        }
+
+        function computeHeights(dimers) {
+            const vertexToDimers = new Map();
+            for (const dimer of dimers) {
+                for (const [n, j] of getVertexKeys(dimer)) {
+                    const key = `${n},${j}`;
+                    if (!vertexToDimers.has(key)) vertexToDimers.set(key, []);
+                    vertexToDimers.get(key).push(dimer);
+                }
+            }
+
+            const heights = new Map();
+            const firstVerts = getVertexKeys(dimers[0]);
+            const startKey = `${firstVerts[0][0]},${firstVerts[0][1]}`;
+            heights.set(startKey, 0);
+
+            const queue = [startKey];
+            const visited = new Set();
+
+            while (queue.length > 0) {
+                const currentKey = queue.shift();
+                if (visited.has(currentKey)) continue;
+                visited.add(currentKey);
+
+                const currentH = heights.get(currentKey);
+                const [cn, cj] = currentKey.split(',').map(Number);
+
+                for (const dimer of vertexToDimers.get(currentKey) || []) {
+                    const verts = getVertexKeys(dimer);
+                    const pattern = getHeightPattern(dimer.t);
+                    const myIdx = verts.findIndex(([vn, vj]) => vn === cn && vj === cj);
+                    if (myIdx >= 0) {
+                        for (let i = 0; i < 4; i++) {
+                            const vkey = `${verts[i][0]},${verts[i][1]}`;
+                            if (!heights.has(vkey)) {
+                                heights.set(vkey, currentH + (pattern[i] - pattern[myIdx]));
+                                queue.push(vkey);
+                            }
+                        }
+                    }
+                }
+            }
+            return heights;
+        }
+
+        // Cached THREE.Color objects for lozenge types
+        const colorObjs3D = LOZENGE_COLORS_3D.map(c => new THREE.Color(c));
+
+        // Scene center and size (set by positionCamera, used by flying cubes)
+        let sceneCenter = { x: 0, y: 0, z: 0 };
+        let sceneSize = 10;
+
+        function positionCamera(dimers) {
+            const heights = computeHeights(dimers);
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+            let minZ = Infinity, maxZ = -Infinity;
+            for (const [key, h] of heights) {
+                const [n, j] = key.split(',').map(Number);
+                const p = to3D(n, j, h);
+                minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+                minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+                minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z);
+            }
+
+            sceneCenter.x = (minX + maxX) / 2;
+            sceneCenter.y = (minY + maxY) / 2;
+            sceneCenter.z = (minZ + maxZ) / 2;
+            sceneSize = Math.max(maxX - minX, maxY - minY, maxZ - minZ) || 10;
+
+            // Isometric direction: (1, -1, -1) — height changes invisible from here
+            const d = 1 / Math.sqrt(3);
+            camera.position.set(
+                sceneCenter.x + d * sceneSize * 5,
+                sceneCenter.y - d * sceneSize * 5,
+                sceneCenter.z - d * sceneSize * 5
+            );
+            controls.target.set(sceneCenter.x, sceneCenter.y, sceneCenter.z);
+            camera.updateProjectionMatrix();
+            controls.update();
+
+            // Project all vertices onto camera view plane to compute tight fit
+            camera.updateMatrixWorld();
+            const cRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+            const cUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+            let minU = Infinity, maxU = -Infinity, minV = Infinity, maxV = -Infinity;
+            for (const [key, h] of heights) {
+                const [n, j] = key.split(',').map(Number);
+                const p = to3D(n, j, h);
+                const dx = p.x - sceneCenter.x, dy = p.y - sceneCenter.y, dz = p.z - sceneCenter.z;
+                const u = dx * cRight.x + dy * cRight.y + dz * cRight.z;
+                const v = dx * cUp.x + dy * cUp.y + dz * cUp.z;
+                minU = Math.min(minU, u); maxU = Math.max(maxU, u);
+                minV = Math.min(minV, v); maxV = Math.max(maxV, v);
+            }
+
+            // Fit so the triangle fills full height or width (with small margin)
+            const aspect = canvas.clientWidth / canvas.clientHeight || 1;
+            const projW = maxU - minU;
+            const projH = maxV - minV;
+            const viewW = frustumSize * aspect;
+            const viewH = frustumSize;
+            const margin = 1.05; // 5% breathing room
+            camera.zoom = Math.min(viewW / (projW * margin), viewH / (projH * margin));
+            camera.updateProjectionMatrix();
+            controls.update();
+        }
+
+        function computeTargets(dimers) {
+            // Use ordered-state heights for 3D cube assembly targets
+            const heights = computeHeights(dimers);
+            const targets = new Float32Array(dimers.length * 3);
+            for (let i = 0; i < dimers.length; i++) {
+                const verts = getVertexKeys(dimers[i]);
+                const h0 = heights.get(`${verts[0][0]},${verts[0][1]}`) || 0;
+                const pattern = getHeightPattern(dimers[i].t);
+                const baseH = h0 - pattern[0];
+                let cx = 0, cy = 0, cz = 0;
+                for (let vi = 0; vi < 4; vi++) {
+                    const p = to3D(verts[vi][0], verts[vi][1], baseH + pattern[vi]);
+                    cx += p.x; cy += p.y; cz += p.z;
+                }
+                targets[i * 3] = cx / 4;
+                targets[i * 3 + 1] = cy / 4;
+                targets[i * 3 + 2] = cz / 4;
+            }
+            return targets;
+        }
+
+        // ========================================================================
+        // SURFACE MESH — build and update
+        // ========================================================================
+        function fillSurfaceBuffers(dimers, pos, norm, col) {
+            const heights = computeHeights(dimers);
             const numDimers = dimers.length;
-            // Pre-allocate canvas coord array (reused across lozenges)
-            const cvBuf = [[0,0],[0,0],[0,0],[0,0]];
-
-            // Build separation line path alongside fill pass (avoids recomputing vertices)
-            const sepPath = new Path2D();
 
             for (let d = 0; d < numDimers; d++) {
                 const dimer = dimers[d];
-                const verts = getLozengeVertices(dimer);
+                const verts = getVertexKeys(dimer);
+                // Locally-consistent heights per tile (avoids branch-cut ladder)
+                const h0 = heights.get(`${verts[0][0]},${verts[0][1]}`) || 0;
+                const pat = getHeightPattern(dimer.t);
+                const baseH = h0 - pat[0];
+                const v3d = verts.map(([n, j], idx) => to3D(n, j, baseH + pat[idx]));
 
-                // Inline toCanvas for performance
+                const base = d * 12; // 4 vertices * 3 components
                 for (let vi = 0; vi < 4; vi++) {
-                    cvBuf[vi][0] = centerX + verts[vi].x * scale;
-                    cvBuf[vi][1] = centerY - verts[vi].y * scale;
+                    pos[base + vi * 3]     = v3d[vi].x;
+                    pos[base + vi * 3 + 1] = v3d[vi].y;
+                    pos[base + vi * 3 + 2] = v3d[vi].z;
                 }
 
-                const fc = frameColors[dimer.t];
+                // Flat normal from cross product
+                const e1x = v3d[1].x - v3d[0].x, e1y = v3d[1].y - v3d[0].y, e1z = v3d[1].z - v3d[0].z;
+                const e2x = v3d[3].x - v3d[0].x, e2y = v3d[3].y - v3d[0].y, e2z = v3d[3].z - v3d[0].z;
+                let nx = e1y * e2z - e1z * e2y;
+                let ny = e1z * e2x - e1x * e2z;
+                let nz = e1x * e2y - e1y * e2x;
+                const len = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1;
+                nx /= len; ny /= len; nz /= len;
+                for (let vi = 0; vi < 4; vi++) {
+                    norm[base + vi * 3]     = nx;
+                    norm[base + vi * 3 + 1] = ny;
+                    norm[base + vi * 3 + 2] = nz;
+                }
 
-                ctx.beginPath();
-                ctx.moveTo(cvBuf[0][0], cvBuf[0][1]);
-                ctx.lineTo(cvBuf[1][0], cvBuf[1][1]);
-                ctx.lineTo(cvBuf[2][0], cvBuf[2][1]);
-                ctx.lineTo(cvBuf[3][0], cvBuf[3][1]);
-                ctx.closePath();
+                // Color by type
+                const clr = colorObjs3D[dimer.t];
+                for (let vi = 0; vi < 4; vi++) {
+                    col[base + vi * 3]     = clr.r;
+                    col[base + vi * 3 + 1] = clr.g;
+                    col[base + vi * 3 + 2] = clr.b;
+                }
+            }
+        }
 
-                if (useGradients) {
-                    // Gradient for 3D depth — direction follows face orientation
-                    let gx0, gy0, gx1, gy1;
-                    if (dimer.t === 0) {
-                        gx0 = (cvBuf[0][0] + cvBuf[1][0]) * 0.5; gy0 = (cvBuf[0][1] + cvBuf[1][1]) * 0.5;
-                        gx1 = (cvBuf[2][0] + cvBuf[3][0]) * 0.5; gy1 = (cvBuf[2][1] + cvBuf[3][1]) * 0.5;
-                    } else if (dimer.t === 1) {
-                        gx0 = cvBuf[0][0]; gy0 = cvBuf[0][1];
-                        gx1 = cvBuf[2][0]; gy1 = cvBuf[2][1];
-                    } else {
-                        gx0 = (cvBuf[0][0] + cvBuf[1][0]) * 0.5; gy0 = (cvBuf[0][1] + cvBuf[1][1]) * 0.5;
-                        gx1 = (cvBuf[2][0] + cvBuf[3][0]) * 0.5; gy1 = (cvBuf[2][1] + cvBuf[3][1]) * 0.5;
+        function buildSurfaceMesh(dimers, withEdges) {
+            const numDimers = dimers.length;
+            const positions = new Float32Array(numDimers * 4 * 3);
+            const normals = new Float32Array(numDimers * 4 * 3);
+            const colors = new Float32Array(numDimers * 4 * 3);
+
+            fillSurfaceBuffers(dimers, positions, normals, colors);
+
+            if (!surfaceGeo) {
+                surfaceGeo = new THREE.BufferGeometry();
+                surfaceGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                surfaceGeo.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+                surfaceGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+                const indices = new Uint32Array(numDimers * 6);
+                for (let d = 0; d < numDimers; d++) {
+                    const bi = d * 4;
+                    indices[d * 6]     = bi;
+                    indices[d * 6 + 1] = bi + 1;
+                    indices[d * 6 + 2] = bi + 2;
+                    indices[d * 6 + 3] = bi;
+                    indices[d * 6 + 4] = bi + 2;
+                    indices[d * 6 + 5] = bi + 3;
+                }
+                surfaceGeo.setIndex(new THREE.BufferAttribute(indices, 1));
+
+                surfaceMesh = new THREE.Mesh(surfaceGeo, surfaceMaterial);
+                meshGroup.add(surfaceMesh);
+            } else {
+                surfaceGeo.attributes.position.array.set(positions);
+                surfaceGeo.attributes.position.needsUpdate = true;
+                surfaceGeo.attributes.normal.array.set(normals);
+                surfaceGeo.attributes.normal.needsUpdate = true;
+                surfaceGeo.attributes.color.array.set(colors);
+                surfaceGeo.attributes.color.needsUpdate = true;
+            }
+
+            // Edge lines
+            if (withEdges) {
+                if (edgeLines) {
+                    meshGroup.remove(edgeLines);
+                    edgeLines.geometry.dispose();
+                }
+                const edgesGeo = new THREE.EdgesGeometry(surfaceGeo, 10);
+                edgeLines = new THREE.LineSegments(edgesGeo, edgeMaterial);
+                meshGroup.add(edgeLines);
+            } else if (edgeLines) {
+                meshGroup.remove(edgeLines);
+                edgeLines.geometry.dispose();
+                edgeLines = null;
+            }
+        }
+
+        function updateSurfaceInPlace(dimers) {
+            if (!surfaceGeo) return;
+            fillSurfaceBuffers(
+                dimers,
+                surfaceGeo.attributes.position.array,
+                surfaceGeo.attributes.normal.array,
+                surfaceGeo.attributes.color.array
+            );
+            surfaceGeo.attributes.position.needsUpdate = true;
+            surfaceGeo.attributes.normal.needsUpdate = true;
+            surfaceGeo.attributes.color.needsUpdate = true;
+        }
+
+        // ========================================================================
+        // FLYING CUBES — InstancedMesh in camera view plane (thin 2D layer)
+        // ========================================================================
+        class SpatialHash2D {
+            constructor(cellSize) {
+                this.inv = 1 / cellSize;
+                this.grid = new Map();
+            }
+            clear() { this.grid.clear(); }
+            insert(idx, x, y) {
+                const k = `${Math.floor(x * this.inv)},${Math.floor(y * this.inv)}`;
+                let cell = this.grid.get(k);
+                if (!cell) { cell = []; this.grid.set(k, cell); }
+                cell.push(idx);
+            }
+            query(x, y) {
+                const cx = Math.floor(x * this.inv);
+                const cy = Math.floor(y * this.inv);
+                const result = [];
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        const cell = this.grid.get(`${cx + dx},${cy + dy}`);
+                        if (cell) for (let i = 0; i < cell.length; i++) result.push(cell[i]);
                     }
-                    const grad = ctx.createLinearGradient(gx0, gy0, gx1, gy1);
-                    grad.addColorStop(0, fc.lightStr);
-                    grad.addColorStop(1, fc.darkStr);
-                    ctx.fillStyle = grad;
+                }
+                return result;
+            }
+        }
+
+        const spatialHash = new SpatialHash2D(CUBE_SIZE * 2);
+        const _dummy = new THREE.Object3D();
+
+        // Convert 2D view-plane coords + depth to 3D world positions
+        function updateCubes2Dto3D() {
+            if (!cubePos2D || !camRight || !camUp) return;
+            const n = cubePos2D.length / 2;
+            const tx = controls.target.x, ty = controls.target.y, tz = controls.target.z;
+            for (let i = 0; i < n; i++) {
+                const u = cubePos2D[i * 2];
+                const v = cubePos2D[i * 2 + 1];
+                const w = cubeDepth[i];
+                cubePositions[i * 3]     = tx + u * camRight.x + v * camUp.x + w * camForward.x;
+                cubePositions[i * 3 + 1] = ty + u * camRight.y + v * camUp.y + w * camForward.y;
+                cubePositions[i * 3 + 2] = tz + u * camRight.z + v * camUp.z + w * camForward.z;
+            }
+        }
+
+        function initFlyingCubes(dimers) {
+            const numCubes = dimers.length;
+
+            // Extract camera basis vectors
+            camera.updateMatrixWorld();
+            camRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+            camUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+            camForward = new THREE.Vector3();
+            camera.getWorldDirection(camForward);
+
+            // Visible area in world units
+            const aspect = canvas.clientWidth / canvas.clientHeight || 1;
+            const visW = frustumSize * aspect / camera.zoom;
+            const visH = frustumSize / camera.zoom;
+            cubeHalfW = visW * 1.2;
+            cubeHalfH = visH * 1.2;
+            const depthRange = visW * 0.08;
+
+            // Allocate arrays
+            cubePos2D = new Float32Array(numCubes * 2);
+            cubeVel2D = new Float32Array(numCubes * 2);
+            cubeDepth = new Float32Array(numCubes);
+            cubePositions = new Float32Array(numCubes * 3);
+            cubeRotations = new Float32Array(numCubes * 3);
+            cubeAngVel = new Float32Array(numCubes * 3);
+            cubeFlying = new Uint8Array(numCubes);
+
+            // Compute 2D target positions from 3D targets
+            computeTargets2D();
+
+            // Pick 1/4 random cubes to fly; rest sit at targets
+            const indices = Array.from({ length: numCubes }, (_, i) => i);
+            for (let i = indices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [indices[i], indices[j]] = [indices[j], indices[i]];
+            }
+            const flyCount = Math.floor(numCubes / 4);
+            for (let k = 0; k < flyCount; k++) cubeFlying[indices[k]] = 1;
+
+            for (let i = 0; i < numCubes; i++) {
+                if (cubeFlying[i]) {
+                    // Flying cubes: random scatter, velocity, rotation
+                    cubePos2D[i * 2]     = (Math.random() - 0.5) * visW * 0.9;
+                    cubePos2D[i * 2 + 1] = (Math.random() - 0.5) * visH * 0.9;
+                    cubeDepth[i] = (Math.random() - 0.5) * depthRange;
+                    const speed = 1.5 + Math.random() * 3;
+                    const angle = Math.random() * Math.PI * 2;
+                    cubeVel2D[i * 2]     = speed * Math.cos(angle);
+                    cubeVel2D[i * 2 + 1] = speed * Math.sin(angle);
+                    cubeRotations[i * 3]     = Math.random() * Math.PI * 2;
+                    cubeRotations[i * 3 + 1] = Math.random() * Math.PI * 2;
+                    cubeRotations[i * 3 + 2] = Math.random() * Math.PI * 2;
+                    cubeAngVel[i * 3]     = (Math.random() - 0.5) * 0.8;
+                    cubeAngVel[i * 3 + 1] = (Math.random() - 0.5) * 0.8;
+                    cubeAngVel[i * 3 + 2] = (Math.random() - 0.5) * 0.8;
                 } else {
-                    // Flat fill during chaos — faster, visually indistinguishable
-                    ctx.fillStyle = fc.midStr;
+                    // Stationary cubes: sit at target positions (form the triangle)
+                    cubePos2D[i * 2]     = cubeTargets2D[i * 2];
+                    cubePos2D[i * 2 + 1] = cubeTargets2D[i * 2 + 1];
+                    cubeDepth[i] = cubeTargetDepth[i];
+                    // Zero velocity and rotation
                 }
-
-                ctx.fill();
-                ctx.strokeStyle = fc.midStr;
-                ctx.stroke();
-
-                // Accumulate separation line into batched path
-                sepPath.moveTo(cvBuf[0][0], cvBuf[0][1]);
-                sepPath.lineTo(cvBuf[1][0], cvBuf[1][1]);
-                sepPath.lineTo(cvBuf[2][0], cvBuf[2][1]);
-                sepPath.lineTo(cvBuf[3][0], cvBuf[3][1]);
-                sepPath.lineTo(cvBuf[0][0], cvBuf[0][1]);
             }
 
-            // Stroke batched separation lines for tile definition
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
-            ctx.lineWidth = 0.3;
-            ctx.lineJoin = 'miter';
-            ctx.stroke(sepPath);
+            updateCubes2Dto3D();
 
-            // Draw boundary — soft warm glow instead of harsh white
-            if (sim.boundaries && sim.boundaries.length > 0) {
-                ctx.strokeStyle = 'rgba(255, 252, 245, 0.4)';
-                ctx.lineWidth = 1.5;
-                ctx.lineJoin = 'round';
-                for (const boundary of sim.boundaries) {
-                    if (boundary.length < 2) continue;
-                    ctx.beginPath();
-                    const first = toCanvas(boundary[0].x, boundary[0].y, centerX, centerY, scale);
-                    ctx.moveTo(first[0], first[1]);
-                    for (let i = 1; i < boundary.length; i++) {
-                        const pt = toCanvas(boundary[i].x, boundary[i].y, centerX, centerY, scale);
-                        ctx.lineTo(pt[0], pt[1]);
+            // Create InstancedMesh — ALL cubes visible
+            const geo = new THREE.BoxGeometry(CUBE_SIZE, CUBE_SIZE, CUBE_SIZE);
+            const mat = new THREE.MeshStandardMaterial({
+                roughness: 0.4, metalness: 0.2
+            });
+            cubesMesh = new THREE.InstancedMesh(geo, mat, numCubes);
+
+            // Per-instance colors by dimer type
+            for (let i = 0; i < numCubes; i++) {
+                cubesMesh.setColorAt(i, colorObjs3D[dimers[i].t]);
+            }
+            cubesMesh.instanceColor.needsUpdate = true;
+
+            updateCubeMatrices();
+            meshGroup.add(cubesMesh);
+        }
+
+        function updateCubeMatrices() {
+            if (!cubesMesh) return;
+            const n = cubesMesh.count;
+            for (let i = 0; i < n; i++) {
+                _dummy.scale.set(1, 1, 1);
+                _dummy.position.set(
+                    cubePositions[i * 3],
+                    cubePositions[i * 3 + 1],
+                    cubePositions[i * 3 + 2]
+                );
+                if (cubeRotations) {
+                    _dummy.rotation.set(
+                        cubeRotations[i * 3],
+                        cubeRotations[i * 3 + 1],
+                        cubeRotations[i * 3 + 2]
+                    );
+                } else {
+                    _dummy.rotation.set(0, 0, 0);
+                }
+                _dummy.updateMatrix();
+                cubesMesh.setMatrixAt(i, _dummy.matrix);
+            }
+            cubesMesh.instanceMatrix.needsUpdate = true;
+        }
+
+        function updateFlyingCubesPhysics(dt) {
+            if (!cubePos2D || !cubesMesh) return;
+            const n = cubesMesh.count;
+            const pos = cubePos2D;
+            const vel = cubeVel2D;
+
+            // Integrate 2D positions and rotations (flying cubes only)
+            for (let i = 0; i < n; i++) {
+                if (!cubeFlying || !cubeFlying[i]) continue;
+                pos[i * 2]     += vel[i * 2] * dt;
+                pos[i * 2 + 1] += vel[i * 2 + 1] * dt;
+                cubeRotations[i * 3]     += cubeAngVel[i * 3] * dt;
+                cubeRotations[i * 3 + 1] += cubeAngVel[i * 3 + 1] * dt;
+                cubeRotations[i * 3 + 2] += cubeAngVel[i * 3 + 2] * dt;
+            }
+
+            // Wall bounce (screen edges, flying cubes only)
+            for (let i = 0; i < n; i++) {
+                if (!cubeFlying || !cubeFlying[i]) continue;
+                if (pos[i * 2] < -cubeHalfW) { pos[i * 2] = -cubeHalfW; vel[i * 2] = Math.abs(vel[i * 2]); }
+                if (pos[i * 2] > cubeHalfW)  { pos[i * 2] = cubeHalfW;  vel[i * 2] = -Math.abs(vel[i * 2]); }
+                if (pos[i * 2 + 1] < -cubeHalfH) { pos[i * 2 + 1] = -cubeHalfH; vel[i * 2 + 1] = Math.abs(vel[i * 2 + 1]); }
+                if (pos[i * 2 + 1] > cubeHalfH)  { pos[i * 2 + 1] = cubeHalfH;  vel[i * 2 + 1] = -Math.abs(vel[i * 2 + 1]); }
+            }
+
+            // 2D collision detection via spatial hash (flying cubes only)
+            spatialHash.clear();
+            for (let i = 0; i < n; i++) {
+                if (!cubeFlying || !cubeFlying[i]) continue;
+                spatialHash.insert(i, pos[i * 2], pos[i * 2 + 1]);
+            }
+
+            for (let a = 0; a < n; a++) {
+                if (!cubeFlying || !cubeFlying[a]) continue;
+                const neighbors = spatialHash.query(pos[a * 2], pos[a * 2 + 1]);
+                for (const b of neighbors) {
+                    if (b <= a) continue;
+                    if (!cubeFlying || !cubeFlying[b]) continue;
+                    const dx = pos[b * 2] - pos[a * 2];
+                    const dy = pos[b * 2 + 1] - pos[a * 2 + 1];
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < CUBE_SIZE && dist > 0.001) {
+                        const nx = dx / dist, ny = dy / dist;
+                        const dvx = vel[a * 2] - vel[b * 2];
+                        const dvy = vel[a * 2 + 1] - vel[b * 2 + 1];
+                        const vn = dvx * nx + dvy * ny;
+
+                        if (vn > 0) {
+                            vel[a * 2]     -= vn * nx;
+                            vel[a * 2 + 1] -= vn * ny;
+                            vel[b * 2]     += vn * nx;
+                            vel[b * 2 + 1] += vn * ny;
+                            const overlap = (CUBE_SIZE - dist) * 0.5;
+                            pos[a * 2]     -= overlap * nx;
+                            pos[a * 2 + 1] -= overlap * ny;
+                            pos[b * 2]     += overlap * nx;
+                            pos[b * 2 + 1] += overlap * ny;
+                            // Collision gives a gentle spin
+                            const kick = vn * 0.3;
+                            cubeAngVel[a * 3]     += (Math.random() - 0.5) * kick;
+                            cubeAngVel[a * 3 + 1] += (Math.random() - 0.5) * kick;
+                            cubeAngVel[b * 3]     += (Math.random() - 0.5) * kick;
+                            cubeAngVel[b * 3 + 1] += (Math.random() - 0.5) * kick;
+                        }
                     }
-                    ctx.closePath();
-                    ctx.stroke();
                 }
             }
 
-            // Vignette — radial darkening around edges to focus attention
-            const vx = displayWidth / 2;
-            const vy = displayHeight / 2;
-            const vr = Math.max(displayWidth, displayHeight) * 0.75;
-            const vignette = ctx.createRadialGradient(vx, vy, vr * 0.4, vx, vy, vr);
-            vignette.addColorStop(0, 'rgba(0,0,0,0)');
-            vignette.addColorStop(1, 'rgba(0,0,0,0.55)');
-            ctx.fillStyle = vignette;
-            ctx.fillRect(0, 0, displayWidth, displayHeight);
+            // Convert 2D to 3D world positions
+            updateCubes2Dto3D();
+            updateCubeMatrices();
+        }
+
+        // ========================================================================
+        // ASSEMBLY — physics continues, spring attraction grows
+        // ========================================================================
+
+        // Project 3D targets into 2D view-plane coords
+        function computeTargets2D() {
+            if (!cubeTargets || !camRight || !camUp || !camForward) return;
+            const n = cubeTargets.length / 3;
+            cubeTargets2D = new Float32Array(n * 2);
+            cubeTargetDepth = new Float32Array(n);
+            const tx = controls.target.x, ty = controls.target.y, tz = controls.target.z;
+            for (let i = 0; i < n; i++) {
+                const dx = cubeTargets[i * 3] - tx;
+                const dy = cubeTargets[i * 3 + 1] - ty;
+                const dz = cubeTargets[i * 3 + 2] - tz;
+                cubeTargets2D[i * 2]     = dx * camRight.x + dy * camRight.y + dz * camRight.z;
+                cubeTargets2D[i * 2 + 1] = dx * camUp.x + dy * camUp.y + dz * camUp.z;
+                cubeTargetDepth[i]       = dx * camForward.x + dy * camForward.y + dz * camForward.z;
+            }
+        }
+
+        let lastSpawnProgress = 0;
+
+        function updateAssemblyPhysics(dt, progress) {
+            if (!cubePos2D || !cubesMesh) return;
+            const n = cubesMesh.count;
+            const pos = cubePos2D;
+            const vel = cubeVel2D;
+
+            // Spawn hidden cubes gradually during first 70% of assembly
+            if (progress < 0.7 && cubeVisible) {
+                const spawnFrac = progress / 0.7; // 0→1 over first 70%
+                // How many should be visible now (from 25% to 100%)
+                const targetVisible = Math.floor(n * (0.25 + 0.75 * spawnFrac));
+                let currentVisible = 0;
+                for (let i = 0; i < n; i++) if (cubeVisible[i]) currentVisible++;
+                // Spawn new cubes at their target positions
+                if (currentVisible < targetVisible) {
+                    let toSpawn = targetVisible - currentVisible;
+                    for (let i = 0; i < n && toSpawn > 0; i++) {
+                        if (!cubeVisible[i]) {
+                            cubeVisible[i] = 1;
+                            // Place at target position, no velocity, no rotation
+                            pos[i * 2] = cubeTargets2D[i * 2];
+                            pos[i * 2 + 1] = cubeTargets2D[i * 2 + 1];
+                            cubeDepth[i] = cubeTargetDepth[i];
+                            vel[i * 2] = 0;
+                            vel[i * 2 + 1] = 0;
+                            cubeRotations[i * 3] = 0;
+                            cubeRotations[i * 3 + 1] = 0;
+                            cubeRotations[i * 3 + 2] = 0;
+                            cubeAngVel[i * 3] = 0;
+                            cubeAngVel[i * 3 + 1] = 0;
+                            cubeAngVel[i * 3 + 2] = 0;
+                            toSpawn--;
+                        }
+                    }
+                }
+            }
+
+            // Spring strength ramps up cubically
+            const p3 = progress * progress * progress;
+            const springK = 3 + p3 * 30;        // 3 → 33
+            const damping = 1 + p3 * 8;          // 1 → 9
+            const angDamp = 3 + progress * 15;   // 3 → 18 (rotations settle fast)
+
+            // Apply spring force toward target + damp velocities (only visible cubes)
+            for (let i = 0; i < n; i++) {
+                if (cubeVisible && !cubeVisible[i]) continue;
+                const dxT = cubeTargets2D[i * 2] - pos[i * 2];
+                const dyT = cubeTargets2D[i * 2 + 1] - pos[i * 2 + 1];
+                vel[i * 2]     += dxT * springK * dt;
+                vel[i * 2 + 1] += dyT * springK * dt;
+                vel[i * 2]     *= Math.max(0, 1 - damping * dt);
+                vel[i * 2 + 1] *= Math.max(0, 1 - damping * dt);
+
+                // Depth converges to target
+                cubeDepth[i] += (cubeTargetDepth[i] - cubeDepth[i]) * springK * dt;
+            }
+
+            // Integrate positions; damp rotations toward zero (only visible cubes)
+            for (let i = 0; i < n; i++) {
+                if (cubeVisible && !cubeVisible[i]) continue;
+                pos[i * 2]     += vel[i * 2] * dt;
+                pos[i * 2 + 1] += vel[i * 2 + 1] * dt;
+                // Damp angular velocity hard
+                const af = Math.max(0, 1 - angDamp * dt);
+                cubeAngVel[i * 3]     *= af;
+                cubeAngVel[i * 3 + 1] *= af;
+                cubeAngVel[i * 3 + 2] *= af;
+                cubeRotations[i * 3]     += cubeAngVel[i * 3] * dt;
+                cubeRotations[i * 3 + 1] += cubeAngVel[i * 3 + 1] * dt;
+                cubeRotations[i * 3 + 2] += cubeAngVel[i * 3 + 2] * dt;
+                // Also pull rotations toward zero directly
+                const rotPull = Math.min(1, angDamp * 0.5 * dt);
+                cubeRotations[i * 3]     *= (1 - rotPull);
+                cubeRotations[i * 3 + 1] *= (1 - rotPull);
+                cubeRotations[i * 3 + 2] *= (1 - rotPull);
+            }
+
+            // Snap rotations to zero in final 10%
+            if (progress > 0.9) {
+                const snap = (progress - 0.9) / 0.1; // 0→1
+                for (let i = 0; i < n; i++) {
+                    cubeRotations[i * 3]     *= (1 - snap);
+                    cubeRotations[i * 3 + 1] *= (1 - snap);
+                    cubeRotations[i * 3 + 2] *= (1 - snap);
+                }
+            }
+
+            // No wall bounce or collisions in late assembly
+            updateCubes2Dto3D();
+            updateCubeMatrices();
         }
 
         // ========================================================================
         // STATE MACHINE
         // ========================================================================
+        const HOOK_DURATION = 15000; // title card display time
+
         function enterHook() {
             currentState = STATES.HOOK;
             const hookEl = document.getElementById('hook-screen');
             hookEl.style.display = 'flex';
             canvas.style.display = 'none';
+            document.getElementById('vignette').style.display = 'none';
 
             // Reset hook text animations for re-entry
             const question = hookEl.querySelector('.question');
             const hint = hookEl.querySelector('.hint');
             question.style.animation = 'none';
             hint.style.animation = 'none';
-            // Force reflow to restart animations
             void question.offsetWidth;
             question.style.animation = '';
             hint.style.animation = '';
 
             startHookBg();
 
-            // Start on click or Enter/Space key
-            function startFromHook(e) {
-                if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
-                if (e.type === 'keydown') e.preventDefault();
-                hookEl.removeEventListener('click', startFromHook);
-                document.removeEventListener('keydown', startFromHook);
-                enterLoading();
-            }
-            hookEl.addEventListener('click', startFromHook);
-            document.addEventListener('keydown', startFromHook);
+            // Auto-advance after title card duration
+            setTimeout(() => {
+                if (currentState === STATES.HOOK) enterLoading();
+            }, HOOK_DURATION);
+
+            // Click anywhere to skip
+            hookEl.addEventListener('click', () => {
+                if (currentState === STATES.HOOK) enterLoading();
+            });
+        }
+
+        function runCFTPAsync() {
+            return new Promise((resolve) => {
+                sim.initCFTP();
+                function step() {
+                    const result = sim.stepCFTP();
+                    console.log('CFTP:', result.status, 'T=' + result.T);
+                    if (result.status === 'coalesced') {
+                        sim.finalizeCFTP();
+                        resolve(true);
+                    } else if (result.status === 'in_progress' || result.status === 'not_coalesced') {
+                        setTimeout(step, 0);
+                    } else {
+                        console.warn('CFTP failed:', result);
+                        sim.setQBias(Q_CHAOS);
+                        sim.step(50000);
+                        sim.refreshDimers();
+                        resolve(false);
+                    }
+                }
+                step();
+            });
         }
 
         async function enterLoading() {
@@ -1067,7 +1613,7 @@ permalink: triangle/
             document.getElementById('loading').textContent = 'Loading\u2026';
             document.getElementById('loading').style.display = 'block';
 
-            // Initialize audio (requires user gesture) — non-fatal if unavailable
+            // Initialize audio (requires user gesture)
             try {
                 sonifier = new FlipSonifier();
                 sonifier.init();
@@ -1077,50 +1623,68 @@ permalink: triangle/
                 sonifier = null;
             }
 
-            // Initialize WASM first
             sim = new SimulatorInterface();
 
-            // Generate scaled shape using WASM boundaries
             setTimeout(async () => {
                 try {
+                    // Generate scaled shape
+                    console.time('generateScaledShape');
                     activeTriangles = await generateScaledShape(sim);
+                    console.timeEnd('generateScaledShape');
+                    console.log('Triangle count:', activeTriangles.size);
 
                     // Final init with scaled shape
+                    console.time('finalInit');
                     sim.initFromTriangles(activeTriangles);
+                    console.timeEnd('finalInit');
 
-                    // Adjust hole height for impossible illusion, but allow fluctuation
+                    // Adjust hole height for impossible illusion
+                    console.time('holeSetup');
                     const holeCount = sim.getHoleCount();
                     if (holeCount > 0) {
                         const HOLE_HEIGHT_INCREASE = 8;
                         const initialInfo = sim.getAllHolesInfo();
                         for (let i = 0; i < holeCount; i++) {
                             const baseWinding = initialInfo.holes[i].currentWinding;
-
-                            // Increase winding by 8 for the impossible illusion
                             for (let step = 0; step < HOLE_HEIGHT_INCREASE; step++) {
                                 const result = sim.adjustHoleWinding(i, +1);
                                 if (!result.success) break;
                             }
-
-                            // Set base height to initial (before +8) to allow downward fluctuation
                             sim.setHoleBaseHeight(i, baseWinding);
                         }
                     }
+                    console.timeEnd('holeSetup');
 
                     if (sim.isValid) {
-                        // RANDOMIZATION - Melt to chaos BEFORE first draw
-                        sim.setQBias(Q_CHAOS);
-                        sim.step(200000);
+                        // Run CFTP for exact uniform sample
+                        console.time('CFTP');
+                        await runCFTPAsync();
+                        console.timeEnd('CFTP');
+                        console.log('Dimer count:', sim.dimers.length);
 
-                        // Launch Visuals - first draw will be messy/chaotic
-                        document.getElementById('loading').style.display = 'none';
-                        canvas.style.opacity = '1';
+                        // Anneal to ordered state for cube assembly targets
+                        console.time('preAnneal');
+                        sim.setQBias(Q_ORDER);
+                        sim.step(100000);
+                        sim.refreshDimers();
+                        console.timeEnd('preAnneal');
+
+                        // Init Three.js
                         canvas.style.display = 'block';
-                        resizeCanvas();
-                        fitToRegion();
-                        draw(); // First draw is CHAOS
+                        canvas.style.opacity = '1';
+                        document.getElementById('vignette').style.display = 'block';
+                        initThreeScene();
 
-                        enterTransforming();
+                        // Compute targets from ORDERED state (nice 3D Penrose surface)
+                        cubeTargets = computeTargets(sim.dimers);
+                        positionCamera(sim.dimers);
+
+                        // Setup flying cubes
+                        initFlyingCubes(sim.dimers);
+
+                        // Hide loading, start
+                        document.getElementById('loading').style.display = 'none';
+                        enterFlyingCubes();
                     } else {
                         document.getElementById('loading').textContent = 'Error: Invalid shape';
                         setTimeout(() => {
@@ -1133,7 +1697,6 @@ permalink: triangle/
                 } catch (err) {
                     console.error('Error:', err);
                     document.getElementById('loading').textContent = 'Error: ' + err.message;
-                    // Auto-recover after 3s so kiosk mode doesn't get stuck
                     setTimeout(() => {
                         document.getElementById('loading').style.display = 'none';
                         if (sonifier) { sonifier.destroy(); sonifier = null; }
@@ -1144,238 +1707,328 @@ permalink: triangle/
             }, 50);
         }
 
+        function enterFlyingCubes() {
+            currentState = STATES.FLYING_CUBES;
+            stateStartTime = performance.now();
+            lastTimestamp = performance.now();
+
+            // No surface mesh here — the triangle is formed by stationary cubes
+            // Flying 1/4 scatter around, 3/4 sit at ordered target positions
+
+            // Audio at high entropy
+            if (sonifier) sonifier.setEntropy(1.0);
+
+            // Start render loop
+            animationId = requestAnimationFrame(renderFrame);
+        }
+
+        function enterAssembly() {
+            currentState = STATES.ASSEMBLY;
+            stateStartTime = performance.now();
+            // 2D targets already computed in initFlyingCubes
+            // Spring physics will pull flying cubes to their targets
+        }
+
         function enterTransforming() {
             currentState = STATES.TRANSFORMING;
-            const startTime = performance.now();
+            stateStartTime = performance.now();
 
-            let currentQ = Q_CHAOS;
-
-            function animationLoop(timestamp) {
-                if (currentState !== STATES.TRANSFORMING) return;
-
-                const elapsed = timestamp - startTime;
-                animPhase.time = elapsed;
-
-                // --- TIMELINE LOGIC ---
-                if (elapsed < CHAOS_DURATION) {
-                    // Phase 1: Pure Chaos — full energy, no annealing
-                    currentQ = Q_CHAOS;
-                    animPhase.chaosEnergy = 1.0;
-                    animPhase.annealProgress = 0;
-                } else if (elapsed < CHAOS_DURATION + ANNEAL_DURATION) {
-                    // Phase 2: The Emergence (Cubic Annealing)
-                    const progress = (elapsed - CHAOS_DURATION) / ANNEAL_DURATION;
-                    currentQ = Q_CHAOS + (Q_ORDER - Q_CHAOS) * Math.pow(progress, 3);
-                    // Energy fades out as order emerges (quadratic decay for snappy cooling)
-                    animPhase.chaosEnergy = Math.max(0, 1.0 - progress * progress);
-                    animPhase.annealProgress = progress;
-                } else {
-                    // Phase 3: Truth Reached
-                    animPhase.chaosEnergy = 0;
-                    animPhase.annealProgress = 1;
-                    enterFrozen();
-                    return;
-                }
-
-                // Apply Physics
-                sim.setQBias(currentQ);
-                sim.step(STEPS_PER_FRAME);
-
-                // Audio — drone pitch tracks chaos/order state
-                if (sonifier) {
-                    sonifier.setEntropy(animPhase.chaosEnergy);
-                }
-
-                draw();
-                animationId = requestAnimationFrame(animationLoop);
+            // Remove cubes
+            if (cubesMesh) {
+                meshGroup.remove(cubesMesh);
+                cubesMesh.geometry.dispose();
+                cubesMesh.material.dispose();
+                cubesMesh = null;
             }
 
-            animationId = requestAnimationFrame(animationLoop);
+            // Remove edges during annealing (performance)
+            if (edgeLines) {
+                meshGroup.remove(edgeLines);
+                edgeLines.geometry.dispose();
+                edgeLines = null;
+            }
+
+            // Scramble to chaos
+            sim.setQBias(Q_CHAOS);
+            sim.step(50000);
+            sim.refreshDimers();
+
+            // Update existing surface mesh to chaotic state
+            updateSurfaceInPlace(sim.dimers);
         }
+
+        function updateTransforming(elapsed) {
+            animPhase.time = elapsed;
+
+            let currentQ;
+            if (elapsed < CHAOS_DURATION) {
+                // Phase 1: Pure Chaos
+                currentQ = Q_CHAOS;
+                animPhase.chaosEnergy = 1.0;
+                animPhase.annealProgress = 0;
+            } else if (elapsed < CHAOS_DURATION + ANNEAL_DURATION) {
+                // Phase 2: Cubic Annealing
+                const progress = (elapsed - CHAOS_DURATION) / ANNEAL_DURATION;
+                currentQ = Q_CHAOS + (Q_ORDER - Q_CHAOS) * Math.pow(progress, 3);
+                animPhase.chaosEnergy = Math.max(0, 1.0 - progress * progress);
+                animPhase.annealProgress = progress;
+            } else {
+                // Phase 3: Done
+                animPhase.chaosEnergy = 0;
+                animPhase.annealProgress = 1;
+                enterFrozen();
+                return;
+            }
+
+            sim.setQBias(currentQ);
+            sim.step(STEPS_PER_FRAME);
+
+            if (sonifier) sonifier.setEntropy(animPhase.chaosEnergy);
+
+            updateSurfaceInPlace(sim.dimers);
+        }
+
+        const FROZEN_DURATION = 12000;   // auto-rotate reveal
+        const TEXT_SCREEN_DURATION = 12000; // text on black
 
         function enterFrozen() {
             currentState = STATES.FROZEN;
+            stateStartTime = performance.now();
 
-            // Lock visual state to fully annealed
             animPhase.chaosEnergy = 0;
             animPhase.annealProgress = 1;
 
-            // Final polish - lock in the Truth
+            // Final polish
             sim.setQBias(Q_ORDER);
             sim.step(10000);
             sim.refreshDimers();
-            draw();
 
-            if (sonifier) sonifier.fadeOut(2000);
+            // Rebuild surface with edge lines
+            buildSurfaceMesh(sim.dimers, true);
 
-            // Start inactivity timer for auto-restart
-            resetInactivityTimer();
+            if (sonifier) sonifier.fadeOut(4000);
 
-            // UI Reveal (track handles so returnToHook can cancel them)
+            // Auto-rotate to reveal the helical gap (impossible surface)
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 2.5;
+
             frozenTimers = [];
             frozenTimers.push(setTimeout(() => {
                 document.getElementById('caption').classList.add('visible');
-            }, 500));
-
-            frozenTimers.push(setTimeout(() => {
-                document.getElementById('controls').classList.add('visible');
                 document.getElementById('attribution').classList.add('visible');
-                enterInteractive();
-            }, 2000));
+            }, 500));
         }
 
-        function enterInteractive() {
-            currentState = STATES.INTERACTIVE;
+        function buildCodeLines() {
+            return [
+                { type: 'comment', text: '// Does Chaos Hide the Truth?' },
+                { type: 'comment', text: '//' },
+                { type: 'code', text: '<span class="keyword">const</span> shape = <span class="fn">penroseTriangle</span>();' },
+                { type: 'code', text: '<span class="keyword">const</span> surface = <span class="fn">lozenges</span>(shape);' },
+                { type: 'comment', text: '// every local patch is valid' },
+                { type: 'comment', text: '// but the global surface cannot exist' },
+                { type: 'comment', text: '//' },
+                { type: 'code', text: 'surface.<span class="fn">monodromy</span>() <span class="comment">// => +8 around the hole</span>' },
+                { type: 'comment', text: '//' },
+                { type: 'code', text: '<span class="keyword">let</span> tiling = <span class="fn">CFTP</span>.<span class="fn">sample</span>(surface);' },
+                { type: 'code', text: '<span class="keyword">for</span> (<span class="keyword">let</span> γ = <span class="number">0</span>; γ &lt; <span class="number">Infinity</span>; γ++) {' },
+                { type: 'code', text: '  tiling = <span class="fn">glauber</span>(tiling, <span class="fn">exp</span>(-γ/N));' },
+                { type: 'code', text: '  <span class="comment">// chaos → order</span>' },
+                { type: 'code', text: '}' },
+                { type: 'comment', text: '//' },
+                { type: 'comment', text: '// <span class="string">Leonid Petrov · 2026</span>' },
+                { type: 'comment', text: '// <span class="string">lpetrov.cc/triangle/</span>' },
+            ];
+        }
 
-            // Restart audio drone (oscillators were stopped by fadeOut in enterFrozen)
-            if (sonifier) sonifier.restartDrone();
+        function enterTextScreen() {
+            currentState = STATES.TEXT_SCREEN;
+            stateStartTime = performance.now();
 
-            const slider = document.getElementById('entropy');
+            // Fade out 3D canvas
+            canvas.style.transition = 'opacity 1.5s ease-out';
+            canvas.style.opacity = '0';
+            document.getElementById('vignette').style.display = 'none';
+            document.getElementById('caption').classList.remove('visible');
+            document.getElementById('attribution').classList.remove('visible');
 
-            let lastSliderVal = -1; // track slider changes to avoid redundant redraws
+            // Build code block
+            const lines = buildCodeLines();
+            const codeBlock = document.querySelector('#text-screen .code-block');
+            codeBlock.innerHTML = '';
 
-            function interactiveLoop(timestamp) {
-                if (currentState !== STATES.INTERACTIVE || !sim) return;
+            const textScreen = document.getElementById('text-screen');
+            textScreen.style.display = 'flex';
 
-                // Get slider value (0 = Frozen, 100 = Chaos)
-                const val = parseInt(slider.value);
-                const e = val / 100;
+            // Stagger each line in with a typing effect
+            lines.forEach((line, idx) => {
+                const lineEl = document.createElement('span');
+                lineEl.className = 'line';
+                lineEl.style.opacity = '0';
+                lineEl.style.transition = `opacity 0.6s ease-in ${idx * 0.25}s`;
 
-                // Skip simulation + redraw when slider hasn't changed and is at 0 (fully ordered)
-                if (val === 0 && lastSliderVal === 0) {
-                    animationId = requestAnimationFrame(interactiveLoop);
-                    return;
+                const numSpan = document.createElement('span');
+                numSpan.className = 'line-num';
+                numSpan.textContent = String(idx + 1).padStart(2, '0');
+
+                lineEl.appendChild(numSpan);
+
+                const contentSpan = document.createElement('span');
+                if (line.type === 'comment') {
+                    contentSpan.className = 'comment';
                 }
-                lastSliderVal = val;
+                contentSpan.innerHTML = line.text;
+                lineEl.appendChild(contentSpan);
 
-                // Map slider to Q: 0 -> Q_ORDER, 100 -> Q_CHAOS
-                const targetQ = Q_ORDER * Math.pow(Q_CHAOS / Q_ORDER, e);
+                codeBlock.appendChild(lineEl);
+            });
 
-                // Visual effects respond to entropy slider
-                animPhase.chaosEnergy = e;
-                animPhase.annealProgress = 1 - e;
-                animPhase.time = timestamp || performance.now();
+            // Trigger fade-in after layout
+            requestAnimationFrame(() => {
+                textScreen.classList.add('visible');
+                codeBlock.querySelectorAll('.line').forEach(el => {
+                    el.style.opacity = '1';
+                });
+            });
 
-                sim.setQBias(targetQ);
-                sim.step(STEPS_PER_FRAME);
-
-                // Audio — drone pitch tracks slider entropy
-                if (sonifier) {
-                    sonifier.setEntropy(e);
-                }
-
-                draw();
-                animationId = requestAnimationFrame(interactiveLoop);
-            }
-
-            animationId = requestAnimationFrame(interactiveLoop);
+            // After TEXT_SCREEN_DURATION, return to hook
+            frozenTimers.push(setTimeout(() => {
+                textScreen.classList.remove('visible');
+                codeBlock.querySelectorAll('.line').forEach(el => {
+                    el.style.opacity = '0';
+                });
+                setTimeout(() => {
+                    textScreen.style.display = 'none';
+                    returnToHook();
+                }, 2000);
+            }, TEXT_SCREEN_DURATION));
         }
 
         // ========================================================================
-        // AUTO-RESTART — return to hook after inactivity (gallery/kiosk mode)
+        // RENDER LOOP
         // ========================================================================
-        let inactivityTimer = null;
-        let frozenTimers = []; // track setTimeout handles from enterFrozen
-        const INACTIVITY_TIMEOUT = 120000; // 2 minutes
+        function renderFrame(timestamp) {
+            if (!renderer) return;
+            if (currentState === STATES.HOOK || currentState === STATES.LOADING || currentState === STATES.TEXT_SCREEN) return;
 
-        function resetInactivityTimer() {
-            if (inactivityTimer) clearTimeout(inactivityTimer);
-            if (currentState === STATES.INTERACTIVE || currentState === STATES.FROZEN) {
-                inactivityTimer = setTimeout(returnToHook, INACTIVITY_TIMEOUT);
+            const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
+            lastTimestamp = timestamp;
+            const elapsed = timestamp - stateStartTime;
+
+            switch (currentState) {
+                case STATES.FLYING_CUBES:
+                    updateFlyingCubesPhysics(dt);
+                    if (elapsed >= FLYING_DURATION) enterAssembly();
+                    break;
+
+                case STATES.ASSEMBLY:
+                    updateAssemblyPhysics(dt, Math.min(1, elapsed / ASSEMBLY_DURATION));
+                    if (elapsed >= ASSEMBLY_DURATION) {
+                        enterTransforming();
+                    }
+                    break;
+
+                case STATES.TRANSFORMING:
+                    updateTransforming(elapsed);
+                    break;
+
+                case STATES.FROZEN:
+                    // Auto-rotate reveal, then transition to text screen
+                    if (elapsed >= FROZEN_DURATION) enterTextScreen();
+                    break;
             }
+
+            // Background color: black in chaos → subtle warm dark in order
+            const bgR = 8 * animPhase.annealProgress / 255;
+            const bgG = 6 * animPhase.annealProgress / 255;
+            const bgB = 4 * animPhase.annealProgress / 255;
+            scene.background.setRGB(bgR, bgG, bgB);
+
+            controls.update();
+            renderer.render(scene, camera);
+            animationId = requestAnimationFrame(renderFrame);
         }
+
+        // ========================================================================
+        // LOOP RESTART — return to hook screen
+        // ========================================================================
+        let frozenTimers = [];
 
         function returnToHook() {
-            // Set state immediately to prevent re-entrance during fade-out
             currentState = STATES.HOOK;
 
-            // Cancel any running animation
             if (animationId) {
                 cancelAnimationFrame(animationId);
                 animationId = null;
             }
-            if (inactivityTimer) {
-                clearTimeout(inactivityTimer);
-                inactivityTimer = null;
-            }
-            // Cancel pending frozen-state timers
             for (const t of frozenTimers) clearTimeout(t);
             frozenTimers = [];
 
-            // Destroy audio context to prevent memory leaks
             if (sonifier) {
                 sonifier.destroy();
                 sonifier = null;
             }
 
-            // Hide UI elements (CSS transition fades them out)
+            // Hide UI
             document.getElementById('caption').classList.remove('visible');
-            document.getElementById('controls').classList.remove('visible');
             document.getElementById('attribution').classList.remove('visible');
 
-            // Reset slider
-            document.getElementById('entropy').value = 0;
-
-            // Reset animation phase
             animPhase.chaosEnergy = 0;
             animPhase.annealProgress = 0;
             animPhase.time = 0;
 
-            // Clean up WASM sim
+            // Dispose Three.js
+            disposeThreeScene();
             sim = null;
 
-            // Smooth fade-out: transition canvas opacity, then hide and show hook
-            canvas.style.transition = 'opacity 1.5s ease-out';
-            canvas.style.opacity = '0';
-            setTimeout(() => {
-                canvas.style.transition = '';
-                canvas.style.display = 'none';
-                enterHook();
-            }, 1500);
+            canvas.style.transition = '';
+            canvas.style.display = 'none';
+            document.getElementById('vignette').style.display = 'none';
+            enterHook();
         }
 
         // ========================================================================
         // EVENT LISTENERS
         // ========================================================================
         window.addEventListener('resize', () => {
-            if (canvas.style.display !== 'none') {
-                resizeCanvas();
-                fitToRegion();
-                draw();
+            if (renderer) {
+                resizeThreeScene();
             }
-            // Also resize hook background if visible
             if (hookAnimId) {
                 initHookBg();
                 seedParticles();
             }
         });
 
-        document.getElementById('entropy').addEventListener('input', () => {
-            resetInactivityTimer();
+        // Click to advance to next stage (for testing)
+        canvas.addEventListener('click', () => {
+            switch (currentState) {
+                case STATES.FLYING_CUBES: enterAssembly(); break;
+                case STATES.ASSEMBLY: enterTransforming(); break;
+                case STATES.TRANSFORMING: enterFrozen(); break;
+                case STATES.FROZEN: enterTextScreen(); break;
+            }
+        });
+        document.getElementById('text-screen').addEventListener('click', () => {
+            if (currentState === STATES.TEXT_SCREEN) {
+                for (const t of frozenTimers) clearTimeout(t);
+                frozenTimers = [];
+                document.getElementById('text-screen').style.display = 'none';
+                document.getElementById('text-screen').classList.remove('visible');
+                returnToHook();
+            }
         });
 
-        // Reset inactivity on any pointer/keyboard activity
-        ['pointermove', 'pointerdown', 'keydown'].forEach(evt => {
-            document.addEventListener(evt, resetInactivityTimer, { passive: true });
-        });
-
-        // Pause inactivity timer when tab is hidden to prevent
-        // auto-restart while user is simply on another tab
+        // Pause render loop when tab is hidden
         document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                if (inactivityTimer) {
-                    clearTimeout(inactivityTimer);
-                    inactivityTimer = null;
-                }
-            } else {
-                resetInactivityTimer();
+            if (!document.hidden && renderer && currentState !== STATES.HOOK && currentState !== STATES.LOADING && currentState !== STATES.TEXT_SCREEN) {
+                lastTimestamp = performance.now();
             }
         });
 
         // ========================================================================
         // INITIALIZATION
         // ========================================================================
-        // Wait for WASM to be ready
         if (typeof Module !== 'undefined' && Module.calledRun) {
             enterHook();
         } else if (typeof Module !== 'undefined') {

@@ -82,7 +82,7 @@ nav_weight: 2
         {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>){% endif %}
         {% if post.simulations %}&bull; (<a href="{{site.url}}/{{post.simulations}}">Visualizations</a>){% endif %}
         {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}">TeX</a>){% endif %}
-        {% if post.erratum %}&bull; (see also erratum <a href="#errata">below</a>){% endif %}
+        {% if post.erratum %}{% for erratum_post in site.posts %}{% if erratum_post.categories contains "erratum" and erratum_post.cv-number == post.cv-number %}&bull; [Includes <a href="{{site.url}}{{erratum_post.url}}">correction</a>: <a href="{{erratum_post.journal-web}}"><i>{{erratum_post.journal-ref}}</i></a>]{% endif %}{% endfor %}{% endif %}
         {% unless post.no-abstract %}<details>
           <summary>
             Abstract
@@ -99,38 +99,6 @@ nav_weight: 2
     {% endif %}
     {% endfor %}
     </ol>
-
-    <h1 class="mt-4"><a name="errata">Errata</a></h1>
-    <hr />
-
-    <ol class="my-ul-zebra research-list">
-      {% for post in site.posts %}
-      {% if post.categories contains "erratum" %}
-
-        <li value="{{post.cv-number}}" class="mb-1" style="padding:6px" data-category="erratum" data-title="{{post.title | downcase}}" data-basic-search="{{post.cv-number}} {{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %} {{post.journal-ref}}" data-year="{{post.date | date: '%Y'}}">
-          {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-          <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}})
-          {%if post.journal-web%}&bull; <a href="{{post.journal-web}}" target="_blank">{%endif%}
-            <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%}{% if post.journal-ref-extra %} {{post.journal-ref-extra}}{% endif %}
-          {% if post.arXiv %}&bull; <a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-          {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>){% endif %}
-          {% if post.simulations %}&bull; (<a href="{{site.url}}/{{post.simulations}}">Visualizations</a>){% endif %}
-          {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}">TeX</a>){% endif %}
-          {% unless post.no-abstract %}<details>
-            <summary>
-              Abstract
-            </summary>
-            <br />
-              {{ post.content | markdownify }}
-              {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:500px;height:auto;width:auto;" class="mb-3 mt-3"></a>
-              {% endif %}
-          </details>{% endunless %}
-        </li>
-
-      {% endif %}
-      {% endfor %}
-      </ol>
-
 
 
 
@@ -199,7 +167,7 @@ nav_weight: 2
     <div class="list-group-sm">
       <a class="list-group-item list-group-item-action h5" href="#preprints">Preprints</a>
       <a class="list-group-item list-group-item-action h5" href="#published">Publications</a>
-      <a class="list-group-item list-group-item-action h5" href="#errata">Errata</a>
+
       <a class="list-group-item list-group-item-action h5" href="#lecture-notes">Lecture notes</a>
       <a class="list-group-item list-group-item-action h5" href="#slides">Slides</a>
 			<a class="list-group-item list-group-item-action h5" href="{{site.url}}/simulations/">Gallery</a>

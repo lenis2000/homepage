@@ -6,21 +6,7 @@
 {% for coa in post.coauthors %}{{coa.name}}{% unless forloop.last %}, {% endunless %}{% endfor %}.
 \emph{%raw%}{{%endraw%}{{post.title}}}, {%if post.journal-ref%}{{post.journal-ref}}. {%endif%}{% if post.journal-ref-extra %}{{post.journal-ref-extra}}. {% endif %}
 {% if post.arXiv %}\href{%raw%}{{%endraw%}https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}{%raw%}}{\texttt{{%endraw%}arXiv:{{post.arXiv}}{%raw%}}}{%endraw%}.{% endif %}
-{% endif %}
-{% endfor %}
-\end{etaremune}
-
-
-\subsection*{Errata}
-
-\begin{etaremune}
-\renewcommand{\labelenumi}{[\theenumi]}
-{% for post in site.posts %}
-{% if post.categories contains "erratum" %}
-\item{%raw%}[{[{%endraw%}{{post.cv-number}}{%raw%}]}]{%endraw%} {% if post.categories contains "preprint" %}($*$){% endif%}
-{% for coa in post.coauthors %}{{coa.name}}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-\emph{%raw%}{{%endraw%}{{post.title}}}, {%if post.journal-ref%}\href{%raw%}{{%endraw%}{{post.journal-web}}{%raw%}}{{%endraw%}{{post.journal-ref}}{%raw%}}{%endraw%}. {%endif%}{% if post.journal-ref-extra %}{{post.journal-ref-extra}}. {% endif %}
-{% if post.arXiv %}\href{%raw%}{{%endraw%}https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}{%raw%}}{\texttt{{{%endraw%}{%raw%}\textcolor{red}{{%endraw%}arXiv:{{post.arXiv}}{%raw%}}}}}{%endraw%}.{% endif %} \href{%raw%}{{%endraw%}{{site.storage_url}}/papers/{{post.pdf}}{%raw%}}{\texttt{{%endraw%}(PDF link){%raw%}}}{%endraw%}. {% if post.pages %}{{post.pages}} pages.{%endif%}
+{% if post.erratum %}{% for erratum_post in site.posts %}{% if erratum_post.categories contains "erratum" and erratum_post.cv-number == post.cv-number %}[Includes correction: {{erratum_post.journal-ref}}.]{% endif %}{% endfor %}{% endif %}
 {% endif %}
 {% endfor %}
 \end{etaremune}
