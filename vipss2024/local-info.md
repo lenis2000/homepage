@@ -18,7 +18,7 @@ permalink: /vipss2024/local-info/
 
 <h2 class="mb-4 mt-4">Accommodation</h2>
 
-For the participants' <b>accommodation</b>, there are two options:
+For the participants' <strong>accommodation</strong>, there are two options:
 - We can provide accommodation at the University of Virginia residence hall ([Bond House](https://housing.virginia.edu/area/1166); very close to the classroom where the shool will be). The deadline to request this accommodation is March 15. <br>
 The occupation is single-bedroom. The halls do not provide bed linens/towels or kitchen pots/pans/utensils for the shared kitchen, so be mindful of this when packing.
 <br><br>
@@ -29,11 +29,11 @@ The occupation is single-bedroom. The halls do not provide bed linens/towels or 
 <h2 class="mb-4 mt-4">Local details</h2>
 
 <ul>
-    <li><b>I</b>. The classroom for the summer school will be in the main part of the University of Virginia Grounds.</li>
-    <li><b>II</b>. UVA Corner has many lunch and dinner options. Along West Main St., there are many hotels which are in walking distance from the University (though they may be on the expensive side).</li>
-    <li><b>III</b>. This intersection has many less expensive hotels, and is accessible by Uber or a short drive.</li>
-    <li><b>IV</b>. UVA Downtown Mall offers high-end dining options.</li>
-    <li><b>V</b>. If you'll be at a place in driving distance, then one of the most reasonable parking places (a combination of cost/distance) is Culbreth Garage, which is a 10-minute walk from the classroom.</li>
+    <li><strong>I</strong>. The classroom for the summer school will be in the main part of the University of Virginia Grounds.</li>
+    <li><strong>II</strong>. UVA Corner has many lunch and dinner options. Along West Main St., there are many hotels which are in walking distance from the University (though they may be on the expensive side).</li>
+    <li><strong>III</strong>. This intersection has many less expensive hotels, and is accessible by Uber or a short drive.</li>
+    <li><strong>IV</strong>. UVA Downtown Mall offers high-end dining options.</li>
+    <li><strong>V</strong>. If you'll be at a place in driving distance, then one of the most reasonable parking places (a combination of cost/distance) is Culbreth Garage, which is a 10-minute walk from the classroom.</li>
 </ul>
 
 
@@ -47,9 +47,9 @@ The occupation is single-bedroom. The halls do not provide bed linens/towels or 
 <h2 class="mb-4 mt-4">Travel</h2>
 
 Charlottesville is a midsize college town located in Central Virginia,
-2.5 hours (by car) south of Washington, DC. The local airport code is <b>CHO</b>, and this airport is
-the most comfortable way to getting to the town (it is about 20 minutes/USD25 on Uber from the town). Another close airport (1 hour drive) is Richmond (<b>RIC</b>). The closest major international airports
-are Washington Dulles (<b>IAD</b>) and Washington Reagan (<b>DCA</b>). Flying to <b>CHO</b> would probably require a connection and may be less convenient, depending on where you are flying from.
+2.5 hours (by car) south of Washington, DC. The local airport code is <strong>CHO</strong>, and this airport is
+the most comfortable way to getting to the town (it is about 20 minutes/USD25 on Uber from the town). Another close airport (1 hour drive) is Richmond (<strong>RIC</strong>). The closest major international airports
+are Washington Dulles (<strong>IAD</strong>) and Washington Reagan (<strong>DCA</strong>). Flying to <strong>CHO</strong> would probably require a connection and may be less convenient, depending on where you are flying from.
 <br><br>
 
 <p>Random things to consider from far airports:</p>

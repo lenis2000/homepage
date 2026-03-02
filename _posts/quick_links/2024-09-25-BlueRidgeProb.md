@@ -5,4 +5,4 @@ comments: false
 categories: quick_link
 ---
 
-<div><a href="https://math.virginia.edu/2024/09/BlueRidgeProb/">Blue Ridge Probability Day</a>, <b>1-5pm, Kerchof 111, October 4, 2024</b>.</div>
+<div><a href="https://math.virginia.edu/2024/09/BlueRidgeProb/">Blue Ridge Probability Day</a>, <strong>1-5pm, Kerchof 111, October 4, 2024</strong>.</div>

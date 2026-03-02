@@ -84,7 +84,7 @@ since that folder has other configuration pertaining to
 The main configuration file `latexindent.yaml`
 was copied from the default configuration file and modified
 accordingly. The default configuration file is well-documented,
-but the comprehensive PDF documentation is found <a href="http://mirrors.concertpass.com/tex-archive/support/latexindent/documentation/latexindent.pdf" target="_blank">here on CTAN</a>.
+but the comprehensive PDF documentation is found <a href="http://mirrors.concertpass.com/tex-archive/support/latexindent/documentation/latexindent.pdf" target="_blank">here on CTAN<span class="sr-only"> (opens in new tab)</span></a>.
 
 ### Multiple configurations
 

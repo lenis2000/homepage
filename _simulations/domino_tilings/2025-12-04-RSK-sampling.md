@@ -407,7 +407,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings sample
     </h4>
     <canvas id="shuffling-canvas" style="height: 380px;" role="img" aria-label="Domino shuffling VH bijection step visualization"></canvas>
     <div id="shuffling-info" class="partition-display">
-      <b>Phases:</b> 0: Initial partitions | 1: Form dimers (&lambda;-&kappa; blue, &kappa;-&mu; orange) | 2: Identify blocks (B markers) | 3: Slide dimers &rarr; AFTER | 4: Final result with &Delta; indicators
+      <strong>Phases:</strong> 0: Initial partitions | 1: Form dimers (&lambda;-&kappa; blue, &kappa;-&mu; orange) | 2: Identify blocks (B markers) | 3: Slide dimers &rarr; AFTER | 4: Final result with &Delta; indicators
     </div>
   </div>
 
@@ -471,7 +471,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings sample
       </ul>
       </p>
 
-      <p><strong>Reference:</strong> <a href="https://arxiv.org/abs/math/9201305" target="_blank">arXiv:math/9201305</a> &mdash; Elkies, Kuperberg, Larsen, Propp, <em>"Alternating-Sign Matrices and Domino Tilings"</em> (1992).</p>
+      <p><strong>Reference:</strong> <a href="https://arxiv.org/abs/math/9201305" target="_blank">arXiv:math/9201305<span class="sr-only"> (opens in new tab)</span></a> &mdash; Elkies, Kuperberg, Larsen, Propp, <em>"Alternating-Sign Matrices and Domino Tilings"</em> (1992).</p>
 
       <hr style="margin: 20px 0; border: none; border-top: 2px solid #1976d2;">
 
@@ -522,8 +522,8 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings sample
 
       <p><strong>References:</strong>
       <ul style="margin: 5px 0 10px 20px;">
-        <li><a href="https://arxiv.org/abs/1407.3764" target="_blank">arXiv:1407.3764</a> &mdash; Betea, Bouttier, Nejjar, Vuletić, <em>"The free boundary Schur process and applications I"</em></li>
-        <li><a href="https://arxiv.org/abs/1504.00666" target="_blank">arXiv:1504.00666</a> &mdash; Matveev, Petrov, <em>"q-randomized Robinson-Schensted-Knuth correspondences and random polymers"</em></li>
+        <li><a href="https://arxiv.org/abs/1407.3764" target="_blank">arXiv:1407.3764<span class="sr-only"> (opens in new tab)</span></a> &mdash; Betea, Bouttier, Nejjar, Vuletić, <em>"The free boundary Schur process and applications I"</em></li>
+        <li><a href="https://arxiv.org/abs/1504.00666" target="_blank">arXiv:1504.00666<span class="sr-only"> (opens in new tab)</span></a> &mdash; Matveev, Petrov, <em>"q-randomized Robinson-Schensted-Knuth correspondences and random polymers"</em></li>
       </ul>
       </p>
 
@@ -4297,8 +4297,8 @@ async function initializeApp() {
       const totalZeros = total - totalOnes;
       const nextCell = state.getCurrentCell();
       const aztecSize = state.completedAntiDiags;
-      infoDiv.innerHTML = `<b>Seed: ${state.seed}</b> | Cells: ${processed}/${total} | <span style="color: #2e7d32;">1s: ${totalOnes}</span> | <span style="color: #c62828;">0s: ${totalZeros}</span> | ` +
-        `<b>Aztec size: ${aztecSize}</b>` +
+      infoDiv.innerHTML = `<strong>Seed: ${state.seed}</strong> | Cells: ${processed}/${total} | <span style="color: #2e7d32;">1s: ${totalOnes}</span> | <span style="color: #c62828;">0s: ${totalZeros}</span> | ` +
+        `<strong>Aztec size: ${aztecSize}</strong>` +
         (nextCell ? ` | <span style="background: #ffeb3b; padding: 0 4px;">Next: (${nextCell.i},${nextCell.j}) in diag ${nextCell.antiDiag}</span>` : ' | <span style="color: #2e7d32;">Complete!</span>');
     }
   }
@@ -5265,7 +5265,7 @@ async function initializeApp() {
 
       // Bernoulli probability
       document.getElementById('cell-bernoulli').innerHTML =
-        `p = x<sub>${d.i}</sub> &middot; y<sub>${d.j}</sub> / (1 + x<sub>${d.i}</sub> &middot; y<sub>${d.j}</sub>) = ${d.x_i.toFixed(4)} &times; ${d.y_j.toFixed(4)} / ${(1 + d.xi).toFixed(4)} = <b>${d.p.toFixed(6)}</b>`;
+        `p = x<sub>${d.i}</sub> &middot; y<sub>${d.j}</sub> / (1 + x<sub>${d.i}</sub> &middot; y<sub>${d.j}</sub>) = ${d.x_i.toFixed(4)} &times; ${d.y_j.toFixed(4)} / ${(1 + d.xi).toFixed(4)} = <strong>${d.p.toFixed(6)}</strong>`;
 
       document.getElementById('cell-random').innerHTML =
         `Random U ~ Uniform[0,1]: U = ${d.u.toFixed(6)}`;
@@ -5285,7 +5285,7 @@ async function initializeApp() {
       if (vh.fValues.length > 0) {
         const f = vh.fValues[0];
         document.getElementById('f-probability').innerHTML =
-          `f<sub>${f.k}</sub> = (1 - q<sup>${f.delta_lam}</sup>) / (1 - q<sup>${f.delta_nu}</sup>) = <b>${f.f_k.toFixed(6)}</b> (U=${f.u.toFixed(4)}, ${f.stopped ? 'STOPPED' : 'passed'})`;
+          `f<sub>${f.k}</sub> = (1 - q<sup>${f.delta_lam}</sup>) / (1 - q<sup>${f.delta_nu}</sup>) = <strong>${f.f_k.toFixed(6)}</strong> (U=${f.u.toFixed(4)}, ${f.stopped ? 'STOPPED' : 'passed'})`;
       } else if (state.q === 0) {
         document.getElementById('f-probability').innerHTML =
           `q=0 (Schur case): deterministic, no probabilistic sampling`;

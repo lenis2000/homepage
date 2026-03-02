@@ -16,9 +16,9 @@ permalink: /vipss2024/registration/
 
 ---
 
-We have financial support to partially cover <b>travel</b> for most participants. Preference will be given to graduate students, postdocs, early career researchers, and members of underrepresented groups. The exact amount of support will depend on the number of requests and available funds. We appreciate if you can estimate your travel expenses during the registration (see some <a href="{{site.url}}/vipss2024/local-info/">travel hints</a> on how to get to Charlottesville by flying). 
+We have financial support to partially cover <strong>travel</strong> for most participants. Preference will be given to graduate students, postdocs, early career researchers, and members of underrepresented groups. The exact amount of support will depend on the number of requests and available funds. We appreciate if you can estimate your travel expenses during the registration (see some <a href="{{site.url}}/vipss2024/local-info/">travel hints</a> on how to get to Charlottesville by flying). 
 
-For the participants' <b>accommodation</b>, there are two options:
+For the participants' <strong>accommodation</strong>, there are two options:
 - We can provide accommodation at the University of Virginia residence hall ([Bond House](https://housing.virginia.edu/area/1166); very close to the classroom where the shool will be). The deadline to request this accommodation is March 15. <br>
 The occupation is single-bedroom. The halls do not provide bed linens/towels or kitchen pots/pans/utensils for the shared kitchen, so be mindful of this when packing.
 <br><br>

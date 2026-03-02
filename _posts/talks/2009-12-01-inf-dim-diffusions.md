@@ -19,4 +19,4 @@ It is based on [[2]][ref2], see also [[4]][ref4], [[8]][ref8]
 
 <!--more-->
 
-<a href="{{ page.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank">PDF ({{page.pdf-size}})</a>
+<a href="{{ page.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank">PDF ({{page.pdf-size}})<span class="sr-only"> (opens in new tab)</span></a>

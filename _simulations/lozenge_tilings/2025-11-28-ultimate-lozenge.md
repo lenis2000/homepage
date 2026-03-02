@@ -2533,7 +2533,7 @@ if (window.LOZENGE_WEBGPU) {
             <span id="duits2x2Container" style="display: none; align-items: center; gap: 4px;">
               <label for="duitsAlpha" style="font-size: 11px; color: #555;">α:</label>
               <input type="number" id="duitsAlpha" value="2" step="0.1" min="0.01" style="width: 50px; padding: 2px 4px; font-size: 11px; border: 1px solid #999; border-radius: 3px;">
-              <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/sapm.12339" target="_blank" style="font-size: 11px;">[paper]</a>
+              <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/sapm.12339" target="_blank" style="font-size: 11px;">[paper]<span class="sr-only"> (opens in new tab)</span></a>
             </span>
           </div>
           <div style="display: flex; flex-wrap: wrap; gap: 6px;">
@@ -2541,7 +2541,7 @@ if (window.LOZENGE_WEBGPU) {
             <span id="nienhuis3x3AlphaContainer" style="display: none; align-items: center; gap: 4px;">
               <label for="nienhuis3x3Alpha" style="font-size: 11px; color: #555;">α:</label>
               <input type="number" id="nienhuis3x3Alpha" value="2" min="0.01" step="0.1" style="width: 60px; padding: 2px 4px; font-size: 11px; border: 1px solid #999; border-radius: 3px;">
-              <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank" style="font-size: 11px;">[paper]</a>
+              <a href="https://iopscience.iop.org/article/10.1088/0305-4470/17/18/025" target="_blank" style="font-size: 11px;">[paper]<span class="sr-only"> (opens in new tab)</span></a>
             </span>
           </div>
         </div>
@@ -2773,7 +2773,7 @@ Cmd-click: complete lasso</div>
       </div>
       <div class="export-divider"></div>
       <div class="export-group" style="justify-content: center;">
-        <a href="https://www.redbubble.com/people/tilinger/shop" target="_blank" rel="noopener" style="font-size: 13px; color: #E57200; text-decoration: none; font-weight: 600;">Get a lozenge design printed on anything!</a>
+        <a href="https://www.redbubble.com/people/tilinger/shop" target="_blank" rel="noopener" style="font-size: 13px; color: #E57200; text-decoration: none; font-weight: 600;">Get a lozenge design printed on anything!<span class="sr-only"> (opens in new tab)</span></a>
       </div>
       <div id="height-csv-info-box" style="display: none; margin-top: 8px; padding: 10px; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-width: 100%;">Height CSV Coordinates:
 

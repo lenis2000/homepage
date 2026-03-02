@@ -11,4 +11,4 @@ image: http://frg.int-prob.org/img/meeting2017/oct2017_1.jpg
 image-alt: FRG meeting in October 2017
 ---
 
-<div>The first <a href="http://frg.int-prob.org/">Integrable Probability FRG</a> workshop was held on <b>October 27-29, 2017</b> at Columbia University in New York. <a href="http://frg.int-prob.org/meeting2017/">Some photos from the meeting</a>.<div>
+<div>The first <a href="http://frg.int-prob.org/">Integrable Probability FRG</a> workshop was held on <strong>October 27-29, 2017</strong> at Columbia University in New York. <a href="http://frg.int-prob.org/meeting2017/">Some photos from the meeting</a>.<div>

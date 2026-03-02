@@ -137,7 +137,7 @@ These pictures and "movies" of random tilings are collected in this post.
 
 ##### Dear colleagues:
 
-Feel free to use these pictures to illustrate your research in talks and papers, with attribution (<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0</a>). Some of the images are available in very high resolution upon request.
+Feel free to use these pictures to illustrate your research in talks and papers, with attribution (<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">CC BY-SA 4.0<span class="sr-only"> (opens in new tab)</span></a>). Some of the images are available in very high resolution upon request.
 
 <!--more-->
 
@@ -150,9 +150,9 @@ Feel free to use these pictures to illustrate your research in talks and papers,
 {% assign img-counter = img-counter | plus:1 %}
 <li class="list-group-item" style="padding:5px 10px">
 <span class="highlighted-item">[{{img-counter}}]</span>&nbsp;&bull;&nbsp;{{im.size}}&nbsp;&bull;&nbsp;
-<a href="{{im.web | replace: '__STORAGE_URL__', site.storage_url }}" target="_blank">{{im.alt}}</a>
+<a href="{{im.web | replace: '__STORAGE_URL__', site.storage_url }}" target="_blank">{{im.alt}}<span class="sr-only"> (opens in new tab)</span></a>
 </li>
 {% endfor %}
 </div>
 
-<h2 class="mt-4 mb-3">(<a href="{{site.url}}/2016/08/Tilings-examples-inline/" target="_blank">All images in one large page</a>)</h2>
+<h2 class="mt-4 mb-3">(<a href="{{site.url}}/2016/08/Tilings-examples-inline/" target="_blank">All images in one large page<span class="sr-only"> (opens in new tab)</span></a>)</h2>

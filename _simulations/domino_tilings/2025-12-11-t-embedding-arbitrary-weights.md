@@ -468,7 +468,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 <div id="gamma-params" style="display: none; margin-bottom: 12px; padding: 12px; border: 1px solid #E57200; border-left-width: 4px; background: #f8f9fa; border-radius: 4px;">
   <div style="margin-bottom: 10px; font-weight: bold; font-size: 14px;">
     📈 Gamma Distribution
-    <span style="font-weight: normal; font-size: 0.85em; color: #666;">(Duits, Van Peski <a href="https://arxiv.org/abs/2512.03033" target="_blank">[arXiv:2512.03033]</a>)</span>
+    <span style="font-weight: normal; font-size: 0.85em; color: #666;">(Duits, Van Peski <a href="https://arxiv.org/abs/2512.03033" target="_blank">[arXiv:2512.03033]<span class="sr-only"> (opens in new tab)</span></a>)</span>
   </div>
 
   <div style="padding: 8px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
@@ -494,7 +494,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 <div id="layered-params" style="display: none; margin-bottom: 12px; padding: 12px; border: 1px solid #2A69A6; border-left-width: 4px; background: #f8f9fa; border-radius: 4px;">
   <div style="margin-bottom: 10px; font-weight: bold; font-size: 14px;">
     📶 Layered Weight Regime
-    <span style="font-weight: normal; font-size: 0.85em; color: #666;">(Bufetov, Petrov, Zografos <a href="https://arxiv.org/abs/2507.08560" target="_blank">[arXiv:2507.08560]</a>)</span>
+    <span style="font-weight: normal; font-size: 0.85em; color: #666;">(Bufetov, Petrov, Zografos <a href="https://arxiv.org/abs/2507.08560" target="_blank">[arXiv:2507.08560]<span class="sr-only"> (opens in new tab)</span></a>)</span>
   </div>
 
   <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 10px;">
@@ -590,7 +590,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 <div id="straight-layered-params" style="display: none; margin-bottom: 12px; padding: 12px; border: 1px solid #28a745; border-left-width: 4px; background: #f8f9fa; border-radius: 4px;">
   <div style="margin-bottom: 10px; font-weight: bold; font-size: 14px;">
     📏 Straight Layered Weight Regime
-    <span style="font-weight: normal; font-size: 0.85em; color: #666;">(layers at y = const, varying in x-direction; Moulard, Toninelli <a href="https://arxiv.org/abs/2507.11964" target="_blank">[arXiv:2507.11964]</a>)</span>
+    <span style="font-weight: normal; font-size: 0.85em; color: #666;">(layers at y = const, varying in x-direction; Moulard, Toninelli <a href="https://arxiv.org/abs/2507.11964" target="_blank">[arXiv:2507.11964]<span class="sr-only"> (opens in new tab)</span></a>)</span>
   </div>
 
   <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 10px;">
@@ -1141,7 +1141,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 </details>
 
 <p style="font-size: 0.9em; color: #555; margin-top: 15px;">
-<b>Acknowledgement:</b> Developed during the reunion conference for the <a href="https://www.ipam.ucla.edu/programs/long-programs/geometry-statistical-mechanics-and-integrability/">IPAM long program on Geometry, Statistical Mechanics, and Integrability</a> (December 2025).
+<strong>Acknowledgement:</strong> Developed during the reunion conference for the <a href="https://www.ipam.ucla.edu/programs/long-programs/geometry-statistical-mechanics-and-integrability/">IPAM long program on Geometry, Statistical Mechanics, and Integrability</a> (December 2025).
 I thank Mikhail Basok, Dmitry Chelkak, and Marianna Russkikh for helpful discussions. I also thank Matthew Nicoletti for providing face-based T-embedding code.
 Part of this research was performed while the author was visiting the Institute for Pure and Applied Mathematics (IPAM), which is supported by the National Science Foundation (Grant No. DMS-1925919).
 </p>
@@ -6131,21 +6131,21 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     const statusDiv = document.createElement('div');
     statusDiv.style.cssText = `padding: 8px; margin-bottom: 10px; border-radius: 4px; font-size: 12px; ${allPassed ? 'background: #e8f5e9; border: 1px solid #4caf50; color: #2e7d32;' : 'background: #ffebee; border: 1px solid #f44336; color: #c62828;'}`;
     statusDiv.innerHTML = allPassed
-      ? `<b>✓ JavaScript cross-ratio check successful</b> (${passedChecks}/${totalChecks} vertices, k=1..${levelData[levelData.length-1].k})`
-      : `<b>✗ Cross-ratio check failed</b> (${passedChecks}/${totalChecks} passed)`;
+      ? `<strong>✓ JavaScript cross-ratio check successful</strong> (${passedChecks}/${totalChecks} vertices, k=1..${levelData[levelData.length-1].k})`
+      : `<strong>✗ Cross-ratio check failed</strong> (${passedChecks}/${totalChecks} passed)`;
     container.appendChild(statusDiv);
 
     // Parity rule explanation
     const ruleDiv = document.createElement('div');
     ruleDiv.style.cssText = 'font-size:10px; color:#666; margin-bottom:8px;';
-    ruleDiv.innerHTML = `<b>Parity rule:</b> odd (i+j+k odd) → XX·γ+1=0 | even → XX+γ=0`;
+    ruleDiv.innerHTML = `<strong>Parity rule:</strong> odd (i+j+k odd) → XX·γ+1=0 | even → XX+γ=0`;
     container.appendChild(ruleDiv);
 
     // Show gamma counts per level (debug info)
     if (gammaCounts.length > 0) {
       const countDiv = document.createElement('div');
       countDiv.style.cssText = 'font-size:10px; color:#333; margin-bottom:4px; background:#e3f2fd; padding:4px; border:1px solid #64b5f6;';
-      countDiv.innerHTML = `<b>γ counts:</b> ${gammaCounts.join(' | ')}`;
+      countDiv.innerHTML = `<strong>γ counts:</strong> ${gammaCounts.join(' | ')}`;
       container.appendChild(countDiv);
     }
 

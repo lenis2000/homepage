@@ -15,6 +15,6 @@ Presentation on integrating AI tools into the teaching workflow, covering practi
 
 The presentation includes hands-on examples with Claude, demonstrations of real-time problem-solving, and discussion of pedagogical implications. Special attention is given to the balance between AI assistance and developing students' independent thinking skills.
 
-<a href="{{ page.talk-url }}" target="_blank">View interactive slides</a>
+<a href="{{ page.talk-url }}" target="_blank">View interactive slides<span class="sr-only"> (opens in new tab)</span></a>
 
 Note: These slides were created using Marp and are best viewed in a modern web browser. Use arrow keys or spacebar to navigate.

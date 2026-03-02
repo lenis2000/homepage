@@ -38,12 +38,12 @@ a11y-description: "Displays two superimposed dimer configurations on an Aztec di
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script src="/js/2025-05-27-double-dimer.js"></script>
 
-This simulation demonstrates <b>double dimer configurations</b> on an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>. Two independent dimer configurations are sampled and displayed simultaneously - one in black and one in red. The simulation uses <b>random IID weights</b> sampled from either a Bernoulli distribution or a log-normal distribution (exp(β × X) where X ~ N(0,1)) to generate tilings via the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>; this version is adapted for <code>JS</code> + <code>WebAssembly</code>. Visualization is done using <code>D3.js</code>.
+This simulation demonstrates <strong>double dimer configurations</strong> on an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a>. Two independent dimer configurations are sampled and displayed simultaneously - one in black and one in red. The simulation uses <strong>random IID weights</strong> sampled from either a Bernoulli distribution or a log-normal distribution (exp(β × X) where X ~ N(0,1)) to generate tilings via the <a href="https://arxiv.org/abs/math/0111034">shuffling algorithm</a>. The original python code was created by <a href="https://www.durham.ac.uk/staff/sunil-chhita/">Sunil Chhita</a>; this version is adapted for <code>JS</code> + <code>WebAssembly</code>. Visualization is done using <code>D3.js</code>.
 
 The sampler works in your browser. Up to $n \sim 120$ it works in reasonable time, but for larger $n$ it may take a while.
 I set the upper bound at $n=400$ to avoid freezing your browser.
 
-<b>Random Weights:</b> Each edge weight $W_{ij}$ is sampled independently from one of three distributions:
+<strong>Random Weights:</strong> Each edge weight $W_{ij}$ is sampled independently from one of three distributions:
 - **Bernoulli**: Takes value "Value 1" with probability "P(Value 1)" and value "Value 2" with probability $1 - P(\text{Value 1})$. The default values (1/2 and 3/2 with equal probability) create a mildly inhomogeneous environment.
 - **Gaussian**: $W_{ij} = e^{\beta X_{ij}}$ where $X_{ij} \sim N(0,1)$ are independent standard normal random variables. The parameter $\beta$ controls the variance of the log-weights.
 - **Gamma**: $W_{ij} = \text{Gamma}(\alpha, 1)$ for some of the edges (even rows, i.e., $i$ even), and $W_{ij} = 1$ for other edges (odd rows, i.e., $i$ odd). The shape parameter $\alpha$ controls the distribution of the gamma weights.

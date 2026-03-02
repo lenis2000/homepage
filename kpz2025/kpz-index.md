@@ -109,7 +109,7 @@ KPZ&nbsp;fluctuations&nbsp;to&nbsp;Tracy–Widom&nbsp;statistics&nbsp;through&nb
 
   <!-- References in a collapsible details block -->
   <details>
-      <summary><b>References</b></summary>
+      <summary><strong>References</strong></summary>
       <ul>
       <li>[AB24]
       A.&nbsp;Aggarwal&nbsp;and&nbsp;A.&nbsp;Borodin.&nbsp;Colored&nbsp;Line&nbsp;Ensembles&nbsp;for&nbsp;Stochastic&nbsp;Vertex&nbsp;Models.&nbsp;arXiv

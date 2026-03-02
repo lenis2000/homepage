@@ -48,15 +48,15 @@ redirect_from: /blog
       {% if paginator.previous_page %}
         <a class="list-group-item list-group-item-action h5" href="{{ paginator.previous_page_path }}/">Previous</a>
       {% else %}
-        <li class="list-group-item h5 disabled">Previous</li>
+        <span class="list-group-item h5 disabled">Previous</span>
       {% endif %}
 
-      <li class="list-group-item h5 active">Page: {{ paginator.page }} of {{ paginator.total_pages }}</li>
+      <span class="list-group-item h5 active">Page: {{ paginator.page }} of {{ paginator.total_pages }}</span>
 
       {% if paginator.next_page %}
         <a class="list-group-item list-group-item-action h5" href="{{ paginator.next_page_path }}/">Next</a>
       {% else %}
-        <li class="list-group-item h5 disabled">Next</li>
+        <span class="list-group-item h5 disabled">Next</span>
       {% endif %}
     </div>
   </div>

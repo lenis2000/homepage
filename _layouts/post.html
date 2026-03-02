@@ -12,12 +12,12 @@ layout: default
     Petrov" %}</a
 >{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}<br />
 {%if page.journal-web%}<a href="{{page.journal-web}}" target="_blank"
-    >{%endif%} <i>{{page.journal-ref}}</i>{%if page.journal-web%}</a
+    >{%endif%} <i>{{page.journal-ref}}</i>{%if page.journal-web%}<span class="sr-only"> (opens in new tab)</span></a
 >{%endif%}{% if page.journal-ref and page.arXiv %} &bull; {% endif %} {% if
 page.arXiv %}<a
     href="https://arxiv.org/abs/{{page.arXiv | split: ' ' | first}}"
     target="_blank"
-    >arXiv:{{page.arXiv}}</a
+    >arXiv:{{page.arXiv}}<span class="sr-only"> (opens in new tab)</span></a
 >{% endif %} {% if page.post-pdf %}<br /><br /><a
     href="{{site.storage_url}}/papers/{{page.pdf}}"
     aria-label="PDF of {{page.title}}"

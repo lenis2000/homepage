@@ -10,5 +10,5 @@ published: true
 ---
 
 <div><a href="{{site.math_url}}/ims/workshop-fall-2018/">Workshop on Representation Theory, Combinatorics, and Geometry</a>
-will be at University of Virginia on <b>October 19-21, 2018</b>. The workshop precedes 
+will be at University of Virginia on <strong>October 19-21, 2018</strong>. The workshop precedes 
 the <a href="{{site.math_url}}/ims/lectures/andrei-okounkov/">Virginia Mathematics Lectures by Andrei Okounkov</a> (October&nbsp;22-24)</div>

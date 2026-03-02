@@ -45,8 +45,8 @@ nav_weight: 2
 
       <li value="{{post.cv-number}}" class="mb-1"  style="padding:6px" data-category="preprint" data-title="{{post.title | downcase}}" data-basic-search="{{post.cv-number}} {{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %}" data-year="{{post.date | date: '%Y'}}">
         {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-        <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
-        {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
+        <strong><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></strong> ({{post.date | date: '%Y'}}) &bull;
+        {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}<span class="sr-only"> (opens in new tab)</span></a>{% endif %}
         {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}" aria-label="PDF of {{post.title}}">PDF</a>){% endif %}
         {% if post.simulations %}&bull; (<a href="{{site.url}}/{{post.simulations}}" aria-label="Visualizations for {{post.title}}">Visualizations</a>){% endif %}
         {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}" aria-label="TeX source of {{post.title}}">TeX</a>){% endif %}
@@ -78,10 +78,10 @@ nav_weight: 2
 
       <li value="{{post.cv-number}}" class="mb-1" style="padding:6px" data-category="published" data-title="{{post.title | downcase}}" data-basic-search="{{post.cv-number}} {{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %} {{post.journal-ref}}" data-year="{{post.date | date: '%Y'}}">
         {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
-        <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
+        <strong><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></strong> ({{post.date | date: '%Y'}}) &bull;
         {%if post.journal-web%}<a href="{{post.journal-web}}" target="_blank">{%endif%}
-          <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%}{% if post.journal-ref-extra %} {{post.journal-ref-extra}}{% endif %} &bull;
-        {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
+          <i>{{post.journal-ref}}</i>{%if post.journal-web%}<span class="sr-only"> (opens in new tab)</span></a>{%endif%}{% if post.journal-ref-extra %} {{post.journal-ref-extra}}{% endif %} &bull;
+        {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}<span class="sr-only"> (opens in new tab)</span></a>{% endif %}
         {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}" aria-label="PDF of {{post.title}}">PDF</a>){% endif %}
         {% if post.simulations %}&bull; (<a href="{{site.url}}/{{post.simulations}}" aria-label="Visualizations for {{post.title}}">Visualizations</a>){% endif %}
         {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}" aria-label="TeX source of {{post.title}}">TeX</a>){% endif %}
@@ -126,9 +126,9 @@ nav_weight: 2
         {% if post.categories contains "unpublished-lecture-notes" %}
 
           <li value="{{post.cv-number}}" class="mb-1" style="padding:6px" data-category="lecture-notes" data-title="{{post.link-description | downcase}}" data-basic-search="{{post.cv-number}} {{post.link-description}} {{post.link-text}}">
-            <b>
+            <strong>
               {{post.link-description}} &bull;
-              <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>
+              <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></strong>
               &bull; (<a href="{{site.storage_url}}/papers/{{post.lec-pdf}}" aria-label="PDF of {{post.link-description}}">PDF</a>{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%})
           </li>
 
@@ -145,7 +145,7 @@ nav_weight: 2
 
 
       <li class="mb-1" style="padding:6px" data-category="talk" data-title="{{post.title | downcase}}" data-basic-search="{{post.title}}" data-year="{{post.date | date: '%Y'}}">
-        <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull; <a href="{{ post.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank" aria-label="{% if post.pdf-name-override %}{{post.pdf-name-override}}{% else %}PDF{% endif %} of {{post.title}}">{% if post.pdf-name-override %}{{post.pdf-name-override}}{% else %}PDF{% if post.pdf-size %} ({{post.pdf-size}}){% endif %}{% endif %}</a>
+        <strong><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></strong> ({{post.date | date: '%Y'}}) &bull; <a href="{{ post.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank" aria-label="{% if post.pdf-name-override %}{{post.pdf-name-override}}{% else %}PDF{% endif %} of {{post.title}}">{% if post.pdf-name-override %}{{post.pdf-name-override}}{% else %}PDF{% if post.pdf-size %} ({{post.pdf-size}}){% endif %}{% endif %}<span class="sr-only"> (opens in new tab)</span></a>
 
         {% unless post.no-abstract %}<details>
           <summary>
@@ -178,7 +178,7 @@ nav_weight: 2
     </div>
     <br />
     <div class="list-group-sm">
-      <a class="list-group-item list-group-item-action h5" href="https://scholar.google.com/citations?user=pWDfr2YAAAAJ&hl=en" target="_blank">Google scholar</a>
+      <a class="list-group-item list-group-item-action h5" href="https://scholar.google.com/citations?user=pWDfr2YAAAAJ&hl=en" target="_blank">Google scholar<span class="sr-only"> (opens in new tab)</span></a>
       <a class="list-group-item list-group-item-action h5" href="{{site.url}}/travel/">Research travel</a>
     </div>
     <br />
@@ -187,7 +187,7 @@ nav_weight: 2
     </div>
     <br />
     <div class="list-group-sm">
-      <a class="list-group-item list-group-item-action h5" href="http://frg.int-prob.org" target="_blank">NSF FRG page</a>
+      <a class="list-group-item list-group-item-action h5" href="http://frg.int-prob.org" target="_blank">NSF FRG page<span class="sr-only"> (opens in new tab)</span></a>
     </div>
     <!-- <div class="list-group-sm mt-5">
       <h3>Interesting papers on arXiv</h3>
@@ -259,7 +259,7 @@ nav_weight: 2
       {%- if coa_jyear != 0 -%}{%- assign coa_display_year = coa_jyear -%}{%- else -%}{%- assign coa_display_year = cyear -%}{%- endif -%}
       {%- if coa_web -%}<a class="list-group-item list-group-item-action" href="{{ coa_web }}"><small class="text-muted">[{{ coa_count }}]</small>&nbsp;{{ cname }}&ensp;<small class="text-muted">(&le;{{ coa_display_year }})</small></a>{%- else -%}<span class="list-group-item"><small class="text-muted">[{{ coa_count }}]</small>&nbsp;{{ cname }}&ensp;<small class="text-muted">(&le;{{ coa_display_year }})</small></span>{%- endif -%}
     {%- endfor %}
-    <span class="list-group-item"><small class="text-muted">[{{ solo_count }}]</small>&nbsp;<b>Solo</b>&ensp;<small class="text-muted">{%- if solo_journal_year != 0 -%}(&le;{{ solo_journal_year }}){%- endif -%}</small></span>
+    <span class="list-group-item"><small class="text-muted">[{{ solo_count }}]</small>&nbsp;<strong>Solo</strong>&ensp;<small class="text-muted">{%- if solo_journal_year != 0 -%}(&le;{{ solo_journal_year }}){%- endif -%}</small></span>
     </div>
 
     <br><br>

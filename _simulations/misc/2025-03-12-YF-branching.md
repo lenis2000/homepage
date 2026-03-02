@@ -101,13 +101,13 @@ a11y-description: "Interactive node-link graph of the Young-Fibonacci lattice. D
         <p>
           In this lattice, a Fibonacci word $w$ in $\text{YF}_n$ is connected to $w'$ in $\text{YF}_{n+1}$ if $w'$ can be obtained from $w$ by one of the following operations:
           <ul>
-            <li><b>F1:</b> $w' = 1w$ (prepend 1 to $w$)</li>
-            <li><b>F2:</b> $w' = 2^{k+1}v$ if $w = 2^k1v$ for some $k \geq 0$ and an arbitrary Fibonacci word $v$</li>
-            <li><b>F3:</b> $w' = 2^{\ell}12^{k-\ell}v$ if $w = 2^kv$ for some $k \geq 1$ and an arbitrary Fibonacci word $v$, where $\ell = 1,...,k$</li>
+            <li><strong>F1:</strong> $w' = 1w$ (prepend 1 to $w$)</li>
+            <li><strong>F2:</strong> $w' = 2^{k+1}v$ if $w = 2^k1v$ for some $k \geq 0$ and an arbitrary Fibonacci word $v$</li>
+            <li><strong>F3:</strong> $w' = 2^{\ell}12^{k-\ell}v$ if $w = 2^kv$ for some $k \geq 1$ and an arbitrary Fibonacci word $v$, where $\ell = 1,...,k$</li>
           </ul>
         </p>
         <p>
-          <b>Dimension formula:</b> For $w \in \text{YF}$, the dimension $\dim(w)$ counts the number of saturated chains from $\emptyset$ to $w$ and obeys the recursion:
+          <strong>Dimension formula:</strong> For $w \in \text{YF}$, the dimension $\dim(w)$ counts the number of saturated chains from $\emptyset$ to $w$ and obeys the recursion:
           <ul>
             <li>$\dim(\emptyset) = 1$</li>
             <li>$\dim(1v) = \dim(v)$ for a Fibonacci word $v$</li>

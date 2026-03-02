@@ -78,7 +78,7 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 
 ### Update 2025-04-14: TikZ Code Generation
 
-You can now get a TikZ code for the sampled Aztec diamond directly by clicking the button below. This feature supports <b>dominoes</b> and <b>nonintersecting paths</b> only.
+You can now get a TikZ code for the sampled Aztec diamond directly by clicking the button below. This feature supports <strong>dominoes</strong> and <strong>nonintersecting paths</strong> only.
 
 <div style="margin-top: 10px; margin-bottom: 10px;">
   <button id="tikz-btn" class="btn btn-primary">Generate TikZ Code</button>

@@ -22,4 +22,4 @@ and on some work in progress.
 
 <!--more-->
 
-<a href="{{ page.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank">PDF ({{page.pdf-size}})</a>
+<a href="{{ page.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank">PDF ({{page.pdf-size}})<span class="sr-only"> (opens in new tab)</span></a>

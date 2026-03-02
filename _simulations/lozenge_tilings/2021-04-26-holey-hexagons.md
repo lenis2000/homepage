@@ -35,7 +35,7 @@ a11y-description: "Gallery of uniform random lozenge tilings of size-100 hexagon
 
 What happens if we sample a uniformly random tiling of a hexagon with a hole, but place the hole at different heights? (Thanks to MR for the request to sample these examples.)
 
-<b>Update 2025-05-05</b>: Well, since I am running the Glauber dynamics to sample these pictures,
+<strong>Update 2025-05-05</strong>: Well, since I am running the Glauber dynamics to sample these pictures,
 the pictures are <i>not</i> having fluctuations in the height of the hole. So, one can think of these
 pictures as samples from the fixed filling numbers ensembles. The "shift" in the data is what
 exactly corresponds to the height of the hole.

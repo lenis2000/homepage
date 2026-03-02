@@ -184,7 +184,7 @@ a11y-description: "Interactive Young diagram viewer showing partitions of near-m
           <p class="mt-4">
               This visualization displays the Young diagrams with the maximum
               dimension (number of standard Young tableaux)
-              or <b>close to maximum</b> (for large $n$).
+              or <strong>close to maximum</strong> (for large $n$).
               Here $n$ is the number of boxes in the Young diagram.
               For large $n$, Young diagrams maximizing $f^\lambda$ are identified via heuristics inspired by <a href="https://arxiv.org/abs/2311.15199">this paper</a> by Duzhin and Smirnov-Maltsev (2023).
               All data on this page was precomputed with various degree of precision (and thus, closeness to the maximal). Up to $n=500$, this should likely be the correct maximal dimension for most $n$ (with a few outliers which are hard to catch), and after that, the answer is approximate, but should be reasonably close.
@@ -199,11 +199,11 @@ a11y-description: "Interactive Young diagram viewer showing partitions of near-m
         After $n=5000$, we implement an even faster greedy algorithm which just maximizes over all ways to add a box to the previous partition, without shaking.
           </p>
           <blockquote class="blockquote">
-            <p><b>Conjecture.</b> We believe that even the simplest greedy algorithm hits the actual maximal dimension for infinitely many $n$.</p>
+            <p><strong>Conjecture.</strong> We believe that even the simplest greedy algorithm hits the actual maximal dimension for infinitely many $n$.</p>
           </blockquote>
           Another observation, which supports the above conjecture and the results of Duzhin--Smirnov-Maltsev:
           <blockquote class="blockquote">
-            <p><b>Observation.</b> All partitions up to $n=12000$ included in the current dataset are either
+            <p><strong>Observation.</strong> All partitions up to $n=12000$ included in the current dataset are either
            symmetric, or have all their <i>asymmetry boxes</i> (the skew diagram $\lambda/(\lambda\Delta\lambda')$,
            where $\lambda\Delta\lambda'$ is the maximal symmetric subdiagram of $\lambda$, and
            $\lambda'$ is the conjugate of $\lambda$)

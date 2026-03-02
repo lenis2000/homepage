@@ -15,7 +15,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
     <span style="font-size: 1.5em;">🚧</span>
     <strong style="color: #856404; font-size: 1.1em;">q-Whittaker Deformation: Coming Soon</strong>
   </div>
-  <p style="margin: 0 0 10px 0; color: #664d03;">Currently running <b>uniform shuffling</b> (q = 0). The q &gt; 0 deformation will modify the hole-filling step to introduce correlations based on partition-valued stopping probabilities. For a working q-Whittaker implementation, see <a href="/simulations/2025-12-04-rsk-sampling/" style="color: #0056b3; font-weight: bold;">q-RSK Sampling of Domino Tilings</a>.</p>
+  <p style="margin: 0 0 10px 0; color: #664d03;">Currently running <strong>uniform shuffling</strong> (q = 0). The q &gt; 0 deformation will modify the hole-filling step to introduce correlations based on partition-valued stopping probabilities. For a working q-Whittaker implementation, see <a href="/simulations/2025-12-04-rsk-sampling/" style="color: #0056b3; font-weight: bold;">q-RSK Sampling of Domino Tilings</a>.</p>
   <div style="display: flex; align-items: center; gap: 15px; opacity: 0.6;">
     <label style="color: #664d03;">q = <input type="number" value="0" min="0" max="1" step="0.01" style="width: 60px;" disabled></label>
     <span style="font-size: 0.9em; color: #856404; font-style: italic;">Parameter disabled until implementation</span>
@@ -427,18 +427,18 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 <details style="margin-top: 15px;">
   <summary style="cursor: pointer; font-weight: bold;">About the Algorithm</summary>
   <div style="padding: 10px;">
-    <p><b>Forward EKLP Shuffling</b> builds random tilings of Aztec diamonds via the map A<sub>n</sub> → A<sub>n+1</sub>:</p>
+    <p><strong>Forward EKLP Shuffling</strong> builds random tilings of Aztec diamonds via the map A<sub>n</sub> → A<sub>n+1</sub>:</p>
     <ol>
-      <li><b>Delete bad blocks:</b> Remove colliding pairs: N-S (N bottom, S top) and E-W (E left, W right)</li>
-      <li><b>Slide:</b> Each domino slides one unit in its direction (N↑, S↓, E→, W←)</li>
-      <li><b>Fill holes:</b> Fill each empty 2×2 block with a random domino pair</li>
+      <li><strong>Delete bad blocks:</strong> Remove colliding pairs: N-S (N bottom, S top) and E-W (E left, W right)</li>
+      <li><strong>Slide:</strong> Each domino slides one unit in its direction (N↑, S↓, E→, W←)</li>
+      <li><strong>Fill holes:</strong> Fill each empty 2×2 block with a random domino pair</li>
     </ol>
     <p>Enable "Granular steps" to see each phase separately. Bad blocks are highlighted in red before deletion.</p>
 
     <hr style="margin: 15px 0;">
 
     <h4>q-Whittaker Deformation (TODO)</h4>
-    <p>The q-Whittaker deformation of domino shuffling modifies <b>Step 3 (Fill holes)</b> to introduce correlations between adjacent empty blocks based on partition-valued stopping probabilities.</p>
+    <p>The q-Whittaker deformation of domino shuffling modifies <strong>Step 3 (Fill holes)</strong> to introduce correlations between adjacent empty blocks based on partition-valued stopping probabilities.</p>
 
     <p>For a working implementation using the partition-based q-Whittaker algorithm (via RSK growth diagrams), see:</p>
     <ul>
@@ -447,7 +447,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 
     <p>The challenge for direct shuffling is translating partition indices (where islands are detected as consecutive i with μ<sub>i</sub> − κ<sub>i</sub> = 1) into geometric empty-block positions.</p>
 
-    <p><b>References:</b></p>
+    <p><strong>References:</strong></p>
     <ul>
       <li><a href="https://arxiv.org/abs/math/9201305">arXiv:math/9201305</a> — Elkies, Kuperberg, Larsen, Propp (EKLP shuffling)</li>
       <li><a href="https://arxiv.org/abs/1504.00666">arXiv:1504.00666</a> — Matveev, Petrov (q-RSK and q-Whittaker)</li>

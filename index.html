@@ -15,7 +15,7 @@ nav_weight: 1
             (<a href="{{ site.url }}/research/petrovCVbrief.pdf">CV</a>)
         </h2>
 
-        <p><b>Professor of Mathematics, University of Virginia</b>.</p>
+        <p><strong>Professor of Mathematics, University of Virginia</strong>.</p>
 
         <p>
             Leonid Petrov works in integrable probability, an area of
@@ -54,7 +54,7 @@ nav_weight: 1
 
         {%include sims.html%}
 
-        <p><b>Keywords</b>: Integrable probability, KPZ universality, interacting
+        <p><strong>Keywords</strong>: Integrable probability, KPZ universality, interacting
         particle systems, six vertex model, Yang-Baxter equation, stochastic
         vertex models, Bethe ansatz, Macdonald processes, random tilings,
         symmetric functions, algebraic combinatorics</p>
@@ -71,29 +71,29 @@ nav_weight: 1
             </li>
             <li>
                 <a href="http://frg.int-prob.org/" target="_blank"
-                    >Focused Research Group in Integrable Probability</a
+                    >Focused Research Group in Integrable Probability<span class="sr-only"> (opens in new tab)</span></a
                 >
                 (2017-2022) supported by the NSF grant
                 <a
                     href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=1664617"
                     target="_blank"
-                    >1664617</a
+                    >1664617<span class="sr-only"> (opens in new tab)</span></a
                 >
                 and companion grants
                 <a
                     href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=1664531"
                     target="_blank"
-                    >1664531</a
+                    >1664531<span class="sr-only"> (opens in new tab)</span></a
                 >,
                 <a
                     href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=1664619"
                     target="_blank"
-                    >1664619</a
+                    >1664619<span class="sr-only"> (opens in new tab)</span></a
                 >,
                 <a
                     href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=1664650"
                     target="_blank"
-                    >1664650</a
+                    >1664650<span class="sr-only"> (opens in new tab)</span></a
                 >.
             </li>
         </ul>
@@ -107,7 +107,7 @@ nav_weight: 1
         <hr />
         <h2 class="mb-3">Recent news and links</h2>
 
-        <div class="list-group my-ul-zebra">
+        <ul class="list-group my-ul-zebra">
             {% assign quick-links-counter = 0 %} {% for post in site.posts %} {%
             if post.categories contains "quick_link" and quick-links-counter < 7
             %} {% assign quick-links-counter = quick-links-counter | plus:1 %}
@@ -117,7 +117,7 @@ nav_weight: 1
             </li>
 
             {% endif %} {% endfor %}
-        </div>
+        </ul>
 
         {%include students.html%}
     </div>
