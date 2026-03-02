@@ -20,4 +20,8 @@
 
 <script src="{{ site.url }}/js/theme-toggle.js"></script>
 
+{% if page.permalink == "/arxiv/" %}
+<link rel="alternate" type="application/atom+xml" title="arXiv Feed" href="{{ site.url }}/arxiv/feed.xml">
+{% endif %}
+
 {% include details_header.html %}

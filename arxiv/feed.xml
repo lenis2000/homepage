@@ -1,0 +1,42 @@
+---
+layout: null
+permalink: /arxiv/feed.xml
+---
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>{{ site.name }} — arXiv Feed</title>
+  <subtitle>Integrable probability papers from the community</subtitle>
+  <link href="{{ site.url }}/arxiv/feed.xml" rel="self" type="application/atom+xml"/>
+  <link href="{{ site.url }}/arxiv/" rel="alternate" type="text/html"/>
+  <id>{{ site.url }}/arxiv/feed.xml</id>
+  <author>
+    <name>{{ site.author }}</name>
+  </author>
+  {%- assign arxiv_posts = site.posts | where: "categories", "arxiv-feed" -%}
+  {%- assign latest = arxiv_posts | first -%}
+  {%- if latest -%}
+  <updated>{{ latest.date | date_to_xmlschema }}</updated>
+  {%- endif -%}
+  {%- for post in arxiv_posts limit:50 %}
+  <entry>
+    <title>{{ post.title | xml_escape }}</title>
+    <link href="https://arxiv.org/abs/{{ post.arxiv-id }}" rel="alternate" type="text/html"/>
+    <id>urn:arxiv:{{ post.arxiv-id }}</id>
+    <published>{{ post.date | date_to_xmlschema }}</published>
+    <updated>{{ post.date | date_to_xmlschema }}</updated>
+    {%- for author in post.authors %}
+    <author><name>{{ author | xml_escape }}</name></author>
+    {%- endfor %}
+    {%- for cat in post.arxiv-categories %}
+    <category term="{{ cat }}"/>
+    {%- endfor %}
+    <summary type="html">
+      {{ post.authors | join: ", " | xml_escape }} — {{ post.title | xml_escape }}
+      {%- if post.arxiv-categories %} [{{ post.arxiv-categories | join: ", " }}]{%- endif %}
+    </summary>
+    {%- if post.content != blank %}
+    <content type="html">{{ post.content | xml_escape }}</content>
+    {%- endif %}
+  </entry>
+  {%- endfor %}
+</feed>

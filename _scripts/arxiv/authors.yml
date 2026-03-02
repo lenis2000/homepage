@@ -17,6 +17,9 @@ categories:
   - math.RT
   - math.QA
   - math.CO
+  - math.ST
+  - math.CA
+  - cond-mat.stat-mech
 
 authors:
   - name: "Alexei Borodin"

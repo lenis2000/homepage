@@ -55,81 +55,100 @@ def save_processed(processed):
     PROCESSED_FILE.write_text(json.dumps(processed, indent=2, sort_keys=True))
 
 
-def fetch_category(category, days):
-    """Fetch recent papers from a single arXiv category, with pagination."""
-    config = load_config()
-    author_terms = []
+def fetch_category(category, days, config):
+    """Fetch recent papers from a single arXiv category, with pagination.
+
+    Splits author list into batches of ~20 to keep API query URLs short.
+    """
+    all_author_terms = []
     for author in config["authors"]:
         for name in author["arxiv_names"]:
-            author_terms.append(f"au:{name}")
+            all_author_terms.append(f"au:{name}")
 
-    author_query = "+OR+".join(author_terms)
-    cat_query = f"cat:{category}"
-    search_query = f"({author_query})+AND+{cat_query}"
+    # Split into batches to avoid URL length limits
+    AUTHOR_BATCH = 20
+    author_batches = [
+        all_author_terms[i:i + AUTHOR_BATCH]
+        for i in range(0, len(all_author_terms), AUTHOR_BATCH)
+    ]
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-    papers = []
-    PAGE_SIZE = 200
-    start = 0
+    cutoff_naive = cutoff.replace(tzinfo=None)
+    all_papers = {}
 
-    while True:
-        params = (
-            f"search_query={search_query}"
-            f"&start={start}&max_results={PAGE_SIZE}"
-            f"&sortBy=submittedDate&sortOrder=descending"
-        )
+    for batch_idx, author_terms in enumerate(author_batches):
+        # Show which authors are in this batch
+        names = [t.replace("au:", "") for t in author_terms]
+        print(f"    batch {batch_idx + 1}/{len(author_batches)}: {', '.join(names[:5])}{'...' if len(names) > 5 else ''}")
+        author_query = "+OR+".join(author_terms)
+        search_query = f"({author_query})+AND+cat:{category}"
 
-        url = f"{ARXIV_API}?{params}"
-        response = urllib.request.urlopen(url).read()
-        feed = feedparser.parse(response)
+        start = 0
+        PAGE_SIZE = 200
 
-        if not feed.entries:
-            break
+        while True:
+            params = (
+                f"search_query={search_query}"
+                f"&start={start}&max_results={PAGE_SIZE}"
+                f"&sortBy=submittedDate&sortOrder=descending"
+            )
 
-        page_papers = 0
-        past_cutoff = False
+            url = f"{ARXIV_API}?{params}"
+            response = urllib.request.urlopen(url).read()
+            feed = feedparser.parse(response)
 
-        for entry in feed.entries:
-            published = entry.get("published", "")
-            if not published:
-                continue
+            if not feed.entries:
+                break
 
-            try:
-                pub_date = datetime.strptime(published[:19], "%Y-%m-%dT%H:%M:%S")
-            except ValueError:
-                continue
+            past_cutoff = False
 
-            if pub_date < cutoff:
-                past_cutoff = True
-                continue
+            for entry in feed.entries:
+                published = entry.get("published", "")
+                if not published:
+                    continue
 
-            arxiv_id = entry.id.split("/abs/")[-1].split("v")[0]
-            authors = [a.name for a in entry.authors]
-            title = re.sub(r"\s+", " ", entry.title.replace("\n", " ")).strip()
-            categories = [t["term"] for t in entry.tags]
-            primary_cat = categories[0] if categories else category
+                try:
+                    pub_date = datetime.strptime(published[:19], "%Y-%m-%dT%H:%M:%S")
+                except ValueError:
+                    continue
 
-            abstract = re.sub(r"\s+", " ", entry.get("summary", "").strip())
+                if pub_date < cutoff_naive:
+                    past_cutoff = True
+                    continue
 
-            papers.append({
-                "arxiv_id": arxiv_id,
-                "title": title,
-                "authors": authors,
-                "date": published,
-                "primary_category": primary_cat,
-                "categories": categories,
-                "abstract": abstract,
-            })
-            page_papers += 1
+                arxiv_id = entry.id.split("/abs/")[-1].split("v")[0]
+                if arxiv_id in all_papers:
+                    continue
 
-        if past_cutoff or len(feed.entries) < PAGE_SIZE:
-            break
+                authors = [a.name for a in entry.authors]
+                title = re.sub(r"\s+", " ", entry.title.replace("\n", " ")).strip()
+                categories = [t["term"] for t in entry.tags]
+                primary_cat = categories[0] if categories else category
 
-        start += PAGE_SIZE
-        print(f"    page {start // PAGE_SIZE + 1} ({len(papers)} so far)...")
-        time.sleep(RATE_LIMIT_SECONDS)
+                abstract = re.sub(r"\s+", " ", entry.get("summary", "").strip())
 
-    return papers
+                all_papers[arxiv_id] = {
+                    "arxiv_id": arxiv_id,
+                    "title": title,
+                    "authors": authors,
+                    "date": published,
+                    "primary_category": primary_cat,
+                    "categories": categories,
+                    "abstract": abstract,
+                }
+
+            if past_cutoff or len(feed.entries) < PAGE_SIZE:
+                break
+
+            start += PAGE_SIZE
+            oldest = list(all_papers.values())[-1]["date"][:10] if all_papers else "?"
+            print(f"      page {start // PAGE_SIZE + 1} — reached {oldest} ({len(all_papers)} total)...")
+            time.sleep(RATE_LIMIT_SECONDS)
+
+        if batch_idx < len(author_batches) - 1:
+            time.sleep(RATE_LIMIT_SECONDS)
+
+    return list(all_papers.values())
 
 
 def match_authors(paper, config):
@@ -462,8 +481,8 @@ def main():
     # Step 1: Fetch from all categories
     all_papers = {}
     for cat in categories:
-        print(f"  Querying {cat}...")
-        papers = fetch_category(cat, args.days)
+        print(f"  Querying {cat} ({len(config['authors'])} authors in batches of 20)...")
+        papers = fetch_category(cat, args.days, config)
         for p in papers:
             if p["arxiv_id"] not in all_papers:
                 all_papers[p["arxiv_id"]] = p
