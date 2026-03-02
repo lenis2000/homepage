@@ -215,7 +215,7 @@ def _ai_filter_batch(batch, prompt_template):
                 "timestamp": datetime.now(timezone.utc).isoformat(), **d,
             }) + "\n")
 
-    return {d["arxiv_id"]: d.get("decision", "ACCEPT") for d in decisions}, None
+    return {d["arxiv_id"]: d for d in decisions}, None
 
 
 def ai_filter(papers_to_review, config):
@@ -229,10 +229,10 @@ def ai_filter(papers_to_review, config):
 
     # Small batch: single call
     if len(papers_to_review) <= BATCH_SIZE:
-        result, err = _ai_filter_batch(papers_to_review, prompt_template)
+        results, err = _ai_filter_batch(papers_to_review, prompt_template)
         if err:
             print(f"  WARN: AI batch error: {err}")
-        return result
+        return results
 
     # Large batch: parallel
     from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -298,13 +298,36 @@ REVIEW_FILE = SCRIPT_DIR / "review.json"
 REVIEW_TOOL = SCRIPT_DIR / "arxiv-review" / "arxiv-review"
 
 
-def export_for_review(candidates, ai_decisions):
-    """Write candidates to review.json for the TUI tool."""
+def export_for_review(candidates, ai_decisions, processed):
+    """Write candidates to review.json for the TUI tool.
+
+    Auto-handles high-confidence cases:
+    - ACCEPT + high confidence → auto-accepted (not in TUI)
+    - REJECT_PERSON + high confidence → auto-rejected (not in TUI)
+    Shows in TUI:
+    - REJECT_TOPIC (all) — right person, wrong topic
+    - REJECT_PERSON + low confidence — uncertain identity
+    - ACCEPT + low confidence — uncertain
+    - No AI decision — needs review
+    """
+    auto_accepted = []
+    auto_rejected = []
     review = []
+
     for p in candidates:
         aid = p["arxiv_id"]
         matched = p.get("matched_author", {})
-        review.append({
+        ai = ai_decisions.get(aid, {})
+
+        if isinstance(ai, str):
+            # Old format fallback
+            ai = {"decision": ai, "confidence": "low", "reason": ""}
+
+        decision = ai.get("decision", "")
+        confidence = ai.get("confidence", "low")
+        reason = ai.get("reason", "")
+
+        entry = {
             "arxiv_id": aid,
             "title": p["title"],
             "authors": p["authors"],
@@ -313,14 +336,50 @@ def export_for_review(candidates, ai_decisions):
             "date": p["date"],
             "matched_author": matched.get("name", ""),
             "is_ambiguous": p.get("is_ambiguous", False),
-            "ai_decision": ai_decisions.get(aid, ""),
-            "ai_reason": "",
+            "ai_decision": decision,
+            "ai_confidence": confidence,
+            "ai_reason": reason,
             "decision": "",
-        })
-    # Sort by date descending
+        }
+
+        if decision == "ACCEPT" and confidence == "high":
+            auto_accepted.append(entry)
+        elif decision == "REJECT_PERSON" and confidence == "high":
+            auto_rejected.append(entry)
+        else:
+            # Show in TUI: REJECT_TOPIC, low-confidence anything, no AI
+            review.append(entry)
+
+    # Auto-accept: generate posts immediately
+    wrote = 0
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    for entry in auto_accepted:
+        aid = entry["arxiv_id"]
+        date_prefix = entry["date"].split("T")[0]
+        filename = f"{date_prefix}-{aid}.md"
+        filepath = OUTPUT_DIR / filename
+        if not filepath.exists():
+            filepath.write_text(generate_post(entry))
+            wrote += 1
+        if aid not in processed:
+            processed[aid] = {"source": "fetch", "decision": "ACCEPT", "date": date_prefix}
+
+    # Auto-reject: mark in processed
+    for entry in auto_rejected:
+        aid = entry["arxiv_id"]
+        date_prefix = entry["date"].split("T")[0]
+        if aid not in processed:
+            processed[aid] = {"source": "fetch", "decision": "REJECT", "date": date_prefix}
+
+    save_processed(processed)
+
+    print(f"  Auto-accepted: {len(auto_accepted)} ({wrote} new posts)")
+    print(f"  Auto-rejected: {len(auto_rejected)} (wrong person, high confidence)")
+    print(f"  Need review: {len(review)}")
+
+    # Sort review by date descending
     review.sort(key=lambda x: x["date"], reverse=True)
     REVIEW_FILE.write_text(json.dumps(review, indent=2, ensure_ascii=False))
-    print(f"  Wrote {len(review)} candidates to {REVIEW_FILE}")
     return review
 
 
@@ -453,11 +512,25 @@ def main():
     # Step 5: Interactive review or auto-accept
     if args.review:
         # Export for TUI review
-        export_for_review(candidates, ai_decisions)
+        export_for_review(candidates, ai_decisions, processed)
+
+        ai_accept = sum(1 for v in ai_decisions.values()
+                        if (v.get("decision") if isinstance(v, dict) else v) == "ACCEPT")
+        ai_reject = sum(1 for v in ai_decisions.values()
+                        if (v.get("decision") if isinstance(v, dict) else v) in ("REJECT_PERSON", "REJECT_TOPIC"))
+        print(f"\n  === Review summary ===")
+        print(f"  {len(candidates)} papers matched tracked authors")
+        if ai_decisions:
+            print(f"  AI pre-filter: {ai_accept} suggested ACCEPT, {ai_reject} suggested REJECT")
+            print(f"  AI suggestions are shown in the TUI — you make the final call")
+        else:
+            print(f"  No AI pre-filter (use without --no-ai to enable)")
+        print(f"  Papers sorted newest-first")
+        print(f"  Keys: a=accept  r=reject  s=skip  u=undo  n/p=nav  q=quit (resumable)")
+        print()
 
         # Launch TUI
         if REVIEW_TOOL.exists():
-            print(f"\n  Launching review TUI...")
             result = subprocess.run([str(REVIEW_TOOL), str(REVIEW_FILE)])
             if result.returncode != 0:
                 print("  Review cancelled.")
@@ -481,7 +554,8 @@ def main():
 
     elif args.dry_run:
         for p in candidates:
-            decision = ai_decisions.get(p["arxiv_id"], "ACCEPT")
+            ai = ai_decisions.get(p["arxiv_id"], {})
+            decision = ai.get("decision", "ACCEPT") if isinstance(ai, dict) else ai
             marker = "✓" if decision == "ACCEPT" else "✗"
             print(f"  [{marker}] {p['arxiv_id']} — {p['title'][:60]}")
 
@@ -489,7 +563,8 @@ def main():
         # Auto mode: accept based on AI decisions
         to_accept = []
         for p in candidates:
-            decision = ai_decisions.get(p["arxiv_id"], "ACCEPT")
+            ai = ai_decisions.get(p["arxiv_id"], {})
+            decision = ai.get("decision", "ACCEPT") if isinstance(ai, dict) else ai
             if decision == "ACCEPT":
                 to_accept.append(p)
             else:

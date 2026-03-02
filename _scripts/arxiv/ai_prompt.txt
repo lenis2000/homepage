@@ -12,17 +12,18 @@ The feed tracks papers by specific mathematicians. However, NOT all papers by th
 - Random permutations, permutons, longest increasing subsequences
 - Interacting particle systems with exact solvability
 
-Papers by tracked authors that fall outside this scope should be REJECTED. For example: pure algebraic combinatorics, pure number theory, pure enumerative geometry, automorphic forms, or topics unrelated to probability/statistical mechanics.
+For each paper, classify into ONE of three categories:
 
-For each paper below, decide:
-- ACCEPT: The paper is by the correct tracked author (not a namesake) AND is relevant to integrable probability or related mathematics (broadly understood).
-- REJECT: The paper is by a different person with the same name, OR the paper is clearly outside the scope of integrable probability.
+1. "ACCEPT" — correct author AND relevant topic. Confidence "high" or "low".
+2. "REJECT_PERSON" — this is a DIFFERENT person with the same name (namesake). Confidence "high" if clearly different field/institution, "low" if uncertain.
+3. "REJECT_TOPIC" — correct author, but the paper is NOT about integrable probability. For example: pure algebraic combinatorics, pure number theory, automorphic forms, etc.
 
 Author disambiguation hints are provided. Pay special attention to papers marked "HIGH_AMBIGUITY" — these have common names with many potential false positives.
 
 Respond with a JSON array. Each element must have:
 - "arxiv_id": the arXiv ID
-- "decision": "ACCEPT" or "REJECT"
+- "decision": "ACCEPT", "REJECT_PERSON", or "REJECT_TOPIC"
+- "confidence": "high" or "low"
 - "reason": brief explanation (1 sentence)
 
 Papers to review:

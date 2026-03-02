@@ -21,6 +21,7 @@ type Paper struct {
 	MatchedName  string   `json:"matched_author"`
 	Ambiguous    bool     `json:"is_ambiguous"`
 	AIDecision   string   `json:"ai_decision"`
+	AIConfidence string   `json:"ai_confidence"`
 	AIReason     string   `json:"ai_reason"`
 	Decision     string   `json:"decision"`
 }
@@ -251,12 +252,24 @@ func (m model) View() string {
 	aiLine := ""
 	if p.AIDecision != "" {
 		style := acceptStyle
-		if p.AIDecision == "REJECT" {
+		label := p.AIDecision
+		switch p.AIDecision {
+		case "REJECT_PERSON":
+			style = rejectStyle
+			label = "REJECT (wrong person)"
+		case "REJECT_TOPIC":
+			style = ambigStyle
+			label = "REJECT (off-topic for int. prob.)"
+		case "REJECT":
 			style = rejectStyle
 		}
-		aiLine = fmt.Sprintf("  AI: %s", style.Render(p.AIDecision))
+		conf := ""
+		if p.AIConfidence != "" {
+			conf = " [" + p.AIConfidence + " confidence]"
+		}
+		aiLine = fmt.Sprintf("  AI: %s%s", style.Render(label), dimStyle.Render(conf))
 		if p.AIReason != "" {
-			aiLine += dimStyle.Render("  "+p.AIReason)
+			aiLine += "\n  " + dimStyle.Render(p.AIReason)
 		}
 	}
 
