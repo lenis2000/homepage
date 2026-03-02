@@ -17,10 +17,16 @@ document.addEventListener('DOMContentLoaded', function() {
     var searchIndex = null;
     var filteredIds = null; // null = show all, Set = show only these IDs
     var BATCH_SIZE = 30;
+    var INITIAL_BATCH = 100;
     var visibleCount = 0;
     var totalMatches = 0;
+    var initialRenderDone = false;
+    var pendingHash = null;
 
-    // Load prebuilt search index
+    // Progressive loading: show first 100 papers immediately from DOM
+    showInitialBatch();
+
+    // Load prebuilt search index in background
     fetch('/assets/data/arxiv-index.json')
         .then(function(r) { return r.json(); })
         .then(function(data) {
@@ -33,6 +39,40 @@ document.addEventListener('DOMContentLoaded', function() {
             initFromDOM();
         });
 
+    // Show first batch immediately from DOM (no index needed)
+    function showInitialBatch() {
+        var shown = 0;
+        var visibleMonths = new Set();
+        for (var i = 0; i < paperItems.length && shown < INITIAL_BATCH; i++) {
+            paperItems[i].removeAttribute('hidden');
+            visibleMonths.add(paperItems[i].dataset.month);
+            shown++;
+        }
+        for (var j = 0; j < monthHeaders.length; j++) {
+            if (visibleMonths.has(monthHeaders[j].dataset.month)) {
+                monthHeaders[j].removeAttribute('hidden');
+            }
+        }
+        visibleCount = shown;
+        totalMatches = paperItems.length;
+        initialRenderDone = true;
+    }
+
+    function applyPendingHash() {
+        if (!pendingHash) return;
+        var catBtn = catButtons.querySelector('[data-category="' + pendingHash + '"]');
+        if (catBtn) {
+            activeCategory = pendingHash;
+        } else {
+            var yearBtn = yearButtons.querySelector('[data-year="' + pendingHash + '"]');
+            if (yearBtn) {
+                activeYear = pendingHash;
+            }
+        }
+        pendingHash = null;
+        updateButtons();
+    }
+
     function initFromIndex() {
         var cats = new Set();
         var years = new Set();
@@ -42,7 +82,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         buildCatButtons(cats);
         buildYearButtons(years);
-        applyFilter();
+        applyPendingHash();
+        // Re-render if filters are active (from hash or user interaction)
+        if (activeCategory !== 'all' || activeYear !== 'all' || searchInput.value) {
+            applyFilter();
+        }
     }
 
     function initFromDOM() {
@@ -54,7 +98,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         buildCatButtons(cats);
         buildYearButtons(years);
-        applyFilter();
+        applyPendingHash();
+        // Re-render if filters are active (from hash or user interaction)
+        if (activeCategory !== 'all' || activeYear !== 'all' || searchInput.value) {
+            applyFilter();
+        }
     }
 
     function buildCatButtons(cats) {
@@ -276,18 +324,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // URL hash deep-linking
+    // Mobile tags toggle
+    listEl.addEventListener('click', function(e) {
+        if (e.target.classList.contains('arxiv-tags-toggle')) {
+            var tags = e.target.closest('.arxiv-tags');
+            if (tags) tags.classList.toggle('arxiv-tags-expanded');
+        }
+    });
+
+    // URL hash deep-linking (store hash; buttons built later when index loads)
     if (window.location.hash) {
         var hash = window.location.hash.substring(1);
-        var catBtn = catButtons.querySelector('[data-category="' + hash + '"]');
-        if (catBtn) {
-            activeCategory = hash;
-        } else {
-            var yearBtn = yearButtons.querySelector('[data-year="' + hash + '"]');
-            if (yearBtn) {
-                activeYear = hash;
-            }
-        }
-        updateButtons();
+        // Stash for when buttons are built; validated in initFromIndex/initFromDOM
+        pendingHash = hash;
     }
 });
