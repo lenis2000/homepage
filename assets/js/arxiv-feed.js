@@ -6,56 +6,88 @@ document.addEventListener('DOMContentLoaded', function() {
     var statusRegion = document.getElementById('arxiv-status');
     var noResults = document.getElementById('arxiv-no-results');
     var listEl = document.querySelector('.arxiv-list');
-    var paperItems = document.querySelectorAll('.arxiv-list li[data-id]');
-    var monthHeaders = document.querySelectorAll('.arxiv-list li.arxiv-month-header');
+    var template = document.getElementById('arxiv-data');
 
     var activeCategory = 'all';
     var activeYear = 'all';
     var statusTimeout;
-
-    // Search index
     var searchIndex = null;
-    var filteredIds = null; // null = show all, Set = show only these IDs
-    var BATCH_SIZE = 30;
-    var INITIAL_BATCH = 100;
-    var visibleCount = 0;
-    var totalMatches = 0;
-    var initialRenderDone = false;
     var pendingHash = null;
 
-    // Progressive loading: show first 100 papers immediately from DOM
-    showInitialBatch();
+    var BATCH_SIZE = 30;
+    var INITIAL_BATCH = 100;
+
+    // --- Parse items from <template> (not in main DOM) ---
+    var paperMap = {};      // arxiv-id -> <li> element
+    var monthMap = {};      // "YYYY-MM" -> <li> header element
+    var orderedPapers = []; // [{id, month, year, categories, search}]
+    var idToIndex = {};     // arxiv-id -> index in orderedPapers
+
+    var tplPapers = template.content.querySelectorAll('li[data-id]');
+    var tplMonths = template.content.querySelectorAll('li.arxiv-month-header');
+
+    for (var i = 0; i < tplPapers.length; i++) {
+        var el = tplPapers[i];
+        var id = el.dataset.id;
+        paperMap[id] = el;
+        idToIndex[id] = i;
+        orderedPapers.push({
+            id: id,
+            month: el.dataset.month,
+            year: el.dataset.year,
+            categories: el.dataset.categories || '',
+            search: el.dataset.search || ''
+        });
+    }
+    for (var j = 0; j < tplMonths.length; j++) {
+        var hdr = tplMonths[j];
+        monthMap[hdr.dataset.month] = hdr;
+    }
+
+    // Display state
+    var displayList = [];   // indices into orderedPapers for current filter
+    var renderedCount = 0;
+    var totalMatches = 0;
+
+    // Show all papers initially
+    resetDisplayList();
+    renderBatch(INITIAL_BATCH);
 
     // Load prebuilt search index in background
     fetch('/assets/data/arxiv-index.json')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             searchIndex = data;
-            // Build category and year buttons from index
-            initFromIndex();
+            initButtons();
         })
         .catch(function() {
-            // Fallback: build from DOM
-            initFromDOM();
+            initButtons();
         });
 
-    // Show first batch immediately from DOM (no index needed)
-    function showInitialBatch() {
-        var shown = 0;
-        var visibleMonths = new Set();
-        for (var i = 0; i < paperItems.length && shown < INITIAL_BATCH; i++) {
-            paperItems[i].removeAttribute('hidden');
-            visibleMonths.add(paperItems[i].dataset.month);
-            shown++;
+    // --- Display list helpers ---
+
+    function resetDisplayList() {
+        displayList = [];
+        for (var k = 0; k < orderedPapers.length; k++) displayList.push(k);
+        totalMatches = displayList.length;
+    }
+
+    function initButtons() {
+        var cats = new Set();
+        var years = new Set();
+        var source = searchIndex || orderedPapers;
+        source.forEach(function(entry) {
+            var catStr = searchIndex ? entry.c : entry.categories;
+            var year = searchIndex ? entry.y : entry.year;
+            catStr.split(' ').forEach(function(c) { if (c) cats.add(c); });
+            if (year) years.add(year);
+        });
+        buildCatButtons(cats);
+        buildYearButtons(years);
+        applyPendingHash();
+        if (activeCategory !== 'all' || activeYear !== 'all' || searchInput.value) {
+            applyFilter();
         }
-        for (var j = 0; j < monthHeaders.length; j++) {
-            if (visibleMonths.has(monthHeaders[j].dataset.month)) {
-                monthHeaders[j].removeAttribute('hidden');
-            }
-        }
-        visibleCount = shown;
-        totalMatches = paperItems.length;
-        initialRenderDone = true;
     }
 
     function applyPendingHash() {
@@ -65,44 +97,10 @@ document.addEventListener('DOMContentLoaded', function() {
             activeCategory = pendingHash;
         } else {
             var yearBtn = yearButtons.querySelector('[data-year="' + pendingHash + '"]');
-            if (yearBtn) {
-                activeYear = pendingHash;
-            }
+            if (yearBtn) activeYear = pendingHash;
         }
         pendingHash = null;
         updateButtons();
-    }
-
-    function initFromIndex() {
-        var cats = new Set();
-        var years = new Set();
-        searchIndex.forEach(function(entry) {
-            entry.c.split(' ').forEach(function(c) { if (c) cats.add(c); });
-            if (entry.y) years.add(entry.y);
-        });
-        buildCatButtons(cats);
-        buildYearButtons(years);
-        applyPendingHash();
-        // Re-render if filters are active (from hash or user interaction)
-        if (activeCategory !== 'all' || activeYear !== 'all' || searchInput.value) {
-            applyFilter();
-        }
-    }
-
-    function initFromDOM() {
-        var cats = new Set();
-        var years = new Set();
-        paperItems.forEach(function(item) {
-            (item.dataset.categories || '').split(' ').forEach(function(c) { if (c) cats.add(c); });
-            if (item.dataset.year) years.add(item.dataset.year);
-        });
-        buildCatButtons(cats);
-        buildYearButtons(years);
-        applyPendingHash();
-        // Re-render if filters are active (from hash or user interaction)
-        if (activeCategory !== 'all' || activeYear !== 'all' || searchInput.value) {
-            applyFilter();
-        }
     }
 
     function buildCatButtons(cats) {
@@ -121,15 +119,50 @@ document.addEventListener('DOMContentLoaded', function() {
         yearButtons.innerHTML = html;
     }
 
-    // Filter using the prebuilt index (fast)
+    // --- Rendering ---
+
+    function clearRendered() {
+        while (listEl.firstChild) listEl.removeChild(listEl.firstChild);
+        renderedCount = 0;
+    }
+
+    function renderBatch(count) {
+        count = count || BATCH_SIZE;
+        var target = Math.min(renderedCount + count, displayList.length);
+        if (target <= renderedCount) return;
+
+        var fragment = document.createDocumentFragment();
+        var prevMonth = renderedCount > 0
+            ? orderedPapers[displayList[renderedCount - 1]].month
+            : null;
+
+        for (var i = renderedCount; i < target; i++) {
+            var entry = orderedPapers[displayList[i]];
+            if (entry.month !== prevMonth) {
+                var monthEl = monthMap[entry.month];
+                if (monthEl) fragment.appendChild(monthEl);
+                prevMonth = entry.month;
+            }
+            var paperEl = paperMap[entry.id];
+            if (paperEl) fragment.appendChild(paperEl);
+        }
+
+        listEl.appendChild(fragment);
+        renderedCount = target;
+    }
+
+    // --- Filtering ---
+
     function applyFilter() {
         var term = searchInput.value;
         var termLower = term.toLowerCase();
         var isCase = term !== termLower;
 
-        if (searchIndex) {
-            // Index-based filtering
-            var matchIds = [];
+        // Fast path: no filters active
+        if (!term && activeCategory === 'all' && activeYear === 'all') {
+            resetDisplayList();
+        } else if (searchIndex) {
+            displayList = [];
             searchIndex.forEach(function(entry) {
                 var matchesCat = activeCategory === 'all' || entry.c.indexOf(activeCategory) !== -1;
                 var matchesYear = activeYear === 'all' || entry.y === activeYear;
@@ -141,33 +174,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (!matched) return;
                 }
 
-                matchIds.push(entry.id);
+                var idx = idToIndex[entry.id];
+                if (idx !== undefined) displayList.push(idx);
             });
-
-            filteredIds = new Set(matchIds);
-            totalMatches = matchIds.length;
+            totalMatches = displayList.length;
         } else {
-            // DOM fallback
-            filteredIds = null;
-            totalMatches = 0;
-            paperItems.forEach(function(item) {
-                var cats = item.dataset.categories || '';
-                var year = item.dataset.year || '';
-                var search = item.dataset.search || '';
+            displayList = [];
+            orderedPapers.forEach(function(p, idx) {
+                var matchesCat = activeCategory === 'all' || p.categories.indexOf(activeCategory) !== -1;
+                var matchesYear = activeYear === 'all' || p.year === activeYear;
+                if (!matchesCat || !matchesYear) return;
 
-                var matchesCat = activeCategory === 'all' || cats.indexOf(activeCategory) !== -1;
-                var matchesYear = activeYear === 'all' || year === activeYear;
-                var matchesSearch = !term || (isCase ? search.indexOf(term) !== -1 : search.toLowerCase().indexOf(termLower) !== -1);
-
-                if (matchesCat && matchesYear && matchesSearch) {
-                    totalMatches++;
+                if (term) {
+                    var haystack = p.search;
+                    var matched = isCase ? haystack.indexOf(term) !== -1 : haystack.toLowerCase().indexOf(termLower) !== -1;
+                    if (!matched) return;
                 }
+                displayList.push(idx);
             });
+            totalMatches = displayList.length;
         }
 
-        // Reset visible count and render first batch
-        visibleCount = 0;
-        renderBatch();
+        clearRendered();
+        renderBatch(INITIAL_BATCH);
 
         // No results
         if (totalMatches === 0) {
@@ -191,71 +220,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Render next batch of items (infinite scroll)
-    function renderBatch() {
-        var batchTarget = visibleCount + BATCH_SIZE;
-        var visibleMonths = new Set();
+    // --- Infinite scroll ---
 
-        var matchIndex = 0;
-        for (var i = 0; i < paperItems.length; i++) {
-            var item = paperItems[i];
-            var isMatch;
-
-            if (filteredIds !== null) {
-                isMatch = filteredIds.has(item.dataset.id);
-            } else {
-                var cats = item.dataset.categories || '';
-                var year = item.dataset.year || '';
-                var search = item.dataset.search || '';
-                var term = searchInput.value;
-                var termLower = term.toLowerCase();
-                var isCase = term !== termLower;
-
-                var matchesCat = activeCategory === 'all' || cats.indexOf(activeCategory) !== -1;
-                var matchesYear = activeYear === 'all' || year === activeYear;
-                var matchesSearch = !term || (isCase ? search.indexOf(term) !== -1 : search.toLowerCase().indexOf(termLower) !== -1);
-                isMatch = matchesCat && matchesYear && matchesSearch;
-            }
-
-            if (isMatch) {
-                matchIndex++;
-                if (matchIndex <= batchTarget) {
-                    item.removeAttribute('hidden');
-                    visibleMonths.add(item.dataset.month);
-                } else {
-                    item.setAttribute('hidden', '');
-                }
-            } else {
-                item.setAttribute('hidden', '');
-            }
-        }
-
-        // Show/hide month headers based on visible papers
-        for (var j = 0; j < monthHeaders.length; j++) {
-            if (visibleMonths.has(monthHeaders[j].dataset.month)) {
-                monthHeaders[j].removeAttribute('hidden');
-            } else {
-                monthHeaders[j].setAttribute('hidden', '');
-            }
-        }
-
-        visibleCount = Math.min(batchTarget, totalMatches);
-    }
-
-    // Infinite scroll observer
     var sentinel = document.createElement('div');
     sentinel.id = 'arxiv-scroll-sentinel';
     sentinel.setAttribute('aria-hidden', 'true');
     listEl.parentNode.insertBefore(sentinel, listEl.nextSibling);
 
     var observer = new IntersectionObserver(function(entries) {
-        if (entries[0].isIntersecting && visibleCount < totalMatches) {
+        if (entries[0].isIntersecting && renderedCount < displayList.length) {
             renderBatch();
         }
     }, { rootMargin: '200px' });
     observer.observe(sentinel);
 
-    // Debounced search input
+    // --- Event listeners ---
+
     var searchDebounce;
     function onSearchInput() {
         clearTimeout(searchDebounce);
@@ -267,14 +247,16 @@ document.addEventListener('DOMContentLoaded', function() {
         activeCategory = 'all';
         activeYear = 'all';
         updateButtons();
+        // Close open abstracts on all items (including detached)
+        Object.keys(paperMap).forEach(function(id) {
+            var details = paperMap[id].querySelector('details[open]');
+            if (details) details.open = false;
+        });
         applyFilter();
         searchInput.focus();
         if (window.location.hash) {
             history.replaceState(null, null, window.location.pathname + window.location.search);
         }
-        document.querySelectorAll('.arxiv-list details[open]').forEach(function(d) {
-            d.open = false;
-        });
     }
 
     function updateButtons() {
@@ -300,13 +282,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Event listeners
-    if (searchInput) {
-        searchInput.addEventListener('input', onSearchInput);
-    }
-    if (searchClear) {
-        searchClear.addEventListener('click', clearSearch);
-    }
+    if (searchInput) searchInput.addEventListener('input', onSearchInput);
+    if (searchClear) searchClear.addEventListener('click', clearSearch);
 
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && searchInput) {
@@ -354,10 +331,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // URL hash deep-linking (store hash; buttons built later when index loads)
+    // URL hash deep-linking
     if (window.location.hash) {
-        var hash = window.location.hash.substring(1);
-        // Stash for when buttons are built; validated in initFromIndex/initFromDOM
-        pendingHash = hash;
+        pendingHash = window.location.hash.substring(1);
     }
 });

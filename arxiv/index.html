@@ -48,17 +48,20 @@ nav_weight: 4
 </p>
 
 <ul class="my-ul-zebra arxiv-list" style="list-style:none;padding-left:0" aria-label="arXiv papers">
+</ul>
+
+<template id="arxiv-data">
 {% assign arxiv_posts = site.posts | where: "categories", "arxiv-feed" %}
 {% assign current_month = "" %}
 {% for post in arxiv_posts %}
   {% assign post_month = post.date | date: '%B %Y' %}
   {% if post_month != current_month %}
     {% assign current_month = post_month %}
-  <li class="arxiv-month-header" hidden data-month="{{ post.date | date: '%Y-%m' }}">
+  <li class="arxiv-month-header" data-month="{{ post.date | date: '%Y-%m' }}">
     <h2>{{ post_month }}</h2>
   </li>
   {% endif %}
-  <li class="mb-1" style="padding:6px" hidden
+  <li class="mb-1" style="padding:6px"
       data-id="{{ post.arxiv-id }}"
       data-month="{{ post.date | date: '%Y-%m' }}"
       data-categories="{{ post.arxiv-categories | join: ' ' }}"
@@ -79,7 +82,7 @@ nav_weight: 4
     </div>
   </li>
 {% endfor %}
-</ul>
+</template>
 
 <!-- No results message -->
 <div id="arxiv-no-results" class="alert alert-info mt-4" role="alert" hidden>
@@ -188,10 +191,6 @@ nav_weight: 4
   }
   .arxiv-body em { cursor: pointer; }
   .arxiv-body em:hover { text-decoration: underline; }
-  /* Skip rendering for off-screen items */
-  .arxiv-list li[hidden] {
-    content-visibility: hidden;
-  }
   /* Dark mode overrides */
   [data-theme="dark"] .arxiv-month-header { border-bottom-color: var(--border-color); }
   [data-theme="dark"] .arxiv-month-header h2 { color: var(--text-primary); }
