@@ -311,6 +311,45 @@ def ai_filter(papers_to_review, config):
     return all_decisions
 
 
+_GREEK_MAP = {
+    'α': '\\alpha', 'β': '\\beta', 'γ': '\\gamma', 'δ': '\\delta',
+    'ε': '\\varepsilon', 'ζ': '\\zeta', 'η': '\\eta', 'θ': '\\theta',
+    'ι': '\\iota', 'κ': '\\kappa', 'λ': '\\lambda', 'μ': '\\mu',
+    'ν': '\\nu', 'ξ': '\\xi', 'π': '\\pi', 'ρ': '\\rho',
+    'σ': '\\sigma', 'ς': '\\varsigma', 'τ': '\\tau', 'υ': '\\upsilon',
+    'φ': '\\varphi', 'χ': '\\chi', 'ψ': '\\psi', 'ω': '\\omega',
+    'Γ': '\\Gamma', 'Δ': '\\Delta', 'Θ': '\\Theta', 'Λ': '\\Lambda',
+    'Ξ': '\\Xi', 'Π': '\\Pi', 'Σ': '\\Sigma', 'Φ': '\\Phi',
+    'Ψ': '\\Psi', 'Ω': '\\Omega',
+}
+_GREEK_CHARS = set(_GREEK_MAP.keys())
+
+
+def _fix_unicode_greek_in_math(text):
+    """Replace Unicode Greek with LaTeX commands inside $...$ math."""
+    result = []
+    i = 0
+    in_math = False
+    while i < len(text):
+        ch = text[i]
+        if ch == '$':
+            in_math = not in_math
+            result.append(ch)
+            i += 1
+        elif in_math and ch in _GREEK_CHARS:
+            latex_cmd = _GREEK_MAP[ch]
+            next_ch = text[i + 1] if i + 1 < len(text) else ''
+            if next_ch.isalnum() or next_ch == '\\':
+                result.append(latex_cmd + ' ')
+            else:
+                result.append(latex_cmd)
+            i += 1
+        else:
+            result.append(ch)
+            i += 1
+    return ''.join(result)
+
+
 def generate_post(paper):
     """Generate a Jekyll post for an accepted paper."""
     authors_yaml = "\n".join(f'  - "{a}"' for a in paper["authors"])
@@ -322,7 +361,7 @@ def generate_post(paper):
     author_str = ", ".join(paper["authors"])
     arxiv_url = f"https://arxiv.org/abs/{paper['arxiv_id']}"
 
-    abstract = paper.get("abstract", "")
+    abstract = _fix_unicode_greek_in_math(paper.get("abstract", ""))
 
     return f"""---
 layout: post

@@ -79,6 +79,45 @@ def fetch_abstracts(arxiv_ids):
     return results
 
 
+_GREEK_MAP = {
+    'α': '\\alpha', 'β': '\\beta', 'γ': '\\gamma', 'δ': '\\delta',
+    'ε': '\\varepsilon', 'ζ': '\\zeta', 'η': '\\eta', 'θ': '\\theta',
+    'ι': '\\iota', 'κ': '\\kappa', 'λ': '\\lambda', 'μ': '\\mu',
+    'ν': '\\nu', 'ξ': '\\xi', 'π': '\\pi', 'ρ': '\\rho',
+    'σ': '\\sigma', 'ς': '\\varsigma', 'τ': '\\tau', 'υ': '\\upsilon',
+    'φ': '\\varphi', 'χ': '\\chi', 'ψ': '\\psi', 'ω': '\\omega',
+    'Γ': '\\Gamma', 'Δ': '\\Delta', 'Θ': '\\Theta', 'Λ': '\\Lambda',
+    'Ξ': '\\Xi', 'Π': '\\Pi', 'Σ': '\\Sigma', 'Φ': '\\Phi',
+    'Ψ': '\\Psi', 'Ω': '\\Omega',
+}
+_GREEK_CHARS = set(_GREEK_MAP.keys())
+
+
+def _fix_unicode_greek_in_math(text):
+    """Replace Unicode Greek with LaTeX commands inside $...$ math."""
+    result = []
+    i = 0
+    in_math = False
+    while i < len(text):
+        ch = text[i]
+        if ch == '$':
+            in_math = not in_math
+            result.append(ch)
+            i += 1
+        elif in_math and ch in _GREEK_CHARS:
+            latex_cmd = _GREEK_MAP[ch]
+            next_ch = text[i + 1] if i + 1 < len(text) else ''
+            if next_ch.isalnum() or next_ch == '\\':
+                result.append(latex_cmd + ' ')
+            else:
+                result.append(latex_cmd)
+            i += 1
+        else:
+            result.append(ch)
+            i += 1
+    return ''.join(result)
+
+
 def update_post(filepath, abstract):
     """Replace the post body with the abstract, keeping front matter."""
     text = filepath.read_text(encoding="utf-8")
@@ -87,6 +126,7 @@ def update_post(filepath, abstract):
         return False
 
     front_matter = parts[1]
+    abstract = _fix_unicode_greek_in_math(abstract)
     # Wrap in <p> inside {% raw %} — <p> prevents kramdown processing,
     # {% raw %} prevents Liquid from parsing LaTeX {{ }}
     new_text = f"---{front_matter}---\n{{% raw %}}<p>{abstract}</p>{{% endraw %}}\n"
