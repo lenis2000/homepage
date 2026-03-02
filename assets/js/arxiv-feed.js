@@ -290,6 +290,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Mobile filters toggle
+    var filtersToggle = document.getElementById('arxiv-filters-toggle');
+    var filtersPanel = document.getElementById('arxiv-filters-panel');
+    if (filtersToggle && filtersPanel) {
+        filtersToggle.addEventListener('click', function() {
+            var open = filtersPanel.classList.toggle('open');
+            filtersToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+    }
+
     // Event listeners
     if (searchInput) {
         searchInput.addEventListener('input', onSearchInput);

@@ -15,14 +15,19 @@ nav_weight: 4
     <button class="btn btn-outline-secondary" type="button" id="arxiv-search-clear" aria-label="Clear search and filters">Clear</button>
   </div>
 
-  <!-- Category Filter Buttons -->
-  <div id="arxiv-cat-buttons" class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Filter by arXiv category">
-    <!-- Dynamically generated -->
-  </div>
+  <!-- Filter toggle (mobile only) -->
+  <button id="arxiv-filters-toggle" class="btn btn-sm btn-outline-secondary mb-2" type="button" aria-expanded="false" aria-controls="arxiv-filters-panel">Filters</button>
 
-  <!-- Year Filter Buttons -->
-  <div id="arxiv-year-buttons" class="d-flex flex-wrap gap-2 mb-4" role="group" aria-label="Filter by year">
-    <!-- Dynamically generated -->
+  <div id="arxiv-filters-panel">
+    <!-- Category Filter Buttons -->
+    <div id="arxiv-cat-buttons" class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Filter by arXiv category">
+      <!-- Dynamically generated -->
+    </div>
+
+    <!-- Year Filter Buttons -->
+    <div id="arxiv-year-buttons" class="d-flex flex-wrap gap-2 mb-4" role="group" aria-label="Filter by year">
+      <!-- Dynamically generated -->
+    </div>
   </div>
 
 </search>
@@ -140,6 +145,11 @@ nav_weight: 4
     color: #000;
     padding: 0 1px;
   }
+  /* Filters toggle: hidden on desktop, visible on mobile */
+  #arxiv-filters-toggle { display: none; }
+  @media (max-width: 767px) {
+    #arxiv-filters-toggle { display: inline-block; }
+  }
   /* Collapse category badges on mobile */
   .arxiv-tags-toggle {
     display: none;
@@ -162,8 +172,8 @@ nav_weight: 4
     .arxiv-tags-toggle:hover { background: #e9ecef; }
     .arxiv-tags-expanded .arxiv-cat-badge { display: inline; }
     .arxiv-tags-expanded .arxiv-tags-toggle::after { content: ' \2212'; }
-    #arxiv-cat-buttons,
-    #arxiv-year-buttons { display: none; }
+    #arxiv-filters-panel { display: none; }
+    #arxiv-filters-panel.open { display: block; }
     .arxiv-date-col { width: 5.5em; font-size: 0.88em; }
     .arxiv-entry { gap: 0.5em; }
   }
