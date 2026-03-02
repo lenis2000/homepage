@@ -479,6 +479,8 @@ def main():
                         help="Interactive review mode with TUI")
     parser.add_argument("--import-review", action="store_true",
                         help="Import decisions from review.json and generate posts")
+    parser.add_argument("--authors", type=str, default="",
+                        help="Comma-separated author names to fetch (subset of authors.yml)")
     args = parser.parse_args()
 
     config = load_config()
@@ -532,6 +534,19 @@ def main():
             print(f"  Removed {FETCH_CACHE.name}")
 
         return 0
+
+    # Filter to specific authors if requested
+    if args.authors:
+        author_filter = [a.strip().lower() for a in args.authors.split(",")]
+        filtered = [a for a in config["authors"]
+                    if a["name"].lower() in author_filter]
+        if not filtered:
+            print(f"No matching authors found for: {args.authors}")
+            print(f"Available: {', '.join(a['name'] for a in config['authors'][:10])}...")
+            return 1
+        config = dict(config)
+        config["authors"] = filtered
+        print(f"Filtering to {len(filtered)} authors: {', '.join(a['name'] for a in filtered)}")
 
     print(f"Fetching papers from last {args.days} days...")
     print(f"Categories: {', '.join(categories)}")
