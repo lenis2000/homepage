@@ -29,7 +29,7 @@ integrable stochastic particle systems on the line in the KPZ universality class
 
 <table class="image" align="center">
 <caption align="bottom"></caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/Diagramofproc.png" /></td></tr>
+<tr><td><img alt="Diagram showing how the stochastic higher spin vertex model generalizes integrable particle systems including TASEP and q-Hahn" style="max-width:100%;" src="{{site.storage_url}}/img/blog/Diagramofproc.png" /></td></tr>
 </table>
 <br>
 
@@ -50,7 +50,7 @@ $$i_2$$ and $$j_2$$, such that $$i_1+j_1=i_2+j_2$$:
 
 <table class="image" align="center">
 <caption align="bottom"></caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/Crossing.png" /></td></tr>
+<tr><td><img alt="Arrow configuration at a single vertex showing incoming arrows i1, j1 and outgoing arrows i2, j2 with conservation rule" style="max-width:100%;" src="{{site.storage_url}}/img/blog/Crossing.png" /></td></tr>
 </table>
 <br>
 
@@ -59,7 +59,7 @@ For $$J=1$$, the probability weights have the following form
 
 <table class="image" align="center">
 <caption align="bottom"></caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/J1_vertex.png" /></td></tr>
+<tr><td><img alt="J=1 vertex probability weights expressed in terms of parameters q, nu, alpha, and g" style="max-width:100%;" src="{{site.storage_url}}/img/blog/J1_vertex.png" /></td></tr>
 </table>
 <br>
 
@@ -80,22 +80,22 @@ The limit shape and KPZ fluctuations theorems for the six vertex model were prov
 $q = 1/3$,
 $\nu = 1/q$. Probability of an arrow to go straight up is $1/3$,
 and to go straight over is $2/3$.</caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim1.png" /></td></tr>
+<tr><td><img alt="Stochastic six-vertex model simulation, size 50, showing arrow paths on integer quadrant" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim1.png" /></td></tr>
 </table>
 
 <table class="image" align="center">
 <caption align="top">Size $150$, other parameters same as above.</caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim2.png" /></td></tr>
+<tr><td><img alt="Stochastic six-vertex model simulation, size 150, showing limit shape formation" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim2.png" /></td></tr>
 </table>
 
 <table class="image" align="center">
 <caption align="top">Size $500$, other parameters same as above.</caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim3.png" /></td></tr>
+<tr><td><img alt="Stochastic six-vertex model simulation, size 500, showing clear limit shape with KPZ fluctuations at boundary" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim3.png" /></td></tr>
 </table>
 
 <table class="image" align="center">
 <caption align="top">Fluctuations of the height function of the above model (size $100$).</caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/100_fluc.png" /></td></tr>
+<tr><td><img alt="Height function fluctuations of the stochastic six-vertex model at size 100" style="max-width:100%;" src="{{site.storage_url}}/img/blog/100_fluc.png" /></td></tr>
 </table>
 
 
@@ -104,12 +104,12 @@ and to go straight over is $2/3$.</caption>
 <table class="image" align="center">
 <caption align="top">Size $350$, $\alpha = -18$,
 $q = 0.5$, $\nu = 1/q^4$.</caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim4.png" /></td></tr>
+<tr><td><img alt="Higher spin vertex model with I=4, J=1, size 350, showing multiple arrow layers" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim4.png" /></td></tr>
 </table>
 
 <table class="image" align="center">
 <caption align="top">A zoom into the above picture.</caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim5.png" /></td></tr>
+<tr><td><img alt="Zoomed view of the I=4, J=1 higher spin vertex model showing arrow detail" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim5.png" /></td></tr>
 </table>
 
 #### General $$\nu$$ and $$J=1$$
@@ -121,19 +121,19 @@ $q = 0.5$,
 $\nu = 0.4$. If there are more than 10 vertical arrows at an edge,
 the boldness is still like that for 10 arrows.
 </caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim6.png" /></td></tr>
+<tr><td><img alt="General nu vertex model, size 50, with unbounded vertical arrows and edge thickness proportional to arrow count" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim6.png" /></td></tr>
 </table>
 
 <table class="image" align="center">
 <caption align="top">Size $400$, other parameters same as above.
 </caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim7.png" /></td></tr>
+<tr><td><img alt="General nu vertex model, size 400, showing large-scale limit shape with packed region" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim7.png" /></td></tr>
 </table>
 
 <table class="image" align="center">
 <caption align="top">A zoom into the above picture.
 </caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim8.png" /></td></tr>
+<tr><td><img alt="Zoomed view of the general nu vertex model at size 400" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim8.png" /></td></tr>
 </table>
 
 ### Model in general $$J$$ case
@@ -143,7 +143,7 @@ $$\alpha, q\alpha, q^2\alpha, \ldots, q^{J-1}\alpha$$. For example, for $$J=2$$ 
 
 <table class="image" align="center">
 <caption align="bottom"></caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/J2_vertex.png" /></td></tr>
+<tr><td><img alt="J=2 fused vertex probability weights obtained from the Kirillov-Reshetikhin fusion procedure" style="max-width:100%;" src="{{site.storage_url}}/img/blog/J2_vertex.png" /></td></tr>
 </table>
 <br>
 
@@ -161,13 +161,13 @@ $q = .5$,
 $\nu = 1/q^4$,
 $J=3$. At most 4 vertical arrows and at most 3 horizontal arrows are allowed, therefore there is a packed region on the left.
 </caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim9.png" /></td></tr>
+<tr><td><img alt="Higher spin vertex model with I=4, J=3, size 270, showing packed region on the left from the horizontal arrow constraint" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim9.png" /></td></tr>
 </table>
 
 <table class="image" align="center">
 <caption align="top">A zoom into the above picture.
 </caption>
-<tr><td><img alt="Simulations of stochastic higher spin vertex model" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim10.png" /></td></tr>
+<tr><td><img alt="Zoomed view of the I=4, J=3 higher spin vertex model showing arrow detail near the packed region boundary" style="max-width:100%;" src="{{site.storage_url}}/img/blog/sim10.png" /></td></tr>
 </table>
 
 

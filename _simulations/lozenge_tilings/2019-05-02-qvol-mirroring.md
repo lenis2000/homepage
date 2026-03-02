@@ -43,11 +43,11 @@ left and right, and the Markovian nature of the behavior on the left edge is los
 Here are three states of the tiling in the beginning, the middle of the simulation, and the end.
 We see that the beginning and the ending configuration are exactly the same, up to reflection about the center of the hexagon.
 
-<img src="{{site.storage_url}}/simulations/2019-05-qvol/q_vol_085_10_mirroring_begin.png" alt="Configuration in the beginning" style="width:50%;min-width:500px">
+<img src="{{site.storage_url}}/simulations/2019-05-qvol/q_vol_085_10_mirroring_begin.png" alt="Lozenge tiling at the start of q-volume mirroring dynamics, before parameter reversal" style="width:50%;min-width:500px">
 
-<img src="{{site.storage_url}}/simulations/2019-05-qvol/q_vol_085_10_mirroring_middle.png" alt="Configuration in the middle" style="width:50%;min-width:500px">
+<img src="{{site.storage_url}}/simulations/2019-05-qvol/q_vol_085_10_mirroring_middle.png" alt="Lozenge tiling midway through q-volume mirroring dynamics, showing intermediate disordered state" style="width:50%;min-width:500px">
 
-<img src="{{site.storage_url}}/simulations/2019-05-qvol/q_vol_085_10_mirroring_end.png" alt="Configuration in the end" style="width:50%;min-width:500px">
+<img src="{{site.storage_url}}/simulations/2019-05-qvol/q_vol_085_10_mirroring_end.png" alt="Lozenge tiling at the end of mirroring dynamics, reflected configuration matching the start" style="width:50%;min-width:500px">
 
 ### Data file format
 

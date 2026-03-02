@@ -28,11 +28,11 @@ This is a simulation illustrating the main result from the paper in preparation 
 In addition to the dynamical simulation (the movie below), we can generate joint pictures of the height 
 function at different times. Here are the ones for TASEP:
 
-<img src="{{site.storage_url}}/simulations/2019-06-backTASEP/multi_TASEP.png" style="max-width:100%;max-height:800px;height:auto;width:auto;" alt="TASEP multitime">
+<img src="{{site.storage_url}}/simulations/2019-06-backTASEP/multi_TASEP.png" style="max-width:100%;max-height:800px;height:auto;width:auto;" alt="TASEP height function profiles at multiple time moments, showing characteristic Airy-process correlations">
 
 And for the backwards dynamics:
 
-<img src="{{site.storage_url}}/simulations/2019-06-backTASEP/multi_BHP.png" style="max-width:100%;max-height:800px;height:auto;width:auto;" alt="Backwards dynamics multitime">
+<img src="{{site.storage_url}}/simulations/2019-06-backTASEP/multi_BHP.png" style="max-width:100%;max-height:800px;height:auto;width:auto;" alt="Backwards dynamics height function profiles at multiple time moments, matching the forward TASEP distribution">
 
 ### Data file format for the movie
 
