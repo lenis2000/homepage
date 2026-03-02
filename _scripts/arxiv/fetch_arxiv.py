@@ -56,8 +56,7 @@ def save_processed(processed):
 
 
 def fetch_category(category, days):
-    """Fetch recent papers from a single arXiv category."""
-    # Build author search query from config
+    """Fetch recent papers from a single arXiv category, with pagination."""
     config = load_config()
     author_terms = []
     for author in config["authors"]:
@@ -68,50 +67,67 @@ def fetch_category(category, days):
     cat_query = f"cat:{category}"
     search_query = f"({author_query})+AND+{cat_query}"
 
-    params = (
-        f"search_query={search_query}"
-        f"&start=0&max_results=200"
-        f"&sortBy=submittedDate&sortOrder=descending"
-    )
-
-    url = f"{ARXIV_API}?{params}"
-    response = urllib.request.urlopen(url).read()
-    feed = feedparser.parse(response)
-
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     papers = []
+    PAGE_SIZE = 200
+    start = 0
 
-    for entry in feed.entries:
-        # Parse date
-        published = entry.get("published", "")
-        if not published:
-            continue
+    while True:
+        params = (
+            f"search_query={search_query}"
+            f"&start={start}&max_results={PAGE_SIZE}"
+            f"&sortBy=submittedDate&sortOrder=descending"
+        )
 
-        try:
-            pub_date = datetime.strptime(published[:19], "%Y-%m-%dT%H:%M:%S")
-        except ValueError:
-            continue
+        url = f"{ARXIV_API}?{params}"
+        response = urllib.request.urlopen(url).read()
+        feed = feedparser.parse(response)
 
-        if pub_date < cutoff:
-            continue
+        if not feed.entries:
+            break
 
-        arxiv_id = entry.id.split("/abs/")[-1].split("v")[0]
-        authors = [a.name for a in entry.authors]
-        title = re.sub(r"\s+", " ", entry.title.replace("\n", " ")).strip()
-        categories = [t["term"] for t in entry.tags]
-        primary_cat = categories[0] if categories else category
+        page_papers = 0
+        past_cutoff = False
 
-        abstract = re.sub(r"\s+", " ", entry.get("summary", "").strip())
+        for entry in feed.entries:
+            published = entry.get("published", "")
+            if not published:
+                continue
 
-        papers.append({
-            "arxiv_id": arxiv_id,
-            "title": title,
-            "authors": authors,
-            "date": published,
-            "primary_category": primary_cat,
-            "categories": categories,
-            "abstract": abstract,
-        })
+            try:
+                pub_date = datetime.strptime(published[:19], "%Y-%m-%dT%H:%M:%S")
+            except ValueError:
+                continue
+
+            if pub_date < cutoff:
+                past_cutoff = True
+                continue
+
+            arxiv_id = entry.id.split("/abs/")[-1].split("v")[0]
+            authors = [a.name for a in entry.authors]
+            title = re.sub(r"\s+", " ", entry.title.replace("\n", " ")).strip()
+            categories = [t["term"] for t in entry.tags]
+            primary_cat = categories[0] if categories else category
+
+            abstract = re.sub(r"\s+", " ", entry.get("summary", "").strip())
+
+            papers.append({
+                "arxiv_id": arxiv_id,
+                "title": title,
+                "authors": authors,
+                "date": published,
+                "primary_category": primary_cat,
+                "categories": categories,
+                "abstract": abstract,
+            })
+            page_papers += 1
+
+        if past_cutoff or len(feed.entries) < PAGE_SIZE:
+            break
+
+        start += PAGE_SIZE
+        print(f"    page {start // PAGE_SIZE + 1} ({len(papers)} so far)...")
+        time.sleep(RATE_LIMIT_SECONDS)
 
     return papers
 
@@ -120,6 +136,10 @@ def match_authors(paper, config):
     """Check if any paper author matches our tracked authors.
     Returns (matched_author_config, is_ambiguous) or (None, False)."""
     paper_authors = paper["authors"]
+
+    # Skip large collaborations (physics experiments, not math papers)
+    if len(paper_authors) > 20:
+        return None, False
 
     for tracked in config["authors"]:
         for arxiv_name in tracked["arxiv_names"]:
@@ -146,71 +166,101 @@ def match_authors(paper, config):
     return None, False
 
 
-def ai_filter(papers_to_review, config):
-    """Send papers to Claude for filtering via 'claude' CLI."""
-    if not papers_to_review:
-        return {}
+def _format_paper_desc(p):
+    """Format a single paper for the AI prompt."""
+    matched = p.get("matched_author", {})
+    ambiguity = "HIGH_AMBIGUITY" if p.get("is_ambiguous") else ""
+    disambiguation = matched.get("disambiguation", "")
+    topics = ", ".join(matched.get("topics", []))
 
-    # Build prompt
-    prompt_template = PROMPT_FILE.read_text()
+    desc = (
+        f"arXiv:{p['arxiv_id']} | {', '.join(p['authors'])} | "
+        f"\"{p['title']}\" | categories: {', '.join(p['categories'])} | "
+        f"Matched author: {matched.get('name', '?')} ({matched.get('affiliation', '?')}) "
+        f"[{topics}] {ambiguity}"
+    )
+    if disambiguation:
+        desc += f" | HINT: {disambiguation}"
+    return desc
 
-    # Format papers for review
-    paper_descs = []
-    for p in papers_to_review:
-        matched = p.get("matched_author", {})
-        ambiguity = "HIGH_AMBIGUITY" if p.get("is_ambiguous") else ""
-        disambiguation = matched.get("disambiguation", "")
-        topics = ", ".join(matched.get("topics", []))
 
-        desc = (
-            f"arXiv:{p['arxiv_id']} | {', '.join(p['authors'])} | "
-            f"\"{p['title']}\" | categories: {', '.join(p['categories'])} | "
-            f"Matched author: {matched.get('name', '?')} ({matched.get('affiliation', '?')}) "
-            f"[{topics}] {ambiguity}"
-        )
-        if disambiguation:
-            desc += f" | HINT: {disambiguation}"
-        paper_descs.append(desc)
-
+def _ai_filter_batch(batch, prompt_template):
+    """Send one batch to Claude, return dict of {arxiv_id: decision}."""
+    paper_descs = [_format_paper_desc(p) for p in batch]
     full_prompt = prompt_template + "\n".join(paper_descs)
 
-    # Call claude CLI
     try:
         result = subprocess.run(
             ["claude", "-p", full_prompt],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, timeout=180,
         )
         output = result.stdout.strip()
     except FileNotFoundError:
-        print("  WARN: 'claude' CLI not found, accepting all papers")
-        return {p["arxiv_id"]: "ACCEPT" for p in papers_to_review}
+        return {p["arxiv_id"]: "ACCEPT" for p in batch}, "no claude CLI"
     except subprocess.TimeoutExpired:
-        print("  WARN: claude CLI timed out, accepting all papers")
-        return {p["arxiv_id"]: "ACCEPT" for p in papers_to_review}
+        return {p["arxiv_id"]: "ACCEPT" for p in batch}, "timeout"
 
-    # Parse JSON response
     try:
-        # Extract JSON array from response (may have surrounding text)
         json_match = re.search(r"\[.*\]", output, re.DOTALL)
         if not json_match:
-            print(f"  WARN: no JSON in AI response, accepting all")
-            return {p["arxiv_id"]: "ACCEPT" for p in papers_to_review}
-
+            return {p["arxiv_id"]: "ACCEPT" for p in batch}, "no JSON"
         decisions = json.loads(json_match.group())
-    except json.JSONDecodeError as e:
-        print(f"  WARN: failed to parse AI response: {e}")
-        return {p["arxiv_id"]: "ACCEPT" for p in papers_to_review}
+    except json.JSONDecodeError:
+        return {p["arxiv_id"]: "ACCEPT" for p in batch}, "parse error"
 
-    # Log decisions
+    # Log
     with open(AI_LOG_FILE, "a") as f:
         for d in decisions:
-            log_entry = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                **d,
-            }
-            f.write(json.dumps(log_entry) + "\n")
+            f.write(json.dumps({
+                "timestamp": datetime.now(timezone.utc).isoformat(), **d,
+            }) + "\n")
 
-    return {d["arxiv_id"]: d["decision"] for d in decisions}
+    return {d["arxiv_id"]: d.get("decision", "ACCEPT") for d in decisions}, None
+
+
+def ai_filter(papers_to_review, config):
+    """Send papers to Claude for filtering, in parallel batches."""
+    if not papers_to_review:
+        return {}
+
+    prompt_template = PROMPT_FILE.read_text()
+    BATCH_SIZE = 20
+    MAX_PARALLEL = 5
+
+    # Small batch: single call
+    if len(papers_to_review) <= BATCH_SIZE:
+        result, err = _ai_filter_batch(papers_to_review, prompt_template)
+        if err:
+            print(f"  WARN: AI batch error: {err}")
+        return result
+
+    # Large batch: parallel
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    batches = []
+    for i in range(0, len(papers_to_review), BATCH_SIZE):
+        batches.append(papers_to_review[i:i + BATCH_SIZE])
+
+    print(f"  Processing {len(batches)} batches ({MAX_PARALLEL} parallel)...")
+    all_decisions = {}
+    done = 0
+
+    with ThreadPoolExecutor(max_workers=MAX_PARALLEL) as pool:
+        futures = {
+            pool.submit(_ai_filter_batch, batch, prompt_template): i
+            for i, batch in enumerate(batches)
+        }
+        for future in as_completed(futures):
+            batch_idx = futures[future]
+            result, err = future.result()
+            all_decisions.update(result)
+            done += 1
+            status = f"  batch {done}/{len(batches)}"
+            if err:
+                status += f" (WARN: {err})"
+            print(status)
+
+    return all_decisions
 
 
 def generate_post(paper):
