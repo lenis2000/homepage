@@ -116,5 +116,5 @@ arxiv-install:
 	cd _scripts/arxiv/arxiv-review && go build -o arxiv-review . && cp arxiv-review ~/bin/
 
 arxiv:
-	python3 _scripts/arxiv/fetch_arxiv.py --days $(or $(DAYS),7) --review
+	python3 _scripts/arxiv/fetch_arxiv.py --days $(or $(DAYS),30) --review
 	python3 _scripts/arxiv/build_search_index.py
