@@ -1,0 +1,22 @@
+---
+title: arXiv Feed — Tracked Authors
+layout: default
+permalink: /arxiv/authors/
+published: true
+---
+
+<p class="text-muted mb-4">
+  The arXiv feed tracks integrable probability papers (broadly understood) by the following authors.
+  Not all papers by these authors are included — only those related to integrable probability, random matrices, KPZ universality, random tilings, and related areas.
+  <br>
+  <a href="mailto:lenia.petrov@gmail.com" class="u-underline">Email me</a> if you notice someone missing or any mistakes.
+  Back to the <a href="/arxiv/" class="u-underline">arXiv feed</a>.
+</p>
+
+<div style="column-count:3;column-gap:2em">
+<ul style="list-style:none;padding-left:0;margin:0">
+{% for name in site.data.arxiv_authors %}
+  <li>{{ name }}</li>
+{% endfor %}
+</ul>
+</div>

@@ -223,3 +223,393 @@ authors:
     arxiv_names: ["Drillick_H"]
     affiliation: "Columbia"
     topics: ["TASEP", "stochastic vertex models", "colored models"]
+
+  - name: "Kurt Johansson"
+    arxiv_names: ["Johansson_K"]
+    affiliation: "KTH"
+    topics: ["random matrices", "random tilings", "TASEP", "Tracy-Widom"]
+
+  - name: "Andrei Okounkov"
+    arxiv_names: ["Okounkov_A"]
+    affiliation: "Columbia"
+    topics: ["random partitions", "DT theory", "Schur processes", "enumerative geometry"]
+
+  - name: "Jeremy Quastel"
+    arxiv_names: ["Quastel_J"]
+    affiliation: "Toronto"
+    topics: ["KPZ equation", "KPZ fixed point", "stochastic PDE"]
+
+  - name: "Patrik Ferrari"
+    arxiv_names: ["Ferrari_P"]
+    affiliation: "Bonn"
+    topics: ["KPZ", "TASEP", "Airy processes", "random growth"]
+    high_ambiguity: true
+    disambiguation: "Patrik Ferrari, KPZ / TASEP probabilist at Bonn — not other P. Ferraris"
+
+  - name: "Herbert Spohn"
+    arxiv_names: ["Spohn_H"]
+    affiliation: "TU Munich"
+    topics: ["KPZ", "hydrodynamic limits", "statistical mechanics"]
+
+  - name: "Craig Tracy"
+    arxiv_names: ["Tracy_C"]
+    affiliation: "UC Davis"
+    topics: ["Tracy-Widom distributions", "random matrices", "ASEP"]
+
+  - name: "Percy Deift"
+    arxiv_names: ["Deift_P"]
+    affiliation: "NYU"
+    topics: ["Riemann-Hilbert problems", "random matrices", "universality"]
+
+  - name: "Grigori Olshanski"
+    arxiv_names: ["Olshanski_G"]
+    affiliation: "Moscow"
+    topics: ["asymptotic representation theory", "point processes", "infinite-dimensional groups"]
+
+  - name: "Daniel Remenik"
+    arxiv_names: ["Remenik_D"]
+    affiliation: "Chile"
+    topics: ["KPZ fixed point", "Airy processes", "last passage percolation"]
+
+  - name: "Nikos Zygouras"
+    arxiv_names: ["Zygouras_N"]
+    affiliation: "Warwick"
+    topics: ["random polymers", "KPZ", "disorder relevance"]
+
+  - name: "Neil O'Connell"
+    arxiv_names: ["OConnell_N", "O'Connell_N"]
+    affiliation: "UCD Dublin"
+    topics: ["geometric RSK", "quantum Toda lattice", "random polymers"]
+
+  - name: "Alan Hammond"
+    arxiv_names: ["Hammond_A"]
+    affiliation: "Berkeley"
+    topics: ["KPZ", "Brownian LPP", "random polymers", "self-avoiding walk"]
+    high_ambiguity: true
+    disambiguation: "Alan Hammond, probabilist at Berkeley — KPZ, LPP, polymer geometry"
+
+  - name: "Bálint Virág"
+    arxiv_names: ["Virag_B"]
+    affiliation: "Toronto"
+    topics: ["random matrices", "stochastic operator limits", "Brownian web"]
+
+  - name: "Tomohiro Sasamoto"
+    arxiv_names: ["Sasamoto_T"]
+    affiliation: "Tokyo"
+    topics: ["ASEP", "KPZ exact formulas", "integrable systems"]
+
+  - name: "Takashi Imamura"
+    arxiv_names: ["Imamura_T"]
+    affiliation: "Chiba"
+    topics: ["KPZ", "ASEP", "half-space models"]
+
+  - name: "Greta Panova"
+    arxiv_names: ["Panova_G"]
+    affiliation: "USC"
+    topics: ["algebraic combinatorics", "symmetric functions", "Schur positivity"]
+    high_ambiguity: true
+    disambiguation: "Greta Panova, algebraic combinatorics at USC — only include papers related to integrable probability, random tilings, or asymptotic representation theory, NOT pure enumerative/algebraic combinatorics"
+
+  - name: "Duncan Dauvergne"
+    arxiv_names: ["Dauvergne_D"]
+    affiliation: "Toronto"
+    topics: ["directed landscape", "KPZ", "last passage percolation"]
+
+  - name: "Milind Hegde"
+    arxiv_names: ["Hegde_M"]
+    affiliation: "Columbia"
+    topics: ["KPZ", "directed landscape", "geodesics"]
+    high_ambiguity: true
+    disambiguation: "Milind Hegde, KPZ / directed landscape probabilist"
+
+  - name: "Jiaoyang Huang"
+    arxiv_names: ["Huang_J"]
+    affiliation: "Penn"
+    topics: ["random matrices", "universality", "beta-ensembles"]
+    high_ambiguity: true
+    disambiguation: "Jiaoyang Huang, random matrix theorist at Penn — very common surname, many false positives"
+
+  - name: "Matteo Mucciconi"
+    arxiv_names: ["Mucciconi_M"]
+    affiliation: ""
+    topics: ["vertex models", "RSK", "KPZ", "colored models"]
+
+  - name: "Elia Bisi"
+    arxiv_names: ["Bisi_E"]
+    affiliation: "TU Wien"
+    topics: ["random polymers", "log-gamma polymer", "KPZ"]
+
+  - name: "Dan Betea"
+    arxiv_names: ["Betea_D"]
+    affiliation: "Paris"
+    topics: ["random partitions", "vertex models", "Schur processes"]
+
+  - name: "Philippe Sosoe"
+    arxiv_names: ["Sosoe_P"]
+    affiliation: "Cornell"
+    topics: ["KPZ", "random matrices", "fluctuations"]
+
+  - name: "Natasha Blitvic"
+    arxiv_names: ["Blitvic_N"]
+    affiliation: "QMUL"
+    topics: ["positivity", "moment sequences", "combinatorics"]
+    high_ambiguity: true
+    disambiguation: "Natasha Blitvic at QMUL — only include papers related to integrable probability, random matrices, or moment problems, NOT pure combinatorics"
+
+  - name: "Dominik Schmid"
+    arxiv_names: ["Schmid_D"]
+    affiliation: "Bonn/Columbia"
+    topics: ["exclusion processes", "hydrodynamic limits", "interacting particle systems"]
+    high_ambiguity: true
+    disambiguation: "Dominik Schmid, exclusion processes — not other D. Schmids"
+
+  - name: "Matthew Nicoletti"
+    arxiv_names: ["Nicoletti_M"]
+    affiliation: "MIT"
+    topics: ["dimers", "t-embeddings", "random tilings"]
+
+  - name: "Zongrui Yang"
+    arxiv_names: ["Yang_Z"]
+    affiliation: "Columbia"
+    topics: ["KPZ", "exclusion processes", "stochastic vertex models"]
+    high_ambiguity: true
+    disambiguation: "Zongrui Yang, KPZ / particle systems at Columbia — common surname"
+
+  - name: "Xincheng Zhang"
+    arxiv_names: ["Zhang_X"]
+    affiliation: "Toronto"
+    topics: ["TASEP", "KPZ", "shock fluctuations"]
+    high_ambiguity: true
+    disambiguation: "Xincheng Zhang, TASEP probabilist at Toronto — very common surname"
+
+  - name: "Ofer Busani"
+    arxiv_names: ["Busani_O"]
+    affiliation: ""
+    topics: ["KPZ", "geodesics", "Busemann functions", "directed landscape"]
+
+  - name: "Reda Chhaibi"
+    arxiv_names: ["Chhaibi_R"]
+    affiliation: "Toulouse"
+    topics: ["random matrices", "beta-ensembles", "quantum groups"]
+
+  - name: "Sunil Chhita"
+    arxiv_names: ["Chhita_S"]
+    affiliation: "Durham"
+    topics: ["dimers", "Arctic curves", "random tilings"]
+
+  - name: "Peter Nejjar"
+    arxiv_names: ["Nejjar_P"]
+    affiliation: "IST Austria"
+    topics: ["TASEP", "random matrices", "shock fluctuations"]
+
+  - name: "Harriet Walsh"
+    arxiv_names: ["Walsh_H"]
+    affiliation: ""
+    topics: ["random partitions", "maps", "unitary matrix integrals"]
+
+  - name: "Theo Assiotis"
+    arxiv_names: ["Assiotis_T"]
+    affiliation: "Edinburgh"
+    topics: ["random matrices", "infinite-dimensional diffusions", "Hua-Pickrell measures"]
+
+  - name: "Arno Kuijlaars"
+    arxiv_names: ["Kuijlaars_A"]
+    affiliation: "KU Leuven"
+    topics: ["random matrices", "orthogonal polynomials", "Riemann-Hilbert"]
+
+  - name: "Sofia Tarricone"
+    arxiv_names: ["Tarricone_S"]
+    affiliation: ""
+    topics: ["Painlevé equations", "Fredholm determinants", "KPZ"]
+
+  - name: "Alessandra Occelli"
+    arxiv_names: ["Occelli_A"]
+    affiliation: "Angers"
+    topics: ["KPZ", "TASEP", "slow decorrelation"]
+
+  - name: "Stefano Olla"
+    arxiv_names: ["Olla_S"]
+    affiliation: "Paris Dauphine"
+    topics: ["hydrodynamic limits", "statistical mechanics", "interacting particle systems"]
+
+  - name: "Jimmy He"
+    arxiv_names: ["He_J"]
+    affiliation: "MIT"
+    topics: ["random matrices", "Hecke algebras", "card shuffling"]
+    high_ambiguity: true
+    disambiguation: "Jimmy He, random matrices / Hecke algebras at MIT"
+
+  - name: "Ben Brubaker"
+    arxiv_names: ["Brubaker_B"]
+    affiliation: "Minnesota"
+    topics: ["Whittaker functions", "lattice models", "automorphic forms"]
+
+  - name: "Slava Naprienko"
+    arxiv_names: ["Naprienko_S"]
+    affiliation: "UNC Chapel Hill"
+    topics: ["vertex models", "symmetric functions", "Schur polynomials"]
+
+  - name: "Siddhartha Sahi"
+    arxiv_names: ["Sahi_S"]
+    affiliation: "Rutgers"
+    topics: ["representation theory", "special functions", "interpolation polynomials"]
+    high_ambiguity: true
+    disambiguation: "Siddhartha Sahi at Rutgers — only include papers related to integrable probability, vertex models, or symmetric functions, NOT pure algebra/number theory"
+
+  - name: "Michael Wheeler"
+    arxiv_names: ["Wheeler_M"]
+    affiliation: "Melbourne"
+    topics: ["vertex models", "symmetric functions", "Yang-Baxter"]
+
+  - name: "Daniel Bump"
+    arxiv_names: ["Bump_D"]
+    affiliation: "Stanford"
+    topics: ["lattice models", "Whittaker functions", "crystal bases"]
+    high_ambiguity: true
+    disambiguation: "Daniel Bump at Stanford — only include papers related to solvable lattice models, vertex models, or crystal bases, NOT pure number theory/automorphic forms"
+
+  - name: "Rick Kenyon"
+    arxiv_names: ["Kenyon_R"]
+    affiliation: "Yale"
+    topics: ["dimers", "conformal invariance", "random tilings", "limit shapes"]
+
+  - name: "Tomas Berggren"
+    arxiv_names: ["Berggren_T"]
+    affiliation: "MIT"
+    topics: ["random tilings", "universality", "determinantal point processes"]
+
+  - name: "Mikhail Tikhonov"
+    arxiv_names: ["Tikhonov_M"]
+    affiliation: "UVA"
+    topics: ["permutons", "Demazure product", "random permutations"]
+    high_ambiguity: true
+    disambiguation: "Mikhail Tikhonov, integrable probability at UVA — not physics Tikhonov"
+
+  - name: "Jacopo Borga"
+    arxiv_names: ["Borga_J"]
+    affiliation: "Stanford"
+    topics: ["permutons", "longest increasing subsequences", "random permutations"]
+
+  - name: "Christian Serio"
+    arxiv_names: ["Serio_C"]
+    affiliation: ""
+    topics: ["half-space KPZ", "stochastic PDE", "KPZ equation"]
+
+  - name: "Christopher Janjigian"
+    arxiv_names: ["Janjigian_C"]
+    affiliation: "Purdue"
+    topics: ["KPZ", "exactly solvable models", "Busemann functions"]
+
+  - name: "Ron Peled"
+    arxiv_names: ["Peled_R"]
+    affiliation: "Tel Aviv"
+    topics: ["random tilings", "statistical mechanics", "random surfaces"]
+
+  - name: "Evan Sorensen"
+    arxiv_names: ["Sorensen_E"]
+    affiliation: "Columbia"
+    topics: ["KPZ fixed point", "shocks", "Busemann functions"]
+
+  - name: "Colin Defant"
+    arxiv_names: ["Defant_C"]
+    affiliation: "Harvard"
+    topics: ["random permutations", "pattern avoidance", "combinatorics"]
+    high_ambiguity: true
+    disambiguation: "Colin Defant — only include papers related to random permutations, permutons, or probabilistic combinatorics, NOT pure enumerative combinatorics"
+
+  - name: "Gabriel Ramirez Raposo"
+    arxiv_names: ["Raposo_G", "Ramirez_G"]
+    affiliation: ""
+    topics: ["random Young tableaux", "fluctuations", "asymptotic combinatorics"]
+
+  - name: "Timo Seppäläinen"
+    arxiv_names: ["Seppalainen_T"]
+    affiliation: "Wisconsin"
+    topics: ["last passage percolation", "random polymers", "corner growth model"]
+
+  - name: "Firas Rassoul-Agha"
+    arxiv_names: ["Rassoul-Agha_F"]
+    affiliation: "Utah"
+    topics: ["random polymers", "Busemann functions", "large deviations"]
+
+  - name: "Elnur Emrah"
+    arxiv_names: ["Emrah_E"]
+    affiliation: ""
+    topics: ["Busemann functions", "exactly solvable models", "last passage percolation"]
+
+  - name: "Márton Balázs"
+    arxiv_names: ["Balazs_M"]
+    affiliation: "Bristol"
+    topics: ["interacting particle systems", "TASEP", "random polymers"]
+
+  - name: "Nicos Georgiou"
+    arxiv_names: ["Georgiou_N"]
+    affiliation: "Sussex"
+    topics: ["last passage percolation", "random polymers", "corner growth"]
+
+  - name: "Benedek Valkó"
+    arxiv_names: ["Valko_B"]
+    affiliation: "Wisconsin"
+    topics: ["random matrices", "beta-ensembles", "stochastic operator limits"]
+
+  - name: "Bálint Vető"
+    arxiv_names: ["Veto_B"]
+    affiliation: "Budapest"
+    topics: ["KPZ", "Tracy-Widom", "Airy processes"]
+
+  - name: "Jan de Gier"
+    arxiv_names: ["de_Gier_J"]
+    affiliation: "Melbourne"
+    topics: ["ASEP", "integrable systems", "loop models"]
+
+  - name: "Peter Forrester"
+    arxiv_names: ["Forrester_P"]
+    affiliation: "Melbourne"
+    topics: ["random matrices", "log-gases", "Selberg integrals"]
+
+  - name: "Ole Warnaar"
+    arxiv_names: ["Warnaar_O", "Warnaar_S"]
+    affiliation: "Queensland"
+    topics: ["elliptic hypergeometric", "symmetric functions", "Rogers-Ramanujan"]
+
+  - name: "Riddhipratim Basu"
+    arxiv_names: ["Basu_R"]
+    affiliation: "ICTS Bangalore"
+    topics: ["last passage percolation", "geodesics", "competition interfaces"]
+
+  - name: "James Martin"
+    arxiv_names: ["Martin_J"]
+    affiliation: "Oxford"
+    topics: ["TASEP", "multiclass systems", "queues"]
+    high_ambiguity: true
+    disambiguation: "James Martin, probabilist at Oxford — TASEP, queues, particle systems"
+
+  - name: "Fabio Toninelli"
+    arxiv_names: ["Toninelli_F"]
+    affiliation: "Vienna"
+    topics: ["random surfaces", "dimer dynamics", "Glauber dynamics"]
+
+  - name: "Cédric Boutillier"
+    arxiv_names: ["Boutillier_C"]
+    affiliation: "Sorbonne"
+    topics: ["dimers", "random matrices", "statistical mechanics"]
+
+  - name: "Béatrice de Tilière"
+    arxiv_names: ["de_Tiliere_B"]
+    affiliation: "Paris"
+    topics: ["dimers", "Ising model", "conformal invariance"]
+
+  - name: "Philippe Di Francesco"
+    arxiv_names: ["Di_Francesco_P"]
+    affiliation: "Illinois"
+    topics: ["integrable lattice models", "T-system", "cluster algebras"]
+
+  - name: "Piotr Śniady"
+    arxiv_names: ["Sniady_P"]
+    affiliation: "Wrocław"
+    topics: ["random Young diagrams", "asymptotic representation theory", "Kerov-Vershik"]
+
+  - name: "David Keating"
+    arxiv_names: ["Keating_D"]
+    affiliation: ""
+    topics: ["vertex models", "symmetric functions", "colored models"]

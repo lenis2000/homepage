@@ -13,10 +13,14 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 POSTS_DIR = REPO_ROOT / "_posts" / "arxiv"
 OUTPUT_FILE = REPO_ROOT / "assets" / "data" / "arxiv-index.json"
+AUTHORS_FILE = SCRIPT_DIR / "authors.yml"
+AUTHORS_DATA_FILE = REPO_ROOT / "_data" / "arxiv_authors.yml"
 
 
 def parse_post(filepath):
@@ -92,6 +96,21 @@ def main():
 
     size_kb = OUTPUT_FILE.stat().st_size / 1024
     print(f"Wrote {len(index)} entries to {OUTPUT_FILE} ({size_kb:.1f} KB)")
+
+    # Sync author names to Jekyll _data/
+    if AUTHORS_FILE.exists():
+        with open(AUTHORS_FILE) as f:
+            config = yaml.safe_load(f)
+        names = sorted(
+            [a["name"] for a in config["authors"]],
+            key=lambda n: n.split()[-1].lower(),
+        )
+        AUTHORS_DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(AUTHORS_DATA_FILE, "w") as f:
+            for n in names:
+                f.write(f'- "{n}"\n')
+        print(f"Synced {len(names)} author names to {AUTHORS_DATA_FILE}")
+
     return 0
 
 

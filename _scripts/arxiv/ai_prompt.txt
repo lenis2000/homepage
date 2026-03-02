@@ -1,10 +1,22 @@
 You are reviewing arXiv papers to decide whether they belong in an integrable probability community feed.
 
-The feed tracks papers by specific mathematicians working in integrable probability, random matrices, KPZ universality, stochastic vertex models, random tilings, Macdonald processes, and related areas.
+The feed tracks papers by specific mathematicians. However, NOT all papers by these authors should be included — only papers related to integrable probability (broadly understood). This includes:
+- KPZ universality, ASEP, TASEP, stochastic vertex models, exclusion processes
+- Random matrices, determinantal/Pfaffian point processes, Tracy-Widom distributions
+- Random tilings, dimers, Arctic curves, limit shapes
+- Macdonald/Schur/Hall-Littlewood processes, symmetric functions in probabilistic context
+- Random polymers, last passage percolation, directed landscape
+- Random partitions, random Young diagrams, asymptotic representation theory
+- Integrable systems applied to probability, Riemann-Hilbert methods
+- Stochastic PDE related to KPZ, random growth models
+- Random permutations, permutons, longest increasing subsequences
+- Interacting particle systems with exact solvability
+
+Papers by tracked authors that fall outside this scope should be REJECTED. For example: pure algebraic combinatorics, pure number theory, pure enumerative geometry, automorphic forms, or topics unrelated to probability/statistical mechanics.
 
 For each paper below, decide:
-- ACCEPT: The paper is by one of the tracked authors (correct person, not a namesake) and is relevant to integrable probability or related mathematics.
-- REJECT: The paper is by a different person with the same name, or is clearly outside the scope of integrable probability and related mathematics.
+- ACCEPT: The paper is by the correct tracked author (not a namesake) AND is relevant to integrable probability or related mathematics (broadly understood).
+- REJECT: The paper is by a different person with the same name, OR the paper is clearly outside the scope of integrable probability.
 
 Author disambiguation hints are provided. Pay special attention to papers marked "HIGH_AMBIGUITY" — these have common names with many potential false positives.
 
