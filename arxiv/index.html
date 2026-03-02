@@ -6,6 +6,8 @@ nav_id: arXiv Feed
 nav_weight: 4
 ---
 
+<h1 class="mb-4">arXiv Feed</h1>
+
 <search aria-label="arXiv feed search and filters">
 
   <!-- Search Bar -->
@@ -53,7 +55,7 @@ nav_weight: 4
   {% if post_month != current_month %}
     {% assign current_month = post_month %}
   <li class="arxiv-month-header" hidden data-month="{{ post.date | date: '%Y-%m' }}">
-    <h3>{{ post_month }}</h3>
+    <h2>{{ post_month }}</h2>
   </li>
   {% endif %}
   <li class="mb-1" style="padding:6px" hidden
@@ -65,7 +67,7 @@ nav_weight: 4
     <div class="arxiv-entry">
       <div class="arxiv-date-col"><time datetime="{{ post.date | date: '%Y-%m-%d' }}">{{ post.date | date: '%Y-%m-%d' }}</time></div>
       <div class="arxiv-body">
-        <span class="arxiv-tags">{% if post.arxiv-categories.size > 0 %}<button class="arxiv-tags-toggle" aria-label="Show tags">tags</button>{% endif %}{% for cat in post.arxiv-categories %}<span class="badge arxiv-cat-badge">{{ cat }}</span> {% endfor %}</span>
+        <span class="arxiv-tags">{% if post.arxiv-categories.size > 0 %}<button class="arxiv-tags-toggle" aria-label="Show tags" aria-expanded="false">tags</button>{% endif %}{% for cat in post.arxiv-categories %}<span class="badge arxiv-cat-badge">{{ cat }}</span> {% endfor %}</span>
         <b>{{ post.authors | join: ", " }}</b>,
         "<em>{{ post.title }}</em>"
         (<a href="https://arxiv.org/abs/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="u-underline">arXiv:{{ post.arxiv-id }}<span class="sr-only"> (opens in new tab)</span></a>)
@@ -90,7 +92,7 @@ nav_weight: 4
     border-bottom: 2px solid #ccc;
     margin-top: 0.5em;
   }
-  .arxiv-month-header h3 {
+  .arxiv-month-header h2 {
     margin: 0;
     font-size: 1.15em;
     color: #333;
@@ -148,7 +150,7 @@ nav_weight: 4
   /* Filters toggle: hidden on desktop, visible on mobile */
   #arxiv-filters-toggle { display: none; }
   @media (max-width: 767px) {
-    #arxiv-filters-toggle { display: inline-block; }
+    #arxiv-filters-toggle { display: inline-block; min-height: 44px; }
   }
   /* Collapse category badges on mobile */
   .arxiv-tags-toggle {
@@ -157,7 +159,11 @@ nav_weight: 4
   @media (max-width: 767px) {
     .arxiv-cat-badge { display: none; }
     .arxiv-tags-toggle {
-      display: inline;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      min-width: 44px;
       cursor: pointer;
       color: #495057;
       font-size: 0.75em;
@@ -176,6 +182,9 @@ nav_weight: 4
     #arxiv-filters-panel.open { display: block; }
     .arxiv-date-col { width: 5.5em; font-size: 0.88em; }
     .arxiv-entry { gap: 0.5em; }
+    .arxiv-abstract-toggle { min-height: 44px; display: inline-flex; align-items: center; }
+    [data-theme="dark"] .arxiv-tags-toggle { color: var(--text-secondary); border-color: var(--border-color); }
+    [data-theme="dark"] .arxiv-tags-toggle:hover { background-color: #3a3a3a; }
   }
   .arxiv-body em { cursor: pointer; }
   .arxiv-body em:hover { text-decoration: underline; }
@@ -183,6 +192,14 @@ nav_weight: 4
   .arxiv-list li[hidden] {
     content-visibility: hidden;
   }
+  /* Dark mode overrides */
+  [data-theme="dark"] .arxiv-month-header { border-bottom-color: var(--border-color); }
+  [data-theme="dark"] .arxiv-month-header h2 { color: var(--text-primary); }
+  [data-theme="dark"] .arxiv-date-col { color: var(--text-primary); }
+  [data-theme="dark"] .arxiv-body b { color: var(--text-primary); }
+  [data-theme="dark"] .arxiv-abstract-toggle { color: var(--link-color) !important; background-color: transparent !important; }
+  [data-theme="dark"] .arxiv-abstract-toggle:hover { color: var(--link-hover) !important; }
+  [data-theme="dark"] .arxiv-abstract { border-left-color: var(--border-color); }
 </style>
 
 <script src="{{ site.url }}/assets/js/arxiv-feed.js"></script>

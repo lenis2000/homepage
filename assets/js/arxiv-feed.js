@@ -338,7 +338,11 @@ document.addEventListener('DOMContentLoaded', function() {
     listEl.addEventListener('click', function(e) {
         if (e.target.classList.contains('arxiv-tags-toggle')) {
             var tags = e.target.closest('.arxiv-tags');
-            if (tags) tags.classList.toggle('arxiv-tags-expanded');
+            if (tags) {
+                var expanded = tags.classList.toggle('arxiv-tags-expanded');
+                e.target.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                e.target.setAttribute('aria-label', expanded ? 'Hide tags' : 'Show tags');
+            }
         }
     });
 
