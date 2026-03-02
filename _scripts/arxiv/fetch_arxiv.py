@@ -55,19 +55,24 @@ def save_processed(processed):
     PROCESSED_FILE.write_text(json.dumps(processed, indent=2, sort_keys=True))
 
 
-def fetch_category(category, days, config):
+def fetch_category(category, days, config, before_date=None):
     """Fetch recent papers from a single arXiv category, with pagination.
 
     Uses surname-only queries with parentheses and + encoding:
       (au:Borodin+OR+au:Corwin+...)+AND+cat:math.PR
     Initial matching is done locally after fetching.
+
+    If before_date is set (historical range), uses ascending sort order
+    so we start from the oldest papers and stop at before_date.
     """
     # Collect unique surnames for API queries
     seen_surnames = set()
     all_surname_terms = []
     for author in config["authors"]:
         for name in author["arxiv_names"]:
-            surname = name.split("_")[0]
+            # Surname is everything before the last underscore
+            # e.g. "Di_Francesco_P" → "Di_Francesco", "Borodin_A" → "Borodin"
+            surname = "_".join(name.split("_")[:-1])
             if surname.lower() not in seen_surnames:
                 seen_surnames.add(surname.lower())
                 all_surname_terms.append(f"au:{surname}")
@@ -81,6 +86,8 @@ def fetch_category(category, days, config):
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     cutoff_naive = cutoff.replace(tzinfo=None)
+    upper_cutoff = datetime.strptime(before_date, "%Y-%m-%d") if before_date else None
+
     all_papers = {}
 
     for batch_idx, author_terms in enumerate(author_batches):
@@ -121,6 +128,10 @@ def fetch_category(category, days, config):
 
                 if pub_date < cutoff_naive:
                     past_cutoff = True
+                    continue
+
+                # Skip papers newer than --before (but keep paging)
+                if upper_cutoff and pub_date > upper_cutoff:
                     continue
 
                 arxiv_id = entry.id.split("/abs/")[-1].split("v")[0]
@@ -169,19 +180,23 @@ def match_authors(paper, config):
 
     for tracked in config["authors"]:
         for arxiv_name in tracked["arxiv_names"]:
-            # Parse arxiv_name format: Surname_Initial
+            # Parse arxiv_name format: Surname_Initial (or Multi_Part_Surname_Initial)
             parts = arxiv_name.split("_")
-            if len(parts) != 2:
+            if len(parts) < 2:
                 continue
-            surname = parts[0]
-            initial = parts[1]
+            surname = " ".join(parts[:-1])  # "Di Francesco", "Van Peski", etc.
+            initial = parts[-1]
 
             for pa in paper_authors:
                 # Check if paper author matches: surname match + first initial
                 name_parts = pa.strip().split()
                 if not name_parts:
                     continue
-                pa_surname = name_parts[-1]
+                # Surname might be multi-word: compare last N words
+                surname_words = surname.split()
+                if len(name_parts) <= len(surname_words):
+                    continue
+                pa_surname = " ".join(name_parts[-len(surname_words):])
                 pa_initial = name_parts[0][0] if name_parts[0] else ""
 
                 if (pa_surname.lower() == surname.lower() and
@@ -481,6 +496,10 @@ def main():
                         help="Import decisions from review.json and generate posts")
     parser.add_argument("--authors", type=str, default="",
                         help="Comma-separated author names to fetch (subset of authors.yml)")
+    parser.add_argument("--after", type=str, default="",
+                        help="Only include papers after this date (YYYY-MM-DD)")
+    parser.add_argument("--before", type=str, default="",
+                        help="Only include papers before this date (YYYY-MM-DD)")
     args = parser.parse_args()
 
     config = load_config()
@@ -548,7 +567,22 @@ def main():
         config["authors"] = filtered
         print(f"Filtering to {len(filtered)} authors: {', '.join(a['name'] for a in filtered)}")
 
-    print(f"Fetching papers from last {args.days} days...")
+    # Date range: compute --days from --after if both are given
+    after_date = args.after or ""
+    before_date = args.before or ""
+    if after_date:
+        after_dt = datetime.strptime(after_date, "%Y-%m-%d")
+        args.days = (datetime.now() - after_dt).days + 1
+    date_desc = f"last {args.days} days"
+    if after_date or before_date:
+        parts = []
+        if after_date:
+            parts.append(f"after {after_date}")
+        if before_date:
+            parts.append(f"before {before_date}")
+        date_desc = " and ".join(parts)
+
+    print(f"Fetching papers: {date_desc}")
     print(f"Categories: {', '.join(categories)}")
 
     # Step 1: Fetch from all categories (with cache for resumability)
@@ -560,7 +594,7 @@ def main():
     else:
         for cat in categories:
             print(f"  Querying {cat} ({len(config['authors'])} authors in batches of 20)...")
-            papers = fetch_category(cat, args.days, config)
+            papers = fetch_category(cat, args.days, config, before_date=before_date)
             for p in papers:
                 if p["arxiv_id"] not in all_papers:
                     all_papers[p["arxiv_id"]] = p
@@ -570,6 +604,16 @@ def main():
         print(f"  Saved fetch cache ({len(all_papers)} papers)")
 
     print(f"  Fetched {len(all_papers)} unique papers")
+
+    # Apply date range filter
+    if after_date or before_date:
+        before_filter = len(all_papers)
+        all_papers = {
+            aid: p for aid, p in all_papers.items()
+            if (not after_date or p["date"][:10] >= after_date)
+            and (not before_date or p["date"][:10] <= before_date)
+        }
+        print(f"  Date filter: {before_filter} → {len(all_papers)} papers")
 
     # Step 2: Dedup against processed
     new_papers = {
