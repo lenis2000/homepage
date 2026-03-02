@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-06-25-random-edges.cpp'
     txt: 'C++ code for the simulation'
-a11y-description: "Interactive simulation of domino tilings of the Aztec diamond with random one-periodic edge weights. The random weights create disorder in the tiling distribution, and the visualization shows the resulting configurations."
+a11y-description: "Displays colored domino tilings of an Aztec diamond with random one-periodic edge weights. Five parameter regimes (critical, rare event, Bernoulli, periodic, uniform) create varying degrees of disorder. Controls set the diamond size, regime, and toggle domino, dimer, path, and height function views."
 ---
 
 <style>
@@ -170,6 +170,8 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 
 ---
 
+<a href="#aztec-svg" class="skip-link">Skip to simulation canvas</a>
+
 <!-- Parameter Regime Selection -->
 <details id="parameter-regimes-details" style="margin-bottom: 20px;">
   <summary style="cursor: pointer; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background-color: #f9f9f9; font-weight: bold; font-size: 1.1em;">
@@ -290,7 +292,7 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 </div>
 
 <!-- Progress indicator (polling progress from the C++ code via getProgress) -->
-<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
+<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;" role="status" aria-live="polite"></div>
 
 <!-- Tabs -->
 <div class="tab">
@@ -351,20 +353,20 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 
   <div class="row">
     <div class="col-12">
-      <svg id="aztec-svg"></svg>
+      <svg id="aztec-svg" role="img" aria-label="Domino tiling of the Aztec diamond with random edge weights"></svg>
     </div>
   </div>
-  
+
   <!-- Export/Import section -->
   <div style="margin-top: 10px; margin-bottom: 10px;">
     <button id="download-csv-btn" style="padding: 6px 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Download CSV</button>
-    <input type="file" id="upload-csv-input" accept=".csv" style="display: none;">
+    <input type="file" id="upload-csv-input" accept=".csv" style="display: none;" aria-label="Upload CSV file">
     <button id="upload-csv-btn" style="padding: 6px 12px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px;">Upload CSV</button>
     <button id="tikz-btn" class="btn btn-primary" style="margin-left: 5px;">Export to TikZ</button>
     <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
       <button id="copy-tikz-btn" class="btn btn-primary">Copy to Clipboard</button>
       <button id="download-tikz-btn" class="btn btn-primary" style="margin-left: 10px;">Download .tex File</button>
-      <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
+      <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;" role="status" aria-live="polite">Copied!</span>
     </div>
   </div>
 
@@ -376,7 +378,7 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 <div id="dimer-view" class="tabcontent">
   <div class="row">
     <div class="col-12">
-      <svg id="dimer-svg"></svg>
+      <svg id="dimer-svg" role="img" aria-label="Dimer configuration on the dual grid of the Aztec diamond"></svg>
     </div>
   </div>
 </div>
@@ -492,6 +494,7 @@ Module.onRuntimeInitialized = async function() {
 
   dominoControlsContainer.append("button")
     .attr("id", "zoom-in-btn")
+    .attr("aria-label", "Zoom in")
     .style("margin-left", "5px")
     .text("+")
     .on("click", () => {
@@ -502,6 +505,7 @@ Module.onRuntimeInitialized = async function() {
 
   dominoControlsContainer.append("button")
     .attr("id", "zoom-out-btn")
+    .attr("aria-label", "Zoom out")
     .style("margin-left", "5px")
     .text("-")
     .on("click", () => {
@@ -538,6 +542,7 @@ Module.onRuntimeInitialized = async function() {
 
   dimerControlsContainer.append("button")
     .attr("id", "dimer-zoom-in-btn")
+    .attr("aria-label", "Zoom in")
     .style("margin-left", "5px")
     .text("+")
     .on("click", () => {
@@ -548,6 +553,7 @@ Module.onRuntimeInitialized = async function() {
 
   dimerControlsContainer.append("button")
     .attr("id", "dimer-zoom-out-btn")
+    .attr("aria-label", "Zoom out")
     .style("margin-left", "5px")
     .text("-")
     .on("click", () => {

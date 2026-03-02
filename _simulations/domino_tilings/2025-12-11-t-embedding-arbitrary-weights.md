@@ -697,6 +697,8 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 </div>
 
 
+<a href="#main-temb-2d-canvas" class="skip-link">Skip to simulation canvas</a>
+
 <!-- Main T-embedding Visualization Section -->
 <details id="main-visualization-section" style="margin-top: 15px;" open>
   <summary style="cursor: pointer; font-weight: bold; padding: 5px; background: #f0e8ff; border: 1px solid #c9f;" aria-label="T-embedding visualization section">
@@ -831,12 +833,12 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 
       <!-- 2D Canvas -->
       <div id="main-2d-container">
-        <canvas id="main-temb-2d-canvas" style="width: 100%; height: 60vh; border: 1px solid #ccc; background: #fafafa;"></canvas>
+        <canvas id="main-temb-2d-canvas" role="img" aria-label="2D T-embedding visualization canvas" style="width: 100%; height: 60vh; border: 1px solid #ccc; background: #fafafa;"></canvas>
       </div>
 
       <!-- 3D Canvas (hidden by default) -->
       <div id="main-3d-container" style="display: none;">
-        <canvas id="main-temb-3d-canvas" style="width: 100%; height: 60vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
+        <canvas id="main-temb-3d-canvas" role="img" aria-label="3D origami surface visualization canvas" style="width: 100%; height: 60vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
       </div>
     </div>
 
@@ -922,7 +924,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
                 aria-label="Zoom in" title="Zoom in">+</button>
       </div>
 
-      <canvas id="tgraph-canvas" style="width: 100%; height: 50vh; border: 1px solid #dee2e6; background: #fafafa; cursor: grab;"></canvas>
+      <canvas id="tgraph-canvas" role="img" aria-label="T-graph visualization canvas" style="width: 100%; height: 50vh; border: 1px solid #dee2e6; background: #fafafa; cursor: grab;"></canvas>
     </div>
 
     <!-- Export Controls -->
@@ -1016,7 +1018,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
                 aria-label="Toggle auto-rotation"
                 title="Toggle auto-rotation">🔄</button>
       </div>
-      <canvas id="sample-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa;" aria-label="Domino tiling visualization canvas"></canvas>
+      <canvas id="sample-canvas" role="img" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa;" aria-label="Domino tiling visualization canvas"></canvas>
       <div id="sample-3d-container"></div>
     </div>
 
@@ -1077,7 +1079,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           <label style="margin-left: 15px;"><input type="checkbox" id="show-aztec-weights-chk" checked> E wts</label>
           <label style="margin-left: 15px;"><input type="checkbox" id="show-face-weights-chk"> F wts</label>
         </div>
-        <canvas id="aztec-graph-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
+        <canvas id="aztec-graph-canvas" role="img" aria-label="Aztec diamond graph visualization canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="aztec-vertex-info" style="margin-top: 3px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
         </div>
       </div>
@@ -1092,7 +1094,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           <label style="margin-left: 15px;">V: <input type="number" id="temb-vertex-size" value="3" min="0.6" max="20" step="0.1" style="width: 3em;"></label>
           <label style="margin-left: 10px;">E: <input type="number" id="temb-edge-thickness" value="2" min="0.3" max="10" step="0.1" style="width: 3em;"></label>
         </div>
-        <canvas id="stepwise-temb-canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
+        <canvas id="stepwise-temb-canvas" role="img" aria-label="Stepwise T-embedding construction canvas" style="width: 100%; height: 50vh; border: 1px solid #ccc; background: #fafafa; cursor: grab;"></canvas>
         <div id="vertex-info" style="margin-top: 5px; padding: 8px; background: #fff; border: 1px solid #ddd; min-height: 30px; font-family: monospace; font-size: 12px;">
         </div>
       </div>
@@ -1151,7 +1153,7 @@ Part of this research was performed while the author was visiting the Institute 
   <button id="benchmark-btn" style="padding: 8px 16px; background: #232D4B; color: white; border: none; border-radius: 4px; font-weight: 500; cursor: pointer;">Benchmark (takes about a minute)</button>
   <span id="benchmark-status" style="margin-left: 10px; color: #666;"></span>
   <div id="benchmark-results" style="display: none; margin-top: 15px;">
-    <canvas id="benchmark-canvas" width="500" height="300" style="border: 1px solid #ddd; background: white;"></canvas>
+    <canvas id="benchmark-canvas" role="img" aria-label="Performance benchmark chart" width="500" height="300" style="border: 1px solid #ddd; background: white;"></canvas>
     <div id="benchmark-fit" style="margin-top: 10px; font-family: monospace; font-size: 14px;"></div>
   </div>
 </div>

@@ -8,7 +8,7 @@ code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-07-07-hookwalk-tableau.cpp'
     txt : 'WASM sampler for a single SYT (already exists)'
 published: false
-a11y-description: "Interactive simulation of inverse RSK correspondence for generating random permutations from Young diagram shapes. Uses WebAssembly for efficient computation of hook walks and RSK bijection."
+a11y-description: "Displays P-tableau and Q-tableau grids alongside a permutation matrix scatter plot. Uses the inverse RSK correspondence to generate random permutations from Young diagram shapes via hook walk sampling. Draw shapes or enter partition notation, then click Generate to see the resulting permutation and tableaux pair."
 ---
 
 **Conjecture (L.P.)**: If a Young diagram has a limit shape on the scale $\sqrt{n}$, then random permutations have a limit in the sense of permutons.
@@ -193,6 +193,8 @@ a11y-description: "Interactive simulation of inverse RSK correspondence for gene
 }
 </style>
 
+<a href="#perm-matrix" class="skip-link">Skip to simulation visualization</a>
+
 <h2>Random permutation via inverse RSK</h2>
 
 <details id="algorithm-description-details" style="margin-bottom: 20px;">
@@ -273,28 +275,28 @@ a11y-description: "Interactive simulation of inverse RSK correspondence for gene
 <div class="input-group">
   <button id="generate-permutation">Generate permutation σ</button>
   <button id="generate-large-permutation">Generate σ with N=30,000</button>
-  <span id="wasm-status" style="margin-left:10px;color:var(--text-secondary,#666);"></span>
+  <span id="wasm-status" role="status" aria-live="polite" style="margin-left:10px;color:var(--text-secondary,#666);"></span>
 </div>
 
 <div id="progress-area" style="display:none;margin-top:10px;">
   <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
-  <div id="progress-text" class="progress-text"></div>
+  <div id="progress-text" class="progress-text" role="status" aria-live="polite"></div>
 </div>
 
 <h3>Standard Young Tableaux</h3>
 <div style="display: flex; gap: 20px; flex-wrap: wrap;">
   <div>
     <h4>P-tableau</h4>
-    <div id="p-tableau"></div>
+    <div id="p-tableau" role="img" aria-label="P-tableau (insertion tableau) visualization"></div>
   </div>
   <div>
     <h4>Q-tableau</h4>
-    <div id="q-tableau"></div>
+    <div id="q-tableau" role="img" aria-label="Q-tableau (recording tableau) visualization"></div>
   </div>
 </div>
 
 <h3>Permutation</h3>
-<div id="perm-matrix"></div>
+<div id="perm-matrix" role="img" aria-label="Permutation matrix scatter plot from inverse RSK"></div>
 <div id="perm-display" class="permutation-display"></div>
 <div class="input-group" style="margin-top: 10px;">
   <button id="download-shape">Download Shape λ</button>
@@ -366,9 +368,9 @@ a11y-description: "Interactive simulation of inverse RSK correspondence for gene
               <span class="info-text">Draw only the outline; interior is auto-filled.</span>
             </div>
             <div class="drawing-container">
-              <div id="shape-canvas"></div>
+              <div id="shape-canvas" role="img" aria-label="Interactive drawing canvas for Young diagram shape"></div>
               <div class="drawing-info">
-                <div>Current boxes: <span id="current-boxes">0</span></div>
+                <div>Current boxes: <span id="current-boxes" role="status" aria-live="polite">0</span></div>
               </div>
             </div>
           </div>

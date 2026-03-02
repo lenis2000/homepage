@@ -8,7 +8,7 @@ code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-17-aztec-uniform-3d-optimized.cpp'
     txt: 'C++ code for the simulation'
 published: true
-a11y-description: "Interactive 3D visualization of uniform random domino tilings of the Aztec diamond. The height function is rendered as a three-dimensional surface showing the characteristic arctic circle. Supports sizes up to 320 with demo mode."
+a11y-description: "3D surface plot of the height function for a uniformly random domino tiling of the Aztec diamond, colored by domino type (blue, green, red, yellow). Demonstrates the arctic circle phenomenon separating frozen and disordered regions. Set diamond order n up to 320, toggle demo rotation mode, and pan the camera with arrow buttons or keyboard."
 ---
 
 <style>
@@ -49,6 +49,8 @@ a11y-description: "Interactive 3D visualization of uniform random domino tilings
 <script src="/js/2025-04-17-aztec-uniform-3d.js"></script>
 
 
+<a href="#aztec-canvas" class="skip-link">Skip to simulation canvas</a>
+
 This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>. Caution: large values of $n$ may take a while to sample. If $n\le 100$, it should be reasonably fast.
 
 <!-- Controls to change n -->
@@ -57,7 +59,7 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
   <input id="n-input" type="number" value="12" min="2" step="2" max="320" size="3">
   <button id="update-btn">Update</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
-  <span id="progress-indicator" style="font-weight: bold; margin-left: 10px;"></span>
+  <span id="progress-indicator" role="status" aria-live="polite" style="font-weight: bold; margin-left: 10px;"></span>
 
   <label for="demo-mode" style="margin-left: 15px;">
     <input id="demo-mode" type="checkbox"> Demo mode
@@ -65,15 +67,15 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
 
   <div style="margin-top: 10px;">
     <label>Camera movement:</label>
-    <button id="move-left-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">←</button>
-    <button id="move-up-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↑</button>
-    <button id="move-down-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↓</button>
-    <button id="move-right-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">→</button>
+    <button id="move-left-btn" aria-label="Move camera left" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">←</button>
+    <button id="move-up-btn" aria-label="Move camera up" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↑</button>
+    <button id="move-down-btn" aria-label="Move camera down" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↓</button>
+    <button id="move-right-btn" aria-label="Move camera right" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">→</button>
     <button id="reset-view-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">Reset View</button>
   </div>
 </div>
 
-<div id="aztec-canvas"></div>
+<div id="aztec-canvas" role="img" aria-label="3D visualization of domino tiling height function on the Aztec diamond"></div>
 
 <script>
 Module.onRuntimeInitialized = async function() {

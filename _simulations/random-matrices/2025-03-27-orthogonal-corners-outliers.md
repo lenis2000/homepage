@@ -7,11 +7,13 @@ code:
     txt: 'Interactive simulation (JavaScript & Emscripten)'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/random-matrices/2025-03-27-orthogonal-corners-outliers.cpp'
     txt: 'C++ source code compiled to WebAssembly'
-a11y-description: "Interactive simulation of corner eigenvalue processes for complex Hermitian ensembles with outliers. Supports atomic, GUE, and rotated GUE distributions, each with up to five outlier eigenvalues. The visualization shows a scatter plot of corner eigenvalues."
+a11y-description: "Scatter plot of corner eigenvalues for complex Hermitian ensembles with outlier perturbations. Choose 10-point atomic, GUE, or rotated GUE regimes, each with up to 5 outlier eigenvalue inputs. In atomic mode, drag red points or edit fields to set the spectrum. Adjust matrix size N up to 500 and click Resample."
 ---
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script src="{{site.url}}/js/2025-03-27-orthogonal-corners-outliers.js"></script>
+
+<a href="#cornerEigenvalsPlot" class="skip-link">Skip to simulation visualization</a>
 
 <div class="row">
   <div class="col-12 mb-3">
@@ -93,7 +95,7 @@ a11y-description: "Interactive simulation of corner eigenvalue processes for com
 <div class="row" id="discreteDensityContainer" style="display:none;">
   <div class="col-12">
     <h5>10-Point Atomic Profile (Drag the red points):</h5>
-    <svg id="discreteDensitySVG" viewBox="0 0 600 150" style="border:1px solid #ccc; width: 100%; height: auto;"></svg>
+    <svg id="discreteDensitySVG" viewBox="0 0 600 150" style="border:1px solid #ccc; width: 100%; height: auto;" role="img" aria-label="Draggable control points for 10 discrete atomic eigenvalue positions"></svg>
     <button id="clearDensityBtn" class="btn btn-secondary mt-2">Reset Profile</button>
     <p class="mt-2">
       Drag the 10 red points horizontally to set the 10 distinct eigenvalues.
@@ -155,8 +157,8 @@ a11y-description: "Interactive simulation of corner eigenvalue processes for com
   <div class="col-12 col-lg-8">
     <div class="controls mb-3">
       <label for="nInput">Matrix size \(N\):</label>
-      <input id="nInput" type="range" min="2" max="500" step="1" value="50" />
-      <span id="nValue">50</span>
+      <input id="nInput" type="range" min="2" max="500" step="1" value="50" aria-label="Matrix size N" />
+      <span id="nValue" role="status" aria-live="polite">50</span>
       &nbsp;&nbsp;
       <button id="resampleBtn" class="btn btn-primary">Resample</button>
     </div>
@@ -167,7 +169,7 @@ a11y-description: "Interactive simulation of corner eigenvalue processes for com
 <div class="row">
   <div class="col-12">
       <h5>Corner Eigenvalue Plot</h5>
-      <svg id="cornerEigenvalsPlot" width="100%" style="min-height: 500px;"></svg>
+      <svg id="cornerEigenvalsPlot" width="100%" style="min-height: 500px;" role="img" aria-label="Scatter plot of corner eigenvalues with outlier trajectories"></svg>
   </div>
 </div>
 

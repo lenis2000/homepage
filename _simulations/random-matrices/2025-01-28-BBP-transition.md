@@ -7,11 +7,13 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/random-matrices/2025-01-28-BBP-transition.cpp'
     txt: 'C++ code for the simulation'
-a11y-description: "Interactive simulation of the Baik-Ben Arous-Peche phase transition in random matrices. A GOE matrix receives a rank-one perturbation, and as the perturbation strength increases, the largest eigenvalue separates from the bulk semicircle distribution. Controls allow adjusting matrix size and perturbation parameter."
+a11y-description: "Eigenvalue histogram of a rank-one perturbed GOE matrix demonstrating the BBP phase transition. As perturbation theta increases, the largest eigenvalue separates from the Wigner semicircle bulk. Point process plots show top 10, lowest 10, and near-zero eigenvalues. Adjust matrix size N and theta via synced slider pairs."
 ---
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script src="{{site.url}}/js/2025-01-28-BBP-transition.js"></script>
+
+<a href="#plot" class="skip-link">Skip to simulation visualization</a>
 
 <div class="row">
   <div class="col-12 mb-3">
@@ -31,17 +33,17 @@ a11y-description: "Interactive simulation of the Baik-Ben Arous-Peche phase tran
   <div class="col-12 col-lg-8">
     <div class="controls mb-3">
       <label for="nInput">$N$:</label>
-      <input id="nInput" type="range" min="2" max="2000" step="1" value="100" />
-      <span id="nValue">100</span>&nbsp;
+      <input id="nInput" type="range" min="2" max="2000" step="1" value="100" aria-label="Matrix size N" />
+      <span id="nValue" role="status" aria-live="polite">100</span>&nbsp;
 
       <button id="runBtn" class="btn btn-primary">Set $N$ and resample matrix</button>
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <label for="thetaInput">θ:</label>
-      <input id="thetaInput" type="range" min="-10" max="10" step="0.01" value="0" />
-      <span id="thetaValue">0</span>
-      <button id="decreaseTheta" class="btn btn-sm btn-secondary">-0.01</button>
-      <button id="increaseTheta" class="btn btn-sm btn-secondary">+0.01</button>
+      <input id="thetaInput" type="range" min="-10" max="10" step="0.01" value="0" aria-label="Perturbation parameter theta" />
+      <span id="thetaValue" role="status" aria-live="polite">0</span>
+      <button id="decreaseTheta" class="btn btn-sm btn-secondary" aria-label="Decrease theta by 0.01">-0.01</button>
+      <button id="increaseTheta" class="btn btn-sm btn-secondary" aria-label="Increase theta by 0.01">+0.01</button>
     </div>
   </div>
 </div>
@@ -81,15 +83,15 @@ a11y-description: "Interactive simulation of the Baik-Ben Arous-Peche phase tran
 <div class="row">
     <div class="col-12 col-lg-4">
       <h5 class="mt-4">Lowest 10 Eigenvalues:</h5>
-      <svg id="lowest10EigenvalsPlot" width="100%" style="min-height: 300px;"></svg>
+      <svg id="lowest10EigenvalsPlot" width="100%" style="min-height: 300px;" role="img" aria-label="Point process scatter plot of the 10 lowest eigenvalues"></svg>
     </div>
   <div class="col-12 col-lg-4">
     <h5 class="mt-4">20 Eigenvalues Around Zero:</h5>
-    <svg id="zero20EigenvalsPlot" width="100%" style="min-height: 300px;"></svg>
+    <svg id="zero20EigenvalsPlot" width="100%" style="min-height: 300px;" role="img" aria-label="Point process scatter plot of 20 eigenvalues near zero"></svg>
   </div>
   <div class="col-12 col-lg-4">
     <h5 class="mt-4">Top 10 Eigenvalues:</h5>
-    <svg id="top10EigenvalsPlot" width="100%" style="min-height: 300px;"></svg>
+    <svg id="top10EigenvalsPlot" width="100%" style="min-height: 300px;" role="img" aria-label="Point process scatter plot of the 10 largest eigenvalues"></svg>
   </div>
 </div>
 
@@ -97,16 +99,16 @@ a11y-description: "Interactive simulation of the Baik-Ben Arous-Peche phase tran
   <div class="col-12">
     <div class="controls">
       <label for="nInput2">$N$:</label>
-      <input id="nInput2" type="range" min="2" max="1000" step="1" value="100" />
-      <span id="nValue2">100</span>&nbsp;
+      <input id="nInput2" type="range" min="2" max="1000" step="1" value="100" aria-label="Matrix size N (second control)" />
+      <span id="nValue2" role="status" aria-live="polite">100</span>&nbsp;
       <button id="runBtn2" class="btn btn-primary">Set $N$  and resample matrix</button>
 
       &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
       <label for="thetaInput2">θ:</label>
-      <input id="thetaInput2" type="range" min="-10" max="10" step="0.01" value="0" />
-      <span id="thetaValue2">0</span>
-      <button id="decreaseTheta2" class="btn btn-sm btn-secondary">-0.01</button>
-      <button id="increaseTheta2" class="btn btn-sm btn-secondary">+0.01</button>
+      <input id="thetaInput2" type="range" min="-10" max="10" step="0.01" value="0" aria-label="Perturbation parameter theta (second control)" />
+      <span id="thetaValue2" role="status" aria-live="polite">0</span>
+      <button id="decreaseTheta2" class="btn btn-sm btn-secondary" aria-label="Decrease theta by 0.01">-0.01</button>
+      <button id="increaseTheta2" class="btn btn-sm btn-secondary" aria-label="Increase theta by 0.01">+0.01</button>
     </div>
   </div>
 </div>
@@ -115,7 +117,7 @@ a11y-description: "Interactive simulation of the Baik-Ben Arous-Peche phase tran
   <!-- Histogram on the left -->
   <div class="col-12">
       <h5>Histogram of eigenvalues:</h5>
-      <svg id="plot" width="100%" style="min-height: 400px;"></svg>
+      <svg id="plot" width="100%" style="min-height: 400px;" role="img" aria-label="Eigenvalue distribution histogram with Wigner semicircle law overlay"></svg>
   </div>
 
 </div>

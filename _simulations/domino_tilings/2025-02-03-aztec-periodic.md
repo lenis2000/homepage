@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript; see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-02-03-aztec-periodic-optimized.cpp'
     txt: 'C++ code for the simulation'
-a11y-description: "Interactive simulation of domino tilings of the Aztec diamond with 2-by-2 periodic weights using the domino shuffling algorithm. Four weight parameters control the tiling distribution, producing arctic curves and frozen regions. Supports TikZ code export."
+a11y-description: "Displays a colored domino tiling of an Aztec diamond with 2-by-2 periodic weights. Four colors encode domino orientations, and the weight parameters a, b shape arctic curves separating frozen corners from disordered regions. Controls set the diamond size, weight parameters, and grayscale mode."
 ---
 
 <style>
@@ -44,7 +44,7 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
   <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
     <button id="copy-tikz-btn" class="btn btn-primary">Copy to Clipboard</button>
     <button id="download-tikz-btn" class="btn btn-primary" style="margin-left: 10px;">Download .tex File</button>
-    <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
+    <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;" role="status" aria-live="polite">Copied!</span>
   </div>
 </div>
 
@@ -55,6 +55,8 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="/js/2025-02-03-aztec-periodic.js"></script>
+
+<a href="#aztec-svg" class="skip-link">Skip to simulation canvas</a>
 
 <!-- Simulation Controls -->
 <div class="controls">
@@ -77,11 +79,11 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
 </div>
 
 <!-- Progress indicator -->
-<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
+<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;" role="status" aria-live="polite"></div>
 
 <div class="row">
   <div class="col-12">
-    <svg id="aztec-svg"></svg>
+    <svg id="aztec-svg" role="img" aria-label="Domino tiling of the Aztec diamond with 2-by-2 periodic weights"></svg>
   </div>
 </div>
 
@@ -176,6 +178,7 @@ Module.onRuntimeInitialized = async function() {
 
   controlsContainer.append("button")
     .attr("id", "zoom-in-btn")
+    .attr("aria-label", "Zoom in")
     .style("margin-left", "5px")
     .text("+")
     .on("click", () => {
@@ -186,6 +189,7 @@ Module.onRuntimeInitialized = async function() {
 
   controlsContainer.append("button")
     .attr("id", "zoom-out-btn")
+    .attr("aria-label", "Zoom out")
     .style("margin-left", "5px")
     .text("-")
     .on("click", () => {

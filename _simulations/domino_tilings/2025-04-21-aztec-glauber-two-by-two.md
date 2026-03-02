@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript; see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-21-aztec-glauber-two-by-two.cpp'
     txt: 'C++ code for the simulation'
-a11y-description: "Interactive simulation of Glauber dynamics on domino tilings of the Aztec diamond with 2-by-2 periodic weights. The Markov chain evolves the tiling by randomly flipping domino pairs, with the four weight parameters controlling the stationary distribution."
+a11y-description: "Colored domino tiling of a diamond-shaped region rendered as an SVG mosaic. Demonstrates Glauber dynamics on Aztec diamond tilings with 2-by-2 periodic edge weights (a,b). The Markov chain flips adjacent domino pairs; adjusting weights in real time reveals arctic circle phenomena and limit shape transitions."
 ---
 
 <style>
@@ -94,6 +94,7 @@ Key phenomena visible in the grayscale view:
 <script src="/js/2025-04-21-aztec-glauber-two-by-two.js"></script>
 
 <!-- Simulation Controls -->
+<a href="#aztec-svg" class="skip-link">Skip to simulation canvas</a>
 <!-- Dynamics controls – always visible -->
 <div class="controls">
   <label for="sweeps-input">Sweeps per visual update:</label>
@@ -123,11 +124,11 @@ Key phenomena visible in the grayscale view:
 </div>
 
 <!-- Progress indicator -->
-<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
+<div id="progress-indicator" role="status" aria-live="polite" style="margin-bottom: 10px; font-weight: bold;"></div>
 
 <div class="row">
   <div class="col-12">
-    <svg id="aztec-svg"></svg>
+    <svg id="aztec-svg" role="img" aria-label="Domino tiling of the Aztec diamond with 2-by-2 periodic weights"></svg>
   </div>
 </div>
 
@@ -136,7 +137,7 @@ Key phenomena visible in the grayscale view:
   <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
     <button id="copy-tikz-btn" class="btn btn-primary">Copy to Clipboard</button>
     <button id="download-tikz-btn" class="btn btn-primary" style="margin-left: 10px;">Download .tex File</button>
-    <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
+    <span id="copy-success-msg" role="status" aria-live="polite" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
   </div>
 </div>
 

@@ -5,7 +5,7 @@ author: "Leonid Petrov"
 code:
     - link: "https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-01-26-Grothendieck-shenanigans-any-shape.md"
       txt: "This simulation is interactive, written in JavaScript."
-a11y-description: "Experimental interactive simulation of random permutations generated from arbitrary reduced words via nonsymmetric Grothendieck polynomials. Users can draw custom boundary shapes and explore the resulting permutation matrices."
+a11y-description: "Shows two SVG plots: a colored grid of the boundary shape (staircase, quadratic, or user-drawn) and a permutation matrix scatter plot. Simulates random permutations from arbitrary reduced words via nonsymmetric Grothendieck polynomials. Choose boundary type, adjust N, p, q, and parity, then draw or auto-generate shapes."
 ---
 
 <div class="container mt-4 mb-3" style="overflow: visible">
@@ -20,11 +20,13 @@ a11y-description: "Experimental interactive simulation of random permutations ge
     Warning: the drawing feature is EXPERIMENTAL, and simulations may not work correctly.
 </h3>
 
+   <a href="#permSVG" class="skip-link">Skip to simulation visualization</a>
+
    <div class="flexRow" style="display: flex;">
     <!-- ========================= LEFT: Controls ========================= -->
     <div class="controlsBox">
       <label><strong>Boundary:</strong></label><br />
-      <select id="boundarySelect">
+      <select id="boundarySelect" aria-label="Boundary shape type">
         <option value="staircase">Staircase</option>
         <option value="shaep">Quadratic (Crab)</option>
         <option value="userdrawn">User‐Drawn (Brush)</option>
@@ -50,22 +52,22 @@ a11y-description: "Experimental interactive simulation of random permutations ge
         <label>
           <strong>Brush Size:</strong> <span id="brushVal">1</span>
         </label><br/>
-        <input id="brushSizeSlider" type="range" min="1" max="10" step="1" value="1" style="width:120px"/>
+        <input id="brushSizeSlider" type="range" min="1" max="10" step="1" value="1" aria-label="Brush size" style="width:120px"/>
       </div>
 
       <hr style="margin:1em 0;" />
 
-      <label><strong>N (Simulation):</strong> <span id="nVal">1000</span></label><br/>
-      <input id="nSlider" type="range" min="100" max="12000" step="100" value="1000" style="width:120px"/>
+      <label><strong>N (Simulation):</strong> <span id="nVal" role="status" aria-live="polite">1000</span></label><br/>
+      <input id="nSlider" type="range" min="100" max="12000" step="100" value="1000" aria-label="Simulation size N" style="width:120px"/>
 
       <div style="margin-top:0.5em">
-        <label><strong>p:</strong> <span id="probVal">0.50</span></label><br />
-        <input id="probInput" type="range" min="0" max="1" step="0.01" value="0.50" style="width:120px"/>
+        <label><strong>p:</strong> <span id="probVal" role="status" aria-live="polite">0.50</span></label><br />
+        <input id="probInput" type="range" min="0" max="1" step="0.01" value="0.50" aria-label="Probability p" style="width:120px"/>
       </div>
 
       <div style="margin-top:0.5em">
-        <label><strong>q:</strong> <span id="qVal">0.00</span></label><br />
-        <input id="qInput" type="range" min="0" max="1" step="0.01" value="0.00" style="width:120px"/>
+        <label><strong>q:</strong> <span id="qVal" role="status" aria-live="polite">0.00</span></label><br />
+        <input id="qInput" type="range" min="0" max="1" step="0.01" value="0.00" aria-label="Parameter q" style="width:120px"/>
       </div>
 
       <div style="margin-top:0.8em">
@@ -86,13 +88,13 @@ a11y-description: "Experimental interactive simulation of random permutations ge
       <p class="labelSmall" style="margin:0.3em 0 0.8em">
       </p>
       <!-- Fixed small width/height so it won't blow up in size -->
-      <svg id="shapeSVG" width="500" height="500"></svg>
+      <svg id="shapeSVG" width="500" height="500" role="img" aria-label="Boundary shape grid showing active swap positions"></svg>
     </div>
   </div><!-- end flexRow -->
 
   <!-- ========================= Final Permutation ========================= -->
   <h3 style="clear:both; margin-top:2em">Permutation Result (EXPERIMENTAL: MIGHT NOT BE CORRECT IN ALL CASES)</h3>
-  <svg id="permSVG" width="400" height="400"></svg>
+  <svg id="permSVG" width="400" height="400" role="img" aria-label="Permutation matrix scatter plot from Grothendieck simulation"></svg>
 </div>
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>

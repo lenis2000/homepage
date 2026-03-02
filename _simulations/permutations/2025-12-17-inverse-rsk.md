@@ -7,7 +7,7 @@ code:
     txt : 'Interactive JS – see source'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-12-17-inverse-rsk.cpp'
     txt : 'WASM sampler for a single SYT'
-a11y-description: "Interactive simulation of inverse RSK correspondence. Given a Young diagram shape, the algorithm samples a random Standard Young Tableau and converts it to a permutation. The visualization explores conjectured limit shapes of the resulting permutons."
+a11y-description: "Displays a permutation matrix, permuton heatmap, and P/Q tableaux generated via inverse RSK from a Young diagram shape. Explores conjectured permuton limit shapes. Draw shapes or use partition notation with Plancherel or staircase presets. Supports single permutations and multi-sample heatmap accumulation with configurable scaling."
 ---
 
 **Conjecture (L.P.)**: If a Young diagram has a limit shape on the scale $\sqrt{n}$, then random permutations have a limit in the sense of permutons.
@@ -384,6 +384,8 @@ h2, h3, h4 {
 }
 </style>
 
+<a href="#perm-matrix" class="skip-link">Skip to simulation visualization</a>
+
 <h2>Random permutation via inverse RSK</h2>
 
 <details id="algorithm-description-details" style="margin-bottom: 20px;">
@@ -466,35 +468,35 @@ h2, h3, h4 {
   <button id="generate-large-permutation">Generate σ with N=30,000</button>
   <span style="margin: 0 12px; color: var(--text-secondary);">|</span>
   <label style="margin-right: 6px; color: var(--text-primary);">R=</label>
-  <input type="number" id="heatmap-iterations" value="10" min="1" max="10000" style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary);">
-  <select id="heatmap-scaling" style="padding: 6px 10px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); font-size: 14px;">
+  <input type="number" id="heatmap-iterations" value="10" min="1" max="10000" aria-label="Number of heatmap repetitions R" style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary);">
+  <select id="heatmap-scaling" aria-label="Heatmap scaling method" style="padding: 6px 10px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); font-size: 14px;">
     <option value="log">Log</option>
     <option value="sqrt">Sqrt</option>
     <option value="linear">Linear</option>
     <option value="power">Power (0.3)</option>
   </select>
   <button id="generate-heatmap" style="margin-left: 8px;">Generate Heatmap</button>
-  <span id="wasm-status"></span>
+  <span id="wasm-status" role="status" aria-live="polite"></span>
 </div>
 
 <div id="progress-area" style="display:none; margin-top: 16px; padding: 16px; background: var(--bg-secondary); border-radius: 6px; border: 1px solid var(--border-color);">
   <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
-  <div id="progress-text" class="progress-text"></div>
+  <div id="progress-text" class="progress-text" role="status" aria-live="polite"></div>
 </div>
 
 <h3 style="margin-top: 28px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); color: var(--text-primary);">Permutation & Permuton Heatmap</h3>
 <div style="display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start;">
   <div>
     <h4 style="margin-bottom: 12px; color: var(--accent-color); font-family: 'Unna', serif; font-style: italic;">Permutation Matrix</h4>
-    <div id="perm-matrix" style="background: var(--bg-secondary); padding: 20px; border-radius: 6px; border: 1px solid var(--border-color); display: inline-block; min-width: 450px; min-height: 450px;"></div>
+    <div id="perm-matrix" role="img" aria-label="Permutation matrix scatter plot from inverse RSK" style="background: var(--bg-secondary); padding: 20px; border-radius: 6px; border: 1px solid var(--border-color); display: inline-block; min-width: 450px; min-height: 450px;"></div>
     <div id="perm-display" class="permutation-display"></div>
   </div>
   <div>
     <h4 style="margin-bottom: 12px; color: var(--accent-color); font-family: 'Unna', serif; font-style: italic;">Permuton Heatmap</h4>
     <div id="heatmap-canvas-wrapper" style="background: var(--bg-secondary); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); display: inline-block;">
-      <canvas id="heatmap-canvas" width="450" height="450" style="display: block;"></canvas>
+      <canvas id="heatmap-canvas" width="450" height="450" role="img" aria-label="Permuton heatmap showing accumulated permutation density" style="display: block;"></canvas>
     </div>
-    <div id="heatmap-info" style="margin-top: 8px; font-size: 13px; color: var(--text-secondary);"></div>
+    <div id="heatmap-info" role="status" aria-live="polite" style="margin-top: 8px; font-size: 13px; color: var(--text-secondary);"></div>
   </div>
 </div>
 <div class="input-group" style="margin-top: 16px;">
@@ -507,11 +509,11 @@ h2, h3, h4 {
 <div style="display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-start;">
   <div style="flex: 1; min-width: 280px;">
     <h4 style="margin-bottom: 12px; color: var(--accent-color); font-family: 'Unna', serif; font-style: italic;">P-tableau</h4>
-    <div id="p-tableau" style="background: var(--bg-secondary); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); min-height: 100px;"></div>
+    <div id="p-tableau" role="img" aria-label="P-tableau (insertion tableau) visualization" style="background: var(--bg-secondary); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); min-height: 100px;"></div>
   </div>
   <div style="flex: 1; min-width: 280px;">
     <h4 style="margin-bottom: 12px; color: var(--accent-color); font-family: 'Unna', serif; font-style: italic;">Q-tableau</h4>
-    <div id="q-tableau" style="background: var(--bg-secondary); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); min-height: 100px;"></div>
+    <div id="q-tableau" role="img" aria-label="Q-tableau (recording tableau) visualization" style="background: var(--bg-secondary); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); min-height: 100px;"></div>
   </div>
 </div>
 
@@ -580,9 +582,9 @@ h2, h3, h4 {
               <span class="info-text">Draw only the outline; interior is auto-filled.</span>
             </div>
             <div class="drawing-container">
-              <div id="shape-canvas"></div>
+              <div id="shape-canvas" role="img" aria-label="Interactive drawing canvas for Young diagram shape"></div>
               <div class="drawing-info">
-                <div>Current boxes: <span id="current-boxes">0</span></div>
+                <div>Current boxes: <span id="current-boxes" role="status" aria-live="polite">0</span></div>
               </div>
             </div>
           </div>

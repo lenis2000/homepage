@@ -19,7 +19,7 @@ results:
   - title: JSON data for $10000 < n <= 12000$
     raw: 'https://github.com/lenis2000/homepage/blob/master/js/2025-05-04-dim-lambda-partitionData-large2.json'
     raw-size: 68.3MB
-a11y-description: "Interactive tool for exploring Young diagrams of near-maximal dimension. Searches for integer partitions whose number of standard Young tableaux approaches the theoretical maximum. Supports large partition sizes up to 12,000."
+a11y-description: "Interactive Young diagram viewer showing partitions of near-maximal dimension f^lambda. Displays the diagram as colored boxes, the exact dimension as a large integer, and a graph of the Kerov-Pass constant c(lambda) across sizes n up to 12,000. Use arrows to step through sizes or auto-grow."
 ---
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
@@ -215,6 +215,8 @@ a11y-description: "Interactive tool for exploring Young diagrams of near-maximal
     </div>
   </div>
 
+  <a href="#young-diagram-container" class="skip-link">Skip to simulation canvas</a>
+
   <div class="row mt-4">
     <div class="col-md-4">
       <div class="card">
@@ -227,8 +229,8 @@ a11y-description: "Interactive tool for exploring Young diagrams of near-maximal
             <div class="number-input-container">
               <input type="number" class="form-control" id="size-n" min="1" max="12000" value="47" required>
               <div class="number-controls">
-                  <span class="number-control-btn" id="increment-btn">▲</span>
-                  <span class="number-control-btn" id="decrement-btn">▼</span>
+                  <span class="number-control-btn" id="increment-btn" role="button" aria-label="Increment size n">▲</span>
+                  <span class="number-control-btn" id="decrement-btn" role="button" aria-label="Decrement size n">▼</span>
               </div>
             </div>
             <div class="auto-controls mt-2">
@@ -251,9 +253,9 @@ a11y-description: "Interactive tool for exploring Young diagrams of near-maximal
         </div>
         <div class="card-body">
           <div id="stats-container">
-            <p><strong>Partition:</strong> <span id="partition-display">-</span></p>
-            <p><strong>Dimension $f^{\lambda}=$</strong> <span id="scientific-display">-</span></p>
-            <p><strong>$c(\lambda) = -\log(f^{\lambda}/\sqrt{n!})/\sqrt{n}=$</strong> <span id="c-lambda-display">-</span></p>
+            <p><strong>Partition:</strong> <span id="partition-display" role="status" aria-live="polite">-</span></p>
+            <p><strong>Dimension $f^{\lambda}=$</strong> <span id="scientific-display" role="status" aria-live="polite">-</span></p>
+            <p><strong>$c(\lambda) = -\log(f^{\lambda}/\sqrt{n!})/\sqrt{n}=$</strong> <span id="c-lambda-display" role="status" aria-live="polite">-</span></p>
           </div>
         </div>
       </div>
@@ -277,7 +279,7 @@ a11y-description: "Interactive tool for exploring Young diagrams of near-maximal
               <h5 class="card-title mb-0">Young Diagram</h5>
             </div>
             <div class="card-body">
-              <div class="young-diagram-container" id="young-diagram-container"></div>
+              <div class="young-diagram-container" id="young-diagram-container" role="img" aria-label="Young diagram of the partition with near-maximal dimension"></div>
 
               <!-- Fixed legend below the diagram -->
               <div class="legend-container mt-3" id="legend-container">
@@ -308,7 +310,7 @@ a11y-description: "Interactive tool for exploring Young diagrams of near-maximal
             \max\limits_{\lambda\vdash n}\log(f^{\lambda}/\sqrt{n!})/\sqrt{n}$</span>
             </div>
             <div class="card-body">
-              <div class="c-lambda-chart-container" id="c-lambda-chart-container"></div>
+              <div class="c-lambda-chart-container" id="c-lambda-chart-container" role="img" aria-label="Graph of Kerov-Pass constant c(lambda) versus partition size n"></div>
             </div>
           </div>
         </div>

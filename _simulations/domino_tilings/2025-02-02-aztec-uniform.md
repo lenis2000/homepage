@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-02-02-aztec-uniform-optimized.cpp'
     txt: 'C++ code for the simulation'
-a11y-description: "Interactive simulation of uniform random domino tilings of the Aztec diamond using the domino shuffling algorithm. The visualization shows the characteristic arctic circle separating frozen corner regions from the disordered interior."
+a11y-description: "Displays a colored grid of dominoes tiling an Aztec diamond shape, where four colors indicate domino orientations. The arctic circle separates frozen corner regions from a disordered interior. Controls set the diamond size and toggle between domino, dimer, path, and height function views."
 ---
 
 <style>
@@ -85,7 +85,7 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
   <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
     <button id="copy-tikz-btn" class="btn btn-primary">Copy to Clipboard</button>
     <button id="download-tikz-btn" class="btn btn-primary" style="margin-left: 10px;">Download .tex File</button>
-    <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
+    <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;" role="status" aria-live="polite">Copied!</span>
   </div>
 </div>
 
@@ -93,6 +93,8 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
 <div id="tikz-code-container" style="font-family: 'Courier New', monospace; padding: 15px; border: 1px solid #ccc; border-radius: 4px; background-color: white; white-space: pre; font-size: 14px; max-height: 40vh; overflow-y: auto; margin-top: 15px; margin-bottom: 15px; display: none;"></div>
 
 ---
+
+<a href="#aztec-svg" class="skip-link">Skip to simulation canvas</a>
 
 <!-- Controls to change n -->
 <div style="margin-bottom: 10px;">
@@ -104,7 +106,7 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
 </div>
 
 <!-- Progress indicator (polling progress from the C++ code via getProgress) -->
-<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
+<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;" role="status" aria-live="polite"></div>
 
 <!-- Tabs -->
 <div class="tab">
@@ -151,7 +153,7 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
 
   <div class="row">
     <div class="col-12">
-      <svg id="aztec-svg"></svg>
+      <svg id="aztec-svg" role="img" aria-label="Domino tiling of the Aztec diamond with colored dominoes"></svg>
     </div>
   </div>
 </div>
@@ -160,7 +162,7 @@ You can now get a TikZ code for the sampled Aztec diamond directly by clicking t
 <div id="dimer-view" class="tabcontent">
   <div class="row">
     <div class="col-12">
-      <svg id="dimer-svg"></svg>
+      <svg id="dimer-svg" role="img" aria-label="Dimer configuration on the dual grid of the Aztec diamond"></svg>
     </div>
   </div>
 </div>
@@ -269,6 +271,7 @@ Module.onRuntimeInitialized = async function() {
 
   dominoControlsContainer.append("button")
     .attr("id", "zoom-in-btn")
+    .attr("aria-label", "Zoom in")
     .style("margin-left", "5px")
     .text("+")
     .on("click", () => {
@@ -279,6 +282,7 @@ Module.onRuntimeInitialized = async function() {
 
   dominoControlsContainer.append("button")
     .attr("id", "zoom-out-btn")
+    .attr("aria-label", "Zoom out")
     .style("margin-left", "5px")
     .text("-")
     .on("click", () => {
@@ -315,6 +319,7 @@ Module.onRuntimeInitialized = async function() {
 
   dimerControlsContainer.append("button")
     .attr("id", "dimer-zoom-in-btn")
+    .attr("aria-label", "Zoom in")
     .style("margin-left", "5px")
     .text("+")
     .on("click", () => {
@@ -325,6 +330,7 @@ Module.onRuntimeInitialized = async function() {
 
   dimerControlsContainer.append("button")
     .attr("id", "dimer-zoom-out-btn")
+    .attr("aria-label", "Zoom out")
     .style("margin-left", "5px")
     .text("-")
     .on("click", () => {

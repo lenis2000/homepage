@@ -8,7 +8,7 @@ code:
     txt: 'Interactive simulation source code'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-11-18-double-dimer-gamma.cpp'
     txt: 'C++ backend code'
-a11y-description: "Interactive simulation of the gamma-disordered Aztec diamond, where edge weights follow a gamma distribution. The double dimer model is formed by overlaying two independent tilings, creating loops whose geometry reflects the disorder."
+a11y-description: "Interactive simulation of the gamma-disordered Aztec diamond with edge weights drawn from Gamma distributions. Two independent tilings are overlaid to form the double dimer model, creating loops colored by type. Adjust size n, alpha, and beta parameters; toggle double-dimer and weight matrix views."
 ---
 
 <style>
@@ -28,11 +28,13 @@ $a_{i,j} \sim \Gamma(\alpha, 1) \quad \text{and} \quad b_{i,j} \sim \Gamma(\beta
 
 ---
 
+<a href="#aztec-svg" class="skip-link">Skip to simulation canvas</a>
+
 <div style="margin-bottom: 10px;">
   <label for="n-input">Size ($n\le 400$): </label>
   <input id="n-input" type="number" value="20" min="2" step="2" max="400" size="3">
   <button id="update-btn">Update</button>
-  <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
+  <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;" aria-label="Cancel computation">Cancel</button>
 </div>
 
 <div style="margin-bottom: 10px; background: #f8f9fa; padding: 10px; border-radius: 4px;">
@@ -56,10 +58,10 @@ $a_{i,j} \sim \Gamma(\alpha, 1) \quad \text{and} \quad b_{i,j} \sim \Gamma(\beta
   <div id="weight-matrix-content" style="padding: 10px; background-color: #f5f5f5; border: 1px solid #ddd; overflow-x: auto;"></div>
 </div>
 
-<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
+<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;" role="status" aria-live="polite"></div>
 
 <div id="domino-view">
-  <svg id="aztec-svg"></svg>
+  <svg id="aztec-svg" role="img" aria-label="Gamma-disordered Aztec diamond double dimer visualization"></svg>
 </div>
 
 <script>

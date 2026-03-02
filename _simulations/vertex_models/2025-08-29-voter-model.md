@@ -7,10 +7,12 @@ code:
     txt: 'This simulation is interactive; see page source'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/vertex_models/2025-08-29-voter-model.cpp'
     txt: 'C++/WASM core (Emscripten)'
-a11y-description: "Interactive simulation of the one-dimensional voter model where each lattice site adopts the color of its left neighbor at random Poisson times. The visualization shows a space-time raster diagram and tracks statistics including front position, interface density, and entropy."
+a11y-description: "Canvas showing a horizontal color bar where each cell represents a lattice site in the 1D voter model; sites adopt their left neighbor's color at exponential random times. Includes space-time raster diagrams, time series of front position, interface density, and entropy, plus a domain-size histogram. Adjustable lattice size N, events per second, and random seed."
 ---
 
 The voter model on a 1D lattice where each site adopts the color of its left neighbor according to independent exponential clocks.
+
+<a href="#voterCanvas" class="skip-link">Skip to simulation canvas</a>
 
 <div style="margin: 20px 0;">
   <label for="n-input">N (lattice size: -N to N): </label>
@@ -19,7 +21,7 @@ The voter model on a 1D lattice where each site adopts the color of its left nei
 
   <label for="events-per-sec" style="margin-left: 20px;">Events per second: </label>
   <input type="range" id="events-per-sec" value="200" min="1" max="20000" step="1" style="width: 180px;">
-  <input type="number" id="events-per-sec-input" value="200" min="1" max="20000" step="1" style="width: 80px; margin-left: 5px;">
+  <input type="number" id="events-per-sec-input" value="200" min="1" max="20000" step="1" style="width: 80px; margin-left: 5px;" aria-label="Events per second (numeric input)">
 
   <label for="seed-input" style="margin-left: 20px;">Seed: </label>
   <input type="number" id="seed-input" value="0" min="0" step="1" style="width: 120px;" title="0 = random seed">
@@ -31,10 +33,10 @@ The voter model on a 1D lattice where each site adopts the color of its left nei
   <button id="reset-btn">Reset</button>
 </div>
 
-<canvas id="voterCanvas" width="800" height="200" style="border: 1px solid #ccc; display: block; margin: 20px auto; width: 100%;"></canvas>
+<canvas id="voterCanvas" width="800" height="200" style="border: 1px solid #ccc; display: block; margin: 20px auto; width: 100%;" role="img" aria-label="Current voter model lattice state showing colored sites"></canvas>
 
 <div id="info" style="text-align: center; margin: 20px;">
-    Time: <span id="time-display">0.00</span>
+    Time: <span id="time-display" role="status" aria-live="polite">0.00</span>
 </div>
 
 <details class="control-group full-width" open>
@@ -50,7 +52,7 @@ The voter model on a 1D lattice where each site adopts the color of its left nei
         <strong style="color:#1f77b4">Blue:</strong> Normalized entropy H(t)/log(L) (color diversity, 1=uniform, 0=single color)
       </div>
       <canvas id="stat-ts" width="900" height="160"
-              style="width:100%;max-width:900px;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
+              style="width:100%;max-width:900px;border:1px solid #ccc;display:block;margin:0 auto" role="img" aria-label="Time series chart of front position, interface density, and normalized entropy"></canvas>
     </div>
     <div style="display:flex;gap:16px;">
       <div style="flex:7;">
@@ -59,7 +61,7 @@ The voter model on a 1D lattice where each site adopts the color of its left nei
         </div>
         <div id="history-container" style="height:280px;border:1px solid #ccc;overflow:hidden">
           <canvas id="stat-raster-full" width="600" height="280"
-                  style="width:100%;display:block"></canvas>
+                  style="width:100%;display:block" role="img" aria-label="Complete space-time raster history of the voter model"></canvas>
         </div>
       </div>
       <div style="flex:5;">
@@ -68,7 +70,7 @@ The voter model on a 1D lattice where each site adopts the color of its left nei
         </div>
         <div style="height:280px;border:1px solid #ccc;overflow:hidden">
           <canvas id="stat-raster" width="300" height="280"
-                  style="width:100%;display:block"></canvas>
+                  style="width:100%;display:block" role="img" aria-label="Recent events sliding window raster"></canvas>
         </div>
       </div>
     </div>
@@ -77,7 +79,7 @@ The voter model on a 1D lattice where each site adopts the color of its left nei
         Domain-size histogram (excluding the leftmost color)
       </div>
       <canvas id="stat-hist" width="900" height="120"
-              style="width:100%;max-width:900px;border:1px solid #ccc;display:block;margin:0 auto"></canvas>
+              style="width:100%;max-width:900px;border:1px solid #ccc;display:block;margin:0 auto" role="img" aria-label="Domain-size histogram excluding leftmost color"></canvas>
     </div>
   </div>
 </details>

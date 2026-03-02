@@ -30,7 +30,7 @@ results:
     image-size: 8.7 MB
     raw: __STORAGE_URL__/simulations/2021-04-27-holey-hexagon/outputXX40.txt
     raw-size: 57 KB
-a11y-description: "Interactive simulation of uniform random lozenge tilings of hexagons with a rectangular hole. The hole size and vertical position are adjustable. Glauber dynamics Markov chain is used for sampling."
+a11y-description: "Gallery of uniform random lozenge tilings of size-100 hexagons with a rectangular hole at varying vertical positions. Three pre-computed images show symmetric, skewed, and heavily skewed hole placements sampled via Glauber dynamics. Each image shows frozen corner regions and a disordered bulk with the hole creating a local perturbation."
 ---
 
 What happens if we sample a uniformly random tiling of a hexagon with a hole, but place the hole at different heights? (Thanks to MR for the request to sample these examples.)

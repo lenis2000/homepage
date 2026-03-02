@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript; see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-05-22-random-weights-glauber-height-function-graph.cpp'
     txt: 'C++ code for the simulation'
-a11y-description: "Interactive simulation of domino tilings with random Bernoulli weights and Glauber dynamics, featuring a height function graph visualization. The height function encodes the tiling as a discrete surface whose fluctuations reveal the tiling statistics."
+a11y-description: "Colored domino tiling of a diamond-shaped region with a live height function time-series graph below. Demonstrates Glauber dynamics on Aztec diamond tilings with random Bernoulli edge weights. Controls let you sample, start from a frozen configuration, adjust weights, and track the center height value as the Markov chain evolves."
 ---
 
 <style>
@@ -85,6 +85,7 @@ a11y-description: "Interactive simulation of domino tilings with random Bernoull
 <script src="/js/2025-05-22-random-weights-glauber-height-function-graph.js"></script>
 
 <!-- Simulation Controls -->
+<a href="#aztec-svg" class="skip-link">Skip to simulation canvas</a>
 <!-- Dynamics controls – always visible -->
 
 <div class="controls">
@@ -121,27 +122,27 @@ a11y-description: "Interactive simulation of domino tilings with random Bernoull
   <div>
     <h4>Weight Graph Visualization (4×4 Corner)</h4>
     <p style="font-style: italic; font-size: 0.9em;">This shows a corner of the Aztec diamond graph with labeled weights</p>
-    <svg id="weight-graph-svg" width="400" height="400" style="border: 1px solid #ccc; background-color: #f9f9f9;"></svg>
+    <svg id="weight-graph-svg" width="400" height="400" role="img" aria-label="Weight graph visualization showing edge weights on a 4-by-4 corner of the Aztec diamond" style="border: 1px solid #ccc; background-color: #f9f9f9;"></svg>
   </div>
 </div>
 
 <!-- Progress indicator -->
-<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
+<div id="progress-indicator" role="status" aria-live="polite" style="margin-bottom: 10px; font-weight: bold;"></div>
 
 <!-- Height Function Graph -->
 <div id="height-graph-container" style="margin-bottom: 20px; display: none;">
   <h4>Center Height Function Evolution</h4>
   <div style="border: 1px solid #ccc; border-radius: 4px; padding: 10px; background-color: #f9f9f9;">
-    <svg id="height-graph-svg" width="600" height="300"></svg>
+    <svg id="height-graph-svg" width="600" height="300" role="img" aria-label="Time-series graph of center height function value during Glauber dynamics"></svg>
     <div style="margin-top: 10px; font-size: 0.9em;">
-      <span id="height-stats" style="color: #666;"></span>
+      <span id="height-stats" role="status" aria-live="polite" style="color: #666;"></span>
     </div>
   </div>
 </div>
 
 <div class="row">
   <div class="col-12">
-    <svg id="aztec-svg"></svg>
+    <svg id="aztec-svg" role="img" aria-label="Domino tiling of the Aztec diamond with random Bernoulli weights"></svg>
   </div>
 </div>
 
@@ -150,7 +151,7 @@ a11y-description: "Interactive simulation of domino tilings with random Bernoull
   <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
     <button id="copy-tikz-btn" class="btn btn-primary">Copy to Clipboard</button>
     <button id="download-tikz-btn" class="btn btn-primary" style="margin-left: 10px;">Download .tex File</button>
-    <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
+    <span id="copy-success-msg" role="status" aria-live="polite" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
   </div>
 </div>
 
@@ -326,8 +327,8 @@ Module.onRuntimeInitialized = async function() {
              value="10000" min="1" step="1" style="width:80px;">
       <button id="dynamics-btn" style="margin-left:10px;">Start Glauber Dynamics</button>
       <button id="refresh-picture-btn" style="margin-left:10px; display:none; background-color:#2196F3; color:white; padding:5px 10px; border:none; border-radius:4px; cursor:pointer;">Refresh Picture</button>
-      <span id="dynamics-status" style="margin-left:15px; font-style:italic; color:#666; display:none;"></span>
-      <span id="center-height-display" style="margin-left:20px; font-weight:bold;"></span>
+      <span id="dynamics-status" role="status" aria-live="polite" style="margin-left:15px; font-style:italic; color:#666; display:none;"></span>
+      <span id="center-height-display" role="status" aria-live="polite" style="margin-left:20px; font-weight:bold;"></span>
     `);
 
   // Update the dynamics button reference since we created it dynamically

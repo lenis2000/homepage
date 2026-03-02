@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/lozenge_tilings/2025-11-26-cutout-region-glauber.cpp'
     txt: 'C++ code for the simulation (compiled to WebAssembly)'
-a11y-description: "Interactive simulation of Glauber dynamics for lozenge tilings of a convex cutout region. The Markov chain randomly flips groups of three lozenges to explore the space of tilings. Controls allow adjusting region shape and simulation speed."
+a11y-description: "Animated lozenge tiling of a convex region with a rectangular cutout, evolving under Glauber dynamics Markov chain. Three rhombus types fill the domain as random flips drive the tiling toward equilibrium. Sliders control grid size, cutout position, simulation speed, and bias; 2D and 3D views available with palette selection."
 ---
 
 <style>
@@ -357,6 +357,8 @@ a11y-description: "Interactive simulation of Glauber dynamics for lozenge tiling
 <script src="/js/colorschemes.js"></script>
 <script src="/js/2025-11-26-cutout-region-glauber.js"></script>
 
+<a href="#lozenge-canvas" class="skip-link">Skip to simulation canvas</a>
+
 <!-- Controls for the simulation -->
 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; padding: 16px; max-width: 1200px; margin: 0 auto;">
 
@@ -366,31 +368,31 @@ a11y-description: "Interactive simulation of Glauber dynamics for lozenge tiling
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px;">
     <div class="slider-group">
       <label>Grid Size <span id="gridVal">60</span></label>
-      <input type="range" id="gridSlider" min="20" max="300" value="60">
+      <input type="range" id="gridSlider" min="20" max="300" value="60" aria-label="Grid size">
     </div>
     <div class="slider-group">
       <label>Max Height <span id="heightVal">70%</span></label>
-      <input type="range" id="heightSlider" min="10" max="100" value="70">
+      <input type="range" id="heightSlider" min="10" max="100" value="70" aria-label="Max height percentage">
     </div>
     <div class="slider-group">
       <label>Cutout X Start <span id="cutX1Val">30%</span></label>
-      <input type="range" id="cutX1Slider" min="0" max="100" value="30">
+      <input type="range" id="cutX1Slider" min="0" max="100" value="30" aria-label="Cutout X start percentage">
     </div>
     <div class="slider-group">
       <label>Cutout X End <span id="cutX2Val">60%</span></label>
-      <input type="range" id="cutX2Slider" min="0" max="100" value="60">
+      <input type="range" id="cutX2Slider" min="0" max="100" value="60" aria-label="Cutout X end percentage">
     </div>
     <div class="slider-group">
       <label>Cutout Y Start <span id="cutY1Val">25%</span></label>
-      <input type="range" id="cutY1Slider" min="0" max="100" value="25">
+      <input type="range" id="cutY1Slider" min="0" max="100" value="25" aria-label="Cutout Y start percentage">
     </div>
     <div class="slider-group">
       <label>Cutout Y End <span id="cutY2Val">75%</span></label>
-      <input type="range" id="cutY2Slider" min="0" max="100" value="75">
+      <input type="range" id="cutY2Slider" min="0" max="100" value="75" aria-label="Cutout Y end percentage">
     </div>
     <div class="slider-group" style="grid-column: 1 / -1;">
       <label>Cutout Height <span id="holeHeightVal">0%</span></label>
-      <input type="range" id="holeHeightSlider" min="0" max="100" value="0">
+      <input type="range" id="holeHeightSlider" min="0" max="100" value="0" aria-label="Cutout height percentage">
     </div>
   </div>
 </div>
@@ -419,9 +421,9 @@ a11y-description: "Interactive simulation of Glauber dynamics for lozenge tiling
     <label for="showFloor">Floor grid</label>
   </div>
   <div class="button-row" style="margin-top: 12px;">
-    <button id="prev-palette">&#9664;</button>
-    <select id="palette-select"></select>
-    <button id="next-palette">&#9654;</button>
+    <button id="prev-palette" aria-label="Previous color palette">&#9664;</button>
+    <select id="palette-select" aria-label="Color palette selection"></select>
+    <button id="next-palette" aria-label="Next color palette">&#9654;</button>
   </div>
 </div>
 
@@ -435,11 +437,11 @@ a11y-description: "Interactive simulation of Glauber dynamics for lozenge tiling
     </div>
     <div class="slider-group" style="flex: 1; min-width: 200px;">
       <label>Steps per Frame <span id="stepsVal">50k</span></label>
-      <input type="range" id="stepsSlider" min="1000" max="200000" value="50000" step="1000">
+      <input type="range" id="stepsSlider" min="1000" max="200000" value="50000" step="1000" aria-label="Steps per frame">
     </div>
     <div class="slider-group" style="flex: 1; min-width: 200px;">
       <label>Bias <span id="biasVal">0.000</span></label>
-      <input type="range" id="biasSlider" min="-500" max="500" value="0">
+      <input type="range" id="biasSlider" min="-500" max="500" value="0" aria-label="Bias parameter">
     </div>
   </div>
 </div>
@@ -447,11 +449,11 @@ a11y-description: "Interactive simulation of Glauber dynamics for lozenge tiling
 </div> <!-- End controls grid -->
 
 <!-- Visualization canvas (2D) -->
-<canvas id="lozenge-canvas"></canvas>
+<canvas id="lozenge-canvas" role="img" aria-label="2D lozenge tiling visualization of cutout region under Glauber dynamics"></canvas>
 
 <!-- 3D Visualization container -->
-<div id="three-container">
-  <canvas id="three-canvas"></canvas>
+<div id="three-container" role="img" aria-label="3D height function visualization of cutout region tiling">
+  <canvas id="three-canvas" aria-hidden="true"></canvas>
 </div>
 
 <!-- Statistics (below canvas) -->
@@ -461,19 +463,19 @@ a11y-description: "Interactive simulation of Glauber dynamics for lozenge tiling
   <div class="stats-grid">
     <div class="stat-box">
       <div class="label">Monte Carlo Steps</div>
-      <div class="value" id="stepCount">0</div>
+      <div class="value" id="stepCount" role="status" aria-live="polite">0</div>
     </div>
     <div class="stat-box">
       <div class="label">Accept Rate</div>
-      <div class="value" id="acceptRate">0%</div>
+      <div class="value" id="acceptRate" role="status" aria-live="polite">0%</div>
     </div>
     <div class="stat-box">
       <div class="label">Total Volume</div>
-      <div class="value" id="cubeCount">0</div>
+      <div class="value" id="cubeCount" role="status" aria-live="polite">0</div>
     </div>
     <div class="stat-box">
       <div class="label">Frame Rate</div>
-      <div class="value" id="fps">0</div>
+      <div class="value" id="fps" role="status" aria-live="polite">0</div>
     </div>
   </div>
 </div>
@@ -485,7 +487,7 @@ a11y-description: "Interactive simulation of Glauber dynamics for lozenge tiling
     <button id="export-png">PNG</button>
     <button id="export-pdf">PDF</button>
     <span style="font-size: 12px; color: #666;">Quality:</span>
-    <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 80px;">
+    <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 80px;" aria-label="Export quality">
     <span id="export-quality-val" style="font-size: 12px; color: #1976d2; min-width: 24px;">85</span>
   </div>
 </div>

@@ -2,7 +2,7 @@
 title: Colored discretized t-PNG Model (Stochastic Colored Rule 54)
 model: vertex-models
 author: Leo Petrov
-a11y-description: "Interactive simulation of the colored discretized t-PNG model with N particle colors. Particles are colored by birth location and interact via crossing, annihilation, and color exchange rules. Controls allow adjusting birth, continuation, and color crossing parameters."
+a11y-description: "Grid canvas showing rainbow-colored occupied cells on the integer quadrant, where each particle's color corresponds to its birth x-coordinate. Simulates the colored t-PNG model (stochastic colored rule 54) with crossing, annihilation, and color exchange. Adjustable parameters: continuation t, birth b, color crossing p, grid size, and speed."
 ---
 
 <div class="container" style="max-width: 1200px;">
@@ -73,8 +73,10 @@ a11y-description: "Interactive simulation of the colored discretized t-PNG model
         </ul>
       </div>
 
+      <a href="#colored-tpng-canvas" class="skip-link">Skip to simulation canvas</a>
+
       <div class="simulation-container">
-        <canvas id="colored-tpng-canvas" width="700" height="700" style="border: 1px solid #ccc;"></canvas>
+        <canvas id="colored-tpng-canvas" width="700" height="700" style="border: 1px solid #ccc;" role="img" aria-label="Colored t-PNG grid visualization showing rainbow-colored particles on the integer quadrant"></canvas>
       </div>
 
       <div class="controls mt-3">
@@ -106,20 +108,20 @@ a11y-description: "Interactive simulation of the colored discretized t-PNG model
           <div class="form-group">
             <label for="size-param">Grid Size:</label>
             <input type="range" id="size-param" min="20" max="700" step="10" value="50" class="form-control-range">
-            <span id="size-value">50</span>
+            <span id="size-value" role="status" aria-live="polite">50</span>
           </div>
           <div class="form-group">
             <label for="speed-param">Speed (× N):</label>
             <input type="range" id="speed-param" min="0.1" max="10" step="0.1" value="2.5" class="form-control-range">
-            <span id="speed-value">2.5</span>
+            <span id="speed-value" role="status" aria-live="polite">2.5</span>
           </div>
         </div>
 
         <div class="col-md-3">
           <h5>Statistics</h5>
-          <p>Time: <span id="time-display">0</span></p>
-          <p>Occupied cells: <span id="occupied-count">0</span></p>
-          <div id="color-counts"></div>
+          <p>Time: <span id="time-display" role="status" aria-live="polite">0</span></p>
+          <p>Occupied cells: <span id="occupied-count" role="status" aria-live="polite">0</span></p>
+          <div id="color-counts" role="status" aria-live="polite"></div>
         </div>
       </div>
     </div>

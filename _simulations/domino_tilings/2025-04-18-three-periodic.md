@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript; see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-18-three-periodic.cpp'
     txt: 'C++ code for the simulation'
-a11y-description: "Interactive simulation of domino tilings of the Aztec diamond with 3-by-3 periodic weights. The nine weight parameters create rich phase diagrams with multiple frozen and disordered regions in the tiling."
+a11y-description: "Displays a colored domino tiling of an Aztec diamond with 3-by-3 periodic weights. Nine tunable weight parameters produce rich phase diagrams with multiple frozen and disordered regions. Controls set the diamond size, all nine weights, and a grayscale toggle."
 ---
 
 <style>
@@ -49,6 +49,8 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="/js/2025-04-18-three-periodic.js"></script>
+
+<a href="#aztec-svg" class="skip-link">Skip to simulation canvas</a>
 
 <!-- Simulation Controls -->
 <div class="controls">
@@ -103,11 +105,11 @@ I set the upper bound at $n=300$ to avoid freezing your browser.
 </div>
 
 <!-- Progress indicator -->
-<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
+<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;" role="status" aria-live="polite"></div>
 
 <div class="row">
   <div class="col-12">
-    <svg id="aztec-svg"></svg>
+    <svg id="aztec-svg" role="img" aria-label="Domino tiling of the Aztec diamond with 3-by-3 periodic weights"></svg>
   </div>
 </div>
 
@@ -201,6 +203,7 @@ Module.onRuntimeInitialized = async function() {
   
   controlsContainer.append("button")
     .attr("id", "zoom-in-btn")
+    .attr("aria-label", "Zoom in")
     .style("margin-left", "5px")
     .text("+")
     .on("click", () => {
@@ -208,9 +211,10 @@ Module.onRuntimeInitialized = async function() {
         .duration(300)
         .call(zoom.scaleBy, 1.3);
     });
-    
+
   controlsContainer.append("button")
     .attr("id", "zoom-out-btn")
+    .attr("aria-label", "Zoom out")
     .style("margin-left", "5px")
     .text("-")
     .on("click", () => {

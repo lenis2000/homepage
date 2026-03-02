@@ -6,7 +6,7 @@ code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2025-12-28-q-partition-cftp.md'
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at this link'
 published: true
-a11y-description: "Interactive simulation of coupling from the past for exact sampling of q-weighted random integer partitions. Adjust the q parameter to control the partition size distribution. The Ferrers diagram of each sampled partition is displayed."
+a11y-description: "Interactive CFTP (coupling from the past) sampler for q-weighted random partitions in an N-by-M rectangle, rendered as a Ferrers diagram on canvas. Adjust N, aspect ratio a=M/N, and q to control partition size distribution. Run CFTP for exact samples or Glauber dynamics for MCMC. Shows limit shape curve and statistics."
 ---
 
 
@@ -324,6 +324,8 @@ where $A = \frac{1-e^{-\gamma}}{1-e^{-\gamma(1+a)}}$ and $B = \frac{1-e^{-\gamma
 </div>
 </details>
 
+<a href="#mainCanvas" class="skip-link">Skip to simulation canvas</a>
+
 <div class="sim-container">
   <!-- Control Panel -->
   <div class="control-panel">
@@ -361,31 +363,31 @@ where $A = \frac{1-e^{-\gamma}}{1-e^{-\gamma(1+a)}}$ and $B = \frac{1-e^{-\gamma
       <button class="btn-sim" id="btnStop" disabled>Stop</button>
       <button class="btn-sim" id="btnReset">Reset</button>
     </div>
-    <div class="status-message" id="statusMessage">Ready. Click "Run CFTP" for exact sampling or "Run Glauber" for Markov chain dynamics.</div>
+    <div class="status-message" id="statusMessage" role="status" aria-live="polite">Ready. Click "Run CFTP" for exact sampling or "Run Glauber" for Markov chain dynamics.</div>
   </div>
 
   <!-- Canvas -->
   <div class="canvas-container">
-    <canvas id="mainCanvas" width="800" height="600"></canvas>
+    <canvas id="mainCanvas" width="800" height="600" role="img" aria-label="Ferrers diagram of sampled q-weighted partition with limit shape overlay"></canvas>
   </div>
 
   <!-- Statistics -->
   <div class="stats-panel">
     <div class="stat-item">
       <span class="stat-label">Partition Size |λ|</span>
-      <span class="stat-value" id="statSize">0</span>
+      <span class="stat-value" id="statSize" role="status" aria-live="polite">0</span>
     </div>
     <div class="stat-item">
       <span class="stat-label">Steps</span>
-      <span class="stat-value" id="statSteps">0</span>
+      <span class="stat-value" id="statSteps" role="status" aria-live="polite">0</span>
     </div>
     <div class="stat-item">
       <span class="stat-label">CFTP Time T</span>
-      <span class="stat-value" id="statT">-</span>
+      <span class="stat-value" id="statT" role="status" aria-live="polite">-</span>
     </div>
     <div class="stat-item">
       <span class="stat-label">Mode</span>
-      <span class="stat-value" id="statMode">Idle</span>
+      <span class="stat-value" id="statMode" role="status" aria-live="polite">Idle</span>
     </div>
   </div>
 </div>

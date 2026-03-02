@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-07-07-rsk-algorithm.cpp'
     txt: 'C++ code for WASM module (handles permutations up to size 10000)'
-a11y-description: "Interactive visualization of the Robinson-Schensted-Knuth algorithm. Input a permutation and watch it decompose into a pair of Standard Young Tableaux (P-tableau and Q-tableau). WebAssembly handles permutations up to size 10,000."
+a11y-description: "Displays a permutation matrix and two Standard Young Tableaux (P and Q) built step by step via the RSK correspondence. Shows animated or instant row-bumping insertion with color-coded cells. Enter a permutation or generate random ones with uniform or block-structured sampling, then run forward RSK with adjustable animation speed."
 ---
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
@@ -164,6 +164,8 @@ button:disabled {
 /* Algorithm description is now a collapsible details element */
 </style>
 
+<a href="#permutation-matrix" class="skip-link">Skip to simulation visualization</a>
+
 <h2>RSK Algorithm Interactive Visualization</h2>
 
 <details id="algorithm-description-details" style="margin-bottom: 20px;">
@@ -186,7 +188,7 @@ button:disabled {
         <label for="n-input">Permutation size N:</label>
         <input type="number" id="n-input" min="1" max="10000" value="6">
         <button id="generate-random">Generate Random Permutation</button>
-        <span id="wasm-indicator" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
+        <span id="wasm-indicator" role="status" aria-live="polite" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
     </div>
 
     <div class="input-group">
@@ -208,12 +210,12 @@ button:disabled {
             <option value="312">312</option>
             <option value="321">321 (reverse)</option>
         </select>
-        <span id="block-size-info" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
+        <span id="block-size-info" role="status" aria-live="polite" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
     </div>
 
     <div class="input-group" id="block-controls-10x10" style="display: none;">
         <label>10x10 block structure:</label>
-        <span id="block-size-info-10x10" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
+        <span id="block-size-info-10x10" role="status" aria-live="polite" style="margin-left: 10px; color: var(--text-secondary, #666);"></span>
     </div>
 
     <div class="input-group">
@@ -252,25 +254,25 @@ button:disabled {
 
 <div class="section">
     <h3>Current Permutation</h3>
-    <div id="permutation-display" class="permutation-display"></div>
-    <div id="permutation-matrix"></div>
+    <div id="permutation-display" class="permutation-display" role="status" aria-live="polite"></div>
+    <div id="permutation-matrix" role="img" aria-label="Permutation matrix visualization"></div>
 </div>
 
 <div class="visualization-container">
     <div class="section">
         <h3>P-Tableau (Insertion Tableau)</h3>
-        <div id="p-tableau"></div>
+        <div id="p-tableau" role="img" aria-label="P-tableau (insertion tableau) visualization"></div>
     </div>
 
     <div class="section">
         <h3>Q-Tableau (Recording Tableau)</h3>
-        <div id="q-tableau"></div>
+        <div id="q-tableau" role="img" aria-label="Q-tableau (recording tableau) visualization"></div>
     </div>
 </div>
 
 <div class="section" id="step-info-section" style="display: none;">
     <h3>Current Step</h3>
-    <div id="step-info" class="step-info"></div>
+    <div id="step-info" class="step-info" role="status" aria-live="polite"></div>
 </div>
 <script>
 class RSKVisualization {

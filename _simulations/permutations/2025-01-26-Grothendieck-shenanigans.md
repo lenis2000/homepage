@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/simulations/blob/master/2025-01-26-Grothendieck-c-code/Grothendieck-swaps.c'
     txt: 'c code for the simulation of heatmaps, runs faster'
-a11y-description: "Interactive simulation of random permutations generated from staircase reduced words via Grothendieck polynomials. Controls allow varying the size N and parameters p and q. The permutation is displayed as a matrix plot."
+a11y-description: "Displays a permutation matrix as a scatter plot of dots, where each dot represents a fixed point mapping. Simulates random permutations from staircase reduced words via nonsymmetric Grothendieck polynomials. Adjust size N (up to 20000), probability p, and parameter q with sliders and arrow buttons, then click Change N to regenerate."
 ---
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,6 +20,8 @@ a11y-description: "Interactive simulation of random permutations generated from 
     Use the controls below to choose $N$, $p$, and $q$,
     then view the resulting permutation matrix drawn via <code>D3.js</code>.
   </p>
+
+  <a href="#plot" class="skip-link">Skip to simulation visualization</a>
 
   <!-- Outer container with no "border" class -->
   <div class="my-3 p-3 bg-light" style="overflow: visible;">
@@ -38,7 +40,7 @@ a11y-description: "Interactive simulation of random permutations generated from 
           max="20000"
           step="100"
         />
-        &nbsp;<span id="nValue" class="ms-2" style="text-align:right;">1000</span>&nbsp;&nbsp;
+        &nbsp;<span id="nValue" class="ms-2" role="status" aria-live="polite" style="text-align:right;">1000</span>&nbsp;&nbsp;
         <button id="runBtn" class="btn btn-sm btn-primary ms-2">
           Change $N$
         </button>
@@ -47,7 +49,7 @@ a11y-description: "Interactive simulation of random permutations generated from 
       <!-- Text input with arrows for p -->
       <div class="col-6 col-md-4 d-flex align-items-center mb-2">
         <label for="probInput" class="me-2 mb-0">$p$:&nbsp;</label>
-        <button id="probDecBtn" class="btn btn-sm btn-outline-secondary me-1">&#9660;</button>
+        <button id="probDecBtn" class="btn btn-sm btn-outline-secondary me-1" aria-label="Decrease p">&#9660;</button>
         <input
           id="probInput"
           type="text"
@@ -55,13 +57,13 @@ a11y-description: "Interactive simulation of random permutations generated from 
           style="width:8rem;"
           value="0.5000000"
         />
-        <button id="probIncBtn" class="btn btn-sm btn-outline-secondary ms-1">&#9650;</button>
+        <button id="probIncBtn" class="btn btn-sm btn-outline-secondary ms-1" aria-label="Increase p">&#9650;</button>
       </div>
 
       <!-- Text input with arrows for q -->
       <div class="col-6 col-md-4 d-flex align-items-center mb-2">
         <label for="qInput" class="me-2 mb-0">$q$:&nbsp;</label>
-        <button id="qDecBtn" class="btn btn-sm btn-outline-secondary me-1">&#9660;</button>
+        <button id="qDecBtn" class="btn btn-sm btn-outline-secondary me-1" aria-label="Decrease q">&#9660;</button>
         <input
           id="qInput"
           type="text"
@@ -69,7 +71,7 @@ a11y-description: "Interactive simulation of random permutations generated from 
           style="width:8rem;"
           value="0.0000000"
         />
-        <button id="qIncBtn" class="btn btn-sm btn-outline-secondary ms-1">&#9650;</button>
+        <button id="qIncBtn" class="btn btn-sm btn-outline-secondary ms-1" aria-label="Increase q">&#9650;</button>
       </div>
     </div>
 
@@ -93,6 +95,8 @@ a11y-description: "Interactive simulation of random permutations generated from 
     <!-- Responsive SVG container for the matrix -->
     <svg
       id="plot"
+      role="img"
+      aria-label="Permutation matrix scatter plot showing random permutation from Grothendieck polynomial simulation"
       style="width: 100%; height: auto; display: block;"
       preserveAspectRatio="xMidYMid meet"
     ></svg>
@@ -364,7 +368,7 @@ updateNValue(document.getElementById("nInput").value);
 </script>
 
 The initial pipe dream boundary condition (where the pipe dreams live) is as follows:
-<img src="{{site.storage_url}}/img/papers/grothendieck-shenanigans.png" alt="Initial pipe dream boundary condition diagram showing where pipe dreams are located" width="100%"/>
+<img src="{{site.storage_url}}/img/papers/grothendieck-shenanigans.png" alt="Initial pipe dream boundary condition diagram showing where pipe dreams are located" role="img" width="100%"/>
 
 
 {% include references.md %}

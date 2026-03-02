@@ -11,7 +11,7 @@ papers:
   - title: "Colin Defant. Permutons from Demazure Products"
     arxiv-url: "https://arxiv.org/abs/2505.15630"
 published: true
-a11y-description: "Interactive visualization of pipe dreams (reduced words) arranged in a rectangular grid. The canvas displays crossing patterns of pipes with zoom controls for exploring large configurations."
+a11y-description: "Displays a canvas with colored pipes crossing through an N-by-M rectangular grid, where crosses and bumps form a pipe dream. Shows the resulting permutation as a matrix plot below. Adjust rows, columns, crossing probability, and Demazure reduction, then zoom and pan to explore the pipe configuration."
 ---
 
 <style>
@@ -175,6 +175,8 @@ This simulation generates **pipe dreams** (also known as RC-graphs) on an $N \ti
 
 The output permutation is read from the top edge (left to right) followed by the right edge (top to bottom).
 
+<a href="#pipe-canvas" class="skip-link">Skip to simulation canvas</a>
+
 <div id="simulation-container">
   <div class="controls-row">
     <div class="control-group">
@@ -219,16 +221,16 @@ The output permutation is read from the top edge (left to right) followed by the
     <button id="resample-btn" class="btn btn-secondary">Resample (new seed)</button>
   </div>
 
-  <div id="progress-indicator"></div>
+  <div id="progress-indicator" role="status" aria-live="polite"></div>
 
   <div id="canvas-container">
-    <canvas id="pipe-canvas" width="800" height="800"></canvas>
+    <canvas id="pipe-canvas" width="800" height="800" role="img" aria-label="Pipe dream visualization showing colored pipes crossing through a rectangular grid"></canvas>
   </div>
 
   <div id="zoom-controls">
-    <button id="zoom-out-btn">−</button>
-    <span id="zoom-level">100%</span>
-    <button id="zoom-in-btn">+</button>
+    <button id="zoom-out-btn" aria-label="Zoom out">−</button>
+    <span id="zoom-level" role="status" aria-live="polite">100%</span>
+    <button id="zoom-in-btn" aria-label="Zoom in">+</button>
     <button id="zoom-reset-btn">Reset</button>
     <span class="zoom-hint">Scroll to zoom, drag to pan</span>
   </div>
@@ -241,7 +243,7 @@ The output permutation is read from the top edge (left to right) followed by the
     <h4>Output Permutation</h4>
     <div id="permutation-display">-</div>
     <h4 style="margin-top: 15px;">Permutation Matrix</h4>
-    <canvas id="perm-matrix-canvas" width="400" height="400" style="border: 1px solid #ddd; max-width: 100%;"></canvas>
+    <canvas id="perm-matrix-canvas" width="400" height="400" role="img" aria-label="Permutation matrix from pipe dream output" style="border: 1px solid #ddd; max-width: 100%;"></canvas>
   </div>
 </div>
 

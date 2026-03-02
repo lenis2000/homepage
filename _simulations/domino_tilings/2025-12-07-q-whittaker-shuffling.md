@@ -5,7 +5,7 @@ author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-12-07-q-whittaker-shuffling.md'
     txt: 'Pure JavaScript implementation of EKLP shuffling'
-a11y-description: "Interactive simulation of domino tilings generated via q-Whittaker shuffling, a sampling algorithm based on q-deformed Whittaker functions from representation theory. The visualization shows the resulting random tiling of the Aztec diamond."
+a11y-description: "Interactive simulation of Aztec diamond domino tilings generated step-by-step via the domino shuffling algorithm. Watch each shuffle phase: identify bad blocks, delete, slide, and fill. Adjust target size n up to 50; use granular mode to see individual phases. Rotate view 45 degrees and toggle particle display."
 ---
 
 <script src="/js/colorschemes.js"></script>
@@ -22,8 +22,10 @@ a11y-description: "Interactive simulation of domino tilings generated via q-Whit
   </div>
 </div>
 
+<a href="#aztec-canvas" class="skip-link">Skip to simulation canvas</a>
+
 <div style="margin-bottom: 10px;">
-  <label>Target n: <input id="n-input" type="number" value="10" min="1" max="50" style="width: 60px;"></label>
+  <label>Target n: <input id="n-input" type="number" value="10" min="1" max="50" style="width: 60px;" aria-label="Target diamond size n"></label>
 </div>
 
 <div style="margin-bottom: 10px;">
@@ -31,18 +33,18 @@ a11y-description: "Interactive simulation of domino tilings generated via q-Whit
   <button id="step-btn">Step</button>
   <button id="auto-btn">Auto</button>
   <button id="instant-btn">Instant</button>
-  <label style="margin-left: 10px;">Speed: <input id="speed-slider" type="range" min="50" max="500" value="150" style="width: 80px; vertical-align: middle;"></label>
-  <span id="step-indicator" style="margin-left: 15px; font-weight: bold;">n=0</span>
+  <label style="margin-left: 10px;">Speed: <input id="speed-slider" type="range" min="50" max="500" value="150" style="width: 80px; vertical-align: middle;" aria-label="Animation speed"></label>
+  <span id="step-indicator" style="margin-left: 15px; font-weight: bold;" role="status" aria-live="polite">n=0</span>
 </div>
 
 <div style="margin-bottom: 10px;">
   <label><input type="checkbox" id="granular-cb"> Granular steps</label>
   <label style="margin-left: 15px;"><input type="checkbox" id="rotate-cb" checked> Rotate 45°</label>
   <label style="margin-left: 15px;"><input type="checkbox" id="holes-cb"> Particles</label>
-  <select id="palette-select" style="margin-left: 15px;"></select>
+  <select id="palette-select" style="margin-left: 15px;" aria-label="Color palette"></select>
 </div>
 
-<canvas id="aztec-canvas" style="width: 100%; height: 70vh; border: 1px solid #ccc; background: #fafafa;"></canvas>
+<canvas id="aztec-canvas" style="width: 100%; height: 70vh; border: 1px solid #ccc; background: #fafafa;" role="img" aria-label="Aztec diamond domino tiling built by shuffling algorithm"></canvas>
 
 <script>
 (function() {

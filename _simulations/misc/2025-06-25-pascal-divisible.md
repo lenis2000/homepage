@@ -5,7 +5,7 @@ author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/yourusername/homepage/blob/master/_simulations/misc/2025-06-25-pascal-divisible.md'
     txt: 'This simulation is interactive, written in JavaScript with WebAssembly optimization, see the source code of this page at the link'
-a11y-description: "Interactive visualization of divisibility patterns in Pascal's triangle. Color-codes binomial coefficients by divisibility by a chosen prime, revealing fractal Sierpinski triangle patterns. WebAssembly-optimized with zoom and pan controls."
+a11y-description: "Interactive pixel visualization of Pascal's triangle divisibility patterns. Dots mark binomial coefficients divisible by a chosen modulus, revealing fractal Sierpinski-like structures for prime moduli. Adjust rows (up to 2000) and modulus, then pan and zoom to explore the pattern. WebAssembly-optimized rendering."
 ---
 <script src="{{site.url}}/js/pascal-wasm.js"></script>
 
@@ -123,6 +123,8 @@ a11y-description: "Interactive visualization of divisibility patterns in Pascal'
 
 This simulation visualizes Pascal's triangle with dots colored based on whether their values are divisible by a given modulus. This creates interesting fractal-like patterns, especially for prime moduli.
 
+<a href="#visualization" class="skip-link">Skip to simulation canvas</a>
+
 <div id="controls">
     <div class="control-group">
         <label for="rowsInput">Rows:</label>
@@ -138,8 +140,8 @@ This simulation visualizes Pascal's triangle with dots colored based on whether 
     <button id="resetZoomBtn">Reset View</button>
 </div>
 
-<div id="visualization">
-    <div id="zoomIndicator"></div>
+<div id="visualization" role="img" aria-label="Pascal triangle divisibility pattern visualization">
+    <div id="zoomIndicator" role="status" aria-live="polite"></div>
 </div>
 
 <script>

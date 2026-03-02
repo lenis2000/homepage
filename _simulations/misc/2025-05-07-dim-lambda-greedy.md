@@ -8,7 +8,7 @@ code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2025-05-07-dim-lambda-greedy.cpp'
     txt: 'C++ code for the simulation'
 published: false
-a11y-description: "Interactive simulation of a greedy Plancherel growth algorithm for Young diagrams. At each step, the algorithm adds the corner box that maximizes the dimension increase. The visualization shows the growing diagram and a table of candidate corners."
+a11y-description: "Interactive Young diagram growth simulation using a greedy Plancherel algorithm. At each step the box maximizing the dimension f(mu) via the hook-length formula is added. Shows the diagram with hook lengths, highlights the best addable corner in yellow, and lists all candidate corners ranked by score."
 ---
 
 <style>
@@ -111,6 +111,8 @@ This simulation demonstrates the **Greedy Plancherel Growth Algorithm**. At each
 
 The algorithm can be viewed as a deterministic greedy version of the Plancherel growth process, where the next box is selected to maximize $f(\mu)/f(\lambda)$ at each step, and not randomly.
 
+<a href="#young-diagram-container" class="skip-link">Skip to simulation canvas</a>
+
 <div id="simulation-container">
   <div class="controls-row">
     <label for="partition-input">Starting Partition (comma-separated):</label>
@@ -126,12 +128,12 @@ The algorithm can be viewed as a deterministic greedy version of the Plancherel 
     <button id="reset-btn" class="btn btn-danger">Reset</button>
   </div>
 
-  <div id="progress-indicator"></div>
+  <div id="progress-indicator" role="status" aria-live="polite"></div>
 
   <div class="row mt-4">
     <div class="col-md-6">
       <h3>Young Diagram</h3>
-      <div id="young-diagram-container"></div>
+      <div id="young-diagram-container" role="img" aria-label="Young diagram showing current partition with hook lengths and addable corners"></div>
     </div>
     <div class="col-md-6">
       <h3>Potential Corners</h3>

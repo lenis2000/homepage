@@ -7,11 +7,13 @@ code:
     txt: 'This simulation is interactive, written in JavaScript – see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/random-matrices/2025-02-04-orthogonal-corners.cpp'
     txt: 'C++ code for the simulation'
-a11y-description: "Interactive simulation of corner eigenvalue processes for orthogonally invariant random matrices. Computes eigenvalues of successive top-left corners of GOE matrices or matrices with user-specified fixed spectrum via draggable control points."
+a11y-description: "Scatter plot of eigenvalues from successive top-left corners of an orthogonally invariant random matrix, showing interlacing patterns. Choose GOE or discrete top eigenvalue profile regime. In discrete mode, drag 10 red control points or edit numeric fields to set the spectrum. Adjust matrix size N up to 300 and click Resample."
 ---
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <script src="{{site.url}}/js/2025-02-04-orthogonal-corners.js"></script>
+
+<a href="#cornerEigenvalsPlot" class="skip-link">Skip to simulation visualization</a>
 
 <div class="row">
   <div class="col-12 mb-3">
@@ -57,7 +59,7 @@ a11y-description: "Interactive simulation of corner eigenvalue processes for ort
   <div class="col-12">
       <h5>Discrete Top Eigenvalue Profile (Drag the red points):</h5>
       <!-- The SVG now uses a viewBox and 100% width so that it fits Bootstrap’s grid -->
-      <svg id="discreteDensitySVG" viewBox="0 0 600 150" style="border:1px solid #ccc; width: 100%; height: auto;"></svg>
+      <svg id="discreteDensitySVG" viewBox="0 0 600 150" style="border:1px solid #ccc; width: 100%; height: auto;" role="img" aria-label="Draggable control points for 10 discrete eigenvalue positions"></svg>
       <button id="clearDensityBtn" class="btn btn-secondary mt-2">Clear Discrete Profile</button>
       <p class="mt-2">
         Drag the 10 red points horizontally to set the 10 distinct eigenvalues.
@@ -121,8 +123,8 @@ a11y-description: "Interactive simulation of corner eigenvalue processes for ort
   <div class="col-12 col-lg-8">
     <div class="controls mb-3">
       <label for="nInput">Matrix size \(N\):</label>
-      <input id="nInput" type="range" min="2" max="300" step="1" value="50" />
-      <span id="nValue">50</span>&nbsp;&nbsp;
+      <input id="nInput" type="range" min="2" max="300" step="1" value="50" aria-label="Matrix size N" />
+      <span id="nValue" role="status" aria-live="polite">50</span>&nbsp;&nbsp;
       <button id="resampleBtn" class="btn btn-primary">Resample</button>
     </div>
   </div>
@@ -131,7 +133,7 @@ a11y-description: "Interactive simulation of corner eigenvalue processes for ort
 <div class="row">
   <div class="col-12">
       <h5>Corner Eigenvalue Dot Plot:</h5>
-      <svg id="cornerEigenvalsPlot" width="100%" style="min-height: 500px;"></svg>
+      <svg id="cornerEigenvalsPlot" width="100%" style="min-height: 500px;" role="img" aria-label="Scatter plot of corner eigenvalues showing interlacing patterns"></svg>
   </div>
 </div>
 

@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-05-27-double-dimer.cpp'
     txt: 'C++ code for the simulation'
-a11y-description: "Interactive simulation of double dimer coverings, formed by superimposing two independent domino tilings. The overlay creates a system of loops and doubled edges whose statistics connect to the Gaussian free field."
+a11y-description: "Displays two superimposed dimer configurations on an Aztec diamond. Black and red edges show the two independent tilings; purple marks doubled edges present in both. Random IID weights (Bernoulli, Gaussian, or Gamma) control the tiling distribution. Controls set size, weight type, and display options."
 ---
 
 <style>
@@ -49,6 +49,8 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 - **Gamma**: $W_{ij} = \text{Gamma}(\alpha, 1)$ for some of the edges (even rows, i.e., $i$ even), and $W_{ij} = 1$ for other edges (odd rows, i.e., $i$ odd). The shape parameter $\alpha$ controls the distribution of the gamma weights.
 
 ---
+
+<a href="#aztec-svg" class="skip-link">Skip to simulation canvas</a>
 
 <!-- Controls to change n and weight parameters -->
 <div style="margin-bottom: 10px;">
@@ -121,7 +123,7 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 </div>
 
 <!-- Progress indicator (polling progress from the C++ code via getProgress) -->
-<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
+<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;" role="status" aria-live="polite"></div>
 
 <!-- TikZ export section -->
 <div style="margin-top: 10px; margin-bottom: 10px;">
@@ -129,7 +131,7 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
   <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
     <button id="copy-tikz-btn" class="btn btn-primary">Copy to Clipboard</button>
     <button id="download-tikz-btn" class="btn btn-primary" style="margin-left: 10px;">Download .tex File</button>
-    <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
+    <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;" role="status" aria-live="polite">Copied!</span>
   </div>
 </div>
 
@@ -145,7 +147,7 @@ I set the upper bound at $n=400$ to avoid freezing your browser.
 
   <div class="row">
     <div class="col-12">
-      <svg id="aztec-svg"></svg>
+      <svg id="aztec-svg" role="img" aria-label="Double dimer configuration on the Aztec diamond showing two superimposed tilings"></svg>
     </div>
   </div>
 </div>
@@ -335,6 +337,7 @@ Module.onRuntimeInitialized = async function() {
 
   dominoControlsContainer.append("button")
     .attr("id", "zoom-in-btn")
+    .attr("aria-label", "Zoom in")
     .style("margin-left", "5px")
     .text("+")
     .on("click", () => {
@@ -345,6 +348,7 @@ Module.onRuntimeInitialized = async function() {
 
   dominoControlsContainer.append("button")
     .attr("id", "zoom-out-btn")
+    .attr("aria-label", "Zoom out")
     .style("margin-left", "5px")
     .text("-")
     .on("click", () => {

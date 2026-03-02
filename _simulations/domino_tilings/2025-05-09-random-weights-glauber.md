@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript; see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-05-09-random-weights-glauber.cpp'
     txt: 'C++ code for the simulation'
-a11y-description: "Interactive simulation of domino tilings with random Bernoulli edge weights evolved using Glauber dynamics. The Markov chain randomly flips pairs of adjacent dominoes to explore the space of tilings under the random weight distribution."
+a11y-description: "Colored domino tiling of a diamond-shaped region rendered as an SVG mosaic with optional height function overlay. Demonstrates Glauber dynamics on Aztec diamond tilings with random Bernoulli edge weights (u or v with probability 1/2). Controls let you sample, adjust weights, and run the Markov chain that flips adjacent domino pairs in real time."
 ---
 
 <style>
@@ -81,6 +81,7 @@ a11y-description: "Interactive simulation of domino tilings with random Bernoull
 <script src="/js/2025-05-09-random-weights-glauber.js"></script>
 
 <!-- Simulation Controls -->
+<a href="#aztec-svg" class="skip-link">Skip to simulation canvas</a>
 <!-- Dynamics controls – always visible -->
 
 <div class="controls">
@@ -116,16 +117,16 @@ a11y-description: "Interactive simulation of domino tilings with random Bernoull
   <div>
     <h4>Weight Graph Visualization (4×4 Corner)</h4>
     <p style="font-style: italic; font-size: 0.9em;">This shows a corner of the Aztec diamond graph with labeled weights</p>
-    <svg id="weight-graph-svg" width="400" height="400" style="border: 1px solid #ccc; background-color: #f9f9f9;"></svg>
+    <svg id="weight-graph-svg" width="400" height="400" role="img" aria-label="Weight graph visualization showing edge weights on a 4-by-4 corner of the Aztec diamond" style="border: 1px solid #ccc; background-color: #f9f9f9;"></svg>
   </div>
 </div>
 
 <!-- Progress indicator -->
-<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
+<div id="progress-indicator" role="status" aria-live="polite" style="margin-bottom: 10px; font-weight: bold;"></div>
 
 <div class="row">
   <div class="col-12">
-    <svg id="aztec-svg"></svg>
+    <svg id="aztec-svg" role="img" aria-label="Domino tiling of the Aztec diamond with random Bernoulli weights"></svg>
   </div>
 </div>
 
@@ -134,7 +135,7 @@ a11y-description: "Interactive simulation of domino tilings with random Bernoull
   <div id="tikz-buttons-container" style="margin-top: 10px; display: none;">
     <button id="copy-tikz-btn" class="btn btn-primary">Copy to Clipboard</button>
     <button id="download-tikz-btn" class="btn btn-primary" style="margin-left: 10px;">Download .tex File</button>
-    <span id="copy-success-msg" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
+    <span id="copy-success-msg" role="status" aria-live="polite" style="color: green; margin-left: 10px; font-weight: bold; display: none;">Copied!</span>
   </div>
 </div>
 
@@ -298,7 +299,7 @@ Module.onRuntimeInitialized = async function() {
       <input id="sweeps-input" type="number"
              value="100" min="1" step="1" style="width:70px;">
       <button id="dynamics-btn" style="margin-left:10px;">Start Glauber Dynamics</button>
-      <span id="center-height-display" style="margin-left:20px; font-weight:bold;"></span>
+      <span id="center-height-display" role="status" aria-live="polite" style="margin-left:20px; font-weight:bold;"></span>
     `);
 
   // Update the dynamics button reference since we created it dynamically

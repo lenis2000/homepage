@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/lozenge_tilings/2025-11-26-cutout-region-q-racah.cpp'
     txt: 'C++ code for the simulation (compiled to WebAssembly)'
-a11y-description: "Interactive simulation of q-Racah weighted Glauber dynamics for lozenge tilings of a convex cutout region. The Markov chain uses q-Racah weights to bias the random tiling distribution. Controls allow adjusting region shape and weight parameters."
+a11y-description: "Animated lozenge tiling of a convex cutout region evolving under q-Racah weighted Glauber dynamics. The Markov chain uses q-Racah orthogonal polynomial weights to bias the tiling distribution. Sliders control grid size, cutout geometry, q and S weight parameters; 2D and 3D views available with palette selection."
 ---
 
 <style>
@@ -376,6 +376,8 @@ a11y-description: "Interactive simulation of q-Racah weighted Glauber dynamics f
 <script src="/js/colorschemes.js"></script>
 <script src="/js/2025-11-26-cutout-region-q-racah.js"></script>
 
+<a href="#lozenge-canvas" class="skip-link">Skip to simulation canvas</a>
+
 <!-- Controls for the simulation -->
 <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; padding: 16px; max-width: 1200px; margin: 0 auto;">
 
@@ -385,31 +387,31 @@ a11y-description: "Interactive simulation of q-Racah weighted Glauber dynamics f
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px;">
     <div class="slider-group">
       <label>Grid Size <span id="gridVal">60</span></label>
-      <input type="range" id="gridSlider" min="20" max="300" value="60">
+      <input type="range" id="gridSlider" min="20" max="300" value="60" aria-label="Grid size">
     </div>
     <div class="slider-group">
       <label>Max Height <span id="heightVal">70%</span></label>
-      <input type="range" id="heightSlider" min="10" max="100" value="70">
+      <input type="range" id="heightSlider" min="10" max="100" value="70" aria-label="Max height percentage">
     </div>
     <div class="slider-group">
       <label>Cutout X Start <span id="cutX1Val">30%</span></label>
-      <input type="range" id="cutX1Slider" min="0" max="100" value="30">
+      <input type="range" id="cutX1Slider" min="0" max="100" value="30" aria-label="Cutout X start percentage">
     </div>
     <div class="slider-group">
       <label>Cutout X End <span id="cutX2Val">60%</span></label>
-      <input type="range" id="cutX2Slider" min="0" max="100" value="60">
+      <input type="range" id="cutX2Slider" min="0" max="100" value="60" aria-label="Cutout X end percentage">
     </div>
     <div class="slider-group">
       <label>Cutout Y Start <span id="cutY1Val">25%</span></label>
-      <input type="range" id="cutY1Slider" min="0" max="100" value="25">
+      <input type="range" id="cutY1Slider" min="0" max="100" value="25" aria-label="Cutout Y start percentage">
     </div>
     <div class="slider-group">
       <label>Cutout Y End <span id="cutY2Val">75%</span></label>
-      <input type="range" id="cutY2Slider" min="0" max="100" value="75">
+      <input type="range" id="cutY2Slider" min="0" max="100" value="75" aria-label="Cutout Y end percentage">
     </div>
     <div class="slider-group" style="grid-column: 1 / -1;">
       <label>Cutout Height <span id="holeHeightVal">0%</span></label>
-      <input type="range" id="holeHeightSlider" min="0" max="100" value="0">
+      <input type="range" id="holeHeightSlider" min="0" max="100" value="0" aria-label="Cutout height percentage">
     </div>
   </div>
 </div>
@@ -438,9 +440,9 @@ a11y-description: "Interactive simulation of q-Racah weighted Glauber dynamics f
     <label for="showFloor">Floor grid</label>
   </div>
   <div class="button-row" style="margin-top: 12px;">
-    <button id="prev-palette">&#9664;</button>
-    <select id="palette-select"></select>
-    <button id="next-palette">&#9654;</button>
+    <button id="prev-palette" aria-label="Previous color palette">&#9664;</button>
+    <select id="palette-select" aria-label="Color palette selection"></select>
+    <button id="next-palette" aria-label="Next color palette">&#9654;</button>
   </div>
 </div>
 
@@ -453,11 +455,11 @@ a11y-description: "Interactive simulation of q-Racah weighted Glauber dynamics f
   <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
     <div class="slider-group" style="flex: 1; min-width: 200px;">
       <label>q parameter <span id="qVal">1.000</span></label>
-      <input type="range" id="qSlider" min="10" max="200" value="100">
+      <input type="range" id="qSlider" min="10" max="200" value="100" aria-label="q parameter">
     </div>
     <div class="slider-group" style="flex: 1; min-width: 200px;">
       <label>S parameter (a = q<sup>S</sup>)</label>
-      <input type="number" id="sInput" step="1" value="10000" style="width: 100%; height: 30px; font-size: 14px; padding: 0 8px; border: 1px solid #d0d0d0; border-radius: 4px;">
+      <input type="number" id="sInput" step="1" value="10000" style="width: 100%; height: 30px; font-size: 14px; padding: 0 8px; border: 1px solid #d0d0d0; border-radius: 4px;" aria-label="S parameter for q-Racah weight">
     </div>
   </div>
 </div>
@@ -472,7 +474,7 @@ a11y-description: "Interactive simulation of q-Racah weighted Glauber dynamics f
     </div>
     <div class="slider-group" style="flex: 1; min-width: 200px;">
       <label>Steps per Frame <span id="stepsVal">50k</span></label>
-      <input type="range" id="stepsSlider" min="1000" max="200000" value="50000" step="1000">
+      <input type="range" id="stepsSlider" min="1000" max="200000" value="50000" step="1000" aria-label="Steps per frame">
     </div>
   </div>
 </div>
@@ -480,11 +482,11 @@ a11y-description: "Interactive simulation of q-Racah weighted Glauber dynamics f
 </div> <!-- End controls grid -->
 
 <!-- Visualization canvas (2D) -->
-<canvas id="lozenge-canvas"></canvas>
+<canvas id="lozenge-canvas" role="img" aria-label="2D lozenge tiling visualization of cutout region under q-Racah weighted dynamics"></canvas>
 
 <!-- 3D Visualization container -->
-<div id="three-container">
-  <canvas id="three-canvas"></canvas>
+<div id="three-container" role="img" aria-label="3D height function visualization of q-Racah weighted tiling">
+  <canvas id="three-canvas" aria-hidden="true"></canvas>
 </div>
 
 <!-- Statistics (below canvas) -->
@@ -494,19 +496,19 @@ a11y-description: "Interactive simulation of q-Racah weighted Glauber dynamics f
   <div class="stats-grid">
     <div class="stat-box">
       <div class="label">Monte Carlo Steps</div>
-      <div class="value" id="stepCount">0</div>
+      <div class="value" id="stepCount" role="status" aria-live="polite">0</div>
     </div>
     <div class="stat-box">
       <div class="label">Accept Rate</div>
-      <div class="value" id="acceptRate">0%</div>
+      <div class="value" id="acceptRate" role="status" aria-live="polite">0%</div>
     </div>
     <div class="stat-box">
       <div class="label">Total Volume</div>
-      <div class="value" id="cubeCount">0</div>
+      <div class="value" id="cubeCount" role="status" aria-live="polite">0</div>
     </div>
     <div class="stat-box">
       <div class="label">Frame Rate</div>
-      <div class="value" id="fps">0</div>
+      <div class="value" id="fps" role="status" aria-live="polite">0</div>
     </div>
   </div>
 </div>
@@ -518,7 +520,7 @@ a11y-description: "Interactive simulation of q-Racah weighted Glauber dynamics f
     <button id="export-png">PNG</button>
     <button id="export-pdf">PDF</button>
     <span style="font-size: 12px; color: #666;">Quality:</span>
-    <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 80px;">
+    <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 80px;" aria-label="Export quality">
     <span id="export-quality-val" style="font-size: 12px; color: #1976d2; min-width: 24px;">85</span>
   </div>
 </div>

@@ -5,7 +5,7 @@ author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/yourusername/homepage/blob/master/_simulations/misc/2025-03-12-YF-branching.md'
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
-a11y-description: "Interactive visualization of Young-Fibonacci word branching. The display shows the recursive hierarchical structure of Fibonacci words with zoom controls and dimension factors for each word in the tree."
+a11y-description: "Interactive node-link graph of the Young-Fibonacci lattice. Displays a selected Fibonacci word with its neighbors one level above and below, connected by edges. Enter a binary word of 1s and 2s, view its dimension via the hook-product formula, and click nodes to navigate the lattice."
 ---
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 
@@ -126,6 +126,8 @@ a11y-description: "Interactive visualization of Young-Fibonacci word branching. 
       </div>
     </div>
 
+  <a href="#chart-container" class="skip-link">Skip to simulation canvas</a>
+
   <div class="row mt-4">
     <div class="col-md-4">
       <div class="card">
@@ -166,9 +168,9 @@ a11y-description: "Interactive visualization of Young-Fibonacci word branching. 
         </div>
         <div class="card-body">
           <div class="word-info">
-            <p><strong>Word:</strong> <span id="current-word" class="current-word">121</span></p>
-            <p><strong>Weight:</strong> <span id="current-weight">4</span></p>
-            <p><strong>Dimension:</strong> <span id="word-dimension">-</span></p>
+            <p><strong>Word:</strong> <span id="current-word" class="current-word" role="status" aria-live="polite">121</span></p>
+            <p><strong>Weight:</strong> <span id="current-weight" role="status" aria-live="polite">4</span></p>
+            <p><strong>Dimension:</strong> <span id="word-dimension" role="status" aria-live="polite">-</span></p>
             <div id="dimension-factors" class="dimension-factors" style="display: none;"></div>
           </div>
         </div>
@@ -181,10 +183,10 @@ a11y-description: "Interactive visualization of Young-Fibonacci word branching. 
           <h5 class="card-title mb-0">Young-Fibonacci Lattice</h5>
         </div>
         <div class="card-body">
-          <div class="chart-container" id="chart-container">
+          <div class="chart-container" id="chart-container" role="img" aria-label="Young-Fibonacci lattice graph showing current word and its neighbors">
             <div class="zoom-controls">
-              <button class="zoom-btn" id="zoom-in">+</button>
-              <button class="zoom-btn" id="zoom-out">-</button>
+              <button class="zoom-btn" id="zoom-in" aria-label="Zoom in">+</button>
+              <button class="zoom-btn" id="zoom-out" aria-label="Zoom out">-</button>
               <button class="zoom-reset" id="zoom-reset">Reset</button>
             </div>
           </div>

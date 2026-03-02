@@ -8,7 +8,7 @@ code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-18-aztec-three-periodic-3d.cpp'
     txt: 'C++ code for the simulation'
 published: true
-a11y-description: "Interactive 3D visualization of domino tilings of the Aztec diamond with 3-by-3 periodic weights. Nine tunable weight parameters control the tiling distribution. The height function is rendered as a three-dimensional surface with demo mode."
+a11y-description: "3D surface plot of the height function for a domino tiling of the Aztec diamond with 3-by-3 periodic edge weights. Nine adjustable weight parameters shape frozen and liquid regions, producing non-circular arctic curves. Set diamond order n up to 320, tune the weight grid, toggle demo rotation, and navigate the camera with arrow buttons or keyboard."
 ---
 
 <style>
@@ -49,6 +49,8 @@ a11y-description: "Interactive 3D visualization of domino tilings of the Aztec d
 <script src="/js/2025-04-18-aztec-three-periodic-3d.js"></script>
 
 
+<a href="#aztec-canvas" class="skip-link">Skip to simulation canvas</a>
+
 This simulation displays random domino tilings of an <a href="https://mathworld.wolfram.com/AztecDiamond.html">Aztec diamond</a> using its three-dimensional height function. The visualization is inspired by Alexei and Matvey Borodin's <a href="https://math.mit.edu/~borodin/aztec.html">visualizations</a>. Caution: large values of $n$ may take a while to sample. If $n\le 100$, it should be reasonably fast.
 
 <!-- Controls to change n -->
@@ -57,7 +59,7 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
   <input id="n-input" type="number" value="12" min="2" step="2" max="320" size="3">
   <button id="update-btn">Update</button>
   <button id="cancel-btn" style="display: none; margin-left: 10px; background-color: #ff5555;">Cancel</button>
-  <span id="progress-indicator" style="font-weight: bold; margin-left: 10px;"></span>
+  <span id="progress-indicator" role="status" aria-live="polite" style="font-weight: bold; margin-left: 10px;"></span>
 
   <label for="demo-mode" style="margin-left: 15px;">
     <input id="demo-mode" type="checkbox"> Demo mode
@@ -66,29 +68,29 @@ This simulation displays random domino tilings of an <a href="https://mathworld.
   <div style="margin-top: 10px;">
     <h4>3×3 Periodic Weights</h4>
     <div style="display: grid; grid-template-columns: repeat(3, 60px); gap: 5px;">
-      <input id="w1" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w2" type="number" value="4.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w3" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w4" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w5" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w6" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w7" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w8" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-      <input id="w9" type="number" value="9.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+      <input id="w1" type="number" value="1.0" step="0.1" min="0.1" max="10" aria-label="Weight w1 (row 1, column 1)" style="width: 50px;">
+      <input id="w2" type="number" value="4.0" step="0.1" min="0.1" max="10" aria-label="Weight w2 (row 1, column 2)" style="width: 50px;">
+      <input id="w3" type="number" value="1.0" step="0.1" min="0.1" max="10" aria-label="Weight w3 (row 1, column 3)" style="width: 50px;">
+      <input id="w4" type="number" value="1.0" step="0.1" min="0.1" max="10" aria-label="Weight w4 (row 2, column 1)" style="width: 50px;">
+      <input id="w5" type="number" value="1.0" step="0.1" min="0.1" max="10" aria-label="Weight w5 (row 2, column 2)" style="width: 50px;">
+      <input id="w6" type="number" value="1.0" step="0.1" min="0.1" max="10" aria-label="Weight w6 (row 2, column 3)" style="width: 50px;">
+      <input id="w7" type="number" value="1.0" step="0.1" min="0.1" max="10" aria-label="Weight w7 (row 3, column 1)" style="width: 50px;">
+      <input id="w8" type="number" value="1.0" step="0.1" min="0.1" max="10" aria-label="Weight w8 (row 3, column 2)" style="width: 50px;">
+      <input id="w9" type="number" value="9.0" step="0.1" min="0.1" max="10" aria-label="Weight w9 (row 3, column 3)" style="width: 50px;">
     </div>
   </div>
 
   <div style="margin-top: 10px;">
     <label>Camera movement:</label>
-    <button id="move-left-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">←</button>
-    <button id="move-up-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↑</button>
-    <button id="move-down-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↓</button>
-    <button id="move-right-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">→</button>
+    <button id="move-left-btn" aria-label="Move camera left" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">←</button>
+    <button id="move-up-btn" aria-label="Move camera up" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↑</button>
+    <button id="move-down-btn" aria-label="Move camera down" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">↓</button>
+    <button id="move-right-btn" aria-label="Move camera right" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">→</button>
     <button id="reset-view-btn" style="padding: 2px 8px; margin: 0 5px; font-size: 14px; vertical-align: middle;">Reset View</button>
   </div>
 </div>
 
-<div id="aztec-canvas"></div>
+<div id="aztec-canvas" role="img" aria-label="3D visualization of domino tiling height function with 3-periodic weights on the Aztec diamond"></div>
 
 <script>
 Module.onRuntimeInitialized = async function() {

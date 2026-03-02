@@ -6,7 +6,7 @@ layout: sim_page
 code:
   - link: https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2025-07-12-bbl_sorting_tool.md
     txt: Interactive bibliography sorting tool for LaTeX .bbl and amsrefs files
-a11y-description: "Utility tool for sorting LaTeX bibliography files in .bbl and amsrefs formats. Paste bibliography entries and the tool reorders them alphabetically, producing sorted output ready for use in LaTeX documents."
+a11y-description: "Text utility for sorting LaTeX bibliography (.bbl) and amsrefs files. Paste bibliography entries into the input area, click Sort, and the tool reorders them alphabetically by author surname then chronologically. Supports standard bibitem and amsrefs bib formats with accent normalization."
 ---
 
 <style>
@@ -81,6 +81,8 @@ a11y-description: "Utility tool for sorting LaTeX bibliography files in .bbl and
 }
 </style>
 
+<a href="#outputArea" class="skip-link">Skip to sorted output</a>
+
 <div class="bbl-tool">
     <p class="lead">
         This tool sorts bibliography entries alphabetically by author names, and—for identical author lists—chronologically from oldest to newest.
@@ -89,8 +91,8 @@ a11y-description: "Utility tool for sorting LaTeX bibliography files in .bbl and
 
     <section>
         <div class="section-title">Input (.bbl file content)</div>
-        <textarea id="inputArea" placeholder="Paste your .bbl file content here..."></textarea>
-        <div class="stats" id="inputStats"></div>
+        <textarea id="inputArea" aria-label="Input bibliography content" placeholder="Paste your .bbl file content here..."></textarea>
+        <div class="stats" id="inputStats" role="status" aria-live="polite"></div>
     </section>
 
     <div class="button-group">
@@ -100,12 +102,12 @@ a11y-description: "Utility tool for sorting LaTeX bibliography files in .bbl and
         <button class="btn btn-secondary" onclick="loadAmsrefsExample()">Load Amsrefs Example</button>
     </div>
 
-    <div id="message"></div>
+    <div id="message" role="status" aria-live="polite"></div>
 
     <section>
         <div class="section-title">Sorted Output</div>
-        <textarea id="outputArea" placeholder="Sorted bibliography will appear here..." readonly></textarea>
-        <div class="stats" id="outputStats"></div>
+        <textarea id="outputArea" aria-label="Sorted bibliography output" placeholder="Sorted bibliography will appear here..." readonly></textarea>
+        <div class="stats" id="outputStats" role="status" aria-live="polite"></div>
     </section>
 </div>
 

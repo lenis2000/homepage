@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-12-04-RSK-sampling.cpp'
     txt: 'C++ source code (compiled to WebAssembly)'
-a11y-description: "Interactive simulation of domino tilings of the Aztec diamond sampled via the q-RSK correspondence. The Robinson-Schensted-Knuth bijection provides an exact sampling method connecting random tilings to Young tableaux."
+a11y-description: "Interactive simulation of Aztec diamond domino tilings sampled via the q-deformed Robinson-Schensted-Knuth correspondence. Adjust diamond size n, q-Whittaker parameter q, and Schur specializations x,y. View modes include dominoes, dimer, double dimer loops, height fluctuations, and 3D stepped surface."
 ---
 
 <style>
@@ -199,6 +199,8 @@ a11y-description: "Interactive simulation of domino tilings of the Aztec diamond
   </div>
 </details>
 
+<a href="#aztec-canvas" class="skip-link">Skip to simulation canvas</a>
+
 <!-- Sampling controls -->
 <div style="background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px;">
   <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
@@ -206,8 +208,8 @@ a11y-description: "Interactive simulation of domino tilings of the Aztec diamond
       <label for="n-input">n = </label>
       <input id="n-input" type="number" value="4" min="1" max="1000" style="width: 60px;">
       <button id="sample-btn" style="margin-left: 8px;">Sample</button>
-      <span id="progress-indicator" style="margin-left: 8px; color: #666;"></span>
-      <span id="timing-display" style="margin-left: 8px; color: #666; font-size: 0.9em;"></span>
+      <span id="progress-indicator" style="margin-left: 8px; color: #666;" role="status" aria-live="polite"></span>
+      <span id="timing-display" style="margin-left: 8px; color: #666; font-size: 0.9em;" role="status" aria-live="polite"></span>
     </span>
     <span>
       <label for="q-input">q = </label>
@@ -248,7 +250,7 @@ a11y-description: "Interactive simulation of domino tilings of the Aztec diamond
     <button type="button" id="fullres-btn" title="Open full-resolution image in new tab">Full Res</button>
     <button type="button" id="export-png-btn">PNG</button>
     <span style="font-size: 10px; color: #666;">Q:</span>
-    <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 50px;">
+    <input type="range" id="export-quality" min="0" max="100" value="85" style="width: 50px;" aria-label="Export quality">
     <span id="export-quality-val" style="font-size: 10px; color: #1976d2;">85</span>
     <button type="button" id="export-pdf-btn">PDF</button>
   </div>
@@ -257,14 +259,14 @@ a11y-description: "Interactive simulation of domino tilings of the Aztec diamond
 <!-- Canvas -->
 <div id="canvas-row" class="row">
   <div class="col-12" style="position: relative; height: 50vh;">
-    <canvas id="aztec-canvas" style="width: 100%; height: 100%; border: 1px solid #ccc; background-color: #fafafa;"></canvas>
-    <svg id="aztec-svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none;"></svg>
-    <div id="three-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none;"></div>
+    <canvas id="aztec-canvas" style="width: 100%; height: 100%; border: 1px solid #ccc; background-color: #fafafa;" role="img" aria-label="Domino tiling of the Aztec diamond sampled via q-RSK"></canvas>
+    <svg id="aztec-svg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none;" role="img" aria-label="SVG rendering of the Aztec diamond domino tiling"></svg>
+    <div id="three-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none;" role="img" aria-label="3D stepped surface of the Aztec diamond height function"></div>
     <div id="loading-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: none; justify-content: center; align-items: center; z-index: 150; flex-direction: column;">
       <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">Building 3D View...</div>
-      <div id="loading-progress" style="font-size: 14px; color: #666;">0%</div>
+      <div id="loading-progress" style="font-size: 14px; color: #666;" role="status" aria-live="polite">0%</div>
     </div>
-    <button id="toggle3DBtn" style="position: absolute; top: 10px; right: 10px; font-weight: bold; font-size: 14px; padding: 6px 12px; background: #fff; border: 2px solid #333; border-radius: 4px; cursor: pointer; z-index: 100; opacity: 0.9;">3D</button>
+    <button id="toggle3DBtn" style="position: absolute; top: 10px; right: 10px; font-weight: bold; font-size: 14px; padding: 6px 12px; background: #fff; border: 2px solid #333; border-radius: 4px; cursor: pointer; z-index: 100; opacity: 0.9;" aria-label="Toggle 3D view">3D</button>
   </div>
 </div>
 
@@ -282,7 +284,7 @@ a11y-description: "Interactive simulation of domino tilings of the Aztec diamond
   <span style="border-left: 1px solid #999; padding-left: 10px;">
     <button id="sample-double-dimer-btn" style="font-size: 0.9em;">Sample Double Dimer</button>
     <label style="margin-left: 6px; font-size: 0.85em;">Loops≥</label>
-    <input type="number" id="min-loop-size" value="2" min="1" max="100" style="width: 40px;">
+    <input type="number" id="min-loop-size" value="2" min="1" max="100" style="width: 40px;" aria-label="Minimum loop size">
   </span>
   <span style="border-left: 1px solid #999; padding-left: 10px;">
     <button id="sample-fluctuations-btn" style="font-size: 0.9em;">Sample Fluctuations</button>
@@ -307,32 +309,32 @@ a11y-description: "Interactive simulation of domino tilings of the Aztec diamond
   </span>
   <span>
     <label for="border-slider">Border:</label>
-    <input type="range" id="border-slider" min="0" max="3" step="0.5" value="1" style="width: 60px; vertical-align: middle;">
+    <input type="range" id="border-slider" min="0" max="3" step="0.5" value="1" style="width: 60px; vertical-align: middle;" aria-label="Domino border width">
     <span id="border-value">1</span>
   </span>
   <span style="border-left: 1px solid #ccc; padding-left: 10px;">
-    <button id="prev-palette" style="padding: 0 6px; font-size: 12px;">&#9664;</button>
-    <select id="palette-select" style="width: 110px; font-size: 12px;"></select>
-    <button id="next-palette" style="padding: 0 6px; font-size: 12px;">&#9654;</button>
+    <button id="prev-palette" style="padding: 0 6px; font-size: 12px;" aria-label="Previous color palette">&#9664;</button>
+    <select id="palette-select" style="width: 110px; font-size: 12px;" aria-label="Color palette"></select>
+    <button id="next-palette" style="padding: 0 6px; font-size: 12px;" aria-label="Next color palette">&#9654;</button>
     <button id="custom-colors-btn" style="margin-left: 4px; font-size: 12px;">Custom</button>
   </span>
   <span id="controls-3d" style="border-left: 1px solid #ccc; padding-left: 10px; display: none;">
-    <button id="perspectiveBtn" style="font-size: 12px;" title="Toggle perspective/orthographic">🎯</button>
-    <button id="preset3DBtn" style="font-size: 12px;" title="Cycle visual preset">☀️</button>
-    <button id="rotateLeftBtn" style="font-size: 12px;" title="Rotate left">↺</button>
-    <button id="rotateRightBtn" style="font-size: 12px;" title="Rotate right">↻</button>
-    <button id="autoRotateBtn" style="font-size: 12px;" title="Toggle auto-rotation">⟳</button>
+    <button id="perspectiveBtn" style="font-size: 12px;" title="Toggle perspective/orthographic" aria-label="Toggle perspective or orthographic projection">🎯</button>
+    <button id="preset3DBtn" style="font-size: 12px;" title="Cycle visual preset" aria-label="Cycle 3D visual preset">☀️</button>
+    <button id="rotateLeftBtn" style="font-size: 12px;" title="Rotate left" aria-label="Rotate view left">↺</button>
+    <button id="rotateRightBtn" style="font-size: 12px;" title="Rotate right" aria-label="Rotate view right">↻</button>
+    <button id="autoRotateBtn" style="font-size: 12px;" title="Toggle auto-rotation" aria-label="Toggle auto-rotation">⟳</button>
   </span>
 </div>
 <div id="custom-color-pickers" style="display: none; gap: 6px; align-items: center; margin-top: 6px; padding: 6px 10px; background: #f0f0f0; border-radius: 5px; font-size: 0.85em;">
   <span>P→</span>
-  <input type="color" id="custom-color-1" value="#228B22" style="width: 28px; height: 22px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+  <input type="color" id="custom-color-1" value="#228B22" style="width: 28px; height: 22px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;" aria-label="Custom color for domino type P-right">
   <span>P↑</span>
-  <input type="color" id="custom-color-2" value="#DC143C" style="width: 28px; height: 22px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+  <input type="color" id="custom-color-2" value="#DC143C" style="width: 28px; height: 22px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;" aria-label="Custom color for domino type P-up">
   <span>H→</span>
-  <input type="color" id="custom-color-3" value="#0057B7" style="width: 28px; height: 22px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+  <input type="color" id="custom-color-3" value="#0057B7" style="width: 28px; height: 22px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;" aria-label="Custom color for domino type H-right">
   <span>H↑</span>
-  <input type="color" id="custom-color-4" value="#FFCD00" style="width: 28px; height: 22px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;">
+  <input type="color" id="custom-color-4" value="#FFCD00" style="width: 28px; height: 22px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;" aria-label="Custom color for domino type H-up">
 </div>
 
 <!-- Detailed Mode Toggle -->
@@ -343,17 +345,17 @@ a11y-description: "Interactive simulation of domino tilings of the Aztec diamond
   <!-- Step Controls -->
   <div id="detailed-step-controls">
     <button id="step-reset-btn">Reset</button>
-    <button id="step-prev-btn" disabled>&#9664; Prev</button>
-    <button id="step-next-btn">Next &#9654;</button>
+    <button id="step-prev-btn" disabled aria-label="Previous step">&#9664; Prev</button>
+    <button id="step-next-btn" aria-label="Next step">Next &#9654;</button>
     <button id="step-auto-btn">Auto-Play</button>
     <label style="margin-left: 10px;">Speed:
-      <input type="range" id="step-speed" min="100" max="2000" value="500" style="width: 80px; vertical-align: middle;">
+      <input type="range" id="step-speed" min="100" max="2000" value="500" style="width: 80px; vertical-align: middle;" aria-label="Auto-play speed">
     </label>
     <label style="margin-left: 15px;">Seed:
-      <input type="number" id="detailed-seed" value="" placeholder="random" style="width: 80px;">
-      <button id="new-seed-btn" title="Generate new random seed" style="padding: 2px 6px;">&#8635;</button>
+      <input type="number" id="detailed-seed" value="" placeholder="random" style="width: 80px;" aria-label="Random seed">
+      <button id="new-seed-btn" title="Generate new random seed" style="padding: 2px 6px;" aria-label="Generate new random seed">&#8635;</button>
     </label>
-    <span id="step-indicator" style="margin-left: 15px; font-weight: bold; color: #1976d2;">Ready to start</span>
+    <span id="step-indicator" style="margin-left: 15px; font-weight: bold; color: #1976d2;" role="status" aria-live="polite">Ready to start</span>
   </div>
 
   <!-- Bernoulli Trial Info -->
@@ -378,12 +380,12 @@ a11y-description: "Interactive simulation of domino tilings of the Aztec diamond
   <div id="detailed-visualizations">
     <div class="detailed-viz-panel">
       <h4>Growth Diagram Cells (Precomputed Bernoulli Bits)</h4>
-      <canvas id="cell-lattice-canvas" style="height: 200px;"></canvas>
+      <canvas id="cell-lattice-canvas" style="height: 200px;" role="img" aria-label="Growth diagram cells with precomputed Bernoulli bits"></canvas>
       <div id="cell-lattice-info" class="partition-display">Staircase cells: <span style="color: #2e7d32;">&#9632; bit=1</span> | <span style="color: #c62828;">&#9633; bit=0</span> | <span style="background: #ffeb3b; padding: 0 4px;">current</span></div>
     </div>
     <div class="detailed-viz-panel">
       <h4>Island Processing Details</h4>
-      <canvas id="island-canvas" style="height: 200px;"></canvas>
+      <canvas id="island-canvas" style="height: 200px;" role="img" aria-label="Island processing details for q-Whittaker VH bijection"></canvas>
       <div id="island-detail-info" class="partition-display">Shows islands, f<sub>k</sub> stopping probability, g<sub>s</sub> sequential sampling</div>
     </div>
   </div>
@@ -394,7 +396,7 @@ a11y-description: "Interactive simulation of domino tilings of the Aztec diamond
       <span style="float: right; font-size: 0.85em; font-weight: normal;">
         <button id="shuffle-animate-btn" style="padding: 2px 8px; font-size: 11px;">&#9654; Animate</button>
         <button id="shuffle-reset-btn" style="padding: 2px 8px; font-size: 11px;">Reset</button>
-        <select id="shuffle-phase-select" style="font-size: 11px; padding: 2px;">
+        <select id="shuffle-phase-select" style="font-size: 11px; padding: 2px;" aria-label="Shuffling phase">
           <option value="0">Phase 0: Initial</option>
           <option value="1">Phase 1: Dimers</option>
           <option value="2">Phase 2: Blocks</option>
@@ -403,7 +405,7 @@ a11y-description: "Interactive simulation of domino tilings of the Aztec diamond
         </select>
       </span>
     </h4>
-    <canvas id="shuffling-canvas" style="height: 380px;"></canvas>
+    <canvas id="shuffling-canvas" style="height: 380px;" role="img" aria-label="Domino shuffling VH bijection step visualization"></canvas>
     <div id="shuffling-info" class="partition-display">
       <b>Phases:</b> 0: Initial partitions | 1: Form dimers (&lambda;-&kappa; blue, &kappa;-&mu; orange) | 2: Identify blocks (B markers) | 3: Slide dimers &rarr; AFTER | 4: Final result with &Delta; indicators
     </div>
@@ -412,7 +414,7 @@ a11y-description: "Interactive simulation of domino tilings of the Aztec diamond
   <!-- Row 3: Current Aztec Diamond (built from completed anti-diagonals) -->
   <div class="detailed-viz-panel" style="margin-top: 15px;">
     <h4>Current Aztec Diamond</h4>
-    <canvas id="current-aztec-canvas" style="height: 400px;"></canvas>
+    <canvas id="current-aztec-canvas" style="height: 400px;" role="img" aria-label="Current Aztec diamond built from completed anti-diagonals"></canvas>
     <div id="current-aztec-info" class="partition-display">After completing each anti-diagonal, the corresponding Aztec diamond is shown</div>
   </div>
 

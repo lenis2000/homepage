@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-12-03-schur-domino.cpp'
     txt: 'C++ code for the simulation'
-a11y-description: "Interactive simulation of domino tilings of the Aztec diamond with Schur process weights. The Schur weights create a specific probability measure on tilings connected to representation theory and determinantal point processes."
+a11y-description: "Displays a colored domino tiling of an Aztec diamond sampled with Schur process weights. Parameters x and y control the probability measure connected to representation theory. Controls set the diamond size, uniform or r-weighted presets, and individual x/y parameter lists."
 ---
 
 <style>
@@ -57,6 +57,8 @@ Schur process style parameters $x_1,\ldots,x_n$ and $y_1,\ldots,y_n$ determine t
 
 ---
 
+<a href="#aztec-svg" class="skip-link">Skip to simulation canvas</a>
+
 <div style="margin-bottom: 10px;">
   <label for="n-input">Aztec Diamond Order ($n\le 600$): </label>
   <input id="n-input" type="number" value="4" min="2" step="2" max="600" size="3">
@@ -83,11 +85,11 @@ Schur process style parameters $x_1,\ldots,x_n$ and $y_1,\ldots,y_n$ determine t
   <input id="y-params" type="text" class="param-input" value="1^4">
 </div>
 
-<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;"></div>
+<div id="progress-indicator" style="margin-bottom: 10px; font-weight: bold;" role="status" aria-live="polite"></div>
 
 <div class="row">
   <div class="col-12">
-    <svg id="aztec-svg"></svg>
+    <svg id="aztec-svg" role="img" aria-label="Domino tiling of the Aztec diamond with Schur process weights"></svg>
   </div>
 </div>
 
@@ -146,9 +148,9 @@ Module.onRuntimeInitialized = async function() {
     .style("margin-bottom", "10px");
 
   zoomDiv.append("span").text("Zoom: ").style("font-weight", "bold");
-  zoomDiv.append("button").attr("id", "zoom-in-btn").style("margin-left", "5px").text("+")
+  zoomDiv.append("button").attr("id", "zoom-in-btn").attr("aria-label", "Zoom in").style("margin-left", "5px").text("+")
     .on("click", () => svg.transition().duration(300).call(zoom.scaleBy, 1.3));
-  zoomDiv.append("button").attr("id", "zoom-out-btn").style("margin-left", "5px").text("-")
+  zoomDiv.append("button").attr("id", "zoom-out-btn").attr("aria-label", "Zoom out").style("margin-left", "5px").text("-")
     .on("click", () => svg.transition().duration(300).call(zoom.scaleBy, 0.7));
   zoomDiv.append("button").attr("id", "zoom-reset-btn").style("margin-left", "5px").text("Reset Zoom")
     .on("click", () => svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity));

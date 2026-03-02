@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-07-07-hookwalk-tableau.cpp'
     txt : 'C++ code for WASM module (samples SYT up to 100 000 boxes)'
-a11y-description: "Interactive simulation of the hook walk algorithm for sampling random Standard Young Tableaux. Enter a Young diagram shape and the algorithm fills it with a uniformly random standard tableau. WebAssembly handles diagrams with up to 100,000 boxes."
+a11y-description: "Displays a Standard Young Tableau as a grid of numbered cells or a color-coded heatmap for large shapes. Uses the Greene-Nijenhuis-Wilf hook walk algorithm to sample uniformly random SYT. Draw shapes interactively, enter partition notation, or use Plancherel/staircase presets, then click Generate SYT."
 ---
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
@@ -177,6 +177,8 @@ a11y-description: "Interactive simulation of the hook walk algorithm for samplin
   }
 </style>
 
+<a href="#hook-tableau-container" class="skip-link">Skip to simulation visualization</a>
+
 <h2>Generate Random Standard Young Tableaux</h2>
 
 <details id="algorithm-description-details" style="margin-bottom: 20px;">
@@ -238,9 +240,9 @@ a11y-description: "Interactive simulation of the hook walk algorithm for samplin
       <span class="info-text">Draw only the outline; interior is auto-filled.</span>
     </div>
     <div class="drawing-container">
-      <div id="shape-canvas"></div>
+      <div id="shape-canvas" role="img" aria-label="Interactive drawing canvas for Young diagram shape"></div>
       <div class="drawing-info">
-        <div>Current boxes: <span id="current-boxes">0</span></div>
+        <div>Current boxes: <span id="current-boxes" role="status" aria-live="polite">0</span></div>
       </div>
     </div>
   </div>
@@ -280,18 +282,18 @@ a11y-description: "Interactive simulation of the hook walk algorithm for samplin
 
   <div class="input-group">
     <button id="generate-tableau">Generate SYT</button>
-    <span id="hook-wasm-indicator" style="margin-left:10px;color:var(--text-secondary,#666);"></span>
+    <span id="hook-wasm-indicator" role="status" aria-live="polite" style="margin-left:10px;color:var(--text-secondary,#666);"></span>
   </div>
 
   <div id="progress-container" style="display: none; margin-top: 10px;">
     <div class="progress-bar">
       <div id="progress-fill" class="progress-fill"></div>
     </div>
-    <div id="progress-text" class="progress-text">Generating SYT...</div>
+    <div id="progress-text" class="progress-text" role="status" aria-live="polite">Generating SYT...</div>
   </div>
 </div>
 
-<div id="hook-tableau-container" class="section"></div>
+<div id="hook-tableau-container" class="section" role="img" aria-label="Generated Standard Young Tableau visualization"></div>
 
 <script>
 // Rename the module to avoid conflicts with RSK

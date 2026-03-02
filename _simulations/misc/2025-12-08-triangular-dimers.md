@@ -7,7 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2025-12-08-triangular-dimers.cpp'
     txt: 'C++ code for the simulation (compiled to WebAssembly)'
-a11y-description: "Interactive simulation of random dimer coverings (perfect matchings) on a non-bipartite triangular lattice using Glauber dynamics. Features drawing tools for creating custom regions, double dimer overlay mode, loop analysis, and fractal dimension computation."
+a11y-description: "Interactive dimer covering simulator on a triangular lattice rendered to canvas. Draw or select preset regions, run Glauber dynamics MCMC to sample random perfect matchings, and toggle double-dimer mode to see alternating loop structures. Includes loop fractal dimension analysis, periodic edge weights, and topological statistics."
 ---
 
 
@@ -216,12 +216,14 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   }
 </style>
 
+<a href="#dimer-canvas" class="skip-link">Skip to simulation canvas</a>
+
 <!-- Control Groups -->
 <div class="control-group">
   <div class="control-group-title">Presets</div>
   <span class="param-group">
     <span class="param-label">Size:</span>
-    <input type="number" id="preset-size" class="param-input" value="6" min="2" max="30">
+    <input type="number" id="preset-size" class="param-input" value="6" min="2" max="30" aria-label="Preset region size">
   </span>
   <button id="btn-parallelogram">Parallelogram</button>
   <button id="btn-triangle-up">Triangle</button>
@@ -241,8 +243,8 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
 
 <div class="control-group">
   <div class="control-group-title">View</div>
-  <button id="btn-zoom-in" class="tool-btn">+</button>
-  <button id="btn-zoom-out" class="tool-btn">−</button>
+  <button id="btn-zoom-in" class="tool-btn" aria-label="Zoom in">+</button>
+  <button id="btn-zoom-out" class="tool-btn" aria-label="Zoom out">−</button>
   <button id="btn-reset-view">Reset View</button>
   <label style="margin-left: 12px;">
     <input type="checkbox" id="show-grid" checked> Grid
@@ -264,11 +266,11 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   </label>
   <span id="min-loop-container" style="display: none; margin-left: 8px;">
     <span style="font-size: 12px; color: #666;">Min loop:</span>
-    <input type="number" id="min-loop-size" class="param-input" value="2" min="2" style="width: 50px;">
+    <input type="number" id="min-loop-size" class="param-input" value="2" min="2" style="width: 50px;" aria-label="Minimum loop size">
   </span>
   <span style="margin-left: 12px; display: inline-flex; align-items: center; gap: 4px;">
     <span style="font-size: 12px; color: #666;">Dimer width</span>
-    <input type="range" id="edge-width-slider" min="1" max="100" value="50" style="width: 80px;">
+    <input type="range" id="edge-width-slider" min="1" max="100" value="50" style="width: 80px;" aria-label="Dimer edge width">
   </span>
 </div>
 
@@ -284,13 +286,13 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   </div>
   <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
     <span style="font-size: 12px;">u:</span>
-    <input type="number" id="param-u" class="param-input" value="0.5" step="0.05" min="0" max="1" style="width: 50px;">
+    <input type="number" id="param-u" class="param-input" value="0.5" step="0.05" min="0" max="1" style="width: 50px;" aria-label="Parameter u for topological statistics">
     <span style="font-size: 12px; margin-left: 8px;">Sample every:</span>
-    <input type="range" id="sample-interval-slider" min="0" max="100" value="38" style="width: 80px;">
-    <input type="number" id="sample-interval-input" class="param-input" value="1000" min="1" max="100000000" style="width: 70px;">
+    <input type="range" id="sample-interval-slider" min="0" max="100" value="38" style="width: 80px;" aria-label="Topological stats sample interval slider">
+    <input type="number" id="sample-interval-input" class="param-input" value="1000" min="1" max="100000000" style="width: 70px;" aria-label="Topological stats sample interval">
     <button id="btn-reset-stats" style="font-size: 11px; padding: 0 6px; height: 24px;">Reset</button>
   </div>
-  <div id="stats-output" style="margin-top: 6px; font-family: monospace; font-size: 11px; border: 1px solid #ddd; background: white; padding: 4px; border-radius: 4px; cursor: pointer;" title="Click for debug info">
+  <div id="stats-output" role="status" aria-live="polite" style="margin-top: 6px; font-family: monospace; font-size: 11px; border: 1px solid #ddd; background: white; padding: 4px; border-radius: 4px; cursor: pointer;" title="Click for debug info">
     Loops: - | L: - | Avg: - | Samples: 0
   </div>
 </div>
@@ -305,7 +307,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
     <button id="btn-clear-loop" class="tool-btn" style="width:auto; padding: 0 8px;">Clear</button>
     <span id="selected-loop-coords" style="font-size: 11px; font-family: monospace; color: #666;">(Click to select)</span>
   </div>
-  <div id="fractal-output" style="font-family: monospace; font-size: 11px; border: 1px solid #ddd; background: white; padding: 4px; border-radius: 4px;">
+  <div id="fractal-output" role="status" aria-live="polite" style="font-family: monospace; font-size: 11px; border: 1px solid #ddd; background: white; padding: 4px; border-radius: 4px;">
     Loop: - | Edges: - | Diameter: - | Fractal dim: -
   </div>
   <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">
@@ -344,13 +346,13 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
       <button id="btn-stop-fractal-avg" class="tool-btn" style="width:auto; padding: 0 8px; display: none;">Stop</button>
       <button id="btn-reset-fractal-avg" class="tool-btn" style="width:auto; padding: 0 8px;" disabled>Reset</button>
       <span style="font-size: 12px; margin-left: 8px;">Sample every:</span>
-      <input type="range" id="fractal-sample-interval-slider" min="0" max="100" value="38" style="width: 80px;">
-      <input type="number" id="fractal-sample-interval-input" class="param-input" value="1000" min="1" max="100000000" style="width: 70px;">
+      <input type="range" id="fractal-sample-interval-slider" min="0" max="100" value="38" style="width: 80px;" aria-label="Fractal dimension sample interval slider">
+      <input type="number" id="fractal-sample-interval-input" class="param-input" value="1000" min="1" max="100000000" style="width: 70px;" aria-label="Fractal dimension sample interval">
     </div>
-    <div id="fractal-avg-output" style="font-family: monospace; font-size: 11px; border: 1px solid #ddd; background: white; padding: 4px; border-radius: 4px;">
+    <div id="fractal-avg-output" role="status" aria-live="polite" style="font-family: monospace; font-size: 11px; border: 1px solid #ddd; background: white; padding: 4px; border-radius: 4px;">
       Target: (not set) | Avg D: - | Samples: 0 | StdDev: -
     </div>
-    <canvas id="fractal-histogram" width="800" height="300" style="display: none; margin-top: 8px; border: 1px solid #ddd; background: white; border-radius: 4px; width: 100%; max-width: 500px; height: 180px;"></canvas>
+    <canvas id="fractal-histogram" width="800" height="300" role="img" aria-label="Histogram of sampled fractal dimensions" style="display: none; margin-top: 8px; border: 1px solid #ddd; background: white; border-radius: 4px; width: 100%; max-width: 500px; height: 180px;"></canvas>
   </div>
 </div>
 
@@ -366,7 +368,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   </label>
   <span class="param-group" style="margin-left: 12px;">
     <span class="param-label">k:</span>
-    <select id="periodic-k" class="param-input" style="width: 50px;">
+    <select id="periodic-k" class="param-input" style="width: 50px;" aria-label="Periodicity k parameter">
       <option value="1">1</option>
       <option value="2" selected>2</option>
       <option value="3">3</option>
@@ -375,7 +377,7 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   </span>
   <span class="param-group">
     <span class="param-label">l:</span>
-    <select id="periodic-l" class="param-input" style="width: 50px;">
+    <select id="periodic-l" class="param-input" style="width: 50px;" aria-label="Periodicity l parameter">
       <option value="1" selected>1</option>
       <option value="2">2</option>
       <option value="3">3</option>
@@ -397,15 +399,15 @@ CFTP (Coupling From The Past) is not directly applicable due to lack of monotone
   <button id="btn-start" class="primary" style="height: 32px; padding: 0 16px; font-size: 14px; font-weight: 600;">Start Glauber</button>
   <button id="btn-stop" disabled style="height: 32px; padding: 0 12px;">Stop</button>
   <span style="font-size: 12px; color: #666; margin-left: 8px;">Speed:</span>
-  <input type="range" id="speed-slider" min="0" max="100" value="25" style="width: 80px;">
-  <input type="number" id="speed-input" class="param-input" value="100" min="1" max="100000000" style="width: 70px;">
+  <input type="range" id="speed-slider" min="0" max="100" value="25" style="width: 80px;" aria-label="Glauber dynamics speed slider">
+  <input type="number" id="speed-input" class="param-input" value="100" min="1" max="100000000" style="width: 70px;" aria-label="Glauber dynamics steps per second">
   <span style="font-size: 11px; color: #888;">/s</span>
 </div>
 
-<canvas id="dimer-canvas"></canvas>
+<canvas id="dimer-canvas" role="img" aria-label="Triangular lattice dimer covering visualization"></canvas>
 
 <div class="status-bar">
-  <span id="status-text">Draw a region or use a preset to begin</span>
+  <span id="status-text" role="status" aria-live="polite">Draw a region or use a preset to begin</span>
 </div>
 
 <!-- Load dependencies -->
