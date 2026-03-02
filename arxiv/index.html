@@ -145,7 +145,7 @@ nav_weight: 4
     display: none;
   }
   @media (max-width: 767px) {
-    .arxiv-tags .arxiv-cat-badge { display: none !important; }
+    .arxiv-cat-badge { display: none; }
     .arxiv-tags-toggle {
       display: inline;
       cursor: pointer;
@@ -160,8 +160,10 @@ nav_weight: 4
       line-height: 1.4;
     }
     .arxiv-tags-toggle:hover { background: #e9ecef; }
-    .arxiv-tags-expanded .arxiv-cat-badge { display: inline !important; }
+    .arxiv-tags-expanded .arxiv-cat-badge { display: inline; }
     .arxiv-tags-expanded .arxiv-tags-toggle::after { content: ' \2212'; }
+    #arxiv-cat-buttons,
+    #arxiv-year-buttons { display: none; }
     .arxiv-date-col { width: 5.5em; font-size: 0.88em; }
     .arxiv-entry { gap: 0.5em; }
   }
