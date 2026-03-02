@@ -1,7 +1,7 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-dry arxiv-import arxiv-backfill arxiv-index
 
 serve:
-	bundle exec jekyll serve --incremental
+	bundle exec jekyll serve 
 
 invalidate:
 	@echo "Creating CloudFront invalidations..."
@@ -111,3 +111,20 @@ deploy-local:
 	aws s3 sync _site/ s3://lpetrov.cc --size-only
 	@$(MAKE) invalidate
 	@echo "Local deploy complete!"
+
+arxiv:
+	python3 _scripts/arxiv/fetch_arxiv.py --days 7
+	python3 _scripts/arxiv/build_search_index.py
+
+arxiv-dry:
+	python3 _scripts/arxiv/fetch_arxiv.py --days 7 --dry-run
+
+arxiv-import:
+	python3 _scripts/arxiv/import_frg.py
+	python3 _scripts/arxiv/build_search_index.py
+
+arxiv-backfill:
+	python3 _scripts/arxiv/backfill_abstracts.py
+
+arxiv-index:
+	python3 _scripts/arxiv/build_search_index.py

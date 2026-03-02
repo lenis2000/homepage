@@ -1,0 +1,225 @@
+# arXiv Feed — Author Configuration
+# Each author entry is used for:
+#   1. Deterministic name matching against arXiv results
+#   2. AI disambiguation when needed
+#
+# Fields:
+#   name: Display name
+#   arxiv_names: List of arXiv author ID patterns (Surname_Initial)
+#   affiliation: Current institution (for disambiguation)
+#   topics: Research topics (for AI context)
+#   disambiguation: Hint for AI to distinguish from namesakes
+#   high_ambiguity: Force AI review even for category-matching papers
+
+categories:
+  - math.PR
+  - math-ph
+  - math.RT
+  - math.QA
+  - math.CO
+
+authors:
+  - name: "Alexei Borodin"
+    arxiv_names: ["Borodin_A"]
+    affiliation: "MIT"
+    topics: ["integrable probability", "random matrices", "Macdonald processes"]
+    disambiguation: "Mathematician at MIT, not signal processing Borodin"
+
+  - name: "Jinho Baik"
+    arxiv_names: ["Baik_J"]
+    affiliation: "Michigan"
+    topics: ["random matrices", "longest increasing subsequences", "KPZ"]
+
+  - name: "Ivan Corwin"
+    arxiv_names: ["Corwin_I"]
+    affiliation: "Columbia"
+    topics: ["KPZ universality", "ASEP", "stochastic vertex models"]
+
+  - name: "Vadim Gorin"
+    arxiv_names: ["Gorin_V"]
+    affiliation: "Berkeley"
+    topics: ["random tilings", "random matrices", "beta-ensembles"]
+
+  - name: "Leonid Petrov"
+    arxiv_names: ["Petrov_L"]
+    affiliation: "UVA"
+    topics: ["integrable probability", "TASEP", "Macdonald processes", "random tilings"]
+
+  - name: "Guillaume Barraquand"
+    arxiv_names: ["Barraquand_G"]
+    affiliation: "ENS Paris"
+    topics: ["KPZ", "random polymers", "half-space models"]
+
+  - name: "Alexey Bufetov"
+    arxiv_names: ["Bufetov_A"]
+    affiliation: "Leipzig"
+    topics: ["random tilings", "representations", "asymptotic combinatorics"]
+    disambiguation: "Alexey Bufetov (Leipzig), probabilist — not Alexander Bufetov (dynamical systems)"
+    high_ambiguity: true
+
+  - name: "Jeffrey Kuan"
+    arxiv_names: ["Kuan_J"]
+    affiliation: "Texas A&M"
+    topics: ["duality", "stochastic vertex models", "quantum groups"]
+
+  - name: "Mustazee Rahman"
+    arxiv_names: ["Rahman_M"]
+    affiliation: "Durham"
+    topics: ["KPZ fixed point", "random growth"]
+    high_ambiguity: true
+    disambiguation: "Probabilist working on KPZ, not other M. Rahmans"
+
+  - name: "Hao Shen"
+    arxiv_names: ["Shen_H"]
+    affiliation: "Wisconsin"
+    topics: ["stochastic PDE", "KPZ equation", "Yang-Mills"]
+    high_ambiguity: true
+    disambiguation: "Stochastic PDE / KPZ probabilist at Wisconsin"
+
+  - name: "Axel Saenz"
+    arxiv_names: ["Saenz_A"]
+    affiliation: "Oregon State"
+    topics: ["TASEP", "multipoint distributions", "KPZ"]
+
+  - name: "Guilherme Silva"
+    arxiv_names: ["Silva_G"]
+    affiliation: "USP São Paulo"
+    topics: ["random matrices", "orthogonal polynomials", "universality"]
+
+  - name: "Yi Sun"
+    arxiv_names: ["Sun_Y"]
+    affiliation: "Chicago"
+    topics: ["random matrices", "moments", "representation theory"]
+    high_ambiguity: true
+    disambiguation: "Yi Sun at U Chicago, random matrix / representation theory"
+
+  - name: "Li-Cheng Tsai"
+    arxiv_names: ["Tsai_L"]
+    affiliation: "Utah"
+    topics: ["KPZ equation", "stochastic PDE", "large deviations"]
+
+  - name: "Alisa Knizel"
+    arxiv_names: ["Knizel_A"]
+    affiliation: "Chicago"
+    topics: ["integrable probability", "random tilings", "asymptotic analysis"]
+
+  - name: "Xuan Wu"
+    arxiv_names: ["Wu_X"]
+    affiliation: "Illinois UC"
+    topics: ["KPZ fixed point", "Airy sheet", "directed landscape"]
+    high_ambiguity: true
+    disambiguation: "Xuan Wu, KPZ / directed landscape probabilist"
+
+  - name: "Evgeni Dimitrov"
+    arxiv_names: ["Dimitrov_E"]
+    affiliation: "USC"
+    topics: ["Gibbsian line ensembles", "KPZ", "stochastic vertex models"]
+
+  - name: "Konstantin Matetski"
+    arxiv_names: ["Matetski_K"]
+    affiliation: "Michigan State"
+    topics: ["KPZ fixed point", "TASEP", "Airy processes"]
+
+  - name: "Benjamin Landon"
+    arxiv_names: ["Landon_B"]
+    affiliation: "Toronto"
+    topics: ["random matrices", "universality", "quantum unique ergodicity"]
+
+  - name: "Sergei Korotkikh"
+    arxiv_names: ["Korotkikh_S"]
+    affiliation: "MIT"
+    topics: ["colored vertex models", "symmetric functions"]
+
+  - name: "Roger Van Peski"
+    arxiv_names: ["Peski_R", "Van_Peski_R"]
+    affiliation: "KTH"
+    topics: ["random matrices over p-adics", "Hall-Littlewood", "Cohen-Lenstra"]
+
+  - name: "Cesar Cuenca"
+    arxiv_names: ["Cuenca_C"]
+    affiliation: "Ohio State"
+    topics: ["Macdonald processes", "random matrices", "quantized free probability"]
+
+  - name: "Amol Aggarwal"
+    arxiv_names: ["Aggarwal_A"]
+    affiliation: "Columbia"
+    topics: ["vertex models", "Arctic curves", "random tilings", "KPZ"]
+
+  - name: "Andrew Ahn"
+    arxiv_names: ["Ahn_A"]
+    affiliation: "Cornell"
+    topics: ["random matrices", "Dyson Brownian motion", "log-gases"]
+    high_ambiguity: true
+    disambiguation: "Andrew Ahn, probabilist at Cornell"
+
+  - name: "Yuchen Liao"
+    arxiv_names: ["Liao_Y"]
+    affiliation: "Warwick"
+    topics: ["TASEP", "KPZ", "integrable probability"]
+    high_ambiguity: true
+    disambiguation: "Yuchen Liao, integrable probability at Warwick"
+
+  - name: "Promit Ghosal"
+    arxiv_names: ["Ghosal_P"]
+    affiliation: "Chicago"
+    topics: ["KPZ", "random matrices", "stochastic PDE"]
+
+  - name: "Shalin Parekh"
+    arxiv_names: ["Parekh_S"]
+    affiliation: "Maryland"
+    topics: ["KPZ", "random polymers", "stochastic PDE"]
+
+  - name: "Mark Rychnovsky"
+    arxiv_names: ["Rychnovsky_M"]
+    affiliation: ""
+    topics: ["beta-RWRE", "random walk", "KPZ"]
+
+  - name: "Zhipeng Liu"
+    arxiv_names: ["Liu_Z"]
+    affiliation: "Kansas"
+    topics: ["KPZ", "TASEP", "multipoint distributions"]
+    high_ambiguity: true
+    disambiguation: "Zhipeng Liu, KPZ probabilist at Kansas — very common name, many false positives"
+
+  - name: "Konstantin Matveev"
+    arxiv_names: ["Matveev_K"]
+    affiliation: "Rutgers"
+    topics: ["Macdonald processes", "q-Whittaker", "integrable systems"]
+    high_ambiguity: true
+    disambiguation: "Konstantin Matveev, integrable probability at Rutgers — not other K. Matveevs"
+
+  - name: "Alexander Moll"
+    arxiv_names: ["Moll_A"]
+    affiliation: "Reed"
+    topics: ["Benjamin-Ono", "random partitions", "topological recursion"]
+
+  - name: "Yier Lin"
+    arxiv_names: ["Lin_Y"]
+    affiliation: "Chicago"
+    topics: ["KPZ", "stochastic PDE", "random polymers"]
+    high_ambiguity: true
+    disambiguation: "Yier Lin, KPZ probabilist at U Chicago"
+
+  - name: "Marianna Russkikh"
+    arxiv_names: ["Russkikh_M"]
+    affiliation: "Notre Dame"
+    topics: ["dimers", "s-embeddings", "conformal invariance"]
+
+  - name: "Andrei Prokhorov"
+    arxiv_names: ["Prokhorov_A"]
+    affiliation: "Michigan"
+    topics: ["Riemann-Hilbert problems", "Painlevé equations", "random matrices"]
+    high_ambiguity: true
+    disambiguation: "Andrei Prokhorov, Riemann-Hilbert / Painlevé at Michigan"
+
+  - name: "Sayan Das"
+    arxiv_names: ["Das_S"]
+    affiliation: "Chicago"
+    topics: ["KPZ", "random polymers", "stochastic PDE"]
+    high_ambiguity: true
+    disambiguation: "Sayan Das, KPZ probabilist at U Chicago — common name"
+
+  - name: "Hindy Drillick"
+    arxiv_names: ["Drillick_H"]
+    affiliation: "Columbia"
+    topics: ["TASEP", "stochastic vertex models", "colored models"]

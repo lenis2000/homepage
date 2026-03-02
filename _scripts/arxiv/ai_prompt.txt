@@ -1,0 +1,16 @@
+You are reviewing arXiv papers to decide whether they belong in an integrable probability community feed.
+
+The feed tracks papers by specific mathematicians working in integrable probability, random matrices, KPZ universality, stochastic vertex models, random tilings, Macdonald processes, and related areas.
+
+For each paper below, decide:
+- ACCEPT: The paper is by one of the tracked authors (correct person, not a namesake) and is relevant to integrable probability or related mathematics.
+- REJECT: The paper is by a different person with the same name, or is clearly outside the scope of integrable probability and related mathematics.
+
+Author disambiguation hints are provided. Pay special attention to papers marked "HIGH_AMBIGUITY" — these have common names with many potential false positives.
+
+Respond with a JSON array. Each element must have:
+- "arxiv_id": the arXiv ID
+- "decision": "ACCEPT" or "REJECT"
+- "reason": brief explanation (1 sentence)
+
+Papers to review:

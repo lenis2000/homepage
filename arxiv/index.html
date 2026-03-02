@@ -1,0 +1,150 @@
+---
+title: arXiv Feed
+layout: default
+permalink: /arxiv/
+nav_id: arXiv Feed
+nav_weight: 4
+---
+
+<search aria-label="arXiv feed search and filters">
+
+  <!-- Search Bar -->
+  <div class="input-group mb-3">
+    <label for="arxiv-search-input" class="sr-only">Search arXiv feed</label>
+    <input type="text" id="arxiv-search-input" class="form-control" placeholder="Search papers… (Esc to clear)" aria-label="Search arXiv feed" autocomplete="off">
+    <button class="btn btn-outline-secondary" type="button" id="arxiv-search-clear" aria-label="Clear search and filters">Clear</button>
+  </div>
+
+  <!-- Category Filter Buttons -->
+  <div id="arxiv-cat-buttons" class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Filter by arXiv category">
+    <!-- Dynamically generated -->
+  </div>
+
+  <!-- Year Filter Buttons -->
+  <div id="arxiv-year-buttons" class="d-flex flex-wrap gap-2 mb-4" role="group" aria-label="Filter by year">
+    <!-- Dynamically generated -->
+  </div>
+
+</search>
+
+<!-- Live region for search status announcements -->
+<div id="arxiv-status" class="sr-only" role="status" aria-live="polite"></div>
+
+<p class="text-muted mb-4">
+  Papers by members of the integrable probability community.
+  Imported from the <a href="http://frg.int-prob.org" target="_blank" rel="noopener">NSF FRG page<span class="sr-only"> (opens in new tab)</span></a> (2016–2025) and updated via automated arXiv queries.
+</p>
+
+<ul class="my-ul-zebra arxiv-list" style="list-style:none;padding-left:0" aria-label="arXiv papers">
+{% assign arxiv_posts = site.posts | where: "categories", "arxiv-feed" %}
+{% assign current_month = "" %}
+{% for post in arxiv_posts %}
+  {% assign post_month = post.date | date: '%B %Y' %}
+  {% if post_month != current_month %}
+    {% assign current_month = post_month %}
+  <li class="arxiv-month-header" hidden data-month="{{ post.date | date: '%Y-%m' }}">
+    <h3>{{ post_month }}</h3>
+  </li>
+  {% endif %}
+  <li class="mb-1" style="padding:6px" hidden
+      data-id="{{ post.arxiv-id }}"
+      data-month="{{ post.date | date: '%Y-%m' }}"
+      data-categories="{{ post.arxiv-categories | join: ' ' }}"
+      data-search="{{ post.arxiv-id }} {{ post.title }} {{ post.authors | join: ' ' }}"
+      data-year="{{ post.date | date: '%Y' }}">
+    <div class="arxiv-entry">
+      <div class="arxiv-date-col"><time datetime="{{ post.date | date: '%Y-%m-%d' }}">{{ post.date | date: '%Y-%m-%d' }}</time></div>
+      <div class="arxiv-body">
+        {% for cat in post.arxiv-categories %}<span class="badge arxiv-cat-badge">{{ cat }}</span> {% endfor %}
+        <b>{{ post.authors | join: ", " }}</b>,
+        "<em>{{ post.title }}</em>"
+        (<a href="https://arxiv.org/abs/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="u-underline">arXiv:{{ post.arxiv-id }}<span class="sr-only"> (opens in new tab)</span></a>)
+        {% if post.content != blank %}<details>
+          <summary class="arxiv-abstract-toggle">Abstract</summary>
+          <div class="arxiv-abstract">{{ post.content | markdownify }}</div>
+        </details>{% endif %}
+      </div>
+    </div>
+  </li>
+{% endfor %}
+</ul>
+
+<!-- No results message -->
+<div id="arxiv-no-results" class="alert alert-info mt-4" role="alert" hidden>
+  No results found. Try adjusting your search or filters.
+</div>
+
+<style>
+  .arxiv-month-header {
+    padding: 0.5em 6px 0.2em;
+    border-bottom: 2px solid #ccc;
+    margin-top: 0.5em;
+  }
+  .arxiv-month-header h3 {
+    margin: 0;
+    font-size: 1.15em;
+    color: #333;
+  }
+  .arxiv-entry {
+    display: flex;
+    gap: 1em;
+  }
+  .arxiv-date-col {
+    flex-shrink: 0;
+    width: 7em;
+    font-weight: bold;
+    color: #222;
+    font-size: 0.95em;
+    padding-top: 1px;
+  }
+  .arxiv-body {
+    flex: 1;
+    min-width: 0;
+  }
+  .arxiv-cat-badge {
+    background-color: #495057;
+    color: #fff;
+    font-size: 0.75em;
+    font-weight: normal;
+  }
+  .u-underline { text-decoration: underline; }
+  .u-underline:hover { text-decoration: underline; }
+  .arxiv-abstract-toggle {
+    cursor: pointer;
+    color: #1a5276;
+    text-decoration: underline;
+    display: inline;
+    font-size: 0.9em;
+  }
+  .arxiv-abstract-toggle:hover {
+    color: #0d3b5e;
+  }
+  .arxiv-abstract {
+    margin-top: 0.5em;
+    padding: 0.5em 0.75em;
+    border-left: 3px solid #ccc;
+    font-size: 0.92em;
+    line-height: 1.5;
+  }
+  .arxiv-list .search-highlight {
+    background-color: #fff3cd;
+    color: #000;
+    padding: 0 1px;
+  }
+</style>
+
+<script src="{{ site.url }}/assets/js/arxiv-feed.js"></script>
+
+<!-- Override default KaTeX 0.7.1 with modern 0.16.9 for abstract math -->
+<link rel="stylesheet" href="/katex-0.16.9/katex.min.css">
+<script src="/katex-0.16.9/katex.min.js"></script>
+<script src="/katex-0.16.9/contrib/auto-render.min.js"></script>
+<script>
+  renderMathInElement(document.querySelector('.arxiv-list'), {
+    delimiters: [
+      {left: "$$", right: "$$", display: true},
+      {left: "$", right: "$", display: false}
+    ],
+    throwOnError: false
+  });
+</script>

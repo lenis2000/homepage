@@ -132,6 +132,9 @@ tools/tiling-factory/src/wasm/*.js
 # ralphex progress logs
 progress*.txt
 
+# arxiv feed pipeline state
+_scripts/arxiv/ai_log.jsonl
+
 .gemini/
 gha-creds-*.json
 /docs/plans/2026-02-26-fix-cftp-correctness.md

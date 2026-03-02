@@ -34,6 +34,7 @@ paginate_path: "posts/page:num"
 permalink: /:year/:month/:title/
 
 exclude:
+  - _scripts
   - vendor
   - "**/CLAUDE.md"
   - "_simulations/**/README.md"
