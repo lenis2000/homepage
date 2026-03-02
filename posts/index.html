@@ -13,7 +13,7 @@ redirect_from: /blog
       {% for post in paginator.posts %}
       <div class="col-12 col-lg-6 my-bordered-news-snippets">
 
-        {% if post.image != null %} {% if post.image-address != null %}{% unless post.no-page %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% endunless %}{% else %}{% unless post.no-page %}<a href="{{site.url }}{{ post.url }}">{% endunless %}{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:280px;height:auto;width:auto;" class="mb-1 mt-3">{% unless post.no-page %}</a>{% endunless %}
+        {% if post.image != null %} {% if post.image-address != null %}{% unless post.no-page %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% endunless %}{% else %}{% unless post.no-page %}<a href="{{site.url }}{{ post.url }}">{% endunless %}{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt | default: post.title }}" title="{{ post.image-alt | default: post.title }}" style="max-width:100%;max-height:280px;height:auto;width:auto;" class="mb-1 mt-3">{% unless post.no-page %}</a>{% endunless %}
         {% endif %}
 
         <h3 class="mb-2 mt-3">{% unless post.no-page %}<a href="{{site.url }}{{ post.url }}" style="color:inherit;">{% endunless %}{{ post.title }}{% unless post.no-page %}</a>{% endunless %}</h3>
