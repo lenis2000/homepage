@@ -79,6 +79,21 @@ def fetch_abstracts(arxiv_ids):
     return results
 
 
+def _sanitize_math_pipes(text):
+    """Replace bare | with \\vert inside $...$ so kramdown won't parse tables."""
+    result = []
+    in_math = False
+    for ch in text:
+        if ch == "$":
+            in_math = not in_math
+            result.append(ch)
+        elif in_math and ch == "|":
+            result.append("\\vert ")
+        else:
+            result.append(ch)
+    return "".join(result)
+
+
 def update_post(filepath, abstract):
     """Replace the post body with the abstract, keeping front matter."""
     text = filepath.read_text(encoding="utf-8")
@@ -87,6 +102,7 @@ def update_post(filepath, abstract):
         return False
 
     front_matter = parts[1]
+    abstract = _sanitize_math_pipes(abstract)
     # Wrap in {% raw %} to prevent Liquid from parsing LaTeX {{ }}
     new_text = f"---{front_matter}---\n{{% raw %}}{abstract}{{% endraw %}}\n"
     filepath.write_text(new_text, encoding="utf-8")

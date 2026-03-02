@@ -311,6 +311,21 @@ def ai_filter(papers_to_review, config):
     return all_decisions
 
 
+def _sanitize_math_pipes(text):
+    """Replace bare | with \\vert inside $...$ so kramdown won't parse tables."""
+    result = []
+    in_math = False
+    for ch in text:
+        if ch == "$":
+            in_math = not in_math
+            result.append(ch)
+        elif in_math and ch == "|":
+            result.append("\\vert ")
+        else:
+            result.append(ch)
+    return "".join(result)
+
+
 def generate_post(paper):
     """Generate a Jekyll post for an accepted paper."""
     authors_yaml = "\n".join(f'  - "{a}"' for a in paper["authors"])
@@ -322,7 +337,7 @@ def generate_post(paper):
     author_str = ", ".join(paper["authors"])
     arxiv_url = f"https://arxiv.org/abs/{paper['arxiv_id']}"
 
-    abstract = paper.get("abstract", "")
+    abstract = _sanitize_math_pipes(paper.get("abstract", ""))
 
     return f"""---
 layout: post
