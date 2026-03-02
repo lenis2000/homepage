@@ -75,7 +75,14 @@ def fetch_category(category, days, config, before_date=None):
             surname = "_".join(name.split("_")[:-1])
             if surname.lower() not in seen_surnames:
                 seen_surnames.add(surname.lower())
-                all_surname_terms.append(f"au:{surname}")
+                # Multi-part surnames need %22 (URL-encoded quotes) to work
+                # in OR combinations. Without quotes, arXiv API silently
+                # drops them from compound queries.
+                if "_" in surname:
+                    spaced = surname.replace("_", "+")
+                    all_surname_terms.append(f'au:%22{spaced}%22')
+                else:
+                    all_surname_terms.append(f"au:{surname}")
 
     # Split into batches to avoid URL length limits
     AUTHOR_BATCH = 20

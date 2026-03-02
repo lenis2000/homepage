@@ -332,6 +332,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Click paper title to toggle abstract
+    listEl.addEventListener('click', function(e) {
+        if (e.target.tagName === 'EM' && e.target.closest('.arxiv-body')) {
+            var details = e.target.closest('.arxiv-body').querySelector('details');
+            if (details) details.open = !details.open;
+        }
+    });
+
     // URL hash deep-linking (store hash; buttons built later when index loads)
     if (window.location.hash) {
         var hash = window.location.hash.substring(1);
