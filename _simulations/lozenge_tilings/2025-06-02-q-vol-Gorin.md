@@ -993,7 +993,7 @@ The sampler works entirely in your browser using WebAssembly.
 <details class="info-section-details" id="config-details">
   <summary>Current Configuration</summary>
   <div class="content">
-    <div class="config-values" id="info">
+    <div class="config-values" id="info" role="status" aria-live="polite">
       <span class="config-item">N = <strong>20</strong></span>
       <span class="config-item">T = <strong>30</strong></span>
       <span class="config-item">S = <strong>25</strong></span>

@@ -373,7 +373,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
     <span id="time-estimate" style="margin-left: 12px; font-size: 13px; color: #666; align-self: center;"></span>
   </div>
 
-  <div id="compute-time" style="margin-bottom: 8px; color: #E57200; font-weight: 500; min-height: 20px;"></div>
+  <div id="compute-time" style="margin-bottom: 8px; color: #E57200; font-weight: 500; min-height: 20px;" role="status" aria-live="polite"></div>
 </div>
 
 <!-- Random IID params panel -->
@@ -882,7 +882,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           <span>show n</span>
         </label>
         <span style="font-size: 10px; color: #8b7355; font-style: italic;">may take minutes</span>
-        <span id="gif-progress" style="display: none; font-size: 12px; color: #6B4C9A; font-weight: 600; background: #f0ebf5; padding: 4px 10px; border-radius: 4px;"></span>
+        <span id="gif-progress" style="display: none; font-size: 12px; color: #6B4C9A; font-weight: 600; background: #f0ebf5; padding: 4px 10px; border-radius: 4px;" role="status" aria-live="polite"></span>
       </div>
     </div>
 
@@ -983,7 +983,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
                 aria-label="Generate random domino tiling">
           🎲 Sample
         </button>
-        <span id="sample-time" style="color: #232D4B; font-weight: 500;"></span>
+        <span id="sample-time" style="color: #232D4B; font-weight: 500;" role="status" aria-live="polite"></span>
       </div>
     </div>
     <!-- Canvas with floating controls -->
@@ -1151,7 +1151,7 @@ Part of this research was performed while the author was visiting the Institute 
   <h3 style="margin-top: 0;">T-embedding Performance Benchmark</h3>
   <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #555;">Runs T-embedding computation for n=10 to n=40, measures time for each, and fits a power law t(n) = c · n<sup>α</sup> (c in nanoseconds). Uses the current weight selection.</p>
   <button id="benchmark-btn" style="padding: 8px 16px; background: #232D4B; color: white; border: none; border-radius: 4px; font-weight: 500; cursor: pointer;">Benchmark (takes about a minute)</button>
-  <span id="benchmark-status" style="margin-left: 10px; color: #666;"></span>
+  <span id="benchmark-status" style="margin-left: 10px; color: #666;" role="status" aria-live="polite"></span>
   <div id="benchmark-results" style="display: none; margin-top: 15px;">
     <canvas id="benchmark-canvas" role="img" aria-label="Performance benchmark chart" width="500" height="300" style="border: 1px solid #ddd; background: white;"></canvas>
     <div id="benchmark-fit" style="margin-top: 10px; font-family: monospace; font-size: 14px;"></div>
