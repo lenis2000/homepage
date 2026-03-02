@@ -244,6 +244,93 @@ published: true
 """
 
 
+REVIEW_FILE = SCRIPT_DIR / "review.json"
+REVIEW_TOOL = SCRIPT_DIR / "arxiv-review" / "arxiv-review"
+
+
+def export_for_review(candidates, ai_decisions):
+    """Write candidates to review.json for the TUI tool."""
+    review = []
+    for p in candidates:
+        aid = p["arxiv_id"]
+        matched = p.get("matched_author", {})
+        review.append({
+            "arxiv_id": aid,
+            "title": p["title"],
+            "authors": p["authors"],
+            "categories": p["categories"],
+            "abstract": p.get("abstract", ""),
+            "date": p["date"],
+            "matched_author": matched.get("name", ""),
+            "is_ambiguous": p.get("is_ambiguous", False),
+            "ai_decision": ai_decisions.get(aid, ""),
+            "ai_reason": "",
+            "decision": "",
+        })
+    # Sort by date descending
+    review.sort(key=lambda x: x["date"], reverse=True)
+    REVIEW_FILE.write_text(json.dumps(review, indent=2, ensure_ascii=False))
+    print(f"  Wrote {len(review)} candidates to {REVIEW_FILE}")
+    return review
+
+
+def import_review(all_papers, config, processed):
+    """Read decisions from review.json and generate posts."""
+    if not REVIEW_FILE.exists():
+        print("No review.json found.")
+        return 0
+
+    review = json.loads(REVIEW_FILE.read_text())
+    accepted = [r for r in review if r["decision"] == "ACCEPT"]
+    rejected = [r for r in review if r["decision"] == "REJECT"]
+    skipped = [r for r in review if r["decision"] == "SKIP"]
+
+    print(f"  Review results: {len(accepted)} accepted, {len(rejected)} rejected, {len(skipped)} skipped")
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    wrote = 0
+
+    for r in accepted:
+        aid = r["arxiv_id"]
+        # Find full paper data
+        paper = all_papers.get(aid)
+        if not paper:
+            # Use review data directly
+            paper = {
+                "arxiv_id": aid,
+                "title": r["title"],
+                "authors": r["authors"],
+                "categories": r["categories"],
+                "abstract": r.get("abstract", ""),
+                "date": r["date"],
+            }
+
+        date_prefix = paper["date"].split("T")[0]
+        filename = f"{date_prefix}-{paper['arxiv_id']}.md"
+        filepath = OUTPUT_DIR / filename
+
+        if not filepath.exists():
+            filepath.write_text(generate_post(paper))
+            print(f"  WROTE {filename}")
+            wrote += 1
+
+    # Update processed for all decided papers
+    for r in review:
+        if r["decision"] in ("ACCEPT", "REJECT"):
+            aid = r["arxiv_id"]
+            if aid not in processed:
+                date_prefix = r["date"].split("T")[0]
+                processed[aid] = {
+                    "source": "fetch",
+                    "decision": r["decision"],
+                    "date": date_prefix,
+                }
+
+    save_processed(processed)
+    print(f"  Generated {wrote} new posts")
+    return wrote
+
+
 def main():
     parser = argparse.ArgumentParser(description="Fetch arXiv papers")
     parser.add_argument("--days", type=int, default=7,
@@ -252,6 +339,8 @@ def main():
                         help="Preview without writing files")
     parser.add_argument("--no-ai", action="store_true",
                         help="Skip AI filtering, accept all clear matches")
+    parser.add_argument("--review", action="store_true",
+                        help="Interactive review mode with TUI")
     args = parser.parse_args()
 
     config = load_config()
@@ -300,64 +389,87 @@ def main():
 
     print(f"  {len(clear)} clear matches, {len(ambiguous)} ambiguous")
 
+    candidates = clear + ambiguous
+    if not candidates:
+        print("  No author matches found.")
+        return 0
+
     # Step 4: AI filtering
-    to_accept = []
+    ai_decisions = {}
+    if not args.no_ai and candidates:
+        print(f"  Sending {len(candidates)} papers to AI for review...")
+        ai_decisions = ai_filter(candidates, config)
 
-    if args.no_ai:
-        # Accept all clear matches, skip ambiguous
-        to_accept = clear
-        print(f"  Skipping AI — accepting {len(clear)} clear matches")
+    # Step 5: Interactive review or auto-accept
+    if args.review:
+        # Export for TUI review
+        export_for_review(candidates, ai_decisions)
+
+        # Launch TUI
+        if REVIEW_TOOL.exists():
+            print(f"\n  Launching review TUI...")
+            result = subprocess.run([str(REVIEW_TOOL), str(REVIEW_FILE)])
+            if result.returncode != 0:
+                print("  Review cancelled.")
+                return 1
+        else:
+            # Build the tool first
+            print(f"  Building review tool...")
+            build = subprocess.run(
+                ["go", "build", "-o", str(REVIEW_TOOL), "."],
+                cwd=REVIEW_TOOL.parent,
+            )
+            if build.returncode == 0:
+                print(f"\n  Launching review TUI...")
+                subprocess.run([str(REVIEW_TOOL), str(REVIEW_FILE)])
+            else:
+                print("  Failed to build review tool. Review review.json manually.")
+                return 1
+
+        # Import decisions
+        import_review(all_papers, config, processed)
+
+    elif args.dry_run:
+        for p in candidates:
+            decision = ai_decisions.get(p["arxiv_id"], "ACCEPT")
+            marker = "✓" if decision == "ACCEPT" else "✗"
+            print(f"  [{marker}] {p['arxiv_id']} — {p['title'][:60]}")
+
     else:
-        # Send clear + ambiguous to AI
-        papers_to_review = clear + ambiguous
-        if papers_to_review:
-            print(f"  Sending {len(papers_to_review)} papers to AI for review...")
-            decisions = ai_filter(papers_to_review, config)
+        # Auto mode: accept based on AI decisions
+        to_accept = []
+        for p in candidates:
+            decision = ai_decisions.get(p["arxiv_id"], "ACCEPT")
+            if decision == "ACCEPT":
+                to_accept.append(p)
+            else:
+                print(f"    REJECTED: {p['arxiv_id']} — {p['title'][:60]}")
 
-            for p in papers_to_review:
-                decision = decisions.get(p["arxiv_id"], "ACCEPT")
-                if decision == "ACCEPT":
-                    to_accept.append(p)
-                else:
-                    print(f"    REJECTED: {p['arxiv_id']} — {p['title'][:60]}")
-        else:
-            print("  No matches to review")
+        print(f"  {len(to_accept)} papers accepted")
 
-    print(f"  {len(to_accept)} papers accepted")
-
-    # Step 5: Generate posts
-    if not args.dry_run:
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    for paper in to_accept:
-        date_prefix = paper["date"].split("T")[0]
-        filename = f"{date_prefix}-{paper['arxiv_id']}.md"
-        filepath = OUTPUT_DIR / filename
-
-        if args.dry_run:
-            print(f"  [DRY] {filename} — {paper['title'][:60]}...")
-        else:
+        for paper in to_accept:
+            date_prefix = paper["date"].split("T")[0]
+            filename = f"{date_prefix}-{paper['arxiv_id']}.md"
+            filepath = OUTPUT_DIR / filename
             filepath.write_text(generate_post(paper))
             print(f"  WROTE {filename}")
 
-    # Step 6: Update processed for ALL fetched papers (not just accepted)
-    for aid, paper in all_papers.items():
-        if aid not in processed:
-            date_prefix = paper["date"].split("T")[0]
-            matched, _ = match_authors(paper, config)
-            accepted = any(p["arxiv_id"] == aid for p in to_accept)
-            processed[aid] = {
-                "source": "fetch",
-                "decision": "ACCEPT" if accepted else "REJECT",
-                "date": date_prefix,
-            }
-
-    if not args.dry_run:
+        # Update processed
+        for aid, paper in all_papers.items():
+            if aid not in processed:
+                date_prefix = paper["date"].split("T")[0]
+                accepted = any(p["arxiv_id"] == aid for p in to_accept)
+                processed[aid] = {
+                    "source": "fetch",
+                    "decision": "ACCEPT" if accepted else "REJECT",
+                    "date": date_prefix,
+                }
         save_processed(processed)
 
     # Summary
-    print(f"\nSummary: {len(all_papers)} fetched, {len(new_papers)} new, "
-          f"{len(to_accept)} accepted")
+    print(f"\nDone. {len(all_papers)} fetched, {len(new_papers)} new, "
+          f"{len(candidates)} matched authors")
 
     return 0
 

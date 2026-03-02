@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-dry arxiv-import arxiv-backfill arxiv-index
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv
 
 serve:
 	bundle exec jekyll serve 
@@ -113,18 +113,5 @@ deploy-local:
 	@echo "Local deploy complete!"
 
 arxiv:
-	python3 _scripts/arxiv/fetch_arxiv.py --days 7
-	python3 _scripts/arxiv/build_search_index.py
-
-arxiv-dry:
-	python3 _scripts/arxiv/fetch_arxiv.py --days 7 --dry-run
-
-arxiv-import:
-	python3 _scripts/arxiv/import_frg.py
-	python3 _scripts/arxiv/build_search_index.py
-
-arxiv-backfill:
-	python3 _scripts/arxiv/backfill_abstracts.py
-
-arxiv-index:
+	python3 _scripts/arxiv/fetch_arxiv.py --days $(or $(DAYS),7) --review
 	python3 _scripts/arxiv/build_search_index.py
