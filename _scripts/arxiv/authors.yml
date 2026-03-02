@@ -613,3 +613,10 @@ authors:
     arxiv_names: ["Keating_D"]
     affiliation: ""
     topics: ["vertex models", "symmetric functions", "colored models"]
+
+  - name: "Zhengye Zhou"
+    arxiv_names: ["Zhou_Z"]
+    affiliation: "USC"
+    topics: ["interacting particle systems", "duality", "ASEP", "stochastic vertex models"]
+    high_ambiguity: true
+    disambiguation: "Zhengye Zhou at USC — orthogonal polynomial duality, multi-species ASEP, stochastic vertex models. Common surname."

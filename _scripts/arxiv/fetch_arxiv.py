@@ -295,7 +295,7 @@ published: true
 
 
 REVIEW_FILE = SCRIPT_DIR / "review.json"
-REVIEW_TOOL = SCRIPT_DIR / "arxiv-review" / "arxiv-review"
+REVIEW_TOOL = Path.home() / "bin" / "arxiv-review"
 
 
 def export_for_review(candidates, ai_decisions, processed):
@@ -530,24 +530,15 @@ def main():
         print()
 
         # Launch TUI
-        if REVIEW_TOOL.exists():
-            result = subprocess.run([str(REVIEW_TOOL), str(REVIEW_FILE)])
-            if result.returncode != 0:
-                print("  Review cancelled.")
-                return 1
-        else:
-            # Build the tool first
-            print(f"  Building review tool...")
-            build = subprocess.run(
-                ["go", "build", "-o", str(REVIEW_TOOL), "."],
-                cwd=REVIEW_TOOL.parent,
-            )
-            if build.returncode == 0:
-                print(f"\n  Launching review TUI...")
-                subprocess.run([str(REVIEW_TOOL), str(REVIEW_FILE)])
-            else:
-                print("  Failed to build review tool. Review review.json manually.")
-                return 1
+        if not REVIEW_TOOL.exists():
+            print(f"  arxiv-review not found at {REVIEW_TOOL}")
+            print(f"  Run: make arxiv-install")
+            return 1
+
+        result = subprocess.run([str(REVIEW_TOOL), str(REVIEW_FILE)])
+        if result.returncode != 0:
+            print("  Review cancelled.")
+            return 1
 
         # Import decisions
         import_review(all_papers, config, processed)

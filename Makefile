@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-install
 
 serve:
 	bundle exec jekyll serve 
@@ -111,6 +111,9 @@ deploy-local:
 	aws s3 sync _site/ s3://lpetrov.cc --size-only
 	@$(MAKE) invalidate
 	@echo "Local deploy complete!"
+
+arxiv-install:
+	cd _scripts/arxiv/arxiv-review && go build -o arxiv-review . && cp arxiv-review ~/bin/
 
 arxiv:
 	python3 _scripts/arxiv/fetch_arxiv.py --days $(or $(DAYS),7) --review
