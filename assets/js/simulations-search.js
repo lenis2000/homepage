@@ -18,6 +18,7 @@
 
     const cats  = document.querySelectorAll('.category-btn');
     const items = document.querySelectorAll('#simulations-list > li');
+    const statusEl = document.getElementById('sim-status');
     let   catState = 'all';
     
     console.log('Found category buttons:', cats.length);
@@ -49,6 +50,12 @@
         }
       });
       console.log('Visible items after filter:', visibleCount);
+      if (statusEl) {
+        const total = items.length;
+        statusEl.textContent = visibleCount === total
+          ? `Showing all ${total} simulations`
+          : `${visibleCount} of ${total} simulations shown`;
+      }
     }
 
     /* ==========  EVENT LISTENERS  ========== */

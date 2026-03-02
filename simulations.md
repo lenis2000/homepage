@@ -12,7 +12,7 @@ nav_weight: 19
 <div class="container mb-5">
 
 <h1 class="my-4">Simulations and other computational tools</h1>
-<h5 class="mb-3">Visualizations, data, source code</h5>
+<h3 class="mb-3">Visualizations, data, source code</h3>
 
 {%include sims.html%}
 
@@ -30,6 +30,7 @@ nav_weight: 19
   <button class="btn btn-outline-secondary" id="sim-search-clear" type="button">Clear</button>
 </div>
 <small class="text-muted d-none d-md-block mb-3" style="margin-top: -1.5rem;">Tip: Press ESC to clear search and reset filters</small>
+<div id="sim-status" class="sr-only" role="status" aria-live="polite"></div>
 
 <!-- Category buttons -->
 <div id="sim-cat-buttons" class="row g-2 mb-4">

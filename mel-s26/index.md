@@ -8,7 +8,7 @@ permalink: /mel-s26/
 
 ## Spring 2026, <a href="https://math.virginia.edu/mathexlab/">UVA Math Experimental Lab</a>
 
-##### Mentored by Leonid Petrov
+### Mentored by Leonid Petrov
 
 ---
 

@@ -20,7 +20,7 @@
             {%if p.url == page.url %}active bg-inverse{% endif %}
             {% if p.nav_id == "Blog" and paginator.page %}active bg-inverse{% endif %}
             {% if page.nav_parent == p.nav_id %}active bg-inverse{% endif %}">
-          <a class="nav-link" href="{{site.url}}{{p.url}}">{{ p.nav_id }}{%if p.url == page.url %}<span class="sr-only">(current)</span>{% endif %}</a>
+          <a class="nav-link" href="{{site.url}}{{p.url}}" {%if p.url == page.url %}aria-current="page"{% endif %}>{{ p.nav_id }}{%if p.url == page.url %}<span class="sr-only">(current)</span>{% endif %}</a>
         </li>
         {% endif %}
         {% if p.nav_id == "Blog" and p.url == "/posts/" %}

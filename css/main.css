@@ -48,7 +48,9 @@
 }
 
 /* Skip navigation link - visually hidden until focused */
-.skip-link {
+.skip-link,
+.skip-link:link,
+.skip-link:visited {
   position: absolute;
   top: -100%;
   left: 16px;
@@ -211,12 +213,19 @@
 [data-theme="dark"] .category-btn {
   border-color: var(--text-primary);
   color: var(--text-primary);
+  background-color: transparent;
 }
 
 [data-theme="dark"] .category-btn:hover {
   background-color: var(--text-primary);
   border-color: var(--text-primary);
   color: #1a1a1a;
+}
+
+[data-theme="dark"] .category-btn.active {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #000;
 }
 
 html {
@@ -273,6 +282,10 @@ a:focus, a:hover {
 .navbar-light .navbar-nav .active>.nav-link, .navbar-light .navbar-nav .nav-link.active, .navbar-light .navbar-nav .nav-link.open, .navbar-light .navbar-nav .open>.nav-link
 {
   color: var(--text-navbar-active);
+}
+
+[data-theme="dark"] .navbar-light .navbar-nav .active > .nav-link {
+  color: #000;
 }
 
 .navbar-light .active .nav-link:focus, .navbar-light .active .nav-link:hover {

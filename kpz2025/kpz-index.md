@@ -15,7 +15,7 @@ permalink: /kpz2025/
 
 ### March 17-21, 2025
 
-##### Organized by Axel Saenz (Oregon State) and Leonid Petrov (UVA)
+### Organized by Axel Saenz (Oregon State) and Leonid Petrov (UVA)
 
 ---
 
@@ -33,7 +33,7 @@ permalink: /kpz2025/
 
 <!-- Foundations -->
 
-<h5 class="mt-4">Foundations</h5>
+<h3 class="mt-4">Foundations</h3>
 <ul>
 <li><span style="color:darkred">[KPZ86]&nbsp;</span>The&nbsp;seminal&nbsp;paper&nbsp;introducing&nbsp;the&nbsp;KPZ&nbsp;equation,&nbsp;which&nbsp;describes&nbsp;the&nbsp;evolution&nbsp;of&nbsp;a&nbsp;growing&nbsp;interface&nbsp;in&nbsp;terms&nbsp;of&nbsp;a&nbsp;stochastic&nbsp;PDE.</li>
 <li><span style="color:darkred">[Cor12]&nbsp;</span>A&nbsp;comprehensive&nbsp;survey&nbsp;explaining&nbsp;key&nbsp;breakthroughs&nbsp;leading&nbsp;to&nbsp;the&nbsp;exact&nbsp;one-point&nbsp;distribution&nbsp;for&nbsp;the&nbsp;KPZ&nbsp;equation&nbsp;with&nbsp;narrow-wedge&nbsp;initial&nbsp;data.</li>
@@ -46,7 +46,7 @@ KPZ&nbsp;fluctuations&nbsp;to&nbsp;Tracy–Widom&nbsp;statistics&nbsp;through&nb
 
   <!-- Recent advances -->
   <section>
-    <h5 >Recent advances</h5>
+    <h3>Recent advances</h3>
     <ul>
     <li><span style="color:darkred">[CH14],&nbsp;[CH16]&nbsp;</span>Develop&nbsp;the&nbsp;Brownian&nbsp;Gibbs&nbsp;property&nbsp;for&nbsp;the&nbsp;Airy&nbsp;and&nbsp;KPZ&nbsp;line&nbsp;ensembles.</li>
     <li><span style="color:darkred">[MQR21]&nbsp;</span>Constructs&nbsp;the&nbsp;KPZ&nbsp;fixed&nbsp;point—the&nbsp;universal&nbsp;Markov&nbsp;process&nbsp;limit&nbsp;of&nbsp;KPZ-class&nbsp;models—with&nbsp;explicit&nbsp;Fredholm&nbsp;determinant&nbsp;formulas&nbsp;for&nbsp;multi-point&nbsp;distributions.</li>
@@ -64,7 +64,7 @@ KPZ&nbsp;fluctuations&nbsp;to&nbsp;Tracy–Widom&nbsp;statistics&nbsp;through&nb
 
   <!-- Cutting edge work by participants -->
 
-<h5>Cutting edge work by participants (in no particular order)</h5>
+<h3>Cutting edge work by participants (in no particular order)</h3>
 <ol>
     <li><span style="color:darkred">[BB24]&nbsp;</span>ASEP&nbsp;via&nbsp;Mallows&nbsp;coloring</li>
     <li><span style="color:darkred">[BC24]&nbsp;</span>Mallows&nbsp;Product&nbsp;Measure</li>
