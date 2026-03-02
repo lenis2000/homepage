@@ -321,6 +321,7 @@ published: true
 
 
 REVIEW_FILE = SCRIPT_DIR / "review.json"
+FETCH_CACHE = SCRIPT_DIR / "fetch_cache.json"
 REVIEW_TOOL = Path.home() / "bin" / "arxiv-review"
 
 
@@ -485,15 +486,23 @@ def main():
     print(f"Fetching papers from last {args.days} days...")
     print(f"Categories: {', '.join(categories)}")
 
-    # Step 1: Fetch from all categories
+    # Step 1: Fetch from all categories (with cache for resumability)
     all_papers = {}
-    for cat in categories:
-        print(f"  Querying {cat} ({len(config['authors'])} authors in batches of 20)...")
-        papers = fetch_category(cat, args.days, config)
-        for p in papers:
-            if p["arxiv_id"] not in all_papers:
-                all_papers[p["arxiv_id"]] = p
-        time.sleep(RATE_LIMIT_SECONDS)
+    if FETCH_CACHE.exists():
+        cached = json.loads(FETCH_CACHE.read_text())
+        all_papers = {p["arxiv_id"]: p for p in cached}
+        print(f"  Loaded {len(all_papers)} papers from cache (delete {FETCH_CACHE.name} to re-fetch)")
+    else:
+        for cat in categories:
+            print(f"  Querying {cat} ({len(config['authors'])} authors in batches of 20)...")
+            papers = fetch_category(cat, args.days, config)
+            for p in papers:
+                if p["arxiv_id"] not in all_papers:
+                    all_papers[p["arxiv_id"]] = p
+            time.sleep(RATE_LIMIT_SECONDS)
+        # Save cache
+        FETCH_CACHE.write_text(json.dumps(list(all_papers.values()), ensure_ascii=False))
+        print(f"  Saved fetch cache ({len(all_papers)} papers)")
 
     print(f"  Fetched {len(all_papers)} unique papers")
 
