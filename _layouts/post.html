@@ -34,7 +34,7 @@ page.arXiv %}<a
 
 <hr />
 
-{{ content }} {% include disqus.js %} {% if page.image != null %} {% if
+{{ content }} {% if page.image != null %} {% if
 page.image-address != null %}<a
     href="{{ page.image-address | replace: '__STORAGE_URL__', site.storage_url }}"
     >{% else %}<a href="{{site.url }}{{ page.url }}"

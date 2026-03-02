@@ -2,7 +2,6 @@
 layout: post
 title: Homepage update
 date: 2017-05-20 03:00:00
-comments: true
 categories: blog math tech
 published: true
 show-date: true

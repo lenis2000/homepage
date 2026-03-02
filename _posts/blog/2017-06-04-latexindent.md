@@ -2,7 +2,6 @@
 layout: post
 title:
 date: 2017-06-04 08:00:00
-comments: true
 categories: blog math tech
 published: true
 show-date: true

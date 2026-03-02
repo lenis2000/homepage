@@ -2,7 +2,6 @@
 layout: post
 title: Installing specific versions of biblatex and texlive for arxiv
 date: 2017-12-21 12:00:00
-comments: true
 categories: blog math tech latex
 published: true
 show-date: true

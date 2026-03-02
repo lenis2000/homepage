@@ -2,7 +2,6 @@
 layout: post
 title: External Tikz pictures
 date: 2017-12-12 08:00:00
-comments: true
 categories: blog math tech latex
 published: true
 show-date: true

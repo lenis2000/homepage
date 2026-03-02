@@ -2,7 +2,6 @@
 layout: post
 title: Switching TeXLive distributions for arXiv
 date: 2017-12-12 12:00:00
-comments: true
 categories: blog math tech latex
 published: true
 show-date: true
