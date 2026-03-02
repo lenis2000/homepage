@@ -8,6 +8,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-12-05-ultimate-domino.cpp'
     txt: 'C++ code for the simulation (compiled to WebAssembly)'
+a11y-description: "Full-featured interactive domino tiling generator. Draw arbitrary regions on a square grid or use preset shapes. Supports multiple rendering modes, various sampling algorithms including shuffling and Glauber dynamics, and export to PNG, PDF, SVG, and animated GIF."
 ---
 
 <details id="about-simulation-details">

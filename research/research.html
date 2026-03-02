@@ -17,22 +17,25 @@ nav_weight: 2
 
     <!-- Search Options -->
     <div class="mb-3">
-      <button class="btn btn-sm btn-outline-info" type="button" id="research-extended-search-toggle">
+      <button class="btn btn-sm btn-outline-info" type="button" id="research-extended-search-toggle" aria-pressed="false">
         Extended
       </button>
-      <button class="btn btn-sm btn-outline-success ms-2" type="button" id="research-recent-filter">
+      <button class="btn btn-sm btn-outline-success ms-2" type="button" id="research-recent-filter" aria-pressed="false">
         Recent
       </button>
       <br>
       <small class="text-muted">By default, search covers paper number, title, authors, and journal only</small>
     </div>
 
+    <!-- Live region for search status announcements -->
+    <div id="research-status" class="sr-only" role="status" aria-live="polite"></div>
+
     <!-- Category Buttons -->
-    <div id="research-cat-buttons" class="d-none d-md-flex flex-wrap gap-2 mb-4">
+    <div id="research-cat-buttons" class="d-none d-md-flex flex-wrap gap-2 mb-4" role="group" aria-label="Filter by category">
       <!-- Categories will be dynamically generated -->
     </div>
 
-    <h1><a name="preprints">Preprints</a></h1>
+    <h1 id="preprints">Preprints</h1>
     <hr />
 
     <ol class="my-ul-zebra research-list">
@@ -44,16 +47,16 @@ nav_weight: 2
         {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
         <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull;
         {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-        {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>){% endif %}
-        {% if post.simulations %}&bull; (<a href="{{site.url}}/{{post.simulations}}">Visualizations</a>){% endif %}
-        {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}">TeX</a>){% endif %}
+        {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}" aria-label="PDF of {{post.title}}">PDF</a>){% endif %}
+        {% if post.simulations %}&bull; (<a href="{{site.url}}/{{post.simulations}}" aria-label="Visualizations for {{post.title}}">Visualizations</a>){% endif %}
+        {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}" aria-label="TeX source of {{post.title}}">TeX</a>){% endif %}
         {% unless post.no-abstract %}<details>
           <summary>
             Abstract
           </summary>
           <br />
             {{ post.content | markdownify }}
-            {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:500px;height:auto;width:auto;" class="mb-3 mt-3"></a>
+            {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt | default: post.title }}" title="{{ post.image-alt | default: post.title }}" style="max-width:100%;max-height:500px;height:auto;width:auto;" class="mb-3 mt-3"></a>
             {% endif %}
         </details>
         {% endunless %}
@@ -65,7 +68,7 @@ nav_weight: 2
     {% endfor %}
     </ol>
 
-    <h1  class="mt-4"><a name="published">Published or accepted</a> &bull; (<a href="{{ site.url }}/research/petrovCVbrief.pdf">CV</a>)</h1>
+    <h1 id="published" class="mt-4">Published or accepted &bull; (<a href="{{ site.url }}/research/petrovCVbrief.pdf">CV</a>)</h1>
     <hr />
 
     <ol reversed class="my-ul-zebra research-list">
@@ -79,9 +82,9 @@ nav_weight: 2
         {%if post.journal-web%}<a href="{{post.journal-web}}" target="_blank">{%endif%}
           <i>{{post.journal-ref}}</i>{%if post.journal-web%}</a>{%endif%}{% if post.journal-ref-extra %} {{post.journal-ref-extra}}{% endif %} &bull;
         {% if post.arXiv %}<a href="https://arxiv.org/abs/{{post.arXiv | split: ' ' | first}}" target="_blank">arXiv:{{post.arXiv}}</a>{% endif %}
-        {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}">PDF</a>){% endif %}
-        {% if post.simulations %}&bull; (<a href="{{site.url}}/{{post.simulations}}">Visualizations</a>){% endif %}
-        {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}">TeX</a>){% endif %}
+        {% if post.post-pdf %}&bull; (<a href="{{site.storage_url}}/papers/{{post.pdf}}" aria-label="PDF of {{post.title}}">PDF</a>){% endif %}
+        {% if post.simulations %}&bull; (<a href="{{site.url}}/{{post.simulations}}" aria-label="Visualizations for {{post.title}}">Visualizations</a>){% endif %}
+        {% if post.post-source %}&bull; (<a href="{{site.storage_url}}/research_files/Petrov-publ/{{post.source}}" aria-label="TeX source of {{post.title}}">TeX</a>){% endif %}
         {% if post.erratum %}{% for erratum_post in site.posts %}{% if erratum_post.categories contains "erratum" and erratum_post.cv-number == post.cv-number %}&bull; [Includes <a href="{{site.url}}{{erratum_post.url}}">correction</a>: <a href="{{erratum_post.journal-web}}"><i>{{erratum_post.journal-ref}}</i></a>]{% endif %}{% endfor %}{% endif %}
         {% unless post.no-abstract %}<details>
           <summary>
@@ -89,7 +92,7 @@ nav_weight: 2
           </summary>
           <br />
             {{ post.content | markdownify }}
-            {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:500px;height:auto;width:auto;" class="mb-3 mt-3"></a>
+            {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt | default: post.title }}" title="{{ post.image-alt | default: post.title }}" style="max-width:100%;max-height:500px;height:auto;width:auto;" class="mb-3 mt-3"></a>
             {% endif %}
         </details>{% endunless %}
       </li>
@@ -115,7 +118,7 @@ nav_weight: 2
       </ol>
 
 
-      <h1 class="mt-4"><a name="lecture-notes">Lecture Notes &amp; Expository Works</a></h1>
+      <h1 id="lecture-notes" class="mt-4">Lecture Notes &amp; Expository Works</h1>
       <hr />
 
       <ol class="my-ul-zebra research-list">
@@ -126,14 +129,14 @@ nav_weight: 2
             <b>
               {{post.link-description}} &bull;
               <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></b>
-              &bull; (<a href="{{site.storage_url}}/papers/{{post.lec-pdf}}">PDF</a>{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%})
+              &bull; (<a href="{{site.storage_url}}/papers/{{post.lec-pdf}}" aria-label="PDF of {{post.link-description}}">PDF</a>{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%})
           </li>
 
         {% endif %}
         {% endfor %}
         </ol>
 
-    <h1 class="mt-4"><a name="slides">Slides of some talks</a></h1>
+    <h1 id="slides" class="mt-4">Slides of some talks</h1>
     <hr />
 
     <ol reversed class="my-ul-zebra research-list">
@@ -142,7 +145,7 @@ nav_weight: 2
 
 
       <li class="mb-1" style="padding:6px" data-category="talk" data-title="{{post.title | downcase}}" data-basic-search="{{post.title}}" data-year="{{post.date | date: '%Y'}}">
-        <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull; <a href="{{ post.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank">{% if post.pdf-name-override %}{{post.pdf-name-override}}{% else %}PDF{% if post.pdf-size %} ({{post.pdf-size}}){% endif %}{% endif %}</a>
+        <b><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></b> ({{post.date | date: '%Y'}}) &bull; <a href="{{ post.talk-url | replace: '__STORAGE_URL__', site.storage_url}}" target="_blank" aria-label="{% if post.pdf-name-override %}{{post.pdf-name-override}}{% else %}PDF{% endif %} of {{post.title}}">{% if post.pdf-name-override %}{{post.pdf-name-override}}{% else %}PDF{% if post.pdf-size %} ({{post.pdf-size}}){% endif %}{% endif %}</a>
 
         {% unless post.no-abstract %}<details>
           <summary>
@@ -150,7 +153,7 @@ nav_weight: 2
           </summary>
           <br />
             {{ post.excerpt | markdownify }}
-            {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt }}" title="{{ post.image-alt }}" style="max-width:100%;max-height:500px;height:auto;width:auto;" class="mb-3 mt-3"></a>
+            {% if post.image != null %} {% if post.image-address != null %}<a href="{{ post.image-address | replace: '__STORAGE_URL__', site.storage_url }}">{% else %}<a href="{{site.url }}{{ post.url }}">{% endif %}<img src="{{ post.image | replace: '__STORAGE_URL__', site.storage_url }}" alt="{{ post.image-alt | default: post.title }}" title="{{ post.image-alt | default: post.title }}" style="max-width:100%;max-height:500px;height:auto;width:auto;" class="mb-3 mt-3"></a>
             {% endif %}
         </details>{% endunless %}
       </li>

@@ -135,6 +135,7 @@ papers:
   arxiv-url: 'https://arxiv.org/abs/0707.2813'
   journal-url: 'http://emis.ams.org/journals/EJP-ECP/article/download/541/541-1801-1-PB.pdf'
 - title: 'L. Petrov, In preparation (2018)'
+a11y-description: "Interactive simulation of a multilayer PushTASEP particle system with space-inhomogeneous rates. Particles on a one-dimensional lattice jump right and push neighboring particles. The visualization shows particle configurations across multiple coupled layers with different rate functions including slow zones, fast zones, and periodic rates."
 ---
 
 

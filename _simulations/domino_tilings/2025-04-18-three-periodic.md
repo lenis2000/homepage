@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript; see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-18-three-periodic.cpp'
     txt: 'C++ code for the simulation'
+a11y-description: "Interactive simulation of domino tilings of the Aztec diamond with 3-by-3 periodic weights. The nine weight parameters create rich phase diagrams with multiple frozen and disordered regions in the tiling."
 ---
 
 <style>

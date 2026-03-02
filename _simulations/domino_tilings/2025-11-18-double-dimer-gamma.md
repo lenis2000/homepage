@@ -8,6 +8,7 @@ code:
     txt: 'Interactive simulation source code'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-11-18-double-dimer-gamma.cpp'
     txt: 'C++ backend code'
+a11y-description: "Interactive simulation of the gamma-disordered Aztec diamond, where edge weights follow a gamma distribution. The double dimer model is formed by overlaying two independent tilings, creating loops whose geometry reflects the disorder."
 ---
 
 <style>

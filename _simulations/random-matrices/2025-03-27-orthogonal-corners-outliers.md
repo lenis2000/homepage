@@ -7,6 +7,7 @@ code:
     txt: 'Interactive simulation (JavaScript & Emscripten)'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/random-matrices/2025-03-27-orthogonal-corners-outliers.cpp'
     txt: 'C++ source code compiled to WebAssembly'
+a11y-description: "Interactive simulation of corner eigenvalue processes for complex Hermitian ensembles with outliers. Supports atomic, GUE, and rotated GUE distributions, each with up to five outlier eigenvalues. The visualization shows a scatter plot of corner eigenvalues."
 ---
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>

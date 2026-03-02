@@ -19,6 +19,7 @@ results:
   - title: JSON data for $10000 < n <= 12000$
     raw: 'https://github.com/lenis2000/homepage/blob/master/js/2025-05-04-dim-lambda-partitionData-large2.json'
     raw-size: 68.3MB
+a11y-description: "Interactive tool for exploring Young diagrams of near-maximal dimension. Searches for integer partitions whose number of standard Young tableaux approaches the theoretical maximum. Supports large partition sizes up to 12,000."
 ---
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">

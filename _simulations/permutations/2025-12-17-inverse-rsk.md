@@ -7,6 +7,7 @@ code:
     txt : 'Interactive JS – see source'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-12-17-inverse-rsk.cpp'
     txt : 'WASM sampler for a single SYT'
+a11y-description: "Interactive simulation of inverse RSK correspondence. Given a Young diagram shape, the algorithm samples a random Standard Young Tableau and converts it to a permutation. The visualization explores conjectured limit shapes of the resulting permutons."
 ---
 
 **Conjecture (L.P.)**: If a Young diagram has a limit shape on the scale $\sqrt{n}$, then random permutations have a limit in the sense of permutons.

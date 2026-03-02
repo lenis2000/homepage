@@ -5,9 +5,11 @@
     </head>
 
     <body>
+        <a class="skip-link" href="#main-content">Skip to main content</a>
+
         {% include navbar.html %}
 
-        <div class="container">
+        <main id="main-content" class="container">
             <!-- Desktop title/authors - visible on larger screens -->
             <div class="d-none d-md-block">
                 <h1>
@@ -20,9 +22,8 @@
                     </a>
                 </h1>
 
-                <h4>{{page.author}}</h4>
+                <p class="h4">{{page.author}}</p>
 
-                <h3></h3>
 
                 <hr class="mb-4" />
             </div>
@@ -43,10 +44,14 @@
                                 {{page.model}}
                             </a>
                         </h2>
-                        <h4 style="margin: 0 0 12px 0; color: #666;">{{page.author}}</h4>
+                        <p class="h4" style="margin: 0 0 12px 0; color: var(--text-secondary);">{{page.author}}</p>
                     </div>
                 </details>
             </div>
+
+            {% if page.a11y-description %}
+            <p class="sr-only">{{ page.a11y-description }}</p>
+            {% endif %}
 
             {{ content }}
 
@@ -125,7 +130,7 @@
 
             <br>
             {%include dear_colleagues.md%}
-        </div>
+        </main>
 
 
 

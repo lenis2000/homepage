@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/lozenge_tilings/2025-06-02-q-vol-Gorin.cpp'
     txt: 'C++ code for the simulation'
+a11y-description: "Interactive simulation of q-volume weighted lozenge tilings using Gorin's shuffling algorithm. Controls allow adjusting the hexagon size and q parameter. The canvas displays the sampled random tiling in two dimensions."
 ---
 
 <style>

@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/lozenge_tilings/2025-11-26-cutout-region-q-racah.cpp'
     txt: 'C++ code for the simulation (compiled to WebAssembly)'
+a11y-description: "Interactive simulation of q-Racah weighted Glauber dynamics for lozenge tilings of a convex cutout region. The Markov chain uses q-Racah weights to bias the random tiling distribution. Controls allow adjusting region shape and weight parameters."
 ---
 
 <style>

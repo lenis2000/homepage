@@ -8,6 +8,7 @@ code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-18-aztec-three-periodic-3d.cpp'
     txt: 'C++ code for the simulation'
 published: true
+a11y-description: "Interactive 3D visualization of domino tilings of the Aztec diamond with 3-by-3 periodic weights. Nine tunable weight parameters control the tiling distribution. The height function is rendered as a three-dimensional surface with demo mode."
 ---
 
 <style>

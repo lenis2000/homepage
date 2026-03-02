@@ -8,6 +8,7 @@ code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-04-17-aztec-uniform-3d-optimized.cpp'
     txt: 'C++ code for the simulation'
 published: true
+a11y-description: "Interactive 3D visualization of uniform random domino tilings of the Aztec diamond. The height function is rendered as a three-dimensional surface showing the characteristic arctic circle. Supports sizes up to 320 with demo mode."
 ---
 
 <style>

@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-05-27-double-dimer.cpp'
     txt: 'C++ code for the simulation'
+a11y-description: "Interactive simulation of double dimer coverings, formed by superimposing two independent domino tilings. The overlay creates a system of loops and doubled edges whose statistics connect to the Gaussian free field."
 ---
 
 <style>

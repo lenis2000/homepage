@@ -136,6 +136,7 @@ papers:
 - title: 'S. Mkrtchyan, Plane partitions with two-periodic weights. Letters in Mathematical Physics, 104(9):1053-1078, 2014.'
   journal-url: 'https://link.springer.com/article/10.1007%2Fs11005-014-0696-z'
   arxiv-url: 'https://arxiv.org/abs/1309.4825'
+a11y-description: "Simulation of a multilayer PushTASEP particle system constructed via column RSK correspondence. Related to Schur measures, the visualization shows particle configurations across coupled layers with asymptotic behavior amenable to exact formulas."
 ---
 
 

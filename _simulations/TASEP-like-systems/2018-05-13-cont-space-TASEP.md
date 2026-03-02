@@ -87,6 +87,7 @@ papers:
 - title: 'A. Borodin, L. Petrov, Inhomogeneous exponential jump model (2017), Probability Theory and Related Fields, to appear'
   arxiv-url: 'https://arxiv.org/abs/1703.03857'
 # journal-url: 
+a11y-description: "Simulation of a continuous-space TASEP on the positive real line. Particles enter at the boundary and jump distances following exponential distributions. The visualization studies Gaussian fluctuation behavior near bottleneck points."
 ---
 
 ### The model [1]

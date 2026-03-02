@@ -5,6 +5,7 @@ author: "Leonid Petrov"
 code:
     - link: "https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-01-26-Grothendieck-shenanigans-any-shape.md"
       txt: "This simulation is interactive, written in JavaScript."
+a11y-description: "Experimental interactive simulation of random permutations generated from arbitrary reduced words via nonsymmetric Grothendieck polynomials. Users can draw custom boundary shapes and explore the resulting permutation matrices."
 ---
 
 <div class="container mt-4 mb-3" style="overflow: visible">

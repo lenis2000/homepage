@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let activeCategory = 'all';
     let extendedSearch = false;
     let recentOnly = false;
+    let statusTimeout;
 
     // Highlight matching text
     function highlightText(element, searchTerm) {
@@ -152,10 +153,11 @@ document.addEventListener('DOMContentLoaded', function() {
         updateNoResultsMessage(visibleCount);
     }
 
-    // Update no results message
+    // Update no results message and status announcements
     function updateNoResultsMessage(count) {
         let noResultsMsg = document.getElementById('no-results-message');
-        
+        const statusRegion = document.getElementById('research-status');
+
         if (count === 0) {
             if (!noResultsMsg) {
                 noResultsMsg = document.createElement('div');
@@ -164,8 +166,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 noResultsMsg.textContent = 'No results found. Try adjusting your search or filters.';
                 document.querySelector('.col-md-8').appendChild(noResultsMsg);
             }
-        } else if (noResultsMsg) {
-            noResultsMsg.remove();
+        } else {
+            if (noResultsMsg) {
+                noResultsMsg.remove();
+            }
+        }
+
+        // Debounce screen reader announcements to avoid rapid-fire updates while typing
+        if (statusRegion) {
+            clearTimeout(statusTimeout);
+            statusTimeout = setTimeout(function() {
+                if (count === 0) {
+                    statusRegion.textContent = 'No results found.';
+                } else if (searchInput.value) {
+                    statusRegion.textContent = count + ' result' + (count !== 1 ? 's' : '') + ' found.';
+                } else {
+                    statusRegion.textContent = '';
+                }
+            }, 400);
         }
     }
 
@@ -200,8 +218,10 @@ document.addEventListener('DOMContentLoaded', function() {
         buttons.forEach(btn => {
             if (btn.dataset.category === activeCategory) {
                 btn.classList.add('active');
+                btn.setAttribute('aria-pressed', 'true');
             } else {
                 btn.classList.remove('active');
+                btn.setAttribute('aria-pressed', 'false');
             }
         });
     }
@@ -228,11 +248,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (recentOnly) {
                 recentFilter.classList.remove('btn-outline-success');
                 recentFilter.classList.add('btn-success');
-                recentFilter.innerHTML = 'Recent (ON)';
+                recentFilter.innerHTML = 'Recent';
+                recentFilter.setAttribute('aria-pressed', 'true');
             } else {
                 recentFilter.classList.remove('btn-success');
                 recentFilter.classList.add('btn-outline-success');
                 recentFilter.innerHTML = 'Recent';
+                recentFilter.setAttribute('aria-pressed', 'false');
             }
         }
     }
@@ -243,11 +265,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (extendedSearch) {
                 extendedSearchToggle.classList.remove('btn-outline-info');
                 extendedSearchToggle.classList.add('btn-info');
-                extendedSearchToggle.innerHTML = '<i class="bi bi-search-plus"></i> Extended (ON)';
+                extendedSearchToggle.innerHTML = '<i class="bi bi-search-plus" aria-hidden="true"></i> Extended';
+                extendedSearchToggle.setAttribute('aria-pressed', 'true');
             } else {
                 extendedSearchToggle.classList.remove('btn-info');
                 extendedSearchToggle.classList.add('btn-outline-info');
-                extendedSearchToggle.innerHTML = '<i class="bi bi-search-plus"></i> Extended';
+                extendedSearchToggle.innerHTML = '<i class="bi bi-search-plus" aria-hidden="true"></i> Extended';
+                extendedSearchToggle.setAttribute('aria-pressed', 'false');
             }
         }
     }
@@ -270,9 +294,9 @@ document.addEventListener('DOMContentLoaded', function() {
         recentFilter.addEventListener('click', toggleRecentFilter);
     }
 
-    // ESC key to clear
+    // ESC key to clear (only when search has a value or input is focused)
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && searchInput) {
+        if (e.key === 'Escape' && searchInput && (searchInput.value || document.activeElement === searchInput)) {
             clearSearch();
         }
     });
@@ -311,7 +335,8 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.className = 'btn btn-sm category-btn' + (category === 'all' ? ' active' : '');
             btn.dataset.category = category;
             btn.textContent = category.charAt(0).toUpperCase() + category.slice(1);
-            
+            btn.setAttribute('aria-pressed', category === 'all' ? 'true' : 'false');
+
             categoryButtons.appendChild(btn);
         });
     }

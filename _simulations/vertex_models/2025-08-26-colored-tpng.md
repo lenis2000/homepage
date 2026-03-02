@@ -2,6 +2,7 @@
 title: Colored discretized t-PNG Model (Stochastic Colored Rule 54)
 model: vertex-models
 author: Leo Petrov
+a11y-description: "Interactive simulation of the colored discretized t-PNG model with N particle colors. Particles are colored by birth location and interact via crossing, annihilation, and color exchange rules. Controls allow adjusting birth, continuation, and color crossing parameters."
 ---
 
 <div class="container" style="max-width: 1200px;">

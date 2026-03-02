@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript; see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-05-22-random-weights-glauber-height-function-graph.cpp'
     txt: 'C++ code for the simulation'
+a11y-description: "Interactive simulation of domino tilings with random Bernoulli weights and Glauber dynamics, featuring a height function graph visualization. The height function encodes the tiling as a discrete surface whose fluctuations reveal the tiling statistics."
 ---
 
 <style>

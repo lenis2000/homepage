@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/random-matrices/2025-01-28-BBP-transition.cpp'
     txt: 'C++ code for the simulation'
+a11y-description: "Interactive simulation of the Baik-Ben Arous-Peche phase transition in random matrices. A GOE matrix receives a rank-one perturbation, and as the perturbation strength increases, the largest eigenvalue separates from the bulk semicircle distribution. Controls allow adjusting matrix size and perturbation parameter."
 ---
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>

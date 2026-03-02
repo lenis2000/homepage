@@ -8,6 +8,7 @@ code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-07-07-hookwalk-tableau.cpp'
     txt : 'WASM sampler for a single SYT (already exists)'
 published: false
+a11y-description: "Interactive simulation of inverse RSK correspondence for generating random permutations from Young diagram shapes. Uses WebAssembly for efficient computation of hook walks and RSK bijection."
 ---
 
 **Conjecture (L.P.)**: If a Young diagram has a limit shape on the scale $\sqrt{n}$, then random permutations have a limit in the sense of permutons.

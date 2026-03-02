@@ -6,6 +6,7 @@ layout: sim_page
 code:
   - link: https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2025-07-12-bbl_sorting_tool.md
     txt: Interactive bibliography sorting tool for LaTeX .bbl and amsrefs files
+a11y-description: "Utility tool for sorting LaTeX bibliography files in .bbl and amsrefs formats. Paste bibliography entries and the tool reorders them alphabetically, producing sorted output ready for use in LaTeX documents."
 ---
 
 <style>

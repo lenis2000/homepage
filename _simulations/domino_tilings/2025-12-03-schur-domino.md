@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-12-03-schur-domino.cpp'
     txt: 'C++ code for the simulation'
+a11y-description: "Interactive simulation of domino tilings of the Aztec diamond with Schur process weights. The Schur weights create a specific probability measure on tilings connected to representation theory and determinantal point processes."
 ---
 
 <style>

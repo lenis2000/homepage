@@ -8,6 +8,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/lozenge_tilings/2025-11-28-ultimate-lozenge.cpp'
     txt: 'C++ code for the simulation (compiled to WebAssembly)'
+a11y-description: "Full-featured interactive lozenge tiling generator. Draw arbitrary regions on a triangular grid or use presets like hexagons and letter shapes. Supports multiple rendering modes including 2D lozenge view, path view, dimer view, and 3D height function. Sampling methods include Glauber dynamics and coupling from the past, with options for periodic weights and export to PNG, PDF, SVG, and animated GIF."
 ---
 
 <details id="about-simulation-details">

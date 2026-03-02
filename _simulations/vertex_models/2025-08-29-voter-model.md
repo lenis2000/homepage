@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive; see page source'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/vertex_models/2025-08-29-voter-model.cpp'
     txt: 'C++/WASM core (Emscripten)'
+a11y-description: "Interactive simulation of the one-dimensional voter model where each lattice site adopts the color of its left neighbor at random Poisson times. The visualization shows a space-time raster diagram and tracks statistics including front position, interface density, and entropy."
 ---
 
 The voter model on a 1D lattice where each site adopts the color of its left neighbor according to independent exponential clocks.

@@ -5,6 +5,7 @@ author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/yourusername/homepage/blob/master/_simulations/misc/2025-06-25-pascal-divisible.md'
     txt: 'This simulation is interactive, written in JavaScript with WebAssembly optimization, see the source code of this page at the link'
+a11y-description: "Interactive visualization of divisibility patterns in Pascal's triangle. Color-codes binomial coefficients by divisibility by a chosen prime, revealing fractal Sierpinski triangle patterns. WebAssembly-optimized with zoom and pan controls."
 ---
 <script src="{{site.url}}/js/pascal-wasm.js"></script>
 

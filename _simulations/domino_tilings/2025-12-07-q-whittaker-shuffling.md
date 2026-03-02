@@ -5,6 +5,7 @@ author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-12-07-q-whittaker-shuffling.md'
     txt: 'Pure JavaScript implementation of EKLP shuffling'
+a11y-description: "Interactive simulation of domino tilings generated via q-Whittaker shuffling, a sampling algorithm based on q-deformed Whittaker functions from representation theory. The visualization shows the resulting random tiling of the Aztec diamond."
 ---
 
 <script src="/js/colorschemes.js"></script>

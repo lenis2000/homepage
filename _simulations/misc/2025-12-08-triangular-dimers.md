@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2025-12-08-triangular-dimers.cpp'
     txt: 'C++ code for the simulation (compiled to WebAssembly)'
+a11y-description: "Interactive simulation of random dimer coverings (perfect matchings) on a non-bipartite triangular lattice using Glauber dynamics. Features drawing tools for creating custom regions, double dimer overlay mode, loop analysis, and fractal dimension computation."
 ---
 
 

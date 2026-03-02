@@ -23,6 +23,7 @@ papers:
   journal-url: 'https://www.sciencedirect.com/science/article/pii/S0001870808003253'
 - title: 'A. Bufetov, L. Petrov. Yang-Baxter field for spin Hall-Littlewood symmetric functions (2017)'
   arxiv-url: 'https://arxiv.org/abs/1712.04584'
+a11y-description: "Simulation of a deterministic mirroring transformation on q-volume weighted lozenge tilings. Vertical lozenges are reflected at each step, converting q-inverse-volume to q-volume measure while preserving the distribution. Movies show tilings of hexagons up to size 100."
 ---
 
 Continuing with the setup of

@@ -5,6 +5,7 @@ author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/yourusername/homepage/blob/master/_simulations/misc/2025-03-12-YF-branching.md'
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
+a11y-description: "Interactive visualization of Young-Fibonacci word branching. The display shows the recursive hierarchical structure of Fibonacci words with zoom controls and dimension factors for each word in the tree."
 ---
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
 

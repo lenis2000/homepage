@@ -6,6 +6,7 @@ code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2025-12-28-q-partition-cftp.md'
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at this link'
 published: true
+a11y-description: "Interactive simulation of coupling from the past for exact sampling of q-weighted random integer partitions. Adjust the q parameter to control the partition size distribution. The Ferrers diagram of each sampled partition is displayed."
 ---
 
 

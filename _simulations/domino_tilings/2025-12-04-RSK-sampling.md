@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-12-04-RSK-sampling.cpp'
     txt: 'C++ source code (compiled to WebAssembly)'
+a11y-description: "Interactive simulation of domino tilings of the Aztec diamond sampled via the q-RSK correspondence. The Robinson-Schensted-Knuth bijection provides an exact sampling method connecting random tilings to Young tableaux."
 ---
 
 <style>

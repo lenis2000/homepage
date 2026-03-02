@@ -1,4 +1,4 @@
-<nav class="navbar navbar-toggleable-sm mb-4 navbar-light" style="background-color: var(--bg-navbar);">
+<nav class="navbar navbar-toggleable-sm mb-4 navbar-light" aria-label="Main navigation" style="background-color: var(--bg-navbar);">
   <div class="container">
 
     <div class="navbar-brand" style="padding-top: 0 ;padding-bottom: 0;">
@@ -34,10 +34,10 @@
       <!-- Theme toggle – shows in collapsed menu on narrow screens -->
       <div class="theme-toggle-wrapper d-flex align-items-center ms-auto">
         <label class="theme-toggle" for="theme-switch">
-          <input type="checkbox" id="theme-switch" />
+          <input type="checkbox" id="theme-switch" aria-label="Toggle dark/light theme" />
           <span class="slider">
-            <i class="fas fa-sun"></i>
-            <i class="fas fa-moon"></i>
+            <i class="fas fa-sun" aria-hidden="true"></i>
+            <i class="fas fa-moon" aria-hidden="true"></i>
           </span>
         </label>
       </div>

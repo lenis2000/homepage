@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript – see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/random-matrices/2025-02-04-orthogonal-corners.cpp'
     txt: 'C++ code for the simulation'
+a11y-description: "Interactive simulation of corner eigenvalue processes for orthogonally invariant random matrices. Computes eigenvalues of successive top-left corners of GOE matrices or matrices with user-specified fixed spectrum via draggable control points."
 ---
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>

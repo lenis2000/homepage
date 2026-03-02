@@ -11,6 +11,7 @@ papers:
   - title: "Colin Defant. Permutons from Demazure Products"
     arxiv-url: "https://arxiv.org/abs/2505.15630"
 published: true
+a11y-description: "Interactive visualization of pipe dreams (reduced words) arranged in a rectangular grid. The canvas displays crossing patterns of pipes with zoom controls for exploring large configurations."
 ---
 
 <style>

@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/simulations/blob/master/2025-01-26-Grothendieck-c-code/Grothendieck-swaps.c'
     txt: 'c code for the simulation of heatmaps, runs faster'
+a11y-description: "Interactive simulation of random permutations generated from staircase reduced words via Grothendieck polynomials. Controls allow varying the size N and parameters p and q. The permutation is displayed as a matrix plot."
 ---
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />

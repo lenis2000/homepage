@@ -8,6 +8,7 @@ code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2025-05-07-dim-lambda-greedy.cpp'
     txt: 'C++ code for the simulation'
 published: false
+a11y-description: "Interactive simulation of a greedy Plancherel growth algorithm for Young diagrams. At each step, the algorithm adds the corner box that maximizes the dimension increase. The visualization shows the growing diagram and a table of candidate corners."
 ---
 
 <style>

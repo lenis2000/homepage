@@ -50,6 +50,7 @@ results:
 
 papers:
 - title: 'L. Petrov, In preparation (2018)'
+a11y-description: "Simulation of a single-layer PushTASEP in inhomogeneous space, comparing particle evolution to theoretical limit shape predictions. The visualization shows the height function of the particle system with rescaling to reveal macroscopic behavior."
 ---
 
 ### Introduction

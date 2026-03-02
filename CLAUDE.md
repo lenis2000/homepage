@@ -3,6 +3,7 @@
 - Color patterns are defined in `js/colorschemes.js` and used in lozenge/domino drawing files. This file contains links to the files which use these color patterns.
 - For cpp compile, look at their preambles
 - Simulation-specific documentation is in `_simulations/CLAUDE.md`
+- Simulation pages use `a11y-description` front matter for screen reader descriptions (rendered as visually-hidden text by `_layouts/sim_page.html`). Add this field when creating new simulation pages.
 
 ## Paper Posts & S3 Storage
 

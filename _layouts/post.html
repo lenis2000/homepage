@@ -5,7 +5,7 @@ layout: default
 <h1>{{page.title}}</h1>
 
 {% if page.show-date %}
-<h3 class="mb-4">{{ page.date | date: "%Y/%m/%d" }}</h3>
+<p class="h3 mb-4">{{ page.date | date: "%Y/%m/%d" }}</p>
 {% endif %} {% for coa in page.coauthors %}{% if coa.noweb != true and coa.name
 != "Leonid Petrov" %}<a href="{{coa.web}}"
     >{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid
@@ -20,12 +20,15 @@ page.arXiv %}<a
     >arXiv:{{page.arXiv}}</a
 >{% endif %} {% if page.post-pdf %}<br /><br /><a
     href="{{site.storage_url}}/papers/{{page.pdf}}"
+    aria-label="PDF of {{page.title}}"
     >PDF</a
 >{% endif %} {% if page.simulations %}<br /><br /><a
     href="{{site.url}}/{{page.simulations}}"
+    aria-label="Visualization for {{page.title}}"
     >Visualization</a
 >{% endif %} {% if page.post-source %}<br /><br /><a
     href="{{site.storage_url}}/research_files/Petrov-publ/{{page.source}}"
+    aria-label="TeX source of {{page.title}}"
     >Source</a
 >{% endif %}
 
@@ -37,8 +40,8 @@ page.image-address != null %}<a
     >{% else %}<a href="{{site.url }}{{ page.url }}"
         >{% endif %}<img
             src="{{ page.image | replace: '__STORAGE_URL__', site.storage_url }}"
-            alt="{{ page.image-alt }}"
-            title="{{ page.image-alt }}"
+            alt="{{ page.image-alt | default: page.title }}"
+            title="{{ page.image-alt | default: page.title }}"
             style="
                 max-width: 100%;
                 max-height: 800px;

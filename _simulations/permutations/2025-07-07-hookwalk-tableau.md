@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-07-07-hookwalk-tableau.cpp'
     txt : 'C++ code for WASM module (samples SYT up to 100 000 boxes)'
+a11y-description: "Interactive simulation of the hook walk algorithm for sampling random Standard Young Tableaux. Enter a Young diagram shape and the algorithm fills it with a uniformly random standard tableau. WebAssembly handles diagrams with up to 100,000 boxes."
 ---
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>

@@ -9,6 +9,7 @@ code:
     txt: 'C++ source (WASM)'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/double-dimer-cli.cpp'
     txt: 'Standalone C++ CLI for faster domino shuffling'
+a11y-description: "Interactive visualization of t-embeddings of the Aztec diamond with arbitrary user-specified edge weights. The t-embedding maps the planar graph to the complex plane preserving harmonicity, revealing the conformal structure of the tiling."
 ---
 
 <details style="margin-bottom: 15px;">

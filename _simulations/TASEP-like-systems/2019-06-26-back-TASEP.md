@@ -18,6 +18,7 @@ results:
 
 papers:
 - title: 'L. Petrov, A. Saenz. Mapping TASEP back in time (2019) • Probability Theory and Related Fields, 182, pages 481-530 (2022) • arXiv:1907.09155 [math.PR]'
+a11y-description: "Simulation showing the backwards evolution of TASEP. The particle system is first simulated forward to time T, then evolved backwards. The movie visualization demonstrates that the distribution at each time matches the original forward distribution."
 ---
 
 This is a simulation illustrating the main result from the paper in preparation [1].

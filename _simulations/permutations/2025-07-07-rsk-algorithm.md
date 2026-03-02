@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/permutations/2025-07-07-rsk-algorithm.cpp'
     txt: 'C++ code for WASM module (handles permutations up to size 10000)'
+a11y-description: "Interactive visualization of the Robinson-Schensted-Knuth algorithm. Input a permutation and watch it decompose into a pair of Standard Young Tableaux (P-tableau and Q-tableau). WebAssembly handles permutations up to size 10,000."
 ---
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>

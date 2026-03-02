@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-06-25-random-edges.cpp'
     txt: 'C++ code for the simulation'
+a11y-description: "Interactive simulation of domino tilings of the Aztec diamond with random one-periodic edge weights. The random weights create disorder in the tiling distribution, and the visualization shows the resulting configurations."
 ---
 
 <style>

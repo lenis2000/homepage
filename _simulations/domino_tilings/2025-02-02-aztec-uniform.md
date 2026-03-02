@@ -7,6 +7,7 @@ code:
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at the link'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2025-02-02-aztec-uniform-optimized.cpp'
     txt: 'C++ code for the simulation'
+a11y-description: "Interactive simulation of uniform random domino tilings of the Aztec diamond using the domino shuffling algorithm. The visualization shows the characteristic arctic circle separating frozen corner regions from the disordered interior."
 ---
 
 <style>

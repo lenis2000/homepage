@@ -5,7 +5,7 @@
   --bg-navbar: #002f6c;
   --bg-footer: rgba(0, 0, 0, 0.12);
   --text-primary: #212529;
-  --text-secondary: #6c757d;
+  --text-secondary: #636b73;
   --text-navbar: #ffffff;
   --text-navbar-active: #002359;
   --link-color: #2A69A6;
@@ -34,14 +34,60 @@
 
 /* Search highlighting */
 .search-highlight {
-  background-color: yellow;
-  padding: 0;
+  background-color: #fff3cd;
+  color: #212529;
+  border-bottom: 2px solid #e57200;
+  padding: 0 1px;
   margin: 0;
 }
 
 [data-theme="dark"] .search-highlight {
   background-color: #ffd700;
   color: #000000;
+  border-bottom: 2px solid #ff9933;
+}
+
+/* Skip navigation link - visually hidden until focused */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: 10000;
+  padding: 8px 16px;
+  background-color: var(--bg-navbar);
+  color: #ffffff;
+  font-family: "franklingothic-demi", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  text-decoration: none;
+  border-radius: 0 0 4px 4px;
+}
+
+.skip-link:focus {
+  top: 0;
+  color: #ffffff;
+}
+
+/* Focus visibility for keyboard navigation (WCAG 2.1 AA) */
+*:focus-visible {
+  outline: 3px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Focus ring for theme toggle slider */
+.theme-toggle input:focus-visible + .slider {
+  outline: 3px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Reduced motion preference (WCAG 2.1 best practice) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 /* Mobile optimizations for search */
@@ -78,8 +124,8 @@
     margin-bottom: 0.25rem;
   }
   
-  /* Ensure minimum touch target size */
-  .btn-sm {
+  /* Ensure minimum touch target size for research filter buttons */
+  #research-cat-buttons .btn-sm {
     min-height: 44px;
     padding: 0.5rem 1rem;
   }
@@ -94,13 +140,13 @@
 #research-extended-search-toggle:hover {
   background-color: #E57200;
   border-color: #E57200;
-  color: white;
+  color: #000;
 }
 
 #research-extended-search-toggle.btn-info {
   background-color: #E57200;
   border-color: #E57200;
-  color: white;
+  color: #000;
 }
 
 #research-recent-filter {
@@ -134,7 +180,43 @@
 .category-btn.active {
   background-color: #E57200;
   border-color: #E57200;
-  color: white;
+  color: #000;
+}
+
+/* Dark mode overrides for research filter buttons */
+[data-theme="dark"] #research-extended-search-toggle {
+  border-color: #E57200;
+  color: #E57200;
+}
+
+[data-theme="dark"] #research-extended-search-toggle:hover,
+[data-theme="dark"] #research-extended-search-toggle.btn-info {
+  background-color: #E57200;
+  border-color: #E57200;
+  color: #000;
+}
+
+[data-theme="dark"] #research-recent-filter {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] #research-recent-filter:hover,
+[data-theme="dark"] #research-recent-filter.btn-success {
+  background-color: var(--text-primary);
+  border-color: var(--text-primary);
+  color: #1a1a1a;
+}
+
+[data-theme="dark"] .category-btn {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .category-btn:hover {
+  background-color: var(--text-primary);
+  border-color: var(--text-primary);
+  color: #1a1a1a;
 }
 
 html {
@@ -160,6 +242,11 @@ a:link, a:visited {
 a:focus, a:hover {
   color: var(--link-hover);
   text-decoration: underline;
+}
+
+/* Override Bootstrap .text-muted to use improved contrast color */
+.text-muted {
+  color: var(--text-secondary) !important;
 }
 
 @media (min-width: 1200px) {

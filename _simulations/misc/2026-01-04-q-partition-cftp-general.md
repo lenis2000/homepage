@@ -6,6 +6,7 @@ code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/misc/2026-01-04-q-partition-cftp-general.md'
     txt: 'This simulation is interactive, written in JavaScript, see the source code of this page at this link'
 published: true
+a11y-description: "Interactive simulation of coupling from the past for exact sampling of q-weighted random partitions with general boundary conditions. Extends the basic CFTP sampler with customizable boundary constraints on the partition shape."
 ---
 
 
