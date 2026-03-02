@@ -659,3 +659,13 @@ authors:
     topics: ["ASEP", "multiline queues", "Macdonald polynomials"]
     high_ambiguity: true
     disambiguation: "Trung Vu, combinatorialist working on ASEP/multiline queues/Macdonald polynomials. Common surname — not Van Vu (random matrices/combinatorics at Yale)."
+
+  - name: "Filippo Colomo"
+    arxiv_names: ["Colomo_F"]
+    affiliation: "INFN Florence"
+    topics: ["Arctic curves", "six-vertex model", "random tilings", "integrable lattice models"]
+
+  - name: "Andrea Sportiello"
+    arxiv_names: ["Sportiello_A"]
+    affiliation: "LIPN Paris"
+    topics: ["Arctic curves", "random tilings", "lattice models", "combinatorics"]
