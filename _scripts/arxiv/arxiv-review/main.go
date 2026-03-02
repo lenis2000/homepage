@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -26,45 +27,132 @@ type Paper struct {
 	Decision     string   `json:"decision"`
 }
 
+type authorGroup struct {
+	name       string
+	start, end int // indices into papers slice
+	total      int
+	decided    int
+}
+
 type undoEntry struct {
 	index    int
 	decision string
 }
 
 type model struct {
-	papers   []Paper
-	current  int
-	accepted int
-	rejected int
-	skipped  int
-	undo     []undoEntry
-	width    int
-	height   int
-	file     string
-	scroll   int
-	done     bool
+	papers       []Paper
+	groups       []authorGroup
+	currentGroup int
+	current      int
+	accepted     int
+	rejected     int
+	skipped      int
+	undo         []undoEntry
+	width        int
+	height       int
+	file         string
+	scroll       int
+	done         bool
 }
 
 // Styles
 var (
-	titleStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("15"))
-	dateStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("14"))
-	authorStyle  = lipgloss.NewStyle().Bold(true)
-	catStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
-	acceptStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Bold(true)
-	rejectStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true)
-	ambigStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Bold(true)
-	dimStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
-	helpStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
-	statusStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("14"))
-	headerStyle  = lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("8")).Foreground(lipgloss.Color("15")).Padding(0, 1)
+	titleStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("15"))
+	dateStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("14"))
+	authorStyle = lipgloss.NewStyle().Bold(true)
+	catStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	acceptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10")).Bold(true)
+	rejectStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Bold(true)
+	ambigStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Bold(true)
+	dimStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	helpStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	statusStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("14"))
+	headerStyle = lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("8")).Foreground(lipgloss.Color("15")).Padding(0, 1)
+	groupStyle  = lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("4")).Foreground(lipgloss.Color("15")).Padding(0, 1)
 )
 
-func initialModel(file string, papers []Paper) model {
-	// Find first undecided paper
-	current := 0
-	accepted, rejected, skipped := 0, 0, 0
+// sortAndGroup sorts papers by matched_author then date descending,
+// and builds author group index. Papers matching multiple authors
+// appear only once (under their matched_author field).
+func sortAndGroup(papers []Paper) []authorGroup {
+	// Deduplicate by arxiv_id (keep first occurrence)
+	seen := make(map[string]bool)
+	deduped := papers[:0]
+	for _, p := range papers {
+		if !seen[p.ArxivID] {
+			seen[p.ArxivID] = true
+			deduped = append(deduped, p)
+		}
+	}
+	// Update slice in place
+	papers = deduped
+
+	// Sort: by matched_author (alphabetical), then date descending
+	sort.SliceStable(papers, func(i, j int) bool {
+		if papers[i].MatchedName != papers[j].MatchedName {
+			return papers[i].MatchedName < papers[j].MatchedName
+		}
+		return papers[i].Date > papers[j].Date
+	})
+
+	var groups []authorGroup
+	if len(papers) == 0 {
+		return groups
+	}
+
+	cur := papers[0].MatchedName
+	start := 0
 	for i, p := range papers {
+		if p.MatchedName != cur {
+			decided := 0
+			for j := start; j < i; j++ {
+				if papers[j].Decision != "" {
+					decided++
+				}
+			}
+			groups = append(groups, authorGroup{
+				name:    cur,
+				start:   start,
+				end:     i,
+				total:   i - start,
+				decided: decided,
+			})
+			cur = p.MatchedName
+			start = i
+		}
+	}
+	// Last group
+	decided := 0
+	for j := start; j < len(papers); j++ {
+		if papers[j].Decision != "" {
+			decided++
+		}
+	}
+	groups = append(groups, authorGroup{
+		name:    cur,
+		start:   start,
+		end:     len(papers),
+		total:   len(papers) - start,
+		decided: decided,
+	})
+
+	return groups
+}
+
+func findGroup(groups []authorGroup, idx int) int {
+	for i, g := range groups {
+		if idx >= g.start && idx < g.end {
+			return i
+		}
+	}
+	return 0
+}
+
+func initialModel(file string, papers []Paper) model {
+	groups := sortAndGroup(papers)
+
+	accepted, rejected, skipped := 0, 0, 0
+	for _, p := range papers {
 		switch p.Decision {
 		case "ACCEPT":
 			accepted++
@@ -72,28 +160,29 @@ func initialModel(file string, papers []Paper) model {
 			rejected++
 		case "SKIP":
 			skipped++
-		default:
-			if current == 0 || (current < i && papers[current].Decision != "") {
-				current = i
-			}
 		}
 	}
-	// Find actual first undecided
+
+	// Find first undecided paper
+	current := 0
 	for i, p := range papers {
 		if p.Decision == "" {
 			current = i
 			break
 		}
 	}
+
 	return model{
-		papers:   papers,
-		current:  current,
-		accepted: accepted,
-		rejected: rejected,
-		skipped:  skipped,
-		file:     file,
-		width:    80,
-		height:   24,
+		papers:       papers,
+		groups:       groups,
+		currentGroup: findGroup(groups, current),
+		current:      current,
+		accepted:     accepted,
+		rejected:     rejected,
+		skipped:      skipped,
+		file:         file,
+		width:        80,
+		height:       24,
 	}
 }
 
@@ -128,6 +217,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.rejected++
 			m.advance()
 
+		case "R":
+			// Reject all undecided in current author group
+			m.rejectGroup()
+
+		case "A":
+			// Accept all undecided in current author group
+			m.acceptGroup()
+
 		case "s":
 			m.decide("SKIP")
 			m.skipped++
@@ -149,6 +246,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "p", "left":
 			m.goBack()
+
+		case "N":
+			// Jump to next author group
+			m.nextGroup()
+
+		case "P":
+			// Jump to previous author group
+			m.prevGroup()
 		}
 	}
 	return m, nil
@@ -163,20 +268,36 @@ func (m *model) decide(decision string) {
 
 func (m *model) advance() {
 	m.scroll = 0
-	for i := m.current + 1; i < len(m.papers); i++ {
+	// First try within current group
+	g := m.groups[m.currentGroup]
+	for i := m.current + 1; i < g.end; i++ {
 		if m.papers[i].Decision == "" {
 			m.current = i
 			return
 		}
 	}
-	// Wrap to find any undecided
-	for i := 0; i < m.current; i++ {
-		if m.papers[i].Decision == "" {
-			m.current = i
-			return
+	// Current group done — move to next group with undecided
+	for gi := m.currentGroup + 1; gi < len(m.groups); gi++ {
+		g := m.groups[gi]
+		for i := g.start; i < g.end; i++ {
+			if m.papers[i].Decision == "" {
+				m.current = i
+				m.currentGroup = gi
+				return
+			}
 		}
 	}
-	// All decided
+	// Wrap around
+	for gi := 0; gi <= m.currentGroup; gi++ {
+		g := m.groups[gi]
+		for i := g.start; i < g.end; i++ {
+			if m.papers[i].Decision == "" {
+				m.current = i
+				m.currentGroup = gi
+				return
+			}
+		}
+	}
 	m.done = true
 }
 
@@ -187,6 +308,7 @@ func (m *model) advanceNoDecide() {
 		next = 0
 	}
 	m.current = next
+	m.currentGroup = findGroup(m.groups, m.current)
 }
 
 func (m *model) goBack() {
@@ -196,6 +318,68 @@ func (m *model) goBack() {
 		prev = len(m.papers) - 1
 	}
 	m.current = prev
+	m.currentGroup = findGroup(m.groups, m.current)
+}
+
+func (m *model) nextGroup() {
+	m.scroll = 0
+	next := m.currentGroup + 1
+	if next >= len(m.groups) {
+		next = 0
+	}
+	m.currentGroup = next
+	g := m.groups[m.currentGroup]
+	// Find first undecided in group, or just first
+	for i := g.start; i < g.end; i++ {
+		if m.papers[i].Decision == "" {
+			m.current = i
+			return
+		}
+	}
+	m.current = g.start
+}
+
+func (m *model) prevGroup() {
+	m.scroll = 0
+	prev := m.currentGroup - 1
+	if prev < 0 {
+		prev = len(m.groups) - 1
+	}
+	m.currentGroup = prev
+	g := m.groups[m.currentGroup]
+	for i := g.start; i < g.end; i++ {
+		if m.papers[i].Decision == "" {
+			m.current = i
+			return
+		}
+	}
+	m.current = g.start
+}
+
+func (m *model) rejectGroup() {
+	g := m.groups[m.currentGroup]
+	for i := g.start; i < g.end; i++ {
+		if m.papers[i].Decision == "" {
+			m.undo = append(m.undo, undoEntry{index: i, decision: ""})
+			m.papers[i].Decision = "REJECT"
+			m.rejected++
+		}
+	}
+	m.save()
+	m.advance()
+}
+
+func (m *model) acceptGroup() {
+	g := m.groups[m.currentGroup]
+	for i := g.start; i < g.end; i++ {
+		if m.papers[i].Decision == "" {
+			m.undo = append(m.undo, undoEntry{index: i, decision: ""})
+			m.papers[i].Decision = "ACCEPT"
+			m.accepted++
+		}
+	}
+	m.save()
+	m.advance()
 }
 
 func (m *model) undoLast() {
@@ -217,6 +401,7 @@ func (m *model) undoLast() {
 
 	m.papers[entry.index].Decision = entry.decision
 	m.current = entry.index
+	m.currentGroup = findGroup(m.groups, m.current)
 	m.scroll = 0
 	m.save()
 }
@@ -237,7 +422,17 @@ func (m model) View() string {
 	}
 
 	p := m.papers[m.current]
+	g := m.groups[m.currentGroup]
 	undecided := len(m.papers) - m.accepted - m.rejected - m.skipped
+
+	// Position within group
+	posInGroup := m.current - g.start + 1
+	groupUndecided := 0
+	for i := g.start; i < g.end; i++ {
+		if m.papers[i].Decision == "" {
+			groupUndecided++
+		}
+	}
 
 	// Header
 	header := headerStyle.Render(fmt.Sprintf(" arXiv Review  %d/%d  ", m.current+1, len(m.papers)))
@@ -247,6 +442,14 @@ func (m model) View() string {
 		dimStyle.Render(fmt.Sprintf("~%d skip", m.skipped)),
 		statusStyle.Render(fmt.Sprintf("%d left", undecided)),
 	)
+
+	// Author group bar
+	groupBar := groupStyle.Render(fmt.Sprintf(" %s ", g.name))
+	groupStats := fmt.Sprintf("  paper %d/%d  %s",
+		posInGroup, g.total,
+		statusStyle.Render(fmt.Sprintf("%d undecided", groupUndecided)),
+	)
+	groupNav := dimStyle.Render(fmt.Sprintf("  (group %d/%d)", m.currentGroup+1, len(m.groups)))
 
 	// AI suggestion
 	aiLine := ""
@@ -312,6 +515,7 @@ func (m model) View() string {
 	// Build content lines
 	lines := []string{
 		header + stats,
+		groupBar + groupStats + groupNav,
 		"",
 		fmt.Sprintf("  %s  %s  arXiv:%s", date, cats, p.ArxivID),
 		fmt.Sprintf("  %s%s", authors, matched),
@@ -339,7 +543,8 @@ func (m model) View() string {
 	}
 
 	lines = append(lines, "")
-	lines = append(lines, helpStyle.Render("  a accept  r reject  s skip  u undo  n/p next/prev  j/k scroll  q quit"))
+	lines = append(lines, helpStyle.Render("  a accept  r reject  s skip  u undo  n/p next/prev  N/P next/prev author  j/k scroll"))
+	lines = append(lines, helpStyle.Render("  A accept all (author)  R reject all (author)  q quit"))
 
 	// Apply scroll
 	content := strings.Join(lines, "\n")
@@ -414,8 +619,8 @@ func main() {
 	fmt.Printf("Reviewing %d papers (%d undecided)...\n", len(papers), undecided)
 
 	m := initialModel(file, papers)
-	p := tea.NewProgram(m, tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
+	prog := tea.NewProgram(m, tea.WithAltScreen())
+	if _, err := prog.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

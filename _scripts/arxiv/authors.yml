@@ -383,7 +383,14 @@ authors:
     affiliation: "Toronto"
     topics: ["TASEP", "KPZ", "shock fluctuations"]
     high_ambiguity: true
-    disambiguation: "Xincheng Zhang, TASEP probabilist at Toronto — very common surname"
+    disambiguation: "Xincheng Zhang, TASEP probabilist at Toronto — very common surname. Also accept Xinyi Zhang (Columbia, Corwin's student, log-gamma polymer)"
+
+  - name: "Xinyi Zhang"
+    arxiv_names: ["Zhang_X"]
+    affiliation: "Columbia"
+    topics: ["log-gamma polymer", "directed landscape", "KPZ"]
+    high_ambiguity: true
+    disambiguation: "Xinyi Zhang, Ivan Corwin's student at Columbia — log-gamma polymer, directed landscape"
 
   - name: "Ofer Busani"
     arxiv_names: ["Busani_O"]
@@ -623,3 +630,32 @@ authors:
     topics: ["interacting particle systems", "duality", "ASEP", "stochastic vertex models"]
     high_ambiguity: true
     disambiguation: "Zhengye Zhou at USC — orthogonal polynomial duality, multi-species ASEP, stochastic vertex models. Common surname."
+
+  - name: "Makiko Sasada"
+    arxiv_names: ["Sasada_M"]
+    affiliation: "Tokyo"
+    topics: ["interacting particle systems", "hydrodynamic limits", "KPZ"]
+
+  - name: "Sylvie Corteel"
+    arxiv_names: ["Corteel_S"]
+    affiliation: "Paris / Berkeley"
+    topics: ["ASEP combinatorics", "staircase tableaux", "Macdonald polynomials", "lattice models"]
+
+  - name: "Lauren Williams"
+    arxiv_names: ["Williams_L"]
+    affiliation: "Harvard"
+    topics: ["ASEP", "totally nonnegative matrices", "cluster algebras", "Macdonald polynomials"]
+    high_ambiguity: true
+    disambiguation: "Lauren K. Williams, combinatorialist at Harvard — ASEP/tableaux/total positivity. Common surname."
+
+  - name: "Olya Mandelshtam"
+    arxiv_names: ["Mandelshtam_O"]
+    affiliation: "Waterloo"
+    topics: ["ASEP", "Macdonald polynomials", "tableaux combinatorics", "multiline queues"]
+
+  - name: "Trung Vu"
+    arxiv_names: ["Vu_T"]
+    affiliation: ""
+    topics: ["ASEP", "multiline queues", "Macdonald polynomials"]
+    high_ambiguity: true
+    disambiguation: "Trung Vu, combinatorialist working on ASEP/multiline queues/Macdonald polynomials. Common surname — not Van Vu (random matrices/combinatorics at Yale)."

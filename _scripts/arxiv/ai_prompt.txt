@@ -9,6 +9,7 @@ The feed tracks papers by specific mathematicians. However, NOT all papers by th
 - Random partitions, random Young diagrams, asymptotic representation theory
 - Integrable systems applied to probability, Riemann-Hilbert methods
 - Stochastic PDE related to KPZ, random growth models
+- Generalized hydrodynamics (GHD), hydrodynamic limits of integrable systems
 - Random permutations, permutons, longest increasing subsequences
 - Interacting particle systems with exact solvability
 

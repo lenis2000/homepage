@@ -477,11 +477,61 @@ def main():
                         help="Skip AI filtering, accept all clear matches")
     parser.add_argument("--review", action="store_true",
                         help="Interactive review mode with TUI")
+    parser.add_argument("--import-review", action="store_true",
+                        help="Import decisions from review.json and generate posts")
     args = parser.parse_args()
 
     config = load_config()
     processed = load_processed()
     categories = config.get("categories", ["math.PR"])
+
+    # Quick path: just import from existing review.json
+    if args.import_review:
+        if not REVIEW_FILE.exists():
+            print(f"No {REVIEW_FILE} found.")
+            return 1
+        review = json.loads(REVIEW_FILE.read_text())
+        total = len(review)
+        accepted = [r for r in review if r["decision"] == "ACCEPT"]
+        rejected = [r for r in review if r["decision"] == "REJECT"]
+        skipped = [r for r in review if r["decision"] == "SKIP"]
+        undecided = [r for r in review if r["decision"] == ""]
+        print(f"Importing from review.json: {total} papers")
+        print(f"  {len(accepted)} accepted, {len(rejected)} rejected, {len(skipped)} skipped, {len(undecided)} undecided")
+        if undecided:
+            print(f"  WARNING: {len(undecided)} undecided papers will be skipped")
+
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        wrote = 0
+        for r in accepted:
+            aid = r["arxiv_id"]
+            date_prefix = r["date"].split("T")[0]
+            filename = f"{date_prefix}-{aid}.md"
+            filepath = OUTPUT_DIR / filename
+            if not filepath.exists():
+                filepath.write_text(generate_post(r))
+                wrote += 1
+            if aid not in processed:
+                processed[aid] = {"source": "fetch", "decision": "ACCEPT", "date": date_prefix}
+
+        for r in rejected:
+            aid = r["arxiv_id"]
+            date_prefix = r["date"].split("T")[0]
+            if aid not in processed:
+                processed[aid] = {"source": "fetch", "decision": "REJECT", "date": date_prefix}
+
+        save_processed(processed)
+        print(f"  Generated {wrote} new posts")
+        print(f"  Updated processed.json ({len(processed)} total entries)")
+
+        # Clean up temp files
+        REVIEW_FILE.unlink()
+        print(f"  Removed {REVIEW_FILE.name}")
+        if FETCH_CACHE.exists():
+            FETCH_CACHE.unlink()
+            print(f"  Removed {FETCH_CACHE.name}")
+
+        return 0
 
     print(f"Fetching papers from last {args.days} days...")
     print(f"Categories: {', '.join(categories)}")
