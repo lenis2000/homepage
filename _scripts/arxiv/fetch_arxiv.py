@@ -593,12 +593,20 @@ def main():
     print(f"Categories: {', '.join(categories)}")
 
     # Step 1: Fetch from all categories (with cache for resumability)
+    # Cache is keyed to run parameters — stale cache from different run is ignored
     all_papers = {}
+    cache_key = f"{args.days}|{args.authors}|{after_date}|{before_date}"
+    cache_valid = False
     if FETCH_CACHE.exists():
-        cached = json.loads(FETCH_CACHE.read_text())
-        all_papers = {p["arxiv_id"]: p for p in cached}
-        print(f"  Loaded {len(all_papers)} papers from cache (delete {FETCH_CACHE.name} to re-fetch)")
-    else:
+        cached_data = json.loads(FETCH_CACHE.read_text())
+        if isinstance(cached_data, dict) and cached_data.get("_cache_key") == cache_key:
+            all_papers = {p["arxiv_id"]: p for p in cached_data["papers"]}
+            cache_valid = True
+            print(f"  Resumed from cache ({len(all_papers)} papers)")
+        else:
+            FETCH_CACHE.unlink()
+            print(f"  Discarded stale cache (different run parameters)")
+    if not cache_valid:
         for cat in categories:
             print(f"  Querying {cat} ({len(config['authors'])} authors in batches of 20)...")
             papers = fetch_category(cat, args.days, config, before_date=before_date)
@@ -606,8 +614,9 @@ def main():
                 if p["arxiv_id"] not in all_papers:
                     all_papers[p["arxiv_id"]] = p
             time.sleep(RATE_LIMIT_SECONDS)
-        # Save cache
-        FETCH_CACHE.write_text(json.dumps(list(all_papers.values()), ensure_ascii=False))
+        # Save cache (keyed to run parameters so different runs don't collide)
+        cache_data = {"_cache_key": cache_key, "papers": list(all_papers.values())}
+        FETCH_CACHE.write_text(json.dumps(cache_data, ensure_ascii=False))
         print(f"  Saved fetch cache ({len(all_papers)} papers)")
 
     print(f"  Fetched {len(all_papers)} unique papers")
