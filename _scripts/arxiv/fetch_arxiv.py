@@ -350,6 +350,28 @@ def _fix_unicode_greek_in_math(text):
     return ''.join(result)
 
 
+def _render_math(text):
+    """Pre-render $...$ and $$...$$ math to MathML via KaTeX Node.js."""
+    if "$" not in text:
+        return text
+    render_js = SCRIPT_DIR / "render_math.js"
+    try:
+        batch = json.dumps([{"id": "0", "text": text}])
+        result = subprocess.run(
+            ["node", str(render_js)],
+            input=batch, capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode == 0:
+            items = json.loads(result.stdout)
+            rendered = items[0]["rendered"]
+            for w in items[0].get("warnings", []):
+                print(f"  WARN: {w}")
+            return rendered
+    except Exception as e:
+        print(f"  WARN: Math rendering failed: {e}")
+    return text
+
+
 def generate_post(paper):
     """Generate a Jekyll post for an accepted paper."""
     authors_yaml = "\n".join(f'  - "{a}"' for a in paper["authors"])
@@ -362,6 +384,7 @@ def generate_post(paper):
     arxiv_url = f"https://arxiv.org/abs/{paper['arxiv_id']}"
 
     abstract = _fix_unicode_greek_in_math(paper.get("abstract", ""))
+    abstract = _render_math(abstract)
 
     return f"""---
 layout: post

@@ -118,6 +118,27 @@ def _fix_unicode_greek_in_math(text):
     return ''.join(result)
 
 
+def _render_math(text):
+    """Pre-render $...$ and $$...$$ math to MathML via KaTeX Node.js."""
+    if "$" not in text:
+        return text
+    import json
+    import subprocess
+    render_js = Path(__file__).parent / "render_math.js"
+    try:
+        batch = json.dumps([{"id": "0", "text": text}])
+        result = subprocess.run(
+            ["node", str(render_js)],
+            input=batch, capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode == 0:
+            items = json.loads(result.stdout)
+            return items[0]["rendered"]
+    except Exception as e:
+        print(f"  WARN: Math rendering failed: {e}")
+    return text
+
+
 def update_post(filepath, abstract):
     """Replace the post body with the abstract, keeping front matter."""
     text = filepath.read_text(encoding="utf-8")
@@ -127,6 +148,7 @@ def update_post(filepath, abstract):
 
     front_matter = parts[1]
     abstract = _fix_unicode_greek_in_math(abstract)
+    abstract = _render_math(abstract)
     # Wrap in <p> inside {% raw %} — <p> prevents kramdown processing,
     # {% raw %} prevents Liquid from parsing LaTeX {{ }}
     new_text = f"---{front_matter}---\n{{% raw %}}<p>{abstract}</p>{{% endraw %}}\n"
