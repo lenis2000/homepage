@@ -58,18 +58,25 @@ def save_processed(processed):
 def fetch_category(category, days, config):
     """Fetch recent papers from a single arXiv category, with pagination.
 
-    Splits author list into batches of ~20 to keep API query URLs short.
+    Uses surname-only queries with parentheses and + encoding:
+      (au:Borodin+OR+au:Corwin+...)+AND+cat:math.PR
+    Initial matching is done locally after fetching.
     """
-    all_author_terms = []
+    # Collect unique surnames for API queries
+    seen_surnames = set()
+    all_surname_terms = []
     for author in config["authors"]:
         for name in author["arxiv_names"]:
-            all_author_terms.append(f"au:{name}")
+            surname = name.split("_")[0]
+            if surname.lower() not in seen_surnames:
+                seen_surnames.add(surname.lower())
+                all_surname_terms.append(f"au:{surname}")
 
     # Split into batches to avoid URL length limits
     AUTHOR_BATCH = 20
     author_batches = [
-        all_author_terms[i:i + AUTHOR_BATCH]
-        for i in range(0, len(all_author_terms), AUTHOR_BATCH)
+        all_surname_terms[i:i + AUTHOR_BATCH]
+        for i in range(0, len(all_surname_terms), AUTHOR_BATCH)
     ]
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
