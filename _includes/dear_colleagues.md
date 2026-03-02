@@ -1,4 +1,4 @@
-<h5>Dear colleagues:</h5>
+<h3>Dear colleagues:</h3>
 
 Feel free to use code (unless otherwise specified next to the corresponding link),
 data, and visualizations to illustrate your research in talks and papers,

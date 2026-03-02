@@ -2,6 +2,7 @@
 title: Ultimate Lozenge Tiling Generator - Draw Any Region
 model: lozenge-tilings
 permalink: lozenge-draw/
+nav_parent: Simulations
 author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/lozenge_tilings/2025-11-28-ultimate-lozenge.md'
@@ -1827,7 +1828,8 @@ a11y-description: "Full-featured interactive lozenge tiling generator. Draw arbi
   }
 
   .btn-action:disabled {
-    background: #ccc !important;
+    background: #999 !important;
+    color: white !important;
     box-shadow: none;
     cursor: not-allowed;
   }
@@ -1852,7 +1854,7 @@ a11y-description: "Full-featured interactive lozenge tiling generator. Draw arbi
   }
 
   .btn-secondary-action:disabled {
-    background: #8a9ab8 !important;
+    background: #6b7a96 !important;
     box-shadow: none;
     cursor: not-allowed;
   }
@@ -2219,7 +2221,7 @@ a11y-description: "Full-featured interactive lozenge tiling generator. Draw arbi
     gap: 8px;
     padding: 8px 16px;
     font-size: 12px;
-    color: var(--text-secondary, #666);
+    color: var(--text-secondary, #555);
     background: var(--bg-secondary, #f8f9fa);
     border-radius: 4px;
     margin-top: 8px;
@@ -2236,7 +2238,7 @@ a11y-description: "Full-featured interactive lozenge tiling generator. Draw arbi
     text-transform: uppercase;
     font-size: 10px;
     letter-spacing: 0.3px;
-    color: var(--text-secondary, #888);
+    color: var(--text-secondary, #595959);
   }
 
   .stats-bar .stat-value {
@@ -2271,11 +2273,11 @@ a11y-description: "Full-featured interactive lozenge tiling generator. Draw arbi
      ======================================================================== */
   #shapeOfMonthBtn {
     background: var(--bg-primary, white) !important;
-    color: #E57200 !important;
-    border: 1px dashed #E57200 !important;
+    color: #b45a00 !important;
+    border: 1px dashed #b45a00 !important;
     border-radius: 4px !important;
     padding: 6px 14px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
     font-size: 11px !important;
     text-transform: uppercase;
     letter-spacing: 0.3px;
@@ -2284,6 +2286,8 @@ a11y-description: "Full-featured interactive lozenge tiling generator. Draw arbi
   #shapeOfMonthBtn:hover {
     background: #fff8f0 !important;
     border-style: solid !important;
+    border-color: #E57200 !important;
+    color: #E57200 !important;
   }
 
   [data-theme="dark"] #shapeOfMonthBtn {
@@ -2396,7 +2400,7 @@ if (window.LOZENGE_WEBGPU) {
 <div class="simulation-layout">
 
 <!-- Left: Controls Panel -->
-<aside class="controls-panel" id="controlsPanel">
+<aside class="controls-panel" id="controlsPanel" aria-label="Simulation controls">
   <!-- Mobile drawer handle -->
   <div class="drawer-handle" id="drawerHandle">
     <div class="drawer-handle-bar"></div>
@@ -2490,7 +2494,7 @@ if (window.LOZENGE_WEBGPU) {
           </div>
         </div>
         <div class="control-row">
-          <button id="resetBtn" class="btn-outline" aria-label="Clear all triangles from region">Clear</button>
+          <button id="resetBtn" class="btn-outline" aria-label="Clear region and reset canvas">Clear</button>
           <button id="undoBtn" class="btn-outline" title="Undo (Ctrl+Z)" aria-label="Undo last action" aria-keyshortcuts="Ctrl+Z">Undo</button>
           <button id="redoBtn" class="btn-outline" title="Redo (Ctrl+Y)" aria-label="Redo last undone action" aria-keyshortcuts="Ctrl+Y">Redo</button>
           <button id="repairBtn" class="btn-outline" data-tooltip="Adds minimal triangles for valid tiling" disabled aria-label="Make region tileable by adding triangles">Make Tileable</button>
@@ -2634,7 +2638,7 @@ if (window.LOZENGE_WEBGPU) {
 </aside>
 
 <!-- Right: Visualization Panel -->
-<main class="visualization-panel">
+<section class="visualization-panel" aria-label="Visualization and canvas">
   <!-- Canvas Container with overlay -->
   <div id="canvas-container" style="position: relative;">
     <!-- Zoom controls overlay (left side) -->
@@ -2649,20 +2653,20 @@ if (window.LOZENGE_WEBGPU) {
     <!-- View Toggle overlay -->
     <div id="view-overlay" style="position: absolute; top: 8px; right: 8px; z-index: 100; display: flex; align-items: center; gap: 6px;">
       <div class="view-toggle">
-        <button id="toggle3DBtn" title="Toggle 2D/3D view">3D</button>
+        <button id="toggle3DBtn" title="Toggle 2D/3D view" aria-label="Toggle 2D/3D view">3D</button>
       </div>
       <div class="view-toggle">
-        <button id="lozengeViewBtn" class="active" title="Lozenge view">◆</button>
-        <button id="pathViewBtn" title="Toggle nonintersecting paths">⟶</button>
-        <button id="dimerViewBtn" title="Dimer view">•-•</button>
-        <button id="rotate2DBtn" title="Rotate canvas 90°">↻</button>
+        <button id="lozengeViewBtn" class="active" title="Lozenge view" aria-label="Lozenge view">◆</button>
+        <button id="pathViewBtn" title="Toggle nonintersecting paths" aria-label="Toggle nonintersecting paths">⟶</button>
+        <button id="dimerViewBtn" title="Dimer view" aria-label="Dimer view">•-•</button>
+        <button id="rotate2DBtn" title="Rotate canvas 90°" aria-label="Rotate canvas 90 degrees">↻</button>
       </div>
       <div class="view-toggle" id="view3DOverlay" style="display: none;">
-        <button id="perspectiveBtn" title="Isometric view (click for perspective)">📐</button>
-        <button id="preset3DBtn" title="Cycle 3D visual preset">☀️</button>
+        <button id="perspectiveBtn" title="Isometric view (click for perspective)" aria-label="Toggle isometric and perspective view">📐</button>
+        <button id="preset3DBtn" title="Cycle 3D visual preset" aria-label="Cycle 3D visual preset">☀️</button>
       </div>
-      <button id="fullscreenBtn" title="Fullscreen (F)" style="width: 28px; height: 28px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">⛶</button>
-      <button id="helpBtn" style="width: 28px; height: 28px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">?</button>
+      <button id="fullscreenBtn" title="Fullscreen (F)" aria-label="Toggle fullscreen" style="width: 28px; height: 28px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">⛶</button>
+      <button id="helpBtn" title="Help and keyboard shortcuts" aria-label="Help and keyboard shortcuts" style="width: 28px; height: 28px; border: 1px solid #888; border-radius: 50%; background: white; color: #666; font-size: 14px; cursor: pointer; padding: 0;">?</button>
       <div id="tool-tooltip" style="padding: 6px 10px; background: rgba(0,0,0,0.85); color: white; border-radius: 6px; font-size: 11px; display: none; white-space: pre-line; line-height: 1.4; position: absolute; right: 0; top: 40px;">🤚 pan · ✏️ draw · 🧹 erase
 ⭕+ lasso fill · ⭕− lasso erase
 📐 snap to grid
@@ -2672,7 +2676,7 @@ Cmd-click: complete lasso</div>
     </div>
 
     <!-- Canvas -->
-    <canvas id="lozenge-canvas" role="img" aria-label="Interactive lozenge tiling canvas. Use drawing tools to create and modify regions."></canvas>
+    <canvas id="lozenge-canvas" role="application" tabindex="0" aria-label="Interactive lozenge tiling canvas. Use drawing tools to create and modify regions." aria-describedby="stats-bar"></canvas>
 
     <!-- 3D Container -->
     <div id="three-container" role="img" aria-label="3D visualization of lozenge tiling height function"></div>
@@ -2682,7 +2686,7 @@ Cmd-click: complete lasso</div>
   </div>
 
   <!-- Stats Bar (under canvas) -->
-  <div class="stats-bar" role="status" aria-live="polite">
+  <div id="stats-bar" class="stats-bar" role="status" aria-live="polite">
     <span class="stat-item"><span class="stat-label">Dimers</span> <span class="stat-value" id="dimerCount">0</span><span id="dimerWarning" style="color: #e77500; font-size: 0.85em; margin-left: 4px; display: none;" role="alert">⚠️ slow</span></span>
     <span class="stat-divider">|</span>
     <span class="stat-item"><span class="stat-label">Steps</span> <span class="stat-value" id="stepCount">0</span></span>
@@ -2690,7 +2694,7 @@ Cmd-click: complete lasso</div>
     <span class="stat-item"><span class="stat-label">CFTP</span> <span class="stat-value" id="cftpSteps">-</span></span>
     <span id="gpuIndicator" style="color: #2e8b57; margin-left: 8px; display: none;">🚀 GPU</span>
   </div>
-</main>
+</section>
 
 <!-- Bottom sections: under canvas on desktop, in drawer on mobile via JS -->
 <div class="bottom-sections-wrapper">
@@ -2830,19 +2834,30 @@ Graphics3D[{EdgeForm[Black],
     <h3 id="keyboard-help-title">Help</h3>
     <h4 style="margin: 12px 0 8px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #666;">Drawing Tools</h4>
     <table>
+      <caption class="sr-only">Drawing tools and their functions</caption>
+      <thead class="sr-only"><tr><th>Tool</th><th>Action</th></tr></thead>
+      <tbody>
       <tr><td>🖐</td><td>Pan canvas</td></tr>
       <tr><td>✏️</td><td>Draw triangles</td></tr>
       <tr><td>🧽</td><td>Erase triangles</td></tr>
       <tr><td>⭕+</td><td>Lasso fill</td></tr>
       <tr><td>⭕−</td><td>Lasso erase</td></tr>
       <tr><td>📐</td><td>Snap to grid</td></tr>
+      </tbody>
     </table>
     <table style="margin-top: 8px;">
+      <caption class="sr-only">Modifier keys</caption>
+      <thead class="sr-only"><tr><th>Key</th><th>Action</th></tr></thead>
+      <tbody>
       <tr><td><kbd>Shift</kbd></td><td>Toggle draw ↔ erase</td></tr>
       <tr><td><kbd>Cmd</kbd>-click</td><td>Complete lasso</td></tr>
+      </tbody>
     </table>
     <h4 style="margin: 16px 0 8px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #666;">Keyboard Shortcuts</h4>
     <table>
+      <caption class="sr-only">Keyboard shortcuts reference</caption>
+      <thead class="sr-only"><tr><th>Key</th><th>Action</th></tr></thead>
+      <tbody>
       <tr><td><kbd>S</kbd></td><td>Perfect Sample (CFTP)</td></tr>
       <tr><td><kbd>G</kbd></td><td>Start/Stop Glauber</td></tr>
       <tr><td><kbd>Space</kbd></td><td>Pause/Resume Glauber</td></tr>
@@ -2861,6 +2876,7 @@ Graphics3D[{EdgeForm[Black],
       <tr><td><kbd>F</kbd></td><td>Toggle fullscreen</td></tr>
       <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
       <tr><td><kbd>Esc</kbd></td><td>Close dialogs</td></tr>
+      </tbody>
     </table>
     <button class="close-btn" id="closeKeyboardHelp">Close</button>
   </div>
