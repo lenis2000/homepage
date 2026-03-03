@@ -193,12 +193,16 @@ def fetch_category(category, days, config, before_date=None):
 
 def match_authors(paper, config):
     """Check if any paper author matches our tracked authors.
-    Returns (matched_author_config, is_ambiguous) or (None, False)."""
+    Returns (matched_author_config, is_ambiguous) or (None, False).
+    Also attaches all_matched_authors to the paper for disambiguation."""
     paper_authors = paper["authors"]
 
     # Skip large collaborations (physics experiments, not math papers)
     if len(paper_authors) > 20:
         return None, False
+
+    all_matches = []
+    seen_names = set()
 
     for tracked in config["authors"]:
         for arxiv_name in tracked["arxiv_names"]:
@@ -223,27 +227,50 @@ def match_authors(paper, config):
 
                 if (pa_surname.lower() == surname.lower() and
                         pa_initial.upper() == initial.upper()):
-                    is_ambiguous = tracked.get("high_ambiguity", False)
-                    return tracked, is_ambiguous
+                    if tracked["name"] not in seen_names:
+                        seen_names.add(tracked["name"])
+                        all_matches.append(tracked)
 
-    return None, False
+    if not all_matches:
+        return None, False
+
+    # Store all matches on the paper for AI disambiguation
+    paper["all_matched_authors"] = all_matches
+
+    first = all_matches[0]
+    is_ambiguous = any(t.get("high_ambiguity", False) for t in all_matches)
+    return first, is_ambiguous
 
 
 def _format_paper_desc(p):
     """Format a single paper for the AI prompt."""
+    all_matched = p.get("all_matched_authors", [])
     matched = p.get("matched_author", {})
     ambiguity = "HIGH_AMBIGUITY" if p.get("is_ambiguous") else ""
-    disambiguation = matched.get("disambiguation", "")
-    topics = ", ".join(matched.get("topics", []))
+
+    # Show all tracked authors that share this name pattern
+    if len(all_matched) > 1:
+        author_descs = []
+        for m in all_matched:
+            topics = ", ".join(m.get("topics", []))
+            hint = m.get("disambiguation", "")
+            ad = f"{m['name']} ({m.get('affiliation', '?')}) [{topics}]"
+            if hint:
+                ad += f" HINT: {hint}"
+            author_descs.append(ad)
+        matched_str = " OR ".join(author_descs)
+    else:
+        topics = ", ".join(matched.get("topics", []))
+        matched_str = f"{matched.get('name', '?')} ({matched.get('affiliation', '?')}) [{topics}]"
+        hint = matched.get("disambiguation", "")
+        if hint:
+            matched_str += f" HINT: {hint}"
 
     desc = (
         f"arXiv:{p['arxiv_id']} | {', '.join(p['authors'])} | "
         f"\"{p['title']}\" | categories: {', '.join(p['categories'])} | "
-        f"Matched author: {matched.get('name', '?')} ({matched.get('affiliation', '?')}) "
-        f"[{topics}] {ambiguity}"
+        f"Matched author(s): {matched_str} {ambiguity}"
     )
-    if disambiguation:
-        desc += f" | HINT: {disambiguation}"
     return desc
 
 
