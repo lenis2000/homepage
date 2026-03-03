@@ -86,10 +86,22 @@ const ARXIV_MACROS = {
   '\\Field': '\\mathbb{F}',
   '\\Expect': '\\mathbb{E}',
   '\\Prob': '\\mathbb{P}',
+  '\\RR': '\\mathbb{R}',
+  '\\CC': '\\mathbb{C}',
+  '\\ZZ': '\\mathbb{Z}',
+  '\\QQ': '\\mathbb{Q}',
+  '\\NN': '\\mathbb{N}',
+  '\\FF': '\\mathbb{F}',
+  '\\EE': '\\mathbb{E}',
+  '\\PP': '\\mathbb{P}',
+  '\\C': '\\mathbb{C}',
+  '\\R': '\\mathbb{R}',
+  '\\Q': '\\mathbb{Q}',
+  '\\Zd': '\\mathbb{Z}^d',
   // Lie algebras / groups
   '\\g': '\\mathfrak{g}',
   '\\h': '\\mathfrak{h}',
-  '\\n': '\\mathfrak{n}',  // careful — only inside math
+  '\\n': '\\mathfrak{n}',
   '\\GL': '\\mathrm{GL}',
   '\\SL': '\\mathrm{SL}',
   '\\SO': '\\mathrm{SO}',
@@ -105,18 +117,38 @@ const ARXIV_MACROS = {
   '\\B': '\\mathcal{B}',
   '\\F': '\\mathcal{F}',
   '\\G': '\\mathcal{G}',
+  '\\H': '\\mathcal{H}',
   '\\M': '\\mathcal{M}',
   '\\N': '\\mathcal{N}',
   '\\T': '\\mathcal{T}',
+  '\\V': '\\mathcal{V}',
   '\\Z': '\\mathcal{Z}',
+  // Random matrix ensembles
+  '\\CUE': '\\mathrm{CUE}',
+  '\\GUE': '\\mathrm{GUE}',
+  '\\GOE': '\\mathrm{GOE}',
+  '\\GSE': '\\mathrm{GSE}',
   // Common abbreviations
   '\\eps': '\\varepsilon',
+  '\\e': '\\varepsilon',
   '\\vep': '\\varepsilon',
+  '\\b': '\\beta',
   '\\half': '\\tfrac{1}{2}',
+  '\\ra': '\\rightarrow',
+  '\\la': '\\leftarrow',
+  '\\lra': '\\leftrightarrow',
+  '\\iy': '\\infty',
   '\\affsl': '\\widehat{\\mathfrak{sl}}',
   '\\affgl': '\\widehat{\\mathfrak{gl}}',
   '\\id': '\\mathrm{id}',
   '\\Id': '\\mathrm{Id}',
+  // Bold shortcuts for vectors
+  '\\rr': '\\mathbf{r}',
+  '\\zz': '\\mathbf{z}',
+  '\\xx': '\\mathbf{x}',
+  '\\yy': '\\mathbf{y}',
+  '\\nn': '\\mathbf{n}',
+  // Operators
   '\\Tr': '\\operatorname{Tr}',
   '\\tr': '\\operatorname{tr}',
   '\\diag': '\\operatorname{diag}',
@@ -128,6 +160,72 @@ const ARXIV_MACROS = {
   '\\supp': '\\operatorname{supp}',
   '\\Var': '\\operatorname{Var}',
   '\\Cov': '\\operatorname{Cov}',
+  '\\dist': '\\operatorname{dist}',
+  '\\per': '\\operatorname{per}',
+  '\\ex': '\\mathbb{E}',
+  // Calculus
+  '\\diff': '\\mathrm{d}',
+  '\\d': '\\mathrm{d}',
+  // Spacing: \* is used as \cdot in some TeX setups
+  '\\*': '\\cdot',
+  // Text shortcuts
+  '\\tf': '\\mathrm{tf}',
+  '\\ts': '\\times',
+  // \mbox and \hbox → \text (KaTeX equivalent)
+  '\\mbox': '\\text',
+  '\\hbox': '\\text',
+  // \op → \operatorname
+  '\\op': '\\operatorname',
+  // More operator/function shortcuts
+  '\\des': '\\operatorname{des}',
+  '\\inv': '\\operatorname{inv}',
+  '\\maj': '\\operatorname{maj}',
+  // Greek/symbol shortcuts
+  '\\om': '\\omega',
+  '\\al': '\\alpha',
+  '\\be': '\\beta',
+  '\\ga': '\\gamma',
+  '\\de': '\\delta',
+  '\\si': '\\sigma',
+  '\\lam': '\\lambda',
+  // Partial derivative shortcut
+  '\\pl': '\\partial',
+  // Misc
+  '\\Lb': '\\Lambda',
+  '\\wide': '\\widehat',
+  // Lie algebra lowercase
+  '\\gl': '\\mathfrak{gl}',
+  '\\sl': '\\mathfrak{sl}',
+  '\\so': '\\mathfrak{so}',
+  '\\sp': '\\mathfrak{sp}',
+  '\\su': '\\mathfrak{su}',
+  // More blackboard bold variants
+  '\\bbR': '\\mathbb{R}',
+  '\\bbC': '\\mathbb{C}',
+  '\\bbZ': '\\mathbb{Z}',
+  '\\bbN': '\\mathbb{N}',
+  '\\bbQ': '\\mathbb{Q}',
+  '\\DD': '\\mathbb{D}',
+  '\\LL': '\\mathbb{L}',
+  // Script/calligraphic
+  '\\Cal': '\\mathcal',
+  '\\sN': '\\mathcal{N}',
+  // Probability/statistics
+  '\\Exp': '\\mathbb{E}',
+  // Special functions / roman
+  '\\rme': '\\mathrm{e}',
+  '\\ud': '\\mathrm{d}',
+  '\\sinf': '\\liminf',
+  // Argmax/argmin
+  '\\argmax': '\\operatorname{arg\\,max}',
+  '\\argmin': '\\operatorname{arg\\,min}',
+  // Airy process
+  '\\aip': '\\mathcal{A}',
+  '\\ct': '\\mathfrak{t}',
+  // Combinatorial
+  '\\polygon': '\\mathrm{polygon}',
+  '\\fl': '\\lfloor',
+  '\\ce': '\\lceil',
 };
 
 function renderExpression(latex, displayMode, warnings) {

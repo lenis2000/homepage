@@ -51,6 +51,21 @@ Homepage uses **Qwen3-Embedding-0.6B** (heavy, instruction-aware) for build-time
 since there's no browser inference — only pre-computed related papers served as static JSON.
 Better quality = better "related papers" suggestions, especially for math terminology.
 
+## Incremental caching
+
+Cache embeddings by content hash (`sha256(text) → vector`) in a local JSON file
+(e.g., `_scripts/arxiv/.embedding-cache.json`). On rebuild:
+- Unchanged papers → reuse cached vectors (instant)
+- New/changed papers → embed only those
+
+First build is slow (~10-20 min for Qwen3-0.6B on MPS with batch_size=4).
+Incremental rebuilds (e.g., 20 new papers) take ~10-15 seconds.
+
+**Lessons from notes implementation:**
+- Use `batch_size=4` for large models on Apple Silicon MPS — larger batches cause OOM/stalls
+- bge-small-en-v1.5 (33M params) embeds 2,400 chunks in ~12s; Qwen3-0.6B needs batch_size=4 on MPS
+- MPS (`device="mps"`) helps but not as dramatically as expected for 600M+ param models
+
 ## Implementation
 
 **Separate task** — independent from the notes semantic search.

@@ -1018,3 +1018,63 @@ authors:
     topics: ["random planar maps", "Liouville quantum gravity", "dimer models", "SLE"]
     high_ambiguity: true
     disambiguation: "Nathanael Berestycki, probabilist at Vienna — random planar maps, dimers, LQG. Not Julien Berestycki (Oxford, branching processes)."
+
+  - name: "Allen Knutson"
+    arxiv_names: ["Knutson_A"]
+    affiliation: "Cornell"
+    topics: ["Schubert calculus", "puzzles", "equivariant cohomology", "geometric combinatorics"]
+    high_ambiguity: true
+    disambiguation: "Allen Knutson, algebraic combinatorics / Schubert calculus at Cornell — only include papers related to puzzles, Littlewood-Richardson, equivariant K-theory, or connections to integrable probability"
+
+  - name: "Sergey Fomin"
+    arxiv_names: ["Fomin_S"]
+    affiliation: "Michigan"
+    topics: ["cluster algebras", "total positivity", "Schur functions", "combinatorial geometry"]
+    high_ambiguity: true
+    disambiguation: "Sergey Fomin at Michigan — cluster algebras, total positivity, Schur functions. Only include papers related to integrable probability, symmetric functions, or total positivity, NOT pure cluster algebras."
+
+  - name: "Evgeny Mukhin"
+    arxiv_names: ["Mukhin_E"]
+    affiliation: "IUPUI"
+    topics: ["Bethe ansatz", "quantum groups", "Gaudin model", "Wronskian"]
+
+  - name: "Vitaly Tarasov"
+    arxiv_names: ["Tarasov_V"]
+    affiliation: "IUPUI"
+    topics: ["quantum groups", "Bethe ansatz", "KZ equations", "hypergeometric solutions"]
+
+  - name: "Paul Zinn-Justin"
+    arxiv_names: ["Zinn-Justin_P"]
+    affiliation: "Melbourne"
+    topics: ["quantum Knizhnik-Zamolodchikov", "loop models", "alternating sign matrices", "Razumov-Stroganov"]
+    disambiguation: "Paul Zinn-Justin, mathematical physicist at Melbourne — not Jean Zinn-Justin (QFT, Saclay)"
+
+  - name: "Eugene Gorsky"
+    arxiv_names: ["Gorsky_E"]
+    affiliation: "UC Davis"
+    topics: ["knot invariants", "DAHA", "Hilbert schemes", "rational Catalan combinatorics"]
+    high_ambiguity: true
+    disambiguation: "Eugene Gorsky at UC Davis — DAHA, knot homology, Hilbert schemes. Only include papers related to symmetric functions, combinatorial representation theory, or connections to integrable probability."
+
+  - name: "Alexander Varchenko"
+    arxiv_names: ["Varchenko_A"]
+    affiliation: "UNC Chapel Hill"
+    topics: ["KZ equations", "Bethe ansatz", "hypergeometric functions", "quantum groups"]
+
+  - name: "Andrei Zelevinsky"
+    arxiv_names: ["Zelevinsky_A"]
+    affiliation: "Northeastern"
+    topics: ["cluster algebras", "representations", "total positivity", "canonical bases"]
+    disambiguation: "Andrei Zelevinsky at Northeastern (deceased 2013) — cluster algebras co-founder with Fomin"
+
+  - name: "Oleg Zaboronski"
+    arxiv_names: ["Zaboronski_O"]
+    affiliation: "Warwick"
+    topics: ["Pfaffian point processes", "annihilating Brownian motions", "reaction-diffusion", "integrable probability"]
+
+  - name: "Arvind Ayyer"
+    arxiv_names: ["Ayyer_A"]
+    affiliation: "IISc Bangalore"
+    topics: ["ASEP", "multiline queues", "random matrices", "integrable combinatorics"]
+    high_ambiguity: true
+    disambiguation: "Arvind Ayyer, integrable combinatorics at IISc Bangalore — ASEP, multispecies exclusion processes, Macdonald polynomials"

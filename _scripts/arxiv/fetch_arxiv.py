@@ -335,8 +335,26 @@ _GREEK_MAP = {
 _GREEK_CHARS = set(_GREEK_MAP.keys())
 
 
+_BROKEN_LATEX = {
+    r'\t au': r'\tau',
+    r'\s igma': r'\sigma',
+    r'\a lpha': r'\alpha',
+    r'\b eta': r'\beta',
+    r'\g amma': r'\gamma',
+    r'\d elta': r'\delta',
+    r'\l ambda': r'\lambda',
+    r'\o mega': r'\omega',
+}
+
+
 def _fix_unicode_greek_in_math(text):
-    """Replace Unicode Greek with LaTeX commands inside $...$ math."""
+    """Replace Unicode Greek with LaTeX commands inside $...$ math.
+    Also fixes broken LaTeX commands from Kaggle data (e.g. \\t au → \\tau)."""
+    for broken, fixed in _BROKEN_LATEX.items():
+        text = text.replace(broken, fixed)
+    # Fix broken \{array} → \begin{array} / \end{array}
+    text = re.sub(r'\\\{array\}', r'\\begin{array}', text, count=1)
+    text = re.sub(r'\\\{array\}', r'\\end{array}', text, count=1)
     result = []
     i = 0
     in_math = False
