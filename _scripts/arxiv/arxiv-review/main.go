@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -254,6 +256,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "P":
 			// Jump to previous author group
 			m.prevGroup()
+
+		case "o":
+			// Open arXiv PDF in browser
+			p := m.papers[m.current]
+			url := "https://arxiv.org/pdf/" + p.ArxivID
+			openURL(url)
 		}
 	}
 	return m, nil
@@ -546,7 +554,7 @@ func (m model) View() string {
 
 	lines = append(lines, "")
 	lines = append(lines, helpStyle.Render("  a/v accept  r/b reject  s skip  u undo  n/p next/prev  N/P next/prev author  j/k scroll"))
-	lines = append(lines, helpStyle.Render("  A accept all (author)  R reject all (author)  q quit"))
+	lines = append(lines, helpStyle.Render("  o open PDF  A accept all (group)  R reject all (group)  q quit"))
 
 	// Apply scroll
 	content := strings.Join(lines, "\n")
@@ -561,6 +569,15 @@ func (m model) View() string {
 	}
 
 	return strings.Join(allLines, "\n")
+}
+
+func openURL(url string) {
+	switch runtime.GOOS {
+	case "darwin":
+		exec.Command("open", url).Start()
+	case "linux":
+		exec.Command("xdg-open", url).Start()
+	}
 }
 
 func wordWrap(s string, width int) []string {

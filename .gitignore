@@ -140,7 +140,7 @@ _scripts/arxiv/arxiv-review/arxiv-review
 _scripts/arxiv/venv/
 _scripts/arxiv/.embedding-cache.json
 _scripts/arxiv/.embedding-cache-full.db
-_scripts/arxiv/candidates.csv
+_scripts/arxiv/scan-review.json
 assets/data/arxiv-vectors.npy
 
 .gemini/

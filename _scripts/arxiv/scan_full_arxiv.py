@@ -37,7 +37,7 @@ REPO_ROOT = SCRIPT_DIR.parent.parent
 INDEX_FILE = REPO_ROOT / "assets" / "data" / "arxiv-index.json"
 VECTORS_FILE = REPO_ROOT / "assets" / "data" / "arxiv-vectors.npy"
 CACHE_DB = SCRIPT_DIR / ".embedding-cache-full.db"
-CANDIDATES_FILE = SCRIPT_DIR / "candidates.csv"
+REVIEW_FILE = SCRIPT_DIR / "scan-review.json"
 
 KAGGLE_FILE = Path(os.environ.get(
     "ARXIV_KAGGLE",
@@ -182,7 +182,7 @@ def main():
     # Buffers for batch embedding
     batch_texts = []
     batch_keys = []
-    batch_meta = []  # (arxiv_id, title, categories, authors)
+    batch_meta = []  # (arxiv_id, title, categories, authors, abstract)
 
     def flush_batch():
         nonlocal model, embedded, cache_hits
@@ -232,6 +232,7 @@ def main():
                     batch_meta[i][1],  # title
                     batch_meta[i][2],  # categories
                     batch_meta[i][3],  # authors
+                    batch_meta[i][4],  # abstract
                 ))
 
         batch_texts.clear()
@@ -274,7 +275,7 @@ def main():
         text = f"{title}. {abstract}" if abstract else title
         batch_texts.append(text)
         batch_keys.append(text_key(text))
-        batch_meta.append((arxiv_id, title, categories, authors))
+        batch_meta.append((arxiv_id, title, categories, authors, abstract))
 
         if len(batch_texts) >= CHUNK_SIZE:
             flush_batch()
@@ -296,20 +297,44 @@ def main():
     # Sort by similarity descending
     candidates.sort(key=lambda x: -x[0])
 
-    # Write CSV
-    with open(CANDIDATES_FILE, "w", encoding="utf-8") as f:
-        f.write("similarity,arxiv_id,categories,title,authors\n")
-        for sim, aid, title, cats, authors in candidates:
-            # Escape CSV fields
-            title_esc = title.replace('"', '""')
-            authors_esc = authors.replace('"', '""')
-            f.write(f'{sim:.4f},{aid},"{cats}","{title_esc}","{authors_esc}"\n')
+    # Append to review JSON for arxiv-review TUI (preserves previous decisions)
+    existing = []
+    existing_ids = set()
+    if REVIEW_FILE.exists():
+        with open(REVIEW_FILE, encoding="utf-8") as f:
+            existing = json.load(f)
+        existing_ids = {e["arxiv_id"] for e in existing}
 
-    log(f"Wrote {len(candidates)} candidates to {CANDIDATES_FILE}")
+    new_count = 0
+    for sim, aid, title, cats, authors, abstract in candidates:
+        if aid in existing_ids:
+            continue
+        author_list = [a.strip() for a in authors.replace(" and ", ", ").split(", ") if a.strip()]
+        existing.append({
+            "arxiv_id": aid,
+            "title": title,
+            "authors": author_list,
+            "categories": cats.split(),
+            "abstract": abstract,
+            "date": f"20{aid[:2]}-{aid[2:4]}",
+            "matched_author": "",
+            "is_ambiguous": False,
+            "ai_decision": "ACCEPT",
+            "ai_confidence": f"{sim:.3f}",
+            "ai_reason": f"Cosine similarity {sim:.3f} to known int-prob papers",
+            "decision": "",
+        })
+        new_count += 1
+
+    with open(REVIEW_FILE, "w", encoding="utf-8") as f:
+        json.dump(existing, f, indent=2)
+
+    log(f"Review file: {new_count} new + {len(existing_ids)} existing = {len(existing)} total")
+    log(f"Review with: arxiv-review {REVIEW_FILE}")
 
     # Print top 20
     log(f"\nTop 20 candidates (threshold={args.threshold}):")
-    for sim, aid, title, cats, authors in candidates[:20]:
+    for sim, aid, title, cats, authors, abstract in candidates[:20]:
         log(f"  {sim:.3f}  {aid}  {cats[:30]}  {title[:80]}")
 
     cache.close()

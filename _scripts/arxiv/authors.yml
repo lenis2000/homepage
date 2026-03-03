@@ -1104,3 +1104,24 @@ authors:
     arxiv_names: ["Mkrtchyan_S"]
     affiliation: "Rochester"
     topics: ["random tilings", "limit shapes", "plane partitions", "dimer models"]
+
+  - name: "Atsuo Kuniba"
+    arxiv_names: ["Kuniba_A"]
+    affiliation: "Tokyo"
+    topics: ["quantum groups", "crystal bases", "box-ball systems", "combinatorial R-matrix", "integrable stochastic processes"]
+
+  - name: "Soichi Okada"
+    arxiv_names: ["Okada_S"]
+    affiliation: "Nagoya"
+    topics: ["symmetric functions", "pfaffians", "Schur Q-functions", "alternating sign matrices", "tableaux"]
+
+  - name: "Alexander Povolotsky"
+    arxiv_names: ["Povolotsky_A"]
+    affiliation: "JINR Dubna"
+    topics: ["TASEP", "zero-range processes", "exactly solvable stochastic models", "Bethe ansatz"]
+
+  - name: "Vladimir Mangazeev"
+    arxiv_names: ["Mangazeev_V"]
+    affiliation: "ANU"
+    topics: ["exactly solvable lattice models", "Yang-Baxter equation", "six-vertex model", "Bethe ansatz"]
+    disambiguation: "Vladimir V. Mangazeev at ANU (deceased 2021) — exactly solvable lattice models"

@@ -10,10 +10,8 @@ source .venv/bin/activate
 
 KAGGLE="${ARXIV_KAGGLE:-$HOME/Data/arxiv/arxiv-metadata-oai-snapshot.json}"
 
-# --- Redo: Pablo & Patrik Ferrari (March 2026) ---
-# Fixed disambiguation hints so AI knows both are tracked separately.
-# Ferrari rejects cleared from processed.json.
+# --- Kuniba, Okada, Povolotsky, Mangazeev (March 2026) ---
 python3 _scripts/arxiv/backfill_kaggle.py $KAGGLE \
-  --authors "Pablo Ferrari,Patrik Ferrari" \
+  --authors "Atsuo Kuniba,Soichi Okada,Alexander Povolotsky,Vladimir Mangazeev" \
   --after 1993-01-01 --before 2026-04-01 --review
 python3 _scripts/arxiv/build_search_index.py
