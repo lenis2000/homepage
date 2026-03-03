@@ -221,9 +221,8 @@ document.addEventListener('DOMContentLoaded', function() {
         catButtons.querySelectorAll('.category-btn').forEach(function(btn) {
             var cat = btn.dataset.category;
             var countSpan = btn.querySelector('.arxiv-cat-count');
-            if (cat === 'all') {
-                if (countSpan) countSpan.textContent = totalAll;
-            } else if (countSpan) {
+            if (cat === 'all') return;
+            if (countSpan) {
                 var n = counts[cat] || 0;
                 countSpan.textContent = n;
                 btn.style.display = n === 0 ? 'none' : '';
@@ -246,11 +245,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function buildCatButtons(catCounts) {
-        // totalAll = number of papers (set by caller via orderedPapers.length)
-        var totalAll = orderedPapers.length;
         // Use stable sort order from initButtons
         var sorted = catSortOrder.length > 0 ? catSortOrder : Object.keys(catCounts);
-        var html = '<button class="btn btn-sm category-btn active" data-category="all" aria-pressed="true">All <span class="arxiv-cat-count">' + totalAll + '</span></button>';
+        var html = '<button class="btn btn-sm category-btn active" data-category="all" aria-pressed="true">All</button>';
         sorted.forEach(function(cat) {
             if (!catCounts[cat]) return;
             html += '<button class="btn btn-sm category-btn" data-category="' + cat + '" aria-pressed="false">' + cat + ' <span class="arxiv-cat-count">' + catCounts[cat] + '</span></button>';
