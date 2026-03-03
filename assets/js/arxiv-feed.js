@@ -579,15 +579,11 @@ document.addEventListener('DOMContentLoaded', function() {
         var dropdown = li.querySelector('.arxiv-related-dropdown');
         if (!dropdown) return;
         var isOpen = !dropdown.hidden;
-
-        // Close all open related dropdowns
-        listEl.querySelectorAll('.arxiv-related-dropdown:not([hidden])').forEach(function(d) {
-            d.hidden = true;
-            var b = d.closest('li').querySelector('.arxiv-related-btn');
-            if (b) b.setAttribute('aria-expanded', 'false');
-        });
-
-        if (isOpen) return;
+        if (isOpen) {
+            dropdown.hidden = true;
+            btn.setAttribute('aria-expanded', 'false');
+            return;
+        }
 
         // Build dropdown content from searchMap
         var relatedIds = (li.dataset.related || '').split(' ').filter(Boolean);
