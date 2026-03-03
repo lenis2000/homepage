@@ -207,12 +207,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.save()
 			return m, tea.Quit
 
-		case "a":
+		case "a", "v":
 			m.decide("ACCEPT")
 			m.accepted++
 			m.advance()
 
-		case "r":
+		case "r", "b":
 			m.decide("REJECT")
 			m.rejected++
 			m.advance()
@@ -519,7 +519,9 @@ func (m model) View() string {
 		"",
 		fmt.Sprintf("  %s  %s  arXiv:%s", date, cats, p.ArxivID),
 		fmt.Sprintf("  %s%s", authors, matched),
+		"",
 		fmt.Sprintf("  %s", title),
+		"",
 	}
 	if aiLine != "" {
 		lines = append(lines, aiLine)
@@ -543,7 +545,7 @@ func (m model) View() string {
 	}
 
 	lines = append(lines, "")
-	lines = append(lines, helpStyle.Render("  a accept  r reject  s skip  u undo  n/p next/prev  N/P next/prev author  j/k scroll"))
+	lines = append(lines, helpStyle.Render("  a/v accept  r/b reject  s skip  u undo  n/p next/prev  N/P next/prev author  j/k scroll"))
 	lines = append(lines, helpStyle.Render("  A accept all (author)  R reject all (author)  q quit"))
 
 	// Apply scroll

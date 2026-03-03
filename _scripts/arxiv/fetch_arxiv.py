@@ -844,7 +844,7 @@ def main():
         else:
             print(f"  No AI pre-filter (use without --no-ai to enable)")
         print(f"  Papers sorted newest-first")
-        print(f"  Keys: a=accept  r=reject  s=skip  u=undo  n/p=nav  q=quit (resumable)")
+        print(f"  Keys: a/v=accept  r/b=reject  s=skip  u=undo  n/p=nav  q=quit (resumable)")
         print()
 
         # Launch TUI

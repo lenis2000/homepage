@@ -65,8 +65,15 @@ authors:
     arxiv_names: ["Bufetov_A"]
     affiliation: "Leipzig"
     topics: ["random tilings", "representations", "asymptotic combinatorics"]
-    disambiguation: "Alexey Bufetov (Leipzig), probabilist — not Alexander Bufetov (dynamical systems)"
+    disambiguation: "Alexey Bufetov (Leipzig), probabilist — random tilings, asymptotic combinatorics. Not Alexander I. Bufetov (see separate entry)."
     high_ambiguity: true
+
+  - name: "Alexander Bufetov"
+    arxiv_names: ["Bufetov_A"]
+    affiliation: "CNRS / Aix-Marseille / Rice / Steklov"
+    topics: ["determinantal point processes", "Pfaffian point processes", "integrable kernels", "ergodic theory"]
+    high_ambiguity: true
+    disambiguation: "Alexander I. Bufetov (CNRS/Aix-Marseille) — determinantal point processes, Airy/Bessel/Gamma kernels, integrable kernels. Not Alexey Bufetov (Leipzig, random tilings). Only include papers on DPPs, point processes, random matrices — NOT dynamical systems, translation flows, or Teichmüller theory."
 
   - name: "Jeffrey Kuan"
     arxiv_names: ["Kuan_J"]
@@ -373,7 +380,21 @@ authors:
     affiliation: "RIMS Kyoto"
     topics: ["Bethe ansatz", "combinatorics of representations", "Schubert calculus"]
     high_ambiguity: true
-    disambiguation: "Anatol N. Kirillov at RIMS Kyoto — Bethe ansatz, combinatorial representation theory. Not A.A. Kirillov (father, orbit method)."
+    disambiguation: "Anatol N. Kirillov at RIMS Kyoto — Bethe ansatz, combinatorial representation theory. Not A.A. Kirillov Sr (father, orbit method) and not Alexander Kirillov Jr (Stony Brook, see separate entry)."
+
+  - name: "Alexander Kirillov Jr"
+    arxiv_names: ["Kirillov_A"]
+    affiliation: "Stony Brook"
+    topics: ["tensor categories", "modular functors", "quantum groups", "conformal field theory"]
+    high_ambiguity: true
+    disambiguation: "Alexander Kirillov Jr at Stony Brook — tensor categories, modular functors, TQFT. Not Anatol N. Kirillov (RIMS, Bethe ansatz), not A.A. Kirillov Sr (father, orbit method), not A.A. Kirillov the physicist."
+
+  - name: "Alexander Kirillov Sr"
+    arxiv_names: ["Kirillov_A"]
+    affiliation: "Penn"
+    topics: ["orbit method", "representation theory", "Lie groups", "geometric quantization"]
+    high_ambiguity: true
+    disambiguation: "Alexandre A. Kirillov Sr (father) — orbit method, representation theory. Not Anatol N. Kirillov (RIMS), not Alexander Kirillov Jr (Stony Brook)."
 
   - name: "Günter Schütz"
     arxiv_names: ["Schutz_G", "Schuetz_G"]
@@ -1078,3 +1099,8 @@ authors:
     topics: ["ASEP", "multiline queues", "random matrices", "integrable combinatorics"]
     high_ambiguity: true
     disambiguation: "Arvind Ayyer, integrable combinatorics at IISc Bangalore — ASEP, multispecies exclusion processes, Macdonald polynomials"
+
+  - name: "Sevak Mkrtchyan"
+    arxiv_names: ["Mkrtchyan_S"]
+    affiliation: "Rochester"
+    topics: ["random tilings", "limit shapes", "plane partitions", "dimer models"]
