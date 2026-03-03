@@ -178,7 +178,7 @@ def main():
             if model is None:
                 from sentence_transformers import SentenceTransformer
                 import torch
-                device = "mps" if torch.backends.mps.is_available() else "cpu"
+                device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
                 log(f"Loading model on {device}...")
                 model = SentenceTransformer(MODEL_NAME).to(device)
 

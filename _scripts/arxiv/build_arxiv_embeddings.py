@@ -45,7 +45,7 @@ KAGGLE_FILE = Path(os.environ.get(
 TOP_K = 5
 SIMILARITY_THRESHOLD = 0.69
 MODEL_NAME = "BAAI/bge-m3"
-BATCH_SIZE = 4
+BATCH_SIZE = 32
 
 
 def load_post_ids():
@@ -115,7 +115,7 @@ def compute_embeddings(ids, texts, cache):
         from sentence_transformers import SentenceTransformer
         import torch
 
-        device = "mps" if torch.backends.mps.is_available() else "cpu"
+        device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
         log(f"Using device: {device}")
 
         model = SentenceTransformer(MODEL_NAME)
