@@ -21,6 +21,14 @@ categories:
   - math.CA
   - cond-mat.stat-mech
 
+# Extra categories for historical backfill (pre-2007 papers).
+# These are large/noisy categories not suitable for daily fetching,
+# but needed to find early random matrix / integrable systems papers.
+backfill_categories:
+  - hep-th
+  - nlin.SI
+  - cond-mat
+
 authors:
   - name: "Alexei Borodin"
     arxiv_names: ["Borodin_A"]
@@ -258,6 +266,57 @@ authors:
     arxiv_names: ["Tracy_C"]
     affiliation: "UC Davis"
     topics: ["Tracy-Widom distributions", "random matrices", "ASEP"]
+
+  - name: "Harold Widom"
+    arxiv_names: ["Widom_H"]
+    affiliation: "UC Santa Cruz"
+    topics: ["Tracy-Widom distributions", "random matrices", "Toeplitz determinants"]
+    disambiguation: "Harold Widom, Tracy-Widom co-discoverer at UC Santa Cruz (deceased 2021)"
+
+  - name: "Eric Rains"
+    arxiv_names: ["Rains_E"]
+    affiliation: "Caltech"
+    topics: ["random matrices", "longest increasing subsequences", "elliptic hypergeometric", "quantum information"]
+
+  - name: "Anatoly Vershik"
+    arxiv_names: ["Vershik_A"]
+    affiliation: "St. Petersburg"
+    topics: ["asymptotic representation theory", "random Young diagrams", "Plancherel measure"]
+    disambiguation: "Anatoly Vershik, representation theory at PDMI St. Petersburg (deceased 2024)"
+
+  - name: "Sergei Kerov"
+    arxiv_names: ["Kerov_S"]
+    affiliation: "St. Petersburg"
+    topics: ["asymptotic representation theory", "random Young diagrams", "transition measure"]
+    disambiguation: "Sergei Kerov, Kerov-Vershik school, St. Petersburg (deceased 2000)"
+
+  - name: "Freeman Dyson"
+    arxiv_names: ["Dyson_F"]
+    affiliation: "IAS Princeton"
+    topics: ["random matrices", "Dyson Brownian motion", "circular ensembles"]
+    disambiguation: "Freeman Dyson, IAS Princeton (deceased 2020) — random matrix pioneer"
+
+  - name: "Madan Lal Mehta"
+    arxiv_names: ["Mehta_M"]
+    affiliation: "CEA Saclay"
+    topics: ["random matrices", "Gaussian ensembles", "correlation functions"]
+    disambiguation: "M.L. Mehta, author of 'Random Matrices' monograph (deceased 2006)"
+    high_ambiguity: true
+
+  - name: "Michael Prähofer"
+    arxiv_names: ["Praehofer_M", "Prahofer_M"]
+    affiliation: "TU Munich"
+    topics: ["KPZ", "PNG model", "Airy process", "random growth"]
+
+  - name: "Sandrine Péché"
+    arxiv_names: ["Peche_S"]
+    affiliation: "Paris"
+    topics: ["random matrices", "spiked models", "BBP transition", "universality"]
+
+  - name: "Philippe Biane"
+    arxiv_names: ["Biane_P"]
+    affiliation: "Paris-Est"
+    topics: ["free probability", "random matrices", "asymptotic representation theory", "random walks on groups"]
 
   - name: "Percy Deift"
     arxiv_names: ["Deift_P"]

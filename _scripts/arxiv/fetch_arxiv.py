@@ -467,7 +467,8 @@ def export_for_review(candidates, ai_decisions, processed):
     for entry in auto_accepted:
         aid = entry["arxiv_id"]
         date_prefix = entry["date"].split("T")[0]
-        filename = f"{date_prefix}-{aid}.md"
+        safe_id = aid.replace("/", "-")
+        filename = f"{date_prefix}-{safe_id}.md"
         filepath = OUTPUT_DIR / filename
         if not filepath.exists():
             filepath.write_text(generate_post(entry))
@@ -526,7 +527,8 @@ def import_review(all_papers, config, processed):
             }
 
         date_prefix = paper["date"].split("T")[0]
-        filename = f"{date_prefix}-{paper['arxiv_id']}.md"
+        safe_id = paper["arxiv_id"].replace("/", "-")
+        filename = f"{date_prefix}-{safe_id}.md"
         filepath = OUTPUT_DIR / filename
 
         if not filepath.exists():
@@ -569,11 +571,21 @@ def main():
                         help="Only include papers after this date (YYYY-MM-DD)")
     parser.add_argument("--before", type=str, default="",
                         help="Only include papers before this date (YYYY-MM-DD)")
+    parser.add_argument("--backfill", action="store_true",
+                        help="Include backfill_categories (hep-th, nlin.SI, cond-mat) for historical runs")
     args = parser.parse_args()
 
     config = load_config()
     processed = load_processed()
     categories = config.get("categories", ["math.PR"])
+    if args.backfill:
+        extra = config.get("backfill_categories", [])
+        # Deduplicate while preserving order
+        seen = set(categories)
+        for cat in extra:
+            if cat not in seen:
+                categories.append(cat)
+                seen.add(cat)
 
     # Quick path: just import from existing review.json
     if args.import_review:
@@ -596,7 +608,8 @@ def main():
         for r in accepted:
             aid = r["arxiv_id"]
             date_prefix = r["date"].split("T")[0]
-            filename = f"{date_prefix}-{aid}.md"
+            safe_id = aid.replace("/", "-")
+            filename = f"{date_prefix}-{safe_id}.md"
             filepath = OUTPUT_DIR / filename
             if not filepath.exists():
                 filepath.write_text(generate_post(r))
@@ -788,7 +801,8 @@ def main():
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         for paper in to_accept:
             date_prefix = paper["date"].split("T")[0]
-            filename = f"{date_prefix}-{paper['arxiv_id']}.md"
+            safe_id = paper["arxiv_id"].replace("/", "-")
+            filename = f"{date_prefix}-{safe_id}.md"
             filepath = OUTPUT_DIR / filename
             filepath.write_text(generate_post(paper))
             print(f"  WROTE {filename}")
