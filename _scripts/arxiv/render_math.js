@@ -226,6 +226,14 @@ const ARXIV_MACROS = {
   '\\polygon': '\\mathrm{polygon}',
   '\\fl': '\\lfloor',
   '\\ce': '\\lceil',
+  // Grassmannian, stabilizer
+  '\\Gr': '\\operatorname{Gr}',
+  '\\Stab': '\\operatorname{Stab}',
+  // More blackboard bold
+  '\\HH': '\\mathbb{H}',
+  '\\E': '\\mathbb{E}',
+  // q-binomial
+  '\\qbinom': '\\binom',
 };
 
 function renderExpression(latex, displayMode, warnings) {
