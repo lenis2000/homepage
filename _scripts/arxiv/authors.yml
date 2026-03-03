@@ -318,6 +318,68 @@ authors:
     affiliation: "Paris-Est"
     topics: ["free probability", "random matrices", "asymptotic representation theory", "random walks on groups"]
 
+  - name: "Alexander Its"
+    arxiv_names: ["Its_A"]
+    affiliation: "IUPUI"
+    topics: ["Riemann-Hilbert problems", "Painlevé equations", "random matrices", "Toeplitz determinants"]
+
+  - name: "Igor Krasovsky"
+    arxiv_names: ["Krasovsky_I"]
+    affiliation: "Imperial College"
+    topics: ["Toeplitz determinants", "random matrices", "Fisher-Hartwig", "Riemann-Hilbert"]
+
+  - name: "Estelle Basor"
+    arxiv_names: ["Basor_E"]
+    affiliation: "AIM"
+    topics: ["Toeplitz determinants", "random matrices", "Szegő limit theorem"]
+
+  - name: "Alice Guionnet"
+    arxiv_names: ["Guionnet_A"]
+    affiliation: "ENS Lyon"
+    topics: ["random matrices", "free probability", "universality", "beta-ensembles"]
+
+  - name: "Alexander Soshnikov"
+    arxiv_names: ["Soshnikov_A"]
+    affiliation: "UC Davis"
+    topics: ["random matrices", "universality", "determinantal point processes", "Wigner matrices"]
+
+  - name: "Dan Voiculescu"
+    arxiv_names: ["Voiculescu_D"]
+    affiliation: "Berkeley"
+    topics: ["free probability", "random matrices", "operator algebras"]
+
+  - name: "Nicolai Reshetikhin"
+    arxiv_names: ["Reshetikhin_N"]
+    affiliation: "Berkeley"
+    topics: ["quantum groups", "integrable lattice models", "random tilings", "exactly solvable models"]
+
+  - name: "Greg Kuperberg"
+    arxiv_names: ["Kuperberg_G"]
+    affiliation: "UC Davis"
+    topics: ["alternating sign matrices", "quantum groups", "symmetry classes"]
+
+  - name: "James Propp"
+    arxiv_names: ["Propp_J"]
+    affiliation: "UMass Lowell"
+    topics: ["arctic circle", "random tilings", "domino shuffling", "perfect matchings"]
+
+  - name: "Christian Krattenthaler"
+    arxiv_names: ["Krattenthaler_C"]
+    affiliation: "Vienna"
+    topics: ["lattice paths", "plane partitions", "determinantal formulas", "combinatorics"]
+
+  - name: "Anatol Kirillov"
+    arxiv_names: ["Kirillov_A"]
+    affiliation: "RIMS Kyoto"
+    topics: ["Bethe ansatz", "combinatorics of representations", "Schubert calculus"]
+    high_ambiguity: true
+    disambiguation: "Anatol N. Kirillov at RIMS Kyoto — Bethe ansatz, combinatorial representation theory. Not A.A. Kirillov (father, orbit method)."
+
+  - name: "Günter Schütz"
+    arxiv_names: ["Schutz_G", "Schuetz_G"]
+    affiliation: "Jülich"
+    topics: ["ASEP", "Bethe ansatz", "interacting particle systems", "exact solutions"]
+
   - name: "Percy Deift"
     arxiv_names: ["Deift_P"]
     affiliation: "NYU"
