@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-install arxiv-venv arxiv-related arxiv-rebuild
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle
 
 serve:
 	bundle exec jekyll serve 
@@ -126,6 +126,12 @@ arxiv-venv:
 arxiv-rebuild:
 	python3 _scripts/arxiv/build_search_index.py
 	@$(MAKE) arxiv-related
+
+arxiv-kaggle:
+	@echo "Downloading latest Kaggle arXiv metadata..."
+	@mkdir -p ~/Data/arxiv
+	@pip install --quiet kaggle && kaggle datasets download -d Cornell-University/arxiv -p ~/Data/arxiv --unzip
+	@echo "Done. Run 'make arxiv-rebuild' to update indices."
 
 arxiv-related: arxiv-venv
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/build_arxiv_embeddings.py
