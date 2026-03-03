@@ -363,9 +363,63 @@ nav_weight: 4
   [data-theme="dark"] .arxiv-related-title { color: var(--link-color); }
   [data-theme="dark"] .arxiv-related-authors { color: var(--text-primary); }
   [data-theme="dark"] .arxiv-related-abstract { color: var(--text-secondary, #aaa); }
+  /* Back to top button — mobile only */
+  .arxiv-back-top {
+    display: none;
+  }
+  @media (max-width: 767px) {
+    .arxiv-back-top {
+      display: none;
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 200;
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(35, 45, 75, 0.75);
+      color: #fff;
+      font-size: 18px;
+      line-height: 36px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .arxiv-back-top.visible {
+      display: block;
+      opacity: 1;
+    }
+  }
+  [data-theme="dark"] .arxiv-back-top {
+    background: rgba(124, 108, 240, 0.8);
+  }
 </style>
 
+<button class="arxiv-back-top" id="arxiv-back-top" aria-label="Back to top">&#9650;</button>
+
 <script src="{{ site.url }}/assets/js/arxiv-feed.js"></script>
+<script>
+(function() {
+  var btn = document.getElementById('arxiv-back-top');
+  if (!btn) return;
+  var ticking = false;
+  window.addEventListener('scroll', function() {
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(function() {
+        btn.classList.toggle('visible', window.scrollY > 400);
+        ticking = false;
+      });
+    }
+  });
+  btn.addEventListener('click', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+})();
+</script>
 
 <!-- KaTeX CSS for pre-rendered MathML math in abstracts -->
 <link rel="stylesheet" href="/katex-0.16.9/katex.min.css">
