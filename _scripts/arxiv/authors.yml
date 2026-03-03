@@ -669,3 +669,91 @@ authors:
     arxiv_names: ["Sportiello_A"]
     affiliation: "LIPN Paris"
     topics: ["Arctic curves", "random tilings", "lattice models", "combinatorics"]
+
+  - name: "Lingfu Zhang"
+    arxiv_names: ["Zhang_L"]
+    affiliation: "Caltech"
+    topics: ["KPZ", "directed landscape", "Airy line ensembles", "random matrices"]
+    high_ambiguity: true
+    disambiguation: "Lingfu Zhang, KPZ / directed landscape probabilist at Caltech — 2026 Sloan Fellow. Very common surname."
+
+  - name: "Jiaming Xu"
+    arxiv_names: ["Xu_J"]
+    affiliation: "Ohio State"
+    topics: ["random matrices", "beta-ensembles", "Airy line ensembles", "Dunkl operators"]
+    high_ambiguity: true
+    disambiguation: "Jiaming Xu, random matrices / beta-ensembles at Ohio State — PhD from Wisconsin with Gorin and Valkó. Not CS/information theory Jiaming Xu at Duke."
+
+  - name: "Xiao Shen"
+    arxiv_names: ["Shen_X"]
+    affiliation: "NC State"
+    topics: ["KPZ", "Busemann functions", "exactly solvable models", "random polymers"]
+    high_ambiguity: true
+    disambiguation: "Xiao Shen, KPZ / Busemann functions probabilist — not other X. Shens"
+
+  - name: "Yu Gu"
+    arxiv_names: ["Gu_Y"]
+    affiliation: "Maryland"
+    topics: ["KPZ equation", "stochastic PDE", "periodic KPZ", "effective diffusivities"]
+    high_ambiguity: true
+    disambiguation: "Yu Gu, stochastic PDE / KPZ probabilist at University of Maryland — very common name"
+
+  - name: "Zoe Himwich"
+    arxiv_names: ["Himwich_Z"]
+    affiliation: "Columbia"
+    topics: ["directed landscape", "open KPZ", "black noise", "stationary measures"]
+
+  - name: "Yiming Tang"
+    arxiv_names: ["Tang_Y"]
+    affiliation: ""
+    topics: ["KPZ equation", "Robin boundary conditions", "stochastic PDE"]
+    high_ambiguity: true
+    disambiguation: "Yiming Tang, KPZ / stochastic PDE — not other Y. Tangs"
+
+  - name: "Alexander Dunlap"
+    arxiv_names: ["Dunlap_A"]
+    affiliation: "NYU"
+    topics: ["KPZ", "stochastic PDE", "viscous shocks", "random media"]
+
+  - name: "Jhih-Huang Li"
+    arxiv_names: ["Li_J"]
+    affiliation: ""
+    topics: ["PushASEP", "contour integrals", "integrable probability"]
+    high_ambiguity: true
+    disambiguation: "Jhih-Huang Li, integrable probability — PushASEP, coauthor with Axel Saenz. Extremely common surname."
+
+  - name: "Kailun Chen"
+    arxiv_names: ["Chen_K"]
+    affiliation: ""
+    topics: ["ASEP", "Mallows measure", "KPZ stationary horizon"]
+    high_ambiguity: true
+    disambiguation: "Kailun Chen, integrable probability — ASEP speed process, Mallows product measure with Bufetov. Extremely common surname."
+
+  - name: "Chiara Franceschini"
+    arxiv_names: ["Franceschini_C"]
+    affiliation: "Modena"
+    topics: ["ASEP duality", "orthogonal polynomials", "quantum groups", "interacting particle systems"]
+
+  - name: "Sourav Sarkar"
+    arxiv_names: ["Sarkar_S"]
+    affiliation: ""
+    topics: ["KPZ convergence", "exclusion processes", "KPZ fixed point"]
+    high_ambiguity: true
+    disambiguation: "Sourav Sarkar, KPZ / exclusion processes — coauthor with Quastel on ASEP→KPZ fixed point convergence. Common name."
+
+  - name: "Sam Groathouse"
+    arxiv_names: ["Groathouse_S"]
+    affiliation: ""
+    topics: ["KPZ", "jointly invariant measures", "random polymers"]
+
+  - name: "Levi Haunschmid-Sibitz"
+    arxiv_names: ["Haunschmid-Sibitz_L"]
+    affiliation: ""
+    topics: ["stochastic six-vertex model", "speed process", "interacting particle systems"]
+
+  - name: "Jiyue Zeng"
+    arxiv_names: ["Zeng_J"]
+    affiliation: "Columbia"
+    topics: ["last passage percolation", "stationary measures", "geometric LPP"]
+    high_ambiguity: true
+    disambiguation: "Jiyue Zeng, LPP / KPZ at Columbia — not other J. Zengs"

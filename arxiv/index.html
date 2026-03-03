@@ -155,39 +155,16 @@ nav_weight: 4
   @media (max-width: 767px) {
     #arxiv-filters-toggle { display: inline-block; min-height: 44px; }
   }
-  /* Collapse category badges on mobile */
+  /* Tags toggle: hidden everywhere (badges always visible) */
   .arxiv-tags-toggle {
     display: none;
   }
   @media (max-width: 767px) {
-    .arxiv-cat-badge { display: none; }
-    .arxiv-tags-toggle {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 44px;
-      min-width: 44px;
-      cursor: pointer;
-      color: #495057;
-      font-size: 0.75em;
-      border: 1px solid #adb5bd;
-      border-radius: 3px;
-      padding: 0 4px;
-      margin-right: 2px;
-      background: none;
-      vertical-align: middle;
-      line-height: 1.4;
-    }
-    .arxiv-tags-toggle:hover { background: #e9ecef; }
-    .arxiv-tags-expanded .arxiv-cat-badge { display: inline; }
-    .arxiv-tags-expanded .arxiv-tags-toggle::after { content: ' \2212'; }
     #arxiv-filters-panel { display: none; }
     #arxiv-filters-panel.open { display: block; }
     .arxiv-date-col { width: 5.5em; font-size: 0.88em; }
     .arxiv-entry { gap: 0.5em; }
     .arxiv-abstract-toggle { min-height: 44px; display: inline-flex; align-items: center; }
-    [data-theme="dark"] .arxiv-tags-toggle { color: var(--text-secondary); border-color: var(--border-color); }
-    [data-theme="dark"] .arxiv-tags-toggle:hover { background-color: #3a3a3a; }
   }
   .arxiv-body em { cursor: pointer; }
   .arxiv-body em:hover { text-decoration: underline; }
