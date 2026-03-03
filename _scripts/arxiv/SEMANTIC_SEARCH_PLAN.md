@@ -2,89 +2,66 @@
 
 ## Goal
 
-Scan the entire Kaggle arXiv metadata (~3M papers) to find integrable probability papers not yet in the feed, using bge-m3 embeddings and cosine similarity against the known 4,068 papers.
+Scan the entire Kaggle arXiv metadata (~3M papers) to find integrable probability papers not yet in the feed, using bge-m3 embeddings and cosine similarity against the known ~4,068 papers.
 
-## What exists already
+## What exists
 
-- `build_arxiv_embeddings.py` — embeds our 4,068 papers using raw LaTeX from Kaggle DB, computes pairwise similarity, writes `related-papers:` into post front matter
-- `.embedding-cache.json` — SHA-256-keyed cache of all computed embeddings (portable between machines)
-- `assets/data/arxiv-vectors.npy` — 4068×1024 float32 matrix of known paper vectors
-- `make arxiv-related` — runs the above
-- `make arxiv-kaggle` — downloads latest Kaggle snapshot
+| File | Purpose |
+|------|---------|
+| `build_arxiv_embeddings.py` | Embeds our ~4k papers (raw LaTeX from Kaggle), computes pairwise similarity, writes `related-papers:` into post front matter |
+| `scan_full_arxiv.py` | Scans full Kaggle DB (~3M papers), finds candidates similar to our papers |
+| `.embedding-cache.json` | JSON cache for the 4k paper embeddings (small, portable) |
+| `.embedding-cache-full.db` | SQLite cache for the full 3M scan (incremental writes, no full load) |
+| `candidates.csv` | Output: ranked list of missed paper candidates |
+| `arxiv-vectors.npy` | 4068×1024 float32 matrix of known paper vectors (reference set) |
 
-## Plan
+## Makefile targets
 
-### Step 1: Build full-database embedding script
+| Target | What it does |
+|--------|-------------|
+| `make arxiv-related` | Embed 4k papers, compute related-papers, write into posts |
+| `make arxiv-scan ARGS="--threshold 0.65"` | Scan full Kaggle DB for missed papers |
+| `make arxiv-rebuild` | Rebuild search index + related papers (no API fetch) |
+| `make arxiv-kaggle` | Download latest Kaggle arXiv snapshot |
 
-Create `_scripts/arxiv/scan_full_arxiv.py`:
+## How `scan_full_arxiv.py` works
 
-1. Load the 4,068 known vectors from `arxiv-vectors.npy` (the "reference set")
-2. Load the set of already-tracked arXiv IDs (to skip them)
-3. Stream Kaggle JSON-lines file (~3M papers)
-4. For each paper:
-   - Skip if already tracked
-   - Build text: `"{title}. {abstract}"` (raw LaTeX)
-   - Check embedding cache; if miss, queue for batch embedding
-5. Embed in batches (batch_size=64 or 128 on 64G machine)
-   - Save cache incrementally every N batches (e.g., every 1000)
-   - Print progress: papers processed, cache hits, elapsed time
-6. For each embedded paper, compute max cosine similarity against reference set:
-   - `max_sim = max(paper_vec @ reference_matrix.T)`
-7. Collect candidates above threshold (start with 0.65, adjustable)
-8. Output sorted CSV: `similarity, arxiv_id, title, categories, authors`
+1. Load reference vectors (`arxiv-vectors.npy`) — our ~4k known int-prob papers
+2. Stream Kaggle JSON-lines (~3M papers), skip already-tracked IDs
+3. For each paper: `text = "{title}. {abstract}"` (raw LaTeX)
+4. Check SQLite cache by SHA-256 key; batch-embed uncached papers with bge-m3
+5. Compute similarity in chunks (10k papers × 4068 reference): `max_sim = max(vec @ ref.T)`
+6. Candidates above threshold → `candidates.csv` sorted by similarity descending
+7. Cache writes are incremental (SQLite WAL mode) — safe to interrupt and resume
 
-### Step 2: Run on Ryzen machine
+## Running on Ryzen (64G RAM)
 
 ```bash
-# Copy to Ryzen machine:
-scp _scripts/arxiv/scan_full_arxiv.py ryzen:Homepage/_scripts/arxiv/
-scp _scripts/arxiv/.embedding-cache.json ryzen:Homepage/_scripts/arxiv/
-scp assets/data/arxiv-vectors.npy ryzen:Homepage/assets/data/
-
-# On Ryzen:
+# Everything is in the repo, just pull and run:
+git pull
 make arxiv-venv
-_scripts/arxiv/venv/bin/python _scripts/arxiv/scan_full_arxiv.py
+make arxiv-scan ARGS="--threshold 0.65 --batch-size 128"
 
-# Copy results back:
-scp ryzen:Homepage/_scripts/arxiv/.embedding-cache.json _scripts/arxiv/
-scp ryzen:Homepage/_scripts/arxiv/candidates.csv _scripts/arxiv/
+# Results appear in _scripts/arxiv/candidates.csv
+# The SQLite cache persists for re-runs with different thresholds
 ```
 
-### Step 3: Review candidates
-
-- Open `candidates.csv`, review by descending similarity
-- Pick threshold where results turn to garbage
-- Decide which papers to add to the feed
-
-### Step 4: Add accepted papers
-
-- Either manually create posts, or extend `backfill_kaggle.py` to accept a list of arXiv IDs
-- Run `make arxiv-rebuild` to update search index + related papers
+Adjusting threshold after a full run is instant — re-run with a different `--threshold` and only the CSV output changes (all embeddings cached in SQLite).
 
 ## Performance estimates
 
-| Step | Time (64G Ryzen, CPU) | Time (Mac, MPS) |
-|------|----------------------|-----------------|
-| Embed 3M papers (batch=128) | ~4-6 hours | ~12-15 hours |
-| Similarity (3M × 4068) | ~30 seconds | ~30 seconds |
-| Cache save (3M entries) | ~2 minutes | ~2 minutes |
+| Step | 64G Ryzen (CPU) | Mac (MPS) |
+|------|-----------------|-----------|
+| Embed ~3M papers (first run) | ~4-6 hours (batch=128) | ~12-15 hours (batch=4) |
+| Re-run with different threshold | ~2 min (all cached) | ~2 min |
+| Similarity (streamed in 10k chunks) | ~30 sec | ~30 sec |
 
-- RAM: 3M × 1024 × 4 bytes = ~12GB for full vector matrix (fits in 64G)
-- Cache file: ~15-20GB JSON (could switch to numpy format if too large)
-- Can stream similarity computation in chunks if RAM is tight
+- RAM: streams in 10k chunks, never loads full 3M matrix
+- SQLite cache: ~5-8 GB on disk (BLOB-packed float32, much smaller than JSON)
+- Safe to interrupt: SQLite WAL mode, resumes from cache on next run
 
-## Cache format consideration
+## After getting candidates
 
-The current cache is JSON (`{sha256: [float, ...], ...}`). At 3M entries this would be ~20GB. Consider:
-- **Option A**: Keep JSON, accept large file (simple, portable)
-- **Option B**: Switch to numpy `.npy` with a separate ID mapping (compact, ~12GB)
-- **Option C**: Use SQLite with BLOB values (incremental, no full load)
-
-Recommend **Option C** (SQLite) for the full scan — incremental writes, no need to load entire cache into memory.
-
-## Makefile target
-
-```makefile
-arxiv-scan:
-	@_scripts/arxiv/venv/bin/python _scripts/arxiv/scan_full_arxiv.py
-```
+1. Review `candidates.csv` — find where results turn to garbage, pick threshold
+2. Add accepted papers: extend `backfill_kaggle.py` to accept a list of arXiv IDs, or create posts manually
+3. Run `make arxiv-rebuild` to update search index + related papers
