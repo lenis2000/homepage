@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-install
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-install arxiv-venv arxiv-related
 
 serve:
 	bundle exec jekyll serve 
@@ -118,3 +118,10 @@ arxiv-install:
 arxiv:
 	python3 _scripts/arxiv/fetch_arxiv.py --days $(or $(DAYS),30) --review
 	python3 _scripts/arxiv/build_search_index.py
+
+arxiv-venv:
+	@test -d _scripts/arxiv/venv || (python3 -m venv _scripts/arxiv/venv && \
+	  _scripts/arxiv/venv/bin/pip install -r _scripts/arxiv/requirements-semantic.txt)
+
+arxiv-related: arxiv-venv
+	@_scripts/arxiv/venv/bin/python _scripts/arxiv/build_arxiv_embeddings.py

@@ -17,17 +17,43 @@ nav_weight: 4
     <button class="btn btn-outline-secondary" type="button" id="arxiv-search-clear" aria-label="Clear search and filters">Clear</button>
   </div>
 
-  <!-- Filter toggle (mobile only) -->
-  <button id="arxiv-filters-toggle" class="btn btn-sm btn-outline-secondary mb-2" type="button" aria-expanded="false" aria-controls="arxiv-filters-panel">Filters</button>
-
-  <div id="arxiv-filters-panel">
-    <!-- Category Filter Buttons -->
-    <div id="arxiv-cat-buttons" class="d-flex flex-wrap gap-2 mb-3" role="group" aria-label="Filter by arXiv category">
-      <!-- Dynamically generated -->
+  <!-- Date Range Dropdown -->
+  <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+    <div id="arxiv-date-filter" class="arxiv-dropdown">
+      <button class="btn btn-sm btn-outline-secondary arxiv-dropdown-btn" type="button" id="arxiv-date-btn" aria-haspopup="true" aria-expanded="false">
+        <span id="arxiv-date-label">All time</span> <span class="arxiv-dropdown-arrow">&#9662;</span>
+      </button>
+      <div class="arxiv-dropdown-menu" id="arxiv-date-menu" role="menu">
+        <button class="arxiv-dropdown-item active" role="menuitem" data-date="all">All time</button>
+        <hr class="arxiv-dropdown-divider">
+        <button class="arxiv-dropdown-item" role="menuitem" data-date="this-week">This week</button>
+        <button class="arxiv-dropdown-item" role="menuitem" data-date="last-week">Last week</button>
+        <button class="arxiv-dropdown-item" role="menuitem" data-date="this-month">This month</button>
+        <button class="arxiv-dropdown-item" role="menuitem" data-date="last-month">Last month</button>
+        <button class="arxiv-dropdown-item" role="menuitem" data-date="this-year">This year</button>
+        <button class="arxiv-dropdown-item" role="menuitem" data-date="last-year">Last year</button>
+        <hr class="arxiv-dropdown-divider">
+        <div class="arxiv-dropdown-custom" role="menuitem">
+          <span class="arxiv-dropdown-custom-label">Custom year range</span>
+          <div class="arxiv-dropdown-custom-inputs">
+            <input type="text" id="arxiv-year-from" class="form-control form-control-sm" placeholder="From" maxlength="4" size="4" aria-label="From year">
+            <span>&ndash;</span>
+            <input type="text" id="arxiv-year-to" class="form-control form-control-sm" placeholder="To" maxlength="4" size="4" aria-label="To year">
+            <button class="btn btn-sm btn-outline-primary" id="arxiv-year-range-apply" type="button">Go</button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Year Filter Buttons -->
-    <div id="arxiv-year-buttons" class="d-flex flex-wrap gap-2 mb-4" role="group" aria-label="Filter by year">
+    <!-- Category Filter Toggle -->
+    <button id="arxiv-cat-toggle" class="btn btn-sm btn-outline-secondary" type="button" aria-expanded="false" aria-controls="arxiv-cat-panel">
+      <span id="arxiv-cat-toggle-label">Filter by category</span>
+    </button>
+  </div>
+
+  <!-- Category Filter Buttons (hidden by default) -->
+  <div id="arxiv-cat-panel" class="mb-3" hidden>
+    <div id="arxiv-cat-buttons" class="d-flex flex-wrap gap-2" role="group" aria-label="Filter by arXiv category">
       <!-- Dynamically generated -->
     </div>
   </div>
@@ -66,18 +92,21 @@ nav_weight: 4
       data-month="{{ post.date | date: '%Y-%m' }}"
       data-categories="{{ post.arxiv-categories | join: ' ' }}"
       data-search="{{ post.arxiv-id }} {{ post.title }} {{ post.authors | join: ' ' }}"
-      data-year="{{ post.date | date: '%Y' }}">
+      data-date="{{ post.date | date: '%Y-%m-%d' }}"
+      data-year="{{ post.date | date: '%Y' }}"
+      data-related="{{ post.related-papers | join: ' ' }}">
     <div class="arxiv-entry">
       <div class="arxiv-date-col"><time datetime="{{ post.date | date: '%Y-%m-%d' }}">{{ post.date | date: '%Y-%m-%d' }}</time><br><a href="https://arxiv.org/abs/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="arxiv-id-label">{{ post.arxiv-id }}<span class="sr-only"> (opens in new tab)</span></a></div>
       <div class="arxiv-body">
         <span class="arxiv-tags">{% if post.arxiv-categories.size > 0 %}<button class="arxiv-tags-toggle" aria-label="Show tags" aria-expanded="false">tags</button>{% endif %}{% for cat in post.arxiv-categories %}<span class="badge arxiv-cat-badge">{{ cat }}</span> {% endfor %}</span>
         <b>{{ post.authors | join: ", " }}</b>,
         "<em>{{ post.title }}</em>"
-        <span class="arxiv-links"><a href="https://arxiv.org/abs/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-abs">arXiv<span class="sr-only"> (opens in new tab)</span></a><a href="https://arxiv.org/pdf/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-pdf">pdf<span class="sr-only"> (opens in new tab)</span></a><a href="https://arxiv.org/html/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-html">html<span class="sr-only"> (opens in new tab)</span></a></span>
+        <span class="arxiv-links"><a href="https://arxiv.org/abs/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-abs">arXiv<span class="sr-only"> (opens in new tab)</span></a><a href="https://arxiv.org/pdf/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-pdf">pdf<span class="sr-only"> (opens in new tab)</span></a><a href="https://arxiv.org/html/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-html">html<span class="sr-only"> (opens in new tab)</span></a>{% if post.related-papers.size > 0 %}<button class="arxiv-related-btn badge arxiv-link-badge" aria-expanded="false">Related</button>{% endif %}</span>
         {% if post.content != blank %}<details>
           <summary class="arxiv-abstract-toggle">Abstract</summary>
           <div class="arxiv-abstract">{{ post.content }}</div>
         </details>{% endif %}
+        <div class="arxiv-related-dropdown" hidden></div>
       </div>
     </div>
   </li>
@@ -172,21 +201,64 @@ nav_weight: 4
     color: #000;
     padding: 0 1px;
   }
-  /* Filters toggle: hidden on desktop, visible on mobile */
-  #arxiv-filters-toggle { display: none; }
-  @media (max-width: 767px) {
-    #arxiv-filters-toggle { display: inline-block; min-height: 44px; }
+  /* Filter bar buttons – shared sizing */
+  .arxiv-dropdown-btn, #arxiv-cat-toggle {
+    display: inline-flex; align-items: center; gap: 0.4em;
+    min-height: 34px; white-space: nowrap;
+    font-size: 0.88em;
+    color: #232d4b !important; border-color: #232d4b !important;
+    background: transparent;
   }
+  .arxiv-dropdown-btn:hover, #arxiv-cat-toggle:hover {
+    background: #232d4b !important; color: #fff !important;
+  }
+  /* Date dropdown */
+  .arxiv-dropdown { position: relative; display: inline-block; }
+  .arxiv-dropdown-arrow { font-size: 0.7em; }
+  .arxiv-dropdown-menu {
+    display: none; position: absolute; top: 100%; left: 0; z-index: 100;
+    min-width: 220px; margin-top: 2px; padding: 4px 0;
+    background: #fff; border: 1px solid #bbb; border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .arxiv-dropdown-menu.open { display: block; }
+  .arxiv-dropdown-item {
+    display: block; width: 100%; padding: 7px 14px;
+    text-align: left; background: none; border: none;
+    font-size: 0.92em; cursor: pointer; color: #222;
+  }
+  .arxiv-dropdown-item:hover { background: #e9ecef; }
+  .arxiv-dropdown-item.active { font-weight: 700; color: #b45309; }
+  .arxiv-dropdown-divider { margin: 4px 0; border: none; border-top: 1px solid #ddd; }
+  .arxiv-dropdown-custom { padding: 7px 14px; }
+  .arxiv-dropdown-custom-label { font-size: 0.85em; color: #555; display: block; margin-bottom: 4px; }
+  .arxiv-dropdown-custom-inputs {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .arxiv-dropdown-custom-inputs input { width: 60px; text-align: center; }
+  /* Category toggle label update when active */
+  #arxiv-cat-toggle.has-filter { background: #e57200 !important; color: #fff !important; border-color: #e57200 !important; }
+  #arxiv-cat-toggle.has-filter:hover { background: #c45f00 !important; border-color: #c45f00 !important; }
+  /* Date button when a filter is active */
+  .arxiv-dropdown-btn.has-filter { background: #e57200 !important; color: #fff !important; border-color: #e57200 !important; }
+  .arxiv-dropdown-btn.has-filter:hover { background: #c45f00 !important; border-color: #c45f00 !important; }
+  /* Category count badge */
+  .arxiv-cat-count {
+    font-size: 0.78em; font-weight: normal;
+    color: #888; margin-left: 2px;
+  }
+  .arxiv-cat-count::before { content: "("; }
+  .arxiv-cat-count::after { content: ")"; }
+  .category-btn.active .arxiv-cat-count { color: inherit; opacity: 0.7; }
   /* Tags toggle: hidden everywhere (badges always visible) */
   .arxiv-tags-toggle {
     display: none;
   }
   @media (max-width: 767px) {
-    #arxiv-filters-panel { display: none; }
-    #arxiv-filters-panel.open { display: block; }
     .arxiv-date-col { width: 5.5em; font-size: 0.88em; }
     .arxiv-entry { gap: 0.5em; }
     .arxiv-abstract-toggle { min-height: 44px; display: inline-flex; align-items: center; }
+    .arxiv-dropdown-btn, #arxiv-cat-toggle { min-height: 44px; }
   }
   .arxiv-body em { cursor: pointer; }
   .arxiv-body em:hover { text-decoration: underline; }
@@ -206,6 +278,77 @@ nav_weight: 4
   [data-theme="dark"] .arxiv-abstract-toggle { color: var(--link-color) !important; background-color: transparent !important; }
   [data-theme="dark"] .arxiv-abstract-toggle:hover { color: var(--link-hover) !important; }
   [data-theme="dark"] .arxiv-abstract { border-left-color: var(--border-color); }
+  [data-theme="dark"] .arxiv-dropdown-btn, [data-theme="dark"] #arxiv-cat-toggle {
+    color: var(--text-primary, #ddd) !important; border-color: var(--text-secondary, #888) !important;
+  }
+  [data-theme="dark"] .arxiv-dropdown-btn:hover, [data-theme="dark"] #arxiv-cat-toggle:hover {
+    background: var(--text-secondary, #888) !important; color: #fff !important;
+  }
+  [data-theme="dark"] .arxiv-dropdown-menu { background: var(--bg-secondary, #1e1e1e); border-color: var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+  [data-theme="dark"] .arxiv-dropdown-item { color: var(--text-primary, #ddd); }
+  [data-theme="dark"] .arxiv-dropdown-item:hover { background: var(--bg-tertiary, #2a2a2a); }
+  [data-theme="dark"] .arxiv-dropdown-item.active { color: #f59e0b; }
+  [data-theme="dark"] .arxiv-dropdown-divider { border-top-color: var(--border-color); }
+  [data-theme="dark"] .arxiv-dropdown-custom-label { color: #999; }
+  /* Related papers button and dropdown */
+  .arxiv-related-btn {
+    background-color: #6c5ce7;
+    cursor: pointer;
+    border: none;
+  }
+  .arxiv-related-btn:hover { background-color: #5a4bd1; }
+  .arxiv-related-btn[aria-expanded="true"] { background-color: #4a3abf; }
+  .arxiv-related-dropdown {
+    margin-top: 0.5em;
+    padding: 0;
+    border-left: 3px solid #6c5ce7;
+    font-size: 0.92em;
+  }
+  .arxiv-related-item {
+    padding: 0.5em 0.75em;
+    border-bottom: 1px solid #eee;
+  }
+  .arxiv-related-item:last-child { border-bottom: none; }
+  .arxiv-related-item-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5em;
+    flex-wrap: wrap;
+  }
+  .arxiv-related-date {
+    color: #666;
+    font-size: 0.88em;
+    white-space: nowrap;
+  }
+  .arxiv-related-title {
+    font-weight: 700;
+    color: #1a5276;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .arxiv-related-title:hover { text-decoration: underline; }
+  .arxiv-related-authors {
+    font-size: 0.9em;
+    color: #333;
+    margin-top: 2px;
+  }
+  .arxiv-related-abstract {
+    font-size: 0.88em;
+    color: #555;
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+  .arxiv-related-links { margin-top: 4px; }
+  /* Dark mode */
+  [data-theme="dark"] .arxiv-related-btn { background-color: #7c6cf0; }
+  [data-theme="dark"] .arxiv-related-btn:hover { background-color: #9b8ff5; }
+  [data-theme="dark"] .arxiv-related-btn[aria-expanded="true"] { background-color: #9b8ff5; }
+  [data-theme="dark"] .arxiv-related-dropdown { border-left-color: #7c6cf0; }
+  [data-theme="dark"] .arxiv-related-item { border-bottom-color: var(--border-color); }
+  [data-theme="dark"] .arxiv-related-date { color: #999; }
+  [data-theme="dark"] .arxiv-related-title { color: var(--link-color); }
+  [data-theme="dark"] .arxiv-related-authors { color: var(--text-primary); }
+  [data-theme="dark"] .arxiv-related-abstract { color: var(--text-secondary, #aaa); }
 </style>
 
 <script src="{{ site.url }}/assets/js/arxiv-feed.js"></script>

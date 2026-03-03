@@ -137,6 +137,9 @@ _scripts/arxiv/ai_log.jsonl
 _scripts/arxiv/review.json
 _scripts/arxiv/fetch_cache.json
 _scripts/arxiv/arxiv-review/arxiv-review
+_scripts/arxiv/venv/
+_scripts/arxiv/.embedding-cache.json
+assets/data/arxiv-vectors.npy
 
 .gemini/
 gha-creds-*.json
