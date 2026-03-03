@@ -79,7 +79,7 @@ nav_weight: 4
 <template id="arxiv-data">
 {% assign arxiv_posts = site.posts | where: "categories", "arxiv-feed" %}
 {% assign current_month = "" %}
-{% for post in arxiv_posts %}
+{% for post in arxiv_posts limit: 200 %}
   {% assign post_month = post.date | date: '%B %Y' %}
   {% if post_month != current_month %}
     {% assign current_month = post_month %}

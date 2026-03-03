@@ -82,6 +82,14 @@ document.addEventListener('DOMContentLoaded', function() {
             initButtons();
         });
 
+    // Load overflow papers (full prebuilt HTML for papers beyond the template)
+    fetch('/arxiv/papers-overflow.html')
+        .then(function(r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+        .then(function(html) {
+            parseOverflow(html);
+        })
+        .catch(function() { /* page works with template papers only */ });
+
     // --- Date range helpers ---
 
     function getDateRange(filterKey) {
@@ -248,6 +256,47 @@ document.addEventListener('DOMContentLoaded', function() {
             html += '<button class="btn btn-sm category-btn" data-category="' + cat + '" aria-pressed="false">' + cat + ' <span class="arxiv-cat-count">' + catCounts[cat] + '</span></button>';
         });
         catButtons.innerHTML = html;
+    }
+
+    // --- Parse overflow papers (prebuilt HTML loaded async) ---
+
+    function parseOverflow(html) {
+        var tmp = document.createElement('div');
+        tmp.innerHTML = html;
+
+        var papers = tmp.querySelectorAll('li[data-id]');
+        var months = tmp.querySelectorAll('li.arxiv-month-header');
+
+        for (var j = 0; j < months.length; j++) {
+            var hdr = months[j];
+            var mk = hdr.dataset.month;
+            if (!monthMap[mk]) monthMap[mk] = hdr;
+        }
+
+        for (var i = 0; i < papers.length; i++) {
+            var el = papers[i];
+            var id = el.dataset.id;
+            if (paperMap[id]) continue;
+            paperMap[id] = el;
+            idToIndex[id] = orderedPapers.length;
+            orderedPapers.push({
+                id: id,
+                month: el.dataset.month,
+                year: el.dataset.year,
+                date: el.dataset.date || '',
+                categories: el.dataset.categories || '',
+                search: el.dataset.search || ''
+            });
+        }
+
+        // Update display to include overflow papers
+        var hadFilter = activeCategory !== 'all' || activeDateFilter !== 'all' || searchInput.value;
+        resetDisplayList();
+        if (hadFilter) {
+            applyFilter();
+        } else if (renderedCount < displayList.length) {
+            renderBatch();
+        }
     }
 
     // --- Rendering ---
