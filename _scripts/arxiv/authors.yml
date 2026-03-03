@@ -262,7 +262,7 @@ authors:
     affiliation: "Bonn"
     topics: ["KPZ", "TASEP", "Airy processes", "random growth"]
     high_ambiguity: true
-    disambiguation: "Patrik Ferrari, KPZ / TASEP probabilist at Bonn — not other P. Ferraris"
+    disambiguation: "Patrik L. Ferrari at Bonn — KPZ, TASEP, Airy processes. Both Patrik and Pablo Ferrari are tracked separately."
 
   - name: "Herbert Spohn"
     arxiv_names: ["Spohn_H"]
@@ -949,7 +949,7 @@ authors:
     affiliation: "Buenos Aires"
     topics: ["TASEP", "interacting particle systems", "second class particles", "shock fluctuations"]
     high_ambiguity: true
-    disambiguation: "Pablo A. Ferrari, TASEP pioneer at Buenos Aires — NOT Patrik Ferrari (Bonn, KPZ/Airy processes)"
+    disambiguation: "Pablo A. Ferrari at Buenos Aires — TASEP, second class particles, interacting particle systems. Both Pablo and Patrik Ferrari are tracked separately. ACCEPT papers by Pablo."
 
   - name: "Cristian Giardina"
     arxiv_names: ["Giardina_C"]
