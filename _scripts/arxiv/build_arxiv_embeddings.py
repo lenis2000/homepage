@@ -198,6 +198,10 @@ def update_post_frontmatter(filepath, related_ids):
             lines += f'\n  - "{rid}"'
         front = front.rstrip() + lines + "\n"
 
+    # Ensure front matter ends with a newline before closing ---
+    if not front.endswith("\n"):
+        front += "\n"
+
     new_text = "---" + front + "---" + body
 
     if new_text == text:
