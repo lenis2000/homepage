@@ -36,6 +36,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 INDEX_FILE = REPO_ROOT / "assets" / "data" / "arxiv-index.json"
 VECTORS_FILE = REPO_ROOT / "assets" / "data" / "arxiv-vectors.npy"
+POSTS_DIR = REPO_ROOT / "_posts" / "arxiv"
 CACHE_DB = SCRIPT_DIR / ".embedding-cache-full.db"
 REVIEW_FILE = SCRIPT_DIR / "scan-review.json"
 
@@ -119,6 +120,28 @@ def text_key(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def _clean_author(name):
+    """Strip LaTeX accent commands from author names."""
+    import re as _re
+    name = name.strip()
+    name = name.replace("\\'", "'").replace('\\"', '').replace("\\~", "")
+    name = _re.sub(r"\\[vcuHkdb]\{(.)\}", r"\1", name)  # \v{c} -> c etc.
+    name = name.replace("{", "").replace("}", "")
+    name = name.replace("\\", "")
+    return name
+
+
+def _arxiv_id_to_date_fallback(aid):
+    """Fallback: convert arXiv ID to approximate date (YYYY-MM-01)."""
+    if "/" in aid:
+        num = aid.split("/")[1]
+        yy, mm = num[:2], num[2:4]
+    else:
+        yy, mm = aid[:2], aid[2:4]
+    century = "19" if int(yy) > 50 else "20"
+    return f"{century}{yy}-{mm}-01"
+
+
 def load_tracked_ids():
     """Get arXiv IDs already in the feed."""
     with open(INDEX_FILE, encoding="utf-8") as f:
@@ -140,6 +163,66 @@ def load_reference_vectors():
     return np.load(VECTORS_FILE)
 
 
+def import_accepted():
+    """Create posts from accepted papers in scan-review.json."""
+    sys.path.insert(0, str(SCRIPT_DIR))
+    from fetch_arxiv import generate_post, load_processed, save_processed
+
+    if not REVIEW_FILE.exists():
+        log(f"No review file: {REVIEW_FILE}")
+        return 1
+
+    review = json.load(open(REVIEW_FILE, encoding="utf-8"))
+    accepted = [r for r in review if r.get("decision") == "ACCEPT"]
+    rejected = [r for r in review if r.get("decision") == "REJECT"]
+    skipped = [r for r in review if r.get("decision") == "SKIP"]
+    undecided = [r for r in review if not r.get("decision")]
+
+    log(f"Review: {len(accepted)} accepted, {len(rejected)} rejected, "
+        f"{len(skipped)} skipped, {len(undecided)} undecided")
+
+    if not accepted:
+        log("Nothing to import.")
+        return 0
+
+    processed = load_processed()
+    POSTS_DIR.mkdir(parents=True, exist_ok=True)
+    wrote = 0
+
+    for r in accepted:
+        aid = r["arxiv_id"]
+        paper = {
+            "arxiv_id": aid,
+            "title": r["title"],
+            "authors": r["authors"],
+            "categories": r["categories"],
+            "abstract": r.get("abstract", ""),
+            "date": r["date"],
+        }
+
+        date_prefix = paper["date"].split("T")[0]
+        safe_id = aid.replace("/", "-")
+        filename = f"{date_prefix}-{safe_id}.md"
+        filepath = POSTS_DIR / filename
+
+        if not filepath.exists():
+            filepath.write_text(generate_post(paper))
+            log(f"  WROTE {filename}")
+            wrote += 1
+
+        if aid not in processed:
+            processed[aid] = {
+                "source": "scan",
+                "decision": "ACCEPT",
+                "date": date_prefix,
+            }
+
+    save_processed(processed)
+    log(f"Created {wrote} new posts from {len(accepted)} accepted papers")
+    log("Run 'make arxiv-rebuild' to update search index + related papers")
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description="Scan full arXiv for missed int-prob papers")
     parser.add_argument("--threshold", type=float, default=0.65,
@@ -148,7 +231,12 @@ def main():
                         help="Embedding batch size (default: 8)")
     parser.add_argument("--id-prefix", type=str, default=None,
                         help="Only scan papers whose ID starts with this (e.g., '2601' for Jan 2026)")
+    parser.add_argument("--import-accepted", action="store_true",
+                        help="Import accepted papers from scan-review.json as posts")
     args = parser.parse_args()
+
+    if args.import_accepted:
+        return import_accepted()
 
     if not VECTORS_FILE.exists():
         log(f"Error: {VECTORS_FILE} not found. Run 'make arxiv-related' first.")
@@ -233,6 +321,7 @@ def main():
                     batch_meta[i][2],  # categories
                     batch_meta[i][3],  # authors
                     batch_meta[i][4],  # abstract
+                    batch_meta[i][5],  # date
                 ))
 
         batch_texts.clear()
@@ -241,7 +330,7 @@ def main():
 
     # Query SQLite for papers to scan
     kaggle_conn = sqlite3.connect(str(KAGGLE_DB))
-    query = "SELECT id, title, abstract, categories, authors FROM papers"
+    query = "SELECT id, title, abstract, categories, authors, date FROM papers"
     params = []
     if args.id_prefix:
         query += " WHERE id GLOB ?"
@@ -249,11 +338,11 @@ def main():
     query += " ORDER BY id"
 
     total_rows = kaggle_conn.execute(
-        query.replace("SELECT id, title, abstract, categories, authors", "SELECT COUNT(*)"),
+        query.replace("SELECT id, title, abstract, categories, authors, date", "SELECT COUNT(*)"),
         params
     ).fetchone()[0]
     last_id = kaggle_conn.execute(
-        query.replace("SELECT id, title, abstract, categories, authors", "SELECT id")
+        query.replace("SELECT id, title, abstract, categories, authors, date", "SELECT id")
         .replace("ORDER BY id", "ORDER BY id DESC") + " LIMIT 1",
         params
     ).fetchone()
@@ -261,7 +350,7 @@ def main():
     log(f"Querying Kaggle DB: {total_rows:,} papers, last={last_id}")
     cursor = kaggle_conn.execute(query, params)
 
-    for arxiv_id, title, abstract, categories, authors in cursor:
+    for arxiv_id, title, abstract, categories, authors, paper_date in cursor:
         if arxiv_id in tracked_ids:
             processed += 1
             continue
@@ -275,7 +364,7 @@ def main():
         text = f"{title}. {abstract}" if abstract else title
         batch_texts.append(text)
         batch_keys.append(text_key(text))
-        batch_meta.append((arxiv_id, title, categories, authors, abstract))
+        batch_meta.append((arxiv_id, title, categories, authors, abstract, paper_date))
 
         if len(batch_texts) >= CHUNK_SIZE:
             flush_batch()
@@ -306,17 +395,17 @@ def main():
         existing_ids = {e["arxiv_id"] for e in existing}
 
     new_count = 0
-    for sim, aid, title, cats, authors, abstract in candidates:
+    for sim, aid, title, cats, authors, abstract, date in candidates:
         if aid in existing_ids:
             continue
-        author_list = [a.strip() for a in authors.replace(" and ", ", ").split(", ") if a.strip()]
+        author_list = [_clean_author(a) for a in authors.replace(" and ", ", ").split(", ") if a.strip()]
         existing.append({
             "arxiv_id": aid,
             "title": title,
             "authors": author_list,
             "categories": cats.split(),
             "abstract": abstract,
-            "date": f"20{aid[:2]}-{aid[2:4]}",
+            "date": date or _arxiv_id_to_date_fallback(aid),
             "matched_author": "",
             "is_ambiguous": False,
             "ai_decision": "ACCEPT",
@@ -334,7 +423,7 @@ def main():
 
     # Print top 20
     log(f"\nTop 20 candidates (threshold={args.threshold}):")
-    for sim, aid, title, cats, authors, abstract in candidates[:20]:
+    for sim, aid, title, cats, authors, abstract, date in candidates[:20]:
         log(f"  {sim:.3f}  {aid}  {cats[:30]}  {title[:80]}")
 
     cache.close()

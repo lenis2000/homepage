@@ -15,6 +15,7 @@ import re
 import sqlite3
 import sys
 import time
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 _t0 = time.monotonic()
@@ -57,7 +58,8 @@ def main():
             title TEXT,
             abstract TEXT,
             categories TEXT,
-            authors TEXT
+            authors TEXT,
+            date TEXT
         )
     """)
     conn.commit()
@@ -88,11 +90,23 @@ def main():
             categories = rec.get("categories", "")
             authors = rec.get("authors", "")
 
-            batch.append((arxiv_id, title, abstract, categories, authors))
+            # Parse submission date from versions[0].created
+            date_str = ""
+            versions = rec.get("versions", [])
+            if versions:
+                created = versions[0].get("created", "")
+                if created:
+                    try:
+                        dt = parsedate_to_datetime(created)
+                        date_str = dt.strftime("%Y-%m-%d")
+                    except Exception:
+                        pass
+
+            batch.append((arxiv_id, title, abstract, categories, authors, date_str))
 
             if len(batch) >= BATCH_SIZE:
                 conn.executemany(
-                    "INSERT OR IGNORE INTO papers VALUES (?, ?, ?, ?, ?)",
+                    "INSERT OR IGNORE INTO papers VALUES (?, ?, ?, ?, ?, ?)",
                     batch
                 )
                 conn.commit()
@@ -104,7 +118,7 @@ def main():
     # Final batch
     if batch:
         conn.executemany(
-            "INSERT OR IGNORE INTO papers VALUES (?, ?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO papers VALUES (?, ?, ?, ?, ?, ?)",
             batch
         )
         conn.commit()

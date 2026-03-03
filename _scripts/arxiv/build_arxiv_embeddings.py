@@ -17,6 +17,7 @@ import hashlib
 import json
 import os
 import re
+import sqlite3
 import sys
 import time
 from pathlib import Path
@@ -41,6 +42,10 @@ KAGGLE_FILE = Path(os.environ.get(
     "ARXIV_KAGGLE",
     Path.home() / "Data" / "arxiv" / "arxiv-metadata-oai-snapshot.json",
 ))
+KAGGLE_DB = Path(os.environ.get(
+    "ARXIV_KAGGLE_DB",
+    Path.home() / "Data" / "arxiv" / "arxiv-metadata.db",
+))
 
 TOP_K = 5
 SIMILARITY_THRESHOLD = 0.69
@@ -56,10 +61,39 @@ def load_post_ids():
 
 
 def load_kaggle_abstracts(wanted_ids):
-    """Stream Kaggle JSON-lines file, extract raw LaTeX title+abstract for wanted IDs."""
-    log(f"Streaming Kaggle DB: {KAGGLE_FILE}")
-    log(f"Looking for {len(wanted_ids)} papers...")
+    """Load raw LaTeX title+abstract for wanted IDs from Kaggle SQLite DB (or JSON fallback)."""
+    if KAGGLE_DB.exists():
+        return _load_from_sqlite(wanted_ids)
+    if KAGGLE_FILE.exists():
+        return _load_from_json(wanted_ids)
+    log(f"Error: Neither {KAGGLE_DB} nor {KAGGLE_FILE} found")
+    return {}
 
+
+def _load_from_sqlite(wanted_ids):
+    log(f"Querying Kaggle SQLite: {KAGGLE_DB}")
+    log(f"Looking for {len(wanted_ids)} papers...")
+    conn = sqlite3.connect(str(KAGGLE_DB))
+    entries = {}
+    ids_list = list(wanted_ids)
+    for i in range(0, len(ids_list), 500):
+        batch = ids_list[i:i+500]
+        placeholders = ",".join("?" * len(batch))
+        rows = conn.execute(
+            f"SELECT id, title, abstract FROM papers WHERE id IN ({placeholders})",
+            batch
+        ).fetchall()
+        for rid, title, abstract in rows:
+            entries[rid] = {"id": rid, "title": title, "abstract": abstract}
+    conn.close()
+    missed = len(wanted_ids) - len(entries)
+    log(f"Found {len(entries)} papers in Kaggle DB ({missed} not found)")
+    return entries
+
+
+def _load_from_json(wanted_ids):
+    log(f"Streaming Kaggle JSON: {KAGGLE_FILE}")
+    log(f"Looking for {len(wanted_ids)} papers...")
     entries = {}
     with open(KAGGLE_FILE, encoding="utf-8") as f:
         for line in f:
@@ -72,17 +106,11 @@ def load_kaggle_abstracts(wanted_ids):
                 continue
             title = re.sub(r"\s+", " ", rec.get("title", "")).strip()
             abstract = re.sub(r"\s+", " ", rec.get("abstract", "")).strip()
-            entries[rid] = {
-                "id": rid,
-                "title": title,
-                "abstract": abstract,
-            }
+            entries[rid] = {"id": rid, "title": title, "abstract": abstract}
             if len(entries) == len(wanted_ids):
-                break  # Found all, stop early
-
-    found = len(entries)
-    missed = len(wanted_ids) - found
-    log(f"Found {found} papers in Kaggle DB ({missed} not found)")
+                break
+    missed = len(wanted_ids) - len(entries)
+    log(f"Found {len(entries)} papers in Kaggle DB ({missed} not found)")
     return entries
 
 
@@ -216,9 +244,9 @@ def main():
         log(f"Error: {INDEX_FILE} not found. Run 'python3 _scripts/arxiv/build_search_index.py' first.")
         return 1
 
-    if not KAGGLE_FILE.exists():
-        log(f"Error: Kaggle DB not found at {KAGGLE_FILE}")
-        log("Set ARXIV_KAGGLE env var or place file at ~/Data/arxiv/arxiv-metadata-oai-snapshot.json")
+    if not KAGGLE_DB.exists() and not KAGGLE_FILE.exists():
+        log(f"Error: Kaggle DB not found at {KAGGLE_DB} or {KAGGLE_FILE}")
+        log("Run 'make arxiv-kaggle' to download and import")
         return 1
 
     # Get IDs of papers we have posts for

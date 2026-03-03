@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import
 
 serve:
 	bundle exec jekyll serve 
@@ -141,6 +141,9 @@ arxiv-import:
 
 arxiv-scan: arxiv-venv
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/scan_full_arxiv.py $(ARGS)
+
+arxiv-scan-import:
+	python3 _scripts/arxiv/scan_full_arxiv.py --import-accepted
 
 arxiv-related: arxiv-venv
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/build_arxiv_embeddings.py

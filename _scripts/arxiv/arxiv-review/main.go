@@ -504,7 +504,11 @@ func (m model) View() string {
 	}
 
 	// Paper info
-	date := dateStyle.Render(p.Date[:10])
+	dateStr := p.Date
+	if len(dateStr) > 10 {
+		dateStr = dateStr[:10]
+	}
+	date := dateStyle.Render(dateStr)
 	matched := ""
 	if p.MatchedName != "" {
 		matched = dimStyle.Render(fmt.Sprintf("  (matched: %s)", p.MatchedName))

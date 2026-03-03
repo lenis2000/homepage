@@ -212,11 +212,13 @@ const ARXIV_MACROS = {
   // Partial derivative shortcut
   '\\pl': '\\partial',
   // Misc
+  '\\La': '\\Lambda',
   '\\Lb': '\\Lambda',
   '\\wide': '\\widehat',
   // Lie algebra lowercase
   '\\gl': '\\mathfrak{gl}',
   '\\sl': '\\mathfrak{sl}',
+  '\\sln': '\\mathfrak{sl}_n',
   '\\so': '\\mathfrak{so}',
   '\\sp': '\\mathfrak{sp}',
   '\\su': '\\mathfrak{su}',
