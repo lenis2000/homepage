@@ -287,6 +287,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && searchInput) {
+            // Always: collapse open abstracts, clear search, focus bar
+            Object.keys(paperMap).forEach(function(id) {
+                var details = paperMap[id].querySelector('details[open]');
+                if (details) details.open = false;
+            });
             if (searchInput.value || activeCategory !== 'all' || activeYear !== 'all') {
                 clearSearch();
             } else {
