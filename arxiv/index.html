@@ -68,7 +68,7 @@ nav_weight: 4
       data-search="{{ post.arxiv-id }} {{ post.title }} {{ post.authors | join: ' ' }}"
       data-year="{{ post.date | date: '%Y' }}">
     <div class="arxiv-entry">
-      <div class="arxiv-date-col"><time datetime="{{ post.date | date: '%Y-%m-%d' }}">{{ post.date | date: '%Y-%m-%d' }}</time><br><span class="arxiv-id-label">{{ post.arxiv-id }}</span></div>
+      <div class="arxiv-date-col"><time datetime="{{ post.date | date: '%Y-%m-%d' }}">{{ post.date | date: '%Y-%m-%d' }}</time><br><a href="https://arxiv.org/abs/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="arxiv-id-label">{{ post.arxiv-id }}<span class="sr-only"> (opens in new tab)</span></a></div>
       <div class="arxiv-body">
         <span class="arxiv-tags">{% if post.arxiv-categories.size > 0 %}<button class="arxiv-tags-toggle" aria-label="Show tags" aria-expanded="false">tags</button>{% endif %}{% for cat in post.arxiv-categories %}<span class="badge arxiv-cat-badge">{{ cat }}</span> {% endfor %}</span>
         <b>{{ post.authors | join: ", " }}</b>,
@@ -112,10 +112,14 @@ nav_weight: 4
     font-size: 0.95em;
     padding-top: 1px;
   }
-  .arxiv-id-label {
+  a.arxiv-id-label {
     font-size: 0.78em;
     font-weight: normal;
-    color: #888;
+    color: #767676;
+    text-decoration: underline;
+  }
+  a.arxiv-id-label:hover {
+    color: #b31b1b;
   }
   .arxiv-link-badge {
     color: #fff !important;
@@ -190,7 +194,8 @@ nav_weight: 4
   [data-theme="dark"] .arxiv-month-header { border-bottom-color: var(--border-color); }
   [data-theme="dark"] .arxiv-month-header h2 { color: var(--text-primary); }
   [data-theme="dark"] .arxiv-date-col { color: var(--text-primary); }
-  [data-theme="dark"] .arxiv-id-label { color: #999; }
+  [data-theme="dark"] a.arxiv-id-label { color: #999; }
+  [data-theme="dark"] a.arxiv-id-label:hover { color: #e74c3c; }
   [data-theme="dark"] .arxiv-link-badge.arxiv-link-abs { background-color: #c0392b; }
   [data-theme="dark"] .arxiv-link-badge.arxiv-link-abs:hover { background-color: #e74c3c; }
   [data-theme="dark"] .arxiv-link-badge.arxiv-link-pdf { background-color: #2980b9; }
