@@ -16,7 +16,6 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import sqlite3
 import struct
 import sys
@@ -44,10 +43,14 @@ KAGGLE_FILE = Path(os.environ.get(
     "ARXIV_KAGGLE",
     Path.home() / "Data" / "arxiv" / "arxiv-metadata-oai-snapshot.json",
 ))
+KAGGLE_DB = Path(os.environ.get(
+    "ARXIV_KAGGLE_DB",
+    Path.home() / "Data" / "arxiv" / "arxiv-metadata.db",
+))
 
 MODEL_NAME = "BAAI/bge-m3"
 EMBED_DIM = 1024
-CHUNK_SIZE = 10000  # papers per similarity chunk
+CHUNK_SIZE = 100  # papers per similarity chunk
 
 
 # --- SQLite embedding cache ---
@@ -122,6 +125,16 @@ def load_tracked_ids():
         return {e["id"] for e in json.load(f)}
 
 
+def load_allowed_categories():
+    """Top 20 categories by paper count in the feed."""
+    return {
+        "math.PR", "math-ph", "math.CO", "math.MP", "cond-mat.stat-mech",
+        "math.RT", "math.CA", "math.QA", "hep-th", "nlin.SI",
+        "math.AG", "math.AP", "math.CV", "cond-mat", "math.FA",
+        "math.NT", "q-alg", "solv-int", "math.ST", "math.DS",
+    }
+
+
 def load_reference_vectors():
     """Load the known int-prob paper vectors."""
     return np.load(VECTORS_FILE)
@@ -131,19 +144,25 @@ def main():
     parser = argparse.ArgumentParser(description="Scan full arXiv for missed int-prob papers")
     parser.add_argument("--threshold", type=float, default=0.65,
                         help="Cosine similarity threshold (default: 0.65)")
-    parser.add_argument("--batch-size", type=int, default=64,
-                        help="Embedding batch size (default: 64)")
+    parser.add_argument("--batch-size", type=int, default=8,
+                        help="Embedding batch size (default: 8)")
+    parser.add_argument("--id-prefix", type=str, default=None,
+                        help="Only scan papers whose ID starts with this (e.g., '2601' for Jan 2026)")
     args = parser.parse_args()
 
     if not VECTORS_FILE.exists():
         log(f"Error: {VECTORS_FILE} not found. Run 'make arxiv-related' first.")
         return 1
-    if not KAGGLE_FILE.exists():
-        log(f"Error: Kaggle DB not found at {KAGGLE_FILE}")
+    if not KAGGLE_DB.exists():
+        log(f"Error: Kaggle SQLite DB not found at {KAGGLE_DB}")
+        log("Run 'make arxiv-kaggle' to download and import.")
         return 1
 
     tracked_ids = load_tracked_ids()
     log(f"Tracked papers: {len(tracked_ids)}")
+
+    allowed_cats = load_allowed_categories()
+    log(f"Allowed categories: {len(allowed_cats)}")
 
     ref_vectors = load_reference_vectors()
     log(f"Reference vectors: {ref_vectors.shape}")
@@ -156,6 +175,7 @@ def main():
 
     candidates = []
     processed = 0
+    skipped_cats = 0
     cache_hits = 0
     embedded = 0
 
@@ -218,42 +238,60 @@ def main():
         batch_keys.clear()
         batch_meta.clear()
 
-    log("Streaming Kaggle DB...")
-    with open(KAGGLE_FILE, encoding="utf-8") as f:
-        for line in f:
-            try:
-                rec = json.loads(line)
-            except json.JSONDecodeError:
-                continue
+    # Query SQLite for papers to scan
+    kaggle_conn = sqlite3.connect(str(KAGGLE_DB))
+    query = "SELECT id, title, abstract, categories, authors FROM papers"
+    params = []
+    if args.id_prefix:
+        query += " WHERE id GLOB ?"
+        params.append(f"{args.id_prefix}*")
+    query += " ORDER BY id"
 
-            arxiv_id = rec.get("id", "")
-            if arxiv_id in tracked_ids:
-                processed += 1
-                continue
+    total_rows = kaggle_conn.execute(
+        query.replace("SELECT id, title, abstract, categories, authors", "SELECT COUNT(*)"),
+        params
+    ).fetchone()[0]
+    last_id = kaggle_conn.execute(
+        query.replace("SELECT id, title, abstract, categories, authors", "SELECT id")
+        .replace("ORDER BY id", "ORDER BY id DESC") + " LIMIT 1",
+        params
+    ).fetchone()
+    last_id = last_id[0] if last_id else "?"
+    log(f"Querying Kaggle DB: {total_rows:,} papers, last={last_id}")
+    cursor = kaggle_conn.execute(query, params)
 
-            title = re.sub(r"\s+", " ", rec.get("title", "")).strip()
-            abstract = re.sub(r"\s+", " ", rec.get("abstract", "")).strip()
-            categories = rec.get("categories", "")
-            authors = rec.get("authors", "")
+    for arxiv_id, title, abstract, categories, authors in cursor:
+        if arxiv_id in tracked_ids:
+            processed += 1
+            continue
 
-            text = f"{title}. {abstract}" if abstract else title
-            batch_texts.append(text)
-            batch_keys.append(text_key(text))
-            batch_meta.append((arxiv_id, title, categories, authors))
+        # Skip papers with no category overlap with our feed
+        paper_cats = set(categories.split())
+        if not paper_cats & allowed_cats:
+            skipped_cats += 1
+            continue
 
-            if len(batch_texts) >= CHUNK_SIZE:
-                flush_batch()
-                processed += CHUNK_SIZE
-                if processed % 100000 == 0:
-                    log(f"  {processed:,} processed, {cache_hits:,} cache hits, "
-                        f"{embedded:,} embedded, {len(candidates)} candidates")
+        text = f"{title}. {abstract}" if abstract else title
+        batch_texts.append(text)
+        batch_keys.append(text_key(text))
+        batch_meta.append((arxiv_id, title, categories, authors))
+
+        if len(batch_texts) >= CHUNK_SIZE:
+            flush_batch()
+            processed += CHUNK_SIZE
+            log(f"  {processed:,} processed, {skipped_cats:,} cat-skipped | "
+                f"id={arxiv_id} | {cache_hits:,} cached, "
+                f"{embedded:,} embedded, {len(candidates)} candidates")
+
+    kaggle_conn.close()
 
     # Final flush
     flush_batch()
     processed += len(batch_texts)
 
-    log(f"Done. {processed:,} processed, {cache_hits:,} cache hits, "
-        f"{embedded:,} embedded, {len(candidates)} candidates")
+    log(f"Done. {processed:,} processed, {skipped_cats:,} category-filtered, "
+        f"{cache_hits:,} cache hits, {embedded:,} embedded, "
+        f"{len(candidates)} candidates")
 
     # Sort by similarity descending
     candidates.sort(key=lambda x: -x[0])
