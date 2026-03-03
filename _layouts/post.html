@@ -18,6 +18,18 @@ page.arXiv %}<a
     href="https://arxiv.org/abs/{{page.arXiv | split: ' ' | first}}"
     target="_blank"
     >arXiv:{{page.arXiv}}<span class="sr-only"> (opens in new tab)</span></a
+>{% endif %}{% if page.arxiv-id %}<a
+    href="https://arxiv.org/abs/{{ page.arxiv-id }}"
+    target="_blank"
+    >arXiv:{{ page.arxiv-id }}<span class="sr-only"> (opens in new tab)</span></a
+> &bull; <a
+    href="https://arxiv.org/pdf/{{ page.arxiv-id }}"
+    target="_blank"
+    >PDF<span class="sr-only"> (opens in new tab)</span></a
+> &bull; <a
+    href="https://arxiv.org/html/{{ page.arxiv-id }}"
+    target="_blank"
+    >HTML<span class="sr-only"> (opens in new tab)</span></a
 >{% endif %} {% if page.post-pdf %}<br /><br /><a
     href="{{site.storage_url}}/papers/{{page.pdf}}"
     aria-label="PDF of {{page.title}}"

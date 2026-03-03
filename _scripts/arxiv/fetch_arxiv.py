@@ -37,7 +37,7 @@ PROMPT_FILE = SCRIPT_DIR / "ai_prompt.txt"
 AI_LOG_FILE = SCRIPT_DIR / "ai_log.jsonl"
 
 ARXIV_API = "https://export.arxiv.org/api/query"
-RATE_LIMIT_SECONDS = 3
+RATE_LIMIT_SECONDS = 4
 
 
 def load_config():
@@ -115,7 +115,17 @@ def fetch_category(category, days, config, before_date=None):
             )
 
             url = f"{ARXIV_API}?{params}"
-            response = urllib.request.urlopen(url).read()
+            for attempt in range(5):
+                try:
+                    response = urllib.request.urlopen(url).read()
+                    break
+                except urllib.error.HTTPError as e:
+                    if e.code in (503, 429) and attempt < 4:
+                        wait = RATE_LIMIT_SECONDS * (2 ** (attempt + 1))
+                        print(f"      {e.code} — retrying in {wait}s (attempt {attempt + 1}/5)...")
+                        time.sleep(wait)
+                    else:
+                        raise
             feed = feedparser.parse(response)
 
             if not feed.entries:

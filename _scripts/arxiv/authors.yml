@@ -878,3 +878,143 @@ authors:
     topics: ["last passage percolation", "stationary measures", "geometric LPP"]
     high_ambiguity: true
     disambiguation: "Jiyue Zeng, LPP / KPZ at Columbia — not other J. Zengs"
+
+  - name: "Maurice Duits"
+    arxiv_names: ["Duits_M"]
+    affiliation: "KTH"
+    topics: ["random tilings", "double contour integrals", "universality", "determinantal point processes"]
+
+  - name: "Tom Claeys"
+    arxiv_names: ["Claeys_T"]
+    affiliation: "Louvain"
+    topics: ["Riemann-Hilbert problems", "Painlevé equations", "random matrices", "universality"]
+
+  - name: "Mark Adler"
+    arxiv_names: ["Adler_M"]
+    affiliation: "Brandeis"
+    topics: ["random matrices", "Pfaffian processes", "Toda lattice", "coupled random matrices"]
+    high_ambiguity: true
+    disambiguation: "Mark Adler, random matrix theorist at Brandeis — Adler-van Moerbeke. Not other M. Adlers."
+
+  - name: "Pierre van Moerbeke"
+    arxiv_names: ["van_Moerbeke_P"]
+    affiliation: "Louvain"
+    topics: ["random matrices", "non-intersecting paths", "Toda lattice", "Pfaffian processes"]
+
+  - name: "Diane Holcomb"
+    arxiv_names: ["Holcomb_D"]
+    affiliation: "KTH"
+    topics: ["beta-ensembles", "stochastic Airy operator", "random matrices"]
+
+  - name: "Brian Rider"
+    arxiv_names: ["Rider_B"]
+    affiliation: "Temple"
+    topics: ["random matrices", "stochastic Airy operator", "beta-Tracy-Widom"]
+
+  - name: "Ioana Dumitriu"
+    arxiv_names: ["Dumitriu_I"]
+    affiliation: "UCSD"
+    topics: ["random matrices", "beta-ensembles", "tridiagonal models"]
+
+  - name: "Martin Hairer"
+    arxiv_names: ["Hairer_M"]
+    affiliation: "Imperial / EPFL"
+    topics: ["KPZ equation", "regularity structures", "stochastic PDE"]
+    high_ambiguity: true
+    disambiguation: "Martin Hairer, Fields medalist — KPZ equation, regularity structures. Not other M. Hairers."
+
+  - name: "Pablo Ferrari"
+    arxiv_names: ["Ferrari_P"]
+    affiliation: "Buenos Aires"
+    topics: ["TASEP", "interacting particle systems", "second class particles", "shock fluctuations"]
+    high_ambiguity: true
+    disambiguation: "Pablo A. Ferrari, TASEP pioneer at Buenos Aires — NOT Patrik Ferrari (Bonn, KPZ/Airy processes)"
+
+  - name: "Cristian Giardina"
+    arxiv_names: ["Giardina_C"]
+    affiliation: "Modena"
+    topics: ["duality", "interacting particle systems", "boundary-driven systems"]
+
+  - name: "Frank Redig"
+    arxiv_names: ["Redig_F"]
+    affiliation: "TU Delft"
+    topics: ["duality", "interacting particle systems", "non-equilibrium statistical mechanics"]
+
+  - name: "Eric Cator"
+    arxiv_names: ["Cator_E"]
+    affiliation: "Nijmegen"
+    topics: ["Hammersley process", "last passage percolation", "geodesics"]
+
+  - name: "Leandro Pimentel"
+    arxiv_names: ["Pimentel_L"]
+    affiliation: "UFRJ"
+    topics: ["LPP geodesics", "competition interfaces", "Busemann functions"]
+
+  - name: "Scott Sheffield"
+    arxiv_names: ["Sheffield_S"]
+    affiliation: "MIT"
+    topics: ["Gaussian free field", "dimers", "SLE", "Liouville quantum gravity"]
+
+  - name: "Jon Novak"
+    arxiv_names: ["Novak_J"]
+    affiliation: "UCSD"
+    topics: ["random matrices", "Weingarten calculus", "Jucys-Murphy", "symmetric functions"]
+    high_ambiguity: true
+    disambiguation: "Jon Novak, random matrices / Weingarten calculus at UCSD"
+
+  - name: "Maciej Dołęga"
+    arxiv_names: ["Dolega_M"]
+    affiliation: "Polish Academy"
+    topics: ["random maps", "Jack polynomials", "b-conjecture", "topological recursion"]
+
+  - name: "Manuela Girotti"
+    arxiv_names: ["Girotti_M"]
+    affiliation: "Emory"
+    topics: ["Riemann-Hilbert problems", "KPZ", "Painlevé equations", "Fredholm determinants"]
+
+  - name: "Alexander Gnedin"
+    arxiv_names: ["Gnedin_A"]
+    affiliation: "QMUL"
+    topics: ["exchangeable structures", "records", "composition structures", "combinatorial probability"]
+
+  - name: "Douglas Rizzolo"
+    arxiv_names: ["Rizzolo_D"]
+    affiliation: "Delaware"
+    topics: ["continuum random trees", "beta-splitting", "random recursive structures"]
+
+  - name: "Omer Angel"
+    arxiv_names: ["Angel_O"]
+    affiliation: "UBC"
+    topics: ["random sorting networks", "random planar maps", "growth models", "percolation"]
+
+  - name: "Dan Romik"
+    arxiv_names: ["Romik_D"]
+    affiliation: "UC Davis"
+    topics: ["random permutations", "limit shapes", "arctic circle", "combinatorics"]
+
+  - name: "David Aldous"
+    arxiv_names: ["Aldous_D"]
+    affiliation: "Berkeley"
+    topics: ["exchangeable structures", "random trees", "CRT", "mixing times"]
+
+  - name: "Jim Pitman"
+    arxiv_names: ["Pitman_J"]
+    affiliation: "Berkeley"
+    topics: ["combinatorial stochastic processes", "random partitions", "Pitman transform", "CRT"]
+
+  - name: "Igor Pak"
+    arxiv_names: ["Pak_I"]
+    affiliation: "UCLA"
+    topics: ["bijective combinatorics", "Young tableaux", "asymptotic combinatorics", "plane partitions"]
+
+  - name: "Robin Pemantle"
+    arxiv_names: ["Pemantle_R"]
+    affiliation: "Penn"
+    topics: ["analytic combinatorics", "random processes on trees", "negative dependence"]
+
+  - name: "Nathanael Berestycki"
+    arxiv_names: ["Berestycki_N"]
+    affiliation: "Vienna"
+    topics: ["random planar maps", "Liouville quantum gravity", "dimer models", "SLE"]
+    high_ambiguity: true
+    disambiguation: "Nathanael Berestycki, probabilist at Vienna — random planar maps, dimers, LQG. Not Julien Berestycki (Oxford, branching processes)."

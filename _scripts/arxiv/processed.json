@@ -26763,5 +26763,1750 @@
     "date": "2026-03-02",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "alg-geom/9712009": {
+    "date": "1997-12-09",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "astro-ph/9905040": {
+    "date": "1999-05-05",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "astro-ph/9912005": {
+    "date": "1999-12-01",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "astro-ph/9912046": {
+    "date": "1999-12-02",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "chao-dyn/9903006": {
+    "date": "1999-03-03",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9303038": {
+    "date": "1993-03-23",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9304016": {
+    "date": "1993-04-08",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9304017": {
+    "date": "1993-04-08",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9304024": {
+    "date": "1993-04-16",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9305040": {
+    "date": "1993-05-29",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9306003": {
+    "date": "1993-06-01",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9306036": {
+    "date": "1993-06-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9306041": {
+    "date": "1993-06-18",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9307027": {
+    "date": "1993-07-14",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9307044": {
+    "date": "1993-07-20",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9309035": {
+    "date": "1993-09-22",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9310020": {
+    "date": "1993-10-11",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9311007": {
+    "date": "1993-11-03",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9311018": {
+    "date": "1993-11-09",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9311021": {
+    "date": "1993-11-09",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9311039": {
+    "date": "1993-11-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9312090": {
+    "date": "1993-12-22",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9312091": {
+    "date": "1993-12-22",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9401023": {
+    "date": "1994-01-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9401031": {
+    "date": "1994-01-17",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9402035": {
+    "date": "1994-02-08",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9403057": {
+    "date": "1994-03-15",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9403061": {
+    "date": "1994-03-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9404091": {
+    "date": "1994-04-28",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9408008": {
+    "date": "1994-08-03",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9408042": {
+    "date": "1994-08-15",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9408048": {
+    "date": "1994-08-18",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9408090": {
+    "date": "1994-08-28",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9409052": {
+    "date": "1994-09-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9409075": {
+    "date": "1994-09-18",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9411019": {
+    "date": "1994-11-03",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9412029": {
+    "date": "1994-12-06",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9412058": {
+    "date": "1994-12-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9412094": {
+    "date": "1994-12-20",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9501024": {
+    "date": "1995-01-08",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9501119": {
+    "date": "1995-01-25",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9502007": {
+    "date": "1995-02-02",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9502008": {
+    "date": "1995-02-02",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9502046": {
+    "date": "1995-02-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9502111": {
+    "date": "1995-02-27",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9503139": {
+    "date": "1995-03-27",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9503142": {
+    "date": "1995-03-28",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9503149": {
+    "date": "1995-03-29",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9504099": {
+    "date": "1995-04-25",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9505014": {
+    "date": "1995-05-03",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9505015": {
+    "date": "1995-05-03",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9505035": {
+    "date": "1995-05-09",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9506113": {
+    "date": "1995-06-24",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9508018": {
+    "date": "1995-08-06",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9508030": {
+    "date": "1995-08-09",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9509012": {
+    "date": "1995-09-04",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9509111": {
+    "date": "1995-09-19",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9509112": {
+    "date": "1995-09-19",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9509113": {
+    "date": "1995-09-19",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9510068": {
+    "date": "1995-10-12",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9511031": {
+    "date": "1995-11-06",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9511117": {
+    "date": "1995-11-23",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9511130": {
+    "date": "1995-11-27",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9511136": {
+    "date": "1995-11-29",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9512066": {
+    "date": "1995-12-09",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9512082": {
+    "date": "1995-12-11",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9602009": {
+    "date": "1996-02-01",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9602084": {
+    "date": "1996-02-15",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9602117": {
+    "date": "1996-02-21",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9602135": {
+    "date": "1996-02-26",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9603170": {
+    "date": "1996-03-27",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9604022": {
+    "date": "1996-04-03",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9604023": {
+    "date": "1996-04-03",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9606006": {
+    "date": "1996-06-03",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9606092": {
+    "date": "1996-06-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9606223": {
+    "date": "1996-06-30",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9607150": {
+    "date": "1996-07-22",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9610085": {
+    "date": "1996-10-10",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9612209": {
+    "date": "1996-12-23",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9701133": {
+    "date": "1997-01-19",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9705209": {
+    "date": "1997-05-21",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9709338": {
+    "date": "1997-09-30",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9710230": {
+    "date": "1997-10-22",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9710231": {
+    "date": "1997-10-22",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9802003": {
+    "date": "1998-01-31",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9803217": {
+    "date": "1998-03-18",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9803355": {
+    "date": "1998-03-30",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9805137": {
+    "date": "1998-05-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9805306": {
+    "date": "1998-05-24",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9805330": {
+    "date": "1998-05-26",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9807265": {
+    "date": "1998-07-18",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9809076": {
+    "date": "1998-09-03",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9811142": {
+    "date": "1998-11-10",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9812223": {
+    "date": "1998-12-14",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9812388": {
+    "date": "1998-12-23",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9901017": {
+    "date": "1999-01-04",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9901060": {
+    "date": "1999-01-08",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9901158": {
+    "date": "1999-01-18",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9904007": {
+    "date": "1999-04-01",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9904388": {
+    "date": "1999-04-27",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9906102": {
+    "date": "1999-06-07",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9908381": {
+    "date": "1999-08-26",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9910013": {
+    "date": "1999-10-01",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9910270": {
+    "date": "1999-10-18",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9910273": {
+    "date": "1999-10-18",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9910483": {
+    "date": "1999-10-29",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9911322": {
+    "date": "1999-11-20",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9912045": {
+    "date": "1999-12-03",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9912264": {
+    "date": "1999-12-14",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "cond-mat/9912323": {
+    "date": "1999-12-17",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "cond-mat/9912417": {
+    "date": "1999-12-22",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "dg-ga/9710006": {
+    "date": "1997-10-07",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "gr-qc/9704049": {
+    "date": "1997-04-17",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-lat/9303011": {
+    "date": "1993-03-23",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-lat/9611013": {
+    "date": "1996-11-11",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-lat/9711019": {
+    "date": "1997-11-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-ph/9506283": {
+    "date": "1995-06-09",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-ph/9611439": {
+    "date": "1996-11-26",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-ph/9911325": {
+    "date": "1999-11-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9301051": {
+    "date": "1993-01-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9303116": {
+    "date": "1993-03-19",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9304063": {
+    "date": "1993-04-16",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9306005": {
+    "date": "1993-06-01",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9306042": {
+    "date": "1993-06-07",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9306153": {
+    "date": "1993-06-29",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9307182": {
+    "date": "1993-07-29",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9310083": {
+    "date": "1993-10-14",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9312101": {
+    "date": "1993-12-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9312103": {
+    "date": "1993-12-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9401102": {
+    "date": "1994-01-20",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9402022": {
+    "date": "1994-02-03",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9403107": {
+    "date": "1994-03-18",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9403168": {
+    "date": "1994-03-28",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9405010": {
+    "date": "1994-05-02",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9407015": {
+    "date": "1994-07-04",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9407046": {
+    "date": "1994-07-08",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9407047": {
+    "date": "1994-07-09",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9408136": {
+    "date": "1994-08-25",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9408150": {
+    "date": "1994-08-28",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9408151": {
+    "date": "1994-08-28",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9408152": {
+    "date": "1994-08-28",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9408157": {
+    "date": "1994-08-29",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9410169": {
+    "date": "1994-10-21",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9411009": {
+    "date": "1994-11-02",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9411061": {
+    "date": "1994-11-09",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9411129": {
+    "date": "1994-11-17",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9412226": {
+    "date": "1994-12-28",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9501088": {
+    "date": "1995-01-20",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9501090": {
+    "date": "1995-01-20",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9501134": {
+    "date": "1995-01-30",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9502003": {
+    "date": "1995-02-01",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9502123": {
+    "date": "1995-02-20",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9503184": {
+    "date": "1995-03-27",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9504060": {
+    "date": "1995-04-11",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9506119": {
+    "date": "1995-06-19",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9507141": {
+    "date": "1995-07-26",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9508079": {
+    "date": "1995-08-17",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9511214": {
+    "date": "1995-11-30",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9512090": {
+    "date": "1995-12-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9512209": {
+    "date": "1995-12-28",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9601152": {
+    "date": "1996-01-28",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9602172": {
+    "date": "1996-03-01",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9603007": {
+    "date": "1996-02-29",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9603066": {
+    "date": "1996-03-11",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9604016": {
+    "date": "1996-04-03",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9606185": {
+    "date": "1996-06-28",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9607006": {
+    "date": "1996-07-01",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9607045": {
+    "date": "1996-07-05",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9607149": {
+    "date": "1996-07-18",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9608162": {
+    "date": "1996-08-23",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9609052": {
+    "date": "1996-09-06",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9610137": {
+    "date": "1996-10-17",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9611080": {
+    "date": "1996-11-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9702001": {
+    "date": "1997-01-31",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9702075": {
+    "date": "1997-02-09",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9703140": {
+    "date": "1997-03-20",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9703146": {
+    "date": "1997-03-21",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9705165": {
+    "date": "1997-05-21",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9706182": {
+    "date": "1997-06-25",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9707124": {
+    "date": "1997-07-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9709206": {
+    "date": "1997-09-29",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9711003": {
+    "date": "1997-11-01",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9801194": {
+    "date": "1998-01-28",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9803078": {
+    "date": "1998-03-09",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9804149": {
+    "date": "1998-04-22",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9805054": {
+    "date": "1998-05-11",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9807074": {
+    "date": "1998-07-10",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9812094": {
+    "date": "1998-12-11",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9901004": {
+    "date": "1999-01-03",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9905037": {
+    "date": "1999-05-05",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9906244": {
+    "date": "1999-06-30",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9907084": {
+    "date": "1999-07-12",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9907116": {
+    "date": "1999-07-14",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9907213": {
+    "date": "1999-07-29",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "hep-th/9911119": {
+    "date": "1999-11-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9911137": {
+    "date": "1999-11-18",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9911168": {
+    "date": "1999-11-22",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9911230": {
+    "date": "1999-11-29",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "hep-th/9912046": {
+    "date": "1999-12-07",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math-ph/9804006": {
+    "date": "1998-04-04",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math-ph/9811009": {
+    "date": "1998-11-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math-ph/9907012": {
+    "date": "1999-07-15",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math-ph/9907013": {
+    "date": "1999-07-15",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math-ph/9907025": {
+    "date": "1999-07-01",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math-ph/9909001": {
+    "date": "1999-08-31",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math-ph/9910002": {
+    "date": "1999-10-01",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9310221": {
+    "date": "1993-10-05",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9311209": {
+    "date": "1993-11-01",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9406227": {
+    "date": "1994-06-30",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9410224": {
+    "date": "1994-10-01",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9411229": {
+    "date": "1994-11-29",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9411232": {
+    "date": "1994-11-30",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9411239": {
+    "date": "1994-11-01",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9501219": {
+    "date": "1995-01-19",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9506225": {
+    "date": "1995-06-08",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9601215": {
+    "date": "1996-01-07",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9705224": {
+    "date": "1997-05-25",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9712201": {
+    "date": "1997-11-26",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9712202": {
+    "date": "1997-11-26",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9712203": {
+    "date": "1997-11-26",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9712204": {
+    "date": "1997-11-26",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9712207": {
+    "date": "1997-11-29",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9712209": {
+    "date": "1997-12-01",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9712244": {
+    "date": "1997-12-10",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9712266": {
+    "date": "1997-12-27",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9712267": {
+    "date": "1997-12-27",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9801059": {
+    "date": "1998-01-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9801067": {
+    "date": "1998-01-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9801068": {
+    "date": "1998-01-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9802111": {
+    "date": "1998-02-23",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9803006": {
+    "date": "1998-03-02",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9803037": {
+    "date": "1998-03-11",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9804027": {
+    "date": "1998-04-06",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9804031": {
+    "date": "1998-04-06",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9804086": {
+    "date": "1998-04-18",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9804087": {
+    "date": "1998-04-18",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9804088": {
+    "date": "1998-04-18",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9806131": {
+    "date": "1998-06-23",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9807068": {
+    "date": "1998-07-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9808018": {
+    "date": "1998-08-04",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9809057": {
+    "date": "1998-09-10",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9809088": {
+    "date": "1998-09-16",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9809193": {
+    "date": "1998-09-30",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9810013": {
+    "date": "1998-10-03",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9810014": {
+    "date": "1998-10-04",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9810015": {
+    "date": "1998-10-03",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9810091": {
+    "date": "1998-10-14",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9810105": {
+    "date": "1998-10-16",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9811103": {
+    "date": "1998-11-17",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9811154": {
+    "date": "1998-11-25",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9812043": {
+    "date": "1998-12-08",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9901037": {
+    "date": "1999-01-08",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9901118": {
+    "date": "1999-01-26",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9902001": {
+    "date": "1999-01-31",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9903025": {
+    "date": "1999-03-03",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9903119": {
+    "date": "1999-03-19",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9903134": {
+    "date": "1999-03-23",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9903176": {
+    "date": "1999-03-30",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9904010": {
+    "date": "1999-04-02",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9904042": {
+    "date": "1999-04-09",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9904150": {
+    "date": "1999-04-27",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9905032": {
+    "date": "1999-05-05",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9905083": {
+    "date": "1999-05-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9905084": {
+    "date": "1999-05-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9905189": {
+    "date": "1999-05-29",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9906120": {
+    "date": "1999-06-18",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9906192": {
+    "date": "1999-06-28",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9906193": {
+    "date": "1999-06-28",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9906194": {
+    "date": "1999-06-28",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9907037": {
+    "date": "1999-07-07",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9907127": {
+    "date": "1999-07-20",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9907165": {
+    "date": "1999-07-25",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9908063": {
+    "date": "1999-08-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9909010": {
+    "date": "1999-09-01",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9909011": {
+    "date": "1999-09-02",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9909038": {
+    "date": "1999-09-07",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9909104": {
+    "date": "1999-09-17",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9909169": {
+    "date": "1999-09-28",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9910019": {
+    "date": "1999-10-05",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9910146": {
+    "date": "1999-10-27",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9911162": {
+    "date": "1999-11-22",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9911163": {
+    "date": "1999-11-22",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9911205": {
+    "date": "1999-11-25",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9911237": {
+    "date": "1999-11-29",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9912008": {
+    "date": "1999-12-01",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9912053": {
+    "date": "1999-12-07",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9912093": {
+    "date": "1999-12-12",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9912124": {
+    "date": "1999-12-15",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "math/9912135": {
+    "date": "1999-12-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9912136": {
+    "date": "1999-12-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "math/9912143": {
+    "date": "1999-12-17",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9503012": {
+    "date": "1995-03-21",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "q-alg/9508017": {
+    "date": "1995-08-24",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "q-alg/9603005": {
+    "date": "1996-03-08",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9605004": {
+    "date": "1996-05-04",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9605005": {
+    "date": "1996-05-04",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9605013": {
+    "date": "1996-05-09",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9605042": {
+    "date": "1996-05-28",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9607027": {
+    "date": "1996-07-19",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9608020": {
+    "date": "1996-08-23",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9608021": {
+    "date": "1996-08-23",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9611008": {
+    "date": "1996-11-07",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "q-alg/9611011": {
+    "date": "1996-11-11",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9612003": {
+    "date": "1996-12-01",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9612025": {
+    "date": "1996-12-17",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9701039": {
+    "date": "1997-01-30",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9703007": {
+    "date": "1997-03-04",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "q-alg/9703024": {
+    "date": "1997-03-12",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9703037": {
+    "date": "1997-03-21",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9706006": {
+    "date": "1997-06-05",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9707001": {
+    "date": "1997-07-01",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9709011": {
+    "date": "1997-09-05",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9709042": {
+    "date": "1997-09-29",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "q-alg/9711009": {
+    "date": "1997-11-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "q-alg/9712051": {
+    "date": "1997-12-23",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "q-alg/9712052": {
+    "date": "1997-12-23",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "quant-ph/9601011": {
+    "date": "1996-01-15",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "solv-int/9506006": {
+    "date": "1995-07-07",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9509003": {
+    "date": "1995-09-09",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9509007": {
+    "date": "1995-09-17",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9602002": {
+    "date": "1996-02-23",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9604005": {
+    "date": "1996-04-25",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9607003": {
+    "date": "1996-07-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "solv-int/9608004": {
+    "date": "1996-08-12",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9609010": {
+    "date": "1996-09-26",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9610009": {
+    "date": "1996-10-22",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9611005": {
+    "date": "1996-11-07",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9701003": {
+    "date": "1997-01-10",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9702007": {
+    "date": "1997-02-26",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9706002": {
+    "date": "1997-06-05",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9706009": {
+    "date": "1997-06-25",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9706010": {
+    "date": "1997-06-25",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9707001": {
+    "date": "1997-06-27",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9801008": {
+    "date": "1998-01-05",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9804004": {
+    "date": "1998-04-02",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9804005": {
+    "date": "1998-04-03",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9808006": {
+    "date": "1998-08-17",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "solv-int/9808011": {
+    "date": "1998-08-24",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "solv-int/9808015": {
+    "date": "1998-08-24",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9812006": {
+    "date": "1998-12-03",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9901003": {
+    "date": "1999-01-06",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9901004": {
+    "date": "1999-01-15",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9903005": {
+    "date": "1999-03-04",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9903009": {
+    "date": "1999-03-08",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9907001": {
+    "date": "1999-06-28",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9907008": {
+    "date": "1999-07-07",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9909010": {
+    "date": "1999-09-15",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9912008": {
+    "date": "1999-12-06",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "solv-int/9912014": {
+    "date": "1999-12-23",
+    "decision": "ACCEPT",
+    "source": "fetch"
   }
 }
