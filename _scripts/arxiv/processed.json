@@ -44309,9 +44309,19 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2602.04363": {
+    "date": "2026-02-04",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
   "2602.04390": {
     "date": "2026-02-04",
     "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2602.04673": {
+    "date": "2026-02-04",
+    "decision": "REJECT",
     "source": "fetch"
   },
   "2602.04815": {
@@ -44355,6 +44365,11 @@
     "source": "fetch"
   },
   "2602.07587": {
+    "date": "2026-02-07",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2602.07669": {
     "date": "2026-02-07",
     "decision": "REJECT",
     "source": "fetch"
@@ -44417,6 +44432,11 @@
   "2602.10696": {
     "date": "2026-02-11",
     "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2602.10857": {
+    "date": "2026-02-11",
+    "decision": "ACCEPT",
     "source": "fetch"
   },
   "2602.11255": {
@@ -44509,6 +44529,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2602.14487": {
+    "date": "2026-02-16",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
   "2602.14776": {
     "date": "2026-02-16",
     "decision": "REJECT",
@@ -44524,6 +44549,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2602.16509": {
+    "date": "2026-02-18",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
   "2602.16568": {
     "date": "2026-02-18",
     "decision": "REJECT",
@@ -44537,6 +44567,11 @@
   "2602.17002": {
     "date": "2026-02-19",
     "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2602.17179": {
+    "date": "2026-02-19",
+    "decision": "ACCEPT",
     "source": "fetch"
   },
   "2602.17466": {
@@ -44612,6 +44647,11 @@
   "2602.23764": {
     "date": "2026-02-27",
     "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2602.23837": {
+    "date": "2026-02-27",
+    "decision": "ACCEPT",
     "source": "fetch"
   },
   "2602.24008": {

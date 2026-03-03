@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!matchesCat || !matchesYear) return;
 
                 if (term) {
-                    var haystack = entry.id + ' ' + entry.t + ' ' + entry.a;
+                    var haystack = entry.id + ' ' + entry.t + ' ' + entry.a + ' ' + (entry.s || '');
                     var matched = isCase ? haystack.indexOf(term) !== -1 : haystack.toLowerCase().indexOf(termLower) !== -1;
                     if (!matched) return;
                 }

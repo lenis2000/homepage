@@ -15,6 +15,32 @@ from pathlib import Path
 
 import yaml
 
+_TAG_RE = re.compile(r'<[^>]+>')
+_JINJA_RE = re.compile(r'\{%.*?%\}')
+_MULTI_SPACE = re.compile(r'\s+')
+
+
+def _strip_to_plain(html):
+    """Strip HTML/MathML to plain text for search indexing.
+
+    Extracts LaTeX from <annotation> tags, strips all other HTML,
+    removes Jinja tags, and collapses whitespace.
+    """
+    # Replace <annotation encoding="application/x-tex">LATEX</annotation> with $LATEX$
+    text = re.sub(
+        r'<annotation[^>]*>(.*?)</annotation>',
+        lambda m: '$' + m.group(1) + '$',
+        html,
+    )
+    # Remove all remaining HTML tags
+    text = _TAG_RE.sub(' ', text)
+    # Remove Jinja {% raw %} / {% endraw %} etc
+    text = _JINJA_RE.sub('', text)
+    # Collapse whitespace
+    text = _MULTI_SPACE.sub(' ', text).strip()
+    return text
+
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 POSTS_DIR = REPO_ROOT / "_posts" / "arxiv"
@@ -68,6 +94,10 @@ def parse_post(filepath):
     date = fm.get("date", "")
     date_short = date.split("T")[0] if "T" in date else date
 
+    # Extract plain-text abstract from post body
+    body = parts[2] if len(parts) > 2 else ""
+    abstract = _strip_to_plain(body)
+
     return {
         "id": arxiv_id,
         "t": title,
@@ -75,6 +105,7 @@ def parse_post(filepath):
         "c": " ".join(cats) if isinstance(cats, list) else str(cats),
         "y": date_short[:4],
         "d": date_short,
+        "s": abstract,
     }
 
 

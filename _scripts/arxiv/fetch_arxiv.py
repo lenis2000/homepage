@@ -36,6 +36,11 @@ AUTHORS_FILE = SCRIPT_DIR / "authors.yml"
 PROMPT_FILE = SCRIPT_DIR / "ai_prompt.txt"
 AI_LOG_FILE = SCRIPT_DIR / "ai_log.jsonl"
 
+KAGGLE_FILE = Path(os.environ.get(
+    "ARXIV_KAGGLE",
+    Path.home() / "Data" / "arxiv" / "arxiv-metadata-oai-snapshot.json",
+))
+
 ARXIV_API = "https://export.arxiv.org/api/query"
 RATE_LIMIT_SECONDS = 4
 
@@ -400,6 +405,51 @@ def _render_math(text):
     return text
 
 
+def _parse_author_to_kaggle(name):
+    """Convert "FirstName LastName" to Kaggle ["LastName", "FirstName", ""]."""
+    parts = name.strip().split()
+    if len(parts) >= 2:
+        return [" ".join(parts[1:]), parts[0], ""]
+    return [name, "", ""]
+
+
+def append_to_kaggle(paper):
+    """Append a paper to the Kaggle JSON-lines file if not already present."""
+    if not KAGGLE_FILE.exists():
+        return
+    arxiv_id = paper["arxiv_id"]
+    # Quick dedup: grep for the ID in the file (matches both "id": "X" and "id":"X")
+    try:
+        result = subprocess.run(
+            ["/usr/bin/grep", "-Ec", f'"id": ?"{arxiv_id}"', str(KAGGLE_FILE)],
+            capture_output=True, text=True, timeout=60,
+        )
+        # grep -c outputs "0" with exit code 1 when no match, count with exit code 0
+        count = result.stdout.strip()
+        if count and count != "0":
+            return  # already in file
+    except Exception:
+        pass  # if grep fails, append anyway
+    # Build Kaggle-format record
+    date_str = paper["date"].split("T")[0] if "T" in paper["date"] else paper["date"]
+    try:
+        from email.utils import format_datetime
+        dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        rfc_date = format_datetime(dt)
+    except Exception:
+        rfc_date = date_str
+    record = {
+        "id": arxiv_id,
+        "title": paper["title"],
+        "authors_parsed": [_parse_author_to_kaggle(a) for a in paper["authors"]],
+        "categories": " ".join(paper.get("categories", [])),
+        "abstract": paper.get("abstract", ""),
+        "versions": [{"created": rfc_date, "version": "v1"}],
+    }
+    with open(KAGGLE_FILE, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
 def generate_post(paper):
     """Generate a Jekyll post for an accepted paper."""
     authors_yaml = "\n".join(f'  - "{a}"' for a in paper["authors"])
@@ -437,7 +487,7 @@ FETCH_CACHE = SCRIPT_DIR / "fetch_cache.json"
 REVIEW_TOOL = Path.home() / "bin" / "arxiv-review"
 
 
-def export_for_review(candidates, ai_decisions, processed):
+def export_for_review(candidates, ai_decisions, processed, append_kaggle=True):
     """Write candidates to review.json for the TUI tool.
 
     Auto-handles high-confidence cases:
@@ -500,6 +550,8 @@ def export_for_review(candidates, ai_decisions, processed):
         filepath = OUTPUT_DIR / filename
         if not filepath.exists():
             filepath.write_text(generate_post(entry))
+            if append_kaggle:
+                append_to_kaggle(entry)
             wrote += 1
         if aid not in processed:
             processed[aid] = {"source": "fetch", "decision": "ACCEPT", "date": date_prefix}
@@ -523,7 +575,7 @@ def export_for_review(candidates, ai_decisions, processed):
     return review
 
 
-def import_review(all_papers, config, processed):
+def import_review(all_papers, config, processed, append_kaggle=True):
     """Read decisions from review.json and generate posts."""
     if not REVIEW_FILE.exists():
         print("No review.json found.")
@@ -561,6 +613,8 @@ def import_review(all_papers, config, processed):
 
         if not filepath.exists():
             filepath.write_text(generate_post(paper))
+            if append_kaggle:
+                append_to_kaggle(paper)
             print(f"  WROTE {filename}")
             wrote += 1
 
@@ -641,6 +695,7 @@ def main():
             filepath = OUTPUT_DIR / filename
             if not filepath.exists():
                 filepath.write_text(generate_post(r))
+                append_to_kaggle(r)
                 wrote += 1
             if aid not in processed:
                 processed[aid] = {"source": "fetch", "decision": "ACCEPT", "date": date_prefix}
@@ -833,6 +888,7 @@ def main():
             filename = f"{date_prefix}-{safe_id}.md"
             filepath = OUTPUT_DIR / filename
             filepath.write_text(generate_post(paper))
+            append_to_kaggle(paper)
             print(f"  WROTE {filename}")
 
         # Update processed

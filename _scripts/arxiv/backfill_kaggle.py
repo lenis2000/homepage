@@ -261,7 +261,7 @@ def main():
 
     # Output mode
     if args.review:
-        export_for_review(candidates, ai_decisions, processed)
+        export_for_review(candidates, ai_decisions, processed, append_kaggle=False)
 
         ai_accept = sum(1 for v in ai_decisions.values()
                         if (v.get("decision") if isinstance(v, dict) else v) == "ACCEPT")
@@ -288,7 +288,7 @@ def main():
 
         # Import decisions — build paper lookup from candidates
         all_papers = {p["arxiv_id"]: p for p in candidates}
-        import_review(all_papers, config, processed)
+        import_review(all_papers, config, processed, append_kaggle=False)
 
     elif args.dry_run:
         for p in candidates:
