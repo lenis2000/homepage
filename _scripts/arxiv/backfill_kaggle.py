@@ -16,12 +16,11 @@ Usage:
 """
 
 import json
-import os
 import re
 import subprocess
 import sys
 import argparse
-from datetime import datetime
+import time
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
