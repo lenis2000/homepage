@@ -60,6 +60,145 @@ document.addEventListener('DOMContentLoaded', function() {
         monthMap[hdr.dataset.month] = hdr;
     }
 
+    // --- LaTeX in titles ---
+
+    var LATEX_CMD_SET = {};
+    ('alpha beta gamma delta epsilon varepsilon zeta eta theta vartheta iota kappa lambda mu nu xi ' +
+     'pi varpi rho varrho sigma varsigma tau upsilon phi varphi chi psi omega ' +
+     'Gamma Delta Theta Lambda Xi Pi Sigma Upsilon Phi Psi Omega ' +
+     'mathbb mathcal mathfrak mathrm mathsf mathbf mathit mathtt ' +
+     'hat bar tilde widehat widetilde overline underline dot ddot vec ' +
+     'operatorname rm bf it sf tt text textbf textit textrm textsf ' +
+     'infty partial nabla ell aleph wp Re Im forall exists ' +
+     'times cdot circ oplus otimes leq geq neq sim simeq approx equiv ' +
+     'to rightarrow leftarrow leftrightarrow Rightarrow Leftarrow ' +
+     'hspace quad qquad left right frac tfrac binom sqrt over ' +
+     'det dim ker Hom log exp sin cos').split(/\s+/).forEach(function(c) {
+        LATEX_CMD_SET[c] = true;
+    });
+
+    var TAKES_ARG = {};
+    ('mathbb mathcal mathfrak mathrm mathsf mathbf mathit mathtt ' +
+     'hat bar tilde widehat widetilde overline underline dot ddot vec ' +
+     'operatorname text textbf textit textrm textsf rm bf it sf tt').split(/\s+/).forEach(function(c) {
+        TAKES_ARG[c] = true;
+    });
+
+    function extractCmd(text, pos) {
+        var start = pos;
+        while (pos < text.length && /[a-zA-Z]/.test(text[pos])) pos++;
+        return pos > start ? text.slice(start, pos) : null;
+    }
+
+    function scanMathEnd(text, pos) {
+        var i = pos, len = text.length, depth = 0;
+        while (i < len) {
+            if (text[i] === '\\' && i + 1 < len && /[a-zA-Z]/.test(text[i + 1])) {
+                var cmdStart = i + 1;
+                i++;
+                while (i < len && /[a-zA-Z]/.test(text[i])) i++;
+                var cmdName = text.slice(cmdStart, i);
+                if (TAKES_ARG[cmdName] && i < len && text[i] === ' ' &&
+                    i + 1 < len && /[A-Za-z0-9]/.test(text[i + 1])) {
+                    i += 2;
+                }
+                continue;
+            }
+            if (text[i] === '\\' && i + 1 < len) { i += 2; continue; }
+            if (text[i] === '{') { depth++; i++; continue; }
+            if (text[i] === '}') {
+                if (depth > 0) { depth--; i++; continue; }
+                break;
+            }
+            if (depth > 0) { i++; continue; }
+            if (text[i] === '_' || text[i] === '^') {
+                i++;
+                if (i < len && text[i] === '{') { depth++; i++; }
+                else if (i < len && /[a-zA-Z0-9\\]/.test(text[i])) {
+                    if (text[i] !== '\\') i++;
+                }
+                continue;
+            }
+            if (text[i] === '(') {
+                var pd = 1;
+                for (var j = i + 1; j < len && pd > 0; j++) {
+                    if (text[j] === '(') pd++;
+                    else if (text[j] === ')') pd--;
+                }
+                if (pd === 0 && /\\[a-zA-Z]/.test(text.slice(i + 1, j))) {
+                    i = j;
+                    continue;
+                }
+                break;
+            }
+            break;
+        }
+        return i;
+    }
+
+    function texifyTitle(text) {
+        if (!text || text.indexOf('$') >= 0) return text;
+        text = text.replace(/\\{2,}/g, '\\');
+        if (text.indexOf('\\') < 0) return text;
+        var regions = [], i = 0, len = text.length;
+        while (i < len) {
+            var mathPos = -1;
+            if (text[i] === '\\') {
+                var cmd = extractCmd(text, i + 1);
+                if (cmd && LATEX_CMD_SET[cmd]) mathPos = i;
+            } else if (text[i] === '{') {
+                for (var j = i + 1; j < len && text[j] !== '}'; j++) {
+                    if (text[j] === '\\') {
+                        var cmd2 = extractCmd(text, j + 1);
+                        if (cmd2 && LATEX_CMD_SET[cmd2]) { mathPos = i; break; }
+                    }
+                }
+            }
+            if (mathPos >= 0) {
+                var end = scanMathEnd(text, mathPos);
+                var start = mathPos;
+                if (start > 0 && (text[start - 1] === '_' || text[start - 1] === '^')) start--;
+                if (regions.length && start <= regions[regions.length - 1].end) {
+                    regions[regions.length - 1].end = Math.max(regions[regions.length - 1].end, end);
+                } else {
+                    regions.push({start: start, end: end});
+                }
+                i = end;
+            } else {
+                i++;
+            }
+        }
+        if (!regions.length) return text;
+        var result = '', pos = 0;
+        for (var r = 0; r < regions.length; r++) {
+            result += text.slice(pos, regions[r].start);
+            result += '$' + text.slice(regions[r].start, regions[r].end) + '$';
+            pos = regions[r].end;
+        }
+        return result + text.slice(pos);
+    }
+
+    function texifyBatch(from, to) {
+        if (!window.renderMathInElement) return;
+        for (var k = from; k < to; k++) {
+            var pid = orderedPapers[displayList[k]].id;
+            var el = paperMap[pid];
+            if (!el) continue;
+            var em = el.querySelector('.arxiv-body em');
+            if (!em || em.dataset.texified) continue;
+            var raw = em.textContent;
+            var processed = texifyTitle(raw);
+            if (processed !== raw) {
+                em.textContent = processed;
+                renderMathInElement(em, {
+                    delimiters: [{left: '$', right: '$', display: false}],
+                    throwOnError: false,
+                });
+            }
+            em.dataset.texified = '1';
+        }
+    }
+
     // Display state
     var displayList = [];
     var renderedCount = 0;
@@ -309,6 +448,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (target <= renderedCount) return;
 
         var fragment = document.createDocumentFragment();
+        var batchStart = renderedCount;
         var prevMonth = renderedCount > 0
             ? orderedPapers[displayList[renderedCount - 1]].month
             : null;
@@ -326,6 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         listEl.appendChild(fragment);
         renderedCount = target;
+        texifyBatch(batchStart, target);
     }
 
     // --- Filtering ---
@@ -646,9 +787,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }).join(' ');
             // Check if paper is on the page (rendered)
             var onPage = !!paperMap[rid] && listEl.contains(paperMap[rid]);
+            var titleText = texifyTitle(entry.t);
             var titleLink = onPage
-                ? '<a href="#" class="arxiv-related-title" data-scroll-to="' + rid + '">' + entry.t + '</a>'
-                : '<a href="https://arxiv.org/abs/' + rid + '" target="_blank" rel="noopener" class="arxiv-related-title">' + entry.t + '</a>';
+                ? '<a href="#" class="arxiv-related-title" data-scroll-to="' + rid + '">' + titleText + '</a>'
+                : '<a href="https://arxiv.org/abs/' + rid + '" target="_blank" rel="noopener" class="arxiv-related-title">' + titleText + '</a>';
             return '<div class="arxiv-related-item">' +
                 '<div class="arxiv-related-item-header">' +
                     '<span class="arxiv-related-date">' + entry.d + '</span> ' +

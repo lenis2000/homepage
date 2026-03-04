@@ -82,7 +82,8 @@ def parse_post(filepath):
             else:
                 current_key = None
                 current_list = None
-                fm[key] = val
+                # Unescape YAML double-quoted string backslashes
+                fm[key] = val.replace('\\\\', '\\')
 
     arxiv_id = fm.get("arxiv-id", "")
     if not arxiv_id:
