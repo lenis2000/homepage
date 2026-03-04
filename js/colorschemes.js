@@ -54,6 +54,7 @@ const ColorSchemes = [
     { name: 'Brazil', colors: ['#009739', '#FEDD00', '#012169', '#FFFFFF'] },
     { name: 'Argentina', colors: ['#74ACDF', '#FFFFFF', '#F6B40E', '#0057A8'] },
     { name: 'Ukraine', colors: ['#0057B7', '#FFD700', '#004494', '#D4A017'] },
+    { name: 'Ireland', colors: ['#169B62', '#FFFFFF', '#FF883E', '#D3D3D3'] },
 
     // Popular Coding Themes (keeping fourth color consistent with original themes)
     { name: 'Dracula', colors: ['#282a36', '#8be9fd', '#50fa7b', '#bd93f9'] },
