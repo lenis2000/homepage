@@ -669,6 +669,15 @@ document.addEventListener('DOMContentLoaded', function() {
         dropdown.innerHTML = html;
         dropdown.hidden = false;
         btn.setAttribute('aria-expanded', 'true');
+        if (window.renderMathInElement) {
+            renderMathInElement(dropdown, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                ],
+                throwOnError: false,
+            });
+        }
     });
 
     // Scroll-to related paper on page

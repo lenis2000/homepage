@@ -37,10 +37,6 @@ AUTHORS_FILE = SCRIPT_DIR / "authors.yml"
 PROMPT_FILE = SCRIPT_DIR / "ai_prompt.txt"
 AI_LOG_FILE = SCRIPT_DIR / "ai_log.jsonl"
 
-KAGGLE_FILE = Path(os.environ.get(
-    "ARXIV_KAGGLE",
-    Path.home() / "Data" / "arxiv" / "arxiv-metadata-oai-snapshot.json",
-))
 KAGGLE_DB = Path(os.environ.get(
     "ARXIV_KAGGLE_DB",
     Path.home() / "Data" / "arxiv" / "arxiv-metadata.db",
@@ -588,16 +584,8 @@ def _render_math(text):
     return text
 
 
-def _parse_author_to_kaggle(name):
-    """Convert "FirstName LastName" to Kaggle ["LastName", "FirstName", ""]."""
-    parts = name.strip().split()
-    if len(parts) >= 2:
-        return [" ".join(parts[1:]), parts[0], ""]
-    return [name, "", ""]
-
-
 def append_to_kaggle(paper):
-    """Append a paper to both the Kaggle JSON-lines file and SQLite DB."""
+    """Insert a paper into the SQLite DB."""
     import sqlite3
 
     arxiv_id = paper["arxiv_id"]
@@ -624,34 +612,6 @@ def append_to_kaggle(paper):
         except Exception as e:
             print(f"  WARN: SQLite insert failed for {arxiv_id}: {e}")
 
-    # Also append to JSON-lines file if it exists (legacy)
-    if KAGGLE_FILE.exists():
-        try:
-            result = subprocess.run(
-                ["/usr/bin/grep", "-Ec", f'"id": ?"{arxiv_id}"', str(KAGGLE_FILE)],
-                capture_output=True, text=True, timeout=60,
-            )
-            count = result.stdout.strip()
-            if count and count != "0":
-                return
-        except Exception:
-            pass
-        try:
-            from email.utils import format_datetime
-            dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            rfc_date = format_datetime(dt)
-        except Exception:
-            rfc_date = date_str
-        record = {
-            "id": arxiv_id,
-            "title": paper["title"],
-            "authors_parsed": [_parse_author_to_kaggle(a) for a in paper["authors"]],
-            "categories": " ".join(paper.get("categories", [])),
-            "abstract": paper.get("abstract", ""),
-            "versions": [{"created": rfc_date, "version": "v1"}],
-        }
-        with open(KAGGLE_FILE, "a", encoding="utf-8") as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
 def generate_post(paper):

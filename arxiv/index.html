@@ -349,6 +349,8 @@ nav_weight: 4
     color: #555;
     margin-top: 4px;
     line-height: 1.4;
+    max-height: 6em;
+    overflow: hidden;
   }
   .arxiv-related-links { margin-top: 4px; }
   /* Dark mode */
@@ -421,5 +423,7 @@ nav_weight: 4
 })();
 </script>
 
-<!-- KaTeX CSS for pre-rendered MathML math in abstracts -->
+<!-- KaTeX for pre-rendered MathML + client-side rendering in related dropdowns -->
 <link rel="stylesheet" href="/katex-0.16.9/katex.min.css">
+<script defer src="/katex-0.16.9/katex.min.js"></script>
+<script defer src="/katex-0.16.9/contrib/auto-render.min.js"></script>

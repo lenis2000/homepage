@@ -94,7 +94,7 @@ def parse_post(filepath):
     date = fm.get("date", "")
     date_short = date.split("T")[0] if "T" in date else date
 
-    # Extract plain-text abstract from post body
+    # Extract plain-text abstract from post body (for search)
     body = parts[2] if len(parts) > 2 else ""
     abstract = _strip_to_plain(body)
 
