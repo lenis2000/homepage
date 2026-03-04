@@ -1,0 +1,366 @@
+[
+  {
+    "arxiv_id": "2602.13495",
+    "title": "A Characterization of the Macdonald Hypergeometric Series ${}_r\\Phi_s(x;q,t)$ and ${}_r\\Phi_s(x,y;q,t)$ via $q$-Difference Equations",
+    "authors": [
+      "Hong Chen"
+    ],
+    "categories": [
+      "math.CO",
+      "math.CA",
+      "math.QA"
+    ],
+    "abstract": "In two widely circulated manuscripts from the 1980s, I. G. Macdonald introduced certain multivariate hypergeometric series ${}_pF_q(x;\\alpha)$ and ${}_pF_q(x,y;\\alpha)$ and their $q$-analogs ${}_r\\Phi_s(x;q,t)$ and ${}_r\\Phi_s(x,y;q,t)$. These series are given by explicit expansions in Jack and Macdonald polynomials, and they generalize the hypergeometric functions of one and two matrix arguments from statistics. In a recent joint paper with Siddhartha Sahi, we constructed differential operators that characterize the Jack series ${}_pF_q$ thereby answering a question of Macdonald. In this paper we construct analogous $q$-difference operators that characterize the Macdonald series ${}_r\\Phi_s$. More precisely, we construct three $q$-difference operators $\\mathcal A^{(x,y)}$, $\\mathcal B^{(x)}$, $C^{(x)}$. The equation $\\mathcal A^{(x,y)}(f(x,y))=0$ characterizes ${}_r\\Phi_s(x,y;q,t)$, while the equations $\\mathcal B^{(x)}(f(x))=0$ and $\\mathcal C^{(x)}(f(x))=0$ each characterize ${}_r\\Phi_s(x;q,t)$. These characterizations are subject to certain symmetry, boundary and stability condition. In the special case of ${}_2\\Phi_1(x;q,t)$, our operator $\\mathcal B^{(x)}$ was previously constructed by Kaneko in 1996.",
+    "date": "2026-02",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.879",
+    "ai_reason": "Cosine similarity 0.879 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "2602.16544",
+    "title": "The Quantum Symmetric Simple Exclusion Process in the Continuum and Free Processes",
+    "authors": [
+      "Denis Bernard"
+    ],
+    "categories": [
+      "math-ph",
+      "cond-mat.stat-mech",
+      "math.MP",
+      "math.PR"
+    ],
+    "abstract": "The quantum symmetric simple exclusion process (QSSEP) is a recent extension of the symmetric simple exclusion process, designed to model quantum coherent fluctuating effects in noisy diffusive systems. It models stochastic nearest-neighbor fermionic hopping on a lattice, possibly driven out-of-equilibrium by boundary processes. We present a direct formulation in the continuum, and establish how this formulation captures the scaling limit of the discrete version. In the continuum, QSSEP emerges as a non-commutative process, driven by free increments, conditioned on the algebra of functions on the ambiant space to encode spatial correlations. We actually develop a more general framework dealing with conditioned orbits with free increments which may find applications beyond the present context. We view this construction as a preliminary step toward formulating a quantum extension of the macroscopic fluctuation theory.",
+    "date": "2026-02",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.843",
+    "ai_reason": "Cosine similarity 0.843 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "2602.14996",
+    "title": "Invariant Gibbs dynamics for the hyperbolic sinh-Gordon model",
+    "authors": [
+      "Justin Forlano",
+      "Younes Zine"
+    ],
+    "categories": [
+      "math.AP",
+      "math-ph",
+      "math.MP",
+      "math.PR"
+    ],
+    "abstract": "We study the hyperbolic defocusing sinh-Gordon model with parameter $\\beta^2\u003e0$ and its associated Gibbs dynamics on the two-dimensional torus. We establish global well-posedness of the model for a certain range of parameters $\\beta^2\u003e0$ with the corresponding Gibbs measure initial data and prove invariance of the Gibbs measure under the flow, thereby resolving a question posed by Oh, Robert, and Wang (2019). Our physical space approach hinges on developing a novel $L^\\infty$-based well-posedness theory for wave equations with exponential-type nonlinearities, going beyond the classical $L^2$-based framework. This refinement allows us to fully leverage structural properties of Gaussian multiplicative chaos. As a by-product of our method, we also obtain an improved well-posedness theory for the hyperbolic Liouville model.",
+    "date": "2026-02",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.825",
+    "ai_reason": "Cosine similarity 0.825 to known int-prob papers",
+    "decision": "REJECT"
+  },
+  {
+    "arxiv_id": "2602.12672",
+    "title": "Combinatorial formulas for symmetric Macdonald polynomials by superizations",
+    "authors": [
+      "Emma Yu Jin",
+      "Xiaowei Lin"
+    ],
+    "categories": [
+      "math.CO"
+    ],
+    "abstract": "In this paper, we derive new combinatorial formulas for symmetric Macdonald polynomials $P_{\\lambda}(X;q,t)$ and integral Macdonald polynomials $J_{\\lambda}(X;q,t)$, in terms of several new statistics and the major index for a partition $\\lambda$. Compared to previous formulas, these new ones contain the fewest terms. Moreover, three existing formulas for symmetric Macdonald polynomials established by Corteel--Mandelshtam--Williams (2022), Corteel--Haglund--Mandelshtam--Mason--Williams (2022) and Mandelshtam (2025) are recovered. Our proof relies on a new statistic on super fillings, employing the superization formulas of Haglund--Haimain--Loehr (2005) and Ayyer--Mandelshtam--Martin (2023), together with our recent approach to modified Macdonald polynomials.",
+    "date": "2026-02",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.802",
+    "ai_reason": "Cosine similarity 0.802 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "2602.16521",
+    "title": "Scaling limits for some Mittag-Leffler queues",
+    "authors": [
+      "Giacomo Ascione",
+      "Luigia Caputo"
+    ],
+    "categories": [
+      "math.PR"
+    ],
+    "abstract": "In this paper, we consider five models of heavy-tailed queues involving Mittag-Leffler distributions that generalize the classical $M/M/1$ queues. These models are suitable modifications of previously defined models in such a way that the classical $M/M/1$ queue can be recovered by a suitable selection of parameters. We provide the distribution of inter-arrival and service times of both the original and modified queueing models. We then study the scaling limits of all the proposed models and we argue that the behaviour of the limiting processes can be used to characterise the traffic regime of the queues.",
+    "date": "2026-02",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.793",
+    "ai_reason": "Cosine similarity 0.793 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "2602.17992",
+    "title": "Convergence of Half-Space Last Passage Percolation Away from the Boundary to the Directed Landscape",
+    "authors": [
+      "Xinyi Zhang"
+    ],
+    "categories": [
+      "math.PR"
+    ],
+    "abstract": "In this note, we prove convergence of the half-space exponential last passage percolation (LPP) model, away from the boundary, to the directed landscape. Our approach couples the half-space and full-space LPP models and constructs two barrier events based on the monotonicity of last passage paths. Combining this coupling with moderate deviation estimates for both models and the known convergence of full-space LPP to the directed landscape, we establish the desired convergence.",
+    "date": "2026-02",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.780",
+    "ai_reason": "Cosine similarity 0.780 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "2602.12928",
+    "title": "On Card guessing after a single shelf shuffle",
+    "authors": [
+      "Markus Kuba"
+    ],
+    "categories": [
+      "math.CO",
+      "math.PR"
+    ],
+    "abstract": "We consider a card guessing game with complete feedback. An ordered deck of $n$ cards labeled $1$ up to $n$ is shelf-shuffled exactly one time. One after the other a single card is drawn from the shuffled deck. The guesser makes has guess and the card is shown until no cards remain. We provide a distributional analysis of the number of correct guesses under the optimal strategy. We re-obtain the previously derived expectation and add a complete description of the distribution. We also obtain a central limit theorem for the number $n$ of cards tending to infinity. Furthermore, we discuss an unbalanced, biased shelf shuffle and show how to derive the extend our analysis, also adding the complete position matrix. Finally, a refined analysis of the number of correct guesses is carried out, distinguishing between pure luck guesses and certified correct guesses.",
+    "date": "2026-02",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.780",
+    "ai_reason": "Cosine similarity 0.780 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "2602.15455",
+    "title": "A Phase Transition For Repeated K-Averages",
+    "authors": [
+      "Rohit Chaudhuri"
+    ],
+    "categories": [
+      "math.PR"
+    ],
+    "abstract": "Let $x_1,\\dots,x_{n}$ be a fixed sequence of real numbers. At each stage, pick $k$ integers $\\{I_{i}\\}_{1\\leq i \\leq k}$ uniformly at random without replacement and then for each $i \\in \\{1,2,\\dots,k\\}$ replace $x_{I_i}$ by $(x_{I_1}+x_{I_2}+\\dots+x_{I_k})/k$. It is easy to observe that all the co-ordinates converge to $(x_1+\\dots+x_n)/n$. In this article, we extend the result of \\cite{chatterjee2019note} by establishing order of decay of the expected $L^{2}$ distance. Furthermore, we establish the mixing time to be in between $\\frac{n}{k \\log k}\\log n$ and $\\frac{n}{k-1}\\log n$.",
+    "date": "2026-02",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.778",
+    "ai_reason": "Cosine similarity 0.778 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "2602.15718",
+    "title": "Asymptotics and zero distribution of geometric polynomials",
+    "authors": [
+      "M. Bello-Hern\\'andez",
+      "M. Benito",
+      "\\'O. Ciaurri,",
+      "E. Fern\\'andez"
+    ],
+    "categories": [
+      "math.CA",
+      "math.CO",
+      "math.NT"
+    ],
+    "abstract": "We obtain some results on the asymptotic behavior and zero distribution of the so-called geometric polynomials. The asymptotics is given both on compact subsets of $\\C\\setminus [-1,0]$ and on compact subsets of the interval $(-1,0)$. The zeros of these polynomials are simple and lie in $(-1,0]$; moreover, the zeros of consecutive polynomials interlace. Its zero distribution is a measure whose density is similar to Cauchy weight. Some orthogonality properties of these polynomials are also proved.",
+    "date": "2026-02",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.770",
+    "ai_reason": "Cosine similarity 0.770 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "2602.20266",
+    "title": "Multiple Poisson-Dirichlet diffusions on generalized Kingman simplices",
+    "authors": [
+      "Cristina Costantini",
+      "Matteo Ruggiero"
+    ],
+    "categories": [
+      "math.PR",
+      "math.ST",
+      "q-bio.PE",
+      "stat.TH"
+    ],
+    "abstract": "We construct a new class of infinite-dimensional diffusions taking values in a generalized Kingman simplex. Our model describes the temporal evolution of the relative frequencies of infinitely-many types which are \"labeled\" by an arbitrary finite number of marks or colors, but \"unlabeled\" within each mark. We start with a finite-dimensional construction which extends to Wright-Fisher diffusions a self-similarity property known for Dirichlet distributions, and corresponds to a multiple skew-product representation of the Wright-Fisher diffusion relative to the marks in the population. After ranking decreasingly the frequencies within each mark, we identify the limit in distribution of the resulting diffusion when the number of types for each mark goes to infinity, and describe its infinitesimal operator. The limiting process reduces to a diffusion in the Thoma simplex in the special case of only two marks, whereas the infinitely-many-neutral-alleles model is recovered when all frequencies have the same mark. The stationary measure of the limit diffusion is shown to be the recently introduced multiple Poisson-Dirichlet distribution, which extends Kingman's Poisson-Dirichlet distribution and is the de Finetti representing measure for a family of random partitions whose elements are marked.",
+    "date": "2026-02",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.767",
+    "ai_reason": "Cosine similarity 0.767 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "2602.20469",
+    "title": "Numerical ranges of non-normal random matrices: elliptic Ginibre and non-Hermitian Wishart ensembles",
+    "authors": [
+      "Sung-Soo Byun",
+      "Joo Young Park"
+    ],
+    "categories": [
+      "math.PR",
+      "math-ph",
+      "math.MP"
+    ],
+    "abstract": "The numerical range of a non-normal matrix plays a central role as a descriptor of non-normal effects beyond spectral information. We study a class of fundamental non-Hermitian random matrix ensembles that interpolate between the Hermitian and non-Hermitian regimes. Our analysis focuses on the elliptic Ginibre ensemble and its chiral counterpart, as well as on non-Hermitian Wishart matrices. For each of these models, we explicitly characterise the geometry of the numerical range in the large-system limit. In particular, we show that for the elliptic Ginibre ensemble and its chiral version, the limiting numerical range is an ellipse, whereas for the non-Hermitian Wishart ensemble it is described by a non-elliptic envelope.",
+    "date": "2026-02",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.767",
+    "ai_reason": "Cosine similarity 0.767 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "2602.13183",
+    "title": "Determinant and Pfaffian formulas for particle annihilation",
+    "authors": [
+      "Piotr \\'Sniady"
+    ],
+    "categories": [
+      "math.PR",
+      "math.CO"
+    ],
+    "abstract": "When particles on a line collide, they may annihilate-both are destroyed. Computing exact annihilation probabilities has been difficult because collisions reduce the particle count, while determinantal methods require a fixed count throughout. The ghost particle method, introduced in a companion paper for coalescence, keeps destroyed particles walking as invisible ghosts that restore the missing dimension. We apply this method to annihilation: when two particles annihilate, both trajectories continue as invisible walkers, yielding an exact determinantal formula that specifies the number of annihilations, where survivors end up, and where ghosts end up. For complete annihilation (no survivors), the formula simplifies to a Pfaffian-an algebraic relative of the determinant built from pairwise quantities-connecting to Pfaffian point process theory. The annihilation formula also yields results about coalescence: pairwise coalescence can be reinterpreted as complete annihilation, producing a Pfaffian coalescence formula. These formulas are exact for any finite initial configuration and apply to discrete lattice paths, birth-death chains, and continuous diffusions including Brownian motion.",
+    "date": "2026-02",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.766",
+    "ai_reason": "Cosine similarity 0.766 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "2602.16126",
+    "title": "Martin Boundary and the Nonlinear Multiplicative Stochastic Heat Equation in Weak Disorder",
+    "authors": [
+      "Hongyi Chen"
+    ],
+    "categories": [
+      "math.PR",
+      "math.DS"
+    ],
+    "abstract": "We study the nonlinear multiplicative stochastic heat equation on Dirichlet spaces with white in time noise under weak disorder. We show that positive invariant random fields with uniformly bounded second moments are in one-to-one correspondence with bounded positive harmonic functions. The proof combines a remote past pullback construction with a uniqueness argument that applies a contraction inspired by chaos expansion. As a consequence, the space of invariant measures inherits geometric structure from the Martin Boundary. We further establish a small-noise Gaussian fluctuation result within each harmonic sector and show that the long-time behavior of solutions is completely determined by the Martin boundary data of the initial condition. These results reveal a direct connection between stochastic PDE dynamics and boundary theory in potential analysis.",
+    "date": "2026-02",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.760",
+    "ai_reason": "Cosine similarity 0.760 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "1401.0829",
+    "title": "Coagulation and diffusion: a probabilistic perspective on the Smoluchowski PDE",
+    "authors": [
+      "Alan Hammond"
+    ],
+    "categories": [
+      "math.PR",
+      "math-ph",
+      "math.AP",
+      "math.MP"
+    ],
+    "abstract": "The Smoluchowski coagulation-diffusion PDE is a system of partial differential equations modelling the evolution in time of mass-bearing Brownian particles which are subject to short-range pairwise coagulation. This survey presents a fairly detailed exposition of the kinetic limit derivation of the Smoluchowski PDE from a microscopic model of many coagulating Brownian particles that was undertaken in [11]. It presents heuristic explanations of the form of the main theorem before discussing the proof, and presents key estimates in that proof using a novel probabilistic technique. The survey's principal aim is an exposition of this kinetic limit derivation, but it also contains an overview of several topics which either motivate or are motivated by this derivation.",
+    "date": "2014-01",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.795",
+    "ai_reason": "Cosine similarity 0.795 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "1401.4355",
+    "title": "Scalar products in models with $GL(3)$ trigonometric $R$-matrix. General case",
+    "authors": [
+      "S. Pakuliak",
+      "E. Ragoucy",
+      "N. A. Slavnov"
+    ],
+    "categories": [
+      "math-ph",
+      "hep-th",
+      "math.MP"
+    ],
+    "abstract": "We study quantum integrable models with $GL(3)$ trigonometric $R$-matrix solvable by the nested algebraic Bethe ansatz. We analyze scalar products of generic Bethe vectors and obtain an explicit representation for them in terms of a sum with respect to partitions of Bethe parameters. This representation generalizes known formula for the scalar products in the models with $GL(3)$-invariant $R$-matrix.",
+    "date": "2014-01",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.782",
+    "ai_reason": "Cosine similarity 0.782 to known int-prob papers",
+    "decision": "REJECT"
+  },
+  {
+    "arxiv_id": "1401.7296",
+    "title": "The Simple Exclusion Process on the Circle has a diffusive Cutoff Window",
+    "authors": [
+      "Hubert Lacoin"
+    ],
+    "categories": [
+      "math.PR",
+      "math-ph",
+      "math.MP"
+    ],
+    "abstract": "In this paper, we investigate the mixing time of the simple exclusion process on the circle with $N$ sites, with a number of particle $k(N)$ tending to infinity, both from the worst initial condition and from a typical initial condition. We show that the worst-case mixing time is asymptotically equivalent to $(8\\pi^2)^{-1}N^2\\log k$, while the cutoff window, is identified to be $N^2$. Starting from a typical condition, we show that there is no cutoff and that the mixing time is of order $N^2$.",
+    "date": "2014-01",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.774",
+    "ai_reason": "Cosine similarity 0.774 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "1401.4498",
+    "title": "Random Walk on Random Walks",
+    "authors": [
+      "Marcelo Hil\\'ario",
+      "Frank den Hollander",
+      "Vladas Sidoravicius",
+      "Renato\n  Soares dos Santos",
+      "Augusto Teixeira"
+    ],
+    "categories": [
+      "math.PR"
+    ],
+    "abstract": "In this paper we study a random walk in a one-dimensional dynamic random environment consisting of a collection of independent particles performing simple symmetric random walks in a Poisson equilibrium with density $\\rho \\in (0,\\infty)$. At each step the random walk performs a nearest-neighbour jump, moving to the right with probability $p_{\\circ}$ when it is on a vacant site and probability $p_{\\bullet}$ when it is on an occupied site. Assuming that $p_\\circ \\in (0,1)$ and $p_\\bullet \\neq \\tfrac12$, we show that the position of the random walk satisfies a strong law of large numbers, a functional central limit theorem and a large deviation bound, provided $\\rho$ is large enough. The proof is based on the construction of a renewal structure together with a multiscale renormalisation argument.",
+    "date": "2014-01",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.769",
+    "ai_reason": "Cosine similarity 0.769 to known int-prob papers",
+    "decision": "ACCEPT"
+  },
+  {
+    "arxiv_id": "1401.6287",
+    "title": "Ergodicity of a collective random walk on a circle",
+    "authors": [
+      "Michael Blank"
+    ],
+    "categories": [
+      "math.DS",
+      "nlin.CG"
+    ],
+    "abstract": "We discuss conditions for unique ergodicity of a collective random walk on a continuous circle. Individual particles in this collective motion perform independent (and different in general) random walks conditioned by the assumption that the particles cannot overrun each other. Additionally to sufficient conditions for the unique ergodicity we discover a new and unexpected way for its violation due to excessively large local jumps. Necessary and sufficient conditions for the unique ergodicity of the deterministic version of this system are obtained as well. Technically our approach is based on the interlacing property of the spin function which describes states of pairs of particles in coupled processes under study.",
+    "date": "2014-01",
+    "matched_author": "",
+    "is_ambiguous": false,
+    "ai_decision": "ACCEPT",
+    "ai_confidence": "0.766",
+    "ai_reason": "Cosine similarity 0.766 to known int-prob papers",
+    "decision": "ACCEPT"
+  }
+]
