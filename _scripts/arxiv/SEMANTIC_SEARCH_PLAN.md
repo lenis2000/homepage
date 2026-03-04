@@ -23,12 +23,45 @@ Files created by `scan_full_arxiv.py` (gitignored):
 ## Makefile targets
 
 ```
+make arxiv                                  # name-based fetch + AI filter + TUI review
+make arxiv-semantic DAYS=7                  # combined: name + embedding similarity + TUI review
+make arxiv-semantic ARGS="--after 2026-02-26"  # semantic with date range
 make arxiv-related                          # embed 4k papers, write related-papers into posts
 make arxiv-scan ARGS="--threshold 0.65"     # scan full Kaggle DB for missed papers
 make arxiv-rebuild                          # rebuild search index + related (no API)
 make arxiv-kaggle                           # download latest Kaggle snapshot
 make arxiv-venv                             # create venv + install deps
 ```
+
+## Semantic mode (`--semantic`)
+
+Combined intake that fetches ALL recent papers from the arXiv API (not just by tracked authors) and filters using both name matching and bge-m3 embedding similarity.
+
+### How it works
+
+1. **Fetch**: queries arXiv API day-by-day across 20 categories using `submittedDate` range filters (small per-request payload, respects API rate limits)
+2. **Name matching**: same as regular mode — matches against `authors.yml` surnames
+3. **Embedding similarity**: embeds all papers via bge-m3, computes cosine similarity against `arxiv-vectors.npy` reference set (threshold default 0.72)
+4. **AI triage**: name-matched papers go through Claude AI filtering as usual; semantic-only papers skip AI and go directly to TUI review with similarity score shown
+5. **TUI review**: all candidates (name + semantic) appear in the TUI for manual accept/reject
+6. **Kaggle DB**: accepted papers are inserted into both SQLite DB (`arxiv-metadata.db`) and JSON-lines file
+
+### Categories scanned
+
+```
+math.PR, math-ph, math.CO, math.MP, cond-mat.stat-mech,
+math.RT, math.CA, math.QA, hep-th, nlin.SI,
+math.AG, math.AP, math.CV, cond-mat, math.FA,
+math.NT, q-alg, solv-int, math.ST, math.DS
+```
+
+### Performance
+
+- 20 categories x N days, 4s rate limit between requests
+- 7 days: ~140 API requests, ~10 min fetch
+- 30 days: ~600 API requests, ~40 min fetch
+- Embedding: cached in `.embedding-cache-full.db`, only new papers need embedding
+- Fetch cache (`fetch_cache.json`) enables interrupt/resume
 
 ---
 

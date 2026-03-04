@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import
 
 serve:
 	bundle exec jekyll serve 
@@ -115,13 +115,18 @@ deploy-local:
 arxiv-install:
 	cd _scripts/arxiv/arxiv-review && go build -o arxiv-review . && cp arxiv-review ~/bin/
 
-arxiv:
-	python3 _scripts/arxiv/fetch_arxiv.py --days $(or $(DAYS),30) --review
+arxiv: arxiv-venv
+	@_scripts/arxiv/venv/bin/python _scripts/arxiv/fetch_arxiv.py --days $(or $(DAYS),30) --review $(ARGS)
+	python3 _scripts/arxiv/build_search_index.py
+
+arxiv-semantic: arxiv-venv
+	@_scripts/arxiv/venv/bin/python _scripts/arxiv/fetch_arxiv.py \
+		--semantic --days $(or $(DAYS),30) --review $(ARGS)
 	python3 _scripts/arxiv/build_search_index.py
 
 arxiv-venv:
-	@test -d _scripts/arxiv/venv || (python3 -m venv _scripts/arxiv/venv && \
-	  _scripts/arxiv/venv/bin/pip install -r _scripts/arxiv/requirements-semantic.txt)
+	@test -d _scripts/arxiv/venv || python3 -m venv _scripts/arxiv/venv
+	@_scripts/arxiv/venv/bin/pip install -q -r _scripts/arxiv/requirements-semantic.txt
 
 arxiv-rebuild:
 	python3 _scripts/arxiv/build_search_index.py

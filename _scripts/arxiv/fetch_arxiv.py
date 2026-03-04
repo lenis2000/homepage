@@ -7,6 +7,7 @@ Usage:
     python3 _scripts/arxiv/fetch_arxiv.py --days 30     # last 30 days
     python3 _scripts/arxiv/fetch_arxiv.py --dry-run     # preview only
     python3 _scripts/arxiv/fetch_arxiv.py --no-ai       # skip AI, accept all matches
+    python3 _scripts/arxiv/fetch_arxiv.py --semantic    # name + embedding similarity
 """
 
 import json
@@ -39,6 +40,10 @@ AI_LOG_FILE = SCRIPT_DIR / "ai_log.jsonl"
 KAGGLE_FILE = Path(os.environ.get(
     "ARXIV_KAGGLE",
     Path.home() / "Data" / "arxiv" / "arxiv-metadata-oai-snapshot.json",
+))
+KAGGLE_DB = Path(os.environ.get(
+    "ARXIV_KAGGLE_DB",
+    Path.home() / "Data" / "arxiv" / "arxiv-metadata.db",
 ))
 
 ARXIV_API = "https://export.arxiv.org/api/query"
@@ -189,6 +194,157 @@ def fetch_category(category, days, config, before_date=None):
             time.sleep(RATE_LIMIT_SECONDS)
 
     return list(all_papers.values())
+
+
+SEMANTIC_CATEGORIES = {
+    "math.PR", "math-ph", "math.CO", "math.MP", "cond-mat.stat-mech",
+    "math.RT", "math.CA", "math.QA", "hep-th", "nlin.SI",
+    "math.AG", "math.AP", "math.CV", "cond-mat", "math.FA",
+    "math.NT", "q-alg", "solv-int", "math.ST", "math.DS",
+}
+
+
+def fetch_category_day(category, day_date):
+    """Fetch ALL papers from a category for a single day (no author constraint).
+
+    Uses submittedDate range filter so the API only returns that day's papers,
+    keeping each request small and avoiding redundant pagination.
+    """
+    day_str = day_date.strftime("%Y%m%d")
+    search_query = f"cat:{category}+AND+submittedDate:[{day_str}0000+TO+{day_str}2359]"
+
+    all_papers = {}
+    start = 0
+    PAGE_SIZE = 200
+
+    while True:
+        params = (
+            f"search_query={search_query}"
+            f"&start={start}&max_results={PAGE_SIZE}"
+            f"&sortBy=submittedDate&sortOrder=descending"
+        )
+
+        url = f"{ARXIV_API}?{params}"
+        for attempt in range(5):
+            try:
+                response = urllib.request.urlopen(url).read()
+                break
+            except urllib.error.HTTPError as e:
+                if e.code in (503, 429) and attempt < 4:
+                    wait = RATE_LIMIT_SECONDS * (2 ** (attempt + 1))
+                    print(f"      {e.code} — retrying in {wait}s (attempt {attempt + 1}/5)...")
+                    time.sleep(wait)
+                else:
+                    raise
+        feed = feedparser.parse(response)
+
+        if not feed.entries:
+            break
+
+        for entry in feed.entries:
+            published = entry.get("published", "")
+            if not published:
+                continue
+
+            arxiv_id = entry.id.split("/abs/")[-1].split("v")[0]
+            if arxiv_id in all_papers:
+                continue
+
+            authors = [a.name for a in entry.authors]
+            title = re.sub(r"\s+", " ", entry.title.replace("\n", " ")).strip()
+            categories = [t["term"] for t in entry.tags]
+            primary_cat = categories[0] if categories else category
+            abstract = re.sub(r"\s+", " ", entry.get("summary", "").strip())
+
+            all_papers[arxiv_id] = {
+                "arxiv_id": arxiv_id,
+                "title": title,
+                "authors": authors,
+                "date": published,
+                "primary_category": primary_cat,
+                "categories": categories,
+                "abstract": abstract,
+            }
+
+        if len(feed.entries) < PAGE_SIZE:
+            break
+
+        start += PAGE_SIZE
+        time.sleep(RATE_LIMIT_SECONDS)
+
+    return list(all_papers.values())
+
+
+def semantic_filter(papers, threshold=0.72):
+    """Filter papers by embedding similarity to known int-prob papers.
+
+    Returns list of (paper, similarity_score) for papers above threshold.
+    Uses EmbeddingCache and reference vectors from scan_full_arxiv.py.
+    """
+    if not papers:
+        return []
+
+    from scan_full_arxiv import EmbeddingCache, text_key, VECTORS_FILE, CACHE_DB, MODEL_NAME
+
+    if not VECTORS_FILE.exists():
+        print(f"  WARN: {VECTORS_FILE} not found — skipping semantic filter")
+        return []
+
+    import numpy as np
+
+    ref_vectors = np.load(VECTORS_FILE)
+    cache = EmbeddingCache(CACHE_DB)
+    model = None
+
+    # Prepare texts and keys
+    texts = []
+    keys = []
+    for p in papers:
+        t = f"{p['title']}. {p.get('abstract', '')}" if p.get('abstract') else p['title']
+        texts.append(t)
+        keys.append(text_key(t))
+
+    # Check cache
+    cached = cache.get_many(keys)
+    to_embed_idx = [i for i, k in enumerate(keys) if k not in cached]
+
+    if to_embed_idx:
+        from sentence_transformers import SentenceTransformer
+        import torch
+        device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+        print(f"  Loading embedding model on {device}...")
+        model = SentenceTransformer(MODEL_NAME).to(device)
+
+        BATCH = 64
+        for b_start in range(0, len(to_embed_idx), BATCH):
+            b_idx = to_embed_idx[b_start:b_start + BATCH]
+            batch_texts = [texts[i] for i in b_idx]
+            vecs = model.encode(
+                batch_texts, batch_size=8,
+                show_progress_bar=False, normalize_embeddings=True,
+            )
+            new_items = []
+            for idx, vec in zip(b_idx, vecs):
+                cached[keys[idx]] = vec
+                new_items.append((keys[idx], vec))
+            cache.put_many(new_items)
+            if b_start + BATCH < len(to_embed_idx):
+                print(f"    embedded {b_start + len(b_idx)}/{len(to_embed_idx)}...")
+
+    print(f"  Embeddings: {len(keys) - len(to_embed_idx)} cached, {len(to_embed_idx)} computed")
+
+    # Compute similarities
+    vecs_array = np.array([cached[k] for k in keys], dtype=np.float32)
+    sims = vecs_array @ ref_vectors.T
+    max_sims = sims.max(axis=1)
+
+    results = []
+    for i, sim in enumerate(max_sims):
+        if sim >= threshold:
+            results.append((papers[i], float(sim)))
+
+    cache.close()
+    return results
 
 
 def match_authors(paper, config):
@@ -441,40 +597,61 @@ def _parse_author_to_kaggle(name):
 
 
 def append_to_kaggle(paper):
-    """Append a paper to the Kaggle JSON-lines file if not already present."""
-    if not KAGGLE_FILE.exists():
-        return
+    """Append a paper to both the Kaggle JSON-lines file and SQLite DB."""
+    import sqlite3
+
     arxiv_id = paper["arxiv_id"]
-    # Quick dedup: grep for the ID in the file (matches both "id": "X" and "id":"X")
-    try:
-        result = subprocess.run(
-            ["/usr/bin/grep", "-Ec", f'"id": ?"{arxiv_id}"', str(KAGGLE_FILE)],
-            capture_output=True, text=True, timeout=60,
-        )
-        # grep -c outputs "0" with exit code 1 when no match, count with exit code 0
-        count = result.stdout.strip()
-        if count and count != "0":
-            return  # already in file
-    except Exception:
-        pass  # if grep fails, append anyway
-    # Build Kaggle-format record
     date_str = paper["date"].split("T")[0] if "T" in paper["date"] else paper["date"]
-    try:
-        from email.utils import format_datetime
-        dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-        rfc_date = format_datetime(dt)
-    except Exception:
-        rfc_date = date_str
-    record = {
-        "id": arxiv_id,
-        "title": paper["title"],
-        "authors_parsed": [_parse_author_to_kaggle(a) for a in paper["authors"]],
-        "categories": " ".join(paper.get("categories", [])),
-        "abstract": paper.get("abstract", ""),
-        "versions": [{"created": rfc_date, "version": "v1"}],
-    }
-    with open(KAGGLE_FILE, "a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    # Insert into SQLite DB (primary store)
+    if KAGGLE_DB.exists():
+        try:
+            conn = sqlite3.connect(str(KAGGLE_DB))
+            conn.execute(
+                "INSERT OR IGNORE INTO papers (id, title, abstract, categories, authors, date) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    arxiv_id,
+                    paper["title"],
+                    paper.get("abstract", ""),
+                    " ".join(paper.get("categories", [])),
+                    ", ".join(paper["authors"]),
+                    date_str,
+                ),
+            )
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"  WARN: SQLite insert failed for {arxiv_id}: {e}")
+
+    # Also append to JSON-lines file if it exists (legacy)
+    if KAGGLE_FILE.exists():
+        try:
+            result = subprocess.run(
+                ["/usr/bin/grep", "-Ec", f'"id": ?"{arxiv_id}"', str(KAGGLE_FILE)],
+                capture_output=True, text=True, timeout=60,
+            )
+            count = result.stdout.strip()
+            if count and count != "0":
+                return
+        except Exception:
+            pass
+        try:
+            from email.utils import format_datetime
+            dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            rfc_date = format_datetime(dt)
+        except Exception:
+            rfc_date = date_str
+        record = {
+            "id": arxiv_id,
+            "title": paper["title"],
+            "authors_parsed": [_parse_author_to_kaggle(a) for a in paper["authors"]],
+            "categories": " ".join(paper.get("categories", [])),
+            "abstract": paper.get("abstract", ""),
+            "versions": [{"created": rfc_date, "version": "v1"}],
+        }
+        with open(KAGGLE_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
 def generate_post(paper):
@@ -543,6 +720,14 @@ def export_for_review(candidates, ai_decisions, processed, append_kaggle=True):
         confidence = ai.get("confidence", "low")
         reason = ai.get("reason", "")
 
+        # Semantic-only papers: no AI decision, show similarity score
+        source = p.get("source", "name")
+        if source == "semantic" and not decision:
+            sim = p.get("similarity", 0)
+            decision = "ACCEPT"
+            confidence = f"{sim:.3f}"
+            reason = f"Cosine similarity {sim:.3f} to known int-prob papers"
+
         entry = {
             "arxiv_id": aid,
             "title": p["title"],
@@ -556,6 +741,7 @@ def export_for_review(candidates, ai_decisions, processed, append_kaggle=True):
             "ai_confidence": confidence,
             "ai_reason": reason,
             "decision": "",
+            "source": source,
         }
 
         if decision == "ACCEPT" and confidence == "high":
@@ -682,6 +868,10 @@ def main():
                         help="Only include papers before this date (YYYY-MM-DD)")
     parser.add_argument("--backfill", action="store_true",
                         help="Include backfill_categories (hep-th, nlin.SI, cond-mat) for historical runs")
+    parser.add_argument("--semantic", action="store_true",
+                        help="Fetch ALL papers from categories and filter by name + embedding similarity")
+    parser.add_argument("--threshold", type=float, default=0.72,
+                        help="Cosine similarity threshold for semantic mode (default: 0.72)")
     args = parser.parse_args()
 
     config = load_config()
@@ -774,13 +964,19 @@ def main():
             parts.append(f"before {before_date}")
         date_desc = " and ".join(parts)
 
+    # In semantic mode, use SEMANTIC_CATEGORIES instead of config categories
+    if args.semantic:
+        categories = sorted(SEMANTIC_CATEGORIES)
+
     print(f"Fetching papers: {date_desc}")
     print(f"Categories: {', '.join(categories)}")
+    if args.semantic:
+        print(f"Mode: SEMANTIC (name + embedding similarity, threshold={args.threshold})")
 
-    # Step 1: Fetch from all categories (with cache for resumability)
+    # Step 1: Fetch papers (with cache for resumability)
     # Cache is keyed to run parameters — stale cache from different run is ignored
     all_papers = {}
-    cache_key = f"{args.days}|{args.authors}|{after_date}|{before_date}"
+    cache_key = f"{'semantic' if args.semantic else 'name'}|{args.days}|{args.authors}|{after_date}|{before_date}"
     cache_valid = False
     if FETCH_CACHE.exists():
         cached_data = json.loads(FETCH_CACHE.read_text())
@@ -792,13 +988,45 @@ def main():
             FETCH_CACHE.unlink()
             print(f"  Discarded stale cache (different run parameters)")
     if not cache_valid:
-        for cat in categories:
-            print(f"  Querying {cat} ({len(config['authors'])} authors in batches of 20)...")
-            papers = fetch_category(cat, args.days, config, before_date=before_date)
-            for p in papers:
-                if p["arxiv_id"] not in all_papers:
-                    all_papers[p["arxiv_id"]] = p
-            time.sleep(RATE_LIMIT_SECONDS)
+        if args.semantic:
+            # Semantic mode: fetch ALL papers day-by-day from each category
+            # Uses submittedDate range filter so each API call is small
+            from datetime import date as _date
+            start_d = (datetime.now() - timedelta(days=args.days)).date()
+            if after_date:
+                start_d = datetime.strptime(after_date, "%Y-%m-%d").date()
+            end_d = datetime.now().date()
+            if before_date:
+                end_d = datetime.strptime(before_date, "%Y-%m-%d").date()
+
+            current_d = start_d
+            total_days = (end_d - start_d).days + 1
+            day_num = 0
+            while current_d <= end_d:
+                day_num += 1
+                day_count_before = len(all_papers)
+                print(f"  [{day_num}/{total_days}] {current_d}")
+                for ci, cat in enumerate(categories):
+                    cat_before = len(all_papers)
+                    papers = fetch_category_day(cat, current_d)
+                    for p in papers:
+                        if p["arxiv_id"] not in all_papers:
+                            all_papers[p["arxiv_id"]] = p
+                    cat_new = len(all_papers) - cat_before
+                    print(f"    {ci+1}/{len(categories)} {cat}: {len(papers)} found, +{cat_new} new", flush=True)
+                    time.sleep(RATE_LIMIT_SECONDS)
+                day_new = len(all_papers) - day_count_before
+                print(f"    day total: +{day_new} new ({len(all_papers)} cumulative)")
+                current_d += timedelta(days=1)
+        else:
+            # Normal mode: fetch by author surname queries
+            for cat in categories:
+                print(f"  Querying {cat} ({len(config['authors'])} authors in batches of 20)...")
+                papers = fetch_category(cat, args.days, config, before_date=before_date)
+                for p in papers:
+                    if p["arxiv_id"] not in all_papers:
+                        all_papers[p["arxiv_id"]] = p
+                time.sleep(RATE_LIMIT_SECONDS)
         # Save cache (keyed to run parameters so different runs don't collide)
         cache_data = {"_cache_key": cache_key, "papers": list(all_papers.values())}
         FETCH_CACHE.write_text(json.dumps(cache_data, ensure_ascii=False))
@@ -830,29 +1058,55 @@ def main():
     # Step 3: Name matching
     clear = []
     ambiguous = []
+    name_matched_ids = set()
 
     for aid, paper in new_papers.items():
         matched, is_ambiguous = match_authors(paper, config)
         if matched:
             paper["matched_author"] = matched
             paper["is_ambiguous"] = is_ambiguous
+            paper["source"] = "name"
+            name_matched_ids.add(aid)
             if is_ambiguous:
                 ambiguous.append(paper)
             else:
                 clear.append(paper)
 
-    print(f"  {len(clear)} clear matches, {len(ambiguous)} ambiguous")
+    print(f"  {len(clear)} clear name matches, {len(ambiguous)} ambiguous")
+
+    # Step 3b: Semantic filtering (if --semantic)
+    semantic_candidates = []
+    if args.semantic:
+        # Run embedding similarity on ALL new papers
+        all_new_list = list(new_papers.values())
+        print(f"  Running semantic filter on {len(all_new_list)} papers (threshold={args.threshold})...")
+        sem_results = semantic_filter(all_new_list, threshold=args.threshold)
+        print(f"  {len(sem_results)} papers above similarity threshold")
+
+        for paper, sim_score in sem_results:
+            aid = paper["arxiv_id"]
+            if aid not in name_matched_ids:
+                paper["source"] = "semantic"
+                paper["similarity"] = sim_score
+                semantic_candidates.append(paper)
+
+        print(f"  {len(semantic_candidates)} semantic-only candidates (not name-matched)")
 
     candidates = clear + ambiguous
-    if not candidates:
-        print("  No author matches found.")
-        return 0
+    name_candidate_count = len(candidates)
 
-    # Step 4: AI filtering
+    # Step 4: AI filtering (name-matched papers only)
     ai_decisions = {}
     if not args.no_ai and candidates:
-        print(f"  Sending {len(candidates)} papers to AI for review...")
+        print(f"  Sending {len(candidates)} name-matched papers to AI for review...")
         ai_decisions = ai_filter(candidates, config)
+
+    # Add semantic candidates (they skip AI, go directly to review)
+    candidates = candidates + semantic_candidates
+
+    if not candidates:
+        print("  No candidates found (name or semantic).")
+        return 0
 
     # Step 5: Interactive review or auto-accept
     if args.review:
@@ -864,7 +1118,9 @@ def main():
         ai_reject = sum(1 for v in ai_decisions.values()
                         if (v.get("decision") if isinstance(v, dict) else v) in ("REJECT_PERSON", "REJECT_TOPIC"))
         print(f"\n  === Review summary ===")
-        print(f"  {len(candidates)} papers matched tracked authors")
+        print(f"  {name_candidate_count} papers matched tracked authors")
+        if args.semantic:
+            print(f"  {len(semantic_candidates)} papers matched by embedding similarity")
         if ai_decisions:
             print(f"  AI pre-filter: {ai_accept} suggested ACCEPT, {ai_reject} suggested REJECT")
             print(f"  AI suggestions are shown in the TUI — you make the final call")
@@ -892,8 +1148,10 @@ def main():
         for p in candidates:
             ai = ai_decisions.get(p["arxiv_id"], {})
             decision = ai.get("decision", "ACCEPT") if isinstance(ai, dict) else ai
+            source = p.get("source", "name")
+            sim = f" sim={p['similarity']:.3f}" if "similarity" in p else ""
             marker = "✓" if decision == "ACCEPT" else "✗"
-            print(f"  [{marker}] {p['arxiv_id']} — {p['title'][:60]}")
+            print(f"  [{marker}] [{source}{sim}] {p['arxiv_id']} — {p['title'][:60]}")
 
     else:
         # Auto mode: accept based on AI decisions
@@ -931,8 +1189,11 @@ def main():
         save_processed(processed)
 
     # Summary
-    print(f"\nDone. {len(all_papers)} fetched, {len(new_papers)} new, "
-          f"{len(candidates)} matched authors")
+    summary = f"\nDone. {len(all_papers)} fetched, {len(new_papers)} new"
+    summary += f", {name_candidate_count} name-matched"
+    if args.semantic:
+        summary += f", {len(semantic_candidates)} semantic-matched"
+    print(summary)
 
     return 0
 

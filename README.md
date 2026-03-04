@@ -142,7 +142,41 @@ This reads `review.json`, generates posts for papers marked ACCEPT, and updates 
 
 ---
 
-#### Pipeline 2: Full Scan (Historical Discovery)
+#### Pipeline 2: Semantic Fetch (Name + Embedding Similarity)
+
+**Goal:** Fetch ALL recent papers from the arXiv API (not just by tracked authors) and filter using both name matching and bge-m3 embedding similarity. Catches topically relevant papers by non-tracked authors that the Kaggle DB may not have yet.
+
+##### Prerequisites
+
+- `make arxiv-venv` — Python venv with `sentence-transformers`, `numpy`, `torch`
+- `assets/data/arxiv-vectors.npy` — reference embeddings (generate with `make arxiv-related`)
+
+##### Usage
+
+```bash
+make arxiv-semantic DAYS=7                       # last 7 days
+make arxiv-semantic ARGS="--after 2026-02-26"    # specific start date
+make arxiv-semantic ARGS="--threshold 0.70"      # stricter similarity
+```
+
+##### How it works
+
+1. **Fetch**: queries arXiv API day-by-day across 20 categories (`math.PR`, `math-ph`, `math.CO`, etc.) using `submittedDate` range filters — each request returns only one day's papers, keeping API load manageable (4s between requests)
+2. **Name matching**: same as Pipeline 1 — matches author surnames against `authors.yml`
+3. **Embedding similarity**: embeds all fetched papers via bge-m3, computes max cosine similarity against the reference set (`arxiv-vectors.npy`). Papers above threshold (default 0.72) become semantic candidates
+4. **AI triage**: name-matched papers go through Claude AI filtering as usual. Semantic-only papers (above threshold but no author match) **skip AI** and go directly to TUI review with their similarity score displayed
+5. **TUI review**: union of name-matched and semantic candidates, all shown in the TUI for final accept/reject
+6. **Output**: accepted papers get Jekyll posts + insertion into both SQLite DB and JSON-lines Kaggle file
+
+##### Performance
+
+- 20 categories x N days at 4s rate limit: ~10 min for 7 days, ~40 min for 30 days
+- Embedding cache (`.embedding-cache-full.db`) — only new papers need embedding
+- Fetch cache (`fetch_cache.json`) — safe to interrupt and resume
+
+---
+
+#### Pipeline 3: Full Kaggle Scan (Historical Discovery)
 
 **Goal:** Scan the entire arXiv corpus (~3M papers) using semantic embeddings to find missed papers related to integrable probability.
 
@@ -235,7 +269,7 @@ Runs `build_search_index.py` then `arxiv-related` to update both the search inde
 
 ---
 
-#### Pipeline 3: Rebuild Without Fetching
+#### Pipeline 4: Rebuild Without Fetching
 
 **Goal:** Regenerate search index and related-paper links from existing posts (e.g., after manual edits).
 
