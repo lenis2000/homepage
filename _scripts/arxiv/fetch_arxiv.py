@@ -914,6 +914,8 @@ def main():
     before_date = args.before or ""
     if after_date:
         after_dt = datetime.strptime(after_date, "%Y-%m-%d")
+        if not before_date:
+            before_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
         args.days = (datetime.now() - after_dt).days + 1
     date_desc = f"last {args.days} days"
     if after_date or before_date:
