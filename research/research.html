@@ -199,7 +199,6 @@ nav_weight: 2
     <div class="list-group-item h5" style="font-weight: bold;">Coauthors</div>
     {% assign coauthor_entries = "" %}
     {% assign solo_count = 0 %}
-    {% assign solo_journal_year = 0 %}
     {% for post in site.posts %}
       {% if post.categories contains "paper" or post.categories contains "preprint" %}
         {% assign has_coauthor = false %}
@@ -221,11 +220,6 @@ nav_weight: 2
         {% endfor %}
         {% unless has_coauthor %}
           {% assign solo_count = solo_count | plus: 1 %}
-          {% if post.journal-year %}
-            {% if solo_journal_year == 0 %}
-              {% assign solo_journal_year = post.journal-year %}
-            {% endif %}
-          {% endif %}
         {% endunless %}
       {% endif %}
     {% endfor %}
@@ -237,7 +231,7 @@ nav_weight: 2
       {%- assign coa_web = nil -%}
       {%- assign coa_noweb = false -%}
       {%- assign coa_count = 0 -%}
-      {%- assign coa_jyear = 0 -%}
+      {%- assign coa_max_year = 0 -%}
       {%- for post in site.posts -%}
         {%- if post.categories contains "paper" or post.categories contains "preprint" -%}
           {%- for coa in post.coauthors -%}
@@ -249,17 +243,23 @@ nav_weight: 2
               {%- if coa.noweb and coa_noweb == false and coa_web == nil -%}
                 {%- assign coa_noweb = true -%}
               {%- endif -%}
-              {%- if post.journal-year and coa_jyear == 0 -%}
-                {%- assign coa_jyear = post.journal-year -%}
+              {%- assign post_yr = post.date | date: "%Y" | plus: 0 -%}
+              {%- if post.journal-year and post.journal-year > post_yr -%}
+                {%- assign candidate_yr = post.journal-year -%}
+              {%- else -%}
+                {%- assign candidate_yr = post_yr -%}
+              {%- endif -%}
+              {%- if candidate_yr > coa_max_year -%}
+                {%- assign coa_max_year = candidate_yr -%}
               {%- endif -%}
             {%- endif -%}
           {%- endfor -%}
         {%- endif -%}
       {%- endfor -%}
-      {%- if coa_jyear != 0 -%}{%- assign coa_display_year = coa_jyear -%}{%- else -%}{%- assign coa_display_year = cyear -%}{%- endif -%}
+      {%- if coa_max_year != 0 -%}{%- assign coa_display_year = coa_max_year -%}{%- else -%}{%- assign coa_display_year = cyear -%}{%- endif -%}
       {%- if coa_web -%}<a class="list-group-item list-group-item-action" href="{{ coa_web }}"><small class="text-muted">[{{ coa_count }}]</small>&nbsp;{{ cname }}&ensp;<small class="text-muted">(&le;{{ coa_display_year }})</small></a>{%- else -%}<span class="list-group-item"><small class="text-muted">[{{ coa_count }}]</small>&nbsp;{{ cname }}&ensp;<small class="text-muted">(&le;{{ coa_display_year }})</small></span>{%- endif -%}
     {%- endfor %}
-    <span class="list-group-item"><small class="text-muted">[{{ solo_count }}]</small>&nbsp;<strong>Solo</strong>&ensp;<small class="text-muted">{%- if solo_journal_year != 0 -%}(&le;{{ solo_journal_year }}){%- endif -%}</small></span>
+    <span class="list-group-item"><small class="text-muted">[{{ solo_count }}]</small>&nbsp;<strong>Solo</strong></span>
     </div>
 
     <br><br>
