@@ -59149,10 +59149,20 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "solv-int/9610011": {
+    "date": "1996-10-25",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "solv-int/9611005": {
     "date": "1996-11-07",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "solv-int/9612001": {
+    "date": "1996-12-03",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "solv-int/9701003": {
     "date": "1997-01-10",
@@ -59224,6 +59234,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "solv-int/9810016": {
+    "date": "1998-10-23",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "solv-int/9812006": {
     "date": "1998-12-03",
     "decision": "ACCEPT",
@@ -59238,6 +59253,11 @@
     "date": "1999-01-15",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "solv-int/9902007": {
+    "date": "1999-02-05",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "solv-int/9903001": {
     "date": "1999-03-01",
