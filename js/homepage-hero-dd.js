@@ -2,9 +2,10 @@
  * Homepage hero: Lozenge double-dimer simulation (WASM-backed)
  *
  * Uses LozengeModule (CFTP) to produce two exact uniform lozenge tiling
- * samples of a regular hexagon, computes height difference (h1-h2)/sqrt(2),
- * and renders the fluctuation field as a triangle heatmap with UVA colors.
- * Double-dimer loops (XOR cycles) are drawn as closed curves.
+ * samples of a regular hexagon. Double-dimer loops (XOR of the two
+ * matchings) are level lines of the integer height difference h0-h1.
+ * Regions between loops are flood-filled with flat colors from a
+ * diverging UVA navy/orange palette.
  *
  * A fresh sample is generated on every page load.
  */
@@ -23,7 +24,7 @@
   var SLOPE  = 1 / Math.sqrt(3);
   var DELTAC = 2 / Math.sqrt(3);
 
-  /* ── Geometry helpers (inlined from lozenge-utils.js) ────────────────── */
+  /* ── Geometry helpers ────────────────────────────────────────────────── */
 
   function getVertex(n, j) {
     return { x: n, y: SLOPE * n + j * DELTAC };
@@ -92,7 +93,7 @@
     return triangleArr;
   }
 
-  /* ── Height function (from ultimate-lozenge.md pattern-based BFS) ───── */
+  /* ── Height function (pattern-based BFS) ─────────────────────────────── */
 
   function getVertexKeys(bn, bj, t) {
     if (t === 0) return [[bn, bj], [bn + 1, bj], [bn + 1, bj - 1], [bn, bj - 1]];
@@ -165,11 +166,6 @@
   /* ── Double-dimer loop computation (XOR of two matchings) ──────────── */
 
   function computeLoops(dimers0, dimers1) {
-    // Each lozenge type matches one black triangle to one white triangle:
-    //   Type 0 at (bn,bj): black(bn,bj) ↔ white(bn,bj)
-    //   Type 1 at (bn,bj): black(bn,bj) ↔ white(bn,bj-1)
-    //   Type 2 at (bn,bj): black(bn,bj) ↔ white(bn-1,bj)
-
     function bkey(n, j) { return n * 100000 + j; }
     function wkey(n, j) { return n * 100000 + j + 50000000; }
 
@@ -195,14 +191,13 @@
     var m0 = buildMatching(dimers0);
     var m1 = buildMatching(dimers1);
 
-    // Trace XOR cycles: B →(M0)→ W →(M1)→ B' →(M0)→ W' → ...
     var visited = new Set();
     var loops = [];
 
     for (var entry of m0.b2w) {
       var bk = entry[0], wk0 = entry[1];
       if (visited.has(bk)) continue;
-      if (m1.b2w.get(bk) === wk0) continue; // Same matching — skip
+      if (m1.b2w.get(bk) === wk0) continue;
 
       var points = [];
       var curB = bk;
@@ -220,6 +215,82 @@
     }
 
     return loops;
+  }
+
+  /* ── Region flood-fill (Union-Find on triangles between loops) ──────── */
+
+  function computeRegions(triArr, dimers0, dimers1) {
+    // Matching key: right triangle R(n,j) and left triangle L(n,j)
+    function rkey(n, j) { return n * 100000 + j; }
+    function lkey(n, j) { return n * 100000 + j + 50000000; }
+
+    function buildMatchMap(dimers) {
+      var m = new Map();
+      for (var i = 0; i < dimers.length; i++) {
+        var d = dimers[i];
+        var rk = rkey(d.bn, d.bj);
+        if (d.t === 0) m.set(rk, lkey(d.bn, d.bj));
+        else if (d.t === 1) m.set(rk, lkey(d.bn, d.bj - 1));
+        else m.set(rk, lkey(d.bn - 1, d.bj));
+      }
+      return m;
+    }
+
+    var match0 = buildMatchMap(dimers0);
+    var match1 = buildMatchMap(dimers1);
+
+    // Map triangle key → index in triArr
+    var numTri = triArr.length / 3;
+    var triIdx = new Map();
+    for (var i = 0; i < numTri; i++) {
+      var n = triArr[i * 3], j = triArr[i * 3 + 1], t = triArr[i * 3 + 2];
+      triIdx.set((t === 1) ? rkey(n, j) : lkey(n, j), i);
+    }
+
+    // Union-Find
+    var parent = new Int32Array(numTri);
+    var ufRank = new Uint8Array(numTri);
+    for (var i = 0; i < numTri; i++) parent[i] = i;
+
+    function find(x) {
+      while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+      return x;
+    }
+    function union(a, b) {
+      a = find(a); b = find(b);
+      if (a === b) return;
+      if (ufRank[a] < ufRank[b]) { var tmp = a; a = b; b = tmp; }
+      parent[b] = a;
+      if (ufRank[a] === ufRank[b]) ufRank[a]++;
+    }
+
+    // For each right triangle, check 3 adjacent left triangles.
+    // Union if edge is NOT an XOR edge (both tilings agree on that edge).
+    //   R(n,j) neighbors: L(n,j) [diagonal], L(n-1,j) [left], L(n,j-1) [bottom]
+    //   Matching type 0 → L(n,j), type 1 → L(n,j-1), type 2 → L(n-1,j)
+    for (var i = 0; i < numTri; i++) {
+      if (triArr[i * 3 + 2] !== 1) continue;
+      var n = triArr[i * 3], j = triArr[i * 3 + 1];
+      var rk = rkey(n, j);
+
+      var m0 = match0.get(rk);
+      var m1 = match1.get(rk);
+
+      var adjKeys = [lkey(n, j), lkey(n - 1, j), lkey(n, j - 1)];
+      for (var ai = 0; ai < 3; ai++) {
+        var lk = adjKeys[ai];
+        var li = triIdx.get(lk);
+        if (li === undefined) continue;
+        // Edge is XOR iff matched in exactly one tiling
+        if ((m0 === lk) === (m1 === lk)) {
+          union(i, li);
+        }
+      }
+    }
+
+    var regionOf = new Int32Array(numTri);
+    for (var i = 0; i < numTri; i++) regionOf[i] = find(i);
+    return regionOf;
   }
 
   /* ── Color mapping ───────────────────────────────────────────────────── */
@@ -290,33 +361,62 @@
     var dimers0 = sample0.dimers;
     var dimers1 = sample1.dimers;
 
+    // Height functions (integer-valued)
     var h0 = computeHeightFunction(dimers0);
     var h1 = computeHeightFunction(dimers1);
 
-    console.log('homepage-hero-dd: dimers', dimers0.length, dimers1.length,
-      'heights', h0.size, h1.size);
-
-    // Compute fluctuations (h0 - h1) / sqrt(2)
+    // Integer height difference h0 - h1 (only at vertices present in BOTH maps)
     var fluct = new Map();
-    var sqrt2 = Math.sqrt(2);
     var absMax = 0;
     for (var entry of h0) {
       var key = entry[0], val0 = entry[1];
-      var val1 = h1.has(key) ? h1.get(key) : 0;
-      var f = (val0 - val1) / sqrt2;
+      if (!h1.has(key)) continue;
+      var f = val0 - h1.get(key);
       fluct.set(key, f);
       var af = f < 0 ? -f : f;
       if (af > absMax) absMax = af;
     }
 
-    // Compute double-dimer loops
-    var loops = computeLoops(dimers0, dimers1);
-    console.log('homepage-hero-dd: absMax', absMax.toFixed(3), 'loops', loops.length);
+    // Flood-fill regions between loops
+    var regionOf = computeRegions(triArr, dimers0, dimers1);
 
-    renderToCanvas(canvas, triArr, fluct, absMax, loops);
+    // Assign each region a level via majority vote of vertex h0-h1 values
+    var regionVotes = new Map();
+    for (var i = 0; i < triArr.length; i += 3) {
+      var reg = regionOf[i / 3];
+      if (!regionVotes.has(reg)) regionVotes.set(reg, new Map());
+      var votes = regionVotes.get(reg);
+      var n = triArr[i], j = triArr[i + 1], t = triArr[i + 2];
+      var verts = (t === 1)
+        ? [[n, j], [n, j - 1], [n + 1, j - 1]]
+        : [[n, j], [n + 1, j], [n + 1, j - 1]];
+      for (var k = 0; k < 3; k++) {
+        var vkey = verts[k][0] + ',' + verts[k][1];
+        if (fluct.has(vkey)) {
+          var lv = fluct.get(vkey);
+          votes.set(lv, (votes.get(lv) || 0) + 1);
+        }
+      }
+    }
+    var regionLevel = new Map();
+    for (var entry of regionVotes) {
+      var reg = entry[0], votes = entry[1];
+      var bestLevel = 0, bestCount = 0;
+      for (var vEntry of votes) {
+        if (vEntry[1] > bestCount) { bestCount = vEntry[1]; bestLevel = vEntry[0]; }
+      }
+      regionLevel.set(reg, bestLevel);
+    }
+
+    var loops = computeLoops(dimers0, dimers1);
+    console.log('homepage-hero-dd: dimers', dimers0.length, dimers1.length,
+      'absMax', absMax, 'loops', loops.length,
+      'regions', regionLevel.size);
+
+    renderToCanvas(canvas, triArr, regionOf, regionLevel, absMax, loops);
   }
 
-  function renderToCanvas(canvas, triArr, fluct, absMax, loops) {
+  function renderToCanvas(canvas, triArr, regionOf, regionLevel, absMax, loops) {
     var dpr = window.devicePixelRatio || 1;
     var W = canvas.clientWidth;
     if (!W) W = canvas.parentElement ? canvas.parentElement.clientWidth : 400;
@@ -360,38 +460,43 @@
       return [vx * scale + offX, vy * scale + offY];
     }
 
-    function getF(n, j) {
-      var val = fluct.get(n + ',' + j);
-      return val !== undefined ? val : 0;
+    // Pre-compute color for each region
+    var regionColor = new Map();
+    for (var entry of regionLevel) {
+      regionColor.set(entry[0], valueToColor(entry[1], absMax));
     }
+    var defaultColor = valueToColor(0, absMax);
 
-    // Draw each triangle (heatmap)
+    // Draw each triangle with its region's flat color
     for (var i = 0; i < triArr.length; i += 3) {
       var tn = triArr[i], tj = triArr[i + 1], tt = triArr[i + 2];
-      var vertKeys, screenVerts;
-
+      var vertKeys;
       if (tt === 1) {
         vertKeys = [[tn, tj], [tn, tj - 1], [tn + 1, tj - 1]];
       } else {
         vertKeys = [[tn, tj], [tn + 1, tj], [tn + 1, tj - 1]];
       }
 
-      screenVerts = [];
-      var avgF = 0;
+      var screenVerts = [];
       for (var k = 0; k < 3; k++) {
         var gv = getVertex(vertKeys[k][0], vertKeys[k][1]);
         screenVerts.push(toCanvas(gv.x, gv.y));
-        avgF += getF(vertKeys[k][0], vertKeys[k][1]);
       }
-      avgF /= 3;
+
+      var reg = regionOf[i / 3];
+      var color = regionColor.get(reg) || defaultColor;
 
       ctx.beginPath();
       ctx.moveTo(screenVerts[0][0], screenVerts[0][1]);
       ctx.lineTo(screenVerts[1][0], screenVerts[1][1]);
       ctx.lineTo(screenVerts[2][0], screenVerts[2][1]);
       ctx.closePath();
-      ctx.fillStyle = valueToColor(avgF, absMax);
+      ctx.fillStyle = color;
       ctx.fill();
+      // Thin matching stroke to eliminate sub-pixel gaps between triangles
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
     }
 
     // Draw double-dimer loops
@@ -414,13 +519,16 @@
         ctx.stroke();
       }
     }
-
   }
 
   /* ── Bootstrap ───────────────────────────────────────────────────────── */
 
   function init() {
-    var canvas = document.getElementById('hero-dd');
+    // Pick whichever canvas is visible (mobile on top, or desktop sidebar)
+    var canvas = document.getElementById('hero-dd-mobile');
+    if (!canvas || canvas.offsetParent === null) {
+      canvas = document.getElementById('hero-dd');
+    }
     if (!canvas) return;
 
     if (typeof LozengeModule === 'undefined') {
