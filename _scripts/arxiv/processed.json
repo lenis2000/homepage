@@ -1199,6 +1199,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0712.0414": {
+    "date": "2007-12-04",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0712.0556": {
     "date": "2007-12-04",
     "decision": "ACCEPT",
@@ -1269,6 +1274,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0712.2695": {
+    "date": "2007-12-17",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0712.3584": {
     "date": "2007-12-21",
     "decision": "ACCEPT",
@@ -1298,6 +1308,11 @@
     "date": "2007-12-26",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0712.4131": {
+    "date": "2007-12-26",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0712.4253": {
     "date": "2007-12-27",
