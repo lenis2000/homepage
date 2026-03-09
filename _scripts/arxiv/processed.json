@@ -424,6 +424,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0707.0734": {
+    "date": "2007-07-05",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0707.0787": {
     "date": "2007-07-05",
     "decision": "REJECT",
@@ -449,6 +454,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0707.1606": {
+    "date": "2007-07-11",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0707.1833": {
     "date": "2007-07-12",
     "decision": "ACCEPT",
@@ -459,10 +469,20 @@
     "decision": "ACCEPT",
     "source": "scan"
   },
+  "0707.1995": {
+    "date": "2007-07-13",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0707.2159": {
     "date": "2007-07-14",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "0707.2333": {
+    "date": "2007-07-16",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0707.2352": {
     "date": "2007-07-16",
@@ -498,6 +518,11 @@
     "date": "2007-07-20",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "0707.3160": {
+    "date": "2007-07-20",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0707.3340": {
     "date": "2007-07-23",
