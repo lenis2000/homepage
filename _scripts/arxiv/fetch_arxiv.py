@@ -961,6 +961,11 @@ def main():
             if before_date:
                 end_d = datetime.strptime(before_date, "%Y-%m-%d").date()
 
+            # Put probe categories first to detect weekends/holidays early
+            probe_cats = ["math.CO", "math.PR"]
+            remaining_cats = [c for c in categories if c not in probe_cats]
+            ordered_categories = [c for c in probe_cats if c in set(categories)] + remaining_cats
+
             current_d = start_d
             total_days = (end_d - start_d).days + 1
             day_num = 0
@@ -968,15 +973,23 @@ def main():
                 day_num += 1
                 day_count_before = len(all_papers)
                 print(f"  [{day_num}/{total_days}] {current_d}")
-                for ci, cat in enumerate(categories):
+                probe_total = 0
+                for ci, cat in enumerate(ordered_categories):
                     cat_before = len(all_papers)
                     papers = fetch_category_day(cat, current_d)
                     for p in papers:
                         if p["arxiv_id"] not in all_papers:
                             all_papers[p["arxiv_id"]] = p
                     cat_new = len(all_papers) - cat_before
-                    print(f"    {ci+1}/{len(categories)} {cat}: {len(papers)} found, +{cat_new} new", flush=True)
+                    print(f"    {ci+1}/{len(ordered_categories)} {cat}: {len(papers)} found, +{cat_new} new", flush=True)
                     time.sleep(RATE_LIMIT_SECONDS)
+                    # Track probe categories to detect no-paper days
+                    if cat in probe_cats:
+                        probe_total += len(papers)
+                    # After probing math.CO + math.PR, skip rest if both empty
+                    if ci + 1 == len(probe_cats) and probe_total == 0:
+                        print(f"    No papers in {' or '.join(probe_cats)} — skipping day (weekend/holiday)")
+                        break
                 day_new = len(all_papers) - day_count_before
                 print(f"    day total: +{day_new} new ({len(all_papers)} cumulative)")
                 current_d += timedelta(days=1)
