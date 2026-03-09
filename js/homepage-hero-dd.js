@@ -281,15 +281,73 @@
 
     wasmParseAndFree(wasm, freeString, initFluctCFTP(2));
 
+    // Placeholder animation for larger hexagons
+    var stopPlaceholder = null;
+    if (HEX_SIDE >= 25) {
+      var phBoundary = generateHexagonBoundary(HEX_SIDE, HEX_SIDE, HEX_SIDE).boundary;
+      var dpr = window.devicePixelRatio || 1;
+      var W = canvas.clientWidth || (canvas.parentElement ? canvas.parentElement.clientWidth : 400) || 400;
+      canvas.width = (W * dpr) | 0;
+      canvas.height = (W * dpr) | 0;
+      var phCtx = canvas.getContext('2d');
+
+      var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (var i = 0; i < phBoundary.length; i++) {
+        var v = phBoundary[i];
+        if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
+        if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
+      }
+      var pad = 6, rangeX = maxX - minX, rangeY = maxY - minY;
+      var phScale = Math.min((W - 2 * pad) / rangeX, (W - 2 * pad) / rangeY);
+      var phOffX = (W - rangeX * phScale) / 2 - minX * phScale;
+      var phOffY = (W - rangeY * phScale) / 2 - minY * phScale;
+
+      var phAngle = 0, phRunning = true;
+      function drawPh() {
+        phCtx.save();
+        phCtx.scale(dpr, dpr);
+        phCtx.translate(W / 2, W / 2);
+        phCtx.rotate(Math.PI / 2);
+        phCtx.translate(-W / 2, -W / 2);
+
+        // Fill hexagon with base color
+        phCtx.beginPath();
+        phCtx.moveTo(phBoundary[0].x * phScale + phOffX, phBoundary[0].y * phScale + phOffY);
+        for (var i = 1; i < phBoundary.length; i++)
+          phCtx.lineTo(phBoundary[i].x * phScale + phOffX, phBoundary[i].y * phScale + phOffY);
+        phCtx.closePath();
+        phCtx.fillStyle = 'rgb(248,245,240)';
+        phCtx.fill();
+
+        // Spinner arc at center
+        phCtx.restore();
+        var cx = W / 2, cy = W / 2, r = W * 0.06;
+        phCtx.strokeStyle = 'rgba(35,45,75,0.35)';
+        phCtx.lineWidth = r * 0.22;
+        phCtx.lineCap = 'round';
+        phCtx.beginPath();
+        phCtx.arc(cx, cy, r, phAngle, phAngle + Math.PI * 1.1);
+        phCtx.stroke();
+        phAngle += 0.12;
+      }
+
+      function phStep() {
+        if (!phRunning) return;
+        drawPh();
+        requestAnimationFrame(phStep);
+      }
+      requestAnimationFrame(phStep);
+      stopPlaceholder = function () { phRunning = false; };
+    }
+
     var maxIter = 500;
     var coalesced = false;
     for (var iter = 0; iter < maxIter; iter++) {
       var stepResult = wasmParseAndFree(wasm, freeString, stepFluctCFTP());
       if (stepResult.status === 'coalesced') { coalesced = true; break; }
-      if (iter % 5 === 0) {
-        await new Promise(function (r) { requestAnimationFrame(r); });
-      }
+      await new Promise(function (r) { requestAnimationFrame(r); });
     }
+    if (stopPlaceholder) stopPlaceholder();
     console.log('homepage-hero-dd: CFTP', coalesced ? 'coalesced at iter ' + iter : 'did NOT coalesce after ' + maxIter);
 
     var sample0 = wasmParseAndFree(wasm, freeString, exportFluctSample(0));
