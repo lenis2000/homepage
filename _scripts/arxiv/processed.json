@@ -1049,6 +1049,21 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0711.1507": {
+    "date": "2007-11-09",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "0711.1718": {
+    "date": "2007-11-12",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "0711.1730": {
+    "date": "2007-11-12",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0711.1744": {
     "date": "2007-11-12",
     "decision": "REJECT",
@@ -1119,15 +1134,40 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0711.3062": {
+    "date": "2007-11-20",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "0711.3208": {
+    "date": "2007-11-21",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "0711.3350": {
+    "date": "2007-11-21",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0711.3686": {
     "date": "2007-11-23",
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0711.3797": {
+    "date": "2007-11-26",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0711.4070": {
     "date": "2007-11-26",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "0711.4185": {
+    "date": "2007-11-27",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0711.4307": {
     "date": "2007-11-27",
