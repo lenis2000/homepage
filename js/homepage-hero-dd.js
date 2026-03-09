@@ -4,8 +4,8 @@
  * Uses LozengeModule (CFTP) to produce two exact uniform lozenge tiling
  * samples of a regular hexagon. Double-dimer loops (XOR of the two
  * matchings) are level lines of the integer height difference h0-h1.
- * Loop interiors are flood-filled as polygons (painter's algorithm,
- * largest first) with flat colors from a diverging UVA palette.
+ * Loop interiors are filled as polygons (painter's algorithm, largest
+ * first). Level at each loop is computed via signed winding numbers.
  *
  * A fresh sample is generated on every page load.
  */
@@ -64,7 +64,6 @@
         bj += directions[dir][1];
       }
     }
-
     var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (var i = 0; i < boundary.length; i++) {
       var v = boundary[i];
@@ -76,18 +75,13 @@
     var nRange = searchMaxN - searchMinN;
     var searchMinJ = Math.floor(minY / DELTAC) - nRange - 5;
     var searchMaxJ = Math.ceil(maxY / DELTAC) + nRange + 5;
-
     var triangleArr = [];
     for (var n = searchMinN; n <= searchMaxN; n++) {
       for (var j = searchMinJ; j <= searchMaxJ; j++) {
         var rc = getRightTriangleCentroid(n, j);
-        if (pointInPolygon(rc.x, rc.y, boundary)) {
-          triangleArr.push(n, j, 1);
-        }
+        if (pointInPolygon(rc.x, rc.y, boundary)) triangleArr.push(n, j, 1);
         var lc = getLeftTriangleCentroid(n, j);
-        if (pointInPolygon(lc.x, lc.y, boundary)) {
-          triangleArr.push(n, j, 2);
-        }
+        if (pointInPolygon(lc.x, lc.y, boundary)) triangleArr.push(n, j, 2);
       }
     }
     return triangleArr;
@@ -97,15 +91,17 @@
     var directions = [[1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1]];
     var sideLengths = [a, b, c, a, b, c];
     var boundary = [];
+    var lattice = [];
     var bn = 0, bj = 0;
     for (var dir = 0; dir < 6; dir++) {
       for (var step = 0; step < sideLengths[dir]; step++) {
         boundary.push(getVertex(bn, bj));
+        lattice.push([bn, bj]);
         bn += directions[dir][0];
         bj += directions[dir][1];
       }
     }
-    return boundary;
+    return { boundary: boundary, lattice: lattice };
   }
 
   /* ── Height function (pattern-based BFS) ─────────────────────────────── */
@@ -120,7 +116,6 @@
 
   function computeHeightFunction(dimers) {
     if (!dimers || dimers.length === 0) return new Map();
-
     var vertexToDimers = new Map();
     for (var i = 0; i < dimers.length; i++) {
       var d = dimers[i];
@@ -131,14 +126,12 @@
         vertexToDimers.get(key).push(i);
       }
     }
-
     var heights = new Map();
     var firstKey = vertexToDimers.keys().next().value;
     heights.set(firstKey, 0);
     var queue = [firstKey];
     var head = 0;
     var visited = new Set();
-
     while (head < queue.length) {
       var currentKey = queue[head++];
       if (visited.has(currentKey)) continue;
@@ -146,19 +139,16 @@
       var currentH = heights.get(currentKey);
       var parts = currentKey.split(',');
       var cn = parseInt(parts[0]), cj = parseInt(parts[1]);
-
       var dimerIndices = vertexToDimers.get(currentKey) || [];
       for (var di = 0; di < dimerIndices.length; di++) {
         var dimer = dimers[dimerIndices[di]];
         var verts = getVertexKeys(dimer.bn, dimer.bj, dimer.t);
         var pattern = HEIGHT_PATTERNS[dimer.t];
-
         var myIdx = -1;
         for (var vi = 0; vi < 4; vi++) {
           if (verts[vi][0] === cn && verts[vi][1] === cj) { myIdx = vi; break; }
         }
         if (myIdx < 0) continue;
-
         for (var vi = 0; vi < 4; vi++) {
           var vkey = verts[vi][0] + ',' + verts[vi][1];
           if (!heights.has(vkey)) {
@@ -168,13 +158,11 @@
         }
       }
     }
-
     var minH = Infinity;
     for (var h of heights.values()) { if (h < minH) minH = h; }
     if (minH !== 0) {
       for (var entry of heights) { heights.set(entry[0], entry[1] - minH); }
     }
-
     return heights;
   }
 
@@ -205,7 +193,6 @@
 
     var m0 = buildMatching(dimers0);
     var m1 = buildMatching(dimers1);
-
     var visited = new Set();
     var loops = [];
 
@@ -213,7 +200,6 @@
       var bk = entry[0], wk0 = entry[1];
       if (visited.has(bk)) continue;
       if (m1.b2w.get(bk) === wk0) continue;
-
       var points = [];
       var curB = bk;
       do {
@@ -225,78 +211,10 @@
         points.push(getLeftTriangleCentroid(wc[0], wc[1]));
         curB = m1.w2b.get(w);
       } while (curB && curB !== bk);
-
       if (points.length >= 4) loops.push(points);
     }
 
     return loops;
-  }
-
-  /* ── Region flood-fill (Union-Find on triangles between loops) ──────── */
-
-  function computeRegions(triArr, dimers0, dimers1) {
-    function rkey(n, j) { return n * 100000 + j; }
-    function lkey(n, j) { return n * 100000 + j + 50000000; }
-
-    function buildMatchMap(dimers) {
-      var m = new Map();
-      for (var i = 0; i < dimers.length; i++) {
-        var d = dimers[i];
-        var rk = rkey(d.bn, d.bj);
-        if (d.t === 0) m.set(rk, lkey(d.bn, d.bj));
-        else if (d.t === 1) m.set(rk, lkey(d.bn, d.bj - 1));
-        else m.set(rk, lkey(d.bn - 1, d.bj));
-      }
-      return m;
-    }
-
-    var match0 = buildMatchMap(dimers0);
-    var match1 = buildMatchMap(dimers1);
-
-    var numTri = triArr.length / 3;
-    var triIdx = new Map();
-    for (var i = 0; i < numTri; i++) {
-      var n = triArr[i * 3], j = triArr[i * 3 + 1], t = triArr[i * 3 + 2];
-      triIdx.set((t === 1) ? rkey(n, j) : lkey(n, j), i);
-    }
-
-    var parent = new Int32Array(numTri);
-    var ufRank = new Uint8Array(numTri);
-    for (var i = 0; i < numTri; i++) parent[i] = i;
-
-    function find(x) {
-      while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }
-      return x;
-    }
-    function union(a, b) {
-      a = find(a); b = find(b);
-      if (a === b) return;
-      if (ufRank[a] < ufRank[b]) { var tmp = a; a = b; b = tmp; }
-      parent[b] = a;
-      if (ufRank[a] === ufRank[b]) ufRank[a]++;
-    }
-
-    for (var i = 0; i < numTri; i++) {
-      if (triArr[i * 3 + 2] !== 1) continue;
-      var n = triArr[i * 3], j = triArr[i * 3 + 1];
-      var rk = rkey(n, j);
-      var m0 = match0.get(rk);
-      var m1 = match1.get(rk);
-
-      var adjKeys = [lkey(n, j), lkey(n - 1, j), lkey(n, j - 1)];
-      for (var ai = 0; ai < 3; ai++) {
-        var lk = adjKeys[ai];
-        var li = triIdx.get(lk);
-        if (li === undefined) continue;
-        if ((m0 === lk) === (m1 === lk)) {
-          union(i, li);
-        }
-      }
-    }
-
-    var regionOf = new Int32Array(numTri);
-    for (var i = 0; i < numTri; i++) regionOf[i] = find(i);
-    return regionOf;
   }
 
   /* ── Color mapping ───────────────────────────────────────────────────── */
@@ -367,64 +285,35 @@
     var dimers0 = sample0.dimers;
     var dimers1 = sample1.dimers;
 
-    // Height functions (integer-valued)
+    // Height functions (for outerLevel calibration + sign validation)
     var h0 = computeHeightFunction(dimers0);
     var h1 = computeHeightFunction(dimers1);
-
-    // Integer height difference h0 - h1 (only at vertices in BOTH maps)
     var fluct = new Map();
-    var absMax = 0;
     for (var entry of h0) {
       var key = entry[0], val0 = entry[1];
       if (!h1.has(key)) continue;
-      var f = val0 - h1.get(key);
-      fluct.set(key, f);
-      var af = f < 0 ? -f : f;
-      if (af > absMax) absMax = af;
-    }
-
-    // Flood-fill regions between loops (for level lookup)
-    var regionOf = computeRegions(triArr, dimers0, dimers1);
-
-    // Assign each region a level via majority vote of vertex h0-h1 values
-    var regionVotes = new Map();
-    for (var i = 0; i < triArr.length; i += 3) {
-      var reg = regionOf[i / 3];
-      if (!regionVotes.has(reg)) regionVotes.set(reg, new Map());
-      var votes = regionVotes.get(reg);
-      var n = triArr[i], j = triArr[i + 1], t = triArr[i + 2];
-      var verts = (t === 1)
-        ? [[n, j], [n, j - 1], [n + 1, j - 1]]
-        : [[n, j], [n + 1, j], [n + 1, j - 1]];
-      for (var k = 0; k < 3; k++) {
-        var vkey = verts[k][0] + ',' + verts[k][1];
-        if (fluct.has(vkey)) {
-          var lv = fluct.get(vkey);
-          votes.set(lv, (votes.get(lv) || 0) + 1);
-        }
-      }
-    }
-    var regionLevel = new Map();
-    for (var entry of regionVotes) {
-      var bestLevel = 0, bestCount = 0;
-      for (var vEntry of entry[1]) {
-        if (vEntry[1] > bestCount) { bestCount = vEntry[1]; bestLevel = vEntry[0]; }
-      }
-      regionLevel.set(entry[0], bestLevel);
+      fluct.set(key, val0 - h1.get(key));
     }
 
     var loops = computeLoops(dimers0, dimers1);
-    var hexBoundary = generateHexagonBoundary(HEX_SIDE, HEX_SIDE, HEX_SIDE);
+    var hexData = generateHexagonBoundary(HEX_SIDE, HEX_SIDE, HEX_SIDE);
+
+    // Outer level from a boundary vertex
+    var outerLevel = 0;
+    for (var i = 0; i < hexData.lattice.length; i++) {
+      var vkey = hexData.lattice[i][0] + ',' + hexData.lattice[i][1];
+      if (fluct.has(vkey)) { outerLevel = fluct.get(vkey); break; }
+    }
 
     console.log('homepage-hero-dd: dimers', dimers0.length, dimers1.length,
-      'absMax', absMax, 'loops', loops.length);
+      'loops', loops.length, 'outerLevel', outerLevel);
 
-    renderToCanvas(canvas, triArr, regionOf, regionLevel, absMax, loops, hexBoundary);
+    renderToCanvas(canvas, triArr, hexData.boundary, loops, outerLevel, fluct);
   }
 
   /* ── Rendering: fill loop polygons (painter's algorithm) ─────────────── */
 
-  function renderToCanvas(canvas, triArr, regionOf, regionLevel, absMax, loops, hexBoundary) {
+  function renderToCanvas(canvas, triArr, hexBoundary, loops, outerLevel, fluct) {
     var dpr = window.devicePixelRatio || 1;
     var W = canvas.clientWidth;
     if (!W) W = canvas.parentElement ? canvas.parentElement.clientWidth : 400;
@@ -441,14 +330,13 @@
     ctx.rotate(Math.PI / 2);
     ctx.translate(-W / 2, -H / 2);
 
-    // Compute bounding box from hexagon boundary
+    // Bounding box from hexagon boundary
     var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     for (var i = 0; i < hexBoundary.length; i++) {
       var v = hexBoundary[i];
       if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
       if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
     }
-
     var pad = 6;
     var rangeX = maxX - minX, rangeY = maxY - minY;
     var scale = Math.min((W - 2 * pad) / rangeX, (H - 2 * pad) / rangeY);
@@ -459,7 +347,63 @@
       return [vx * scale + offX, vy * scale + offY];
     }
 
-    // Helper: find which triangle contains a point in lattice coords
+    // Find a point reliably inside a polygon (handles non-convex shapes)
+    function findInteriorPoint(pts) {
+      var cx = 0, cy = 0;
+      for (var i = 0; i < pts.length; i++) { cx += pts[i].x; cy += pts[i].y; }
+      cx /= pts.length; cy /= pts.length;
+      if (pointInPolygon(cx, cy, pts)) return { x: cx, y: cy };
+
+      // Compute signed area to determine winding direction
+      var sa = 0;
+      for (var i = 0; i < pts.length; i++) {
+        var j = (i + 1) % pts.length;
+        sa += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+      }
+      var ws = sa > 0 ? 1 : -1;
+
+      // Edge midpoints nudged inward by perpendicular normal
+      var EPS = 0.02;
+      for (var i = 0; i < pts.length; i++) {
+        var j = (i + 1) % pts.length;
+        var mx = (pts[i].x + pts[j].x) / 2;
+        var my = (pts[i].y + pts[j].y) / 2;
+        var dx = pts[j].x - pts[i].x, dy = pts[j].y - pts[i].y;
+        var len = Math.sqrt(dx * dx + dy * dy);
+        if (len < 1e-10) continue;
+        var px = mx + ws * dy / len * EPS;
+        var py = my + ws * (-dx) / len * EPS;
+        if (pointInPolygon(px, py, pts)) return { x: px, y: py };
+      }
+
+      // Scanline: sweep horizontal lines, find x-intersections, take interior midpoints
+      var minY = Infinity, maxY = -Infinity;
+      for (var i = 0; i < pts.length; i++) {
+        if (pts[i].y < minY) minY = pts[i].y;
+        if (pts[i].y > maxY) maxY = pts[i].y;
+      }
+      var NSCANS = 30;
+      for (var si = 1; si < NSCANS; si++) {
+        var y = minY + (maxY - minY) * si / NSCANS;
+        var xs = [];
+        for (var ei = 0, ej = pts.length - 1; ei < pts.length; ej = ei++) {
+          var yi = pts[ei].y, yj = pts[ej].y;
+          if ((yi <= y && yj > y) || (yj <= y && yi > y)) {
+            xs.push(pts[ei].x + (y - yi) / (yj - yi) * (pts[ej].x - pts[ei].x));
+          }
+        }
+        if (xs.length >= 2) {
+          xs.sort(function(a, b) { return a - b; });
+          for (var k = 0; k + 1 < xs.length; k += 2) {
+            var mx = (xs[k] + xs[k + 1]) / 2;
+            if (pointInPolygon(mx, y, pts)) return { x: mx, y: y };
+          }
+        }
+      }
+      return { x: cx, y: cy };
+    }
+
+    // Find which triangle contains a point (lattice coords, barycentric test)
     function findTriangleAt(px, py) {
       for (var i = 0; i < triArr.length; i += 3) {
         var n = triArr[i], j = triArr[i + 1], t = triArr[i + 2];
@@ -478,47 +422,77 @@
       return -1;
     }
 
-    // Helper: find a point reliably inside a polygon
-    function findInteriorPoint(pts) {
-      // Try centroid
-      var cx = 0, cy = 0;
-      for (var i = 0; i < pts.length; i++) { cx += pts[i].x; cy += pts[i].y; }
-      cx /= pts.length; cy /= pts.length;
-      if (pointInPolygon(cx, cy, pts)) return { x: cx, y: cy };
-      // Fallback: try midpoints of edges, nudged toward centroid
-      for (var i = 0; i < pts.length; i++) {
-        var j = (i + 1) % pts.length;
-        var mx = (pts[i].x + pts[j].x) / 2;
-        var my = (pts[i].y + pts[j].y) / 2;
-        var dx = cx - mx, dy = cy - my;
-        var dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > 1e-6) {
-          var px = mx + dx * 0.1 / dist;
-          var py = my + dy * 0.1 / dist;
-          if (pointInPolygon(px, py, pts)) return { x: px, y: py };
+    // ── Compute loop data: signed area, interior point ──
+
+    var loopData = [];
+    for (var li = 0; li < loops.length; li++) {
+      var pts = loops[li];
+      if (pts.length < 4) continue;
+      var area = 0;
+      for (var pi = 0; pi < pts.length; pi++) {
+        var pj = (pi + 1) % pts.length;
+        area += pts[pi].x * pts[pj].y - pts[pj].x * pts[pi].y;
+      }
+      area /= 2;
+      loopData.push({
+        pts: pts,
+        absArea: Math.abs(area),
+        sign: area > 0 ? 1 : -1,
+        ip: findInteriorPoint(pts)
+      });
+    }
+
+    // ── Compute level via winding number: count signed containment ──
+
+    for (var li = 0; li < loopData.length; li++) {
+      var level = outerLevel;
+      var ip = loopData[li].ip;
+      for (var oi = 0; oi < loopData.length; oi++) {
+        if (pointInPolygon(ip.x, ip.y, loopData[oi].pts)) {
+          level += loopData[oi].sign;
         }
       }
-      return { x: cx, y: cy };
+      loopData[li].level = level;
     }
 
-    // Determine the level for the outermost region (near hexagon boundary)
-    var outerLevel = 0;
-    // Use a point near the first hexagon boundary vertex
-    var bv0 = hexBoundary[0], bv1 = hexBoundary[1];
-    var testPt = { x: (bv0.x + bv1.x) / 2, y: (bv0.y + bv1.y) / 2 };
-    // Nudge slightly inward
-    var bcx = 0, bcy = 0;
-    for (var i = 0; i < hexBoundary.length; i++) { bcx += hexBoundary[i].x; bcy += hexBoundary[i].y; }
-    bcx /= hexBoundary.length; bcy /= hexBoundary.length;
-    var ndx = bcx - testPt.x, ndy = bcy - testPt.y;
-    var ndist = Math.sqrt(ndx * ndx + ndy * ndy);
-    if (ndist > 0) { testPt.x += ndx * 0.5 / ndist; testPt.y += ndy * 0.5 / ndist; }
-    var outerTri = findTriangleAt(testPt.x, testPt.y);
-    if (outerTri >= 0) {
-      outerLevel = regionLevel.get(regionOf[outerTri]) || 0;
+    // ── Validate sign convention against height function ──
+
+    var correctCount = 0, wrongCount = 0;
+    for (var li = 0; li < loopData.length; li++) {
+      var ip = loopData[li].ip;
+      var triI = findTriangleAt(ip.x, ip.y);
+      if (triI >= 0) {
+        var n = triArr[triI * 3], j = triArr[triI * 3 + 1];
+        var vkey = n + ',' + j;
+        if (fluct.has(vkey)) {
+          if (loopData[li].level === fluct.get(vkey)) correctCount++;
+          else wrongCount++;
+        }
+      }
+    }
+    // If sign convention is backwards, flip all levels around outerLevel
+    if (wrongCount > correctCount) {
+      for (var li = 0; li < loopData.length; li++) {
+        loopData[li].level = 2 * outerLevel - loopData[li].level;
+      }
+    }
+    console.log('homepage-hero-dd: sign validation correct=' + correctCount +
+      ' wrong=' + wrongCount + (wrongCount > correctCount ? ' (FLIPPED)' : ''));
+
+    // ── Compute absMax for color normalization ──
+
+    var absMax = Math.abs(outerLevel);
+    for (var li = 0; li < loopData.length; li++) {
+      var al = Math.abs(loopData[li].level);
+      if (al > absMax) absMax = al;
     }
 
-    // 1. Fill hexagon background with outermost level color
+    // ── Sort by area descending (painter's algorithm) ──
+
+    loopData.sort(function(a, b) { return b.absArea - a.absArea; });
+
+    // ── 1. Fill hexagon background with outerLevel color ──
+
     ctx.beginPath();
     var sv = toCanvas(hexBoundary[0].x, hexBoundary[0].y);
     ctx.moveTo(sv[0], sv[1]);
@@ -530,32 +504,8 @@
     ctx.fillStyle = valueToColor(outerLevel, absMax);
     ctx.fill();
 
-    // 2. Compute loop data: area, interior level
-    var loopData = [];
-    for (var li = 0; li < loops.length; li++) {
-      var pts = loops[li];
-      if (pts.length < 4) continue;
+    // ── 2. Fill each loop polygon (largest first) ──
 
-      // Signed area (shoelace formula)
-      var area = 0;
-      for (var pi = 0; pi < pts.length; pi++) {
-        var pj = (pi + 1) % pts.length;
-        area += pts[pi].x * pts[pj].y - pts[pj].x * pts[pi].y;
-      }
-      area /= 2;
-
-      // Find a point inside the loop and look up its region level
-      var ip = findInteriorPoint(pts);
-      var triI = findTriangleAt(ip.x, ip.y);
-      var level = (triI >= 0) ? (regionLevel.get(regionOf[triI]) || 0) : 0;
-
-      loopData.push({ pts: pts, area: Math.abs(area), level: level });
-    }
-
-    // 3. Sort by area descending (painter's algorithm: largest first)
-    loopData.sort(function(a, b) { return b.area - a.area; });
-
-    // 4. Fill each loop polygon with its interior level color
     for (var li = 0; li < loopData.length; li++) {
       var ld = loopData[li];
       ctx.beginPath();
@@ -570,7 +520,8 @@
       ctx.fill();
     }
 
-    // 5. Stroke all loops
+    // ── 3. Stroke all loops ──
+
     ctx.strokeStyle = 'rgba(35, 45, 75, 0.55)';
     ctx.lineWidth = 1.2;
     ctx.lineJoin = 'round';
