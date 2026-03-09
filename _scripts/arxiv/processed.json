@@ -254,10 +254,20 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0706.0136": {
+    "date": "2007-06-01",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0706.0748": {
     "date": "2007-06-06",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "0706.0767": {
+    "date": "2007-06-06",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0706.0806": {
     "date": "2007-06-06",
@@ -288,6 +298,16 @@
     "date": "2007-06-07",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "0706.1093": {
+    "date": "2007-06-07",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "0706.1177": {
+    "date": "2007-06-08",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0706.1185": {
     "date": "2007-06-08",
