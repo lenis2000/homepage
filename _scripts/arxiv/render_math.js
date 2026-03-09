@@ -203,6 +203,7 @@ const ARXIV_MACROS = {
   '\\maj': '\\operatorname{maj}',
   // Greek/symbol shortcuts
   '\\om': '\\omega',
+  '\\a': '\\alpha',
   '\\al': '\\alpha',
   '\\be': '\\beta',
   '\\ga': '\\gamma',
