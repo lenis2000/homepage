@@ -4,8 +4,8 @@
  * Uses LozengeModule (CFTP) to produce two exact uniform lozenge tiling
  * samples of a regular hexagon. Double-dimer loops (XOR of the two
  * matchings) are level lines of the integer height difference h0-h1.
- * Regions between loops are flood-filled with flat colors from a
- * diverging UVA navy/orange palette.
+ * Loop interiors are flood-filled as polygons (painter's algorithm,
+ * largest first) with flat colors from a diverging UVA palette.
  *
  * A fresh sample is generated on every page load.
  */
@@ -91,6 +91,21 @@
       }
     }
     return triangleArr;
+  }
+
+  function generateHexagonBoundary(a, b, c) {
+    var directions = [[1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1]];
+    var sideLengths = [a, b, c, a, b, c];
+    var boundary = [];
+    var bn = 0, bj = 0;
+    for (var dir = 0; dir < 6; dir++) {
+      for (var step = 0; step < sideLengths[dir]; step++) {
+        boundary.push(getVertex(bn, bj));
+        bn += directions[dir][0];
+        bj += directions[dir][1];
+      }
+    }
+    return boundary;
   }
 
   /* ── Height function (pattern-based BFS) ─────────────────────────────── */
@@ -220,7 +235,6 @@
   /* ── Region flood-fill (Union-Find on triangles between loops) ──────── */
 
   function computeRegions(triArr, dimers0, dimers1) {
-    // Matching key: right triangle R(n,j) and left triangle L(n,j)
     function rkey(n, j) { return n * 100000 + j; }
     function lkey(n, j) { return n * 100000 + j + 50000000; }
 
@@ -239,7 +253,6 @@
     var match0 = buildMatchMap(dimers0);
     var match1 = buildMatchMap(dimers1);
 
-    // Map triangle key → index in triArr
     var numTri = triArr.length / 3;
     var triIdx = new Map();
     for (var i = 0; i < numTri; i++) {
@@ -247,7 +260,6 @@
       triIdx.set((t === 1) ? rkey(n, j) : lkey(n, j), i);
     }
 
-    // Union-Find
     var parent = new Int32Array(numTri);
     var ufRank = new Uint8Array(numTri);
     for (var i = 0; i < numTri; i++) parent[i] = i;
@@ -264,15 +276,10 @@
       if (ufRank[a] === ufRank[b]) ufRank[a]++;
     }
 
-    // For each right triangle, check 3 adjacent left triangles.
-    // Union if edge is NOT an XOR edge (both tilings agree on that edge).
-    //   R(n,j) neighbors: L(n,j) [diagonal], L(n-1,j) [left], L(n,j-1) [bottom]
-    //   Matching type 0 → L(n,j), type 1 → L(n,j-1), type 2 → L(n-1,j)
     for (var i = 0; i < numTri; i++) {
       if (triArr[i * 3 + 2] !== 1) continue;
       var n = triArr[i * 3], j = triArr[i * 3 + 1];
       var rk = rkey(n, j);
-
       var m0 = match0.get(rk);
       var m1 = match1.get(rk);
 
@@ -281,7 +288,6 @@
         var lk = adjKeys[ai];
         var li = triIdx.get(lk);
         if (li === undefined) continue;
-        // Edge is XOR iff matched in exactly one tiling
         if ((m0 === lk) === (m1 === lk)) {
           union(i, li);
         }
@@ -365,7 +371,7 @@
     var h0 = computeHeightFunction(dimers0);
     var h1 = computeHeightFunction(dimers1);
 
-    // Integer height difference h0 - h1 (only at vertices present in BOTH maps)
+    // Integer height difference h0 - h1 (only at vertices in BOTH maps)
     var fluct = new Map();
     var absMax = 0;
     for (var entry of h0) {
@@ -377,7 +383,7 @@
       if (af > absMax) absMax = af;
     }
 
-    // Flood-fill regions between loops
+    // Flood-fill regions between loops (for level lookup)
     var regionOf = computeRegions(triArr, dimers0, dimers1);
 
     // Assign each region a level via majority vote of vertex h0-h1 values
@@ -400,23 +406,25 @@
     }
     var regionLevel = new Map();
     for (var entry of regionVotes) {
-      var reg = entry[0], votes = entry[1];
       var bestLevel = 0, bestCount = 0;
-      for (var vEntry of votes) {
+      for (var vEntry of entry[1]) {
         if (vEntry[1] > bestCount) { bestCount = vEntry[1]; bestLevel = vEntry[0]; }
       }
-      regionLevel.set(reg, bestLevel);
+      regionLevel.set(entry[0], bestLevel);
     }
 
     var loops = computeLoops(dimers0, dimers1);
-    console.log('homepage-hero-dd: dimers', dimers0.length, dimers1.length,
-      'absMax', absMax, 'loops', loops.length,
-      'regions', regionLevel.size);
+    var hexBoundary = generateHexagonBoundary(HEX_SIDE, HEX_SIDE, HEX_SIDE);
 
-    renderToCanvas(canvas, triArr, regionOf, regionLevel, absMax, loops);
+    console.log('homepage-hero-dd: dimers', dimers0.length, dimers1.length,
+      'absMax', absMax, 'loops', loops.length);
+
+    renderToCanvas(canvas, triArr, regionOf, regionLevel, absMax, loops, hexBoundary);
   }
 
-  function renderToCanvas(canvas, triArr, regionOf, regionLevel, absMax, loops) {
+  /* ── Rendering: fill loop polygons (painter's algorithm) ─────────────── */
+
+  function renderToCanvas(canvas, triArr, regionOf, regionLevel, absMax, loops, hexBoundary) {
     var dpr = window.devicePixelRatio || 1;
     var W = canvas.clientWidth;
     if (!W) W = canvas.parentElement ? canvas.parentElement.clientWidth : 400;
@@ -433,21 +441,12 @@
     ctx.rotate(Math.PI / 2);
     ctx.translate(-W / 2, -H / 2);
 
-    // Compute bounding box
+    // Compute bounding box from hexagon boundary
     var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    for (var i = 0; i < triArr.length; i += 3) {
-      var tn = triArr[i], tj = triArr[i + 1], tt = triArr[i + 2];
-      var verts;
-      if (tt === 1) {
-        verts = [[tn, tj], [tn, tj - 1], [tn + 1, tj - 1]];
-      } else {
-        verts = [[tn, tj], [tn + 1, tj], [tn + 1, tj - 1]];
-      }
-      for (var k = 0; k < 3; k++) {
-        var v = getVertex(verts[k][0], verts[k][1]);
-        if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
-        if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
-      }
+    for (var i = 0; i < hexBoundary.length; i++) {
+      var v = hexBoundary[i];
+      if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
+      if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
     }
 
     var pad = 6;
@@ -460,71 +459,139 @@
       return [vx * scale + offX, vy * scale + offY];
     }
 
-    // Pre-compute color for each region
-    var regionColor = new Map();
-    for (var entry of regionLevel) {
-      regionColor.set(entry[0], valueToColor(entry[1], absMax));
-    }
-    var defaultColor = valueToColor(0, absMax);
-
-    // Draw each triangle with its region's flat color
-    for (var i = 0; i < triArr.length; i += 3) {
-      var tn = triArr[i], tj = triArr[i + 1], tt = triArr[i + 2];
-      var vertKeys;
-      if (tt === 1) {
-        vertKeys = [[tn, tj], [tn, tj - 1], [tn + 1, tj - 1]];
-      } else {
-        vertKeys = [[tn, tj], [tn + 1, tj], [tn + 1, tj - 1]];
-      }
-
-      var screenVerts = [];
-      for (var k = 0; k < 3; k++) {
-        var gv = getVertex(vertKeys[k][0], vertKeys[k][1]);
-        screenVerts.push(toCanvas(gv.x, gv.y));
-      }
-
-      var reg = regionOf[i / 3];
-      var color = regionColor.get(reg) || defaultColor;
-
-      ctx.beginPath();
-      ctx.moveTo(screenVerts[0][0], screenVerts[0][1]);
-      ctx.lineTo(screenVerts[1][0], screenVerts[1][1]);
-      ctx.lineTo(screenVerts[2][0], screenVerts[2][1]);
-      ctx.closePath();
-      ctx.fillStyle = color;
-      ctx.fill();
-      // Thin matching stroke to eliminate sub-pixel gaps between triangles
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 0.5;
-      ctx.stroke();
-    }
-
-    // Draw double-dimer loops
-    if (loops) {
-      ctx.strokeStyle = 'rgba(35, 45, 75, 0.55)';
-      ctx.lineWidth = 1.2;
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-      for (var li = 0; li < loops.length; li++) {
-        var pts = loops[li];
-        if (pts.length < 4) continue;
-        ctx.beginPath();
-        var sv = toCanvas(pts[0].x, pts[0].y);
-        ctx.moveTo(sv[0], sv[1]);
-        for (var pi = 1; pi < pts.length; pi++) {
-          sv = toCanvas(pts[pi].x, pts[pi].y);
-          ctx.lineTo(sv[0], sv[1]);
+    // Helper: find which triangle contains a point in lattice coords
+    function findTriangleAt(px, py) {
+      for (var i = 0; i < triArr.length; i += 3) {
+        var n = triArr[i], j = triArr[i + 1], t = triArr[i + 2];
+        var v0, v1, v2;
+        if (t === 1) {
+          v0 = getVertex(n, j); v1 = getVertex(n, j - 1); v2 = getVertex(n + 1, j - 1);
+        } else {
+          v0 = getVertex(n, j); v1 = getVertex(n + 1, j); v2 = getVertex(n + 1, j - 1);
         }
-        ctx.closePath();
-        ctx.stroke();
+        var d = (v1.y - v2.y) * (v0.x - v2.x) + (v2.x - v1.x) * (v0.y - v2.y);
+        if (Math.abs(d) < 1e-10) continue;
+        var u = ((v1.y - v2.y) * (px - v2.x) + (v2.x - v1.x) * (py - v2.y)) / d;
+        var v = ((v2.y - v0.y) * (px - v2.x) + (v0.x - v2.x) * (py - v2.y)) / d;
+        if (u >= -0.01 && v >= -0.01 && u + v <= 1.01) return i / 3;
       }
+      return -1;
+    }
+
+    // Helper: find a point reliably inside a polygon
+    function findInteriorPoint(pts) {
+      // Try centroid
+      var cx = 0, cy = 0;
+      for (var i = 0; i < pts.length; i++) { cx += pts[i].x; cy += pts[i].y; }
+      cx /= pts.length; cy /= pts.length;
+      if (pointInPolygon(cx, cy, pts)) return { x: cx, y: cy };
+      // Fallback: try midpoints of edges, nudged toward centroid
+      for (var i = 0; i < pts.length; i++) {
+        var j = (i + 1) % pts.length;
+        var mx = (pts[i].x + pts[j].x) / 2;
+        var my = (pts[i].y + pts[j].y) / 2;
+        var dx = cx - mx, dy = cy - my;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 1e-6) {
+          var px = mx + dx * 0.1 / dist;
+          var py = my + dy * 0.1 / dist;
+          if (pointInPolygon(px, py, pts)) return { x: px, y: py };
+        }
+      }
+      return { x: cx, y: cy };
+    }
+
+    // Determine the level for the outermost region (near hexagon boundary)
+    var outerLevel = 0;
+    // Use a point near the first hexagon boundary vertex
+    var bv0 = hexBoundary[0], bv1 = hexBoundary[1];
+    var testPt = { x: (bv0.x + bv1.x) / 2, y: (bv0.y + bv1.y) / 2 };
+    // Nudge slightly inward
+    var bcx = 0, bcy = 0;
+    for (var i = 0; i < hexBoundary.length; i++) { bcx += hexBoundary[i].x; bcy += hexBoundary[i].y; }
+    bcx /= hexBoundary.length; bcy /= hexBoundary.length;
+    var ndx = bcx - testPt.x, ndy = bcy - testPt.y;
+    var ndist = Math.sqrt(ndx * ndx + ndy * ndy);
+    if (ndist > 0) { testPt.x += ndx * 0.5 / ndist; testPt.y += ndy * 0.5 / ndist; }
+    var outerTri = findTriangleAt(testPt.x, testPt.y);
+    if (outerTri >= 0) {
+      outerLevel = regionLevel.get(regionOf[outerTri]) || 0;
+    }
+
+    // 1. Fill hexagon background with outermost level color
+    ctx.beginPath();
+    var sv = toCanvas(hexBoundary[0].x, hexBoundary[0].y);
+    ctx.moveTo(sv[0], sv[1]);
+    for (var i = 1; i < hexBoundary.length; i++) {
+      sv = toCanvas(hexBoundary[i].x, hexBoundary[i].y);
+      ctx.lineTo(sv[0], sv[1]);
+    }
+    ctx.closePath();
+    ctx.fillStyle = valueToColor(outerLevel, absMax);
+    ctx.fill();
+
+    // 2. Compute loop data: area, interior level
+    var loopData = [];
+    for (var li = 0; li < loops.length; li++) {
+      var pts = loops[li];
+      if (pts.length < 4) continue;
+
+      // Signed area (shoelace formula)
+      var area = 0;
+      for (var pi = 0; pi < pts.length; pi++) {
+        var pj = (pi + 1) % pts.length;
+        area += pts[pi].x * pts[pj].y - pts[pj].x * pts[pi].y;
+      }
+      area /= 2;
+
+      // Find a point inside the loop and look up its region level
+      var ip = findInteriorPoint(pts);
+      var triI = findTriangleAt(ip.x, ip.y);
+      var level = (triI >= 0) ? (regionLevel.get(regionOf[triI]) || 0) : 0;
+
+      loopData.push({ pts: pts, area: Math.abs(area), level: level });
+    }
+
+    // 3. Sort by area descending (painter's algorithm: largest first)
+    loopData.sort(function(a, b) { return b.area - a.area; });
+
+    // 4. Fill each loop polygon with its interior level color
+    for (var li = 0; li < loopData.length; li++) {
+      var ld = loopData[li];
+      ctx.beginPath();
+      sv = toCanvas(ld.pts[0].x, ld.pts[0].y);
+      ctx.moveTo(sv[0], sv[1]);
+      for (var pi = 1; pi < ld.pts.length; pi++) {
+        sv = toCanvas(ld.pts[pi].x, ld.pts[pi].y);
+        ctx.lineTo(sv[0], sv[1]);
+      }
+      ctx.closePath();
+      ctx.fillStyle = valueToColor(ld.level, absMax);
+      ctx.fill();
+    }
+
+    // 5. Stroke all loops
+    ctx.strokeStyle = 'rgba(35, 45, 75, 0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    for (var li = 0; li < loopData.length; li++) {
+      var pts = loopData[li].pts;
+      ctx.beginPath();
+      sv = toCanvas(pts[0].x, pts[0].y);
+      ctx.moveTo(sv[0], sv[1]);
+      for (var pi = 1; pi < pts.length; pi++) {
+        sv = toCanvas(pts[pi].x, pts[pi].y);
+        ctx.lineTo(sv[0], sv[1]);
+      }
+      ctx.closePath();
+      ctx.stroke();
     }
   }
 
   /* ── Bootstrap ───────────────────────────────────────────────────────── */
 
   function init() {
-    // Pick whichever canvas is visible (mobile on top, or desktop sidebar)
     var canvas = document.getElementById('hero-dd-mobile');
     if (!canvas || canvas.offsetParent === null) {
       canvas = document.getElementById('hero-dd');
