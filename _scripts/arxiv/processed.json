@@ -584,6 +584,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0708.0638": {
+    "date": "2007-08-04",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0708.0946": {
     "date": "2007-08-07",
     "decision": "REJECT",
@@ -644,10 +649,25 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0708.2643": {
+    "date": "2007-08-20",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0708.2721": {
     "date": "2007-08-20",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "0708.2895": {
+    "date": "2007-08-21",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "0708.2940": {
+    "date": "2007-08-22",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0708.3107": {
     "date": "2007-08-22",
@@ -679,6 +699,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0708.3544": {
+    "date": "2007-08-27",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0708.3556": {
     "date": "2007-08-27",
     "decision": "REJECT",
@@ -698,6 +723,11 @@
     "date": "2007-08-29",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0708.4294": {
+    "date": "2007-08-31",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0709.0103": {
     "date": "2007-09-02",

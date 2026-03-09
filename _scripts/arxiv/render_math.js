@@ -264,6 +264,8 @@ const ARXIV_MACROS = {
 };
 
 function renderExpression(latex, displayMode, warnings) {
+  // Bare # is common in arXiv abstracts (cardinality), but KaTeX needs \#
+  latex = latex.replace(/(?<!\\)#/g, '\\#');
   try {
     return katex.renderToString(latex, {
       output: 'mathml',
