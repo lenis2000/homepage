@@ -207,8 +207,20 @@
         var w = m0.b2w.get(curB);
         var bc = m0.bCoord.get(curB);
         var wc = m0.wCoord.get(w);
-        points.push(getRightTriangleCentroid(bc[0], bc[1]));
-        points.push(getLeftTriangleCentroid(wc[0], wc[1]));
+        var rc = getRightTriangleCentroid(bc[0], bc[1]);
+        var lc = getLeftTriangleCentroid(wc[0], wc[1]);
+        // Determine dimer type to find the apex vertex on each side
+        // (apex = the vertex NOT on the dimer shared edge)
+        var dt;
+        if (wc[0] === bc[0] && wc[1] === bc[1]) dt = 0;
+        else if (wc[0] === bc[0] && wc[1] === bc[1] - 1) dt = 1;
+        else dt = 2;
+        var rA, lA; // right apex, left apex
+        if (dt === 0) { rA = [bc[0], bc[1]-1];   lA = [bc[0]+1, bc[1]]; }
+        else if (dt === 1) { rA = [bc[0], bc[1]]; lA = [bc[0]+1, bc[1]-2]; }
+        else               { rA = [bc[0]+1, bc[1]-1]; lA = [bc[0]-1, bc[1]]; }
+        points.push({ x: rc.x, y: rc.y, bn: rA[0], bj: rA[1] });
+        points.push({ x: lc.x, y: lc.y, wn: lA[0], wj: lA[1] });
         curB = m1.w2b.get(w);
       } while (curB && curB !== bk);
       if (points.length >= 4) loops.push(points);
@@ -308,12 +320,12 @@
     console.log('homepage-hero-dd: dimers', dimers0.length, dimers1.length,
       'loops', loops.length, 'outerLevel', outerLevel);
 
-    renderToCanvas(canvas, triArr, hexData.boundary, loops, outerLevel, fluct);
+    renderToCanvas(canvas, hexData.boundary, loops, outerLevel, fluct);
   }
 
   /* ── Rendering: fill loop polygons (painter's algorithm) ─────────────── */
 
-  function renderToCanvas(canvas, triArr, hexBoundary, loops, outerLevel, fluct) {
+  function renderToCanvas(canvas, hexBoundary, loops, outerLevel, fluct) {
     var dpr = window.devicePixelRatio || 1;
     var W = canvas.clientWidth;
     if (!W) W = canvas.parentElement ? canvas.parentElement.clientWidth : 400;
@@ -347,50 +359,81 @@
       return [vx * scale + offX, vy * scale + offY];
     }
 
-    // Find a point reliably inside a polygon (handles non-convex shapes)
+    // ── Compute loop data: signed area, levels from height function ──
+
+    var loopData = [];
+    for (var li = 0; li < loops.length; li++) {
+      var pts = loops[li];
+      if (pts.length < 4) continue;
+      var area = 0;
+      for (var pi = 0; pi < pts.length; pi++) {
+        var pj = (pi + 1) % pts.length;
+        area += pts[pi].x * pts[pj].y - pts[pj].x * pts[pi].y;
+      }
+      area /= 2;
+
+      // Look up fluct at right-triangle vertices (even indices)
+      var rLevel = null;
+      for (var pi = 0; pi < pts.length; pi += 2) {
+        if (pts[pi].bn !== undefined) {
+          var key = pts[pi].bn + ',' + pts[pi].bj;
+          if (fluct.has(key)) { rLevel = fluct.get(key); break; }
+        }
+      }
+      // Look up fluct at left-triangle vertices (odd indices)
+      var lLevel = null;
+      for (var pi = 1; pi < pts.length; pi += 2) {
+        if (pts[pi].wn !== undefined) {
+          var key = pts[pi].wn + ',' + pts[pi].wj;
+          if (fluct.has(key)) { lLevel = fluct.get(key); break; }
+        }
+      }
+
+      loopData.push({
+        pts: pts,
+        absArea: Math.abs(area),
+        sign: area > 0 ? 1 : -1,
+        rLevel: rLevel,
+        lLevel: lLevel
+      });
+    }
+
+    // ── Scanline interior point finder (for winding number fallback) ──
     function findInteriorPoint(pts) {
       var cx = 0, cy = 0;
       for (var i = 0; i < pts.length; i++) { cx += pts[i].x; cy += pts[i].y; }
       cx /= pts.length; cy /= pts.length;
       if (pointInPolygon(cx, cy, pts)) return { x: cx, y: cy };
-
-      // Compute signed area to determine winding direction
+      // Edge midpoints nudged inward
       var sa = 0;
       for (var i = 0; i < pts.length; i++) {
         var j = (i + 1) % pts.length;
         sa += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
       }
       var ws = sa > 0 ? 1 : -1;
-
-      // Edge midpoints nudged inward by perpendicular normal
       var EPS = 0.02;
       for (var i = 0; i < pts.length; i++) {
         var j = (i + 1) % pts.length;
-        var mx = (pts[i].x + pts[j].x) / 2;
-        var my = (pts[i].y + pts[j].y) / 2;
+        var mx = (pts[i].x + pts[j].x) / 2, my = (pts[i].y + pts[j].y) / 2;
         var dx = pts[j].x - pts[i].x, dy = pts[j].y - pts[i].y;
         var len = Math.sqrt(dx * dx + dy * dy);
         if (len < 1e-10) continue;
-        var px = mx + ws * dy / len * EPS;
-        var py = my + ws * (-dx) / len * EPS;
+        var px = mx + ws * dy / len * EPS, py = my + ws * (-dx) / len * EPS;
         if (pointInPolygon(px, py, pts)) return { x: px, y: py };
       }
-
-      // Scanline: sweep horizontal lines, find x-intersections, take interior midpoints
+      // Scanline
       var minY = Infinity, maxY = -Infinity;
       for (var i = 0; i < pts.length; i++) {
         if (pts[i].y < minY) minY = pts[i].y;
         if (pts[i].y > maxY) maxY = pts[i].y;
       }
-      var NSCANS = 30;
-      for (var si = 1; si < NSCANS; si++) {
-        var y = minY + (maxY - minY) * si / NSCANS;
+      for (var si = 1; si < 30; si++) {
+        var y = minY + (maxY - minY) * si / 30;
         var xs = [];
         for (var ei = 0, ej = pts.length - 1; ei < pts.length; ej = ei++) {
           var yi = pts[ei].y, yj = pts[ej].y;
-          if ((yi <= y && yj > y) || (yj <= y && yi > y)) {
+          if ((yi <= y && yj > y) || (yj <= y && yi > y))
             xs.push(pts[ei].x + (y - yi) / (yj - yi) * (pts[ej].x - pts[ei].x));
-          }
         }
         if (xs.length >= 2) {
           xs.sort(function(a, b) { return a - b; });
@@ -403,81 +446,28 @@
       return { x: cx, y: cy };
     }
 
-    // Find which triangle contains a point (lattice coords, barycentric test)
-    function findTriangleAt(px, py) {
-      for (var i = 0; i < triArr.length; i += 3) {
-        var n = triArr[i], j = triArr[i + 1], t = triArr[i + 2];
-        var v0, v1, v2;
-        if (t === 1) {
-          v0 = getVertex(n, j); v1 = getVertex(n, j - 1); v2 = getVertex(n + 1, j - 1);
-        } else {
-          v0 = getVertex(n, j); v1 = getVertex(n + 1, j); v2 = getVertex(n + 1, j - 1);
-        }
-        var d = (v1.y - v2.y) * (v0.x - v2.x) + (v2.x - v1.x) * (v0.y - v2.y);
-        if (Math.abs(d) < 1e-10) continue;
-        var u = ((v1.y - v2.y) * (px - v2.x) + (v2.x - v1.x) * (py - v2.y)) / d;
-        var v = ((v2.y - v0.y) * (px - v2.x) + (v0.x - v2.x) * (py - v2.y)) / d;
-        if (u >= -0.01 && v >= -0.01 && u + v <= 1.01) return i / 3;
-      }
-      return -1;
-    }
-
-    // ── Compute loop data: signed area, interior point ──
-
-    var loopData = [];
-    for (var li = 0; li < loops.length; li++) {
-      var pts = loops[li];
-      if (pts.length < 4) continue;
-      var area = 0;
-      for (var pi = 0; pi < pts.length; pi++) {
-        var pj = (pi + 1) % pts.length;
-        area += pts[pi].x * pts[pj].y - pts[pj].x * pts[pi].y;
-      }
-      area /= 2;
-      loopData.push({
-        pts: pts,
-        absArea: Math.abs(area),
-        sign: area > 0 ? 1 : -1,
-        ip: findInteriorPoint(pts)
-      });
-    }
-
-    // ── Compute level via winding number: count signed containment ──
-
+    // ── Assign interior level: apex lookup when distinct, winding number fallback ──
+    // parity=0 (validated empirically): CCW loops have interior on right-apex side,
+    //   CW loops have interior on left-apex side.
+    // Winding number sign convention is backwards → use negated sum.
     for (var li = 0; li < loopData.length; li++) {
-      var level = outerLevel;
-      var ip = loopData[li].ip;
-      for (var oi = 0; oi < loopData.length; oi++) {
-        if (pointInPolygon(ip.x, ip.y, loopData[oi].pts)) {
-          level += loopData[oi].sign;
+      var ld = loopData[li];
+      if (ld.rLevel !== null && ld.lLevel !== null && ld.rLevel !== ld.lLevel) {
+        // Apex lookup is unambiguous — use it directly (parity=0)
+        ld.level = (ld.sign > 0) ? ld.rLevel : ld.lLevel;
+      } else {
+        // Fallback: winding number with negated sign convention
+        var ip = findInteriorPoint(ld.pts);
+        var level = outerLevel;
+        for (var oi = 0; oi < loopData.length; oi++) {
+          if (pointInPolygon(ip.x, ip.y, loopData[oi].pts)) {
+            level -= loopData[oi].sign;
+          }
         }
-      }
-      loopData[li].level = level;
-    }
-
-    // ── Validate sign convention against height function ──
-
-    var correctCount = 0, wrongCount = 0;
-    for (var li = 0; li < loopData.length; li++) {
-      var ip = loopData[li].ip;
-      var triI = findTriangleAt(ip.x, ip.y);
-      if (triI >= 0) {
-        var n = triArr[triI * 3], j = triArr[triI * 3 + 1];
-        var vkey = n + ',' + j;
-        if (fluct.has(vkey)) {
-          if (loopData[li].level === fluct.get(vkey)) correctCount++;
-          else wrongCount++;
-        }
+        ld.level = level;
       }
     }
-    // If sign convention is backwards, flip all levels around outerLevel
-    if (wrongCount > correctCount) {
-      for (var li = 0; li < loopData.length; li++) {
-        loopData[li].level = 2 * outerLevel - loopData[li].level;
-      }
-    }
-    console.log('homepage-hero-dd: sign validation correct=' + correctCount +
-      ' wrong=' + wrongCount + (wrongCount > correctCount ? ' (FLIPPED)' : ''));
+    console.log('homepage-hero-dd: loops', loopData.length, 'outerLevel', outerLevel);
 
     // ── Compute absMax for color normalization ──
 
