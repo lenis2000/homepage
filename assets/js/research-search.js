@@ -294,10 +294,14 @@ document.addEventListener('DOMContentLoaded', function() {
         recentFilter.addEventListener('click', toggleRecentFilter);
     }
 
-    // ESC key to clear (only when search has a value or input is focused)
+    // ESC key: clear search if active, otherwise focus search input
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && searchInput && (searchInput.value || document.activeElement === searchInput)) {
-            clearSearch();
+        if (e.key === 'Escape' && searchInput) {
+            if (searchInput.value || document.activeElement === searchInput) {
+                clearSearch();
+            } else {
+                searchInput.focus();
+            }
         }
     });
 
