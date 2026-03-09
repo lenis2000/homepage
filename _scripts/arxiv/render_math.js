@@ -132,6 +132,7 @@ const ARXIV_MACROS = {
   '\\eps': '\\varepsilon',
   '\\e': '\\varepsilon',
   '\\vep': '\\varepsilon',
+  '\\ve': '\\varepsilon',
   '\\b': '\\beta',
   '\\half': '\\tfrac{1}{2}',
   '\\ra': '\\rightarrow',
