@@ -135,7 +135,7 @@ const ARXIV_MACROS = {
   '\\b': '\\beta',
   '\\half': '\\tfrac{1}{2}',
   '\\ra': '\\rightarrow',
-  '\\la': '\\leftarrow',
+  '\\la': '\\lambda',
   '\\lra': '\\leftrightarrow',
   '\\iy': '\\infty',
   '\\affsl': '\\widehat{\\mathfrak{sl}}',
@@ -217,6 +217,8 @@ const ARXIV_MACROS = {
   '\\La': '\\Lambda',
   '\\Lb': '\\Lambda',
   '\\wide': '\\widehat',
+  // Fraktur shortcuts
+  '\\mf': '\\mathfrak',
   // Lie algebra lowercase
   '\\gl': '\\mathfrak{gl}',
   '\\sl': '\\mathfrak{sl}',
@@ -230,6 +232,12 @@ const ARXIV_MACROS = {
   '\\bbZ': '\\mathbb{Z}',
   '\\bbN': '\\mathbb{N}',
   '\\bbQ': '\\mathbb{Q}',
+  '\\bb': '\\mathbb',
+  '\\dC': '\\mathbb{C}',
+  '\\dR': '\\mathbb{R}',
+  '\\dZ': '\\mathbb{Z}',
+  '\\dN': '\\mathbb{N}',
+  '\\dQ': '\\mathbb{Q}',
   '\\DD': '\\mathbb{D}',
   '\\LL': '\\mathbb{L}',
   // Script/calligraphic

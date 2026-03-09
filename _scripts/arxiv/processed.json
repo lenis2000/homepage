@@ -729,10 +729,20 @@
     "decision": "ACCEPT",
     "source": "scan"
   },
+  "0709.0036": {
+    "date": "2007-09-01",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0709.0103": {
     "date": "2007-09-02",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0709.0306": {
+    "date": "2007-09-03",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0709.0498": {
     "date": "2007-09-04",
@@ -773,6 +783,11 @@
     "date": "2007-09-12",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0709.2284": {
+    "date": "2007-09-14",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0709.2325": {
     "date": "2007-09-14",
@@ -829,6 +844,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0709.4575": {
+    "date": "2007-09-28",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0709.4599": {
     "date": "2007-09-28",
     "decision": "ACCEPT",
@@ -843,6 +863,11 @@
     "date": "2007-10-02",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0710.0755": {
+    "date": "2007-10-03",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0710.0845": {
     "date": "2007-10-03",
@@ -859,6 +884,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0710.0942": {
+    "date": "2007-10-04",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0710.1459": {
     "date": "2007-10-08",
     "decision": "REJECT",
@@ -869,6 +899,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0710.1816": {
+    "date": "2007-10-09",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0710.1923": {
     "date": "2007-10-10",
     "decision": "REJECT",
@@ -878,6 +913,16 @@
     "date": "2007-10-10",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0710.2454": {
+    "date": "2007-10-12",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "0710.2680": {
+    "date": "2007-10-14",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0710.2687": {
     "date": "2007-10-15",
@@ -894,6 +939,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0710.3078": {
+    "date": "2007-10-16",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0710.3132": {
     "date": "2007-10-16",
     "decision": "ACCEPT",
@@ -903,6 +953,11 @@
     "date": "2007-10-17",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0710.3419": {
+    "date": "2007-10-18",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0710.3836": {
     "date": "2007-10-20",
@@ -944,6 +999,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0710.5577": {
+    "date": "2007-10-30",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0710.5646": {
     "date": "2007-10-30",
     "decision": "REJECT",
@@ -958,6 +1018,11 @@
     "date": "2007-10-30",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0710.5885": {
+    "date": "2007-10-31",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0711.0272": {
     "date": "2007-11-02",
