@@ -3354,6 +3354,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0902.0879": {
+    "date": "2009-02-05",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0902.0902": {
     "date": "2009-02-05",
     "decision": "REJECT",
@@ -3368,6 +3373,11 @@
     "date": "2009-02-10",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0902.1822": {
+    "date": "2009-02-11",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0902.1882": {
     "date": "2009-02-11",
@@ -3514,6 +3524,16 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0903.1068": {
+    "date": "2009-03-05",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "0903.1071": {
+    "date": "2009-03-05",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0903.1176": {
     "date": "2009-03-06",
     "decision": "REJECT",
@@ -3549,6 +3569,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0903.2696": {
+    "date": "2009-03-16",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0903.2783": {
     "date": "2009-03-16",
     "decision": "REJECT",
@@ -3573,6 +3598,11 @@
     "date": "2009-03-17",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0903.3089": {
+    "date": "2009-03-18",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0903.3585": {
     "date": "2009-03-20",
@@ -3619,10 +3649,20 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0903.4740": {
+    "date": "2009-03-27",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0903.4938": {
     "date": "2009-03-28",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0903.4968": {
+    "date": "2009-03-28",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0903.5073": {
     "date": "2009-03-29",
@@ -3653,6 +3693,11 @@
     "date": "2009-03-31",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0903.5447": {
+    "date": "2009-03-31",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0903.5474": {
     "date": "2009-03-31",
@@ -3694,6 +3739,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0904.1158": {
+    "date": "2009-04-07",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0904.1481": {
     "date": "2009-04-09",
     "decision": "ACCEPT",
@@ -3708,6 +3758,11 @@
     "date": "2009-04-09",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0904.1581": {
+    "date": "2009-04-09",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0904.1719": {
     "date": "2009-04-10",
@@ -3738,6 +3793,11 @@
     "date": "2009-04-16",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0904.2514": {
+    "date": "2009-04-16",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0904.2607": {
     "date": "2009-04-16",
@@ -3789,10 +3849,20 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0904.4585": {
+    "date": "2009-04-29",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0904.4655": {
     "date": "2009-04-29",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "0904.4768": {
+    "date": "2009-04-30",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0905.0135": {
     "date": "2009-05-01",
@@ -3813,6 +3883,11 @@
     "date": "2009-05-04",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "0905.0412": {
+    "date": "2009-05-04",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0905.0441": {
     "date": "2009-05-04",
@@ -3869,6 +3944,16 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0905.2089": {
+    "date": "2009-05-13",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "0905.2163": {
+    "date": "2009-05-13",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0905.2557": {
     "date": "2009-05-15",
     "decision": "ACCEPT",
@@ -3883,6 +3968,11 @@
     "date": "2009-05-15",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "0905.2753": {
+    "date": "2009-05-17",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0905.2899": {
     "date": "2009-05-18",
@@ -3913,6 +4003,11 @@
     "date": "2009-05-21",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0905.3565": {
+    "date": "2009-05-21",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0905.3989": {
     "date": "2009-05-25",
@@ -4009,6 +4104,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0906.2017": {
+    "date": "2009-06-10",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0906.2217": {
     "date": "2009-06-11",
     "decision": "ACCEPT",
@@ -4064,10 +4164,20 @@
     "decision": "ACCEPT",
     "source": "scan"
   },
+  "0906.3446": {
+    "date": "2009-06-18",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0906.3587": {
     "date": "2009-06-19",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0906.3596": {
+    "date": "2009-06-19",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0906.3703": {
     "date": "2009-06-19",
@@ -4133,6 +4243,11 @@
     "date": "2009-07-01",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0907.0156": {
+    "date": "2009-07-01",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0907.0226": {
     "date": "2009-07-01",
@@ -4209,6 +4324,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0907.2854": {
+    "date": "2009-07-16",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0907.3122": {
     "date": "2009-07-17",
     "decision": "REJECT",
@@ -4228,6 +4348,11 @@
     "date": "2009-07-20",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "0907.3680": {
+    "date": "2009-07-21",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0907.3772": {
     "date": "2009-07-22",
@@ -4288,6 +4413,11 @@
     "date": "2009-08-03",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0908.0391": {
+    "date": "2009-08-04",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0908.0413": {
     "date": "2009-08-04",
@@ -4384,6 +4514,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0908.4050": {
+    "date": "2009-08-27",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0908.4206": {
     "date": "2009-08-28",
     "decision": "REJECT",
@@ -4409,6 +4544,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0909.0575": {
+    "date": "2009-09-03",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0909.0615": {
     "date": "2009-09-03",
     "decision": "ACCEPT",
@@ -4428,6 +4568,16 @@
     "date": "2009-09-10",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0909.1985": {
+    "date": "2009-09-10",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "0909.1999": {
+    "date": "2009-09-10",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0909.2211": {
     "date": "2009-09-11",
@@ -4453,6 +4603,16 @@
     "date": "2009-09-14",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0909.2677": {
+    "date": "2009-09-15",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "0909.2691": {
+    "date": "2009-09-14",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0909.2807": {
     "date": "2009-09-15",
@@ -4619,6 +4779,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0910.0775": {
+    "date": "2009-10-05",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0910.0849": {
     "date": "2009-10-05",
     "decision": "REJECT",
@@ -4654,6 +4819,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0910.1984": {
+    "date": "2009-10-11",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0910.1988": {
     "date": "2009-10-11",
     "decision": "ACCEPT",
@@ -4688,6 +4858,11 @@
     "date": "2009-10-16",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "0910.3338": {
+    "date": "2009-10-17",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0910.3563": {
     "date": "2009-10-19",
@@ -4733,6 +4908,11 @@
     "date": "2009-10-26",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0910.4885": {
+    "date": "2009-10-26",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0910.4889": {
     "date": "2009-10-26",
@@ -4799,6 +4979,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0911.1276": {
+    "date": "2009-11-06",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0911.1573": {
     "date": "2009-11-09",
     "decision": "REJECT",
@@ -4849,6 +5034,16 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0911.2646": {
+    "date": "2009-11-13",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "0911.2903": {
+    "date": "2009-11-15",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0911.2929": {
     "date": "2009-11-15",
     "decision": "REJECT",
@@ -4863,6 +5058,11 @@
     "date": "2009-11-18",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0911.3687": {
+    "date": "2009-11-19",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0911.3693": {
     "date": "2009-11-19",
@@ -4919,6 +5119,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0911.5368": {
+    "date": "2009-11-28",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0911.5377": {
     "date": "2009-11-28",
     "decision": "ACCEPT",
@@ -4954,6 +5159,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0912.0239": {
+    "date": "2009-12-01",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0912.0348": {
     "date": "2009-12-02",
     "decision": "ACCEPT",
@@ -4964,10 +5174,25 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "0912.0658": {
+    "date": "2009-12-03",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0912.0911": {
     "date": "2009-12-04",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "0912.0966": {
+    "date": "2009-12-07",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "0912.1279": {
+    "date": "2009-12-07",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0912.2023": {
     "date": "2009-12-10",
@@ -5013,6 +5238,16 @@
     "date": "2009-12-20",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "0912.4010": {
+    "date": "2009-12-20",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "0912.4608": {
+    "date": "2009-12-23",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "0912.4733": {
     "date": "2009-12-23",
