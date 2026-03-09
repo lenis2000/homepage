@@ -19,10 +19,10 @@ rm -f _scripts/arxiv/scan-review.json
 ```
 
 ```bash
-make arxiv-scan ARGS="--id-prefix math-ph/ --threshold 0.78"
-arxiv-review _scripts/arxiv/scan-review.json
-make arxiv-scan-import && make arxiv-rebuild
-rm -f _scripts/arxiv/scan-review.json
+<!-- make arxiv-scan ARGS="--id-prefix math-ph/ --threshold 0.78" -->
+<!-- arxiv-review _scripts/arxiv/scan-review.json -->
+<!-- make arxiv-scan-import && make arxiv-rebuild -->
+<!-- rm -f _scripts/arxiv/scan-review.json -->
 ```
 
 ```bash

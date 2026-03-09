@@ -52974,6 +52974,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "math-ph/0101037": {
+    "date": "2001-01-01",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "math-ph/0102004": {
     "date": "2001-02-07",
     "decision": "REJECT",
@@ -52994,6 +52999,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "math-ph/0104016": {
+    "date": "2001-04-11",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "math-ph/0104024": {
     "date": "2001-04-18",
     "decision": "REJECT",
@@ -53003,6 +53013,11 @@
     "date": "2001-05-02",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "math-ph/0106005": {
+    "date": "2001-06-06",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "math-ph/0106015": {
     "date": "2001-06-18",
@@ -53048,6 +53063,11 @@
     "date": "2002-01-25",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "math-ph/0201057": {
+    "date": "2002-01-26",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "math-ph/0202018": {
     "date": "2002-02-13",
@@ -53169,6 +53189,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "math-ph/0211022": {
+    "date": "2002-11-13",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "math-ph/0211040": {
     "date": "2002-11-18",
     "decision": "ACCEPT",
@@ -53239,10 +53264,20 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "math-ph/0304043": {
+    "date": "2003-04-28",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "math-ph/0305029": {
     "date": "2003-05-14",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "math-ph/0305039": {
+    "date": "2003-05-20",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "math-ph/0305043": {
     "date": "2003-05-21",
@@ -53324,6 +53359,16 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "math-ph/0312069": {
+    "date": "2003-12-26",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "math-ph/0312071": {
+    "date": "2003-12-29",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "math-ph/0401011": {
     "date": "2004-01-07",
     "decision": "ACCEPT",
@@ -53374,6 +53419,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "math-ph/0404058": {
+    "date": "2004-04-25",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "math-ph/0404062": {
     "date": "2004-04-26",
     "decision": "ACCEPT",
@@ -53398,6 +53448,11 @@
     "date": "2004-06-07",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "math-ph/0406025": {
+    "date": "2004-06-14",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "math-ph/0406042": {
     "date": "2004-06-22",
@@ -53483,6 +53538,11 @@
     "date": "2004-12-02",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "math-ph/0412017": {
+    "date": "2004-12-07",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "math-ph/0412031": {
     "date": "2004-12-10",
@@ -53764,6 +53824,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "math-ph/0604041": {
+    "date": "2006-04-18",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "math-ph/0604046": {
     "date": "2006-04-20",
     "decision": "ACCEPT",
@@ -53803,6 +53868,11 @@
     "date": "2006-06-06",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "math-ph/0607007": {
+    "date": "2006-07-06",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "math-ph/0607017": {
     "date": "2006-07-11",
@@ -53924,6 +53994,16 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "math-ph/0703087": {
+    "date": "2007-03-29",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "math-ph/0703090": {
+    "date": "2007-03-30",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "math-ph/9804006": {
     "date": "1998-04-04",
     "decision": "ACCEPT",
@@ -53963,6 +54043,11 @@
     "date": "1999-07-15",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "math-ph/9907019": {
+    "date": "1999-07-23",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "math-ph/9907025": {
     "date": "1999-07-01",
