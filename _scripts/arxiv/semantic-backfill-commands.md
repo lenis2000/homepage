@@ -36,9 +36,9 @@ make arxiv-scan-import && make arxiv-rebuild
 ```
 
 ```bash
-make arxiv-scan ARGS="--id-prefix nlin/ --threshold 0.78"
-arxiv-review _scripts/arxiv/scan-review.json
-make arxiv-scan-import && make arxiv-rebuild
+<!-- make arxiv-scan ARGS="--id-prefix nlin/ --threshold 0.78" -->
+<!-- arxiv-review _scripts/arxiv/scan-review.json -->
+<!-- make arxiv-scan-import && make arxiv-rebuild -->
 ```
 
 ```bash

@@ -58469,6 +58469,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "nlin/0003068": {
+    "date": "2000-03-30",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "nlin/0004018": {
     "date": "2000-04-10",
     "decision": "ACCEPT",
@@ -58478,6 +58483,11 @@
     "date": "2000-05-30",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "nlin/0008030": {
+    "date": "2000-08-23",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "nlin/0009002": {
     "date": "2000-09-01",
@@ -58508,6 +58518,11 @@
     "date": "2000-11-16",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "nlin/0102018": {
+    "date": "2001-02-17",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "nlin/0103022": {
     "date": "2001-03-16",
@@ -58579,15 +58594,30 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "nlin/0208042": {
+    "date": "2002-08-28",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "nlin/0310002": {
     "date": "2003-10-03",
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "nlin/0404026": {
+    "date": "2004-04-14",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "nlin/0404047": {
     "date": "2004-04-27",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "nlin/0411009": {
+    "date": "2004-11-04",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "nlin/0411044": {
     "date": "2004-11-19",
