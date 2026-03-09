@@ -51614,6 +51614,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "hep-th/0301057": {
+    "date": "2003-01-09",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "hep-th/0301072": {
     "date": "2003-01-12",
     "decision": "REJECT",
@@ -51628,6 +51633,11 @@
     "date": "2003-02-13",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "hep-th/0303077": {
+    "date": "2003-03-10",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "hep-th/0303089": {
     "date": "2003-03-11",
@@ -51724,6 +51734,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "hep-th/0312119": {
+    "date": "2003-12-11",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "hep-th/0312139": {
     "date": "2003-12-12",
     "decision": "REJECT",
@@ -51779,6 +51794,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "hep-th/0405089": {
+    "date": "2004-05-10",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "hep-th/0406011": {
     "date": "2004-06-01",
     "decision": "REJECT",
@@ -51793,6 +51813,11 @@
     "date": "2004-07-07",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "hep-th/0407108": {
+    "date": "2004-07-13",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "hep-th/0407151": {
     "date": "2004-07-17",
@@ -51884,10 +51909,20 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "hep-th/0505006": {
+    "date": "2005-04-30",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "hep-th/0505062": {
     "date": "2005-05-06",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "hep-th/0505091": {
+    "date": "2005-05-11",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "hep-th/0505217": {
     "date": "2005-05-24",
@@ -52359,6 +52394,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "hep-th/9402076": {
+    "date": "1994-02-14",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "hep-th/9402126": {
     "date": "1994-02-22",
     "decision": "ACCEPT",
@@ -52383,6 +52423,11 @@
     "date": "1994-05-02",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "hep-th/9406100": {
+    "date": "1994-06-15",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "hep-th/9406180": {
     "date": "1994-06-28",
@@ -52448,6 +52493,11 @@
     "date": "1994-08-29",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "hep-th/9409025": {
+    "date": "1994-09-05",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "hep-th/9410049": {
     "date": "1994-10-07",
@@ -52524,6 +52574,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "hep-th/9504119": {
+    "date": "1995-04-24",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "hep-th/9506030": {
     "date": "1995-06-06",
     "decision": "ACCEPT",
@@ -52558,6 +52613,11 @@
     "date": "1995-09-08",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "hep-th/9511174": {
+    "date": "1995-11-24",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "hep-th/9511214": {
     "date": "1995-11-30",
@@ -52659,6 +52719,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "hep-th/9610003": {
+    "date": "1996-10-01",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "hep-th/9610137": {
     "date": "1996-10-17",
     "decision": "ACCEPT",
@@ -52708,6 +52773,11 @@
     "date": "1997-05-21",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "hep-th/9706147": {
+    "date": "1997-06-20",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "hep-th/9706182": {
     "date": "1997-06-25",

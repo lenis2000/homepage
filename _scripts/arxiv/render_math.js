@@ -208,6 +208,7 @@ const ARXIV_MACROS = {
   '\\ga': '\\gamma',
   '\\de': '\\delta',
   '\\si': '\\sigma',
+  '\\s': '\\sigma',
   '\\lam': '\\lambda',
   // Partial derivative shortcut
   '\\pl': '\\partial',
@@ -255,6 +256,8 @@ const ARXIV_MACROS = {
   // More blackboard bold
   '\\HH': '\\mathbb{H}',
   '\\E': '\\mathbb{E}',
+  // Numeric fraction shortcuts (hep-th convention)
+  '\\2': '\\frac{1}{2}',
   // q-binomial
   '\\qbinom': '\\binom',
 };
