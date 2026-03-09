@@ -58684,6 +58684,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "q-alg/9505029": {
+    "date": "1995-05-24",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "q-alg/9507003": {
     "date": "1995-07-06",
     "decision": "ACCEPT",
@@ -58903,6 +58908,11 @@
     "date": "1997-03-30",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "q-alg/9704005": {
+    "date": "1997-04-03",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "q-alg/9704011": {
     "date": "1997-04-11",
