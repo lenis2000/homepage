@@ -50,7 +50,7 @@ make arxiv-scan-import && make arxiv-rebuild
 ```bash
 <!-- make arxiv-scan ARGS="--id-prefix solv-int/ --threshold 0.78" -->
 <!-- arxiv-review _scripts/arxiv/scan-review.json -->
-make arxiv-scan-import && make arxiv-rebuild
+<!-- make arxiv-scan-import && make arxiv-rebuild -->
 ```
 
 ## 2007 (new-style IDs start April 2007)
