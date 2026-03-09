@@ -12,7 +12,7 @@
 (function () {
   'use strict';
 
-  var HEX_SIDE = 22;
+  var HEX_SIDE = 20 + Math.floor(Math.random() * 41); // random 20–60
 
   // UVA brand palette (diverging: navy <- off-white -> orange)
   var NAVY   = [35, 45, 75];
