@@ -64,7 +64,7 @@ function findClosingDelim(delim, text, start) {
   let depth = 0;
   for (let j = start; j < text.length; j++) {
     const ch = text[j];
-    if (depth <= 0 && text.slice(j, j + delim.length) === delim) {
+    if (depth === 0 && text.slice(j, j + delim.length) === delim) {
       return j;
     }
     if (ch === '\\') { j++; continue; }
