@@ -199,6 +199,10 @@ SEMANTIC_CATEGORIES = {
     "math.NT", "q-alg", "solv-int", "math.ST", "math.DS",
 }
 
+# Old categories to skip for recent dates (2026+):
+# q-alg → math.QA, solv-int → nlin.SI, bare cond-mat → use cond-mat.stat-mech
+SKIP_RECENT_CATEGORIES = {"q-alg", "solv-int", "cond-mat"}
+
 
 def fetch_category_day(category, day_date):
     """Fetch ALL papers from a category for a single day (no author constraint).
@@ -929,6 +933,13 @@ def main():
     # In semantic mode, use SEMANTIC_CATEGORIES instead of config categories
     if args.semantic:
         categories = sorted(SEMANTIC_CATEGORIES)
+        # Skip old categories when searching recent dates (2026+)
+        effective_start = after_date or (datetime.now() - timedelta(days=args.days)).strftime("%Y-%m-%d")
+        if effective_start >= "2026":
+            skipped = sorted(SKIP_RECENT_CATEGORIES & set(categories))
+            if skipped:
+                categories = [c for c in categories if c not in SKIP_RECENT_CATEGORIES]
+                print(f"  Skipping legacy categories for {effective_start[:4]}+: {', '.join(skipped)}")
 
     print(f"Fetching papers: {date_desc}")
     print(f"Categories: {', '.join(categories)}")
