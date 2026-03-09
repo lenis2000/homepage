@@ -2,7 +2,7 @@
 """
 Pre-render LaTeX math in arXiv abstract posts to MathML using KaTeX.
 
-Processes all posts in _posts/arxiv/, extracts abstracts, renders
+Processes all posts in _arxiv/, extracts abstracts, renders
 $...$ and $$...$$ math to MathML via a single batched Node.js call,
 and updates the post files.
 
@@ -22,7 +22,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).parent
 RENDER_JS = SCRIPT_DIR / "render_math.js"
-POSTS_DIR = Path("_posts/arxiv")
+POSTS_DIR = Path("_arxiv")
 
 
 def has_raw_math(text):

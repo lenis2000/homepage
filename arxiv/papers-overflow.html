@@ -3,7 +3,7 @@ layout: null
 permalink: /arxiv/papers-overflow.html
 sitemap: false
 ---
-{% assign arxiv_posts = site.posts | where: "categories", "arxiv-feed" %}
+{% assign arxiv_posts = site.arxiv | sort: "date" | reverse %}
 {% assign current_month = "" %}
 {% for post in arxiv_posts offset: 200 %}
   {% assign post_month = post.date | date: '%B %Y' %}

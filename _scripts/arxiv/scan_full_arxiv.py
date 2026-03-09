@@ -36,7 +36,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 INDEX_FILE = REPO_ROOT / "assets" / "data" / "arxiv-index.json"
 VECTORS_FILE = REPO_ROOT / "assets" / "data" / "arxiv-vectors.npy"
-POSTS_DIR = REPO_ROOT / "_posts" / "arxiv"
+POSTS_DIR = REPO_ROOT / "_arxiv"
 CACHE_DB = SCRIPT_DIR / ".embedding-cache-full.db"
 REVIEW_FILE = SCRIPT_DIR / "scan-review.json"
 

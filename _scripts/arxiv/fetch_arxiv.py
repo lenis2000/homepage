@@ -31,7 +31,7 @@ except ImportError:
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
-OUTPUT_DIR = REPO_ROOT / "_posts" / "arxiv"
+OUTPUT_DIR = REPO_ROOT / "_arxiv"
 PROCESSED_FILE = SCRIPT_DIR / "processed.json"
 AUTHORS_FILE = SCRIPT_DIR / "authors.yml"
 PROMPT_FILE = SCRIPT_DIR / "ai_prompt.txt"

@@ -10,7 +10,7 @@ Accepts various ID formats:
   - https://arxiv.org/html/2603.00317v2
 
 Cleans up:
-  1. Post file in _posts/arxiv/
+  1. Post file in _arxiv/
   2. Entry in processed.json
   3. Search index (assets/data/arxiv-index.json)
   4. Related-paper references in other posts' front matter
@@ -24,7 +24,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
-POSTS_DIR = REPO_ROOT / "_posts" / "arxiv"
+POSTS_DIR = REPO_ROOT / "_arxiv"
 PROCESSED_FILE = SCRIPT_DIR / "processed.json"
 INDEX_FILE = REPO_ROOT / "assets" / "data" / "arxiv-index.json"
 VECTORS_FILE = REPO_ROOT / "assets" / "data" / "arxiv-vectors.npy"

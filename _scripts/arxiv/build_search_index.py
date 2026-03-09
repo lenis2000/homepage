@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build a compact JSON search index from _posts/arxiv/ for fast client-side search.
+Build a compact JSON search index from _arxiv/ for fast client-side search.
 
 Usage:
     python3 _scripts/arxiv/build_search_index.py
@@ -43,7 +43,7 @@ def _strip_to_plain(html):
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
-POSTS_DIR = REPO_ROOT / "_posts" / "arxiv"
+POSTS_DIR = REPO_ROOT / "_arxiv"
 OUTPUT_FILE = REPO_ROOT / "assets" / "data" / "arxiv-index.json"
 AUTHORS_FILE = SCRIPT_DIR / "authors.yml"
 AUTHORS_DATA_FILE = REPO_ROOT / "_data" / "arxiv_authors.yml"

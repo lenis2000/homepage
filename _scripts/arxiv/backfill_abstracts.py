@@ -2,7 +2,7 @@
 """
 Backfill abstracts for existing arXiv feed posts by querying the arXiv API.
 
-Reads all posts in _posts/arxiv/, extracts arXiv IDs, fetches abstracts
+Reads all posts in _arxiv/, extracts arXiv IDs, fetches abstracts
 in batches, and updates the post body with the abstract text.
 
 Usage:
@@ -25,7 +25,7 @@ except ImportError:
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
-POSTS_DIR = REPO_ROOT / "_posts" / "arxiv"
+POSTS_DIR = REPO_ROOT / "_arxiv"
 
 ARXIV_API = "https://export.arxiv.org/api/query"
 BATCH_SIZE = 20

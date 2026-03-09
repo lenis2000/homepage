@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-One-time import: migrate 460 FRG website posts into _posts/arxiv/.
+One-time import: migrate 460 FRG website posts into _arxiv/.
 
 Reads posts from the FRG website directory, parses them, and generates
 new-format posts for the homepage arXiv feed.
@@ -19,7 +19,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 FRG_DIR = Path.home() / "__FORMER_DPBX" / "Sci" / "FRG-website" / "_posts" / "arXiv_2017"
-OUTPUT_DIR = REPO_ROOT / "_posts" / "arxiv"
+OUTPUT_DIR = REPO_ROOT / "_arxiv"
 PROCESSED_FILE = SCRIPT_DIR / "processed.json"
 
 

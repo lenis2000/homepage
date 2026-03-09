@@ -12,7 +12,7 @@ permalink: /arxiv/feed.xml
   <author>
     <name>{{ site.author }}</name>
   </author>
-  {%- assign arxiv_posts = site.posts | where: "categories", "arxiv-feed" -%}
+  {%- assign arxiv_posts = site.arxiv | sort: "date" | reverse -%}
   {%- assign latest = arxiv_posts | first -%}
   {%- if latest -%}
   <updated>{{ latest.date | date_to_xmlschema }}</updated>
