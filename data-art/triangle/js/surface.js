@@ -68,17 +68,6 @@
         return heights;
     }
 
-    function hashDimers(dimers) {
-        let h = 2166136261 >>> 0;
-        for (let i = 0; i < dimers.length; i++) {
-            const d = dimers[i];
-            h ^= (d.bn | 0); h = Math.imul(h, 16777619) >>> 0;
-            h ^= (d.bj | 0); h = Math.imul(h, 16777619) >>> 0;
-            h ^= (d.t  | 0); h = Math.imul(h, 16777619) >>> 0;
-        }
-        return h.toString(16).padStart(8, '0');
-    }
-
     // ========================================================================
     // SURFACE BUILDER — manages Three.js mesh state for the lozenge surface
     // ========================================================================
@@ -270,45 +259,6 @@
                 targets[i * 3 + 2] = cz / 4;
             }
             return targets;
-        }
-
-        dumpSurfaceSnapshot(label, sim, currentState) {
-            if (!sim || !Array.isArray(sim.dimers)) return null;
-
-            const dump = {
-                label,
-                capturedAt: new Date().toISOString(),
-                state: currentState,
-                dimersCount: sim.dimers.length,
-                boundariesCount: Array.isArray(sim.boundaries) ? sim.boundaries.length : 0,
-                hash: hashDimers(sim.dimers),
-                dimers: sim.dimers.map(d => ({ bn: d.bn, bj: d.bj, t: d.t })),
-                boundaries: Array.isArray(sim.boundaries)
-                    ? JSON.parse(JSON.stringify(sim.boundaries))
-                    : []
-            };
-
-            if (!window.__triangleSurfaceDumps) window.__triangleSurfaceDumps = {};
-            window.__triangleSurfaceDumps[label] = dump;
-
-            console.log(`[SURFACE_DUMP] ${label}`, {
-                capturedAt: dump.capturedAt,
-                state: dump.state,
-                dimersCount: dump.dimersCount,
-                boundariesCount: dump.boundariesCount,
-                hash: dump.hash
-            });
-
-            if (label === 'post_glauber' && window.__triangleSurfaceDumps.pre_glauber) {
-                const pre = window.__triangleSurfaceDumps.pre_glauber;
-                console.log('[SURFACE_DUMP] pre -> post', {
-                    changed: pre.hash !== dump.hash,
-                    preHash: pre.hash,
-                    postHash: dump.hash
-                });
-            }
-
-            return dump;
         }
 
         dispose(meshGroup) {

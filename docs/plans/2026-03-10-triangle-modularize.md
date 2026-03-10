@@ -118,13 +118,13 @@ data-art/triangle/
 **Files:**
 - Remove: `data-art/triangle.html` (old monolith)
 
-- [ ] Start local server and test at 1920x1080 with agent-browser
-- [ ] Verify hook screen renders correctly (background particles, question text, hint)
-- [ ] Verify flying cubes phase (3,072 cubes tumbling)
-- [ ] Verify assembly phase (cubes converge to lattice positions)
-- [ ] Verify annealing phase (chaos-to-order with entropy slider, 3D surface)
-- [ ] Verify frozen orbit phase (camera rotates around surface)
-- [ ] Verify text screen phase (code reveals line by line)
-- [ ] Verify auto-restart after idle timeout
-- [ ] Remove old `data-art/triangle.html`
-- [ ] Test at 1280x720 and 2560x1440 for responsive behavior
+- [x] Start local server and test at 1920x1080 with agent-browser
+- [x] Verify hook screen renders correctly (background particles, question text, hint)
+- [x] Verify flying cubes phase (3,072 cubes tumbling)
+- [x] Verify assembly phase (cubes converge to lattice positions)
+- [x] Verify annealing phase (chaos-to-order with entropy slider, 3D surface)
+- [x] Verify frozen orbit phase (camera rotates around surface)
+- [x] Verify text screen phase (code reveals line by line)
+- [x] Verify auto-restart after idle timeout
+- [x] Remove old `data-art/triangle.html`
+- [x] Test at 1280x720 and 2560x1440 for responsive behavior

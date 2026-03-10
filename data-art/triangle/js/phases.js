@@ -424,7 +424,6 @@
         FlyingCubesManager: FlyingCubesManager,
         setFrozenRotation: setFrozenRotation,
         getFrozenAction: getFrozenAction,
-        buildCodeLines: buildCodeLines,
         populateTextScreen: populateTextScreen
     };
 })();

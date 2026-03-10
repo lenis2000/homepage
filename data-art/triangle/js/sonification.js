@@ -98,36 +98,6 @@
             }
         }
 
-        restartDrone() {
-            if (!this.audioCtx || !this.droneGain) return;
-            if (this.drone) {
-                for (const osc of this.drone) {
-                    try { osc.stop(); } catch(e) {}
-                }
-            }
-            const t = this.audioCtx.currentTime;
-            this.masterGain.gain.setValueAtTime(0.25, t);
-
-            const osc1 = this.audioCtx.createOscillator();
-            osc1.type = 'sine'; osc1.frequency.value = 110;
-            const g1 = this.audioCtx.createGain(); g1.gain.value = 0.5;
-            osc1.connect(g1); g1.connect(this.droneGain);
-
-            const osc2 = this.audioCtx.createOscillator();
-            osc2.type = 'sine'; osc2.frequency.value = 110; osc2.detune.value = 3;
-            const g2 = this.audioCtx.createGain(); g2.gain.value = 0.4;
-            osc2.connect(g2); g2.connect(this.droneGain);
-
-            const osc3 = this.audioCtx.createOscillator();
-            osc3.type = 'sine'; osc3.frequency.value = 220;
-            const g3 = this.audioCtx.createGain(); g3.gain.value = 0.1;
-            osc3.connect(g3); g3.connect(this.droneGain);
-
-            osc1.start(t); osc2.start(t); osc3.start(t);
-            this.drone = [osc1, osc2, osc3];
-            this.droneGain.gain.setTargetAtTime(0.6, t, 0.3);
-        }
-
         destroy() {
             if (this.drone) {
                 for (const osc of this.drone) {

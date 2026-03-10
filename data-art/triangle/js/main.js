@@ -30,8 +30,6 @@
     var lastTimestamp = 0;
     var stateStartTime = 0;
     var transformBlendComplete = false;
-    var dumpedPreGlauber = false;
-    var dumpedPostGlauber = false;
 
     // Timers
     var hookTimerId = null;
@@ -139,7 +137,6 @@
     }
 
     function enterHook() {
-        console.log('[STATE] → HOOK');
         currentState = STATES.HOOK;
         var hookEl = document.getElementById('hook-screen');
         hookEl.style.display = 'flex';
@@ -172,7 +169,6 @@
             sim.initCFTP();
             function step() {
                 var result = sim.stepCFTP();
-                console.log('CFTP:', result.status, 'T=' + result.T);
                 if (result.status === 'coalesced') {
                     sim.finalizeCFTP();
                     resolve(true);
@@ -191,7 +187,6 @@
     }
 
     async function enterLoading() {
-        console.log('[STATE] → LOADING');
         currentState = STATES.LOADING;
         if (hookTimerId) { clearTimeout(hookTimerId); hookTimerId = null; }
         window.HookBackground.stop();
@@ -210,23 +205,28 @@
         }
 
         // Create WASM-backed simulator (async — loads modularized WASM)
-        sim = await window.SimulatorInterface.create();
+        try {
+            sim = await window.SimulatorInterface.create();
+        } catch (wasmErr) {
+            console.error('WASM load failed:', wasmErr);
+            document.getElementById('loading').textContent = 'Error: Failed to load simulation engine';
+            setTimeout(function() {
+                document.getElementById('loading').style.display = 'none';
+                if (sonifier) { sonifier.destroy(); sonifier = null; }
+                enterHook();
+            }, 3000);
+            return;
+        }
 
         setTimeout(async function() {
             try {
                 // Generate scaled shape
-                console.time('generateScaledShape');
                 activeTriangles = await window.TriangleGeometry.generateScaledShape(sim);
-                console.timeEnd('generateScaledShape');
-                console.log('Triangle count:', activeTriangles.size);
 
                 // Final init with scaled shape
-                console.time('finalInit');
                 sim.initFromTriangles(activeTriangles);
-                console.timeEnd('finalInit');
 
                 // Adjust hole height for impossible illusion
-                console.time('holeSetup');
                 var holeCount = sim.getHoleCount();
                 if (holeCount > 0) {
                     var HOLE_HEIGHT_INCREASE = 8;
@@ -240,14 +240,10 @@
                         sim.setHoleBaseHeight(i, baseWinding);
                     }
                 }
-                console.timeEnd('holeSetup');
 
                 if (sim.isValid) {
                     // Run CFTP for exact uniform sample
-                    console.time('CFTP');
                     await runCFTPAsync();
-                    console.timeEnd('CFTP');
-                    console.log('Dimer count:', sim.dimers.length);
 
                     // Init Three.js
                     canvas.style.display = 'block';
@@ -290,7 +286,6 @@
     }
 
     function enterFlyingCubes() {
-        console.log('[STATE] → FLYING_CUBES');
         currentState = STATES.FLYING_CUBES;
         stateStartTime = performance.now();
         lastTimestamp = performance.now();
@@ -300,18 +295,14 @@
     }
 
     function enterAssembly() {
-        console.log('[STATE] → ASSEMBLY');
         currentState = STATES.ASSEMBLY;
         stateStartTime = performance.now();
     }
 
     function enterTransforming() {
-        console.log('[STATE] → TRANSFORMING');
         currentState = STATES.TRANSFORMING;
         stateStartTime = performance.now();
         transformBlendComplete = !cubes || !cubes.cubesMesh;
-        dumpedPreGlauber = false;
-        dumpedPostGlauber = false;
 
         // Build surface from current CFTP state; fade it in over cubes
         surfaceBuilder.buildSurfaceMesh(sim.dimers, false, meshGroup, surfaceMaterial, edgeMaterial);
@@ -325,10 +316,6 @@
             cubes.cubesMesh.material.depthWrite = false;
         }
 
-        if (!dumpedPreGlauber) {
-            surfaceBuilder.dumpSurfaceSnapshot('pre_glauber', sim, currentState);
-            dumpedPreGlauber = true;
-        }
         sim.setQBias(TC.Q_CHAOS);
     }
 
@@ -374,11 +361,6 @@
             sim.setQBias(currentQ);
             var stepsThisFrame = Math.max(100, Math.round(TC.STEPS_PER_FRAME / Math.pow(currentQ, 1.5)));
             sim.step(stepsThisFrame);
-            console.log('[ANNEAL] t=' + (dynamicElapsed/1000).toFixed(1) + 's q=' + currentQ.toFixed(3) + ' steps=' + stepsThisFrame + ' progress=' + animPhase.annealProgress.toFixed(3));
-            if (!dumpedPostGlauber) {
-                surfaceBuilder.dumpSurfaceSnapshot('post_glauber', sim, currentState);
-                dumpedPostGlauber = true;
-            }
         }
 
         if (sonifier) sonifier.setEntropy(animPhase.chaosEnergy);
@@ -387,7 +369,6 @@
     }
 
     function enterFrozen() {
-        console.log('[STATE] → FROZEN');
         currentState = STATES.FROZEN;
         stateStartTime = performance.now();
 
@@ -434,7 +415,6 @@
     }
 
     function enterTextScreen() {
-        console.log('[STATE] → TEXT_SCREEN');
         currentState = STATES.TEXT_SCREEN;
         stateStartTime = performance.now();
 
@@ -521,7 +501,6 @@
     // LOOP RESTART — return to hook screen
     // ========================================================================
     function returnToHook() {
-        console.log('[STATE] → RETURN_TO_HOOK');
         currentState = STATES.HOOK;
 
         if (animationId) {

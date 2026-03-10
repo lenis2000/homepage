@@ -11,7 +11,7 @@ emcc triangle-lozenge.cpp -o triangle-lozenge.js \
   -s ENVIRONMENT=web \
   -s SINGLE_FILE=1 \
   -O3 -ffast-math -flto -msimd128
-mv triangle-lozenge.js ../../
+mv triangle-lozenge.js ../
 
 Triangle Lozenge Tiling Sampler (stripped for data-art/triangle/)
 - Arbitrary topology support (holes, disconnected regions)

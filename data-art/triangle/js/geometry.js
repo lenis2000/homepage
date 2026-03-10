@@ -130,15 +130,11 @@
         let triangles = trianglesToMap(TC.BASE_SHAPE);
 
         for (let i = 0; i < TC.SCALE_ITERATIONS; i++) {
-            console.time(`scaleIter-${i}`);
             simInterface.initFromTriangles(triangles);
             if (!simInterface.isValid || !simInterface.boundaries || simInterface.boundaries.length === 0) {
-                console.error('Invalid shape at iteration', i);
                 break;
             }
             triangles = doubleMeshWithBoundaries(triangles, simInterface.boundaries);
-            console.timeEnd(`scaleIter-${i}`);
-            console.log(`  iter ${i}: ${triangles.size} triangles`);
         }
 
         return triangles;

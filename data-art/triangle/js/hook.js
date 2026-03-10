@@ -84,7 +84,6 @@
     window.HookBackground = {
         start: startHookBg,
         stop: stopHookBg,
-        isRunning: function() { return hookAnimId !== null; },
         resizeIfRunning: function() {
             if (hookAnimId) {
                 initHookBg();
