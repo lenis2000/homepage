@@ -46,71 +46,77 @@ html, body {
 #controls {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  background: #1e1e1e;
-  border-top: 1px solid #333;
-  padding: 6px 8px 8px;
+  background: #1a1a1a;
+  border-top: 1px solid #2e2e2e;
+  padding: 5px 8px 7px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   z-index: 100;
   user-select: none;
 }
 
 .ctrl-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  align-items: center;
+  gap: 4px;
+  align-items: stretch;
 }
 
+/* All buttons in preset row stretch equally */
+#row-presets button { flex: 1; }
+
 button {
-  background: #2c2c2c;
-  color: #ddd;
-  border: 1px solid #444;
-  border-radius: 6px;
-  padding: 0 12px;
-  height: 38px;
+  background: #252525;
+  color: #ccc;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  padding: 0 10px;
+  height: 36px;
   font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  min-width: 38px;
 }
-button:active { background: #383838; }
+button:hover { background: #2e2e2e; color: #e8e8e8; }
+button:active { background: #333; }
 button.active, button.preset-active {
-  background: #3a3a3a;
-  border-color: #A0ADB8;
+  background: #2d3a47;
+  border-color: #7a9ab0;
   color: #EDE8E0;
 }
 button.action {
-  background: linear-gradient(135deg, #2a3a4a, #1e2e3e);
-  border-color: #A0ADB8;
+  flex: 2;
+  background: linear-gradient(135deg, #253545, #1a2a38);
+  border-color: #7a9ab0;
   color: #EDE8E0;
   font-weight: 600;
+  letter-spacing: 0.2px;
 }
-button.action:hover { background: linear-gradient(135deg, #354555, #283848); }
+button.action:hover { background: linear-gradient(135deg, #2e4055, #223040); }
 button.chaos-btn {
-  background: linear-gradient(135deg, #3a2a1a, #2e1e0e);
-  border-color: #CCC0B0;
-  color: #EDE8E0;
+  flex: 2;
+  background: linear-gradient(135deg, #382515, #2c1a0a);
+  border-color: #a08060;
+  color: #e8d8c0;
   font-weight: 600;
 }
-button.chaos-btn:hover { background: linear-gradient(135deg, #453525, #392919); }
+button.chaos-btn:hover { background: linear-gradient(135deg, #453020, #382010); }
 button.stop-btn {
-  background: linear-gradient(135deg, #4a2a2a, #3e1e1e);
-  border-color: #cc6655;
+  flex: 2;
+  background: linear-gradient(135deg, #452020, #381818);
+  border-color: #aa5544;
   color: #ffaaaa;
   font-weight: 600;
 }
 button.view-btn {
-  padding: 0 10px;
+  flex: 1;
   font-size: 12px;
 }
 button.view-btn.active {
-  background: #283848;
-  border-color: #A0ADB8;
+  background: #243040;
+  border-color: #7a9ab0;
   color: #EDE8E0;
 }
 
@@ -181,7 +187,7 @@ button.view-btn.active {
     <button id="btn-perfect" class="action">Perfect Sample</button>
     <button id="btn-chaos" class="chaos-btn">Chaos ▶</button>
     <button id="btn-2x" class="view-btn" title="Double domain size (up to ~60k dimers)">2×</button>
-    <button id="btn-draw" class="view-btn" title="Draw mode: clear canvas and draw custom region">✏ Draw</button>
+    <button id="btn-draw" class="view-btn" title="Draw mode: clear canvas and draw custom region">Draw</button>
     <button id="btn-2d" class="view-btn">2D</button>
     <button id="btn-3d" class="view-btn active">3D</button>
   </div>
@@ -195,6 +201,12 @@ const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
 </script>
 <script>
 document.write('<script src="/js/2025-11-28-ultimate-lozenge' + (window.LOZENGE_THREADED ? '-threaded' : '') + '.js"><\/script>');
+</script>
+<script>
+if (!isFirefox && navigator.gpu) {
+    window.LOZENGE_WEBGPU = true;
+    document.write('<script src="/js/webgpu-lozenge-engine.js"><\/script>');
+}
 </script>
 <script>
 'use strict';
@@ -274,111 +286,74 @@ function generateHexagon(a, b, c) {
 }
 
 // ============================================================
-// DOMAIN DOUBLING  (ported from gen-penrose.js)
+// DOMAIN DOUBLING  (mirrors lozenge-draw doubleMesh exactly)
 // ============================================================
 const MAX_TRIANGLES_2X = 120000; // ~60k dimers cap
 
-function _getTriVerts(n, j, type) {
-    return type === 1 ? [[n,j],[n,j-1],[n+1,j-1]] : [[n,j],[n+1,j],[n+1,j-1]];
+// Convert world coords back to nearest lattice integers
+function worldToLattice(x, y) {
+    const n = Math.round(x);
+    const j = Math.round((y - slope * x) / deltaC);
+    return { n, j };
 }
 
-function _findBoundaryEdges(trianglesMap) {
-    const edgeCount = new Map();
-    for (const [, tri] of trianglesMap) {
-        const verts = _getTriVerts(tri.n, tri.j, tri.type);
-        for (let i = 0; i < 3; i++) {
-            const a = verts[i], b = verts[(i + 1) % 3];
-            const key = (a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]))
-                ? `${a[0]},${a[1]}|${b[0]},${b[1]}` : `${b[0]},${b[1]}|${a[0]},${a[1]}`;
-            edgeCount.set(key, (edgeCount.get(key) || 0) + 1);
+// Double the domain using sim.boundaries (WASM-computed world-coordinate polygons).
+// Returns new triangles Map, or null if result > cap or no boundaries.
+function doubleShape(simBoundaries) {
+    if (!simBoundaries || simBoundaries.length === 0) return null;
+
+    // Convert world → lattice for all boundary polygons
+    const latticeBoundaries = simBoundaries.map(b => b.map(v => worldToLattice(v.x, v.y)));
+
+    // Outer = largest bounding-box diagonal
+    let outerIdx = 0, maxDiag = -1;
+    latticeBoundaries.forEach((b, i) => {
+        let mn = Infinity, mxn = -Infinity, mj = Infinity, mxj = -Infinity;
+        for (const v of b) {
+            mn = Math.min(mn, v.n); mxn = Math.max(mxn, v.n);
+            mj = Math.min(mj, v.j); mxj = Math.max(mxj, v.j);
         }
-    }
-    const result = [];
-    for (const [key, count] of edgeCount) {
-        if (count === 1) {
-            const [l, r] = key.split('|');
-            result.push([l.split(',').map(Number), r.split(',').map(Number)]);
-        }
-    }
-    return result;
-}
+        const diag = (mxn - mn) ** 2 + (mxj - mj) ** 2;
+        if (diag > maxDiag) { maxDiag = diag; outerIdx = i; }
+    });
 
-function _traceBoundaries(boundaryEdges) {
-    const adj = new Map();
-    for (const [[an,aj],[bn,bj]] of boundaryEdges) {
-        const ka = `${an},${aj}`, kb = `${bn},${bj}`;
-        if (!adj.has(ka)) adj.set(ka, []);
-        if (!adj.has(kb)) adj.set(kb, []);
-        adj.get(ka).push({ to:[bn,bj], key:kb });
-        adj.get(kb).push({ to:[an,aj], key:ka });
-    }
-    const usedEdges = new Set();
-    const polygons = [];
-    for (const [[an,aj],[bn,bj]] of boundaryEdges) {
-        const ka = `${an},${aj}`, kb = `${bn},${bj}`;
-        const ek = ka < kb ? `${ka}|${kb}` : `${kb}|${ka}`;
-        if (usedEdges.has(ek)) continue;
-        const poly = [[an,aj]];
-        usedEdges.add(ek);
-        let prevKey = ka, currentKey = kb;
-        while (currentKey !== ka) {
-            const [cn,cj] = currentKey.split(',').map(Number);
-            poly.push([cn,cj]);
-            const next = (adj.get(currentKey)||[]).find(nb => {
-                const ek2 = currentKey < nb.key ? `${currentKey}|${nb.key}` : `${nb.key}|${currentKey}`;
-                return !usedEdges.has(ek2);
-            });
-            if (!next) break;
-            const ek2 = currentKey < next.key ? `${currentKey}|${next.key}` : `${next.key}|${currentKey}`;
-            usedEdges.add(ek2);
-            prevKey = currentKey; currentKey = next.key;
-        }
-        if (poly.length >= 3) polygons.push(poly);
-    }
-    return polygons;
-}
-
-function _signedArea(latticePoly) {
-    const pts = latticePoly.map(([n,j]) => getVertex(n,j));
-    let area = 0;
-    for (let i = 0, k = pts.length - 1; i < pts.length; k = i++) {
-        area += pts[k].x * pts[i].y - pts[i].x * pts[k].y;
-    }
-    return area / 2;
-}
-
-function doubleShape(trianglesMap) {
-    const boundaryEdges = _findBoundaryEdges(trianglesMap);
-    if (boundaryEdges.length === 0) return null;
-    const polygons = _traceBoundaries(boundaryEdges);
-    if (polygons.length === 0) return null;
-
-    // Find outer polygon by largest absolute area
-    const areas = polygons.map(_signedArea);
-    let outerIdx = 0;
-    for (let i = 1; i < areas.length; i++) if (Math.abs(areas[i]) > Math.abs(areas[outerIdx])) outerIdx = i;
-
-    // Centroid of outer in lattice coords
-    const outer = polygons[outerIdx];
+    // Integer anchor = rounded centroid of outer boundary
+    const outer = latticeBoundaries[outerIdx];
     let cenN = 0, cenJ = 0;
-    for (const [n,j] of outer) { cenN += n; cenJ += j; }
+    for (const v of outer) { cenN += v.n; cenJ += v.j; }
     const anchorN = Math.round(cenN / outer.length);
     const anchorJ = Math.round(cenJ / outer.length);
 
-    // Scale all polygons 2× around anchor in lattice coords
-    const scaledWorld = polygons.map(poly =>
-        poly.map(([n,j]) => getVertex(anchorN + (n-anchorN)*2, anchorJ + (j-anchorJ)*2))
+    // Scale all boundaries 2× around anchor → back to world coords
+    const scaledWorld = latticeBoundaries.map(b =>
+        b.map(v => getVertex(anchorN + (v.n - anchorN) * 2, anchorJ + (v.j - anchorJ) * 2))
     );
     const scaledOuter = scaledWorld[outerIdx];
-    const scaledHoles = scaledWorld.filter((_,i) => i !== outerIdx);
+    const scaledHoles = scaledWorld.filter((_, i) => i !== outerIdx);
 
-    // Build new triangle set
-    const newTriangles = generateTrianglesInPolygon(scaledOuter);
-    // Remove holes
-    for (const hole of scaledHoles) {
-        for (const [key, tri] of newTriangles) {
-            const c = tri.type === 1 ? getRightTriangleCentroid(tri.n, tri.j) : getLeftTriangleCentroid(tri.n, tri.j);
-            if (pointInPolygonPreset(c.x, c.y, hole)) newTriangles.delete(key);
+    // Bounding box of scaled outer
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const v of scaledOuter) {
+        minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+        minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+    }
+    const searchMinN = Math.floor(minX) - 2, searchMaxN = Math.ceil(maxX) + 2;
+    const nRange = searchMaxN - searchMinN;
+    const searchMinJ = Math.floor(minY / deltaC) - nRange - 5;
+    const searchMaxJ = Math.ceil(maxY / deltaC) + nRange + 5;
+
+    const newTriangles = new Map();
+    for (let n = searchMinN; n <= searchMaxN; n++) {
+        for (let j = searchMinJ; j <= searchMaxJ; j++) {
+            const rc = getRightTriangleCentroid(n, j);
+            if (pointInPolygonPreset(rc.x, rc.y, scaledOuter) &&
+                !scaledHoles.some(h => pointInPolygonPreset(rc.x, rc.y, h)))
+                newTriangles.set(`${n},${j},1`, { n, j, type: 1 });
+
+            const lc = getLeftTriangleCentroid(n, j);
+            if (pointInPolygonPreset(lc.x, lc.y, scaledOuter) &&
+                !scaledHoles.some(h => pointInPolygonPreset(lc.x, lc.y, h)))
+                newTriangles.set(`${n},${j},2`, { n, j, type: 2 });
         }
     }
 
@@ -424,6 +399,12 @@ class DataArtSampler {
         this._adjustHoleWinding = Module.cwrap('adjustHoleWindingExport', 'number', ['number', 'number']);
         this._setHoleBaseHeight = Module.cwrap('setHoleBaseHeight', 'number', ['number', 'number']);
         this._freeString = Module.cwrap('freeString', null, ['number']);
+        this._getRawGridData = Module.cwrap('getRawGridData', 'number', []);
+        this._getGridBounds = Module.cwrap('getGridBounds', 'number', []);
+        this._getCFTPMinGridData = Module.cwrap('getCFTPMinGridData', 'number', []);
+        this._getCFTPMaxGridData = Module.cwrap('getCFTPMaxGridData', 'number', []);
+
+        this.blackTriangles = [];
     }
 
     _json(ptr) {
@@ -449,6 +430,7 @@ class DataArtSampler {
         const r = this._json(this._exportDimers());
         this.boundaries = r.boundaries || [];
         this.dimers = r.dimers || [];
+        this.blackTriangles = r.black || [];
     }
 
     setQBias(q) { this._setQBias(q); }
@@ -477,6 +459,25 @@ class DataArtSampler {
     getAllHolesInfo() { return this._json(this._getAllHolesInfo()); }
     adjustHoleWinding(idx, delta) { return this._json(this._adjustHoleWinding(idx, delta)); }
     setHoleBaseHeight(idx, h) { this._setHoleBaseHeight(idx, h); }
+
+    // Read grid array using given WASM data function; returns {data, minN, maxN, minJ, maxJ} or null
+    _readGridData(dataFn) {
+        const boundsPtr = this._getGridBounds();
+        const boundsStr = Module.UTF8ToString(boundsPtr);
+        this._freeString(boundsPtr);
+        const bounds = JSON.parse(boundsStr);
+        const dataPtr = dataFn();
+        if (!dataPtr) return null;
+        const size = bounds.size;
+        const data = new Int32Array(size);
+        for (let i = 0; i < size; i++) data[i] = Module.getValue(dataPtr + i * 4, 'i32');
+        Module._free(dataPtr);
+        return { data, minN: bounds.minN, maxN: bounds.maxN, minJ: bounds.minJ, maxJ: bounds.maxJ };
+    }
+
+    getRawGridData() { return this._readGridData(this._getRawGridData); }
+    getCFTPMinRawGridData() { const r = this._readGridData(this._getCFTPMinGridData); return r ? r.data : null; }
+    getCFTPMaxRawGridData() { const r = this._readGridData(this._getCFTPMaxGridData); return r ? r.data : null; }
 
     setupHoleHeight() {
         const count = this.getHoleCount();
@@ -641,19 +642,21 @@ class Renderer2D {
                 }
             }
         } else if (activeTriangles && activeTriangles.size > 0) {
-            // Show region outline
+            // Drawn triangles — bright orange fill so they're visible on dark background
             for (const [, tri] of activeTriangles) {
                 let verts;
                 if (tri.type === 1) verts = [getVertex(tri.n, tri.j), getVertex(tri.n, tri.j-1), getVertex(tri.n+1, tri.j-1)];
                 else verts = [getVertex(tri.n, tri.j), getVertex(tri.n+1, tri.j), getVertex(tri.n+1, tri.j-1)];
                 const cv = verts.map(v => this.toCanvas(v.x, v.y, centerX, centerY, scale));
-                ctx.strokeStyle = '#3a4a5a';
+                ctx.fillStyle = 'rgba(255, 130, 20, 0.75)';
+                ctx.strokeStyle = 'rgba(255, 160, 60, 0.4)';
                 ctx.lineWidth = 0.5;
                 ctx.beginPath();
                 ctx.moveTo(cv[0][0], cv[0][1]);
                 ctx.lineTo(cv[1][0], cv[1][1]);
                 ctx.lineTo(cv[2][0], cv[2][1]);
                 ctx.closePath();
+                ctx.fill();
                 ctx.stroke();
             }
         }
@@ -925,6 +928,8 @@ class App {
         this.drawMode = null; // null | 'add' | 'erase'
         this.currentPreset = 'penrose';
         this.penholePenrose = false; // true when penrose hole was set up
+        this.gpuEngine = null;
+        this.useWebGPU = false;
 
         // Touch draw state
         this.touchDrawing = false;
@@ -951,15 +956,18 @@ class App {
                 this.isValid = false;
                 if (this.sim) { this.sim.dimers = []; this.sim.boundaries = []; }
                 this.drawMode = 'add';
-                drawBtn.textContent = '✏ Drawing';
+                drawBtn.textContent = 'Drawing';
                 drawBtn.classList.add('active');
+                // Zoom in so individual triangles are easy to draw
+                const cx = this.r2d.displayWidth / 2, cy = this.r2d.displayHeight / 2;
+                this.r2d.zoomAt(cx, cy, 4);
                 this._draw();
             } else if (this.drawMode === 'add') {
                 this.drawMode = 'erase';
-                drawBtn.textContent = '🧹 Erase';
+                drawBtn.textContent = 'Erase';
             } else {
                 this.drawMode = null;
-                drawBtn.textContent = '✏ Draw';
+                drawBtn.textContent = 'Draw';
                 drawBtn.classList.remove('active');
                 this._finalizeDrawing();
             }
@@ -1027,6 +1035,7 @@ class App {
         if (this.isValid && this.penholePenrose) {
             this.sim.setupHoleHeight();
         }
+        if (this.isValid) this._syncGPU();
         this.r2d.fitToRegion(this.activeTriangles);
         if (this.r3d) this.r3d.cameraInitialized = false;
         this._draw();
@@ -1044,18 +1053,51 @@ class App {
             this.showStatus('Already at max size (~60k dimers)');
             return;
         }
+        if (!this.isValid || !this.sim || !this.sim.boundaries || this.sim.boundaries.length === 0) {
+            this.showStatus('Shape must be valid to scale up');
+            return;
+        }
         this._stopAll();
+
+        // Save relative hole heights before doubling (currentWinding - baseHeight per hole)
+        let savedHoleHeights = [];
+        if (this.sim.getHoleCount() > 0) {
+            const info = this.sim.getAllHolesInfo();
+            savedHoleHeights = (info.holes || []).map(h => h.currentWinding - h.baseHeight);
+        }
+
+        // Capture boundaries before reinitialize clears them
+        const boundaries = this.sim.boundaries.slice();
+
         this._showLoading('Scaling up 2×…');
         await new Promise(r => setTimeout(r, 20));
-        const doubled = doubleShape(this.activeTriangles);
+        const doubled = doubleShape(boundaries);
         if (!doubled) {
             this._hideLoading();
             this.showStatus('Cannot scale up — shape too large or geometry error');
             return;
         }
         this.activeTriangles = doubled;
-        this.penholePenrose = false;
+        this.penholePenrose = false; // manual hole setup below
         await this._reinitialize(false);
+
+        // Restore hole heights scaled 2× (proportional to new domain size)
+        if (this.isValid && savedHoleHeights.length > 0) {
+            const count = Math.min(savedHoleHeights.length, this.sim.getHoleCount());
+            if (count > 0) {
+                const newInfo = this.sim.getAllHolesInfo();
+                for (let i = 0; i < count; i++) {
+                    const newBase = newInfo.holes[i].currentWinding;
+                    const scaledHeight = savedHoleHeights[i] * 2;
+                    if (scaledHeight !== 0) this.sim.adjustHoleWinding(i, scaledHeight);
+                    this.sim.setHoleBaseHeight(i, newBase);
+                }
+                this.sim._refreshDimers();
+                if (this.gpuEngine) this._syncGPU();
+                this._draw();
+            }
+        }
+
         this._hideLoading();
         this.showStatus(`Scaled to ${this.sim.dimers.length} dimers`, 4000);
     }
@@ -1068,8 +1110,12 @@ class App {
         btn.disabled = true;
         this.cftpRunning = true;
 
-        this.sim.initCFTP();
-        this._cftpLoop();
+        if (this.useWebGPU && this.gpuEngine && this.gpuEngine.isInitialized()) {
+            this._startGPUCFTP();
+        } else {
+            this.sim.initCFTP();
+            this._cftpLoop();
+        }
     }
 
     _cftpLoop() {
@@ -1078,6 +1124,7 @@ class App {
         if (status.status === 'coalesced') {
             this.sim.finalizeCFTP();
             this.cftpRunning = false;
+            if (this.gpuEngine) this._syncGPU(); // keep GPU grid in sync after WASM CFTP
             const btn = document.getElementById('btn-perfect');
             btn.textContent = 'Perfect Sample';
             btn.disabled = false;
@@ -1101,12 +1148,28 @@ class App {
         this._glauberLoop();
     }
 
-    _glauberLoop() {
+    async _glauberLoop() {
         if (!this.glauberRunning) return;
-        const steps = Math.max(100, Math.min(5000, this.sim.dimers.length * 2));
-        this.sim.randomStep(steps);
+        // Small shapes get fewer steps per frame for slower visual mixing
+        const n = this.sim.dimers.length;
+        const steps = n <= 500
+            ? Math.max(1, Math.round(n / 10))   // ~10% sweep for small shapes
+            : Math.max(1, Math.round(n / 3));   // ~33% sweep for large shapes
+        if (this.useWebGPU && this.gpuEngine && this.gpuEngine.isInitialized()) {
+            try {
+                await this.gpuEngine.step(1, 1.0);  // 1 chromatic sweep per frame
+                if (!this.glauberRunning) return;
+                this.sim.dimers = await this.gpuEngine.getDimers(this.sim.blackTriangles);
+            } catch(e) {
+                console.warn('[GPU] Glauber step failed, switching to WASM:', e);
+                this.useWebGPU = false;
+                this.sim.randomStep(steps);
+            }
+        } else {
+            this.sim.randomStep(steps);
+        }
         this._draw();
-        requestAnimationFrame(() => this._glauberLoop());
+        if (this.glauberRunning) requestAnimationFrame(() => this._glauberLoop());
     }
 
     _stopGlauber() {
@@ -1184,20 +1247,31 @@ class App {
             this._draw();
         }, { passive: false });
 
-        // Mouse pan
+        // Mouse pan / draw
         canvas.addEventListener('mousedown', (e) => {
-            this.isPanning = true;
-            this.lastPanPos = { x: e.clientX, y: e.clientY };
+            if (this.drawMode !== null) {
+                this.isPanning = false;
+                this._handleDraw(e.clientX, e.clientY);
+            } else {
+                this.isPanning = true;
+                this.lastPanPos = { x: e.clientX, y: e.clientY };
+            }
         });
         window.addEventListener('mousemove', (e) => {
-            if (!this.isPanning) return;
-            const dx = e.clientX - this.lastPanPos.x;
-            const dy = e.clientY - this.lastPanPos.y;
-            this.lastPanPos = { x: e.clientX, y: e.clientY };
-            this.r2d.pan(dx, dy);
-            this._draw();
+            if (this.drawMode !== null && e.buttons & 1) {
+                this._handleDraw(e.clientX, e.clientY);
+            } else if (this.isPanning) {
+                const dx = e.clientX - this.lastPanPos.x;
+                const dy = e.clientY - this.lastPanPos.y;
+                this.lastPanPos = { x: e.clientX, y: e.clientY };
+                this.r2d.pan(dx, dy);
+                this._draw();
+            }
         });
-        window.addEventListener('mouseup', () => { this.isPanning = false; });
+        window.addEventListener('mouseup', () => {
+            this.isPanning = false;
+            if (this.drawMode !== null) { this.lastDrawnKey = null; }
+        });
 
         // Touch events
         canvas.addEventListener('touchstart', (e) => {
@@ -1284,7 +1358,74 @@ class App {
         const result = this.sim.initFromTriangles(this.activeTriangles);
         this.isValid = result.status === 'valid';
         this.penholePenrose = false;
+        if (this.isValid) this._syncGPU();
         this._draw();
+    }
+
+    _syncGPU() {
+        if (!this.gpuEngine || !this.gpuEngine.isReady || !this.isValid) return;
+        try {
+            const gridInfo = this.sim.getRawGridData();
+            if (gridInfo) {
+                this.gpuEngine.initFromWasmData(gridInfo.data, gridInfo.minN, gridInfo.maxN, gridInfo.minJ, gridInfo.maxJ);
+                this.useWebGPU = true;
+                console.log(`[GPU] Grid synced: ${gridInfo.data.length} cells`);
+            }
+        } catch(e) {
+            console.warn('[GPU] syncGPU failed:', e);
+            this.useWebGPU = false;
+        }
+    }
+
+    async _gpuCFTPDoubling(minData, maxData, onProgress) {
+        const ok = await this.gpuEngine.initCFTP(minData, maxData);
+        if (!ok) return false;
+        let T = Math.max(1, Math.min(this.sim.dimers.length, 1000));
+        for (let epoch = 0; epoch < 25; epoch++) {
+            if (epoch > 0) this.gpuEngine.resetCFTPChains(minData, maxData);
+            if (onProgress) onProgress(T);
+            await this.gpuEngine.stepCFTP(T);
+            if (!this.cftpRunning) { this.gpuEngine.destroyCFTP(); return false; }
+            const coalesced = await this.gpuEngine.checkCoalescence();
+            if (!this.cftpRunning) { this.gpuEngine.destroyCFTP(); return false; }
+            if (coalesced) {
+                this.gpuEngine.finalizeCFTP();
+                await this.gpuEngine.device.queue.onSubmittedWorkDone();
+                this.sim.dimers = await this.gpuEngine.getDimers(this.sim.blackTriangles);
+                this.gpuEngine.destroyCFTP();
+                return true;
+            }
+            T = Math.min(T * 2, 1 << 22);
+        }
+        this.gpuEngine.destroyCFTP();
+        return false;
+    }
+
+    async _startGPUCFTP() {
+        this.sim.initCFTP();
+        const minData = this.sim.getCFTPMinRawGridData();
+        const maxData = this.sim.getCFTPMaxRawGridData();
+        const btn = document.getElementById('btn-perfect');
+        if (minData && maxData) {
+            try {
+                const success = await this._gpuCFTPDoubling(minData, maxData, (T) => {
+                    btn.textContent = `GPU T=${T}…`;
+                });
+                if (success) {
+                    if (this.cftpRunning) {
+                        this.cftpRunning = false;
+                        btn.textContent = 'Perfect Sample';
+                        btn.disabled = false;
+                        this._updateAfterSample();
+                    }
+                    return;
+                }
+            } catch(e) {
+                console.warn('[GPU] CFTP error, falling back to WASM:', e);
+            }
+        }
+        // Fallback to WASM CFTP
+        this._cftpLoop();
     }
 
     _setupResize() {
@@ -1324,6 +1465,21 @@ class App {
     async init() {
         this.sim = new DataArtSampler();
 
+        // Initialize WebGPU engine if available
+        if (window.LOZENGE_WEBGPU && window.WebGPULozengeEngine) {
+            this.gpuEngine = new WebGPULozengeEngine();
+            try {
+                await Promise.race([
+                    this.gpuEngine.init(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('GPU timeout')), 3000))
+                ]);
+                console.log('[GPU] WebGPU engine ready');
+            } catch(e) {
+                console.warn('[GPU] WebGPU init failed:', e.message);
+                this.gpuEngine = null;
+            }
+        }
+
         // Load penrose on startup
         this._showLoading('Loading Penrose shape…');
         this.activeTriangles = await loadLetterTriangles('penrose');
@@ -1339,6 +1495,7 @@ class App {
         if (this.isValid) {
             this.sim.setupHoleHeight();
         }
+        if (this.isValid) this._syncGPU();
 
         this.r2d.setupCanvas();
         this.r2d.fitToRegion(this.activeTriangles);
@@ -1358,12 +1515,33 @@ class App {
     }
 
     async _runCFTPAsync() {
+        this.cftpRunning = true;
+        this.sim.initCFTP();
+
+        // Try GPU CFTP if available
+        if (this.useWebGPU && this.gpuEngine && this.gpuEngine.isInitialized()) {
+            const minData = this.sim.getCFTPMinRawGridData();
+            const maxData = this.sim.getCFTPMaxRawGridData();
+            if (minData && maxData) {
+                try {
+                    const success = await this._gpuCFTPDoubling(minData, maxData, (T) => {
+                        document.getElementById('loading-text').textContent = `Perfect Sample (GPU, T=${T})…`;
+                    });
+                    if (success) { this.cftpRunning = false; return; }
+                } catch(e) {
+                    console.warn('[GPU] CFTP failed, falling back to WASM:', e);
+                }
+            }
+        }
+
+        // WASM CFTP fallback
         return new Promise(resolve => {
-            this.sim.initCFTP();
             const step = () => {
+                if (!this.cftpRunning) { resolve(); return; }
                 const status = this.sim.stepCFTP();
                 if (status.status === 'coalesced') {
                     this.sim.finalizeCFTP();
+                    this.cftpRunning = false;
                     resolve();
                 } else {
                     const pct = status.progress ? `${Math.round(status.progress * 100)}%` : '';
