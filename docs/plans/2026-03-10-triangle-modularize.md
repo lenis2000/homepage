@@ -99,9 +99,9 @@ data-art/triangle/
 - Create: `data-art/triangle/js/sonification.js`
 - Create: `data-art/triangle/js/surface.js`
 
-- [ ] Extract hook.js: hook background particle animation (drifting lozenges on canvas) — expose as `window.HookBackground`
-- [ ] Extract sonification.js: Sonifier class (Web Audio API drone + entropy mapping) — expose as `window.Sonifier`
-- [ ] Extract surface.js: Three.js surface mesh building from dimers (dimer-to-3D conversion, height function computation, mesh geometry updates) — expose as `window.SurfaceBuilder`
+- [x] Extract hook.js: hook background particle animation (drifting lozenges on canvas) — expose as `window.HookBackground`
+- [x] Extract sonification.js: Sonifier class (Web Audio API drone + entropy mapping) — expose as `window.Sonifier`
+- [x] Extract surface.js: Three.js surface mesh building from dimers (dimer-to-3D conversion, height function computation, mesh geometry updates) — expose as `window.SurfaceBuilder`
 
 ### Task 5: Extract JS modules — phases and main
 
