@@ -13,6 +13,7 @@
 
     // Timing (ms)
     const FLYING_DURATION = 5000;
+    const FLYING_TIMEOUT = 20000;
     const ASSEMBLY_DURATION = 8000;
     const SURFACE_HOLD_DURATION = 3000;
     const CHAOS_DURATION = 12000;
@@ -69,6 +70,7 @@
         MONOTONE_FRAMES_PER_STEP,
         CUBE_SIZE,
         FLYING_DURATION,
+        FLYING_TIMEOUT,
         ASSEMBLY_DURATION,
         SURFACE_HOLD_DURATION,
         CHAOS_DURATION,

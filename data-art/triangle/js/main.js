@@ -490,6 +490,7 @@
             case STATES.FLYING_CUBES:
                 if (cubes) cubes.updateFlyingPhysics(dt, controls, elapsed);
                 if (cftpDone && cubes && cubes.hasCubeAtCenter()) enterAssembly(timestamp);
+                else if (elapsed >= TC.FLYING_TIMEOUT) enterAssembly(timestamp);
                 break;
 
             case STATES.ASSEMBLY:
