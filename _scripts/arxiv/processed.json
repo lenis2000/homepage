@@ -50604,6 +50604,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2603.06268": {
+    "date": "2026-03-06",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "2603.06368": {
     "date": "2026-03-06",
     "decision": "REJECT",

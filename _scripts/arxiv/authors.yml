@@ -1125,3 +1125,17 @@ authors:
     affiliation: "ANU"
     topics: ["exactly solvable lattice models", "Yang-Baxter equation", "six-vertex model", "Bethe ansatz"]
     disambiguation: "Vladimir V. Mangazeev at ANU (deceased 2021) — exactly solvable lattice models"
+
+  - name: "Hugo Duminil-Copin"
+    arxiv_names: ["Duminil-Copin_H"]
+    affiliation: "IHES/Geneva"
+    topics: ["six-vertex model", "percolation", "Ising model", "GFF", "statistical mechanics"]
+    high_ambiguity: true
+    disambiguation: "Hugo Duminil-Copin, Fields medalist at IHES/Geneva — unambiguous name, but prolific in many areas. Only include papers related to exactly solvable models, six-vertex model, height functions, or GFF convergence, NOT pure percolation/Ising/random-cluster"
+
+  - name: "Karol Kajetan Kozlowski"
+    arxiv_names: ["Kozlowski_K"]
+    affiliation: "ENS Lyon"
+    topics: ["exactly solvable models", "Riemann-Hilbert problems", "correlation functions", "six-vertex model", "quantum integrable systems"]
+    high_ambiguity: true
+    disambiguation: "Karol Kajetan Kozlowski at ENS Lyon — exactly solvable models, Riemann-Hilbert approach to correlation functions. Not other Kozlowskis."
