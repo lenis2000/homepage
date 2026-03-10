@@ -1,13 +1,3 @@
-## 2011
-
-```bash
-make arxiv-scan ARGS="--id-prefix 11 --threshold 0.77"
-arxiv-review _scripts/arxiv/scan-review.json
-make arxiv-scan-import && make arxiv-rebuild
-rm -f _scripts/arxiv/scan-review.json
-```
-
-
 ## 2012
 
 ```bash

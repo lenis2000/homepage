@@ -11,6 +11,13 @@ nav_weight: 19
 <!-- Container for the entire page content -->
 <div class="container mb-5">
 
+<figure class="handdrawn-hex-figure">
+  <img src="{{site.storage_url}}/img/lozenge-tiling-handdrawn.jpg"
+       alt="Hand-colored double dimer configuration on a hexagonal region"
+       class="handdrawn-hex-img">
+  <figcaption>A hand-colored double dimer configuration</figcaption>
+</figure>
+
 <h1 class="my-4">Simulations and other computational tools</h1>
 <h3 class="mb-3">Visualizations, data, source code</h3>
 
@@ -188,6 +195,62 @@ nav_weight: 19
   color: var(--text-primary);
   background-color: var(--accent-color);
   border-color: var(--accent-color);
+}
+
+/* Hand-drawn hexagon illustration */
+.handdrawn-hex-figure {
+  float: right;
+  margin: 0 0 0.5rem 1.5rem;
+  max-width: 240px;
+  text-align: center;
+}
+
+.handdrawn-hex-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 4px solid #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.13);
+}
+
+.handdrawn-hex-figure figcaption {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: #666;
+  font-style: italic;
+}
+
+/* Cards must clear the float */
+.featured-simulations {
+  clear: both;
+}
+
+[data-theme="dark"] .handdrawn-hex-img {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+[data-theme="dark"] .handdrawn-hex-figure figcaption {
+  color: #999;
+}
+
+@media (max-width: 767px) {
+  .handdrawn-hex-figure {
+    max-width: 140px;
+    margin: 0 0 0.5rem 1rem;
+  }
+  /* Show featured cards on mobile on simulations page */
+  .container > .featured-simulations {
+    display: block !important;
+  }
+  .container > .featured-simulations > .row {
+    flex-wrap: wrap;
+    display: flex;
+  }
+  .container > .featured-simulations > .row > .col {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
 }
 </style>
 
