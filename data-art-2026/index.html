@@ -187,6 +187,7 @@ button.view-btn.active {
 #loading-overlay.hidden {
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
   transition: opacity 0.4s ease, visibility 0s 0.4s;
 }
 .spinner {
@@ -637,23 +638,29 @@ class Renderer2D {
     }
 
     worldToTriangle(wx, wy) {
-        // Find nearest triangle (returns {n, j, type})
-        // Inverse of world coords: x = n, y = slope*n + j*deltaC => j = (y - slope*n)/deltaC
-        const n = Math.round(wx);
-        // Check a few candidates
-        const jEst = Math.round((wy - slope * n) / deltaC);
-        let best = null, bestDist = Infinity;
-        for (let dn = -1; dn <= 1; dn++) {
-            for (let dj = -1; dj <= 2; dj++) {
-                const cn = n + dn, cj = jEst + dj;
-                for (const type of [1, 2]) {
-                    const c = type === 1 ? getRightTriangleCentroid(cn, cj) : getLeftTriangleCentroid(cn, cj);
-                    const d = (c.x - wx) ** 2 + (c.y - wy) ** 2;
-                    if (d < bestDist) { bestDist = d; best = { n: cn, j: cj, type }; }
-                }
-            }
+        // Exact point-in-triangle test (from lozenge-draw)
+        const n = Math.floor(wx);
+        const j = Math.floor((wy - slope * n) / deltaC);
+        const candidates = [
+            { n, j }, { n, j: j + 1 }, { n: n + 1, j }, { n: n - 1, j },
+            { n, j: j - 1 }, { n: n + 1, j: j - 1 }, { n: n - 1, j: j + 1 }
+        ];
+        for (const { n: cn, j: cj } of candidates) {
+            const v1 = getVertex(cn, cj), v2 = getVertex(cn, cj - 1), v3 = getVertex(cn + 1, cj - 1);
+            if (this._pointInTriangle(wx, wy, v1, v2, v3)) return { n: cn, j: cj, type: 1 };
+            const w1 = getVertex(cn, cj), w2 = getVertex(cn + 1, cj), w3 = getVertex(cn + 1, cj - 1);
+            if (this._pointInTriangle(wx, wy, w1, w2, w3)) return { n: cn, j: cj, type: 2 };
         }
-        return best;
+        return null;
+    }
+
+    _pointInTriangle(px, py, v1, v2, v3) {
+        const d1 = (px - v2.x) * (v1.y - v2.y) - (v1.x - v2.x) * (py - v2.y);
+        const d2 = (px - v3.x) * (v2.y - v3.y) - (v2.x - v3.x) * (py - v3.y);
+        const d3 = (px - v1.x) * (v3.y - v1.y) - (v3.x - v1.x) * (py - v1.y);
+        const hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+        const hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+        return !(hasNeg && hasPos);
     }
 
     draw(sim, activeTriangles, isValid) {
@@ -1195,26 +1202,22 @@ class App {
 
     async _glauberLoop() {
         if (!this.glauberRunning) return;
-        // Small shapes get fewer steps per frame for slower visual mixing
-        const n = this.sim.dimers.length;
-        const steps = n <= 500
-            ? Math.max(1, Math.round(n / 10))   // ~10% sweep for small shapes
-            : Math.max(1, Math.round(n / 3));   // ~33% sweep for large shapes
+        const n = Math.max(1, this.sim.dimers.length);
         if (this.useWebGPU && this.gpuEngine && this.gpuEngine.isInitialized()) {
             try {
-                await this.gpuEngine.step(1, 1.0);  // 1 chromatic sweep per frame
+                await this.gpuEngine.step(1, 1.0);
                 if (!this.glauberRunning) return;
                 this.sim.dimers = await this.gpuEngine.getDimers(this.sim.blackTriangles);
             } catch(e) {
-                console.warn('[GPU] Glauber step failed, switching to WASM:', e);
+                console.warn('[GPU] Glauber step failed, falling back to WASM:', e);
                 this.useWebGPU = false;
-                this.sim.randomStep(steps);
+                this.sim.randomStep(n);
             }
         } else {
-            this.sim.randomStep(steps);
+            this.sim.randomStep(n);
         }
         this._draw();
-        if (this.glauberRunning) requestAnimationFrame(() => this._glauberLoop());
+        if (this.glauberRunning) setTimeout(() => this._glauberLoop(), 250);
     }
 
     _stopGlauber() {
@@ -1389,12 +1392,15 @@ class App {
         if (key === this.lastDrawnKey) return;
         this.lastDrawnKey = key;
 
-        if (this.drawMode === 'add') {
+        let changed = false;
+        if (this.drawMode === 'add' && !this.activeTriangles.has(key)) {
             this.activeTriangles.set(key, tri);
-        } else if (this.drawMode === 'erase') {
+            changed = true;
+        } else if (this.drawMode === 'erase' && this.activeTriangles.has(key)) {
             this.activeTriangles.delete(key);
+            changed = true;
         }
-        this._draw();
+        if (changed) this._finalizeDrawing();
     }
 
     _finalizeDrawing() {

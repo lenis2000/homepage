@@ -1,0 +1,45 @@
+<!-- STUB: Random Edge Weights Setup -->
+<!-- TODO: Add simulation showing Aztec diamond with random weights (existing at /simulations/2025-06-25-random-edges/) -->
+<section class="slide slide-top" id="random-weights-setup" data-title="Random Weights Setup">
+    <h2 class="slide-title">One-Periodic Random Edge Weights [Bufetov–P.–Zografos 2025]</h2>
+
+    <div style="display: grid; grid-template-columns: 42vw 50vw; gap: 2vw; margin-top: 2vh; padding: 0 1vw;">
+        <!-- Left: model description -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Model:</strong><br>
+                Attach i.i.d. random weights \(\alpha_k\) to edges in each diagonal layer \(k = 1, \ldots, M\) of the Aztec diamond of size \(M\).
+                <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.5rem, 2.5vw, 2rem);">
+                    \(\displaystyle \mathbb{P}(\text{tiling}) = \frac{1}{Z(\alpha)} \prod_{\text{edges } e} \alpha_{k(e)}\)
+                </div>
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-navy);">One-periodic structure:</strong><br>
+                Weights depend only on the diagonal, so alternating layers have the same distribution (one-periodic in the diagonal direction)
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Two variance regimes:</strong>
+                <ol style="margin: 0.5vh 0 0 1.2em; padding: 0;">
+                    <li><strong>Critical scaling:</strong> \(\operatorname{Var}(\alpha_k) \sim 1/M\)</li>
+                    <li><strong>Fixed distribution:</strong> \(\operatorname{Var}(\alpha_k) = \text{const}\)</li>
+                </ol>
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-navy);">Key question:</strong><br>
+                How do random weights affect the <strong>limit shape</strong> and <strong>fluctuations</strong>?
+            </div>
+        </div>
+
+        <!-- Right: placeholder for simulation -->
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1vh;">
+            <!-- TODO: replace with side-by-side uniform vs random weight tilings -->
+            <div style="height: 55vh; width: 55vh; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: clamp(1rem, 1.5vw, 1.3rem); color: var(--slide-muted); text-align: center; border: 1px solid #ccc;">
+                Random-weight Aztec diamond<br><br>
+                <em>(link to <a href="/simulations/2025-06-25-random-edges/" target="_blank" style="color: #0066cc;">existing simulation</a>)</em>
+            </div>
+        </div>
+    </div>
+</section>

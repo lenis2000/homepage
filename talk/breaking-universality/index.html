@@ -1,0 +1,128 @@
+---
+layout: slides
+title: "Breaking Universality in Dimer Models"
+description: "Interactive talk on two mechanisms that break universality in random tilings while preserving exact solvability"
+---
+
+<!-- Service Worker not set up yet for this talk variant -->
+
+<!-- Load simulation dependencies (colorschemes.js already loaded by slides layout) -->
+<script src="/js/three.min.js"></script>
+<script src="/js/OrbitControls.js"></script>
+<script src="/js/2025-06-08-q-vol-3d.js"></script>
+
+<!-- Dynamic WASM loader: use threaded version if SharedArrayBuffer is available -->
+<script>
+window.VISUAL_THREADED = typeof SharedArrayBuffer !== 'undefined';
+window.VISUAL_WEBGPU = !!navigator.gpu;
+
+// Load WASM module dynamically (no document.write)
+function loadScript(src) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+const wasmSrc = '/talk/visual/sim/visual-lozenge' + (window.VISUAL_THREADED ? '-threaded' : '') + '.js';
+const qpartSrc = '/talk/visual/sim/q-partition-cftp.js';
+
+Promise.all([
+    loadScript(wasmSrc),
+    loadScript(qpartSrc)
+]).then(() => {
+    // Load WebGPU engines, then signal ready
+    Promise.all([
+        loadScript('/js/webgpu-lozenge-engine.js').catch(e => console.log('WebGPU lozenge engine not available')),
+        loadScript('/js/webgpu-qpartition-engine.js').catch(e => console.log('WebGPU qpartition engine not available'))
+    ]).finally(() => window.dispatchEvent(new Event('wasm-loaded')));
+});
+</script>
+
+<!-- ==================== SLIDES ==================== -->
+
+<!-- ===== Part I: Universality in Random Tilings ===== -->
+
+{% include talk/breaking-universality/title.html %}
+
+{% include talk/waterfall/nature-builds.html %}
+
+{% include talk/breaking-universality/part1-intro.html %}
+
+{% include talk/waterfall/2to3d.html %}
+
+{% include talk/waterfall/limit-shape.html %}
+
+{% include talk/waterfall/universality-zoom.html %}
+
+{% include talk/waterfall/complex-burgers.html %}
+
+{% include talk/waterfall/gff-fluctuations.html %}
+
+<!-- ===== Part II: Breaking Universality I — The Waterfall ===== -->
+
+{% include talk/breaking-universality/part2-intro.html %}
+
+{% include talk/waterfall/q-volume.html %}
+
+{% include talk/waterfall/q-racah-brief.html %}
+
+{% include talk/waterfall/q-racah-large-hexagons.html %}
+
+{% include talk/waterfall/dimensional-collapse.html %}
+
+{% include talk/waterfall/barcode-process-applied.html %}
+
+<!-- ===== Part III: Breaking Universality II — Random Edge Weights ===== -->
+
+{% include talk/breaking-universality/part3-intro.html %}
+
+{% include talk/breaking-universality/aztec-intro.html %}
+
+{% include talk/breaking-universality/random-weights-setup.html %}
+
+{% include talk/breaking-universality/schur-generating.html %}
+
+{% include talk/breaking-universality/limit-shape-deformation.html %}
+
+{% include talk/breaking-universality/fluctuation-regimes.html %}
+
+<!-- ===== Conclusion ===== -->
+
+{% include talk/breaking-universality/summary.html %}
+
+{% include talk/breaking-universality/thankyou.html %}
+
+<!-- ==================== SIMULATION SCRIPTS ==================== -->
+<!-- Part I: reused waterfall simulations (absolute paths) -->
+<script src="/talk/waterfall/js/nature-builds-sim.js" defer></script>
+<script src="/talk/waterfall/js/2to3d-sim.js" defer></script>
+<script src="/talk/waterfall/js/limit-shape-sim.js" defer></script>
+<script src="/talk/waterfall/js/universality-zoom-sim.js" defer></script>
+<script src="/talk/waterfall/js/gff-fluctuations-sim.js" defer></script>
+
+<!-- Part II: reused waterfall simulations -->
+<script src="/talk/waterfall/js/q-volume-sim.js" defer></script>
+<script src="/talk/waterfall/js/q-racah-large-hexagons-sim.js" defer></script>
+<script src="/talk/waterfall/js/dimensional-collapse-sim.js" defer></script>
+<script src="/talk/waterfall/js/barcode-process-applied-sim.js" defer></script>
+
+<!-- Part III: new simulations (stubs — to be created) -->
+<!-- <script src="js/aztec-intro-sim.js" defer></script> -->
+<!-- <script src="js/random-weights-sim.js" defer></script> -->
+<!-- <script src="js/limit-shape-deformation-sim.js" defer></script> -->
+<!-- <script src="js/fluctuation-regimes-sim.js" defer></script> -->
+
+<!-- Global: Escape/Enter key blurs input fields for slide navigation -->
+<script>
+document.addEventListener('keydown', (e) => {
+    if ((e.key === 'Escape' || e.key === 'Enter') && document.activeElement &&
+        (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+        document.activeElement.blur();
+        e.preventDefault();
+    }
+});
+</script>

@@ -1,0 +1,58 @@
+<!-- STUB: Fluctuation Regimes (GFF+BM vs sqrt(M) BM) -->
+<!-- TODO: Add simulation showing fluctuation profiles in different regimes -->
+<!-- Reference: existing CLI tool double-dimer-cli.cpp supports critical/fixed variance modes -->
+<section class="slide slide-top" id="fluctuation-regimes" data-title="Fluctuation Regimes">
+    <h2 class="slide-title">Non-GFF Fluctuations [Bufetov–P.–Zografos 2025]</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 2vh; padding: 0 2vw;">
+        <!-- Left: Critical scaling regime -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+                <strong style="color: var(--slide-accent);">Regime 1: Critical scaling</strong><br>
+                \(\operatorname{Var}(\alpha_k) \sim 1/M\)
+                <div style="margin-top: 0.5vh;">
+                    Height fluctuations = <strong>GFF</strong> + independent <strong>Brownian motion</strong>
+                </div>
+                <div style="margin-top: 0.5vh; font-size: clamp(1rem, 1.8vw, 1.4rem);">
+                    Both live on the <strong>same scale</strong> \(O(1)\)
+                </div>
+            </div>
+
+            <!-- TODO: replace with pre-sampled fluctuation image (critical regime) -->
+            <div style="height: 30vh; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: clamp(1rem, 1.5vw, 1.3rem); color: var(--slide-muted); text-align: center; border: 1px solid #ccc;">
+                Critical scaling fluctuations<br>\(h - \mathbb{E}[h]\) at scale \(O(1)\)
+            </div>
+        </div>
+
+        <!-- Right: Fixed distribution regime -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+                <strong style="color: var(--slide-navy);">Regime 2: Fixed distribution</strong><br>
+                \(\operatorname{Var}(\alpha_k) = \text{const}\)
+                <div style="margin-top: 0.5vh;">
+                    Fluctuations on scale \(\sqrt{M}\), given by <strong>Brownian motion alone</strong>
+                </div>
+                <div style="margin-top: 0.5vh; font-size: clamp(1rem, 1.8vw, 1.4rem);">
+                    The GFF is <strong>invisible</strong> — the disorder dominates
+                </div>
+            </div>
+
+            <!-- TODO: replace with pre-sampled fluctuation image (fixed distribution regime) -->
+            <div style="height: 30vh; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: clamp(1rem, 1.5vw, 1.3rem); color: var(--slide-muted); text-align: center; border: 1px solid #ccc;">
+                Fixed distribution fluctuations<br>\(h - \mathbb{E}[h]\) at scale \(\sqrt{M}\)
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom: comparison pane -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 2vh; padding: 0 2vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+        <div style="background: #fff3e0; border-left: 4px solid #E57200; padding: 1vh 1.5vw; text-align: left;">
+            <strong style="color: #E57200;">Contrast with the waterfall:</strong><br>
+            The waterfall breaks universality via a <strong>strong potential</strong> (q-Racah weights) that collapses 2D → 1D. Here, <strong>random disorder</strong> adds a new Brownian component to the fluctuations.
+        </div>
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+            <strong style="color: var(--slide-navy);">Common thread:</strong><br>
+            Both mechanisms preserve <strong>exact solvability</strong> — via q-Racah orthogonal polynomials (waterfall) or Schur generating functions (random weights)
+        </div>
+    </div>
+</section>

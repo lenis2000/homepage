@@ -1,0 +1,45 @@
+<!-- STUB: Aztec Diamond Introduction -->
+<!-- TODO: Add interactive Aztec diamond simulation (existing at /simulations/2025-02-02-aztec-uniform/) -->
+<!-- TODO: Consider embedding the uniform Aztec diamond WASM sampler -->
+<section class="slide slide-top" id="aztec-intro" data-title="Aztec Diamond">
+    <h2 class="slide-title">Domino Tilings of the Aztec Diamond</h2>
+
+    <div style="display: grid; grid-template-columns: 42vw 50vw; gap: 2vw; margin-top: 2vh; padding: 0 1vw;">
+        <!-- Left: text panes -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Aztec diamond of size \(M\):</strong><br>
+                Staircase-shaped region tiled by \(1 \times 2\) and \(2 \times 1\) dominoes.
+                <div style="margin-top: 0.5vh;">
+                    Number of tilings: \(\displaystyle 2^{M(M+1)/2}\)
+                </div>
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-navy);">Arctic circle theorem</strong>
+                <span style="color: var(--slide-muted);">[Jockusch–Propp–Shor 1998]</span><br>
+                Under the uniform measure, the frozen boundary is a <strong>circle</strong> inscribed in the diamond
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Height function:</strong><br>
+                Domino tilings \(\leftrightarrow\) interlacing particle arrays \(\leftrightarrow\) height functions on the square grid, just like lozenge tilings
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-navy);">Same universality:</strong>
+                GFF fluctuations, Airy processes at the edge, translation-invariant Gibbs measures in the bulk
+                <span style="color: var(--slide-muted);">[Chhita–Johansson–Young 2015], [Johansson 2005]</span>
+            </div>
+        </div>
+
+        <!-- Right: placeholder for simulation or image -->
+        <div style="display: flex; align-items: center; justify-content: center;">
+            <!-- TODO: replace with live Aztec diamond canvas or pre-sampled image -->
+            <div style="height: 55vh; width: 55vh; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: clamp(1rem, 1.5vw, 1.3rem); color: var(--slide-muted); text-align: center; border: 1px solid #ccc;">
+                Aztec diamond simulation<br><br>
+                <em>(link to <a href="/simulations/2025-02-02-aztec-uniform/" target="_blank" style="color: #0066cc;">existing simulation</a>)</em>
+            </div>
+        </div>
+    </div>
+</section>
