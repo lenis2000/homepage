@@ -87,10 +87,10 @@ data-art/triangle/
 - Create: `data-art/triangle/js/geometry.js`
 - Create: `data-art/triangle/js/wasm-interface.js`
 
-- [ ] Extract config.js: LOZENGE_COLORS_3D, SCALE_ITERATIONS, STEPS_PER_FRAME, CUBE_SIZE, BASE_SHAPE, timing constants (FLYING_DURATION, ASSEMBLY_DURATION, etc.), Q values, state enum — expose as `window.TriangleConfig`
-- [ ] Extract geometry.js: getVertex, getTriangleCentroid, pointInPolygon, doubleMeshWithBoundaries — expose as `window.TriangleGeometry`
-- [ ] Extract wasm-interface.js: SimulatorInterface class rewritten to use modularized WASM (`const mod = await TriangleLozenge()`) instead of global Module — expose as `window.SimulatorInterface`
-- [ ] Verify these modules load and initialize without errors in browser console
+- [x] Extract config.js: LOZENGE_COLORS_3D, SCALE_ITERATIONS, STEPS_PER_FRAME, CUBE_SIZE, BASE_SHAPE, timing constants (FLYING_DURATION, ASSEMBLY_DURATION, etc.), Q values, state enum — expose as `window.TriangleConfig`
+- [x] Extract geometry.js: getVertex, getTriangleCentroid, pointInPolygon, doubleMeshWithBoundaries — expose as `window.TriangleGeometry`
+- [x] Extract wasm-interface.js: SimulatorInterface class rewritten to use modularized WASM (`const mod = await TriangleLozenge()`) instead of global Module — expose as `window.SimulatorInterface`
+- [x] Verify these modules load and initialize without errors in browser console
 
 ### Task 4: Extract JS modules — hook, sonification, surface
 
