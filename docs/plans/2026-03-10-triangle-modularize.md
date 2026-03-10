@@ -59,13 +59,13 @@ data-art/triangle/
 - Create: `data-art/triangle/sim/src/triangle-lozenge.cpp`
 - Reference: `_simulations/lozenge_tilings/2025-11-28-ultimate-lozenge.cpp`
 
-- [ ] Create the `data-art/triangle/` directory tree (css/, js/, sim/src/)
-- [ ] Copy ultimate-lozenge.cpp to triangle-lozenge.cpp
-- [ ] Strip out unused exported functions: periodic weights (setPeriodicQBias, setPeriodicK, setUsePeriodicWeights), random sweeps, batch runCFTP, CFTP max/min dimer export, repairRegion, setDimers, getVerticalCutInfo, getHardwareConcurrency, fluctuations CFTP (4 functions), grid data export (4 functions), loop detection (3 functions), seedRNG
-- [ ] Remove the C++ implementation code backing those functions (not just the exports)
-- [ ] Update the compile command in the file header: MODULARIZE=1, EXPORT_NAME='TriangleLozenge', only needed exported functions
-- [ ] Compile the stripped WASM module
-- [ ] Verify compiled JS size is meaningfully smaller than 215KB
+- [x] Create the `data-art/triangle/` directory tree (css/, js/, sim/src/)
+- [x] Copy ultimate-lozenge.cpp to triangle-lozenge.cpp
+- [x] Strip out unused exported functions: periodic weights (setPeriodicQBias, setPeriodicK, setUsePeriodicWeights), random sweeps, batch runCFTP, CFTP max/min dimer export, repairRegion, setDimers, getVerticalCutInfo, getHardwareConcurrency, fluctuations CFTP (4 functions), grid data export (4 functions), loop detection (3 functions), seedRNG
+- [x] Remove the C++ implementation code backing those functions (not just the exports)
+- [x] Update the compile command in the file header: MODULARIZE=1, EXPORT_NAME='TriangleLozenge', only needed exported functions
+- [x] Compile the stripped WASM module
+- [x] Verify compiled JS size is meaningfully smaller than 215KB
 
 ### Task 2: Extract CSS and create entry point skeleton
 
