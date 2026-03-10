@@ -207,7 +207,8 @@ nav_weight: 19
 
 .handdrawn-hex-img {
   max-width: 100%;
-  height: auto;
+  max-height: 140px;
+  width: auto;
   border-radius: 8px;
   border: 4px solid #fff;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.13);
@@ -220,9 +221,9 @@ nav_weight: 19
   font-style: italic;
 }
 
-/* Cards must clear the float */
+/* Cards flow under the heading, not waiting for float */
 .featured-simulations {
-  clear: both;
+  clear: none;
 }
 
 [data-theme="dark"] .handdrawn-hex-img {
@@ -236,11 +237,7 @@ nav_weight: 19
 
 @media (max-width: 767px) {
   .handdrawn-hex-figure {
-    max-width: 110px;
-    margin: 0 0 0.25rem 0.75rem;
-  }
-  .handdrawn-hex-figure figcaption {
-    display: none;
+    display: none !important;
   }
   /* Show featured cards on mobile on simulations page */
   .container > .featured-simulations {
