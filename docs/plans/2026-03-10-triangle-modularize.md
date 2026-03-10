@@ -73,12 +73,12 @@ data-art/triangle/
 - Create: `data-art/triangle/css/triangle.css`
 - Create: `data-art/triangle/index.html`
 
-- [ ] Extract all inline CSS from triangle.html into `css/triangle.css`
-- [ ] Create `index.html` with Jekyll front matter (`layout: null`, `permalink: /triangle/`), HTML structure, and script/link tags loading all modules
-- [ ] Load Three.js and OrbitControls from /js/
-- [ ] Load the new modularized WASM from sim/triangle-lozenge.js
-- [ ] Load all JS modules with defer
-- [ ] Verify the HTML structure matches the original (hook-screen, canvas, vignette, caption, text-screen, attribution, loading, hook-bg)
+- [x] Extract all inline CSS from triangle.html into `css/triangle.css`
+- [x] Create `index.html` with Jekyll front matter (`layout: null`, `permalink: /triangle/`), HTML structure, and script/link tags loading all modules
+- [x] Load Three.js and OrbitControls from /js/
+- [x] Load the new modularized WASM from sim/triangle-lozenge.js
+- [x] Load all JS modules with defer
+- [x] Verify the HTML structure matches the original (hook-screen, canvas, vignette, caption, text-screen, attribution, loading, hook-bg)
 
 ### Task 3: Extract JS modules — config, geometry, WASM interface
 

@@ -1,0 +1,58 @@
+---
+layout: null
+permalink: triangle/
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Can Chaos Hide the Truth? — Leonid Petrov</title>
+    <meta name="description" content="An interactive data art piece where impossible geometry emerges from probabilistic truth. MCMC-sampled lozenge tilings anneal from chaos into a Penrose triangle.">
+    <meta property="og:title" content="Can Chaos Hide the Truth?">
+    <meta property="og:description" content="Impossible geometry emerges from probabilistic truth. An interactive data art piece by Leonid Petrov.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://lpetrov.cc/triangle/">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Can Chaos Hide the Truth?">
+    <meta name="twitter:description" content="Impossible geometry emerges from probabilistic truth. An interactive data art piece by Leonid Petrov.">
+    <link rel="stylesheet" href="css/triangle.css">
+</head>
+<body>
+    <div id="hook-screen">
+        <canvas id="hook-bg"></canvas>
+        <div class="question"><span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">01</span><span style="color: rgba(255,255,255,0.5);">// </span><span style="color: rgba(255,255,255,0.85);">Can Chaos Hide the Truth?</span>
+<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">02</span><span style="color: rgba(255,255,255,0.25);">//</span>
+<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">03</span><span style="color: rgba(255,255,255,0.25);">//</span>
+<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">04</span><span style="color: rgba(200,160,255,0.35);">const</span> <span style="color: rgba(140,190,240,0.35);">shape</span> = <span style="color: rgba(140,190,240,0.35);">penroseTriangle</span>();
+<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">05</span><span style="color: rgba(200,160,255,0.35);">const</span> <span style="color: rgba(140,190,240,0.35);">tiling</span> = <span style="color: rgba(140,190,240,0.35);">CFTP</span>.<span style="color: rgba(140,190,240,0.35);">sample</span>(shape);
+<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">06</span><span style="color: rgba(140,190,240,0.35);">anneal</span>(tiling, { <span style="color: rgba(140,190,240,0.35);">γ</span>: <span style="color: rgba(200,180,140,0.35);">0</span> → <span style="color: rgba(200,180,140,0.35);">∞</span> });</div>
+        <p class="hint">Leonid Petrov · lpetrov.cc</p>
+    </div>
+
+    <canvas id="canvas"></canvas>
+    <div id="vignette"></div>
+
+    <div id="caption">Local Truth, Global Paradox</div>
+
+    <div id="text-screen">
+        <div class="code-block"></div>
+    </div>
+
+    <div id="attribution">Leonid Petrov &middot; Can Chaos Hide the Truth? &middot; 2026</div>
+
+    <div id="loading">Loading...</div>
+
+    <script src="/js/three.min.js"></script>
+    <script src="/js/OrbitControls.js"></script>
+    <script src="sim/triangle-lozenge.js"></script>
+    <script src="js/config.js" defer></script>
+    <script src="js/geometry.js" defer></script>
+    <script src="js/wasm-interface.js" defer></script>
+    <script src="js/sonification.js" defer></script>
+    <script src="js/hook.js" defer></script>
+    <script src="js/surface.js" defer></script>
+    <script src="js/phases.js" defer></script>
+    <script src="js/main.js" defer></script>
+</body>
+</html>
