@@ -11,28 +11,34 @@ nav_weight: 19
 <!-- Container for the entire page content -->
 <div class="container mb-5">
 
-<figure class="handdrawn-hex-desktop d-none d-lg-block">
-  <img src="{{site.storage_url}}/img/lozenge-tiling-handdrawn-portrait.jpg"
-       alt="Hand-colored double dimer configuration on a hexagonal region"
-       class="handdrawn-hex-img">
-  <figcaption>A hand-colored double dimer configuration</figcaption>
-</figure>
-
 <h1 class="my-4">Simulations and other computational tools</h1>
 <h3 class="mb-3">Visualizations, data, source code</h3>
 
-<figure class="handdrawn-hex-mobile d-lg-none">
+<figure class="handdrawn-hex-mobile d-md-none">
   <img src="{{site.storage_url}}/img/lozenge-tiling-handdrawn.jpg"
        alt="Hand-colored double dimer configuration on a hexagonal region"
        class="handdrawn-hex-img">
   <figcaption>A hand-colored double dimer configuration</figcaption>
 </figure>
 
-{%include sims.html%}
+<div class="sim-cards-row d-none d-md-flex">
+  <div class="sim-cards-left">
+    {%include sims.html%}
+  </div>
+  <figure class="handdrawn-hex-desktop">
+    <img src="{{site.storage_url}}/img/lozenge-tiling-handdrawn.jpg"
+         alt="Hand-colored double dimer configuration on a hexagonal region"
+         class="handdrawn-hex-img">
+    <figcaption>A hand-colored double dimer configuration</figcaption>
+  </figure>
+</div>
+<div class="d-md-none">
+  {%include sims.html%}
+</div>
 
 
 <!-- Search bar + category buttons -->
-<div class="sim-filter-bar" style="clear: both;">
+<div class="sim-filter-bar">
 <div id="sim-search-group" class="input-group mb-2">
   <input type="text"
          id="sim-search-input"
@@ -72,7 +78,7 @@ nav_weight: 19
 </div><!-- /.sim-filter-bar -->
 
 <!-- Complete simulations list -->
-<ul id="simulations-list" class="list-group list-group-flush" style="clear: both;">
+<ul id="simulations-list" class="list-group list-group-flush">
   {% assign all_sims = site.simulations | sort: "date" | reverse %}
   {% for sim in all_sims %}
     {% unless sim.head_page %}
@@ -198,7 +204,22 @@ nav_weight: 19
   border-color: var(--accent-color);
 }
 
-/* Hand-drawn hexagon — shared image styles */
+/* Cards + image row */
+.sim-cards-row {
+  align-items: stretch;
+  gap: 1rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+.sim-cards-left {
+  flex: 3 1 0;
+}
+.sim-cards-left .featured-simulations {
+  display: block !important;
+  margin: 0 !important;
+}
+
+/* Shared image styles */
 .handdrawn-hex-img {
   max-width: 100%;
   height: auto;
@@ -212,12 +233,17 @@ nav_weight: 19
   box-shadow: none;
 }
 
-/* Desktop version: floated right, compact */
+/* Desktop version: sits beside cards */
 .handdrawn-hex-desktop {
-  float: right;
-  margin: 0 0 0.5rem 1.5rem;
-  max-width: 300px;
+  flex: 1 1 0;
   text-align: center;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.handdrawn-hex-desktop .handdrawn-hex-img {
+  width: 100%;
 }
 
 .handdrawn-hex-desktop figcaption,
@@ -231,11 +257,6 @@ nav_weight: 19
 [data-theme="dark"] .handdrawn-hex-desktop figcaption,
 [data-theme="dark"] .handdrawn-hex-mobile figcaption {
   color: #999;
-}
-
-.handdrawn-hex-desktop .handdrawn-hex-img {
-  max-height: 220px;
-  width: auto;
 }
 
 /* Mobile version: full width, centered */
