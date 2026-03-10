@@ -12,6 +12,9 @@
             this.mod = mod;
             this.initFromTrianglesWasm = mod.cwrap('initFromTriangles', 'number', ['number', 'number']);
             this.performGlauberStepsWasm = mod.cwrap('performGlauberSteps', 'number', ['number']);
+            this.performRandomGlauberStepsWasm = mod.cwrap('performRandomGlauberSteps', 'number', ['number']);
+            this.performMonotoneStepsWasm = mod.cwrap('performMonotoneSteps', 'number', ['number', 'number']);
+            this.performRandomMonotoneStepsWasm = mod.cwrap('performRandomMonotoneSteps', 'number', ['number', 'number']);
             this.exportDimersWasm = mod.cwrap('exportDimers', 'number', []);
             this.setQBiasWasm = mod.cwrap('setQBias', null, ['number']);
             this.setHoleBaseHeightWasm = mod.cwrap('setHoleBaseHeight', 'number', ['number', 'number']);
@@ -60,8 +63,35 @@
             return result;
         }
 
+        randomStep(numSteps) {
+            const ptr = this.performRandomGlauberStepsWasm(numSteps);
+            const jsonStr = this.mod.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            const result = JSON.parse(jsonStr);
+            this.refreshDimers();
+            return result;
+        }
+
         step(numSteps) {
             const ptr = this.performGlauberStepsWasm(numSteps);
+            const jsonStr = this.mod.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            const result = JSON.parse(jsonStr);
+            this.refreshDimers();
+            return result;
+        }
+
+        randomMonotoneStep(numSteps, direction) {
+            const ptr = this.performRandomMonotoneStepsWasm(numSteps, direction);
+            const jsonStr = this.mod.UTF8ToString(ptr);
+            this.freeStringWasm(ptr);
+            const result = JSON.parse(jsonStr);
+            this.refreshDimers();
+            return result;
+        }
+
+        monotoneStep(numSteps, direction) {
+            const ptr = this.performMonotoneStepsWasm(numSteps, direction);
             const jsonStr = this.mod.UTF8ToString(ptr);
             this.freeStringWasm(ptr);
             const result = JSON.parse(jsonStr);

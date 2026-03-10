@@ -36,6 +36,17 @@
     // ========================================================================
     // FLYING CUBES MANAGER — InstancedMesh in camera view plane
     // ========================================================================
+    // Slab scale targets per type: flatten along face normal
+    // Type 0: normal (1,0,0) → thin in x
+    // Type 1: normal (0,-1,0) → thin in y
+    // Type 2: normal (0,0,-1) → thin in z
+    var SLAB_THIN = 0.05;
+    var SLAB_SCALES = [
+        [SLAB_THIN, 1, 1],  // type 0
+        [1, SLAB_THIN, 1],  // type 1
+        [1, 1, SLAB_THIN]   // type 2
+    ];
+
     class FlyingCubesManager {
         constructor() {
             this.cubesMesh = null;
@@ -49,11 +60,18 @@
             this.cubeTargets = null;
             this.cubeTargets2D = null;
             this.cubeTargetDepth = null;
+            this.cubeTypes = null;
+            this.cubeScales = null;
             this.camRight = null;
             this.camUp = null;
             this.camForward = null;
             this.cubeHalfW = 0;
             this.cubeHalfH = 0;
+            this.spawnHalfW = 0;
+            this.spawnHalfH = 0;
+            this.cubeEntryTime = null;
+            this.depthRange = 0;
+            this.collisionCallback = null;
             this._spatialHash = new SpatialHash2D(TC.CUBE_SIZE * 2);
             this._dummy = new THREE.Object3D();
         }
@@ -77,7 +95,9 @@
             var visH = TC.frustumSize / camera.zoom;
             this.cubeHalfW = visW * 1.2;
             this.cubeHalfH = visH * 1.2;
-            var depthRange = visW * 0.08;
+            this.spawnHalfW = visW * 0.52;
+            this.spawnHalfH = visH * 0.52;
+            this.depthRange = visW * 0.08;
 
             this.cubePos2D = new Float32Array(numCubes * 2);
             this.cubeVel2D = new Float32Array(numCubes * 2);
@@ -86,19 +106,25 @@
             this.cubeRotations = new Float32Array(numCubes * 3);
             this.cubeAngVel = new Float32Array(numCubes * 3);
             this.cubeFlying = new Uint8Array(numCubes);
+            this.cubeTypes = new Uint8Array(numCubes);
+            this.cubeScales = new Float32Array(numCubes * 3);
+            this.cubeEntryTime = new Float32Array(numCubes);
+
+            // Store types and init scales to (1,1,1); assign staggered entry times
+            for (var i = 0; i < numCubes; i++) {
+                this.cubeTypes[i] = dimers[i].t;
+                this.cubeScales[i * 3] = 1;
+                this.cubeScales[i * 3 + 1] = 1;
+                this.cubeScales[i * 3 + 2] = 1;
+                this.cubeEntryTime[i] = Math.random() * TC.FLYING_DURATION * 0.6;
+            }
 
             this._computeTargets2D(controls);
 
-            for (var i = 0; i < numCubes; i++) this.cubeFlying[i] = 1;
-
+            // All start hidden; positions/velocities set on entry
+            // Pre-assign rotations and angular velocities
             for (var i = 0; i < numCubes; i++) {
-                this.cubePos2D[i * 2]     = (Math.random() - 0.5) * visW * 0.9;
-                this.cubePos2D[i * 2 + 1] = (Math.random() - 0.5) * visH * 0.9;
-                this.cubeDepth[i] = (Math.random() - 0.5) * depthRange;
-                var speed = 1.5 + Math.random() * 3;
-                var angle = Math.random() * Math.PI * 2;
-                this.cubeVel2D[i * 2]     = speed * Math.cos(angle);
-                this.cubeVel2D[i * 2 + 1] = speed * Math.sin(angle);
+                this.cubeFlying[i] = 0;
                 this.cubeRotations[i * 3]     = Math.random() * Math.PI * 2;
                 this.cubeRotations[i * 3 + 1] = Math.random() * Math.PI * 2;
                 this.cubeRotations[i * 3 + 2] = Math.random() * Math.PI * 2;
@@ -111,9 +137,12 @@
 
             var geo = new THREE.BoxGeometry(TC.CUBE_SIZE, TC.CUBE_SIZE, TC.CUBE_SIZE);
             var mat = new THREE.MeshStandardMaterial({
-                roughness: 0.4, metalness: 0.2
+                roughness: 0.3,
+                metalness: 0.35,
+                flatShading: true
             });
             this.cubesMesh = new THREE.InstancedMesh(geo, mat, numCubes);
+            this._colorObjs3D = colorObjs3D;
 
             for (var i = 0; i < numCubes; i++) {
                 this.cubesMesh.setColorAt(i, colorObjs3D[dimers[i].t]);
@@ -122,6 +151,55 @@
 
             this._updateMatrices();
             meshGroup.add(this.cubesMesh);
+        }
+
+        _spawnFromEdge(i) {
+            this.cubeFlying[i] = 1;
+            var edge = Math.floor(Math.random() * 4);
+            var px, py;
+            if (edge === 0) { px = -this.spawnHalfW; py = (Math.random() * 2 - 1) * this.spawnHalfH; }
+            else if (edge === 1) { px = this.spawnHalfW;  py = (Math.random() * 2 - 1) * this.spawnHalfH; }
+            else if (edge === 2) { px = (Math.random() * 2 - 1) * this.spawnHalfW; py = this.spawnHalfH; }
+            else                 { px = (Math.random() * 2 - 1) * this.spawnHalfW; py = -this.spawnHalfH; }
+            this.cubePos2D[i * 2]     = px;
+            this.cubePos2D[i * 2 + 1] = py;
+            var angle = Math.atan2(-py, -px) + (Math.random() - 0.5) * 1.2;
+            var speed = 0.8 + Math.random() * 1.5;
+            this.cubeVel2D[i * 2]     = speed * Math.cos(angle);
+            this.cubeVel2D[i * 2 + 1] = speed * Math.sin(angle);
+            this.cubeDepth[i] = (Math.random() - 0.5) * this.depthRange;
+        }
+
+        refreshTargets(dimers, targets, controls) {
+            this.setTargets(targets);
+            this._computeTargets2D(controls);
+            // Update types and colors to match post-CFTP dimer assignment
+            var n = Math.min(dimers.length, this.cubesMesh.count);
+            for (var i = 0; i < n; i++) {
+                this.cubeTypes[i] = dimers[i].t;
+                this.cubesMesh.setColorAt(i, this._colorObjs3D[dimers[i].t]);
+            }
+            this.cubesMesh.instanceColor.needsUpdate = true;
+        }
+
+        activateAll() {
+            var n = this.cubePos2D.length / 2;
+            for (var i = 0; i < n; i++) {
+                if (this.cubeFlying[i] === 0) this._spawnFromEdge(i);
+            }
+        }
+
+        hasCubeAtCenter() {
+            if (!this.cubePos2D) return false;
+            var n = this.cubePos2D.length / 2;
+            var threshold = TC.CUBE_SIZE * 1.5;
+            for (var i = 0; i < n; i++) {
+                if (this.cubeFlying[i] !== 1) continue;
+                var x = this.cubePos2D[i * 2];
+                var y = this.cubePos2D[i * 2 + 1];
+                if (x * x + y * y < threshold * threshold) return true;
+            }
+            return false;
         }
 
         _computeTargets2D(controls) {
@@ -164,7 +242,15 @@
                     dummy.position.set(0, 0, 0);
                     dummy.rotation.set(0, 0, 0);
                 } else {
-                    dummy.scale.set(1, 1, 1);
+                    if (this.cubeScales) {
+                        dummy.scale.set(
+                            this.cubeScales[i * 3],
+                            this.cubeScales[i * 3 + 1],
+                            this.cubeScales[i * 3 + 2]
+                        );
+                    } else {
+                        dummy.scale.set(1, 1, 1);
+                    }
                     dummy.position.set(
                         this.cubePositions[i * 3],
                         this.cubePositions[i * 3 + 1],
@@ -186,11 +272,20 @@
             this.cubesMesh.instanceMatrix.needsUpdate = true;
         }
 
-        updateFlyingPhysics(dt, controls) {
+        updateFlyingPhysics(dt, controls, elapsed) {
             if (!this.cubePos2D || !this.cubesMesh) return;
             var n = this.cubesMesh.count;
             var pos = this.cubePos2D;
             var vel = this.cubeVel2D;
+
+            // Staggered entry from screen edges
+            if (this.cubeEntryTime) {
+                for (var i = 0; i < n; i++) {
+                    if (this.cubeFlying[i] === 0 && elapsed >= this.cubeEntryTime[i]) {
+                        this._spawnFromEdge(i);
+                    }
+                }
+            }
 
             // Integrate 2D positions and rotations (flying cubes only)
             for (var i = 0; i < n; i++) {
@@ -205,13 +300,16 @@
             // Wall bounce
             for (var i = 0; i < n; i++) {
                 if (!this.cubeFlying || !this.cubeFlying[i]) continue;
-                if (pos[i * 2] < -this.cubeHalfW) { pos[i * 2] = -this.cubeHalfW; vel[i * 2] = Math.abs(vel[i * 2]); }
-                if (pos[i * 2] > this.cubeHalfW)  { pos[i * 2] = this.cubeHalfW;  vel[i * 2] = -Math.abs(vel[i * 2]); }
-                if (pos[i * 2 + 1] < -this.cubeHalfH) { pos[i * 2 + 1] = -this.cubeHalfH; vel[i * 2 + 1] = Math.abs(vel[i * 2 + 1]); }
-                if (pos[i * 2 + 1] > this.cubeHalfH)  { pos[i * 2 + 1] = this.cubeHalfH;  vel[i * 2 + 1] = -Math.abs(vel[i * 2 + 1]); }
+                var bounced = false;
+                if (pos[i * 2] < -this.cubeHalfW) { pos[i * 2] = -this.cubeHalfW; var spd = Math.abs(vel[i * 2]); vel[i * 2] = spd; if (spd > 0.5) bounced = true; }
+                if (pos[i * 2] > this.cubeHalfW)  { pos[i * 2] = this.cubeHalfW;  var spd = Math.abs(vel[i * 2]); vel[i * 2] = -spd; if (spd > 0.5) bounced = true; }
+                if (pos[i * 2 + 1] < -this.cubeHalfH) { pos[i * 2 + 1] = -this.cubeHalfH; var spd = Math.abs(vel[i * 2 + 1]); vel[i * 2 + 1] = spd; if (spd > 0.5) bounced = true; }
+                if (pos[i * 2 + 1] > this.cubeHalfH)  { pos[i * 2 + 1] = this.cubeHalfH;  var spd = Math.abs(vel[i * 2 + 1]); vel[i * 2 + 1] = -spd; if (spd > 0.5) bounced = true; }
+                if (bounced && this.collisionCallback) this.collisionCallback(Math.min(1, spd / 8));
             }
 
-            // 2D collision detection via spatial hash
+            // 2D soft spring repulsion — works even on initial overlap, gives gentle bounce
+            var COLL_DIST = TC.CUBE_SIZE * 1.5;
             this._spatialHash.clear();
             for (var i = 0; i < n; i++) {
                 if (!this.cubeFlying || !this.cubeFlying[i]) continue;
@@ -229,30 +327,37 @@
                     var dy = pos[b * 2 + 1] - pos[a * 2 + 1];
                     var dist = Math.sqrt(dx * dx + dy * dy);
 
-                    if (dist < TC.CUBE_SIZE && dist > 0.001) {
+                    if (dist < COLL_DIST && dist > 0.001) {
+                        var overlap = COLL_DIST - dist;
                         var nx = dx / dist, ny = dy / dist;
-                        var dvx = vel[a * 2] - vel[b * 2];
-                        var dvy = vel[a * 2 + 1] - vel[b * 2 + 1];
-                        var vn = dvx * nx + dvy * ny;
-
-                        if (vn > 0) {
-                            vel[a * 2]     -= vn * nx;
-                            vel[a * 2 + 1] -= vn * ny;
-                            vel[b * 2]     += vn * nx;
-                            vel[b * 2 + 1] += vn * ny;
-                            var overlap = (TC.CUBE_SIZE - dist) * 0.5;
-                            pos[a * 2]     -= overlap * nx;
-                            pos[a * 2 + 1] -= overlap * ny;
-                            pos[b * 2]     += overlap * nx;
-                            pos[b * 2 + 1] += overlap * ny;
-                            var kick = vn * 0.3;
-                            this.cubeAngVel[a * 3]     += (Math.random() - 0.5) * kick;
-                            this.cubeAngVel[a * 3 + 1] += (Math.random() - 0.5) * kick;
-                            this.cubeAngVel[b * 3]     += (Math.random() - 0.5) * kick;
-                            this.cubeAngVel[b * 3 + 1] += (Math.random() - 0.5) * kick;
+                        // Click on approach (not separation)
+                        if (this.collisionCallback) {
+                            var vRelX = vel[b * 2] - vel[a * 2];
+                            var vRelY = vel[b * 2 + 1] - vel[a * 2 + 1];
+                            var vApproach = -(vRelX * nx + vRelY * ny);
+                            if (vApproach > 1.0) this.collisionCallback(Math.min(1, vApproach / 8));
                         }
+                        // Spring force — pushes apart regardless of approach direction
+                        var force = overlap * 20 * dt;
+                        vel[a * 2]     -= force * nx;
+                        vel[a * 2 + 1] -= force * ny;
+                        vel[b * 2]     += force * nx;
+                        vel[b * 2 + 1] += force * ny;
+                        // Positional nudge to prevent deep penetration
+                        var correction = overlap * 0.15;
+                        pos[a * 2]     -= correction * nx;
+                        pos[a * 2 + 1] -= correction * ny;
+                        pos[b * 2]     += correction * nx;
+                        pos[b * 2 + 1] += correction * ny;
                     }
                 }
+            }
+
+            // Gentle damping to keep energy bounded
+            for (var i = 0; i < n; i++) {
+                if (!this.cubeFlying || !this.cubeFlying[i]) continue;
+                vel[i * 2]     *= 0.995;
+                vel[i * 2 + 1] *= 0.995;
             }
 
             this._updatePos2Dto3D(controls);
@@ -267,8 +372,8 @@
 
             var p3 = progress * progress * progress;
             var springK = 3 + p3 * 30;
-            var damping = 1 + p3 * 8;
-            var angDamp = 3 + progress * 15;
+            var damping = 1 + p3 * 30;
+            var angDamp = 3 + progress * 25;
 
             for (var i = 0; i < n; i++) {
                 if (this.cubeFlying[i] !== 1) continue;
@@ -309,6 +414,44 @@
                 }
             }
 
+            // Interpolate scales from (1,1,1) toward slab targets in final 50%
+            if (progress > 0.5) {
+                var t = (progress - 0.5) / 0.5;  // 0→1 over last 50%
+                var t2 = t * t;                    // ease-in
+                for (var i = 0; i < n; i++) {
+                    if (this.cubeFlying[i] !== 1) continue;
+                    var ss = SLAB_SCALES[this.cubeTypes[i]];
+                    this.cubeScales[i * 3]     = 1 + (ss[0] - 1) * t2;
+                    this.cubeScales[i * 3 + 1] = 1 + (ss[1] - 1) * t2;
+                    this.cubeScales[i * 3 + 2] = 1 + (ss[2] - 1) * t2;
+                }
+            }
+
+            this._updatePos2Dto3D(controls);
+            this._updateMatrices();
+        }
+
+        snapToTargets(controls) {
+            if (!this.cubePos2D || !this.cubeTargets2D) return;
+            var n = this.cubePos2D.length / 2;
+            for (var i = 0; i < n; i++) {
+                this.cubePos2D[i * 2] = this.cubeTargets2D[i * 2];
+                this.cubePos2D[i * 2 + 1] = this.cubeTargets2D[i * 2 + 1];
+                this.cubeDepth[i] = this.cubeTargetDepth[i];
+                this.cubeVel2D[i * 2] = 0;
+                this.cubeVel2D[i * 2 + 1] = 0;
+                this.cubeRotations[i * 3] = 0;
+                this.cubeRotations[i * 3 + 1] = 0;
+                this.cubeRotations[i * 3 + 2] = 0;
+                this.cubeAngVel[i * 3] = 0;
+                this.cubeAngVel[i * 3 + 1] = 0;
+                this.cubeAngVel[i * 3 + 2] = 0;
+                // Flatten to slab based on type
+                var ss = SLAB_SCALES[this.cubeTypes[i]];
+                this.cubeScales[i * 3] = ss[0];
+                this.cubeScales[i * 3 + 1] = ss[1];
+                this.cubeScales[i * 3 + 2] = ss[2];
+            }
             this._updatePos2Dto3D(controls);
             this._updateMatrices();
         }
@@ -330,6 +473,8 @@
             this.cubeTargets = null;
             this.cubeTargets2D = null;
             this.cubeTargetDepth = null;
+            this.cubeTypes = null;
+            this.cubeScales = null;
             this.camRight = null;
             this.camUp = null;
             this.camForward = null;
@@ -384,13 +529,18 @@
             { type: 'code', text: 'surface.<span class="fn">monodromy</span>() <span class="comment">// => +8 around the hole</span>' },
             { type: 'comment', text: '//' },
             { type: 'code', text: '<span class="keyword">let</span> tiling = <span class="fn">CFTP</span>.<span class="fn">sample</span>(surface);' },
-            { type: 'code', text: '<span class="keyword">for</span> (<span class="keyword">let</span> γ = <span class="number">0</span>; γ &lt; <span class="number">Infinity</span>; γ++) {' },
-            { type: 'code', text: '  tiling = <span class="fn">glauber</span>(tiling, <span class="fn">exp</span>(-γ/N));' },
-            { type: 'code', text: '  <span class="comment">// chaos → order</span>' },
+            { type: 'comment', text: '// exact draw from the uniform measure' },
+            { type: 'comment', text: '//' },
+            { type: 'comment', text: '// phase 1: chaos — random Glauber at q = 1' },
+            { type: 'code', text: '<span class="fn">glauber</span>(tiling, { q: <span class="number">1</span>, steps: <span class="fn">random</span> });' },
+            { type: 'comment', text: '//' },
+            { type: 'comment', text: '// phase 2: order — monotone deletions only' },
+            { type: 'code', text: '<span class="keyword">while</span> (!tiling.<span class="fn">isMinimal</span>()) {' },
+            { type: 'code', text: '  tiling.<span class="fn">remove</span>(<span class="fn">random</span>.lozenge()); <span class="comment">// dir = −1</span>' },
             { type: 'code', text: '}' },
             { type: 'comment', text: '//' },
             { type: 'comment', text: '// <span class="string">Leonid Petrov · 2026</span>' },
-            { type: 'comment', text: '// <span class="string">lpetrov.cc/triangle/</span>' },
+            { type: 'comment', text: '// <span class="string">lpetrov.cc/data-art-2026/</span>' },
         ];
     }
 
@@ -418,6 +568,15 @@
 
             codeBlock.appendChild(lineEl);
         });
+
+        // QR code after all lines
+        var qrImg = document.createElement('img');
+        qrImg.src = '/data-art/triangle/img/qr.svg';
+        qrImg.className = 'qr-code';
+        qrImg.alt = 'QR code: lpetrov.cc/data-art-2026/';
+        qrImg.style.opacity = '0';
+        qrImg.style.transition = 'opacity 1s ease-in ' + (lines.length * 0.25 + 0.5) + 's';
+        codeBlock.appendChild(qrImg);
     }
 
     window.TrianglePhases = {

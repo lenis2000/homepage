@@ -230,6 +230,16 @@
                 minV = Math.min(minV, v); maxV = Math.max(maxV, v);
             }
 
+            // Shift target so projected centroid is at screen center
+            const midU = (minU + maxU) / 2;
+            const midV = (minV + maxV) / 2;
+            controls.target.x += midU * cRight.x + midV * cUp.x;
+            controls.target.y += midU * cRight.y + midV * cUp.y;
+            controls.target.z += midU * cRight.z + midV * cUp.z;
+            camera.position.x += midU * cRight.x + midV * cUp.x;
+            camera.position.y += midU * cRight.y + midV * cUp.y;
+            camera.position.z += midU * cRight.z + midV * cUp.z;
+
             const aspect = canvas.clientWidth / canvas.clientHeight || 1;
             const projW = maxU - minU;
             const projH = maxV - minV;

@@ -2,11 +2,12 @@
 (function() {
     'use strict';
 
-    const hookBg = document.getElementById('hook-bg');
-    const hookCtx = hookBg.getContext('2d');
+    let hookBg = null;
+    let hookCtx = null;
     let hookAnimId = null;
 
     function initHookBg() {
+        if (!hookBg) return;
         const dpr = window.devicePixelRatio || 1;
         const w = window.innerWidth;
         const h = window.innerHeight;
@@ -52,6 +53,7 @@
     }
 
     function animateHookBg() {
+        if (!hookCtx) return;
         const w = window.innerWidth;
         const h = window.innerHeight;
         hookCtx.clearRect(0, 0, w, h);
@@ -68,7 +70,13 @@
         hookAnimId = requestAnimationFrame(animateHookBg);
     }
 
-    function startHookBg() {
+    function startHookBg(canvasEl) {
+        if (hookAnimId) {
+            cancelAnimationFrame(hookAnimId);
+            hookAnimId = null;
+        }
+        hookBg = canvasEl || document.getElementById('hook-bg');
+        hookCtx = hookBg.getContext('2d');
         initHookBg();
         seedParticles();
         animateHookBg();
@@ -79,6 +87,8 @@
             cancelAnimationFrame(hookAnimId);
             hookAnimId = null;
         }
+        hookBg = null;
+        hookCtx = null;
     }
 
     window.HookBackground = {

@@ -23,10 +23,10 @@ permalink: triangle/
         <canvas id="hook-bg"></canvas>
         <div class="question"><span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">01</span><span style="color: rgba(255,255,255,0.5);">// </span><span style="color: rgba(255,255,255,0.85);">Can Chaos Hide the Truth?</span>
 <span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">02</span><span style="color: rgba(255,255,255,0.25);">//</span>
-<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">03</span><span style="color: rgba(255,255,255,0.25);">//</span>
-<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">04</span><span style="color: rgba(200,160,255,0.35);">const</span> <span style="color: rgba(140,190,240,0.35);">shape</span> = <span style="color: rgba(140,190,240,0.35);">penroseTriangle</span>();
-<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">05</span><span style="color: rgba(200,160,255,0.35);">const</span> <span style="color: rgba(140,190,240,0.35);">tiling</span> = <span style="color: rgba(140,190,240,0.35);">CFTP</span>.<span style="color: rgba(140,190,240,0.35);">sample</span>(shape);
-<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">06</span><span style="color: rgba(140,190,240,0.35);">anneal</span>(tiling, { <span style="color: rgba(140,190,240,0.35);">γ</span>: <span style="color: rgba(200,180,140,0.35);">0</span> → <span style="color: rgba(200,180,140,0.35);">∞</span> });</div>
+<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">03</span><span style="color: rgba(200,160,255,0.35);">const</span> <span style="color: rgba(140,190,240,0.35);">shape</span> = <span style="color: rgba(140,190,240,0.35);">penroseTriangle</span>();
+<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">04</span><span style="color: rgba(200,160,255,0.35);">const</span> <span style="color: rgba(140,190,240,0.35);">tiling</span> = <span style="color: rgba(140,190,240,0.35);">CFTP</span>.<span style="color: rgba(140,190,240,0.35);">sample</span>(shape);
+<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">05</span><span style="color: rgba(140,190,240,0.35);">glauber</span>(tiling, { q: <span style="color: rgba(200,180,140,0.35);">1</span> });   <span style="color: rgba(255,255,255,0.2);">// chaos</span>
+<span style="color: rgba(255,255,255,0.15); margin-right: 2ch;">06</span><span style="color: rgba(140,190,240,0.35);">monotone</span>(tiling, { dir: <span style="color: rgba(200,180,140,0.35);">-1</span> }); <span style="color: rgba(255,255,255,0.2);">// order</span></div>
         <p class="hint">Leonid Petrov · lpetrov.cc</p>
     </div>
 
@@ -36,6 +36,7 @@ permalink: triangle/
     <div id="caption">Local Truth, Global Paradox</div>
 
     <div id="text-screen">
+        <canvas id="text-bg"></canvas>
         <div class="code-block"></div>
     </div>
 

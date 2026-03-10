@@ -34,6 +34,9 @@
     // Timers
     var hookTimerId = null;
     var frozenTimers = [];
+    var cftpDone = false;
+    var chaosFrameCounter = 0;
+    var monotoneFrameCounter = 0;
 
     var canvas = document.getElementById('canvas');
 
@@ -86,8 +89,7 @@
             side: THREE.DoubleSide,
             flatShading: true,
             roughness: 0.3,
-            metalness: 0.35,
-            color: 0xddeeff
+            metalness: 0.35
         });
 
         edgeMaterial = new THREE.LineBasicMaterial({
@@ -126,18 +128,19 @@
         camera.right = TC.frustumSize * aspect / 2;
         camera.top = TC.frustumSize / 2;
         camera.bottom = -TC.frustumSize / 2;
+        // Recalculate zoom to fit shape in new aspect ratio
+        if (surfaceBuilder && sim && sim.dimers) {
+            surfaceBuilder.positionCamera(sim.dimers, camera, controls, canvas);
+        }
         camera.updateProjectionMatrix();
     }
 
     // ========================================================================
     // STATE MACHINE
     // ========================================================================
-    function onHookClick() {
-        if (currentState === STATES.HOOK) enterLoading();
-    }
-
     function enterHook() {
         currentState = STATES.HOOK;
+
         var hookEl = document.getElementById('hook-screen');
         hookEl.style.display = 'flex';
         canvas.style.display = 'none';
@@ -160,8 +163,6 @@
             if (currentState === STATES.HOOK) enterLoading();
         }, TC.HOOK_DURATION);
 
-        hookEl.removeEventListener('click', onHookClick);
-        hookEl.addEventListener('click', onHookClick);
     }
 
     function runCFTPAsync() {
@@ -188,6 +189,7 @@
 
     async function enterLoading() {
         currentState = STATES.LOADING;
+
         if (hookTimerId) { clearTimeout(hookTimerId); hookTimerId = null; }
         window.HookBackground.stop();
         document.getElementById('hook-screen').style.display = 'none';
@@ -242,9 +244,6 @@
                 }
 
                 if (sim.isValid) {
-                    // Run CFTP for exact uniform sample
-                    await runCFTPAsync();
-
                     // Init Three.js
                     canvas.style.display = 'block';
                     canvas.style.opacity = '1';
@@ -255,14 +254,23 @@
                     surfaceBuilder = new window.SurfaceBuilder();
                     surfaceBuilder.positionCamera(sim.dimers, camera, controls, canvas);
 
-                    // Setup flying cubes
+                    // Setup flying cubes with initial (pre-CFTP) tiling
                     cubes = new window.TrianglePhases.FlyingCubesManager();
                     cubes.setTargets(surfaceBuilder.computeTargets(sim.dimers));
                     cubes.init(sim.dimers, camera, controls, canvas, meshGroup);
 
-                    // Hide loading, start
+                    // Hide loading, start flying immediately
                     document.getElementById('loading').style.display = 'none';
+                    cftpDone = false;
                     enterFlyingCubes();
+
+                    // CFTP runs in background while cubes fly; refresh targets when done
+                    runCFTPAsync().then(function() {
+                        cftpDone = true;
+                        if (cubes && surfaceBuilder && controls) {
+                            cubes.refreshTargets(sim.dimers, surfaceBuilder.computeTargets(sim.dimers), controls);
+                        }
+                    });
                 } else {
                     document.getElementById('loading').textContent = 'Error: Invalid shape';
                     setTimeout(function() {
@@ -287,69 +295,80 @@
 
     function enterFlyingCubes() {
         currentState = STATES.FLYING_CUBES;
+
         stateStartTime = performance.now();
         lastTimestamp = performance.now();
 
-        if (sonifier) sonifier.setEntropy(1.0);
+        if (cubes && sonifier) cubes.collisionCallback = function(intensity) { sonifier.cubeClick(intensity); };
         animationId = requestAnimationFrame(renderFrame);
     }
 
-    function enterAssembly() {
+    function enterAssembly(frameTimestamp) {
         currentState = STATES.ASSEMBLY;
-        stateStartTime = performance.now();
+        if (cubes) cubes.activateAll();
+        stateStartTime = frameTimestamp || performance.now();
+        if (sonifier) sonifier.startAssembly();
     }
 
-    function enterTransforming() {
+    function enterAssemblyHold(frameTimestamp) {
+        currentState = STATES.ASSEMBLY_HOLD;
+        stateStartTime = frameTimestamp || performance.now();
+        if (cubes) cubes.snapToTargets(controls);
+    }
+
+    function enterTransforming(frameTimestamp) {
         currentState = STATES.TRANSFORMING;
-        stateStartTime = performance.now();
-        transformBlendComplete = !cubes || !cubes.cubesMesh;
 
-        // Build surface from current CFTP state; fade it in over cubes
+        stateStartTime = frameTimestamp || performance.now();
+
+        // Snap cubes, then immediately replace with surface
+        if (cubes) {
+            cubes.snapToTargets(controls);
+            cubes.dispose(meshGroup);
+            cubes = null;
+        }
+
         surfaceBuilder.buildSurfaceMesh(sim.dimers, false, meshGroup, surfaceMaterial, edgeMaterial);
-        if (surfaceMaterial) {
-            surfaceMaterial.transparent = true;
-            surfaceMaterial.opacity = transformBlendComplete ? 1 : 0;
-        }
-        if (cubes && cubes.cubesMesh && cubes.cubesMesh.material) {
-            cubes.cubesMesh.material.transparent = true;
-            cubes.cubesMesh.material.opacity = 1;
-            cubes.cubesMesh.material.depthWrite = false;
-        }
+        transformBlendComplete = true;
 
+        if (sonifier) sonifier.stopAssembly();
         sim.setQBias(TC.Q_CHAOS);
     }
 
     function updateTransforming(elapsed) {
         animPhase.time = elapsed;
-        var dynamicElapsed = Math.max(0, elapsed - TC.CUBE_SURFACE_BLEND_DURATION);
 
-        if (!transformBlendComplete) {
-            var blend = Math.min(1, elapsed / TC.CUBE_SURFACE_BLEND_DURATION);
-            if (surfaceMaterial) surfaceMaterial.opacity = blend;
-            if (cubes && cubes.cubesMesh && cubes.cubesMesh.material) cubes.cubesMesh.material.opacity = 1 - blend;
-            if (blend >= 1) {
-                if (cubes) {
-                    cubes.dispose(meshGroup);
-                    cubes = null;
-                }
-                if (surfaceMaterial) {
-                    surfaceMaterial.opacity = 1;
-                    surfaceMaterial.transparent = false;
-                }
-                transformBlendComplete = true;
-            }
+        if (elapsed < TC.SURFACE_HOLD_DURATION) {
+            // Surface visible but no Glauber yet — pause for inspection
+            animPhase.chaosEnergy = 0;
+            animPhase.annealProgress = 0;
+            if (sonifier) sonifier.setEntropy(0);
+            surfaceBuilder.updateSurfaceInPlace(sim.dimers);
+            return;
         }
 
-        var currentQ;
-        if (dynamicElapsed < TC.CHAOS_DURATION) {
-            currentQ = TC.Q_CHAOS;
+        var t = elapsed - TC.SURFACE_HOLD_DURATION;
+
+        if (t < TC.CHAOS_DURATION) {
+            // Phase 1: pure chaos at q=1 for 12s
             animPhase.chaosEnergy = 1.0;
             animPhase.annealProgress = 0;
-        } else if (dynamicElapsed < TC.CHAOS_DURATION + TC.ANNEAL_DURATION) {
-            var progress = (dynamicElapsed - TC.CHAOS_DURATION) / TC.ANNEAL_DURATION;
-            currentQ = TC.Q_CHAOS + (TC.Q_ORDER - TC.Q_CHAOS) * progress * progress;
+            sim.setQBias(TC.Q_CHAOS);
+            chaosFrameCounter++;
+            if (chaosFrameCounter % TC.CHAOS_FRAMES_PER_STEP === 0) {
+                sim.randomStep(TC.CHAOS_STEPS_PER_FRAME);
+            }
+            if (sonifier) { sonifier.startDrone(); sonifier.setEntropy(1.0); }
+        } else if (t < TC.CHAOS_DURATION + TC.MONOTONE_DURATION) {
+            // Phase 2: monotone convergence (only deletions) for 10s
+            var progress = (t - TC.CHAOS_DURATION) / TC.MONOTONE_DURATION;
             animPhase.chaosEnergy = Math.max(0, 1.0 - progress);
             animPhase.annealProgress = progress;
+            monotoneFrameCounter++;
+            if (monotoneFrameCounter % TC.MONOTONE_FRAMES_PER_STEP === 0) {
+                sim.randomMonotoneStep(TC.MONOTONE_STEPS_PER_FRAME, -1);
+            }
+            if (sonifier) sonifier.setEntropy(animPhase.chaosEnergy);
         } else {
             animPhase.chaosEnergy = 0;
             animPhase.annealProgress = 1;
@@ -357,19 +376,12 @@
             return;
         }
 
-        if (transformBlendComplete) {
-            sim.setQBias(currentQ);
-            var stepsThisFrame = Math.max(100, Math.round(TC.STEPS_PER_FRAME / Math.pow(currentQ, 1.5)));
-            sim.step(stepsThisFrame);
-        }
-
-        if (sonifier) sonifier.setEntropy(animPhase.chaosEnergy);
-
         surfaceBuilder.updateSurfaceInPlace(sim.dimers);
     }
 
     function enterFrozen() {
         currentState = STATES.FROZEN;
+
         stateStartTime = performance.now();
 
         // Ensure cubes gone, surface fully opaque
@@ -393,7 +405,7 @@
         // Rebuild surface with edge lines
         surfaceBuilder.buildSurfaceMesh(sim.dimers, true, meshGroup, surfaceMaterial, edgeMaterial);
 
-        if (sonifier) sonifier.fadeOut(4000);
+        if (sonifier) sonifier.startRotation();
 
         controls.autoRotate = false;
 
@@ -416,7 +428,10 @@
 
     function enterTextScreen() {
         currentState = STATES.TEXT_SCREEN;
+
         stateStartTime = performance.now();
+
+        if (sonifier) sonifier.fadeOut(4000);
 
         // Fade out 3D canvas
         canvas.style.transition = 'opacity 1.5s ease-out';
@@ -432,20 +447,27 @@
         var textScreen = document.getElementById('text-screen');
         textScreen.style.display = 'flex';
 
+        window.HookBackground.start(document.getElementById('text-bg'));
+
         // Trigger fade-in after layout
         requestAnimationFrame(function() {
             textScreen.classList.add('visible');
             codeBlock.querySelectorAll('.line').forEach(function(el) {
                 el.style.opacity = '1';
             });
+            var qr = textScreen.querySelector('.qr-code');
+            if (qr) qr.style.opacity = '1';
         });
 
         // After TEXT_SCREEN_DURATION, fade out then return to hook
         frozenTimers.push(setTimeout(function() {
+            window.HookBackground.stop();
             textScreen.classList.remove('visible');
             codeBlock.querySelectorAll('.line').forEach(function(el) {
                 el.style.opacity = '0';
             });
+            var qr = textScreen.querySelector('.qr-code');
+            if (qr) qr.style.opacity = '0';
             frozenTimers.push(setTimeout(function() {
                 textScreen.style.display = 'none';
                 returnToHook();
@@ -466,14 +488,23 @@
 
         switch (currentState) {
             case STATES.FLYING_CUBES:
-                if (cubes) cubes.updateFlyingPhysics(dt, controls);
-                if (elapsed >= TC.FLYING_DURATION) enterAssembly();
+                if (cubes) cubes.updateFlyingPhysics(dt, controls, elapsed);
+                if (cftpDone && cubes && cubes.hasCubeAtCenter()) enterAssembly(timestamp);
                 break;
 
             case STATES.ASSEMBLY:
-                if (cubes) cubes.updateAssemblyPhysics(dt, Math.min(1, elapsed / TC.ASSEMBLY_DURATION), controls);
+                var assemblyProgress = Math.min(1, elapsed / TC.ASSEMBLY_DURATION);
+                if (cubes) cubes.updateAssemblyPhysics(dt, assemblyProgress, controls);
+                if (sonifier) sonifier.updateAssembly(assemblyProgress);
                 if (elapsed >= TC.ASSEMBLY_DURATION) {
-                    enterTransforming();
+                    enterAssemblyHold(timestamp);
+                }
+                break;
+
+            case STATES.ASSEMBLY_HOLD:
+                // Cubes frozen in place — just render
+                if (elapsed >= TC.ASSEMBLY_HOLD_DURATION) {
+                    enterTransforming(timestamp);
                 }
                 break;
 
@@ -522,6 +553,7 @@
         animPhase.chaosEnergy = 0;
         animPhase.annealProgress = 0;
         animPhase.time = 0;
+        cftpDone = false;
 
         // Dispose Three.js
         disposeThreeScene();
@@ -536,6 +568,25 @@
     // ========================================================================
     // EVENT LISTENERS
     // ========================================================================
+
+    // Resume AudioContext on any user interaction — needed for autoplay policy.
+    // Also prime the subsystem before sonifier exists by creating a temp context.
+    var _audioUnlockCtx = null;
+    function tryUnlockAudio() {
+        if (sonifier && sonifier.audioCtx && sonifier.audioCtx.state === 'suspended') {
+            sonifier.audioCtx.resume();
+        }
+        if (!_audioUnlockCtx) {
+            try {
+                _audioUnlockCtx = new (window.AudioContext || window.webkitAudioContext)();
+                _audioUnlockCtx.resume();
+            } catch(e) {}
+        }
+    }
+    ['pointerdown', 'touchstart', 'keydown'].forEach(function(evt) {
+        document.addEventListener(evt, tryUnlockAudio, { passive: true });
+    });
+
     window.addEventListener('resize', function() {
         if (renderer) {
             resizeThreeScene();
@@ -543,25 +594,7 @@
         window.HookBackground.resizeIfRunning();
     });
 
-    // Click to advance to next stage
-    canvas.addEventListener('click', function() {
-        switch (currentState) {
-            case STATES.FLYING_CUBES: enterAssembly(); break;
-            case STATES.ASSEMBLY: enterTransforming(); break;
-            case STATES.TRANSFORMING: enterFrozen(); break;
-            case STATES.FROZEN: enterTextScreen(); break;
-        }
-    });
 
-    document.getElementById('text-screen').addEventListener('click', function() {
-        if (currentState === STATES.TEXT_SCREEN) {
-            for (var i = 0; i < frozenTimers.length; i++) clearTimeout(frozenTimers[i]);
-            frozenTimers = [];
-            document.getElementById('text-screen').style.display = 'none';
-            document.getElementById('text-screen').classList.remove('visible');
-            returnToHook();
-        }
-    });
 
     // Pause render loop when tab is hidden
     document.addEventListener('visibilitychange', function() {
