@@ -84,11 +84,33 @@ simulations: simulations/YYYY-MM-DD-slug/    # optional
 - Conference/workshop talks go in "Conference talks" section
 - Seminar/colloquium talks go in "Seminar talks" section
 
+## Images & S3 Storage for Non-Paper Assets
+- Upload images to `s3://lpetrov.cc.storage/img/` (served at `https://storage.lpetrov.cc/img/`)
+- Reference via `{{site.storage_url}}/img/filename.jpg` in templates
+- Convert HEIC to JPEG with `sips -s format jpeg -s formatOptions 85 -Z <maxdim> input.heic --out output.jpg`
+- Rotate/flip with `sips -r <degrees>` and `sips -f vertical|horizontal`
+- Don't store images in the repo — use S3 storage bucket
+
+## Simulations Page (`simulations.md`)
+- Featured cards are in `_includes/sims.html` (shared with `index.html`)
+- `sims.html` uses `d-none d-md-block` — hidden on mobile on index, but simulations page overrides with CSS `display: block !important` at ≤991px
+- Cards use `col-6` with zero-padding CSS override (Bootstrap's `.col-6` has default 15px padding)
+- For responsive show/hide, use Bootstrap classes (`d-none d-lg-block`, `d-lg-none`) — custom media query `display:none` often fails due to specificity
+- Two-image pattern for responsive layouts: separate desktop/mobile `<figure>` elements with Bootstrap visibility classes, not CSS transform hacks
+- CSS `transform: rotate()` does NOT change layout box — use a separate pre-rotated image file instead
+
+## Bootstrap Gotchas (this site uses Bootstrap 4-style col padding)
+- `d-md-block` overrides `.row`'s `display: flex` — use explicit `col-6` classes instead of `row-cols-2`
+- `.col` class has `flex: 1 0 0%` which can override `row-cols-*` width
+- Zero-gap grid: need explicit CSS `.col-6 { padding: 0; }` and `.row { margin: 0; }` — `g-0` alone doesn't remove all gutters
+- Floated images that are too tall push all subsequent content below — constrain with `max-height`
+
 ## User Preferences
 - **No co-author line in commits** — do NOT add `Co-Authored-By: Claude` to git commit messages
-- Don't run Jekyll builds - user handles deployment
+- Don't run Jekyll builds - user handles deployment; Jekyll rebuild takes ~15s
 - Prefer static KaTeX formulas in HTML over dynamic JS rendering
 - Keep dynamic value displays (e.g., computed q-binomial values) separate from static formulas
 - Avoid redundant status text — show sample counts in ONE place (e.g., under histogram only, not also under the path canvas)
 - When switching rendering modes (LEGO, Minecraft), do NOT announce the mode in descriptions — just silently change the visual style while keeping the mathematical description unchanged
 - Grid column widths are per-slide — adjust to fit content (e.g., `52vw 40vw` for text-heavy left, `42vw 50vw` for balanced)
+- Wait for Jekyll rebuild (~15s) before taking agent-browser screenshots after file changes

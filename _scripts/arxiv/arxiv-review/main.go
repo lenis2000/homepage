@@ -262,6 +262,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			p := m.papers[m.current]
 			url := "https://arxiv.org/pdf/" + p.ArxivID
 			openURL(url)
+
+		case "O":
+			// Open arXiv abs page in browser
+			p := m.papers[m.current]
+			url := "https://arxiv.org/abs/" + p.ArxivID
+			openURL(url)
 		}
 	}
 	return m, nil
@@ -558,7 +564,7 @@ func (m model) View() string {
 
 	lines = append(lines, "")
 	lines = append(lines, helpStyle.Render("  a/v accept  r/b reject  s skip  u undo  n/p next/prev  N/P next/prev author  j/k scroll"))
-	lines = append(lines, helpStyle.Render("  o open PDF  A accept all (group)  R reject all (group)  q quit"))
+	lines = append(lines, helpStyle.Render("  o open PDF  O open abs  A accept all (group)  R reject all (group)  q quit"))
 
 	// Apply scroll
 	content := strings.Join(lines, "\n")

@@ -11,8 +11,8 @@ nav_weight: 19
 <!-- Container for the entire page content -->
 <div class="container mb-5">
 
-<figure class="handdrawn-hex-figure">
-  <img src="{{site.storage_url}}/img/lozenge-tiling-handdrawn.jpg"
+<figure class="handdrawn-hex-desktop d-none d-lg-block">
+  <img src="{{site.storage_url}}/img/lozenge-tiling-handdrawn-portrait.jpg"
        alt="Hand-colored double dimer configuration on a hexagonal region"
        class="handdrawn-hex-img">
   <figcaption>A hand-colored double dimer configuration</figcaption>
@@ -21,33 +21,35 @@ nav_weight: 19
 <h1 class="my-4">Simulations and other computational tools</h1>
 <h3 class="mb-3">Visualizations, data, source code</h3>
 
+<figure class="handdrawn-hex-mobile d-lg-none">
+  <img src="{{site.storage_url}}/img/lozenge-tiling-handdrawn.jpg"
+       alt="Hand-colored double dimer configuration on a hexagonal region"
+       class="handdrawn-hex-img">
+  <figcaption>A hand-colored double dimer configuration</figcaption>
+</figure>
+
 {%include sims.html%}
 
 
-<!-- Search bar -->
-<div id="sim-search-group" class="input-group mb-4">
-  <span class="input-group-text" id="sim-search-label">
-  </span>
+<!-- Search bar + category buttons -->
+<div class="sim-filter-bar" style="clear: both;">
+<div id="sim-search-group" class="input-group mb-2">
   <input type="text"
          id="sim-search-input"
          class="form-control"
          placeholder="Type to search simulations…"
-         aria-label="Search simulations"
-         aria-describedby="sim-search-label">
+         aria-label="Search simulations">
   <button class="btn btn-outline-secondary" id="sim-search-clear" type="button">Clear</button>
 </div>
-<small class="text-muted d-none d-md-block mb-3" style="margin-top: -1.5rem;">Tip: Press ESC to clear search and reset filters</small>
 <div id="sim-status" class="sr-only" role="status" aria-live="polite"></div>
 
 <!-- Category buttons -->
-<div id="sim-cat-buttons" class="row g-2 mb-4">
-  <div class="col-auto">
-    <button type="button"
-            class="btn btn-sm category-btn active text-nowrap"
-            data-category="all">
-      All
-    </button>
-  </div>
+<div id="sim-cat-buttons" class="d-flex flex-wrap gap-2 mb-3">
+  <button type="button"
+          class="btn btn-sm category-btn active text-nowrap"
+          data-category="all">
+    All
+  </button>
   {% assign categories = "
         domino-tilings:Dominos,
         random-matrices:Random Matrices,
@@ -60,18 +62,17 @@ nav_weight: 19
     {% assign p = cat | split: ":" %}
     {% assign slug = p[0] | strip %}
     {% assign name = p[1] | strip %}
-    <div class="col-auto">
-      <button type="button"
-              class="btn btn-sm category-btn text-nowrap"
-              data-category="{{ slug }}">
-        {{ name }}
-      </button>
-    </div>
+    <button type="button"
+            class="btn btn-sm category-btn text-nowrap"
+            data-category="{{ slug }}">
+      {{ name }}
+    </button>
   {% endfor %}
 </div>
+</div><!-- /.sim-filter-bar -->
 
 <!-- Complete simulations list -->
-<ul id="simulations-list" class="list-group list-group-flush">
+<ul id="simulations-list" class="list-group list-group-flush" style="clear: both;">
   {% assign all_sims = site.simulations | sort: "date" | reverse %}
   {% for sim in all_sims %}
     {% unless sim.head_page %}
@@ -197,33 +198,13 @@ nav_weight: 19
   border-color: var(--accent-color);
 }
 
-/* Hand-drawn hexagon illustration */
-.handdrawn-hex-figure {
-  float: right;
-  margin: 0 0 0.5rem 1.5rem;
-  max-width: 240px;
-  text-align: center;
-}
-
+/* Hand-drawn hexagon — shared image styles */
 .handdrawn-hex-img {
   max-width: 100%;
-  max-height: 140px;
-  width: auto;
+  height: auto;
   border-radius: 8px;
   border: 4px solid #fff;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.13);
-}
-
-.handdrawn-hex-figure figcaption {
-  margin-top: 0.35rem;
-  font-size: 0.78rem;
-  color: #666;
-  font-style: italic;
-}
-
-/* Cards flow under the heading, not waiting for float */
-.featured-simulations {
-  clear: none;
 }
 
 [data-theme="dark"] .handdrawn-hex-img {
@@ -231,25 +212,42 @@ nav_weight: 19
   box-shadow: none;
 }
 
-[data-theme="dark"] .handdrawn-hex-figure figcaption {
+/* Desktop version: floated right, compact */
+.handdrawn-hex-desktop {
+  float: right;
+  margin: 0 0 0.5rem 1.5rem;
+  max-width: 300px;
+  text-align: center;
+}
+
+.handdrawn-hex-desktop figcaption,
+.handdrawn-hex-mobile figcaption {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: #666;
+  font-style: italic;
+}
+
+[data-theme="dark"] .handdrawn-hex-desktop figcaption,
+[data-theme="dark"] .handdrawn-hex-mobile figcaption {
   color: #999;
 }
 
-@media (max-width: 767px) {
-  .handdrawn-hex-figure {
-    display: none !important;
-  }
-  /* Show featured cards on mobile on simulations page */
+.handdrawn-hex-desktop .handdrawn-hex-img {
+  max-height: 220px;
+  width: auto;
+}
+
+/* Mobile version: full width, centered */
+.handdrawn-hex-mobile {
+  text-align: center;
+  margin: 0.5rem auto 1rem;
+}
+
+@media (max-width: 991px) {
+  /* Show featured cards on simulations page */
   .container > .featured-simulations {
     display: block !important;
-  }
-  .container > .featured-simulations > .row {
-    flex-wrap: wrap;
-    display: flex;
-  }
-  .container > .featured-simulations > .row > .col {
-    flex: 0 0 50%;
-    max-width: 50%;
   }
 }
 </style>
