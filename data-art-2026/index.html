@@ -1,0 +1,1282 @@
+---
+layout: null
+permalink: data-art-2026/
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Lozenge Tilings — Leonid Petrov</title>
+<meta name="description" content="Interactive lozenge tiling generator. Draw regions, load presets, sample perfect tilings.">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: #141414;
+  color: #eee;
+  font-family: system-ui, sans-serif;
+  overflow: hidden;
+  touch-action: none;
+}
+
+#main-canvas, #three-container {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+#main-canvas {
+  display: block;
+  bottom: var(--bar-height, 110px);
+  height: calc(100% - var(--bar-height, 110px));
+}
+
+#three-container {
+  display: none;
+  bottom: var(--bar-height, 110px);
+  height: calc(100% - var(--bar-height, 110px));
+}
+
+#three-container.active { display: block; }
+
+/* ── Bottom Control Bar ── */
+#controls {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: #1e1e1e;
+  border-top: 1px solid #333;
+  padding: 6px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 100;
+  user-select: none;
+}
+
+.ctrl-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+
+button {
+  background: #2c2c2c;
+  color: #ddd;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 0 12px;
+  height: 38px;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 38px;
+}
+button:active { background: #383838; }
+button.active, button.preset-active {
+  background: #3a3a3a;
+  border-color: #A0ADB8;
+  color: #EDE8E0;
+}
+button.action {
+  background: linear-gradient(135deg, #2a3a4a, #1e2e3e);
+  border-color: #A0ADB8;
+  color: #EDE8E0;
+  font-weight: 600;
+}
+button.action:hover { background: linear-gradient(135deg, #354555, #283848); }
+button.chaos-btn {
+  background: linear-gradient(135deg, #3a2a1a, #2e1e0e);
+  border-color: #CCC0B0;
+  color: #EDE8E0;
+  font-weight: 600;
+}
+button.chaos-btn:hover { background: linear-gradient(135deg, #453525, #392919); }
+button.stop-btn {
+  background: linear-gradient(135deg, #4a2a2a, #3e1e1e);
+  border-color: #cc6655;
+  color: #ffaaaa;
+  font-weight: 600;
+}
+button.view-btn {
+  padding: 0 10px;
+  font-size: 12px;
+}
+button.view-btn.active {
+  background: #283848;
+  border-color: #A0ADB8;
+  color: #EDE8E0;
+}
+
+.hex-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: #2c2c2c;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 0 6px;
+  height: 38px;
+}
+.hex-group label {
+  color: #888;
+  font-size: 11px;
+}
+.hex-group input[type=number] {
+  width: 42px;
+  background: #1e1e1e;
+  border: 1px solid #555;
+  border-radius: 3px;
+  color: #ddd;
+  text-align: center;
+  font-size: 12px;
+  padding: 2px 3px;
+  height: 26px;
+  -moz-appearance: textfield;
+}
+.hex-group input::-webkit-outer-spin-button,
+.hex-group input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+#status-bar {
+  position: fixed;
+  top: 8px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.6);
+  color: #A0ADB8;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 200;
+  white-space: nowrap;
+}
+#status-bar.visible { opacity: 1; }
+
+#loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: #141414;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 500;
+}
+#loading-overlay.hidden { display: none; }
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid #333;
+  border-top-color: #A0ADB8;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#loading-text { color: #888; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div id="loading-text">Loading…</div>
+</div>
+
+<canvas id="main-canvas"></canvas>
+<div id="three-container"></div>
+
+<div id="status-bar"></div>
+
+<div id="controls">
+  <!-- Row 1: Presets -->
+  <div class="ctrl-row" id="row-presets">
+    <button id="btn-penrose" class="preset-active" title="Penrose triangle (with hole, 1536 lozenges)">Penrose</button>
+    <button id="btn-hex">Hex</button>
+    <span class="hex-group">
+      <label>a</label><input type="number" id="hex-a" value="8" min="1" max="150">
+      <label>b</label><input type="number" id="hex-b" value="8" min="1" max="150">
+      <label>c</label><input type="number" id="hex-c" value="8" min="1" max="150">
+    </span>
+    <button id="btn-cardioid">Cardioid</button>
+    <button id="btn-skull">Skull</button>
+    <button id="btn-rotunda">Rotunda</button>
+  </div>
+  <!-- Row 2: Actions + View -->
+  <div class="ctrl-row" id="row-actions">
+    <button id="btn-perfect" class="action">Perfect Sample</button>
+    <button id="btn-chaos" class="chaos-btn">Chaos ▶</button>
+    <div style="flex:1"></div>
+    <button id="btn-2d" class="view-btn active">2D</button>
+    <button id="btn-3d" class="view-btn">3D</button>
+    <button id="btn-draw" class="view-btn" style="display:none" title="Toggle draw/erase mode">✏ Add</button>
+  </div>
+</div>
+
+<script src="/js/three.min.js"></script>
+<script src="/js/OrbitControls.js"></script>
+<script>
+window.LOZENGE_THREADED = typeof SharedArrayBuffer !== 'undefined';
+const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+</script>
+<script>
+document.write('<script src="/js/2025-11-28-ultimate-lozenge' + (window.LOZENGE_THREADED ? '-threaded' : '') + '.js"><\/script>');
+</script>
+<script>
+'use strict';
+
+// ============================================================
+// CONSTANTS
+// ============================================================
+const COLORS = ['#EDE8E0', '#A0ADB8', '#CCC0B0'];  // from triangle sim
+const BG_COLOR = '#141414';
+const HOLE_HEIGHT_INCREASE = 8;
+const LARGE_DOMAIN_THRESHOLD = 10000; // dimers above which we skip CFTP auto-start
+const slope = 1 / Math.sqrt(3);
+const deltaC = 2 / Math.sqrt(3);
+
+// ============================================================
+// LATTICE GEOMETRY  (copied from lozenge-draw)
+// ============================================================
+function getVertex(n, j) { return { x: n, y: slope * n + j * deltaC }; }
+
+function getRightTriangleCentroid(n, j) {
+    const v1 = getVertex(n, j), v2 = getVertex(n, j - 1), v3 = getVertex(n + 1, j - 1);
+    return { x: (v1.x + v2.x + v3.x) / 3, y: (v1.y + v2.y + v3.y) / 3 };
+}
+function getLeftTriangleCentroid(n, j) {
+    const v1 = getVertex(n, j), v2 = getVertex(n + 1, j), v3 = getVertex(n + 1, j - 1);
+    return { x: (v1.x + v2.x + v3.x) / 3, y: (v1.y + v2.y + v3.y) / 3 };
+}
+
+function pointInPolygonPreset(x, y, polygon) {
+    if (polygon.length < 3) return false;
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i].x, yi = polygon[i].y;
+        const xj = polygon[j].x, yj = polygon[j].y;
+        if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+    }
+    return inside;
+}
+
+function generateTrianglesInPolygon(boundary) {
+    const triangles = new Map();
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const v of boundary) {
+        minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+        minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+    }
+    const searchMinN = Math.floor(minX) - 2, searchMaxN = Math.ceil(maxX) + 2;
+    const nRange = searchMaxN - searchMinN;
+    const searchMinJ = Math.floor(minY / deltaC) - nRange - 5;
+    const searchMaxJ = Math.ceil(maxY / deltaC) + nRange + 5;
+    for (let n = searchMinN; n <= searchMaxN; n++) {
+        for (let j = searchMinJ; j <= searchMaxJ; j++) {
+            const rc = getRightTriangleCentroid(n, j);
+            if (pointInPolygonPreset(rc.x, rc.y, boundary))
+                triangles.set(`${n},${j},1`, { n, j, type: 1 });
+            const lc = getLeftTriangleCentroid(n, j);
+            if (pointInPolygonPreset(lc.x, lc.y, boundary))
+                triangles.set(`${n},${j},2`, { n, j, type: 2 });
+        }
+    }
+    return triangles;
+}
+
+function generateHexagon(a, b, c) {
+    const directions = [[1,-1],[1,0],[0,1],[-1,1],[-1,0],[0,-1]];
+    const sideLengths = [a, b, c, a, b, c];
+    const boundary = [];
+    let n = 0, j = 0;
+    for (let dir = 0; dir < 6; dir++) {
+        const [dn, dj] = directions[dir];
+        for (let step = 0; step < sideLengths[dir]; step++) {
+            boundary.push(getVertex(n, j));
+            n += dn; j += dj;
+        }
+    }
+    return generateTrianglesInPolygon(boundary);
+}
+
+async function loadLetterTriangles(char) {
+    const filename = (char.match(/^[a-zA-Z0-9]$/) ? char.toUpperCase() : char) + '.json';
+    try {
+        const resp = await fetch(`/letters/${filename}?v=${Date.now()}`);
+        if (!resp.ok) return new Map();
+        const data = await resp.json();
+        if (!data.triangles) return new Map();
+        const triangles = new Map();
+        for (const t of data.triangles) {
+            const type = t.type || t.t;
+            triangles.set(`${t.n},${t.j},${type}`, { n: t.n, j: t.j, type });
+        }
+        return triangles;
+    } catch (e) { console.error('Failed to load:', char, e); return new Map(); }
+}
+
+// ============================================================
+// WASM SAMPLER  (minimal subset of UltimateLozengeSampler)
+// ============================================================
+class DataArtSampler {
+    constructor() {
+        this.dimers = [];
+        this.boundaries = [];
+        this.isValid = false;
+
+        this._initFromTriangles = Module.cwrap('initFromTriangles', 'number', ['number', 'number']);
+        this._performGlauberSteps = Module.cwrap('performGlauberSteps', 'number', ['number']);
+        this._exportDimers = Module.cwrap('exportDimers', 'number', []);
+        this._setQBias = Module.cwrap('setQBias', null, ['number']);
+        this._initCFTP = Module.cwrap('initCFTP', 'number', []);
+        this._stepCFTP = Module.cwrap('stepCFTP', 'number', []);
+        this._finalizeCFTP = Module.cwrap('finalizeCFTP', 'number', []);
+        this._getHoleCount = Module.cwrap('getHoleCount', 'number', []);
+        this._getAllHolesInfo = Module.cwrap('getAllHolesInfo', 'number', []);
+        this._adjustHoleWinding = Module.cwrap('adjustHoleWindingExport', 'number', ['number', 'number']);
+        this._setHoleBaseHeight = Module.cwrap('setHoleBaseHeight', 'number', ['number', 'number']);
+        this._freeString = Module.cwrap('freeString', null, ['number']);
+    }
+
+    _json(ptr) {
+        const s = Module.UTF8ToString(ptr);
+        this._freeString(ptr);
+        return JSON.parse(s);
+    }
+
+    initFromTriangles(trianglesMap) {
+        const arr = [];
+        for (const [, tri] of trianglesMap) arr.push(tri.n, tri.j, tri.type);
+        if (arr.length === 0) { this.isValid = false; this.dimers = []; this.boundaries = []; return { status: 'empty' }; }
+        const ptr = Module._malloc(arr.length * 4);
+        for (let i = 0; i < arr.length; i++) Module.setValue(ptr + i * 4, arr[i], 'i32');
+        const result = this._json(this._initFromTriangles(ptr, arr.length));
+        Module._free(ptr);
+        this.isValid = result.status === 'valid';
+        if (this.isValid) this._refreshDimers();
+        return result;
+    }
+
+    _refreshDimers() {
+        const r = this._json(this._exportDimers());
+        this.boundaries = r.boundaries || [];
+        this.dimers = r.dimers || [];
+    }
+
+    setQBias(q) { this._setQBias(q); }
+
+    step(n) {
+        const r = this._json(this._performGlauberSteps(n));
+        this._refreshDimers();
+        return r;
+    }
+
+    initCFTP() { return this._json(this._initCFTP()); }
+    stepCFTP() { return this._json(this._stepCFTP()); }
+    finalizeCFTP() {
+        const r = this._json(this._finalizeCFTP());
+        this._refreshDimers();
+        return r;
+    }
+
+    getHoleCount() { return this._getHoleCount(); }
+    getAllHolesInfo() { return this._json(this._getAllHolesInfo()); }
+    adjustHoleWinding(idx, delta) { return this._json(this._adjustHoleWinding(idx, delta)); }
+    setHoleBaseHeight(idx, h) { this._setHoleBaseHeight(idx, h); }
+
+    setupHoleHeight() {
+        const count = this.getHoleCount();
+        if (count === 0) return;
+        const info = this.getAllHolesInfo();
+        for (let i = 0; i < count; i++) {
+            const baseWinding = info.holes[i].currentWinding;
+            for (let s = 0; s < HOLE_HEIGHT_INCREASE; s++) {
+                const r = this.adjustHoleWinding(i, +1);
+                if (!r.success) break;
+            }
+            this.setHoleBaseHeight(i, baseWinding);
+        }
+    }
+}
+
+// ============================================================
+// 2D RENDERER
+// ============================================================
+class Renderer2D {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.zoom = 1;
+        this.panX = 0;
+        this.panY = 0;
+        this.minZoom = 0.01;
+        this.maxZoom = 20;
+        this.displayWidth = 0;
+        this.displayHeight = 0;
+        this.setupCanvas();
+    }
+
+    setupCanvas() {
+        const rect = this.canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        this.canvas.width = rect.width * dpr;
+        this.canvas.height = rect.height * dpr;
+        this.ctx.scale(dpr, dpr);
+        this.displayWidth = rect.width;
+        this.displayHeight = rect.height;
+    }
+
+    getTransform() {
+        const baseViewSize = 20;
+        const baseScale = Math.min(this.displayWidth, this.displayHeight) / baseViewSize;
+        const scale = baseScale * this.zoom;
+        const centerX = this.displayWidth / 2 - this.panX * scale;
+        const centerY = this.displayHeight / 2 + this.panY * scale;
+        return { centerX, centerY, scale };
+    }
+
+    toCanvas(x, y, cx, cy, scale) { return [cx + x * scale, cy - y * scale]; }
+    fromCanvas(cx2, cy2, cx, cy, scale) {
+        return { x: (cx2 - cx) / scale, y: (cy - cy2) / scale };
+    }
+
+    zoomAt(canvasX, canvasY, factor) {
+        const { centerX, centerY, scale } = this.getTransform();
+        const worldX = (canvasX - centerX) / scale;
+        const worldY = (centerY - canvasY) / scale;
+        const newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoom * factor));
+        const af = newZoom / this.zoom;
+        this.zoom = newZoom;
+        const ns = scale * af;
+        this.panX = (this.displayWidth / 2 - canvasX) / ns + worldX;
+        this.panY = (canvasY - this.displayHeight / 2) / ns + worldY;
+    }
+
+    pan(dx, dy) {
+        const { scale } = this.getTransform();
+        this.panX -= dx / scale;
+        this.panY += dy / scale;
+    }
+
+    resetView() { this.zoom = 1; this.panX = 0; this.panY = 0; }
+
+    fitToRegion(activeTriangles) {
+        if (!activeTriangles || activeTriangles.size === 0) { this.resetView(); return; }
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const [, tri] of activeTriangles) {
+            let verts;
+            if (tri.type === 1) verts = [getVertex(tri.n, tri.j), getVertex(tri.n, tri.j - 1), getVertex(tri.n + 1, tri.j - 1)];
+            else verts = [getVertex(tri.n, tri.j), getVertex(tri.n + 1, tri.j), getVertex(tri.n + 1, tri.j - 1)];
+            for (const v of verts) {
+                minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+                minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+            }
+        }
+        const pad = 2;
+        minX -= pad; maxX += pad; minY -= pad; maxY += pad;
+        const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+        const rx = maxX - minX, ry = maxY - minY;
+        const baseViewSize = 20, minDim = Math.min(this.displayWidth, this.displayHeight);
+        if (minDim <= 0 || rx <= 0 || ry <= 0) return;
+        const zx = this.displayWidth / rx / (minDim / baseViewSize);
+        const zy = this.displayHeight / ry / (minDim / baseViewSize);
+        this.zoom = Math.min(zx, zy);
+        this.panX = cx; this.panY = cy;
+    }
+
+    getLozengeVertices(dimer) {
+        const { bn, bj, t } = dimer;
+        if (t === 0) return [getVertex(bn, bj), getVertex(bn+1, bj), getVertex(bn+1, bj-1), getVertex(bn, bj-1)];
+        if (t === 1) return [getVertex(bn, bj), getVertex(bn+1, bj-1), getVertex(bn+1, bj-2), getVertex(bn, bj-1)];
+        return [getVertex(bn-1, bj), getVertex(bn, bj), getVertex(bn+1, bj-1), getVertex(bn, bj-1)];
+    }
+
+    screenToWorld(sx, sy) {
+        const { centerX, centerY, scale } = this.getTransform();
+        return this.fromCanvas(sx, sy, centerX, centerY, scale);
+    }
+
+    worldToTriangle(wx, wy) {
+        // Find nearest triangle (returns {n, j, type})
+        // Inverse of world coords: x = n, y = slope*n + j*deltaC => j = (y - slope*n)/deltaC
+        const n = Math.round(wx);
+        // Check a few candidates
+        const jEst = Math.round((wy - slope * n) / deltaC);
+        let best = null, bestDist = Infinity;
+        for (let dn = -1; dn <= 1; dn++) {
+            for (let dj = -1; dj <= 2; dj++) {
+                const cn = n + dn, cj = jEst + dj;
+                for (const type of [1, 2]) {
+                    const c = type === 1 ? getRightTriangleCentroid(cn, cj) : getLeftTriangleCentroid(cn, cj);
+                    const d = (c.x - wx) ** 2 + (c.y - wy) ** 2;
+                    if (d < bestDist) { bestDist = d; best = { n: cn, j: cj, type }; }
+                }
+            }
+        }
+        return best;
+    }
+
+    draw(sim, activeTriangles, isValid) {
+        const ctx = this.ctx;
+        ctx.fillStyle = BG_COLOR;
+        ctx.fillRect(0, 0, this.displayWidth, this.displayHeight);
+        if (this.displayWidth <= 0) return;
+        const { centerX, centerY, scale } = this.getTransform();
+        if (scale <= 0 || !isFinite(scale)) return;
+
+        // Draw background grid
+        this._drawGrid(ctx, centerX, centerY, scale);
+
+        // Draw lozenges
+        if (isValid && sim.dimers.length > 0) {
+            const dimerCount = sim.dimers.length || 1;
+            const outlineWidth = Math.max(0, 0.1 * (100 / dimerCount));
+            for (const dimer of sim.dimers) {
+                const verts = this.getLozengeVertices(dimer);
+                const cv = verts.map(v => this.toCanvas(v.x, v.y, centerX, centerY, scale));
+                ctx.fillStyle = COLORS[dimer.t];
+                ctx.beginPath();
+                ctx.moveTo(cv[0][0], cv[0][1]);
+                for (let i = 1; i < cv.length; i++) ctx.lineTo(cv[i][0], cv[i][1]);
+                ctx.closePath();
+                ctx.fill();
+                if (outlineWidth > 0) {
+                    ctx.strokeStyle = 'rgba(180,180,180,0.5)';
+                    ctx.lineWidth = outlineWidth;
+                    ctx.stroke();
+                }
+            }
+        } else if (activeTriangles && activeTriangles.size > 0) {
+            // Show region outline
+            for (const [, tri] of activeTriangles) {
+                let verts;
+                if (tri.type === 1) verts = [getVertex(tri.n, tri.j), getVertex(tri.n, tri.j-1), getVertex(tri.n+1, tri.j-1)];
+                else verts = [getVertex(tri.n, tri.j), getVertex(tri.n+1, tri.j), getVertex(tri.n+1, tri.j-1)];
+                const cv = verts.map(v => this.toCanvas(v.x, v.y, centerX, centerY, scale));
+                ctx.strokeStyle = '#3a4a5a';
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(cv[0][0], cv[0][1]);
+                ctx.lineTo(cv[1][0], cv[1][1]);
+                ctx.lineTo(cv[2][0], cv[2][1]);
+                ctx.closePath();
+                ctx.stroke();
+            }
+        }
+
+        // Draw boundaries
+        if (sim.boundaries && sim.boundaries.length > 0) {
+            ctx.strokeStyle = '#A0ADB8';
+            ctx.lineWidth = 1.5;
+            for (const bnd of sim.boundaries) {
+                if (bnd.length < 2) continue;
+                ctx.beginPath();
+                const b0 = this.toCanvas(bnd[0].x, bnd[0].y, centerX, centerY, scale);
+                ctx.moveTo(b0[0], b0[1]);
+                for (let i = 1; i < bnd.length; i++) {
+                    const b = this.toCanvas(bnd[i].x, bnd[i].y, centerX, centerY, scale);
+                    ctx.lineTo(b[0], b[1]);
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+        }
+    }
+
+    _drawGrid(ctx, centerX, centerY, scale) {
+        const w = this.displayWidth, h = this.displayHeight;
+        // Sample corners to find world bounds
+        const corners = [[0,0],[w,0],[0,h],[w,h]].map(([cx2,cy2]) => this.fromCanvas(cx2, cy2, centerX, centerY, scale));
+        let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+        for (const c of corners) {
+            minX=Math.min(minX,c.x); maxX=Math.max(maxX,c.x);
+            minY=Math.min(minY,c.y); maxY=Math.max(maxY,c.y);
+        }
+        const vr = Math.max(maxX-minX, maxY-minY);
+        const mg = Math.ceil(vr*0.3)+5;
+        minX-=mg; maxX+=mg; minY-=mg; maxY+=mg;
+        const minN=Math.floor(minX)-3, maxN=Math.ceil(maxX)+3;
+        const minJ=Math.floor(minY/deltaC)-Math.ceil(vr)-3;
+        const maxJ=Math.ceil(maxY/deltaC)+Math.ceil(vr)+3;
+
+        ctx.strokeStyle='rgba(80,90,100,0.3)';
+        ctx.lineWidth=0.5;
+        for (let n=minN; n<=maxN; n++) {
+            const y1=slope*n+minJ*deltaC, y2=slope*n+maxJ*deltaC;
+            const [x1c,y1c]=this.toCanvas(n,y1,centerX,centerY,scale);
+            const [x2c,y2c]=this.toCanvas(n,y2,centerX,centerY,scale);
+            ctx.beginPath(); ctx.moveTo(x1c,y1c); ctx.lineTo(x2c,y2c); ctx.stroke();
+        }
+        for (let j=minJ; j<=maxJ; j++) {
+            const [x1c,y1c]=this.toCanvas(minN,slope*minN+j*deltaC,centerX,centerY,scale);
+            const [x2c,y2c]=this.toCanvas(maxN,slope*maxN+j*deltaC,centerX,centerY,scale);
+            ctx.beginPath(); ctx.moveTo(x1c,y1c); ctx.lineTo(x2c,y2c); ctx.stroke();
+        }
+        for (let j=minJ; j<=maxJ; j++) {
+            const [x1c,y1c]=this.toCanvas(minN,-slope*minN+j*deltaC,centerX,centerY,scale);
+            const [x2c,y2c]=this.toCanvas(maxN,-slope*maxN+j*deltaC,centerX,centerY,scale);
+            ctx.beginPath(); ctx.moveTo(x1c,y1c); ctx.lineTo(x2c,y2c); ctx.stroke();
+        }
+    }
+}
+
+// ============================================================
+// 3D RENDERER  (adapted from Lozenge3DRenderer in lozenge-draw)
+// ============================================================
+class Renderer3D {
+    constructor(container) {
+        this.container = container;
+        this.cameraInitialized = false;
+
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x141414);
+
+        const w = container.clientWidth || 800;
+        const h = container.clientHeight || 600;
+        const frustum = 80;
+        this.camera = new THREE.OrthographicCamera(
+            -frustum * w / h / 2, frustum * w / h / 2,
+            frustum / 2, -frustum / 2, 0.1, 10000
+        );
+        this.camera.up.set(0, 0, 1);
+
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer.setSize(w, h);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(this.renderer.domElement);
+
+        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enableDamping = true;
+        this.controls.dampingFactor = 0.05;
+        this.controls.screenSpacePanning = true;
+        this.controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+
+        // Lighting
+        this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(10, 10, 15);
+        this.scene.add(dirLight);
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        fillLight.position.set(-10, -5, -10);
+        this.scene.add(fillLight);
+
+        this.meshGroup = new THREE.Group();
+        this.scene.add(this.meshGroup);
+
+        window.addEventListener('resize', () => this.handleResize());
+        this._animating = false;
+    }
+
+    handleResize() {
+        const w = this.container.clientWidth, h = this.container.clientHeight;
+        const frustum = 80, aspect = w / h;
+        this.camera.left = -frustum * aspect / 2; this.camera.right = frustum * aspect / 2;
+        this.camera.top = frustum / 2; this.camera.bottom = -frustum / 2;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(w, h);
+    }
+
+    startAnimation() {
+        if (this._animating) return;
+        this._animating = true;
+        const loop = () => {
+            if (!this._animating) return;
+            requestAnimationFrame(loop);
+            this.controls.update();
+            this.renderer.render(this.scene, this.camera);
+        };
+        loop();
+    }
+
+    stopAnimation() { this._animating = false; }
+
+    dimersTo3D(dimers) {
+        // Clear old geometry
+        while (this.meshGroup.children.length > 0) {
+            const ch = this.meshGroup.children[0];
+            if (ch.geometry) ch.geometry.dispose();
+            if (ch.material) ch.material.dispose();
+            this.meshGroup.remove(ch);
+        }
+        if (!dimers || dimers.length === 0) return;
+
+        const getVertexKeys = (d) => {
+            const { bn, bj, t } = d;
+            if (t === 0) return [[bn,bj],[bn+1,bj],[bn+1,bj-1],[bn,bj-1]];
+            if (t === 1) return [[bn,bj],[bn+1,bj-1],[bn+1,bj-2],[bn,bj-1]];
+            return [[bn-1,bj],[bn,bj],[bn+1,bj-1],[bn,bj-1]];
+        };
+        const getHeightPattern = (t) => t===0?[0,0,0,0]:t===1?[1,0,0,1]:[1,1,0,0];
+
+        // BFS height function
+        const vertexToDimers = new Map();
+        for (const d of dimers) {
+            for (const [n,j] of getVertexKeys(d)) {
+                const k = `${n},${j}`;
+                if (!vertexToDimers.has(k)) vertexToDimers.set(k, []);
+                vertexToDimers.get(k).push(d);
+            }
+        }
+        const heights = new Map();
+        const firstVerts = getVertexKeys(dimers[0]);
+        heights.set(`${firstVerts[0][0]},${firstVerts[0][1]}`, 0);
+        const queue = [`${firstVerts[0][0]},${firstVerts[0][1]}`];
+        const visited = new Set();
+        while (queue.length > 0) {
+            const ck = queue.shift();
+            if (visited.has(ck)) continue;
+            visited.add(ck);
+            const ch = heights.get(ck);
+            const [cn, cj] = ck.split(',').map(Number);
+            for (const d of (vertexToDimers.get(ck) || [])) {
+                const verts = getVertexKeys(d), pat = getHeightPattern(d.t);
+                let myIdx = -1;
+                for (let i = 0; i < 4; i++) if (verts[i][0]===cn && verts[i][1]===cj) { myIdx=i; break; }
+                if (myIdx >= 0) {
+                    for (let i = 0; i < 4; i++) {
+                        const vk = `${verts[i][0]},${verts[i][1]}`;
+                        if (!heights.has(vk)) { heights.set(vk, ch + pat[i] - pat[myIdx]); queue.push(vk); }
+                    }
+                }
+            }
+        }
+
+        const to3D = (n,j,h) => ({ x: h, y: -n-h, z: j-h });
+        const verts3d = [], normals3d = [], colors3d = [], indices3d = [];
+
+        const addQuad = (v1,v2,v3,v4,color) => {
+            const base = verts3d.length / 3;
+            for (const v of [v1,v2,v3,v4]) verts3d.push(v.x, v.y, v.z);
+            const e1={x:v2.x-v1.x,y:v2.y-v1.y,z:v2.z-v1.z};
+            const e2={x:v4.x-v1.x,y:v4.y-v1.y,z:v4.z-v1.z};
+            const nx=e1.y*e2.z-e1.z*e2.y, ny=e1.z*e2.x-e1.x*e2.z, nz=e1.x*e2.y-e1.y*e2.x;
+            const len=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
+            for (let i=0;i<4;i++) normals3d.push(nx/len,ny/len,nz/len);
+            const c = new THREE.Color(color);
+            for (let i=0;i<4;i++) colors3d.push(c.r,c.g,c.b);
+            indices3d.push(base,base+1,base+2,base,base+2,base+3);
+        };
+
+        for (const d of dimers) {
+            const verts = getVertexKeys(d);
+            const h0 = heights.get(`${verts[0][0]},${verts[0][1]}`);
+            if (h0 === undefined) continue;
+            const pat = getHeightPattern(d.t);
+            const baseH = h0 - pat[0];
+            const v3 = verts.map(([n,j],i) => to3D(n,j,baseH+pat[i]));
+            addQuad(v3[0],v3[1],v3[2],v3[3], COLORS[d.t]);
+        }
+
+        const geom = new THREE.BufferGeometry();
+        geom.setAttribute('position', new THREE.Float32BufferAttribute(verts3d, 3));
+        geom.setAttribute('normal',   new THREE.Float32BufferAttribute(normals3d, 3));
+        geom.setAttribute('color',    new THREE.Float32BufferAttribute(colors3d, 3));
+        geom.setIndex(indices3d);
+        geom.computeBoundingSphere();
+
+        const mat = new THREE.MeshPhongMaterial({ vertexColors: true, side: THREE.DoubleSide, flatShading: false, shininess: 60 });
+        this.meshGroup.add(new THREE.Mesh(geom, mat));
+
+        const edgeGeom = new THREE.EdgesGeometry(geom, 15);
+        const edgeMat = new THREE.LineBasicMaterial({ color: 0x333333, opacity: 0.3, transparent: true });
+        this.meshGroup.add(new THREE.LineSegments(edgeGeom, edgeMat));
+
+        if (!this.cameraInitialized) {
+            this.resetCamera();
+        }
+    }
+
+    resetCamera() {
+        this.cameraInitialized = false;
+        const box = new THREE.Box3();
+        if (this.meshGroup.children.length > 0) box.setFromObject(this.meshGroup);
+        else box.set(new THREE.Vector3(-30,-30,-30), new THREE.Vector3(30,30,30));
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x,size.y,size.z)||50;
+        const w=this.container.clientWidth||800, h=this.container.clientHeight||600, aspect=w/h;
+        const frustum=maxDim*1.4;
+        this.camera.left=-frustum*aspect/2; this.camera.right=frustum*aspect/2;
+        this.camera.top=frustum/2; this.camera.bottom=-frustum/2;
+        this.camera.position.set(center.x-maxDim,center.y+maxDim,center.z+maxDim);
+        this.camera.lookAt(center); this.camera.updateProjectionMatrix();
+        this.controls.target.copy(center); this.controls.update();
+        this.cameraInitialized = true;
+    }
+}
+
+// ============================================================
+// APP CONTROLLER
+// ============================================================
+class App {
+    constructor() {
+        this.sim = null; // set after WASM ready
+        this.r2d = new Renderer2D(document.getElementById('main-canvas'));
+        this.r3d = null; // lazy init on first 3D toggle
+        this.activeTriangles = new Map();
+        this.isValid = false;
+        this.is3D = false;
+        this.glauberRunning = false;
+        this.cftpRunning = false;
+        this.drawMode = null; // null | 'add' | 'erase'
+        this.currentPreset = 'penrose';
+        this.penholePenrose = false; // true when penrose hole was set up
+
+        // Touch draw state
+        this.touchDrawing = false;
+        this.lastDrawnKey = null;
+
+        // Pan/zoom state
+        this.isPanning = false;
+        this.lastPanPos = null;
+        this.lastPinchDist = null;
+
+        this._setupUI();
+        this._setupCanvasEvents();
+        this._setupResize();
+    }
+
+    _setupUI() {
+        const isTouchDevice = 'ontouchstart' in window;
+
+        // Draw button (mobile only)
+        const drawBtn = document.getElementById('btn-draw');
+        if (isTouchDevice) {
+            drawBtn.style.display = '';
+            drawBtn.addEventListener('click', () => {
+                if (this.drawMode === 'add') {
+                    this.drawMode = 'erase';
+                    drawBtn.textContent = '🧹 Erase';
+                    drawBtn.classList.add('active');
+                } else if (this.drawMode === 'erase') {
+                    this.drawMode = null;
+                    drawBtn.textContent = '✏ Add';
+                    drawBtn.classList.remove('active');
+                } else {
+                    this.drawMode = 'add';
+                    drawBtn.textContent = '✏ Add';
+                    drawBtn.classList.add('active');
+                }
+            });
+        }
+
+        // Presets
+        document.getElementById('btn-penrose').addEventListener('click', () => this._loadPreset('penrose'));
+        document.getElementById('btn-cardioid').addEventListener('click', () => this._loadPreset('cardio'));
+        document.getElementById('btn-skull').addEventListener('click', () => this._loadPreset('skull'));
+        document.getElementById('btn-rotunda').addEventListener('click', () => this._loadPreset('Rotunda'));
+        document.getElementById('btn-hex').addEventListener('click', () => {
+            const a = parseInt(document.getElementById('hex-a').value) || 8;
+            const b = parseInt(document.getElementById('hex-b').value) || 8;
+            const c = parseInt(document.getElementById('hex-c').value) || 8;
+            this._loadHexagon(a, b, c);
+        });
+
+        // Actions
+        document.getElementById('btn-perfect').addEventListener('click', () => this._startCFTP());
+        document.getElementById('btn-chaos').addEventListener('click', () => {
+            if (this.glauberRunning) this._stopGlauber();
+            else this._startGlauber();
+        });
+
+        // View toggle
+        document.getElementById('btn-2d').addEventListener('click', () => this._setView('2d'));
+        document.getElementById('btn-3d').addEventListener('click', () => this._setView('3d'));
+    }
+
+    _setPresetActiveBtn(id) {
+        document.querySelectorAll('#row-presets button.preset-active').forEach(b => b.classList.remove('preset-active'));
+        const btn = document.getElementById(id);
+        if (btn) btn.classList.add('preset-active');
+    }
+
+    async _loadPreset(name) {
+        this._stopAll();
+        this._setPresetActiveBtn(
+            name === 'penrose' ? 'btn-penrose' :
+            name === 'cardio' ? 'btn-cardioid' :
+            name === 'skull' ? 'btn-skull' :
+            name === 'Rotunda' ? 'btn-rotunda' : null
+        );
+        this.currentPreset = name;
+        this.penholePenrose = (name === 'penrose');
+        this._showLoading(`Loading ${name}…`);
+        this.activeTriangles = await loadLetterTriangles(name);
+        await this._reinitialize(true);
+        this._hideLoading();
+    }
+
+    async _loadHexagon(a, b, c) {
+        this._stopAll();
+        this._setPresetActiveBtn(null);
+        document.getElementById('btn-hex').classList.add('preset-active');
+        this.currentPreset = 'hex';
+        this.penholePenrose = false;
+        this._showLoading(`Generating hex(${a},${b},${c})…`);
+        this.activeTriangles = generateHexagon(a, b, c);
+        await this._reinitialize(false);
+        this._hideLoading();
+    }
+
+    async _reinitialize(autoSample) {
+        if (!this.sim) return;
+        const result = this.sim.initFromTriangles(this.activeTriangles);
+        this.isValid = result.status === 'valid';
+        if (this.isValid && this.penholePenrose) {
+            this.sim.setupHoleHeight();
+        }
+        this.r2d.fitToRegion(this.activeTriangles);
+        if (this.r3d) this.r3d.cameraInitialized = false;
+        this._draw();
+
+        const dimerCount = this.sim.dimers.length;
+        if (autoSample && this.isValid) {
+            if (dimerCount < LARGE_DOMAIN_THRESHOLD) {
+                this._startCFTP();
+            } else {
+                this._startGlauber();
+            }
+        }
+    }
+
+    _startCFTP() {
+        if (!this.sim || !this.isValid) return;
+        this._stopAll();
+        const btn = document.getElementById('btn-perfect');
+        btn.textContent = 'Sampling…';
+        btn.disabled = true;
+        this.cftpRunning = true;
+
+        this.sim.initCFTP();
+        this._cftpLoop();
+    }
+
+    _cftpLoop() {
+        if (!this.cftpRunning) return;
+        const status = this.sim.stepCFTP();
+        if (status.status === 'coalesced') {
+            this.sim.finalizeCFTP();
+            this.cftpRunning = false;
+            const btn = document.getElementById('btn-perfect');
+            btn.textContent = 'Perfect Sample';
+            btn.disabled = false;
+            this._updateAfterSample();
+        } else {
+            const pct = status.progress ? Math.round(status.progress * 100) : '';
+            document.getElementById('btn-perfect').textContent = pct ? `Sampling ${pct}%` : 'Sampling…';
+            setTimeout(() => this._cftpLoop(), 0);
+        }
+    }
+
+    _startGlauber() {
+        if (!this.sim || !this.isValid) return;
+        this._stopCFTP();
+        this.glauberRunning = true;
+        this.sim.setQBias(1.0);
+        const btn = document.getElementById('btn-chaos');
+        btn.textContent = 'Stop ⏹';
+        btn.classList.remove('chaos-btn');
+        btn.classList.add('stop-btn');
+        this._glauberLoop();
+    }
+
+    _glauberLoop() {
+        if (!this.glauberRunning) return;
+        const steps = Math.max(100, Math.min(5000, this.sim.dimers.length * 2));
+        this.sim.step(steps);
+        this._draw();
+        requestAnimationFrame(() => this._glauberLoop());
+    }
+
+    _stopGlauber() {
+        this.glauberRunning = false;
+        const btn = document.getElementById('btn-chaos');
+        btn.textContent = 'Chaos ▶';
+        btn.classList.remove('stop-btn');
+        btn.classList.add('chaos-btn');
+    }
+
+    _stopCFTP() {
+        this.cftpRunning = false;
+        const btn = document.getElementById('btn-perfect');
+        btn.textContent = 'Perfect Sample';
+        btn.disabled = false;
+    }
+
+    _stopAll() {
+        this._stopGlauber();
+        this._stopCFTP();
+    }
+
+    _updateAfterSample() {
+        this._draw();
+        if (this.is3D && this.r3d) {
+            this.r3d.cameraInitialized = false;
+            this.r3d.dimersTo3D(this.sim.dimers);
+        }
+    }
+
+    _setView(mode) {
+        this.is3D = (mode === '3d');
+        document.getElementById('btn-2d').classList.toggle('active', !this.is3D);
+        document.getElementById('btn-3d').classList.toggle('active', this.is3D);
+        const canvas2d = document.getElementById('main-canvas');
+        const div3d = document.getElementById('three-container');
+        if (this.is3D) {
+            canvas2d.style.display = 'none';
+            div3d.classList.add('active');
+            if (!this.r3d) {
+                this.r3d = new Renderer3D(div3d);
+                this.r3d.startAnimation();
+                this.r3d.handleResize();
+            } else {
+                this.r3d.startAnimation();
+            }
+            if (this.sim && this.sim.dimers.length > 0) {
+                this.r3d.dimersTo3D(this.sim.dimers);
+            }
+        } else {
+            canvas2d.style.display = '';
+            div3d.classList.remove('active');
+            if (this.r3d) this.r3d.stopAnimation();
+            this._draw();
+        }
+    }
+
+    _draw() {
+        if (!this.is3D) {
+            this.r2d.draw(this.sim || { dimers: [], boundaries: [] }, this.activeTriangles, this.isValid);
+        } else if (this.r3d && this.sim && this.sim.dimers.length > 0) {
+            this.r3d.dimersTo3D(this.sim.dimers);
+        }
+    }
+
+    _setupCanvasEvents() {
+        const canvas = document.getElementById('main-canvas');
+
+        // Mouse wheel zoom
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const factor = e.deltaY < 0 ? 1.1 : 0.9;
+            const rect = canvas.getBoundingClientRect();
+            this.r2d.zoomAt(e.clientX - rect.left, e.clientY - rect.top, factor);
+            this._draw();
+        }, { passive: false });
+
+        // Mouse pan
+        canvas.addEventListener('mousedown', (e) => {
+            this.isPanning = true;
+            this.lastPanPos = { x: e.clientX, y: e.clientY };
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (!this.isPanning) return;
+            const dx = e.clientX - this.lastPanPos.x;
+            const dy = e.clientY - this.lastPanPos.y;
+            this.lastPanPos = { x: e.clientX, y: e.clientY };
+            this.r2d.pan(dx, dy);
+            this._draw();
+        });
+        window.addEventListener('mouseup', () => { this.isPanning = false; });
+
+        // Touch events
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 1) {
+                const t = e.touches[0];
+                if (this.drawMode !== null) {
+                    // Drawing mode: add/remove triangle
+                    this._handleDraw(t.clientX, t.clientY);
+                } else {
+                    this.isPanning = true;
+                    this.lastPanPos = { x: t.clientX, y: t.clientY };
+                    this.lastPinchDist = null;
+                }
+            } else if (e.touches.length === 2) {
+                this.isPanning = false;
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                this.lastPinchDist = Math.sqrt(dx*dx + dy*dy);
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (e.touches.length === 1) {
+                const t = e.touches[0];
+                if (this.drawMode !== null) {
+                    this._handleDraw(t.clientX, t.clientY);
+                } else if (this.isPanning) {
+                    const dx = t.clientX - this.lastPanPos.x;
+                    const dy = t.clientY - this.lastPanPos.y;
+                    this.lastPanPos = { x: t.clientX, y: t.clientY };
+                    this.r2d.pan(dx, dy);
+                    this._draw();
+                }
+            } else if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (this.lastPinchDist) {
+                    const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                    const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                    const rect = canvas.getBoundingClientRect();
+                    this.r2d.zoomAt(mx - rect.left, my - rect.top, dist / this.lastPinchDist);
+                    this._draw();
+                }
+                this.lastPinchDist = dist;
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (e.touches.length === 0) {
+                this.isPanning = false;
+                this.lastPinchDist = null;
+                this.lastDrawnKey = null;
+                if (this.drawMode !== null) this._finalizeDrawing();
+            }
+        }, { passive: false });
+    }
+
+    _handleDraw(clientX, clientY) {
+        if (!this.sim) return;
+        const canvas = document.getElementById('main-canvas');
+        const rect = canvas.getBoundingClientRect();
+        const wx = clientX - rect.left, wy = clientY - rect.top;
+        const world = this.r2d.screenToWorld(wx, wy);
+        const tri = this.r2d.worldToTriangle(world.x, world.y);
+        if (!tri) return;
+        const key = `${tri.n},${tri.j},${tri.type}`;
+        if (key === this.lastDrawnKey) return;
+        this.lastDrawnKey = key;
+
+        if (this.drawMode === 'add') {
+            this.activeTriangles.set(key, tri);
+        } else if (this.drawMode === 'erase') {
+            this.activeTriangles.delete(key);
+        }
+        this._draw();
+    }
+
+    _finalizeDrawing() {
+        if (!this.sim || this.activeTriangles.size === 0) return;
+        this._stopAll();
+        const result = this.sim.initFromTriangles(this.activeTriangles);
+        this.isValid = result.status === 'valid';
+        this.penholePenrose = false;
+        this._draw();
+    }
+
+    _setupResize() {
+        window.addEventListener('resize', () => {
+            // Update CSS variable for bar height
+            const bar = document.getElementById('controls');
+            document.body.style.setProperty('--bar-height', bar.offsetHeight + 'px');
+            this.r2d.setupCanvas();
+            this._draw();
+            if (this.r3d) this.r3d.handleResize();
+        });
+        // Initial set
+        setTimeout(() => {
+            const bar = document.getElementById('controls');
+            document.body.style.setProperty('--bar-height', bar.offsetHeight + 'px');
+            this.r2d.setupCanvas();
+        }, 0);
+    }
+
+    _showLoading(msg) {
+        document.getElementById('loading-text').textContent = msg || 'Loading…';
+        document.getElementById('loading-overlay').classList.remove('hidden');
+    }
+
+    _hideLoading() {
+        document.getElementById('loading-overlay').classList.add('hidden');
+    }
+
+    showStatus(msg, duration = 2500) {
+        const el = document.getElementById('status-bar');
+        el.textContent = msg;
+        el.classList.add('visible');
+        clearTimeout(this._statusTimer);
+        this._statusTimer = setTimeout(() => el.classList.remove('visible'), duration);
+    }
+
+    async init() {
+        this.sim = new DataArtSampler();
+
+        // Load penrose on startup
+        this._showLoading('Loading Penrose shape…');
+        this.activeTriangles = await loadLetterTriangles('penrose');
+        if (this.activeTriangles.size === 0) {
+            this._showLoading('Penrose load failed');
+            return;
+        }
+
+        const result = this.sim.initFromTriangles(this.activeTriangles);
+        this.isValid = result.status === 'valid';
+        this.penholePenrose = true;
+
+        if (this.isValid) {
+            this.sim.setupHoleHeight();
+        }
+
+        this.r2d.setupCanvas();
+        this.r2d.fitToRegion(this.activeTriangles);
+
+        // Set 3D as default view, then compute perfect sample
+        this._setView('3d');
+        document.getElementById('loading-text').textContent = 'Computing perfect sample…';
+
+        // Run CFTP
+        await this._runCFTPAsync();
+        this._hideLoading();
+
+        // Update 3D view with perfect sample
+        if (this.r3d && this.sim.dimers.length > 0) {
+            this.r3d.dimersTo3D(this.sim.dimers);
+        }
+    }
+
+    async _runCFTPAsync() {
+        return new Promise(resolve => {
+            this.sim.initCFTP();
+            const step = () => {
+                const status = this.sim.stepCFTP();
+                if (status.status === 'coalesced') {
+                    this.sim.finalizeCFTP();
+                    resolve();
+                } else {
+                    const pct = status.progress ? `${Math.round(status.progress * 100)}%` : '';
+                    document.getElementById('loading-text').textContent = `Computing perfect sample… ${pct}`;
+                    setTimeout(step, 0);
+                }
+            };
+            step();
+        });
+    }
+}
+
+// ============================================================
+// BOOTSTRAP - wait for WASM
+// ============================================================
+(function waitForWasm() {
+    if (typeof Module === 'undefined') { setTimeout(waitForWasm, 50); return; }
+    if (Module.calledRun || (Module.asm && Module._malloc)) {
+        new App().init();
+    } else {
+        const orig = Module.onRuntimeInitialized;
+        Module.onRuntimeInitialized = function() {
+            if (orig) orig();
+            new App().init();
+        };
+    }
+})();
+</script>
+</body>
+</html>
