@@ -109,9 +109,9 @@ data-art/triangle/
 - Create: `data-art/triangle/js/phases.js`
 - Create: `data-art/triangle/js/main.js`
 
-- [ ] Extract phases.js: all phase-specific logic (flying cubes creation/physics/animation, assembly convergence, annealing with MCMC, frozen camera orbit with 2 rotations, text screen line-by-line reveal) — expose as `window.TrianglePhases`
-- [ ] Extract main.js: state machine, render loop (requestAnimationFrame with dt clamping), click handlers, Three.js scene/renderer/camera/controls initialization and disposal, phase transition orchestration, auto-restart timer
-- [ ] Verify the full animation pipeline works: hook screen click -> loading -> flying cubes -> assembly -> annealing -> frozen orbit -> text screen -> auto-restart
+- [x] Extract phases.js: all phase-specific logic (flying cubes creation/physics/animation, assembly convergence, annealing with MCMC, frozen camera orbit with 2 rotations, text screen line-by-line reveal) — expose as `window.TrianglePhases`
+- [x] Extract main.js: state machine, render loop (requestAnimationFrame with dt clamping), click handlers, Three.js scene/renderer/camera/controls initialization and disposal, phase transition orchestration, auto-restart timer
+- [x] Verify the full animation pipeline works: hook screen click -> loading -> flying cubes -> assembly -> annealing -> frozen orbit -> text screen -> auto-restart
 
 ### Task 6: Visual verification and cleanup
 
