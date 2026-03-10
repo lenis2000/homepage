@@ -236,8 +236,11 @@ nav_weight: 19
 
 @media (max-width: 767px) {
   .handdrawn-hex-figure {
-    max-width: 140px;
-    margin: 0 0 0.5rem 1rem;
+    max-width: 110px;
+    margin: 0 0 0.25rem 0.75rem;
+  }
+  .handdrawn-hex-figure figcaption {
+    display: none;
   }
   /* Show featured cards on mobile on simulations page */
   .container > .featured-simulations {
