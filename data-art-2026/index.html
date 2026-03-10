@@ -1203,6 +1203,7 @@ class App {
     async _glauberLoop() {
         if (!this.glauberRunning) return;
         const n = Math.max(1, this.sim.dimers.length);
+        // 1 sweep per 100ms tick = ~10 sweeps/sec
         if (this.useWebGPU && this.gpuEngine && this.gpuEngine.isInitialized()) {
             try {
                 await this.gpuEngine.step(1, 1.0);
@@ -1217,7 +1218,7 @@ class App {
             this.sim.randomStep(n);
         }
         this._draw();
-        if (this.glauberRunning) setTimeout(() => this._glauberLoop(), 250);
+        if (this.glauberRunning) setTimeout(() => this._glauberLoop(), 100);
     }
 
     _stopGlauber() {
@@ -1384,6 +1385,8 @@ class App {
         if (!this.sim) return;
         const canvas = document.getElementById('main-canvas');
         const rect = canvas.getBoundingClientRect();
+        // Ignore clicks outside canvas bounds (e.g. control bar area)
+        if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return;
         const wx = clientX - rect.left, wy = clientY - rect.top;
         const world = this.r2d.screenToWorld(wx, wy);
         const tri = this.r2d.worldToTriangle(world.x, world.y);
@@ -1409,7 +1412,13 @@ class App {
         const result = this.sim.initFromTriangles(this.activeTriangles);
         this.isValid = result.status === 'valid';
         this.penholePenrose = false;
-        if (this.isValid) this._syncGPU();
+        if (this.isValid) {
+            this._syncGPU();
+        } else if (this.drawMode !== null) {
+            // Show triangle count while drawing to help diagnose validity
+            const b = result.blackCount || 0, w = result.whiteCount || 0;
+            this.showStatus(`${b}▲ ${w}△ ${b === w ? '— tileable count' : '— unequal'}`, 1500);
+        }
         this._draw();
     }
 
