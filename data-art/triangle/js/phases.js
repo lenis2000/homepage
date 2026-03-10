@@ -354,7 +354,7 @@
             }
 
             // Gentle central gravity — prevents void in the middle
-            var GRAVITY_STRENGTH = 0.3;
+            var GRAVITY_STRENGTH = 0.8;
             for (var i = 0; i < n; i++) {
                 if (!this.cubeFlying || !this.cubeFlying[i]) continue;
                 var cx = pos[i * 2], cy = pos[i * 2 + 1];
