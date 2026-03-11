@@ -202,34 +202,37 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- fzf-style fuzzy subsequence search ---
 
     function fzfScore(pattern, text) {
-        // Returns 0 if pattern is not a subsequence of text, positive score otherwise.
-        // Bonuses: consecutive chars, word-boundary matches, case matches.
+        // Subsequence match with tight-span requirement (catches typos, not scattered chars).
         var pLow = pattern.toLowerCase();
         var tLow = text.toLowerCase();
         var pLen = pLow.length, tLen = tLow.length;
         if (pLen === 0) return 1;
         if (pLen > tLen) return 0;
 
-        // Quick reject: check all pattern chars exist as subsequence
-        for (var qp = 0, qt = 0; qp < pLen; qt++) {
-            if (qt >= tLen) return 0;
-            if (pLow[qp] === tLow[qt]) qp++;
+        // Find first greedy subsequence match positions
+        var positions = [];
+        for (var pi = 0, ti = 0; pi < pLen && ti < tLen; ti++) {
+            if (pLow[pi] === tLow[ti]) { positions.push(ti); pi++; }
         }
+        if (positions.length < pLen) return 0;
 
-        // Score with greedy forward match + bonuses
-        var score = 0, consecutive = 0, pi = 0;
-        for (var ti = 0; ti < tLen && pi < pLen; ti++) {
-            if (pLow[pi] === tLow[ti]) {
-                score += 1 + consecutive;
+        // Reject if match span is too wide (not a typo — just scattered chars)
+        var span = positions[positions.length - 1] - positions[0] + 1;
+        if (span > pLen * 2) return 0;
+
+        // Score based on consecutive chars and word boundaries
+        var score = 0, consecutive = 0;
+        for (var i = 0; i < positions.length; i++) {
+            var pos = positions[i];
+            score += 1;
+            if (i > 0 && positions[i] === positions[i - 1] + 1) {
                 consecutive++;
-                // Word boundary bonus
-                if (ti === 0 || ' -_.,;:('.indexOf(text[ti - 1]) >= 0) score += 5;
-                // Exact case bonus
-                if (pattern[pi] === text[ti]) score += 1;
-                pi++;
+                score += consecutive;
             } else {
                 consecutive = 0;
             }
+            if (pos === 0 || ' -_.,;:('.indexOf(text[pos - 1]) >= 0) score += 5;
+            if (pattern[i] === text[pos]) score += 1;
         }
         return score;
     }
@@ -248,17 +251,17 @@ document.addEventListener('DOMContentLoaded', function() {
         for (var i = 0; i < tokens.length; i++) {
             var token = tokens[i];
 
-            // 1) Substring match in short fields (highest score)
+            // 1) Substring match in title/authors/id (highest score)
             var subIdx = shortLower.indexOf(token);
             if (subIdx !== -1) {
-                total += 10 + token.length;
-                if (subIdx === 0 || ' -_.,;:('.indexOf(shortText[subIdx - 1]) >= 0) total += 5;
+                total += 20 + token.length * 2;
+                if (subIdx === 0 || ' -_.,;:('.indexOf(shortText[subIdx - 1]) >= 0) total += 10;
                 continue;
             }
 
-            // 2) Substring match in abstract (medium score)
+            // 2) Substring match in abstract (low score — still matches but ranks below)
             if (longLower.indexOf(token) !== -1) {
-                total += 5 + token.length;
+                total += 3;
                 continue;
             }
 
