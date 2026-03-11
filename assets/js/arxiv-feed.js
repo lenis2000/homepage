@@ -530,6 +530,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         for (var i = renderedCount; i < target; i++) {
             var entry = orderedPapers[displayList[i]];
+            if (topMatchIds[entry.id]) continue;
             if (entry.month !== prevMonth) {
                 var monthEl = monthMap[entry.month];
                 if (monthEl) fragment.appendChild(monthEl);
@@ -537,7 +538,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             var paperEl = paperMap[entry.id];
             if (paperEl) {
-                paperEl.classList.toggle('arxiv-top-match', !!topMatchIds[entry.id]);
+                paperEl.classList.remove('arxiv-top-match');
                 fragment.appendChild(paperEl);
             }
         }
@@ -566,7 +567,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!paper) continue;
             var clone = paper.cloneNode(true);
             clone.classList.add('arxiv-top-match');
-            clone.removeAttribute('data-id');
+            clone.dataset.clone = '1';
 
             // Texify if not yet done on original
             if (window.renderMathInElement) {
@@ -598,7 +599,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         var divider = document.createElement('li');
         divider.className = 'arxiv-all-header';
-        divider.innerHTML = '<h2>All results</h2>';
+        divider.innerHTML = '<h2>Other results</h2>';
         listEl.appendChild(divider);
     }
 
