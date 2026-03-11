@@ -208,6 +208,27 @@ nav_weight: 21
     background-color: #fff3cd;
     color: #000;
     padding: 0 1px;
+    border-radius: 2px;
+  }
+  .arxiv-list li.arxiv-top-match {
+    background-color: rgba(229, 114, 0, 0.10) !important;
+    border-left: 3px solid #e57200;
+  }
+  .arxiv-top-header, .arxiv-all-header {
+    padding: 0.6em 6px 0.2em;
+    margin-top: 0.3em;
+    list-style: none;
+  }
+  .arxiv-top-header h2 {
+    margin: 0; font-size: 1em; font-weight: 700;
+    color: #e57200; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .arxiv-all-header {
+    border-top: 1px solid #ccc; margin-top: 0.8em; padding-top: 0.6em;
+  }
+  .arxiv-all-header h2 {
+    margin: 0; font-size: 1em; font-weight: 700;
+    color: #555; text-transform: uppercase; letter-spacing: 0.05em;
   }
   /* Filter bar buttons – shared sizing */
   .arxiv-dropdown-btn, #arxiv-cat-toggle {
@@ -365,6 +386,11 @@ nav_weight: 21
   [data-theme="dark"] .arxiv-related-title { color: var(--link-color); }
   [data-theme="dark"] .arxiv-related-authors { color: var(--text-primary); }
   [data-theme="dark"] .arxiv-related-abstract { color: var(--text-secondary, #aaa); }
+  [data-theme="dark"] .arxiv-list .search-highlight { background-color: rgba(229, 114, 0, 0.35); color: #fff; }
+  [data-theme="dark"] .arxiv-list li.arxiv-top-match { background-color: rgba(229, 114, 0, 0.15) !important; border-left-color: #f59e0b; }
+  [data-theme="dark"] .arxiv-top-header h2 { color: #f59e0b; }
+  [data-theme="dark"] .arxiv-all-header { border-top-color: var(--border-color); }
+  [data-theme="dark"] .arxiv-all-header h2 { color: var(--text-secondary, #999); }
   /* Back to top button — mobile only */
   .arxiv-back-top {
     display: none;

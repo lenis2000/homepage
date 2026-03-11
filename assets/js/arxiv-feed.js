@@ -234,23 +234,49 @@ document.addEventListener('DOMContentLoaded', function() {
         return score;
     }
 
-    function fzfMatch(query, text) {
+    function fzfMatch(query, shortText, longText) {
         // Split query into tokens, all must match (AND, any order).
-        var tokens = query.trim().toLowerCase().split(/\s+/);
+        // shortText = id + title + authors (used for both substring and subsequence)
+        // longText = abstract (substring only — subsequence too permissive on long text)
+        var tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+        if (!tokens.length) return 1;
+
+        var shortLower = shortText.toLowerCase();
+        var longLower = longText ? longText.toLowerCase() : '';
         var total = 0;
+
         for (var i = 0; i < tokens.length; i++) {
-            if (!tokens[i]) continue;
-            var s = fzfScore(tokens[i], text);
+            var token = tokens[i];
+
+            // 1) Substring match in short fields (highest score)
+            var subIdx = shortLower.indexOf(token);
+            if (subIdx !== -1) {
+                total += 10 + token.length;
+                if (subIdx === 0 || ' -_.,;:('.indexOf(shortText[subIdx - 1]) >= 0) total += 5;
+                continue;
+            }
+
+            // 2) Substring match in abstract (medium score)
+            if (longLower.indexOf(token) !== -1) {
+                total += 5 + token.length;
+                continue;
+            }
+
+            // 3) Fuzzy subsequence only on short fields (catches typos)
+            var s = fzfScore(token, shortText);
             if (s === 0) return 0;
             total += s;
         }
-        return total || 1;
+        return total;
     }
 
     // Display state
     var displayList = [];
     var renderedCount = 0;
     var totalMatches = 0;
+    var topMatchIds = {}; // top-scoring fuzzy matches to highlight
+    var topMatchList = []; // ordered array of top match IDs (by score desc)
+    var highlightedPaperIds = []; // papers with <mark> tags to clean up
 
     // Show all papers initially
     resetDisplayList();
@@ -385,10 +411,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!matchesDateFilter(dateStr)) return;
 
             if (term) {
-                var haystack = searchIndex
-                    ? (entry.id + ' ' + entry.t + ' ' + entry.a + ' ' + (entry.s || ''))
+                var shortH = searchIndex
+                    ? (entry.id + ' ' + entry.t + ' ' + entry.a)
                     : entry.search;
-                if (fzfMatch(term, haystack) === 0) return;
+                var longH = searchIndex ? (entry.s || '') : '';
+                if (fzfMatch(term, shortH, longH) === 0) return;
             }
 
             totalAll++;
@@ -506,21 +533,181 @@ document.addEventListener('DOMContentLoaded', function() {
                 prevMonth = entry.month;
             }
             var paperEl = paperMap[entry.id];
-            if (paperEl) fragment.appendChild(paperEl);
+            if (paperEl) {
+                paperEl.classList.toggle('arxiv-top-match', !!topMatchIds[entry.id]);
+                fragment.appendChild(paperEl);
+            }
         }
 
         listEl.appendChild(fragment);
         renderedCount = target;
         texifyBatch(batchStart, target);
+        highlightBatch(batchStart, target);
+    }
+
+    // --- Top matches section ---
+
+    function renderTopMatches() {
+        if (!topMatchList.length) return;
+
+        var header = document.createElement('li');
+        header.className = 'arxiv-top-header';
+        header.innerHTML = '<h2>Top results</h2>';
+        listEl.appendChild(header);
+
+        var term = searchInput.value.trim();
+        var tokens = term.toLowerCase().split(/\s+/).filter(Boolean);
+
+        for (var i = 0; i < topMatchList.length; i++) {
+            var paper = paperMap[topMatchList[i]];
+            if (!paper) continue;
+            var clone = paper.cloneNode(true);
+            clone.classList.add('arxiv-top-match');
+            clone.removeAttribute('data-id');
+
+            // Texify if not yet done on original
+            if (window.renderMathInElement) {
+                var em = clone.querySelector('.arxiv-body em');
+                if (em && !em.dataset.texified) {
+                    var raw = em.textContent;
+                    var processed = texifyTitle(raw);
+                    if (processed !== raw) {
+                        em.textContent = processed;
+                        renderMathInElement(em, {
+                            delimiters: [{left: '$', right: '$', display: false}],
+                            throwOnError: false,
+                        });
+                    }
+                    em.dataset.texified = '1';
+                }
+            }
+
+            // Highlight matched words in clone
+            if (tokens.length) {
+                var cb = clone.querySelector('.arxiv-body b');
+                var cem = clone.querySelector('.arxiv-body em');
+                if (cb) highlightInElement(cb, tokens);
+                if (cem) highlightInElement(cem, tokens);
+            }
+
+            listEl.appendChild(clone);
+        }
+
+        var divider = document.createElement('li');
+        divider.className = 'arxiv-all-header';
+        divider.innerHTML = '<h2>All results</h2>';
+        listEl.appendChild(divider);
+    }
+
+    // --- Word highlighting ---
+
+    function stripMarks() {
+        highlightedPaperIds.forEach(function(id) {
+            var el = paperMap[id];
+            if (!el) return;
+            var marks = el.querySelectorAll('mark.search-highlight');
+            for (var mi = 0; mi < marks.length; mi++) {
+                var m = marks[mi];
+                m.parentNode.replaceChild(document.createTextNode(m.textContent), m);
+            }
+            if (marks.length) {
+                var b = el.querySelector('.arxiv-body b');
+                var em = el.querySelector('.arxiv-body em');
+                if (b) b.normalize();
+                if (em) em.normalize();
+            }
+        });
+        highlightedPaperIds = [];
+    }
+
+    function highlightBatch(from, to) {
+        var term = searchInput.value.trim();
+        if (!term) return;
+        var tokens = term.toLowerCase().split(/\s+/).filter(Boolean);
+        if (!tokens.length) return;
+
+        for (var k = from; k < to; k++) {
+            var pid = orderedPapers[displayList[k]].id;
+            var el = paperMap[pid];
+            if (!el) continue;
+            var b = el.querySelector('.arxiv-body b');
+            var em = el.querySelector('.arxiv-body em');
+            var changed = false;
+            if (b) changed = highlightInElement(b, tokens) || changed;
+            if (em) changed = highlightInElement(em, tokens) || changed;
+            if (changed) highlightedPaperIds.push(pid);
+        }
+    }
+
+    function highlightInElement(el, tokens) {
+        var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+            acceptNode: function(node) {
+                if (node.parentNode.closest && node.parentNode.closest('.katex'))
+                    return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        });
+        var textNodes = [];
+        var node;
+        while (node = walker.nextNode()) textNodes.push(node);
+
+        var any = false;
+        for (var i = textNodes.length - 1; i >= 0; i--) {
+            if (highlightTextNode(textNodes[i], tokens)) any = true;
+        }
+        return any;
+    }
+
+    function highlightTextNode(textNode, tokens) {
+        var text = textNode.textContent;
+        var lower = text.toLowerCase();
+        var marks = [];
+
+        tokens.forEach(function(token) {
+            var idx = lower.indexOf(token);
+            while (idx !== -1) {
+                marks.push({ start: idx, end: idx + token.length });
+                idx = lower.indexOf(token, idx + 1);
+            }
+        });
+        if (!marks.length) return false;
+
+        marks.sort(function(a, b) { return a.start - b.start; });
+        var merged = [{ start: marks[0].start, end: marks[0].end }];
+        for (var i = 1; i < marks.length; i++) {
+            var last = merged[merged.length - 1];
+            if (marks[i].start <= last.end) {
+                last.end = Math.max(last.end, marks[i].end);
+            } else {
+                merged.push({ start: marks[i].start, end: marks[i].end });
+            }
+        }
+
+        var frag = document.createDocumentFragment();
+        var pos = 0;
+        merged.forEach(function(m) {
+            if (m.start > pos) frag.appendChild(document.createTextNode(text.slice(pos, m.start)));
+            var mark = document.createElement('mark');
+            mark.className = 'search-highlight';
+            mark.textContent = text.slice(m.start, m.end);
+            frag.appendChild(mark);
+            pos = m.end;
+        });
+        if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
+        textNode.parentNode.replaceChild(frag, textNode);
+        return true;
     }
 
     // --- Filtering ---
 
     function applyFilter() {
+        stripMarks();
         var term = searchInput.value.trim();
 
         // Fast path: no filters active
         if (!term && activeCategory === 'all' && activeDateFilter === 'all') {
+            topMatchIds = {};
+            topMatchList = [];
             resetDisplayList();
         } else if (searchIndex) {
             displayList = [];
@@ -532,8 +719,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!matchesDateFilter(entry.d)) return;
 
                 if (term) {
-                    var haystack = entry.id + ' ' + entry.t + ' ' + entry.a + ' ' + (entry.s || '');
-                    var s = fzfMatch(term, haystack);
+                    var shortHay = entry.id + ' ' + entry.t + ' ' + entry.a;
+                    var s = fzfMatch(term, shortHay, entry.s || '');
                     if (s === 0) return;
                     scores[entry.id] = s;
                 }
@@ -541,11 +728,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 var idx = idToIndex[entry.id];
                 if (idx !== undefined) displayList.push(idx);
             });
-            // Sort by relevance when searching
+            // Find top 5 matches by score
+            topMatchIds = {};
+            topMatchList = [];
             if (term) {
-                displayList.sort(function(a, b) {
-                    return (scores[orderedPapers[b].id] || 0) - (scores[orderedPapers[a].id] || 0);
-                });
+                var scored = displayList.map(function(idx) {
+                    return { idx: idx, s: scores[orderedPapers[idx].id] || 0 };
+                }).sort(function(a, b) { return b.s - a.s; });
+                for (var ti = 0; ti < Math.min(5, scored.length); ti++) {
+                    var tid = orderedPapers[scored[ti].idx].id;
+                    topMatchIds[tid] = true;
+                    topMatchList.push(tid);
+                }
             }
             totalMatches = displayList.length;
         } else {
@@ -558,21 +752,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!matchesDateFilter(p.date)) return;
 
                 if (term) {
-                    var s = fzfMatch(term, p.search);
+                    var s = fzfMatch(term, p.search, '');
                     if (s === 0) return;
                     scores2[p.id] = s;
                 }
                 displayList.push(idx);
             });
+            topMatchIds = {};
+            topMatchList = [];
             if (term) {
-                displayList.sort(function(a, b) {
-                    return (scores2[orderedPapers[b].id] || 0) - (scores2[orderedPapers[a].id] || 0);
-                });
+                var scored2 = displayList.map(function(idx) {
+                    return { idx: idx, s: scores2[orderedPapers[idx].id] || 0 };
+                }).sort(function(a, b) { return b.s - a.s; });
+                for (var ti2 = 0; ti2 < Math.min(5, scored2.length); ti2++) {
+                    var tid2 = orderedPapers[scored2[ti2].idx].id;
+                    topMatchIds[tid2] = true;
+                    topMatchList.push(tid2);
+                }
             }
             totalMatches = displayList.length;
         }
 
         clearRendered();
+        renderTopMatches();
         renderBatch(INITIAL_BATCH);
 
         // No results
