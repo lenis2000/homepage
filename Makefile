@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add
 
 serve:
 	bundle exec jekyll serve 
@@ -150,11 +150,14 @@ arxiv-scan: arxiv-venv
 arxiv-scan-import:
 	python3 _scripts/arxiv/scan_full_arxiv.py --import-accepted
 
+arxiv-add: arxiv-venv
+	@_scripts/arxiv/venv/bin/python _scripts/arxiv/add_paper.py $(or $(ID),$(filter-out $@,$(MAKECMDGOALS)))
+
 arxiv-delete:
 	@python3 _scripts/arxiv/delete_paper.py $(or $(ID),$(filter-out $@,$(MAKECMDGOALS)))
 
-# Swallow extra positional args passed to arxiv-delete (URLs, bare IDs)
-ifneq ($(filter arxiv-delete,$(MAKECMDGOALS)),)
+# Swallow extra positional args passed to arxiv-delete and arxiv-add (URLs, bare IDs)
+ifneq ($(filter arxiv-delete arxiv-add,$(MAKECMDGOALS)),)
 %:
 	@:
 endif

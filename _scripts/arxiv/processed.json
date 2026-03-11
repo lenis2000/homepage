@@ -47469,6 +47469,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "2505.15726": {
+    "date": "2025-05-21",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "2505.15871": {
     "date": "2025-05-21",
     "decision": "REJECT",
