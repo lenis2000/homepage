@@ -43,6 +43,39 @@ EPRINT_URL = "https://export.arxiv.org/e-print/{}"
 PDF_URL = "https://arxiv.org/pdf/{}"
 
 
+def _guess_filename(data: bytes) -> str:
+    """Guess a filename from file content magic bytes."""
+    # PDF (including with leading BOM or whitespace)
+    if data[:5] == b"%PDF-" or b"%PDF-" in data[:20]:
+        return "main.pdf"
+    # PostScript (sometimes preceded by arXiv comment headers)
+    if data[:10] == b"%!PS-Adobe" or b"\n%!PS-Adobe" in data[:500]:
+        return "main.ps"
+    # DVI
+    if data[:2] == b"\xf7\x02":
+        return "main.dvi"
+    # Word .doc (OLE2 Compound Document)
+    if data[:8] == b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1":
+        return "main.doc"
+    # ZIP-based formats (docx, odt, etc.)
+    if data[:2] == b"PK":
+        if b"word/" in data[:2000]:
+            return "main.docx"
+        return "source.zip"
+    # HTML
+    if b"<html" in data[:500].lower() or b"<!doctype html" in data[:500].lower():
+        return "main.html"
+    # TeX/LaTeX detection: check for common commands in first 10KB
+    head = data[:10000]
+    tex_markers = (b"\\documentclass", b"\\documentstyle", b"\\begin{document}",
+                   b"\\input", b"\\magnification", b"\\hoffset", b"\\voffset",
+                   b"\\def\\", b"\\font\\", b"\\baselineskip", b"\\hsize",
+                   b"\\catcode", b"\\tolerance")
+    if any(m in head for m in tex_markers):
+        return "main.tex"
+    return "source.raw"
+
+
 def load_manifest() -> dict:
     if MANIFEST_FILE.exists():
         return json.loads(MANIFEST_FILE.read_text())
@@ -140,21 +173,13 @@ def download_and_unpack(arxiv_id: str, dest_dir: Path) -> bool:
     # Plain gzip (single-file submission)
     try:
         decompressed = gzip.decompress(data)
-        if decompressed[:5] == b"%PDF-":
-            (dest_dir / "main.pdf").write_bytes(decompressed)
-        else:
-            (dest_dir / "main.tex").write_bytes(decompressed)
+        (dest_dir / _guess_filename(decompressed)).write_bytes(decompressed)
         return True
     except gzip.BadGzipFile:
         pass
 
     # Raw file
-    if data[:5] == b"%PDF-":
-        (dest_dir / "main.pdf").write_bytes(data)
-    elif b"\\documentclass" in data[:2000] or b"\\begin{document}" in data[:5000]:
-        (dest_dir / "main.tex").write_bytes(data)
-    else:
-        (dest_dir / "source.raw").write_bytes(data)
+    (dest_dir / _guess_filename(data)).write_bytes(data)
     return True
 
 
@@ -184,10 +209,37 @@ def main():
                         help="Max papers to process (0=all)")
     parser.add_argument("--redownload", action="store_true",
                         help="Re-download already downloaded papers")
+    parser.add_argument("--fix-extensions", action="store_true",
+                        help="Rename mis-detected files (e.g. PS saved as .tex)")
     args = parser.parse_args()
 
     all_ids = get_all_arxiv_ids()
     manifest = load_manifest()
+
+    # Fix-extensions mode: rename mis-detected files in existing source dirs
+    if args.fix_extensions:
+        fixed = 0
+        checked = 0
+        for d in sorted(SOURCES_DIR.iterdir()):
+            if not d.is_dir():
+                continue
+            for candidate in ("main.tex", "main.pdf", "source.raw"):
+                f = d / candidate
+                if not f.exists():
+                    continue
+                data = f.read_bytes()
+                correct = _guess_filename(data)
+                if correct != candidate:
+                    target = d / correct
+                    if args.dry_run:
+                        print(f"  would rename: {d.name}/{candidate} -> {correct}")
+                    else:
+                        f.rename(target)
+                        print(f"  {d.name}/{candidate} -> {correct}")
+                    fixed += 1
+            checked += 1
+        print(f"Checked {checked} dirs, {'would fix' if args.dry_run else 'fixed'} {fixed} files")
+        return
 
     # Upload-only mode
     if args.upload_only:
