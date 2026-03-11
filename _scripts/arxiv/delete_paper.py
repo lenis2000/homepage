@@ -28,6 +28,7 @@ POSTS_DIR = REPO_ROOT / "_arxiv"
 PROCESSED_FILE = SCRIPT_DIR / "processed.json"
 INDEX_FILE = REPO_ROOT / "assets" / "data" / "arxiv-index.json"
 VECTORS_FILE = REPO_ROOT / "assets" / "data" / "arxiv-vectors.npy"
+SOURCES_DIR = SCRIPT_DIR / "sources"
 
 
 def parse_arxiv_id(raw):
@@ -51,13 +52,13 @@ def find_post(arxiv_id):
     return matches[0] if matches else None
 
 
-def remove_from_processed(arxiv_id):
-    """Remove entry from processed.json."""
+def mark_deleted_in_processed(arxiv_id):
+    """Mark as deleted in processed.json so it won't be re-imported."""
     if not PROCESSED_FILE.exists():
         return False
     data = json.loads(PROCESSED_FILE.read_text())
     if arxiv_id in data:
-        del data[arxiv_id]
+        data[arxiv_id]["deleted"] = True
         PROCESSED_FILE.write_text(json.dumps(data, indent=2, sort_keys=True))
         return True
     return False
@@ -124,9 +125,9 @@ def main():
         print(f"  No post found for {arxiv_id}")
         sys.exit(1)
 
-    # 2. Remove from processed.json
-    if remove_from_processed(arxiv_id):
-        print(f"  Removed from processed.json")
+    # 2. Mark deleted in processed.json (keeps entry so scan won't re-import)
+    if mark_deleted_in_processed(arxiv_id):
+        print(f"  Marked deleted in processed.json")
 
     # 3. Remove from search index
     if remove_from_index(arxiv_id):
@@ -137,7 +138,15 @@ def main():
     if n:
         print(f"  Removed from related-papers in {n} other posts")
 
-    # 5. Invalidate vectors (out of sync now)
+    # 5. Remove downloaded sources
+    safe_id = arxiv_id.replace("/", "-")
+    src_dir = SOURCES_DIR / safe_id
+    if src_dir.is_dir():
+        import shutil
+        shutil.rmtree(src_dir)
+        print(f"  Removed downloaded sources: {safe_id}")
+
+    # 6. Invalidate vectors (out of sync now)
     if remove_from_vectors(arxiv_id):
         print(f"  Removed stale arxiv-vectors.npy (run 'make arxiv-related' to rebuild)")
 

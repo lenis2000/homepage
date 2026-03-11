@@ -40,6 +40,7 @@ OUR_S3_PREFIX = "arxiv-sources"
 
 RATE_LIMIT_SECONDS = 3
 EPRINT_URL = "https://export.arxiv.org/e-print/{}"
+PDF_URL = "https://arxiv.org/pdf/{}"
 
 
 def load_manifest() -> dict:
@@ -91,6 +92,22 @@ def is_uploaded(arxiv_id: str, manifest: dict) -> bool:
     return manifest.get(arxiv_id, {}).get("uploaded", False)
 
 
+def download_pdf(arxiv_id: str, dest_dir: Path) -> bool:
+    """Download PDF when source is not public."""
+    url = PDF_URL.format(arxiv_id)
+    req = urllib.request.Request(url)
+    req.add_header("User-Agent", "lpetrov-arxiv-sources/1.0 (academic research)")
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = resp.read()
+    except urllib.error.HTTPError:
+        return False
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    (dest_dir / "main.pdf").write_bytes(data)
+    (dest_dir / ".pdf-only").write_text("source not public, pdf downloaded\n")
+    return True
+
+
 def download_and_unpack(arxiv_id: str, dest_dir: Path) -> bool:
     """Download source from arXiv and unpack into dest_dir."""
     url = EPRINT_URL.format(arxiv_id)
@@ -104,8 +121,8 @@ def download_and_unpack(arxiv_id: str, dest_dir: Path) -> bool:
         if e.code == 404:
             return False
         if e.code == 403:
-            # Source not public (author's choice) — not retryable
-            return False
+            # Source not public — fall back to PDF
+            return download_pdf(arxiv_id, dest_dir)
         raise
 
     dest_dir.mkdir(parents=True, exist_ok=True)

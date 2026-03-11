@@ -57832,6 +57832,7 @@
   "math/0301299": {
     "date": "2003-01-26",
     "decision": "ACCEPT",
+    "deleted": true,
     "source": "fetch"
   },
   "math/0302033": {
@@ -57962,6 +57963,7 @@
   "math/0304275": {
     "date": "2003-04-19",
     "decision": "ACCEPT",
+    "deleted": true,
     "source": "fetch"
   },
   "math/0304282": {
