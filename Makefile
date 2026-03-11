@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-sources
 
 serve:
 	bundle exec jekyll serve 
@@ -161,6 +161,12 @@ ifneq ($(filter arxiv-delete arxiv-add,$(MAKECMDGOALS)),)
 %:
 	@:
 endif
+
+arxiv-sources:
+	@python3 _scripts/arxiv/download_sources.py $(ARGS)
+
+arxiv-sources-upload:
+	@python3 _scripts/arxiv/download_sources.py --upload-only $(ARGS)
 
 arxiv-related: arxiv-venv
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/build_arxiv_embeddings.py
