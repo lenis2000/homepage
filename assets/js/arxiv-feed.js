@@ -199,6 +199,54 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // --- fzf-style fuzzy subsequence search ---
+
+    function fzfScore(pattern, text) {
+        // Returns 0 if pattern is not a subsequence of text, positive score otherwise.
+        // Bonuses: consecutive chars, word-boundary matches, case matches.
+        var pLow = pattern.toLowerCase();
+        var tLow = text.toLowerCase();
+        var pLen = pLow.length, tLen = tLow.length;
+        if (pLen === 0) return 1;
+        if (pLen > tLen) return 0;
+
+        // Quick reject: check all pattern chars exist as subsequence
+        for (var qp = 0, qt = 0; qp < pLen; qt++) {
+            if (qt >= tLen) return 0;
+            if (pLow[qp] === tLow[qt]) qp++;
+        }
+
+        // Score with greedy forward match + bonuses
+        var score = 0, consecutive = 0, pi = 0;
+        for (var ti = 0; ti < tLen && pi < pLen; ti++) {
+            if (pLow[pi] === tLow[ti]) {
+                score += 1 + consecutive;
+                consecutive++;
+                // Word boundary bonus
+                if (ti === 0 || ' -_.,;:('.indexOf(text[ti - 1]) >= 0) score += 5;
+                // Exact case bonus
+                if (pattern[pi] === text[ti]) score += 1;
+                pi++;
+            } else {
+                consecutive = 0;
+            }
+        }
+        return score;
+    }
+
+    function fzfMatch(query, text) {
+        // Split query into tokens, all must match (AND, any order).
+        var tokens = query.trim().toLowerCase().split(/\s+/);
+        var total = 0;
+        for (var i = 0; i < tokens.length; i++) {
+            if (!tokens[i]) continue;
+            var s = fzfScore(tokens[i], text);
+            if (s === 0) return 0;
+            total += s;
+        }
+        return total || 1;
+    }
+
     // Display state
     var displayList = [];
     var renderedCount = 0;
@@ -327,9 +375,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Recount categories for papers matching current search + date (ignoring category filter)
     function recomputeCatCounts() {
-        var term = searchInput.value;
-        var termLower = term.toLowerCase();
-        var isCase = term !== termLower;
+        var term = searchInput.value.trim();
         var counts = {};
         var totalAll = 0;
 
@@ -342,8 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 var haystack = searchIndex
                     ? (entry.id + ' ' + entry.t + ' ' + entry.a + ' ' + (entry.s || ''))
                     : entry.search;
-                var matched = isCase ? haystack.indexOf(term) !== -1 : haystack.toLowerCase().indexOf(termLower) !== -1;
-                if (!matched) return;
+                if (fzfMatch(term, haystack) === 0) return;
             }
 
             totalAll++;
@@ -472,15 +517,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Filtering ---
 
     function applyFilter() {
-        var term = searchInput.value;
-        var termLower = term.toLowerCase();
-        var isCase = term !== termLower;
+        var term = searchInput.value.trim();
 
         // Fast path: no filters active
         if (!term && activeCategory === 'all' && activeDateFilter === 'all') {
             resetDisplayList();
         } else if (searchIndex) {
             displayList = [];
+            var scores = {};
             searchIndex.forEach(function(entry) {
                 var matchesCat = activeCategory === 'all' || entry.c.indexOf(activeCategory) !== -1;
                 if (!matchesCat) return;
@@ -489,16 +533,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (term) {
                     var haystack = entry.id + ' ' + entry.t + ' ' + entry.a + ' ' + (entry.s || '');
-                    var matched = isCase ? haystack.indexOf(term) !== -1 : haystack.toLowerCase().indexOf(termLower) !== -1;
-                    if (!matched) return;
+                    var s = fzfMatch(term, haystack);
+                    if (s === 0) return;
+                    scores[entry.id] = s;
                 }
 
                 var idx = idToIndex[entry.id];
                 if (idx !== undefined) displayList.push(idx);
             });
+            // Sort by relevance when searching
+            if (term) {
+                displayList.sort(function(a, b) {
+                    return (scores[orderedPapers[b].id] || 0) - (scores[orderedPapers[a].id] || 0);
+                });
+            }
             totalMatches = displayList.length;
         } else {
             displayList = [];
+            var scores2 = {};
             orderedPapers.forEach(function(p, idx) {
                 var matchesCat = activeCategory === 'all' || p.categories.indexOf(activeCategory) !== -1;
                 if (!matchesCat) return;
@@ -506,12 +558,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!matchesDateFilter(p.date)) return;
 
                 if (term) {
-                    var haystack = p.search;
-                    var matched = isCase ? haystack.indexOf(term) !== -1 : haystack.toLowerCase().indexOf(termLower) !== -1;
-                    if (!matched) return;
+                    var s = fzfMatch(term, p.search);
+                    if (s === 0) return;
+                    scores2[p.id] = s;
                 }
                 displayList.push(idx);
             });
+            if (term) {
+                displayList.sort(function(a, b) {
+                    return (scores2[orderedPapers[b].id] || 0) - (scores2[orderedPapers[a].id] || 0);
+                });
+            }
             totalMatches = displayList.length;
         }
 
