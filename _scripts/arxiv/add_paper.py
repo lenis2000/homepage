@@ -108,10 +108,13 @@ def main():
     processed = load_processed()
     if arxiv_id in processed:
         prev = processed[arxiv_id]
-        if prev.get("decision") == "ACCEPT":
+        if prev.get("decision") == "ACCEPT" and not prev.get("deleted"):
             print(f"  Already accepted (source: {prev.get('source', '?')})")
             return 0
-        print(f"  Previously {prev.get('decision', '?')} — overriding to ACCEPT")
+        if prev.get("deleted"):
+            print(f"  Previously deleted — re-adding")
+        else:
+            print(f"  Previously {prev.get('decision', '?')} — overriding to ACCEPT")
 
     # Fetch from API
     print("  Fetching from arXiv API...")
