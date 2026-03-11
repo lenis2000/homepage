@@ -2494,6 +2494,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0809.1598": {
+    "date": "2008-09-09",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "0809.1974": {
     "date": "2008-09-11",
     "decision": "ACCEPT",
@@ -46553,6 +46558,11 @@
     "date": "2025-02-25",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "2502.18349": {
+    "date": "2025-02-25",
+    "decision": "ACCEPT",
+    "source": "manual"
   },
   "2502.18428": {
     "date": "2025-02-25",
