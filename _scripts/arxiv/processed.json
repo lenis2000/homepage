@@ -3322,6 +3322,7 @@
   "0902.0182": {
     "date": "2009-02-02",
     "decision": "ACCEPT",
+    "deleted": true,
     "source": "fetch"
   },
   "0902.0242": {

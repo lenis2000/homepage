@@ -135,6 +135,7 @@ def main():
     # Generate post
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     date_prefix = paper["date"].split("T")[0]
+    paper["date"] = date_prefix  # normalize to YYYY-MM-DD for front matter
     safe_id = arxiv_id.replace("/", "-")
     filename = f"{date_prefix}-{safe_id}.md"
     filepath = OUTPUT_DIR / filename
