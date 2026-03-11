@@ -5,8 +5,10 @@ Download arXiv paper sources for all papers in the feed.
 Downloads from https://export.arxiv.org/e-print/{id}, unpacks locally,
 and uploads to s3://lpetrov.cc.storage/arxiv-sources/{id}/.
 
-Resumable: tracks progress in sources/manifest.json. Safe to Ctrl-C
-and re-run — picks up where it left off.
+Resumable: checks actual folders on disk. Safe to Ctrl-C and re-run —
+papers with non-empty source dirs are skipped automatically.
+
+Upload status is tracked in sources/manifest.json.
 
 Usage:
     python3 download_sources.py              # download missing papers
@@ -21,7 +23,6 @@ import gzip
 import io
 import json
 import subprocess
-import sys
 import tarfile
 import time
 import urllib.error
@@ -79,6 +80,17 @@ def safe_dirname(arxiv_id: str) -> str:
     return arxiv_id.replace("/", "-")
 
 
+def is_downloaded(arxiv_id: str) -> bool:
+    """Check if sources exist on disk (non-empty directory)."""
+    d = SOURCES_DIR / safe_dirname(arxiv_id)
+    return d.is_dir() and any(d.iterdir())
+
+
+def is_uploaded(arxiv_id: str, manifest: dict) -> bool:
+    """Check if sources were already uploaded to S3."""
+    return manifest.get(arxiv_id, {}).get("uploaded", False)
+
+
 def download_and_unpack(arxiv_id: str, dest_dir: Path) -> bool:
     """Download source from arXiv and unpack into dest_dir."""
     url = EPRINT_URL.format(arxiv_id)
@@ -90,6 +102,9 @@ def download_and_unpack(arxiv_id: str, dest_dir: Path) -> bool:
             data = resp.read()
     except urllib.error.HTTPError as e:
         if e.code == 404:
+            return False
+        if e.code == 403:
+            # Source not public (author's choice) — not retryable
             return False
         raise
 
@@ -159,14 +174,14 @@ def main():
 
     # Upload-only mode
     if args.upload_only:
-        to_upload = [aid for aid, v in manifest.items()
-                     if v.get("status") == "downloaded" and not v.get("uploaded")]
+        downloaded_ids = [aid for aid in all_ids if is_downloaded(aid)]
+        to_upload = [aid for aid in downloaded_ids
+                     if not manifest.get(aid, {}).get("uploaded")]
         if args.limit > 0:
             to_upload = to_upload[:args.limit]
-        n_downloaded = sum(1 for v in manifest.values()
-                          if v.get("status") == "downloaded")
-        n_uploaded = sum(1 for v in manifest.values() if v.get("uploaded"))
-        print(f"Downloaded papers:  {n_downloaded}")
+        n_uploaded = sum(1 for aid in downloaded_ids
+                         if manifest.get(aid, {}).get("uploaded"))
+        print(f"Downloaded papers:  {len(downloaded_ids)}")
         print(f"Already uploaded:   {n_uploaded}")
         print(f"To upload:          {len(to_upload)}")
         if args.dry_run:
@@ -182,7 +197,7 @@ def main():
             print(f"[{i+1}/{len(to_upload)}] uploading {arxiv_id}...",
                   end=" ", flush=True)
             if upload_to_s3(arxiv_id, local_dir):
-                manifest[arxiv_id]["uploaded"] = True
+                manifest[arxiv_id] = {"uploaded": True}
                 uploaded += 1
                 print("OK")
             else:
@@ -195,13 +210,17 @@ def main():
     if args.redownload:
         to_download = all_ids
     else:
-        to_download = [aid for aid in all_ids if aid not in manifest]
+        to_download = [aid for aid in all_ids
+                       if not is_downloaded(aid) and not is_uploaded(aid, manifest)]
 
     if args.limit > 0:
         to_download = to_download[:args.limit]
 
+    n_local = sum(1 for aid in all_ids if is_downloaded(aid))
+    n_uploaded = sum(1 for aid in all_ids if is_uploaded(aid, manifest))
     print(f"Papers in feed:     {len(all_ids)}")
-    print(f"Already downloaded: {len(manifest)}")
+    print(f"Downloaded locally: {n_local}")
+    print(f"Uploaded to S3:     {n_uploaded}")
     print(f"To download:        {len(to_download)}")
     if to_download:
         est_hours = len(to_download) * RATE_LIMIT_SECONDS / 3600
@@ -241,35 +260,21 @@ def main():
         except Exception as e:
             print(f"ERROR: {e}")
             failed += 1
-            manifest[arxiv_id] = {
-                "status": "error",
-                "error": str(e),
-                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            }
-            save_manifest(manifest)
             continue
 
         if ok:
-            entry = {
-                "status": "downloaded",
-                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "local_path": str(dest_dir),
-            }
+            downloaded += 1
             if args.upload:
                 if upload_to_s3(arxiv_id, dest_dir):
-                    entry["uploaded"] = True
-            manifest[arxiv_id] = entry
-            downloaded += 1
+                    manifest[arxiv_id] = {"uploaded": True}
+                    save_manifest(manifest)
             print("OK")
         else:
-            manifest[arxiv_id] = {
-                "status": "not_found",
-                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            }
+            # Mark as unavailable so we don't retry
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            (dest_dir / ".no-source").write_text("source not public\n")
             failed += 1
-            print("NOT FOUND")
-
-        save_manifest(manifest)
+            print("NOT FOUND / SOURCE NOT PUBLIC")
 
         # Progress every 100 papers
         if (i + 1) % 100 == 0:
