@@ -41,8 +41,6 @@ sitemap: false
   </div>
 </div>
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
 
 <style>
   #file-list .list-group-item {
@@ -78,14 +76,16 @@ sitemap: false
     overflow: hidden;
     margin-bottom: 1rem;
   }
-  .source-code-container pre[class*="language-"] {
+  .source-code-container pre {
     margin: 0;
     padding: 1rem;
-    font-size: 0.88rem;
+    font-size: 0.85rem;
     font-family: 'Courier New', monospace;
-    background-color: #f6f8fa !important;
+    background-color: #f6f8fa;
     max-height: 80vh;
     overflow: auto;
+    line-height: 1.45;
+    tab-size: 4;
   }
   .source-code-header {
     display: flex;
@@ -165,7 +165,7 @@ sitemap: false
   /* Dark mode */
   [data-theme="dark"] #file-list .list-group-item:hover { background-color: var(--bg-tertiary, #2a2a2a); }
   [data-theme="dark"] #file-list .list-group-item.active { background-color: rgba(26, 82, 118, 0.2); border-left-color: #3498db; color: #3498db; }
-  [data-theme="dark"] .source-code-container pre[class*="language-"] { background-color: var(--bg-secondary, #1e1e1e) !important; }
+  [data-theme="dark"] .source-code-container pre { background-color: var(--bg-secondary, #1e1e1e); color: #ddd; }
   [data-theme="dark"] .source-code-header { background: var(--bg-tertiary, #2a2a2a); border-bottom-color: var(--border-color); }
   [data-theme="dark"] .tex-section-header { background: var(--bg-tertiary, #2a2a2a); border-bottom-color: var(--border-color); color: #3498db; }
   [data-theme="dark"] .tex-section-header:hover { background: rgba(52, 152, 219, 0.1); }
@@ -174,10 +174,6 @@ sitemap: false
   [data-theme="dark"] .source-pdf-container { border-color: var(--border-color); }
 </style>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-latex.min.js"></script>
 
 <script>
 (function() {
@@ -303,22 +299,14 @@ sitemap: false
         .then(function(text) {
           var codeArea = document.getElementById('code-area');
           if (ext === 'tex' || ext === 'sty' || ext === 'cls') {
-            codeArea.innerHTML = renderTexWithSections(text, filename);
-            // Highlight all code blocks
-            codeArea.querySelectorAll('code[class*="language-"]').forEach(function(el) {
-              Prism.highlightElement(el);
-            });
-            // Set up section folding
-            codeArea.querySelectorAll('.tex-section-header').forEach(function(header) {
-              header.addEventListener('click', function() {
-                this.parentElement.classList.toggle('collapsed');
-              });
-            });
+            renderTexLazy(codeArea, text);
           } else {
-            var lang = getPrismLang(ext);
-            codeArea.innerHTML = '<pre class="line-numbers"><code class="language-' + lang + '"></code></pre>';
-            codeArea.querySelector('code').textContent = text;
-            Prism.highlightElement(codeArea.querySelector('code'));
+            var pre = document.createElement('pre');
+            var code = document.createElement('code');
+            code.textContent = text;
+            pre.appendChild(code);
+            codeArea.innerHTML = '';
+            codeArea.appendChild(pre);
           }
         })
         .catch(function(err) {
@@ -338,90 +326,101 @@ sitemap: false
     }
   }
 
-  function renderTexWithSections(text, filename) {
-    // Split into preamble + document
+  function renderTexLazy(container, text) {
+    // Split into preamble + document body
     var docIdx = text.indexOf('\\begin{document}');
     var preamble = '';
     var body = text;
-
     if (docIdx !== -1) {
       preamble = text.substring(0, docIdx);
       body = text.substring(docIdx);
     }
 
-    var html = '';
-
-    // Preamble (collapsed by default)
-    if (preamble) {
-      html += '<div class="tex-section collapsed">' +
-        '<div class="tex-section-header">' +
-          '<span class="tex-section-arrow">&#9660;</span> Preamble' +
-        '</div>' +
-        '<div class="tex-section-body" style="max-height:none">' +
-          '<pre class="line-numbers"><code class="language-latex">' + escapeHtml(preamble) + '</code></pre>' +
-        '</div>' +
-      '</div>';
-    }
-
-    // Split body by \section, \subsection, \subsubsection
+    // Parse sections from body
     var sectionRegex = /^(\\(?:section|subsection|subsubsection)\*?\{[^}]*\})/gm;
     var parts = [];
     var lastIndex = 0;
     var match;
-
     while ((match = sectionRegex.exec(body)) !== null) {
       if (match.index > lastIndex) {
         parts.push({ header: null, text: body.substring(lastIndex, match.index) });
       }
-      // Find the end of this section (next section or end of body)
       var nextMatch = sectionRegex.exec(body);
       var endIdx = nextMatch ? nextMatch.index : body.length;
-      parts.push({
-        header: match[1],
-        text: body.substring(match.index, endIdx)
-      });
-      if (nextMatch) {
-        sectionRegex.lastIndex = nextMatch.index;
-      }
+      parts.push({ header: match[1], text: body.substring(match.index, endIdx) });
+      if (nextMatch) sectionRegex.lastIndex = nextMatch.index;
       lastIndex = endIdx;
     }
-
     if (lastIndex < body.length) {
-      if (parts.length === 0) {
-        parts.push({ header: null, text: body });
-      } else if (lastIndex > 0) {
-        parts.push({ header: null, text: body.substring(lastIndex) });
+      if (parts.length === 0) parts.push({ header: null, text: body });
+      else if (lastIndex > 0) parts.push({ header: null, text: body.substring(lastIndex) });
+    }
+    if (parts.length === 0) parts.push({ header: null, text: body });
+
+    container.innerHTML = '';
+
+    // Helper: create a lazy section (content rendered on first open)
+    function makeSection(label, rawText, collapsed, indent) {
+      var section = document.createElement('div');
+      section.className = 'tex-section' + (collapsed ? ' collapsed' : '');
+      if (indent) section.style.marginLeft = indent;
+
+      var header = document.createElement('div');
+      header.className = 'tex-section-header';
+      header.innerHTML = '<span class="tex-section-arrow">&#9660;</span> ' + escapeHtml(label);
+
+      var bodyDiv = document.createElement('div');
+      bodyDiv.className = 'tex-section-body';
+      bodyDiv.style.maxHeight = 'none';
+
+      var loaded = false;
+      function ensureLoaded() {
+        if (loaded) return;
+        loaded = true;
+        var pre = document.createElement('pre');
+        var code = document.createElement('code');
+        code.textContent = rawText;
+        pre.appendChild(code);
+        bodyDiv.appendChild(pre);
       }
+
+      // Render content immediately if not collapsed
+      if (!collapsed) ensureLoaded();
+
+      header.addEventListener('click', function() {
+        section.classList.toggle('collapsed');
+        ensureLoaded();
+      });
+
+      section.appendChild(header);
+      section.appendChild(bodyDiv);
+      return section;
     }
 
-    if (parts.length === 0) {
-      parts.push({ header: null, text: body });
+    // Preamble (collapsed)
+    if (preamble) {
+      container.appendChild(makeSection('Preamble', preamble, true, ''));
     }
 
+    // Body parts
     parts.forEach(function(part) {
       if (part.header) {
-        // Extract display name from \section{Name}
         var nameMatch = part.header.match(/\\(?:section|subsection|subsubsection)\*?\{([^}]*)\}/);
         var displayName = nameMatch ? nameMatch[1] : part.header;
         var level = part.header.startsWith('\\subsubsection') ? 'subsubsection' :
                     part.header.startsWith('\\subsection') ? 'subsection' : 'section';
-        var indent = level === 'subsubsection' ? 'margin-left:2em' :
-                     level === 'subsection' ? 'margin-left:1em' : '';
-
-        html += '<div class="tex-section" style="' + indent + '">' +
-          '<div class="tex-section-header">' +
-            '<span class="tex-section-arrow">&#9660;</span> ' + escapeHtml(displayName) +
-          '</div>' +
-          '<div class="tex-section-body" style="max-height:none">' +
-            '<pre class="line-numbers"><code class="language-latex">' + escapeHtml(part.text) + '</code></pre>' +
-          '</div>' +
-        '</div>';
+        var indent = level === 'subsubsection' ? '2em' :
+                     level === 'subsection' ? '1em' : '';
+        container.appendChild(makeSection(displayName, part.text, true, indent));
       } else {
-        html += '<pre class="line-numbers"><code class="language-latex">' + escapeHtml(part.text) + '</code></pre>';
+        // Intro text before first section — render immediately
+        var pre = document.createElement('pre');
+        var code = document.createElement('code');
+        code.textContent = part.text;
+        pre.appendChild(code);
+        container.appendChild(pre);
       }
     });
-
-    return html;
   }
 
   function isImageFile(ext) {
@@ -436,20 +435,6 @@ sitemap: false
             'tikz', 'pgf', 'raw'].indexOf(ext) !== -1;
   }
 
-  function getPrismLang(ext) {
-    var map = {
-      'tex': 'latex', 'sty': 'latex', 'cls': 'latex', 'bbl': 'latex',
-      'bib': 'bibtex', 'bst': 'latex',
-      'py': 'python', 'js': 'javascript', 'json': 'json',
-      'html': 'html', 'xml': 'xml', 'css': 'css',
-      'c': 'c', 'cpp': 'cpp', 'h': 'c', 'hpp': 'cpp',
-      'java': 'java', 'sh': 'bash', 'pl': 'perl', 'rb': 'ruby', 'r': 'r',
-      'asy': 'latex', 'tikz': 'latex', 'pgf': 'latex',
-      'def': 'latex', 'cfg': 'latex', 'dtx': 'latex',
-      'fd': 'latex', 'clo': 'latex', 'ldf': 'latex',
-    };
-    return map[ext] || 'plain';
-  }
 
   function getFileIcon(name) {
     var ext = name.split('.').pop().toLowerCase();
