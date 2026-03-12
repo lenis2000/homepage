@@ -131,6 +131,8 @@ arxiv-venv:
 arxiv-rebuild:
 	python3 _scripts/arxiv/build_search_index.py
 	@$(MAKE) arxiv-related
+	@$(MAKE) arxiv-sources-process
+	@$(MAKE) arxiv-sources-upload
 
 arxiv-kaggle:
 	@echo "Downloading latest Kaggle arXiv metadata..."

@@ -6,6 +6,10 @@ sitemap: false
 no-math: true
 ---
 
+<script>window.Prism = window.Prism || {}; Prism.manual = true;</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-latex.min.js"></script>
+
 
 <div id="source-loading">Loading source files...</div>
 <div id="source-error" hidden>
@@ -82,14 +86,13 @@ no-math: true
     margin: 0;
     padding: 1rem;
     font-size: 0.85rem;
-    font-family: 'Courier New', monospace;
-    background-color: #f6f8fa;
+    font-family: 'Iosevka Fixed', 'Courier New', monospace;
+    background-color: #fdf6e3;
+    color: #657b83;
     max-height: 80vh;
     overflow: auto;
     line-height: 1.45;
     tab-size: 4;
-  }
-  .soft-wrap pre {
     white-space: pre-wrap;
     word-break: break-word;
   }
@@ -108,45 +111,48 @@ no-math: true
     white-space: pre-wrap;
     word-break: break-word;
   }
-  /* Section folding for .tex */
+  /* Section folding for .tex — content stays in DOM for Cmd-F */
   .tex-section {
-    border-left: 2px solid #e0e0e0;
+    border-left: 2px solid #eee8d5;
     margin-left: 0;
   }
   .tex-section-header {
     cursor: pointer;
     padding: 0.3rem 0.6rem;
-    background: #f8f8f8;
-    border-bottom: 1px solid #eee;
-    font-family: 'Courier New', monospace;
+    background: #eee8d5;
+    border-bottom: 1px solid #ddd;
+    font-family: 'Iosevka Fixed', 'Courier New', monospace;
     font-size: 0.88rem;
     font-weight: 700;
-    color: #1a5276;
+    color: #268bd2;
     user-select: none;
     display: flex;
     align-items: center;
     gap: 0.5em;
   }
-  .tex-section-header:hover {
-    background: #eef4f8;
-  }
-  .tex-section-arrow {
-    display: inline-block;
+  .tex-section-header::before {
+    content: '▶';
+    font-size: 0.65em;
     transition: transform 0.15s;
-    font-size: 0.7em;
+    display: inline-block;
   }
-  .tex-section.collapsed .tex-section-arrow {
-    transform: rotate(-90deg);
+  .tex-section.open .tex-section-header::before {
+    transform: rotate(90deg);
+  }
+  .tex-section-header:hover {
+    background: #fdf6e3;
   }
   .tex-section-body {
+    /* Collapsed: content stays in DOM for Cmd-F searchability */
+    height: 1px;
     overflow: hidden;
+    opacity: 0;
+    position: relative;
   }
-  .tex-section-body pre {
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-  .tex-section.collapsed .tex-section-body {
-    max-height: 0 !important;
+  .tex-section.open .tex-section-body {
+    height: auto;
+    overflow: visible;
+    opacity: 1;
   }
   /* Image viewer */
   .source-image-container {
@@ -174,11 +180,34 @@ no-math: true
   /* Dark mode */
   [data-theme="dark"] #file-list .list-group-item:hover { background-color: var(--bg-tertiary, #2a2a2a); }
   [data-theme="dark"] #file-list .list-group-item.active { background-color: rgba(26, 82, 118, 0.2); border-left-color: #3498db; color: #3498db; }
-  [data-theme="dark"] .source-code-container pre { background-color: var(--bg-secondary, #1e1e1e); color: #ddd; }
+  [data-theme="dark"] .source-code-container pre { background-color: #263238; color: #B0BEC5; }
+
+  /* Prism token colors — Light: Solarized Light */
+  .token.comment, .token.prolog { color: #93a1a1; font-style: italic; }
+  .token.keyword, .token.tag { color: #859900; font-weight: bold; }
+  .token.function, .token.selector { color: #268bd2; }
+  .token.string, .token.attr-value { color: #2aa198; }
+  .token.number { color: #d33682; }
+  .token.operator { color: #657b83; }
+  .token.punctuation { color: #586e75; }
+  .token.property, .token.constant { color: #cb4b16; }
+  .token.class-name { color: #b58900; }
+  .token.important { color: #dc322f; font-weight: bold; }
+  /* Prism token colors — Dark: hybrid_material */
+  [data-theme="dark"] .token.comment, [data-theme="dark"] .token.prolog { color: #87CEFA; font-style: italic; }
+  [data-theme="dark"] .token.keyword, [data-theme="dark"] .token.tag { color: #32CD32; font-weight: bold; }
+  [data-theme="dark"] .token.function, [data-theme="dark"] .token.selector { color: #F0E68C; }
+  [data-theme="dark"] .token.string, [data-theme="dark"] .token.attr-value { color: #00FA9A; }
+  [data-theme="dark"] .token.number { color: #F0E68C; }
+  [data-theme="dark"] .token.operator { color: #B0BEC5; }
+  [data-theme="dark"] .token.punctuation { color: #87CEFA; }
+  [data-theme="dark"] .token.property, [data-theme="dark"] .token.constant { color: #F0E68C; }
+  [data-theme="dark"] .token.class-name { color: #32CD32; }
+  [data-theme="dark"] .token.important { color: #FF6B6B; font-weight: bold; }
   [data-theme="dark"] .source-code-header { background: var(--bg-tertiary, #2a2a2a); border-bottom-color: var(--border-color); }
-  [data-theme="dark"] .tex-section-header { background: var(--bg-tertiary, #2a2a2a); border-bottom-color: var(--border-color); color: #3498db; }
-  [data-theme="dark"] .tex-section-header:hover { background: rgba(52, 152, 219, 0.1); }
-  [data-theme="dark"] .tex-section { border-left-color: var(--border-color); }
+  [data-theme="dark"] .tex-section-header { background: #37474F; border-bottom-color: #455A64; color: #87CEFA; }
+  [data-theme="dark"] .tex-section-header:hover { background: #455A64; }
+  [data-theme="dark"] .tex-section { border-left-color: #455A64; }
   [data-theme="dark"] .source-image-container { background: var(--bg-secondary, #1e1e1e); border-color: var(--border-color); }
   [data-theme="dark"] .source-pdf-container { border-color: var(--border-color); }
 </style>
@@ -246,6 +275,35 @@ no-math: true
     });
 
   var wrapEnabled = true;
+
+  // Cmd-F: expand all collapsed sections so browser find works
+  // Escape: re-collapse auto-expanded; double-Escape: collapse ALL
+  var lastEscapeTime = 0;
+  document.addEventListener('keydown', function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+      document.querySelectorAll('.tex-section:not(.open)').forEach(function(s) {
+        s.classList.add('open');
+        s.dataset.autoExpanded = '1';
+      });
+    }
+    if (e.key === 'Escape') {
+      var now = Date.now();
+      if (now - lastEscapeTime < 400) {
+        // Double-Escape: collapse ALL sections
+        document.querySelectorAll('.tex-section.open').forEach(function(s) {
+          s.classList.remove('open');
+          delete s.dataset.autoExpanded;
+        });
+      } else {
+        // Single Escape: collapse only auto-expanded
+        document.querySelectorAll('.tex-section[data-auto-expanded]').forEach(function(s) {
+          s.classList.remove('open');
+          delete s.dataset.autoExpanded;
+        });
+      }
+      lastEscapeTime = now;
+    }
+  });
 
   function selectFile(filename, files) {
     // Update active state in file list
@@ -334,7 +392,7 @@ no-math: true
   }
 
   function renderTexLazy(container, text) {
-    // Split into preamble + document body
+    // Split into preamble + document body (LaTeX or Plain TeX)
     var docIdx = text.indexOf('\\begin{document}');
     var preamble = '';
     var body = text;
@@ -343,60 +401,60 @@ no-math: true
       body = text.substring(docIdx);
     }
 
-    // Parse sections from body
-    var sectionRegex = /^(\\(?:section|subsection|subsubsection)\*?\{[^}]*\})/gm;
-    var parts = [];
-    var lastIndex = 0;
+    // Find all section positions — LaTeX, Plain TeX (\beginsection), AMS-TeX (\head)
+    var sectionRegex = /^(\\(?:section|subsection|subsubsection)\*?\{[^}]*\}|\\beginsection\s*\{[^}]*\}|\\beginsection\s+\S[^\n]*|\\head\{[^}]*\}|\\subhead\{[^}]*\})/gm;
+    var sections = [];
     var match;
     while ((match = sectionRegex.exec(body)) !== null) {
-      if (match.index > lastIndex) {
-        parts.push({ header: null, text: body.substring(lastIndex, match.index) });
+      sections.push({ index: match.index, header: match[1] });
+    }
+
+    var parts = [];
+    if (sections.length === 0) {
+      parts.push({ header: null, text: body });
+    } else {
+      // Text before first section
+      if (sections[0].index > 0) {
+        parts.push({ header: null, text: body.substring(0, sections[0].index) });
       }
-      var nextMatch = sectionRegex.exec(body);
-      var endIdx = nextMatch ? nextMatch.index : body.length;
-      parts.push({ header: match[1], text: body.substring(match.index, endIdx) });
-      if (nextMatch) sectionRegex.lastIndex = nextMatch.index;
-      lastIndex = endIdx;
+      for (var si = 0; si < sections.length; si++) {
+        var start = sections[si].index;
+        var end = si + 1 < sections.length ? sections[si + 1].index : body.length;
+        parts.push({ header: sections[si].header, text: body.substring(start, end) });
+      }
     }
-    if (lastIndex < body.length) {
-      if (parts.length === 0) parts.push({ header: null, text: body });
-      else if (lastIndex > 0) parts.push({ header: null, text: body.substring(lastIndex) });
-    }
-    if (parts.length === 0) parts.push({ header: null, text: body });
 
     container.innerHTML = '';
 
-    // Helper: create a lazy section (content rendered on first open)
-    function makeSection(label, rawText, collapsed, indent) {
+    // Helper: content always in DOM for Cmd-F searchability
+    function makeSection(label, rawText, startOpen, indent) {
       var section = document.createElement('div');
-      section.className = 'tex-section' + (collapsed ? ' collapsed' : '');
+      section.className = 'tex-section' + (startOpen ? ' open' : '');
       if (indent) section.style.marginLeft = indent;
 
       var header = document.createElement('div');
       header.className = 'tex-section-header';
-      header.innerHTML = '<span class="tex-section-arrow">&#9660;</span> ' + escapeHtml(label);
+      header.textContent = label;
 
       var bodyDiv = document.createElement('div');
       bodyDiv.className = 'tex-section-body';
-      bodyDiv.style.maxHeight = 'none';
 
-      var loaded = false;
-      function ensureLoaded() {
-        if (loaded) return;
-        loaded = true;
-        var pre = document.createElement('pre');
-        var code = document.createElement('code');
-        code.textContent = rawText;
-        pre.appendChild(code);
-        bodyDiv.appendChild(pre);
-      }
-
-      // Render content immediately if not collapsed
-      if (!collapsed) ensureLoaded();
+      var pre = document.createElement('pre');
+      var code = document.createElement('code');
+      code.textContent = rawText;
+      pre.appendChild(code);
+      bodyDiv.appendChild(pre);
 
       header.addEventListener('click', function() {
-        section.classList.toggle('collapsed');
-        ensureLoaded();
+        var wasOpen = section.classList.contains('open');
+        section.classList.toggle('open');
+        if (wasOpen) delete section.dataset.autoExpanded;
+        // Highlight on first open
+        if (!wasOpen && window.Prism && !code.dataset.highlighted) {
+          code.className = 'language-latex';
+          Prism.highlightElement(code);
+          code.dataset.highlighted = '1';
+        }
       });
 
       section.appendChild(header);
@@ -404,21 +462,25 @@ no-math: true
       return section;
     }
 
-    // Preamble (collapsed)
+    // Preamble (collapsed by default)
     if (preamble) {
-      container.appendChild(makeSection('Preamble', preamble, true, ''));
+      container.appendChild(makeSection('Preamble', preamble, false, ''));
     }
 
     // Body parts
     parts.forEach(function(part) {
       if (part.header) {
-        var nameMatch = part.header.match(/\\(?:section|subsection|subsubsection)\*?\{([^}]*)\}/);
-        var displayName = nameMatch ? nameMatch[1] : part.header;
+        // Extract display name from various TeX dialects
+        var nameMatch = part.header.match(/\\(?:section|subsection|subsubsection)\*?\{([^}]*)\}/) ||
+                        part.header.match(/\\beginsection\s*\{([^}]*)\}/) ||
+                        part.header.match(/\\beginsection\s+(.+)/) ||
+                        part.header.match(/\\(?:sub)?head\{([^}]*)\}/);
+        var displayName = nameMatch ? nameMatch[1].trim() : part.header;
         var level = part.header.startsWith('\\subsubsection') ? 'subsubsection' :
-                    part.header.startsWith('\\subsection') ? 'subsection' : 'section';
+                    (part.header.startsWith('\\subsection') || part.header.startsWith('\\subhead')) ? 'subsection' : 'section';
         var indent = level === 'subsubsection' ? '2em' :
                      level === 'subsection' ? '1em' : '';
-        container.appendChild(makeSection(displayName, part.text, true, indent));
+        container.appendChild(makeSection(displayName, part.text, false, indent));
       } else {
         // Intro text before first section — render immediately
         var pre = document.createElement('pre');
