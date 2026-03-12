@@ -266,9 +266,30 @@ no-math: true
         fileList.appendChild(li);
       });
 
-      // Auto-select first .tex file, or first file
-      var firstTex = files.find(function(f) { return f.name.endsWith('.tex'); });
-      selectFile((firstTex || files[0]).name, files);
+      // Auto-select: main.tex, else .tex with \input{}, else largest .tex, else first file
+      var mainTex = files.find(function(f) { return f.name === 'main.tex'; });
+      if (mainTex) {
+        selectFile(mainTex.name, files);
+      } else {
+        var texFiles = files.filter(function(f) { return f.name.endsWith('.tex'); });
+        if (texFiles.length === 0) {
+          selectFile(files[0].name, files);
+        } else if (texFiles.length === 1) {
+          selectFile(texFiles[0].name, files);
+        } else {
+          // Peek at all .tex files to find the one with \input{}
+          Promise.all(texFiles.map(function(f) {
+            return fetch(baseUrl + f.name).then(function(r) { return r.ok ? r.text() : ''; })
+              .then(function(txt) { return { name: f.name, size: f.size, hasInput: /\\input\{/.test(txt) }; })
+              .catch(function() { return { name: f.name, size: f.size, hasInput: false }; });
+          })).then(function(results) {
+            var withInput = results.filter(function(r) { return r.hasInput; });
+            var pick = withInput.length > 0 ? withInput[0] :
+              results.reduce(function(a, b) { return a.size >= b.size ? a : b; });
+            selectFile(pick.name, files);
+          });
+        }
+      }
     })
     .catch(function(err) {
       document.getElementById('source-loading').textContent = 'Error loading manifest: ' + err.message;
@@ -460,10 +481,26 @@ no-math: true
       if (sections[0].index > 0) {
         parts.push({ header: null, text: body.substring(0, sections[0].index) });
       }
+      // Number sections/subsections/subsubsections independently
+      var secNum = 0, subNum = 0, subsubNum = 0;
       for (var si = 0; si < sections.length; si++) {
         var start = sections[si].index;
         var end = si + 1 < sections.length ? sections[si + 1].index : body.length;
-        parts.push({ header: sections[si].header, text: body.substring(start, end) });
+        var hdr = sections[si].header;
+        var level = hdr.startsWith('\\subsubsection') ? 'subsubsection' :
+                    (hdr.startsWith('\\subsection') || hdr.startsWith('\\subhead')) ? 'subsection' : 'section';
+        var num = '';
+        if (level === 'section') {
+          secNum++; subNum = 0; subsubNum = 0;
+          num = secNum + '. ';
+        } else if (level === 'subsection') {
+          subNum++; subsubNum = 0;
+          num = secNum + '.' + subNum + '. ';
+        } else {
+          subsubNum++;
+          num = secNum + '.' + subNum + '.' + subsubNum + '. ';
+        }
+        parts.push({ header: hdr, text: body.substring(start, end), num: num });
       }
     }
 
@@ -523,7 +560,7 @@ no-math: true
                     (part.header.startsWith('\\subsection') || part.header.startsWith('\\subhead')) ? 'subsection' : 'section';
         var indent = level === 'subsubsection' ? '2em' :
                      level === 'subsection' ? '1em' : '';
-        container.appendChild(makeSection(displayName, part.text, false, indent));
+        container.appendChild(makeSection((part.num || '') + displayName, part.text, false, indent));
       } else {
         // Intro text before first section — render immediately
         var pre = document.createElement('pre');
