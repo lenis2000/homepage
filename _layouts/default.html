@@ -20,7 +20,7 @@
   {% include footer.html %}
 
   {% include boot.js %}
-  {% include math.js %}
+  {% unless page.no-math %}{% include math.js %}{% endunless %}
   {% include google.js %}
   {% include cookie-banner.js %}
 

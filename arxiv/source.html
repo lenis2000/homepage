@@ -3,7 +3,9 @@ title: arXiv Source Viewer
 layout: default
 permalink: /arxiv/source/
 sitemap: false
+no-math: true
 ---
+
 
 <div id="source-loading">Loading source files...</div>
 <div id="source-error" hidden>
@@ -13,7 +15,7 @@ sitemap: false
   </div>
 </div>
 
-<div id="source-viewer" hidden>
+<div id="source-viewer" hidden class="tex2jax_ignore">
   <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap">
     <div>
       <h1 id="source-title" class="h4 mb-1"></h1>
@@ -87,6 +89,10 @@ sitemap: false
     line-height: 1.45;
     tab-size: 4;
   }
+  .soft-wrap pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
   .source-code-header {
     display: flex;
     justify-content: space-between;
@@ -134,7 +140,10 @@ sitemap: false
   }
   .tex-section-body {
     overflow: hidden;
-    transition: max-height 0.2s ease;
+  }
+  .tex-section-body pre {
+    white-space: pre-wrap;
+    word-break: break-word;
   }
   .tex-section.collapsed .tex-section-body {
     max-height: 0 !important;
@@ -302,9 +311,7 @@ sitemap: false
             renderTexLazy(codeArea, text);
           } else {
             var pre = document.createElement('pre');
-            var code = document.createElement('code');
-            code.textContent = text;
-            pre.appendChild(code);
+            pre.textContent = text;
             codeArea.innerHTML = '';
             codeArea.appendChild(pre);
           }

@@ -568,6 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
         renderedCount = target;
         texifyBatch(batchStart, target);
         highlightBatch(batchStart, target);
+        applySrcBadges();
     }
 
     // --- Top matches section ---
@@ -622,6 +623,7 @@ document.addEventListener('DOMContentLoaded', function() {
         divider.className = 'arxiv-all-header';
         divider.innerHTML = '<h2>Other results</h2>';
         listEl.appendChild(divider);
+        applySrcBadges();
     }
 
     // --- Word highlighting ---
@@ -1088,6 +1090,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     '<a href="https://arxiv.org/abs/' + rid + '" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-abs">arXiv</a>' +
                     '<a href="https://arxiv.org/pdf/' + rid + '" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-pdf">pdf</a>' +
                     '<a href="https://arxiv.org/html/' + rid + '" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-html">html</a>' +
+                    (sourceIdSet && sourceIdSet[rid] ? '<a href="/arxiv/source/?id=' + rid + '" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-src">src</a>' : '') +
                 '</div>' +
             '</div>';
         }).join('');
