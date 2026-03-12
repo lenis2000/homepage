@@ -211,6 +211,8 @@ def main():
                         help="Re-download already downloaded papers")
     parser.add_argument("--fix-extensions", action="store_true",
                         help="Rename mis-detected files (e.g. PS saved as .tex)")
+    parser.add_argument("--check", action="store_true",
+                        help="Verify uploaded papers exist on S3")
     args = parser.parse_args()
 
     all_ids = get_all_arxiv_ids()
@@ -239,6 +241,93 @@ def main():
                     fixed += 1
             checked += 1
         print(f"Checked {checked} dirs, {'would fix' if args.dry_run else 'fixed'} {fixed} files")
+        return
+
+    # Check mode: verify S3 presence
+    if args.check:
+        all_ids_set = set(all_ids)
+        # Check manifest entries
+        uploaded_ids = [aid for aid in all_ids if manifest.get(aid, {}).get("uploaded")]
+        print(f"Papers in feed:       {len(all_ids)}")
+        print(f"Marked uploaded:      {len(uploaded_ids)}")
+        print(f"Not uploaded:         {len(all_ids) - len(uploaded_ids)}")
+        print()
+
+        # List all prefixes on S3 to find what's actually there
+        print("Listing S3 contents...", flush=True)
+        try:
+            result = subprocess.run(
+                ["aws", "s3", "ls",
+                 f"s3://{OUR_S3_BUCKET}/{OUR_S3_PREFIX}/",
+                 "--no-cli-pager"],
+                check=True, capture_output=True, text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            print(f"ERROR listing S3: {e.stderr}")
+            return
+
+        # Parse "PRE dirname/" lines from s3 ls output
+        s3_dirs = set()
+        for line in result.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("PRE "):
+                dirname = line[4:].rstrip("/")
+                s3_dirs.add(dirname)
+
+        # Check: uploaded in manifest but missing from S3
+        missing_from_s3 = []
+        for aid in uploaded_ids:
+            if safe_dirname(aid) not in s3_dirs:
+                missing_from_s3.append(aid)
+
+        # Check: on S3 but not in manifest
+        manifest_dirs = {safe_dirname(aid) for aid in uploaded_ids}
+        orphan_on_s3 = sorted(s3_dirs - manifest_dirs)
+
+        # Check: on S3 but not in feed
+        feed_dirs = {safe_dirname(aid) for aid in all_ids}
+        not_in_feed = sorted(s3_dirs - feed_dirs)
+
+        print(f"Folders on S3:        {len(s3_dirs)}")
+        print()
+
+        ok = True
+        if missing_from_s3:
+            ok = False
+            print(f"MISSING from S3 (manifest says uploaded): {len(missing_from_s3)}")
+            for aid in missing_from_s3:
+                print(f"  {aid}")
+            print()
+
+        if orphan_on_s3:
+            print(f"On S3 but not in manifest: {len(orphan_on_s3)}")
+            for d in orphan_on_s3[:20]:
+                print(f"  {d}")
+            if len(orphan_on_s3) > 20:
+                print(f"  ... and {len(orphan_on_s3) - 20} more")
+            print()
+
+        if not_in_feed:
+            print(f"On S3 but not in feed: {len(not_in_feed)}")
+            for d in not_in_feed[:20]:
+                print(f"  {d}")
+            if len(not_in_feed) > 20:
+                print(f"  ... and {len(not_in_feed) - 20} more")
+            print()
+
+        not_uploaded = [aid for aid in all_ids
+                        if not manifest.get(aid, {}).get("uploaded")
+                        and safe_dirname(aid) not in s3_dirs]
+        if not_uploaded:
+            print(f"Not uploaded at all: {len(not_uploaded)}")
+            for aid in not_uploaded[:20]:
+                print(f"  {aid}")
+            if len(not_uploaded) > 20:
+                print(f"  ... and {len(not_uploaded) - 20} more")
+            print()
+
+        if ok and not missing_from_s3:
+            print("All manifest-uploaded papers verified on S3.")
         return
 
     # Upload-only mode

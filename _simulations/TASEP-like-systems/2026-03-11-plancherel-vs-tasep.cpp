@@ -3,7 +3,7 @@
 /*
 emcc 2026-03-11-plancherel-vs-tasep.cpp -o 2026-03-11-plancherel-vs-tasep.js \
  -s WASM=1 \
- -s "EXPORTED_FUNCTIONS=['_plancherelGrow','_getPartition','_getPartitionLen','_profileHeightAtZero','_computeRussianProfile','_getProfileU','_getProfileV','_getProfileLen','_tasepSimulate','_getTasepParticles','_getTasepParticleCount','_getTasepTime','_computeHeightFunction','_getHeightX','_getHeightH','_getHeightLen','_tasepHeightAtZero']" \
+ -s "EXPORTED_FUNCTIONS=['_plancherelGrow','_getPartition','_getPartitionLen','_profileHeightAtZero','_computeRussianProfile','_getProfileU','_getProfileV','_getProfileLen','_tasepSimulate','_getTasepParticles','_getTasepParticleCount','_getTasepTime','_computeHeightFunction','_getHeightX','_getHeightH','_getHeightLen','_tasepHeightAtZero','_tasepPregenerate','_getTasepMoves','_getTasepTimes','_getTasepMoveCount']" \
  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPF64"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
@@ -262,5 +262,63 @@ double* getHeightH() { return g_heightH.data(); }
 
 EMSCRIPTEN_KEEPALIVE
 int getHeightLen() { return g_heightLen; }
+
+// ─── TASEP Pre-generation (for animation replay) ───
+static vector<int> g_tasepMoves;
+static vector<double> g_tasepTimes;
+
+EMSCRIPTEN_KEEPALIVE
+int tasepPregenerate(int N) {
+    rng.seed(random_device{}());
+
+    int M = (int)(3.0 * sqrt((double)N)) + 10;
+    vector<int> particles(M);
+    exponential_distribution<double> expDist(1.0);
+
+    using Event = pair<double, int>;
+    priority_queue<Event, vector<Event>, greater<Event>> pq;
+
+    for (int k = 0; k < M; k++) {
+        particles[k] = -k;
+        pq.push({expDist(rng), k});
+    }
+
+    g_tasepMoves.clear();
+    g_tasepTimes.clear();
+    g_tasepMoves.reserve(N);
+    g_tasepTimes.reserve(N);
+
+    double time = 0;
+    int totalDisp = 0;
+    int maxIter = N * 100;
+    int iter = 0;
+
+    while (totalDisp < N && iter < maxIter) {
+        iter++;
+        auto [t, k] = pq.top();
+        pq.pop();
+        time = t;
+
+        bool canJump = (k == 0) || (particles[k] + 1 < particles[k - 1]);
+        if (canJump) {
+            particles[k] += 1;
+            totalDisp++;
+            g_tasepMoves.push_back(k);
+            g_tasepTimes.push_back(time);
+        }
+        pq.push({time + expDist(rng), k});
+    }
+
+    return totalDisp;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int* getTasepMoves() { return g_tasepMoves.data(); }
+
+EMSCRIPTEN_KEEPALIVE
+double* getTasepTimes() { return g_tasepTimes.data(); }
+
+EMSCRIPTEN_KEEPALIVE
+int getTasepMoveCount() { return (int)g_tasepMoves.size(); }
 
 } // extern "C"

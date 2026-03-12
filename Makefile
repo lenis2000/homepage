@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-sources
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-sources arxiv-sources-upload arxiv-sources-upload-check
 
 serve:
 	bundle exec jekyll serve 
@@ -167,6 +167,9 @@ arxiv-sources:
 
 arxiv-sources-upload:
 	@python3 _scripts/arxiv/download_sources.py --upload-only $(ARGS)
+
+arxiv-sources-upload-check:
+	@python3 _scripts/arxiv/download_sources.py --check
 
 arxiv-related: arxiv-venv
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/build_arxiv_embeddings.py

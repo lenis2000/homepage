@@ -388,10 +388,10 @@ details.control-section {
         <div class="control-section-content">
           <div class="control-row">
             <label for="nInput">N (boxes)</label>
-            <input type="number" id="nInput" value="2000" min="100" max="1000000" step="100">
+            <input type="number" id="nInput" value="2000" min="100" max="200000" step="100">
           </div>
           <div class="control-row">
-            <input type="range" id="nSlider" min="100" max="1000000" step="100" value="2000" aria-label="N slider">
+            <input type="range" id="nSlider" min="100" max="200000" step="100" value="2000" aria-label="N slider">
           </div>
         </div>
       </details>
@@ -1095,7 +1095,12 @@ details.control-section {
   }
 
   // ─── Run one sample and draw (WASM) ───
-  function runAndDraw(N, addToHistogram) {
+  async function runAndDraw(N, addToHistogram) {
+    disableControls(true);
+    drawLoading(plancherelCanvas, 'Computing…');
+    drawLoading(tasepCanvas, 'Computing…');
+    await yieldFrame();
+
     // Plancherel via WASM
     wasmPlancherelGrow(N);
     const omega0 = wasmProfileHeightAtZero();
@@ -1142,36 +1147,32 @@ details.control-section {
     }
 
     updateStats(N, omega0, h0, limitOmega0, limitH0);
+    disableControls(false);
   }
 
   // ─── Animation (JS RSK for incremental Plancherel, JS TASEP replay) ───
-  function startAnimation(N) {
+  async function startAnimation(N) {
     if (isAnimating) { stopAnimation(); return; }
     isAnimating = true;
     animateBtn.textContent = 'Stop';
     disableControls(true);
     animateBtn.disabled = false;
 
+    drawLoading(plancherelCanvas, 'Pre-generating…');
+    drawLoading(tasepCanvas, 'Pre-generating…');
+    await yieldFrame();
+
     const rskValues = Array.from({ length: N }, () => Math.random());
     const tableau = [];
     let pStep = 0;
 
-    // Pre-generate TASEP moves (JS — needed for step-by-step replay)
+    // Pre-generate TASEP moves via WASM (O(N log M) with min-heap)
+    const moveCount = W._tasepPregenerate(N);
     const M = Math.ceil(3 * Math.sqrt(N)) + 10;
-    const particles = new Float64Array(M);
-    const nextJump = new Float64Array(M);
-    for (let k = 0; k < M; k++) { particles[k] = -k; nextJump[k] = expRandom(); }
-    const moves = [], times = [];
-    let time = 0, totalDisp = 0;
-    while (totalDisp < N) {
-      let minTime = Infinity, minK = 0;
-      for (let k = 0; k < M; k++) { if (nextJump[k] < minTime) { minTime = nextJump[k]; minK = k; } }
-      time = minTime;
-      if ((minK === 0) || (particles[minK] + 1 < particles[minK - 1])) {
-        particles[minK]++; totalDisp++; moves.push(minK); times.push(time);
-      }
-      nextJump[minK] = time + expRandom();
-    }
+    const movesPtr = W._getTasepMoves();
+    const timesPtr = W._getTasepTimes();
+    const moves = new Int32Array(W.HEAP32.buffer, movesPtr, moveCount);
+    const times = new Float64Array(W.HEAPF64.buffer, timesPtr, moveCount);
 
     const animParticles = new Float64Array(M);
     for (let k = 0; k < M; k++) animParticles[k] = -k;
@@ -1307,19 +1308,31 @@ details.control-section {
   }
 
   // ─── Event Listeners ───
+  function clearHistogramOnNChange(newN) {
+    if (plancherelDeviations.length > 0 || tasepDeviations.length > 0) {
+      plancherelDeviations.length = 0;
+      tasepDeviations.length = 0;
+      drawHistogram();
+      document.getElementById('statSamples').textContent = '0';
+    }
+  }
+
   nInput.addEventListener('input', () => {
-    const v = Math.max(100, Math.min(1000000, parseInt(nInput.value) || 2000));
+    const v = Math.max(100, Math.min(200000, parseInt(nInput.value) || 2000));
     nSlider.value = v;
+    if (v !== currentN) clearHistogramOnNChange(v);
     currentN = v;
   });
   nSlider.addEventListener('input', () => {
     nInput.value = nSlider.value;
-    currentN = parseInt(nSlider.value);
+    const v = parseInt(nSlider.value);
+    if (v !== currentN) clearHistogramOnNChange(v);
+    currentN = v;
   });
 
-  sampleBtn.addEventListener('click', () => {
+  sampleBtn.addEventListener('click', async () => {
     currentN = parseInt(nInput.value) || 2000;
-    runAndDraw(currentN, true);
+    await runAndDraw(currentN, true);
   });
 
   animateBtn.addEventListener('click', () => {
@@ -1345,9 +1358,9 @@ details.control-section {
   });
 
   if (sampleFab) {
-    sampleFab.addEventListener('click', () => {
+    sampleFab.addEventListener('click', async () => {
       currentN = parseInt(nInput.value) || 2000;
-      runAndDraw(currentN, true);
+      await runAndDraw(currentN, true);
     });
   }
 
@@ -1444,6 +1457,6 @@ details.control-section {
   currentN = 20000;
   nInput.value = currentN;
   nSlider.value = currentN;
-  runAndDraw(currentN, true);
+  await runAndDraw(currentN, true);
 })();
 </script>
