@@ -366,7 +366,9 @@ no-math: true
         .then(function(text) {
           var codeArea = document.getElementById('code-area');
           if (ext === 'tex' || ext === 'sty' || ext === 'cls') {
-            renderTexLazy(codeArea, text);
+            flattenInputs(text, files, baseUrl).then(function(flattened) {
+              renderTexLazy(codeArea, flattened);
+            });
           } else {
             var pre = document.createElement('pre');
             pre.textContent = text;
@@ -389,6 +391,47 @@ no-math: true
           '<a href="' + url + '" download class="btn btn-primary">Download ' + escapeHtml(filename) + '</a>' +
         '</div>';
     }
+  }
+
+  function flattenInputs(text, files, base, depth) {
+    if (!depth) depth = 0;
+    if (depth > 5) return Promise.resolve(text);
+    // Build set of available filenames for resolution
+    var available = {};
+    files.forEach(function(f) { available[f.name] = true; });
+    // Find \input{...} — skip if preceded by % on the same line
+    var inputRe = /\\input\{([^}]+)\}/g;
+    var matches = [];
+    var m;
+    while ((m = inputRe.exec(text)) !== null) {
+      // Check that no % appears before this on the same line (i.e., not commented out)
+      var lineStart = text.lastIndexOf('\n', m.index) + 1;
+      var before = text.substring(lineStart, m.index);
+      if (before.indexOf('%') !== -1) continue;
+      var ref = m[1].trim();
+      // Resolve filename: try as-is, then with .tex
+      var resolved = available[ref] ? ref : available[ref + '.tex'] ? ref + '.tex' : null;
+      if (resolved) {
+        matches.push({ start: m.index, end: m.index + m[0].length, file: resolved });
+      }
+    }
+    if (matches.length === 0) return Promise.resolve(text);
+    // Fetch all referenced files in parallel
+    var fetches = matches.map(function(mi) {
+      return fetch(base + mi.file)
+        .then(function(r) { return r.ok ? r.text() : '% [flatten error: could not load ' + mi.file + ']'; })
+        .catch(function() { return '% [flatten error: could not load ' + mi.file + ']'; });
+    });
+    return Promise.all(fetches).then(function(contents) {
+      // Replace from end to preserve indices
+      var result = text;
+      for (var i = matches.length - 1; i >= 0; i--) {
+        var header = '% ══════ ' + matches[i].file + ' ══════\n';
+        result = result.substring(0, matches[i].start) + header + contents[i] + '\n' + result.substring(matches[i].end);
+      }
+      // Recurse for nested inputs
+      return flattenInputs(result, files, base, depth + 1);
+    });
   }
 
   function renderTexLazy(container, text) {
