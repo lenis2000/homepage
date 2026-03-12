@@ -10,13 +10,11 @@ a11y-description: "Side-by-side comparison of Plancherel growth process (Russian
 
 <details class="math-description" id="mathDescription">
 <summary>Mathematical description</summary>
-
-The **Plancherel growth process** adds boxes to a Young diagram via RSK insertion of i.i.d.\ uniform random variables. The resulting partition of $N$ is distributed according to the **Plancherel measure**. The **TASEP** (Totally Asymmetric Simple Exclusion Process) starts from step initial condition: particles at $\ldots, -2, -1, 0$, each jumping right at rate $1$ (i.e., $\operatorname{Exp}(1)$ waiting times), subject to the exclusion constraint.
-
-Both processes produce piecewise-linear **height functions** with slopes $\pm 1$: the Russian-notation profile $\omega(u)$ for Plancherel, and $h(x,t)$ for TASEP ($+1$ over holes, $-1$ over particles). Both height functions have the shape of the Young diagram (a partition) sitting on top of the $|u|$ or $|x|$ baseline. The two processes are synchronized so that the total number of boxes (area of the partition) equals $N$.
-
-**Fluctuations at the center** ($u = x = 0$): the Plancherel height $\omega(0) \approx \frac{4}{\pi}\sqrt{N}$ has $O(1)$ fluctuations (Kerov's CLT), while the TASEP height $h(0,t) \approx t/2$ has $O(t^{1/3})$ fluctuations (KPZ universality class). **Plancherel is dramatically more rigid.**
-
+<div style="padding: 8px 0;">
+<p>The <b>Plancherel growth process</b> adds boxes to a Young diagram via RSK insertion of i.i.d. uniform random variables. The resulting partition of $N$ is distributed according to the <b>Plancherel measure</b>. The <b>TASEP</b> (Totally Asymmetric Simple Exclusion Process) starts from step initial condition: particles at $\ldots, -2, -1, 0$, each jumping right at rate $1$ (i.e., $\operatorname{Exp}(1)$ waiting times), subject to the exclusion constraint.</p>
+<p>Both processes produce piecewise-linear <b>height functions</b> with slopes $\pm 1$: the Russian-notation profile $\omega(u)$ for Plancherel, and $h(x,t)$ for TASEP ($+1$ over holes, $-1$ over particles). Both height functions have the shape of the Young diagram (a partition) sitting on top of the $|u|$ or $|x|$ baseline. The two processes are synchronized so that the total number of boxes (area of the partition) equals $N$.</p>
+<p><b>Fluctuations at the center</b> ($u = x = 0$): the Plancherel height $\omega(0) \approx \frac{4}{\pi}\sqrt{N}$ has $O(1)$ fluctuations (Kerov's CLT), while the TASEP height $h(0,t) \approx t/2$ has $O(t^{1/3})$ fluctuations (KPZ universality class). <b>Plancherel is dramatically more rigid.</b></p>
+</div>
 </details>
 
 <script>if (window.innerWidth >= 992) document.getElementById('mathDescription').setAttribute('open', '');</script>
@@ -499,6 +497,8 @@ details.control-section {
   const progressText = document.getElementById('progressText');
   const plancherelCanvas = document.getElementById('plancherelCanvas');
   const tasepCanvas = document.getElementById('tasepCanvas');
+  const plancherelZoomCanvas = document.getElementById('plancherelZoomCanvas');
+  const tasepZoomCanvas = document.getElementById('tasepZoomCanvas');
   const histogramCanvas = document.getElementById('histogramCanvas');
   const sampleFab = document.getElementById('sampleFab');
 
@@ -833,6 +833,153 @@ details.control-section {
     ctx.restore();
   }
 
+  // ─── Zoomed Center View ───
+  function drawZoomed(canvas, profilePts, limitPts, colorVar, fillVar, centerVal, limitCenterVal, zoomRadius) {
+    const { ctx, w, h } = setupCanvas(canvas);
+    const margin = { top: 20, right: 15, bottom: 25, left: 40 };
+    const pw = w - margin.left - margin.right;
+    const ph = h - margin.top - margin.bottom;
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (!profilePts || profilePts.length === 0) {
+      ctx.fillStyle = getColor('--text-secondary');
+      ctx.font = '13px "franklingothic-book", Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Zoomed view after sampling', w / 2, h / 2);
+      return;
+    }
+
+    const uKey = profilePts[0].u !== undefined ? 'u' : 'x';
+    const vKey = profilePts[0].v !== undefined ? 'v' : 'h';
+
+    // Fixed x-range centered on 0
+    const uMin = -zoomRadius, uMax = zoomRadius;
+
+    // Filter points to zoom window (with 1 extra on each side for continuity)
+    const inRange = [];
+    for (let i = 0; i < profilePts.length; i++) {
+      const u = profilePts[i][uKey];
+      if (u >= uMin && u <= uMax) {
+        inRange.push(profilePts[i]);
+      } else if (inRange.length === 0 && i + 1 < profilePts.length && profilePts[i + 1][uKey] >= uMin) {
+        inRange.push(profilePts[i]);
+      } else if (inRange.length > 0 && u > uMax) {
+        inRange.push(profilePts[i]);
+        break;
+      }
+    }
+    if (inRange.length === 0) return;
+
+    // y-range: auto from visible data
+    let vMin = Infinity, vMax = -Infinity;
+    for (const p of inRange) {
+      if (p[vKey] < vMin) vMin = p[vKey];
+      if (p[vKey] > vMax) vMax = p[vKey];
+    }
+    // Include limit curve points in y-range
+    if (limitPts) {
+      const limUKey = limitPts[0].u !== undefined ? 'u' : 'x';
+      const limVKey = limitPts[0].v !== undefined ? 'v' : 'h';
+      for (const p of limitPts) {
+        if (p[limUKey] >= uMin && p[limUKey] <= uMax) {
+          if (p[limVKey] < vMin) vMin = p[limVKey];
+          if (p[limVKey] > vMax) vMax = p[limVKey];
+        }
+      }
+    }
+    // Include |u| baseline in range
+    vMin = Math.min(vMin, 0);
+    const vPad = (vMax - vMin) * 0.08 || 1;
+    vMin -= vPad; vMax += vPad;
+
+    function toX(u) { return margin.left + (u - uMin) / (uMax - uMin) * pw; }
+    function toY(v) { return margin.top + ph - (v - vMin) / (vMax - vMin) * ph; }
+
+    // |u| baseline
+    ctx.strokeStyle = '#aaa';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(toX(uMin), toY(Math.abs(uMin)));
+    ctx.lineTo(toX(0), toY(0));
+    ctx.lineTo(toX(uMax), toY(Math.abs(uMax)));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Vertical center line
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = '#999';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(toX(0), margin.top);
+    ctx.lineTo(toX(0), h - margin.bottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Fill under profile (clipped to zoom window)
+    const fillColor = getColor(fillVar);
+    ctx.fillStyle = fillColor;
+    ctx.beginPath();
+    ctx.moveTo(toX(inRange[0][uKey]), toY(0));
+    for (const p of inRange) ctx.lineTo(toX(p[uKey]), toY(p[vKey]));
+    ctx.lineTo(toX(inRange[inRange.length - 1][uKey]), toY(0));
+    ctx.closePath();
+    ctx.fill();
+
+    // Profile line
+    const lineColor = getColor(colorVar);
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < inRange.length; i++) {
+      ctx[i === 0 ? 'moveTo' : 'lineTo'](toX(inRange[i][uKey]), toY(inRange[i][vKey]));
+    }
+    ctx.stroke();
+
+    // Limit shape (dashed)
+    if (limitPts && limitPts.length > 0) {
+      const limUKey = limitPts[0].u !== undefined ? 'u' : 'x';
+      const limVKey = limitPts[0].v !== undefined ? 'v' : 'h';
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = lineColor;
+      ctx.globalAlpha = 0.4;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      let started = false;
+      for (const p of limitPts) {
+        if (p[limUKey] >= uMin && p[limUKey] <= uMax) {
+          ctx[started ? 'lineTo' : 'moveTo'](toX(p[limUKey]), toY(p[limVKey]));
+          started = true;
+        }
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.setLineDash([]);
+    }
+
+    // Center value annotation
+    if (centerVal !== undefined) {
+      const cx = toX(0), cy = toY(centerVal);
+      ctx.fillStyle = lineColor;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 5, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.font = '12px "SF Mono", Monaco, monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(centerVal.toFixed(1), cx + 8, cy - 6);
+      if (limitCenterVal !== undefined) {
+        ctx.globalAlpha = 0.5;
+        ctx.fillText('limit: ' + limitCenterVal.toFixed(1), cx + 8, cy + 10);
+        ctx.globalAlpha = 1;
+        // Draw deviation
+        const dev = centerVal - limitCenterVal;
+        ctx.fillStyle = Math.abs(dev) > 3 ? '#c00' : lineColor;
+        ctx.fillText('Δ=' + dev.toFixed(2), cx + 8, cy + 24);
+      }
+    }
+  }
+
   // ─── Histogram Drawing ───
   function drawHistogram() {
     const { ctx, w, h } = setupCanvas(histogramCanvas);
@@ -1005,6 +1152,12 @@ details.control-section {
       '--plancherel-color', '--plancherel-fill',
       'Plancherel', omega0, limitOmega0);
 
+    // Zoomed Plancherel: show ~10% of the full width centered on 0
+    const pZoom = Math.max(10, Math.ceil(sqN * 0.5));
+    drawZoomed(plancherelZoomCanvas, extProfile, extLimit,
+      '--plancherel-color', '--plancherel-fill',
+      omega0, limitOmega0, pZoom);
+
     // TASEP
     const tasep = tasepSimulate(N);
     const t = tasep.time;
@@ -1024,6 +1177,12 @@ details.control-section {
     drawProfile(tasepCanvas, hFunc, hLimitCurve,
       '--tasep-color', '--tasep-fill',
       'TASEP', h0, limitH0);
+
+    // Zoomed TASEP
+    const tZoom = Math.max(10, Math.ceil(t * 0.15));
+    drawZoomed(tasepZoomCanvas, hFunc, hLimitCurve,
+      '--tasep-color', '--tasep-fill',
+      h0, limitH0, tZoom);
 
     if (addToHistogram) {
       plancherelDeviations.push(omega0 - limitOmega0);
@@ -1124,6 +1283,11 @@ details.control-section {
         '--plancherel-color', '--plancherel-fill',
         'Plancherel', omega0, limitOmega0);
 
+      const pZoom = Math.max(10, Math.ceil(sqN * 0.5));
+      drawZoomed(plancherelZoomCanvas, ext, extLim,
+        '--plancherel-color', '--plancherel-fill',
+        omega0, limitOmega0, pZoom);
+
       // Draw TASEP height function
       const tTime = tStep > 0 ? times[tStep - 1] : 0;
       const limitH0 = tTime / 2;
@@ -1136,6 +1300,11 @@ details.control-section {
       drawProfile(tasepCanvas, hFunc, hLim,
         '--tasep-color', '--tasep-fill',
         'TASEP', h0, limitH0);
+
+      const tZoom = Math.max(10, Math.ceil(Math.max(tTime, 1) * 0.15));
+      drawZoomed(tasepZoomCanvas, hFunc, hLim,
+        '--tasep-color', '--tasep-fill',
+        h0, limitH0, tZoom);
 
       updateStats(pStep, omega0, h0, limitOmega0, limitH0);
 
@@ -1309,15 +1478,25 @@ details.control-section {
       drawProfile(plancherelCanvas, lastPlancherelDraw.pts, lastPlancherelDraw.limit,
         '--plancherel-color', '--plancherel-fill',
         'Plancherel', lastPlancherelDraw.centerVal, lastPlancherelDraw.limitCenter);
+      const pZoom = Math.max(10, Math.ceil(Math.sqrt(currentN) * 0.5));
+      drawZoomed(plancherelZoomCanvas, lastPlancherelDraw.pts, lastPlancherelDraw.limit,
+        '--plancherel-color', '--plancherel-fill',
+        lastPlancherelDraw.centerVal, lastPlancherelDraw.limitCenter, pZoom);
     } else {
       drawProfile(plancherelCanvas, null, null, '--plancherel-color', '--plancherel-fill', 'Plancherel');
+      drawZoomed(plancherelZoomCanvas, null, null, '--plancherel-color', '--plancherel-fill', undefined, undefined, 10);
     }
     if (lastTasepDraw) {
       drawProfile(tasepCanvas, lastTasepDraw.pts, lastTasepDraw.limit,
         '--tasep-color', '--tasep-fill',
         'TASEP', lastTasepDraw.centerVal, lastTasepDraw.limitCenter);
+      const tZoom = Math.max(10, Math.ceil(lastTasepDraw.limitCenter * 0.3));
+      drawZoomed(tasepZoomCanvas, lastTasepDraw.pts, lastTasepDraw.limit,
+        '--tasep-color', '--tasep-fill',
+        lastTasepDraw.centerVal, lastTasepDraw.limitCenter, tZoom);
     } else {
       drawProfile(tasepCanvas, null, null, '--tasep-color', '--tasep-fill', 'TASEP');
+      drawZoomed(tasepZoomCanvas, null, null, '--tasep-color', '--tasep-fill', undefined, undefined, 10);
     }
     drawHistogram();
   }
@@ -1326,9 +1505,10 @@ details.control-section {
     window._resizeTimer = setTimeout(handleResize, 200);
   });
 
-  // Initial draw
-  drawProfile(plancherelCanvas, null, null, '--plancherel-color', '--plancherel-fill', 'Plancherel');
-  drawProfile(tasepCanvas, null, null, '--tasep-color', '--tasep-fill', 'TASEP');
-  drawHistogram();
+  // Initial sample on load
+  currentN = 20000;
+  nInput.value = currentN;
+  nSlider.value = currentN;
+  runAndDraw(currentN, true);
 })();
 </script>
