@@ -298,6 +298,25 @@ document.addEventListener('DOMContentLoaded', function() {
             initButtons();
         });
 
+    // Load sources manifest to show "src" badges
+    var sourcesManifest = null;
+    fetch('/assets/data/arxiv-sources-manifest.json')
+        .then(function(r) { return r.json(); })
+        .then(function(manifest) {
+            sourcesManifest = manifest;
+            applySrcBadges();
+        })
+        .catch(function() { /* manifest not available yet */ });
+
+    function applySrcBadges() {
+        if (!sourcesManifest) return;
+        document.querySelectorAll('.arxiv-link-src[data-src-id]').forEach(function(el) {
+            if (sourcesManifest[el.dataset.srcId]) {
+                el.hidden = false;
+            }
+        });
+    }
+
     // Load overflow papers (full prebuilt HTML for papers beyond the template)
     fetch('/arxiv/papers-overflow.html')
         .then(function(r) { if (!r.ok) throw new Error(r.status); return r.text(); })
@@ -508,6 +527,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (renderedCount < displayList.length) {
             renderBatch();
         }
+        applySrcBadges();
     }
 
     // --- Rendering ---

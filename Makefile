@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-sources arxiv-sources-upload arxiv-sources-upload-check
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-sources arxiv-sources-upload arxiv-sources-upload-check arxiv-sources-convert-ps arxiv-sources-manifest arxiv-sources-process
 
 serve:
 	bundle exec jekyll serve 
@@ -170,6 +170,15 @@ arxiv-sources-upload:
 
 arxiv-sources-upload-check:
 	@python3 _scripts/arxiv/download_sources.py --check
+
+arxiv-sources-convert-ps:
+	@python3 _scripts/arxiv/convert_ps_to_pdf.py --upload $(ARGS)
+
+arxiv-sources-manifest:
+	@python3 _scripts/arxiv/build_sources_manifest.py $(ARGS)
+
+arxiv-sources-process: arxiv-sources-convert-ps arxiv-sources-manifest
+	@echo "Sources processed: PS converted, manifest built."
 
 arxiv-related: arxiv-venv
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/build_arxiv_embeddings.py

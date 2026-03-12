@@ -1,0 +1,474 @@
+---
+title: arXiv Source Viewer
+layout: default
+permalink: /arxiv/source/
+sitemap: false
+---
+
+<div id="source-loading">Loading source files...</div>
+<div id="source-error" hidden>
+  <div class="alert alert-warning">
+    <strong>No source files found</strong> for this paper.
+    <a id="error-arxiv-link" href="#" target="_blank">View on arXiv</a>
+  </div>
+</div>
+
+<div id="source-viewer" hidden>
+  <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap">
+    <div>
+      <h1 id="source-title" class="h4 mb-1"></h1>
+      <div class="text-muted" id="source-meta"></div>
+    </div>
+    <div class="d-flex gap-2 mt-2">
+      <a id="source-arxiv-link" href="#" target="_blank" class="btn btn-sm btn-outline-secondary">arXiv</a>
+      <a id="source-pdf-link" href="#" target="_blank" class="btn btn-sm btn-outline-primary">PDF</a>
+    </div>
+  </div>
+
+  <!-- File list sidebar + content area -->
+  <div class="row">
+    <div class="col-md-3 mb-3">
+      <div class="card">
+        <div class="card-header"><strong>Files</strong> <span id="file-count" class="text-muted"></span></div>
+        <ul id="file-list" class="list-group list-group-flush" style="font-size:0.88em"></ul>
+      </div>
+    </div>
+    <div class="col-md-9">
+      <div id="file-content">
+        <p class="text-muted">Select a file to view</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css">
+
+<style>
+  #file-list .list-group-item {
+    padding: 0.4rem 0.75rem;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+  }
+  #file-list .list-group-item:hover {
+    background-color: #f0f0f0;
+  }
+  #file-list .list-group-item.active {
+    background-color: #e8f4f8;
+    border-left-color: #1a5276;
+    color: #1a5276;
+    font-weight: 700;
+  }
+  .file-icon {
+    display: inline-block;
+    width: 1.5em;
+    text-align: center;
+    font-size: 0.85em;
+    color: #666;
+  }
+  .file-size {
+    float: right;
+    color: #999;
+    font-size: 0.85em;
+  }
+  /* Code viewer */
+  .source-code-container {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  .source-code-container pre[class*="language-"] {
+    margin: 0;
+    padding: 1rem;
+    font-size: 0.88rem;
+    font-family: 'Courier New', monospace;
+    background-color: #f6f8fa !important;
+    max-height: 80vh;
+    overflow: auto;
+  }
+  .source-code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0.75rem;
+    background: #f0f0f0;
+    border-bottom: 1px solid #ddd;
+    font-size: 0.88em;
+  }
+  .source-code-header .btn { font-size: 0.82em; }
+  /* Soft wrap */
+  .soft-wrap pre[class*="language-"] {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  /* Section folding for .tex */
+  .tex-section {
+    border-left: 2px solid #e0e0e0;
+    margin-left: 0;
+  }
+  .tex-section-header {
+    cursor: pointer;
+    padding: 0.3rem 0.6rem;
+    background: #f8f8f8;
+    border-bottom: 1px solid #eee;
+    font-family: 'Courier New', monospace;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #1a5276;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+  }
+  .tex-section-header:hover {
+    background: #eef4f8;
+  }
+  .tex-section-arrow {
+    display: inline-block;
+    transition: transform 0.15s;
+    font-size: 0.7em;
+  }
+  .tex-section.collapsed .tex-section-arrow {
+    transform: rotate(-90deg);
+  }
+  .tex-section-body {
+    overflow: hidden;
+    transition: max-height 0.2s ease;
+  }
+  .tex-section.collapsed .tex-section-body {
+    max-height: 0 !important;
+  }
+  /* Image viewer */
+  .source-image-container {
+    text-align: center;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fafafa;
+  }
+  .source-image-container img {
+    max-width: 100%;
+    max-height: 70vh;
+  }
+  /* PDF embed */
+  .source-pdf-container {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .source-pdf-container iframe {
+    width: 100%;
+    height: 80vh;
+    border: none;
+  }
+  /* Dark mode */
+  [data-theme="dark"] #file-list .list-group-item:hover { background-color: var(--bg-tertiary, #2a2a2a); }
+  [data-theme="dark"] #file-list .list-group-item.active { background-color: rgba(26, 82, 118, 0.2); border-left-color: #3498db; color: #3498db; }
+  [data-theme="dark"] .source-code-container pre[class*="language-"] { background-color: var(--bg-secondary, #1e1e1e) !important; }
+  [data-theme="dark"] .source-code-header { background: var(--bg-tertiary, #2a2a2a); border-bottom-color: var(--border-color); }
+  [data-theme="dark"] .tex-section-header { background: var(--bg-tertiary, #2a2a2a); border-bottom-color: var(--border-color); color: #3498db; }
+  [data-theme="dark"] .tex-section-header:hover { background: rgba(52, 152, 219, 0.1); }
+  [data-theme="dark"] .tex-section { border-left-color: var(--border-color); }
+  [data-theme="dark"] .source-image-container { background: var(--bg-secondary, #1e1e1e); border-color: var(--border-color); }
+  [data-theme="dark"] .source-pdf-container { border-color: var(--border-color); }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-latex.min.js"></script>
+
+<script>
+(function() {
+  var STORAGE_URL = '{{ site.storage_url }}';
+  var MANIFEST_URL = '{{ site.url }}/assets/data/arxiv-sources-manifest.json';
+
+  var params = new URLSearchParams(window.location.search);
+  var arxivId = params.get('id');
+  if (!arxivId) {
+    document.getElementById('source-loading').textContent = 'No paper ID specified. Use ?id=XXXX.XXXXX';
+    return;
+  }
+
+  var safeId = arxivId.replace(/\//g, '-');
+  var baseUrl = STORAGE_URL + '/arxiv-sources/' + safeId + '/';
+
+  // Set up links immediately
+  document.getElementById('source-arxiv-link').href = 'https://arxiv.org/abs/' + arxivId;
+  document.getElementById('source-pdf-link').href = 'https://arxiv.org/pdf/' + arxivId;
+  document.getElementById('error-arxiv-link').href = 'https://arxiv.org/abs/' + arxivId;
+
+  fetch(MANIFEST_URL)
+    .then(function(r) { return r.json(); })
+    .then(function(manifest) {
+      var files = manifest[arxivId];
+      if (!files || files.length === 0) {
+        document.getElementById('source-loading').hidden = true;
+        document.getElementById('source-error').hidden = false;
+        return;
+      }
+
+      document.getElementById('source-loading').hidden = true;
+      document.getElementById('source-viewer').hidden = false;
+      document.getElementById('source-title').textContent = arxivId;
+      document.getElementById('source-meta').textContent = files.length + ' file' + (files.length === 1 ? '' : 's');
+      document.getElementById('file-count').textContent = '(' + files.length + ')';
+      document.title = arxivId + ' — Source Viewer';
+
+      var fileList = document.getElementById('file-list');
+      files.forEach(function(f) {
+        var li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.innerHTML = '<span class="file-icon">' + getFileIcon(f.name) + '</span>' +
+                        escapeHtml(f.name) +
+                        '<span class="file-size">' + formatSize(f.size) + '</span>';
+        li.dataset.filename = f.name;
+        li.addEventListener('click', function() {
+          selectFile(f.name, files);
+        });
+        fileList.appendChild(li);
+      });
+
+      // Auto-select first .tex file, or first file
+      var firstTex = files.find(function(f) { return f.name.endsWith('.tex'); });
+      selectFile((firstTex || files[0]).name, files);
+    })
+    .catch(function(err) {
+      document.getElementById('source-loading').textContent = 'Error loading manifest: ' + err.message;
+    });
+
+  var wrapEnabled = true;
+
+  function selectFile(filename, files) {
+    // Update active state in file list
+    var items = document.querySelectorAll('#file-list .list-group-item');
+    items.forEach(function(item) {
+      item.classList.toggle('active', item.dataset.filename === filename);
+    });
+
+    var content = document.getElementById('file-content');
+    var url = baseUrl + filename;
+    var ext = filename.split('.').pop().toLowerCase();
+
+    // Update URL without reload
+    var newUrl = window.location.pathname + '?id=' + arxivId + '&file=' + encodeURIComponent(filename);
+    history.replaceState(null, '', newUrl);
+
+    if (isImageFile(ext)) {
+      content.innerHTML =
+        '<div class="source-code-header">' +
+          '<strong>' + escapeHtml(filename) + '</strong>' +
+          '<a href="' + url + '" download class="btn btn-sm btn-outline-secondary">Download</a>' +
+        '</div>' +
+        '<div class="source-image-container">' +
+          '<img src="' + url + '" alt="' + escapeHtml(filename) + '">' +
+        '</div>';
+    } else if (ext === 'pdf') {
+      content.innerHTML =
+        '<div class="source-code-header">' +
+          '<strong>' + escapeHtml(filename) + '</strong>' +
+          '<a href="' + url + '" download class="btn btn-sm btn-outline-secondary">Download</a>' +
+        '</div>' +
+        '<div class="source-pdf-container">' +
+          '<iframe src="' + url + '"></iframe>' +
+        '</div>';
+    } else if (isTextFile(ext)) {
+      content.innerHTML = '<div class="source-code-header">' +
+        '<strong>' + escapeHtml(filename) + '</strong>' +
+        '<span>' +
+          '<button id="wrap-toggle" class="btn btn-sm btn-outline-secondary">' +
+            'Wrap: ' + (wrapEnabled ? 'On' : 'Off') +
+          '</button> ' +
+          '<a href="' + url + '" download class="btn btn-sm btn-outline-secondary">Download</a>' +
+        '</span>' +
+      '</div>' +
+      '<div id="code-area" class="source-code-container' + (wrapEnabled ? ' soft-wrap' : '') + '">' +
+        '<div style="padding:1rem;color:#666">Loading...</div>' +
+      '</div>';
+
+      document.getElementById('wrap-toggle').addEventListener('click', function() {
+        wrapEnabled = !wrapEnabled;
+        this.textContent = 'Wrap: ' + (wrapEnabled ? 'On' : 'Off');
+        document.getElementById('code-area').classList.toggle('soft-wrap', wrapEnabled);
+      });
+
+      fetch(url)
+        .then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.text();
+        })
+        .then(function(text) {
+          var codeArea = document.getElementById('code-area');
+          if (ext === 'tex' || ext === 'sty' || ext === 'cls') {
+            codeArea.innerHTML = renderTexWithSections(text, filename);
+            // Highlight all code blocks
+            codeArea.querySelectorAll('code[class*="language-"]').forEach(function(el) {
+              Prism.highlightElement(el);
+            });
+            // Set up section folding
+            codeArea.querySelectorAll('.tex-section-header').forEach(function(header) {
+              header.addEventListener('click', function() {
+                this.parentElement.classList.toggle('collapsed');
+              });
+            });
+          } else {
+            var lang = getPrismLang(ext);
+            codeArea.innerHTML = '<pre class="line-numbers"><code class="language-' + lang + '"></code></pre>';
+            codeArea.querySelector('code').textContent = text;
+            Prism.highlightElement(codeArea.querySelector('code'));
+          }
+        })
+        .catch(function(err) {
+          document.getElementById('code-area').innerHTML =
+            '<div style="padding:1rem;color:#c00">Error loading file: ' + err.message + '</div>';
+        });
+    } else {
+      // Binary or unknown — just offer download
+      content.innerHTML =
+        '<div class="source-code-header">' +
+          '<strong>' + escapeHtml(filename) + '</strong>' +
+        '</div>' +
+        '<div style="padding:2rem;text-align:center">' +
+          '<p>This file type cannot be previewed.</p>' +
+          '<a href="' + url + '" download class="btn btn-primary">Download ' + escapeHtml(filename) + '</a>' +
+        '</div>';
+    }
+  }
+
+  function renderTexWithSections(text, filename) {
+    // Split into preamble + document
+    var docIdx = text.indexOf('\\begin{document}');
+    var preamble = '';
+    var body = text;
+
+    if (docIdx !== -1) {
+      preamble = text.substring(0, docIdx);
+      body = text.substring(docIdx);
+    }
+
+    var html = '';
+
+    // Preamble (collapsed by default)
+    if (preamble) {
+      html += '<div class="tex-section collapsed">' +
+        '<div class="tex-section-header">' +
+          '<span class="tex-section-arrow">&#9660;</span> Preamble' +
+        '</div>' +
+        '<div class="tex-section-body" style="max-height:none">' +
+          '<pre class="line-numbers"><code class="language-latex">' + escapeHtml(preamble) + '</code></pre>' +
+        '</div>' +
+      '</div>';
+    }
+
+    // Split body by \section, \subsection, \subsubsection
+    var sectionRegex = /^(\\(?:section|subsection|subsubsection)\*?\{[^}]*\})/gm;
+    var parts = [];
+    var lastIndex = 0;
+    var match;
+
+    while ((match = sectionRegex.exec(body)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ header: null, text: body.substring(lastIndex, match.index) });
+      }
+      // Find the end of this section (next section or end of body)
+      var nextMatch = sectionRegex.exec(body);
+      var endIdx = nextMatch ? nextMatch.index : body.length;
+      parts.push({
+        header: match[1],
+        text: body.substring(match.index, endIdx)
+      });
+      if (nextMatch) {
+        sectionRegex.lastIndex = nextMatch.index;
+      }
+      lastIndex = endIdx;
+    }
+
+    if (lastIndex < body.length) {
+      if (parts.length === 0) {
+        parts.push({ header: null, text: body });
+      } else if (lastIndex > 0) {
+        parts.push({ header: null, text: body.substring(lastIndex) });
+      }
+    }
+
+    if (parts.length === 0) {
+      parts.push({ header: null, text: body });
+    }
+
+    parts.forEach(function(part) {
+      if (part.header) {
+        // Extract display name from \section{Name}
+        var nameMatch = part.header.match(/\\(?:section|subsection|subsubsection)\*?\{([^}]*)\}/);
+        var displayName = nameMatch ? nameMatch[1] : part.header;
+        var level = part.header.startsWith('\\subsubsection') ? 'subsubsection' :
+                    part.header.startsWith('\\subsection') ? 'subsection' : 'section';
+        var indent = level === 'subsubsection' ? 'margin-left:2em' :
+                     level === 'subsection' ? 'margin-left:1em' : '';
+
+        html += '<div class="tex-section" style="' + indent + '">' +
+          '<div class="tex-section-header">' +
+            '<span class="tex-section-arrow">&#9660;</span> ' + escapeHtml(displayName) +
+          '</div>' +
+          '<div class="tex-section-body" style="max-height:none">' +
+            '<pre class="line-numbers"><code class="language-latex">' + escapeHtml(part.text) + '</code></pre>' +
+          '</div>' +
+        '</div>';
+      } else {
+        html += '<pre class="line-numbers"><code class="language-latex">' + escapeHtml(part.text) + '</code></pre>';
+      }
+    });
+
+    return html;
+  }
+
+  function isImageFile(ext) {
+    return ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].indexOf(ext) !== -1;
+  }
+
+  function isTextFile(ext) {
+    return ['tex', 'sty', 'cls', 'bbl', 'bib', 'bst', 'txt', 'md',
+            'py', 'c', 'h', 'cpp', 'hpp', 'java', 'js', 'json', 'xml',
+            'html', 'css', 'sh', 'pl', 'rb', 'r', 'asy', 'mp', 'mf',
+            'def', 'cfg', 'dtx', 'ins', 'fd', 'clo', 'ldf',
+            'tikz', 'pgf', 'raw'].indexOf(ext) !== -1;
+  }
+
+  function getPrismLang(ext) {
+    var map = {
+      'tex': 'latex', 'sty': 'latex', 'cls': 'latex', 'bbl': 'latex',
+      'bib': 'bibtex', 'bst': 'latex',
+      'py': 'python', 'js': 'javascript', 'json': 'json',
+      'html': 'html', 'xml': 'xml', 'css': 'css',
+      'c': 'c', 'cpp': 'cpp', 'h': 'c', 'hpp': 'cpp',
+      'java': 'java', 'sh': 'bash', 'pl': 'perl', 'rb': 'ruby', 'r': 'r',
+      'asy': 'latex', 'tikz': 'latex', 'pgf': 'latex',
+      'def': 'latex', 'cfg': 'latex', 'dtx': 'latex',
+      'fd': 'latex', 'clo': 'latex', 'ldf': 'latex',
+    };
+    return map[ext] || 'plain';
+  }
+
+  function getFileIcon(name) {
+    var ext = name.split('.').pop().toLowerCase();
+    if (ext === 'tex' || ext === 'sty' || ext === 'cls') return '&#120139;';
+    if (ext === 'bbl' || ext === 'bib' || ext === 'bst') return '&#128218;';
+    if (ext === 'pdf') return '&#128196;';
+    if (isImageFile(ext)) return '&#128444;';
+    if (ext === 'eps' || ext === 'ps') return '&#128444;';
+    return '&#128196;';
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+})();
+</script>
