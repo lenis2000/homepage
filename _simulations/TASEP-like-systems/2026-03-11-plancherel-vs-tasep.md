@@ -4,14 +4,16 @@ model: TASEPs
 author: 'Leonid Petrov'
 code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/TASEP-like-systems/2026-03-11-plancherel-vs-tasep.md'
-    txt: 'Interactive JavaScript simulation — see source'
+    txt: 'Interactive simulation — see source'
+  - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/TASEP-like-systems/2026-03-11-plancherel-vs-tasep.cpp'
+    txt: 'C++ source for WASM (RSK + TASEP algorithms)'
 a11y-description: "Side-by-side comparison of Plancherel growth process (Russian-notation Young diagram profile) and TASEP height function (step initial condition). Both produce piecewise-linear profiles with slopes plus or minus 1. Animated growth synchronized by box count, with limit shape overlays and accumulated histograms of height fluctuations at the center. Demonstrates that Plancherel fluctuations are O(1) while TASEP fluctuations are O(N to the 1/6)."
 ---
 
 <details class="math-description" id="mathDescription">
 <summary>Mathematical description</summary>
 <div style="padding: 8px 0;">
-<p>The <b>Plancherel growth process</b> adds boxes to a Young diagram via RSK insertion of i.i.d. uniform random variables. The resulting partition of $N$ is distributed according to the <b>Plancherel measure</b>. The <b>TASEP</b> (Totally Asymmetric Simple Exclusion Process) starts from step initial condition: particles at $\ldots, -2, -1, 0$, each jumping right at rate $1$ (i.e., $\operatorname{Exp}(1)$ waiting times), subject to the exclusion constraint.</p>
+<p>The <b>Plancherel growth process</b> adds boxes to a Young diagram via RSK insertion of i.i.d. uniform random variables. The resulting partition of $N$ is distributed according to the <b>Plancherel measure</b>. The <b>TASEP</b> (Totally Asymmetric Simple Exclusion Process) starts from step initial condition: particles at $\ldots, -2, -1, 0$, each jumping right at rate $1$ (i.e., $\mathrm{Exp}(1)$ waiting times), subject to the exclusion constraint.</p>
 <p>Both processes produce piecewise-linear <b>height functions</b> with slopes $\pm 1$: the Russian-notation profile $\omega(u)$ for Plancherel, and $h(x,t)$ for TASEP ($+1$ over holes, $-1$ over particles). Both height functions have the shape of the Young diagram (a partition) sitting on top of the $|u|$ or $|x|$ baseline. The two processes are synchronized so that the total number of boxes (area of the partition) equals $N$.</p>
 <p><b>Fluctuations at the center</b> ($u = x = 0$): the Plancherel height $\omega(0) \approx \frac{4}{\pi}\sqrt{N}$ has $O(1)$ fluctuations (Kerov's CLT), while the TASEP height $h(0,t) \approx t/2$ has $O(t^{1/3})$ fluctuations (KPZ universality class). <b>Plancherel is dramatically more rigid.</b></p>
 </div>
@@ -20,6 +22,7 @@ a11y-description: "Side-by-side comparison of Plancherel growth process (Russian
 <script>if (window.innerWidth >= 992) document.getElementById('mathDescription').setAttribute('open', '');</script>
 
 <script src="{{site.url}}/js/d3.v7.min.js"></script>
+<script src="{{site.url}}/js/2026-03-11-plancherel-vs-tasep.js"></script>
 
 <style>
 details.math-description {
@@ -467,8 +470,11 @@ details.control-section {
 <button class="sample-fab" id="sampleFab" aria-label="Sample">&#9654;</button>
 
 <script>
-(function() {
+(async function() {
   'use strict';
+
+  // ─── WASM Init ───
+  let W = null;
 
   // ─── State ───
   let currentN = 2000;
@@ -478,8 +484,6 @@ details.control-section {
   let batchCancelRequested = false;
   const plancherelDeviations = [];
   const tasepDeviations = [];
-
-  // Cache last drawn data for resize redraws
   let lastPlancherelDraw = null;
   let lastTasepDraw = null;
 
@@ -506,7 +510,51 @@ details.control-section {
   function expRandom() { return -Math.log(1 - Math.random()); }
   function yieldFrame() { return new Promise(requestAnimationFrame); }
 
-  // ─── RSK Insertion ───
+  // ─── WASM wrappers ───
+  function wasmPlancherelGrow(N) {
+    W._plancherelGrow(N);
+  }
+
+  function wasmProfileHeightAtZero() {
+    return W._profileHeightAtZero();
+  }
+
+  function wasmRussianProfile() {
+    const len = W._computeRussianProfile();
+    const ptrU = W._getProfileU();
+    const ptrV = W._getProfileV();
+    // Read immediately before any other WASM call (buffer may move with ALLOW_MEMORY_GROWTH)
+    const uArr = new Float64Array(W.HEAPF64.buffer, ptrU, len);
+    const vArr = new Float64Array(W.HEAPF64.buffer, ptrV, len);
+    const pts = new Array(len);
+    for (let i = 0; i < len; i++) {
+      pts[i] = { u: uArr[i], v: vArr[i] };
+    }
+    return pts;
+  }
+
+  function wasmTasepSimulate(N) {
+    return W._tasepSimulate(N); // returns time
+  }
+
+  function wasmTasepHeightAtZero() {
+    return W._tasepHeightAtZero();
+  }
+
+  function wasmHeightFunction(xMin, xMax) {
+    const len = W._computeHeightFunction(xMin, xMax);
+    const ptrX = W._getHeightX();
+    const ptrH = W._getHeightH();
+    const xArr = new Float64Array(W.HEAPF64.buffer, ptrX, len);
+    const hArr = new Float64Array(W.HEAPF64.buffer, ptrH, len);
+    const pts = new Array(len);
+    for (let i = 0; i < len; i++) {
+      pts[i] = { x: xArr[i], h: hArr[i] };
+    }
+    return pts;
+  }
+
+  // ─── JS RSK (kept for animation only) ───
   function rskInsert(tableau, x) {
     let val = x;
     for (let r = 0; r < tableau.length; r++) {
@@ -517,27 +565,16 @@ details.control-section {
       }
       if (pos === -1) {
         row.push(val);
-        return [r, row.length - 1];
+        return;
       }
       const bumped = row[pos];
       row[pos] = val;
       val = bumped;
     }
     tableau.push([val]);
-    return [tableau.length - 1, 0];
   }
 
-  // ─── Plancherel Growth ───
-  function plancherelGrow(N) {
-    const tableau = [];
-    for (let k = 0; k < N; k++) {
-      rskInsert(tableau, Math.random());
-    }
-    return tableau.map(row => row.length);
-  }
-
-  // ─── Russian Profile from Partition ───
-  function russianProfile(lambda) {
+  function jsRussianProfile(lambda) {
     const ell = lambda.length;
     if (ell === 0) return [{ u: 0, v: 0 }];
     const points = [];
@@ -559,17 +596,32 @@ details.control-section {
     return points;
   }
 
-  // ─── Profile height at u = 0 ───
-  function profileHeightAtZero(lambda) {
+  function jsProfileHeightAtZero(lambda) {
     let count = 0;
     for (let k = 0; k < lambda.length; k++) {
-      if (lambda[k] >= k + 1) count++;
-      else break;
+      if (lambda[k] >= k + 1) count++; else break;
     }
     return 2 * count;
   }
 
-  // ─── VKLS limit shape ───
+  function jsHeightFunction(particles, xMin, xMax) {
+    const occupied = new Set();
+    for (const p of particles) occupied.add(Math.round(p));
+    const pts = [];
+    let countRight = 0;
+    for (const p of particles) {
+      if (Math.round(p) > xMin) countRight++;
+    }
+    let h = 2 * countRight + xMin;
+    pts.push({ x: xMin, h: h });
+    for (let x = xMin + 1; x <= xMax; x++) {
+      h += (1 - 2 * (occupied.has(x) ? 1 : 0));
+      pts.push({ x, h });
+    }
+    return pts;
+  }
+
+  // ─── Limit shapes (JS — just math, fast) ───
   function vklsOmega(x) {
     if (Math.abs(x) >= 2) return Math.abs(x);
     return (2 / Math.PI) * (x * Math.asin(x / 2) + Math.sqrt(4 - x * x));
@@ -585,88 +637,11 @@ details.control-section {
     return pts;
   }
 
-  // ─── TASEP Simulation (event-driven) ───
-  function tasepSimulate(N) {
-    const M = Math.ceil(3 * Math.sqrt(N)) + 10;
-    const particles = new Float64Array(M);
-    const nextJump = new Float64Array(M);
-    for (let k = 0; k < M; k++) {
-      particles[k] = -k;
-      nextJump[k] = expRandom();
-    }
-    let time = 0;
-    let totalDisp = 0;
-    let iter = 0;
-    const maxIter = N * 200;
-
-    while (totalDisp < N && iter < maxIter) {
-      iter++;
-      // Find next event (linear scan — M is small)
-      let minTime = Infinity, minK = 0;
-      for (let k = 0; k < M; k++) {
-        if (nextJump[k] < minTime) {
-          minTime = nextJump[k];
-          minK = k;
-        }
-      }
-      time = minTime;
-      // Check if particle can jump
-      const canJump = (minK === 0) || (particles[minK] + 1 < particles[minK - 1]);
-      if (canJump) {
-        particles[minK] += 1;
-        totalDisp += 1;
-      }
-      nextJump[minK] = time + expRandom();
-    }
-
-    // Extract partition
-    const lambda = [];
-    for (let k = 0; k < M; k++) {
-      const disp = particles[k] - (-k);
-      if (disp <= 0) break;
-      lambda.push(disp);
-    }
-
-    return { particles: Array.from(particles).slice(0, M), time, lambda };
-  }
-
-  // ─── Height function from particles ───
-  function tasepHeightFunction(particles, xMin, xMax) {
-    const occupied = new Set();
-    for (const p of particles) {
-      occupied.add(Math.round(p));
-    }
-    const pts = [];
-    // Compute h(x) = 2 * #{particles at positions > x} + x
-    // We count particles to the right at each integer position
-    // More efficient: compute h(xMin), then h(x+1) = h(x) + 1 - 2*eta(x+1)
-    // First compute h(xMin) = 2 * #{particles > xMin} + xMin
-    let countRight = 0;
-    for (const p of particles) {
-      if (Math.round(p) > xMin) countRight++;
-    }
-    let h = 2 * countRight + xMin;
-    pts.push({ x: xMin, h: h });
-    for (let x = xMin + 1; x <= xMax; x++) {
-      const eta = occupied.has(x) ? 1 : 0;
-      h += (1 - 2 * eta);
-      pts.push({ x, h });
-    }
-    return pts;
-  }
-
-  // ─── TASEP limit shape ───
   function tasepLimitCurve(t, xMin, xMax, numPoints) {
     const pts = [];
     for (let i = 0; i <= numPoints; i++) {
       const x = xMin + (xMax - xMin) * i / numPoints;
-      let hLim;
-      if (Math.abs(x) >= t) {
-        hLim = Math.abs(x);
-      } else {
-        hLim = t / 2 + (x * x) / (2 * t);
-      }
-      pts.push({ x, h: hLim });
+      pts.push({ x, h: Math.abs(x) >= t ? Math.abs(x) : t / 2 + (x * x) / (2 * t) });
     }
     return pts;
   }
@@ -1119,17 +1094,16 @@ details.control-section {
     document.getElementById('statSamples').textContent = plancherelDeviations.length;
   }
 
-  // ─── Run one sample and draw ───
+  // ─── Run one sample and draw (WASM) ───
   function runAndDraw(N, addToHistogram) {
-    // Plancherel
-    const lambda = plancherelGrow(N);
-    const profile = russianProfile(lambda);
-    const omega0 = profileHeightAtZero(lambda);
+    // Plancherel via WASM
+    wasmPlancherelGrow(N);
+    const omega0 = wasmProfileHeightAtZero();
+    const profile = wasmRussianProfile();
     const sqN = Math.sqrt(N);
     const limitOmega0 = (4 / Math.PI) * sqN;
     const limitCurve = vklsCurve(N, 200);
 
-    // Extend profile with |u| tails for visual context
     const uMinProf = profile[0].u;
     const uMaxProf = profile[profile.length - 1].u;
     const extProfile = [
@@ -1137,52 +1111,29 @@ details.control-section {
       ...profile,
       { u: uMaxProf + 10, v: Math.abs(uMaxProf + 10) }
     ];
-    // Also extend limit curve
     const extLimit = [
       { u: uMinProf - 10, v: Math.abs(uMinProf - 10) },
       ...limitCurve,
       { u: uMaxProf + 10, v: Math.abs(uMaxProf + 10) }
     ];
 
-    lastPlancherelDraw = {
-      pts: extProfile, limit: extLimit,
-      centerVal: omega0, limitCenter: limitOmega0
-    };
-    drawProfile(plancherelCanvas, extProfile, extLimit,
-      '--plancherel-color', '--plancherel-fill',
-      'Plancherel', omega0, limitOmega0);
+    lastPlancherelDraw = { pts: extProfile, limit: extLimit, centerVal: omega0, limitCenter: limitOmega0 };
+    drawProfile(plancherelCanvas, extProfile, extLimit, '--plancherel-color', '--plancherel-fill', 'Plancherel', omega0, limitOmega0);
+    const zoomR = Math.max(10, Math.ceil(Math.pow(N, 2/3) * 0.3));
+    drawZoomed(plancherelZoomCanvas, extProfile, extLimit, '--plancherel-color', '--plancherel-fill', omega0, limitOmega0, zoomR);
 
-    // Zoomed Plancherel: show ~10% of the full width centered on 0
-    const pZoom = Math.max(10, Math.ceil(sqN * 0.5));
-    drawZoomed(plancherelZoomCanvas, extProfile, extLimit,
-      '--plancherel-color', '--plancherel-fill',
-      omega0, limitOmega0, pZoom);
-
-    // TASEP
-    const tasep = tasepSimulate(N);
-    const t = tasep.time;
+    // TASEP via WASM
+    const t = wasmTasepSimulate(N);
     const limitH0 = t / 2;
     const xRange = Math.ceil(t * 1.15);
-    const hFunc = tasepHeightFunction(tasep.particles, -xRange, xRange);
+    const hFunc = wasmHeightFunction(-xRange, xRange);
+    const h0 = wasmTasepHeightAtZero();
     const hLimitCurve = tasepLimitCurve(t, -xRange, xRange, 300);
 
-    // h(0) from the height function
-    const h0Pt = hFunc.find(p => p.x === 0);
-    const h0 = h0Pt ? h0Pt.h : 0;
-
-    lastTasepDraw = {
-      pts: hFunc, limit: hLimitCurve,
-      centerVal: h0, limitCenter: limitH0
-    };
-    drawProfile(tasepCanvas, hFunc, hLimitCurve,
-      '--tasep-color', '--tasep-fill',
-      'TASEP', h0, limitH0);
-
-    // Zoomed TASEP
-    const tZoom = Math.max(10, Math.ceil(t * 0.15));
-    drawZoomed(tasepZoomCanvas, hFunc, hLimitCurve,
-      '--tasep-color', '--tasep-fill',
-      h0, limitH0, tZoom);
+    lastTasepDraw = { pts: hFunc, limit: hLimitCurve, centerVal: h0, limitCenter: limitH0 };
+    drawProfile(tasepCanvas, hFunc, hLimitCurve, '--tasep-color', '--tasep-fill', 'TASEP', h0, limitH0);
+    const tZoom = zoomR;
+    drawZoomed(tasepZoomCanvas, hFunc, hLimitCurve, '--tasep-color', '--tasep-fill', h0, limitH0, tZoom);
 
     if (addToHistogram) {
       plancherelDeviations.push(omega0 - limitOmega0);
@@ -1191,11 +1142,9 @@ details.control-section {
     }
 
     updateStats(N, omega0, h0, limitOmega0, limitH0);
-
-    return { lambda, tasep, omega0, h0, limitOmega0, limitH0 };
   }
 
-  // ─── Animation ───
+  // ─── Animation (JS RSK for incremental Plancherel, JS TASEP replay) ───
   function startAnimation(N) {
     if (isAnimating) { stopAnimation(); return; }
     isAnimating = true;
@@ -1203,39 +1152,27 @@ details.control-section {
     disableControls(true);
     animateBtn.disabled = false;
 
-    // Pre-generate RSK values
     const rskValues = Array.from({ length: N }, () => Math.random());
     const tableau = [];
     let pStep = 0;
 
-    // Pre-generate TASEP (full run to get moves)
+    // Pre-generate TASEP moves (JS — needed for step-by-step replay)
     const M = Math.ceil(3 * Math.sqrt(N)) + 10;
     const particles = new Float64Array(M);
     const nextJump = new Float64Array(M);
-    for (let k = 0; k < M; k++) {
-      particles[k] = -k;
-      nextJump[k] = expRandom();
-    }
-    const moves = []; // Array of particle indices for each successful jump
-    const times = [];
+    for (let k = 0; k < M; k++) { particles[k] = -k; nextJump[k] = expRandom(); }
+    const moves = [], times = [];
     let time = 0, totalDisp = 0;
     while (totalDisp < N) {
       let minTime = Infinity, minK = 0;
-      for (let k = 0; k < M; k++) {
-        if (nextJump[k] < minTime) { minTime = nextJump[k]; minK = k; }
-      }
+      for (let k = 0; k < M; k++) { if (nextJump[k] < minTime) { minTime = nextJump[k]; minK = k; } }
       time = minTime;
-      const canJump = (minK === 0) || (particles[minK] + 1 < particles[minK - 1]);
-      if (canJump) {
-        particles[minK] += 1;
-        totalDisp += 1;
-        moves.push(minK);
-        times.push(time);
+      if ((minK === 0) || (particles[minK] + 1 < particles[minK - 1])) {
+        particles[minK]++; totalDisp++; moves.push(minK); times.push(time);
       }
       nextJump[minK] = time + expRandom();
     }
 
-    // Reset TASEP particles for playback
     const animParticles = new Float64Array(M);
     for (let k = 0; k < M; k++) animParticles[k] = -k;
     let tStep = 0;
@@ -1246,80 +1183,51 @@ details.control-section {
       const stepsPerFrame = Math.max(1, Math.ceil(N * speed / 2000));
       const targetStep = Math.min(N, pStep + stepsPerFrame);
 
-      // Advance Plancherel
-      while (pStep < targetStep) {
-        rskInsert(tableau, rskValues[pStep]);
-        pStep++;
-      }
+      while (pStep < targetStep) { rskInsert(tableau, rskValues[pStep]); pStep++; }
+      while (tStep < targetStep) { animParticles[moves[tStep]]++; tStep++; }
 
-      // Advance TASEP
-      while (tStep < targetStep) {
-        animParticles[moves[tStep]] += 1;
-        tStep++;
-      }
-
-      // Draw Plancherel profile
       const lambda = tableau.map(row => row.length);
-      const profile = russianProfile(lambda);
-      const omega0 = profileHeightAtZero(lambda);
+      const profile = jsRussianProfile(lambda);
+      const omega0 = jsProfileHeightAtZero(lambda);
       const sqN = Math.sqrt(N);
       const limitOmega0 = (4 / Math.PI) * sqN;
       const limitCurve = vklsCurve(N, 200);
 
-      const uMinProf = profile[0].u;
-      const uMaxProf = profile[profile.length - 1].u;
+      const uMinP = profile[0].u, uMaxP = profile[profile.length - 1].u;
       const ext = [
-        { u: Math.min(uMinProf, -2 * sqN) - 5, v: Math.abs(Math.min(uMinProf, -2 * sqN) - 5) },
+        { u: Math.min(uMinP, -2*sqN)-5, v: Math.abs(Math.min(uMinP, -2*sqN)-5) },
         ...profile,
-        { u: Math.max(uMaxProf, 2 * sqN) + 5, v: Math.abs(Math.max(uMaxProf, 2 * sqN) + 5) }
+        { u: Math.max(uMaxP, 2*sqN)+5, v: Math.abs(Math.max(uMaxP, 2*sqN)+5) }
       ];
       const extLim = [
-        { u: Math.min(uMinProf, -2 * sqN) - 5, v: Math.abs(Math.min(uMinProf, -2 * sqN) - 5) },
+        { u: Math.min(uMinP, -2*sqN)-5, v: Math.abs(Math.min(uMinP, -2*sqN)-5) },
         ...limitCurve,
-        { u: Math.max(uMaxProf, 2 * sqN) + 5, v: Math.abs(Math.max(uMaxProf, 2 * sqN) + 5) }
+        { u: Math.max(uMaxP, 2*sqN)+5, v: Math.abs(Math.max(uMaxP, 2*sqN)+5) }
       ];
+      drawProfile(plancherelCanvas, ext, extLim, '--plancherel-color', '--plancherel-fill', 'Plancherel', omega0, limitOmega0);
+      drawZoomed(plancherelZoomCanvas, ext, extLim, '--plancherel-color', '--plancherel-fill', omega0, limitOmega0, Math.max(10, Math.ceil(Math.pow(N, 2/3)*0.3)));
 
-      drawProfile(plancherelCanvas, ext, extLim,
-        '--plancherel-color', '--plancherel-fill',
-        'Plancherel', omega0, limitOmega0);
-
-      const pZoom = Math.max(10, Math.ceil(sqN * 0.5));
-      drawZoomed(plancherelZoomCanvas, ext, extLim,
-        '--plancherel-color', '--plancherel-fill',
-        omega0, limitOmega0, pZoom);
-
-      // Draw TASEP height function
-      const tTime = tStep > 0 ? times[tStep - 1] : 0;
+      const tTime = tStep > 0 ? times[tStep-1] : 0;
       const limitH0 = tTime / 2;
-      const tXRange = Math.max(20, Math.ceil(Math.sqrt(6 * N) * 1.2));
-      const hFunc = tasepHeightFunction(Array.from(animParticles).slice(0, M), -tXRange, tXRange);
-      const hLim = tasepLimitCurve(Math.max(tTime, 1), -tXRange, tXRange, 300);
+      const tXRange = Math.max(20, Math.ceil(Math.sqrt(6*N)*1.2));
+      const hFunc = jsHeightFunction(Array.from(animParticles).slice(0,M), -tXRange, tXRange);
+      const hLim = tasepLimitCurve(Math.max(tTime,1), -tXRange, tXRange, 300);
       const h0Pt = hFunc.find(p => p.x === 0);
       const h0 = h0Pt ? h0Pt.h : 0;
-
-      drawProfile(tasepCanvas, hFunc, hLim,
-        '--tasep-color', '--tasep-fill',
-        'TASEP', h0, limitH0);
-
-      const tZoom = Math.max(10, Math.ceil(Math.max(tTime, 1) * 0.15));
-      drawZoomed(tasepZoomCanvas, hFunc, hLim,
-        '--tasep-color', '--tasep-fill',
-        h0, limitH0, tZoom);
+      drawProfile(tasepCanvas, hFunc, hLim, '--tasep-color', '--tasep-fill', 'TASEP', h0, limitH0);
+      drawZoomed(tasepZoomCanvas, hFunc, hLim, '--tasep-color', '--tasep-fill', h0, limitH0, Math.max(10, Math.ceil(Math.pow(N, 2/3)*0.3)));
 
       updateStats(pStep, omega0, h0, limitOmega0, limitH0);
 
       if (pStep >= N) {
-        // Done
         plancherelDeviations.push(omega0 - limitOmega0);
         tasepDeviations.push(h0 - limitH0);
         drawHistogram();
         stopAnimation();
         return;
       }
-
       animationId = requestAnimationFrame(frame);
     }
-
     animationId = requestAnimationFrame(frame);
   }
 
@@ -1347,14 +1255,13 @@ details.control-section {
     const startTime = performance.now();
 
     while (completed < count && !batchCancelRequested) {
-      const lambda = plancherelGrow(N);
-      const omega0 = profileHeightAtZero(lambda);
+      wasmPlancherelGrow(N);
+      const omega0 = wasmProfileHeightAtZero();
       plancherelDeviations.push(omega0 - limitOmega0);
 
-      const tasep = tasepSimulate(N);
-      const h0Count = tasep.particles.filter(p => p > 0).length;
-      const h0 = 2 * h0Count;
-      const limitH0 = tasep.time / 2;
+      const tTime = wasmTasepSimulate(N);
+      const h0 = wasmTasepHeightAtZero();
+      const limitH0 = tTime / 2;
       tasepDeviations.push(h0 - limitH0);
 
       completed++;
@@ -1474,14 +1381,14 @@ details.control-section {
 
   // Canvas resize
   function handleResize() {
+    const zR = Math.max(10, Math.ceil(Math.pow(currentN, 2/3) * 0.3));
     if (lastPlancherelDraw) {
       drawProfile(plancherelCanvas, lastPlancherelDraw.pts, lastPlancherelDraw.limit,
         '--plancherel-color', '--plancherel-fill',
         'Plancherel', lastPlancherelDraw.centerVal, lastPlancherelDraw.limitCenter);
-      const pZoom = Math.max(10, Math.ceil(Math.sqrt(currentN) * 0.5));
       drawZoomed(plancherelZoomCanvas, lastPlancherelDraw.pts, lastPlancherelDraw.limit,
         '--plancherel-color', '--plancherel-fill',
-        lastPlancherelDraw.centerVal, lastPlancherelDraw.limitCenter, pZoom);
+        lastPlancherelDraw.centerVal, lastPlancherelDraw.limitCenter, zR);
     } else {
       drawProfile(plancherelCanvas, null, null, '--plancherel-color', '--plancherel-fill', 'Plancherel');
       drawZoomed(plancherelZoomCanvas, null, null, '--plancherel-color', '--plancherel-fill', undefined, undefined, 10);
@@ -1490,10 +1397,9 @@ details.control-section {
       drawProfile(tasepCanvas, lastTasepDraw.pts, lastTasepDraw.limit,
         '--tasep-color', '--tasep-fill',
         'TASEP', lastTasepDraw.centerVal, lastTasepDraw.limitCenter);
-      const tZoom = Math.max(10, Math.ceil(lastTasepDraw.limitCenter * 0.3));
       drawZoomed(tasepZoomCanvas, lastTasepDraw.pts, lastTasepDraw.limit,
         '--tasep-color', '--tasep-fill',
-        lastTasepDraw.centerVal, lastTasepDraw.limitCenter, tZoom);
+        lastTasepDraw.centerVal, lastTasepDraw.limitCenter, zR);
     } else {
       drawProfile(tasepCanvas, null, null, '--tasep-color', '--tasep-fill', 'TASEP');
       drawZoomed(tasepZoomCanvas, null, null, '--tasep-color', '--tasep-fill', undefined, undefined, 10);
@@ -1505,7 +1411,36 @@ details.control-section {
     window._resizeTimer = setTimeout(handleResize, 200);
   });
 
-  // Initial sample on load
+  // ─── Show loading state, init WASM, then auto-sample ───
+  function drawLoading(canvas, msg) {
+    const { ctx, w, h } = setupCanvas(canvas);
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = getColor('--text-secondary');
+    ctx.font = '14px "franklingothic-book", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(msg, w / 2, h / 2);
+  }
+
+  drawLoading(plancherelCanvas, 'Loading WASM…');
+  drawLoading(tasepCanvas, 'Loading WASM…');
+  drawLoading(plancherelZoomCanvas, '');
+  drawLoading(tasepZoomCanvas, '');
+  drawHistogram();
+
+  disableControls(true);
+
+  try {
+    W = await createPlancherelTASEP();
+  } catch (err) {
+    console.error('WASM load failed:', err);
+    drawLoading(plancherelCanvas, 'WASM failed to load');
+    drawLoading(tasepCanvas, 'WASM failed to load');
+    return;
+  }
+
+  disableControls(false);
+
+  // Initial sample
   currentN = 20000;
   nInput.value = currentN;
   nSlider.value = currentN;
