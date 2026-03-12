@@ -88,19 +88,6 @@ def write_files_json(arxiv_id: str, files: list[dict]) -> Path:
     return fpath
 
 
-def upload_file_to_s3(local_path: Path, arxiv_id: str) -> bool:
-    """Upload a single file to the paper's S3 dir."""
-    safe_id = safe_dirname(arxiv_id)
-    s3_path = f"s3://{OUR_S3_BUCKET}/{OUR_S3_PREFIX}/{safe_id}/{local_path.name}"
-    try:
-        subprocess.run(
-            ["aws", "s3", "cp", str(local_path), s3_path, "--quiet"],
-            check=True, capture_output=True,
-        )
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
 
 def main():
     parser = argparse.ArgumentParser(description="Build arxiv sources manifest")
@@ -113,30 +100,24 @@ def main():
     all_ids = get_all_arxiv_ids()
     source_ids = []
     written = 0
-    uploaded = 0
     missing_count = 0
 
     print(f"Papers in feed: {len(all_ids)}")
 
+    # Step 1: Write _files.json locally for each paper
     for i, arxiv_id in enumerate(all_ids):
         files = scan_local_dir(arxiv_id)
 
         if files:
             source_ids.append(arxiv_id)
-
             if not args.dry_run:
-                fpath = write_files_json(arxiv_id, files)
+                write_files_json(arxiv_id, files)
                 written += 1
-
-                if not args.no_upload:
-                    if upload_file_to_s3(fpath, arxiv_id):
-                        uploaded += 1
         else:
             missing_count += 1
 
-        if (i + 1) % 500 == 0:
-            print(f"  processed {i+1}/{len(all_ids)}..."
-                  + (f" ({uploaded} uploaded)" if not args.no_upload and not args.dry_run else ""))
+        if (i + 1) % 1000 == 0:
+            print(f"  scanned {i+1}/{len(all_ids)}...")
 
     print(f"\nWith sources: {len(source_ids)}")
     print(f"Missing:      {missing_count}")
@@ -146,10 +127,23 @@ def main():
         return
 
     print(f"Wrote _files.json: {written}")
-    if not args.no_upload:
-        print(f"Uploaded to S3:    {uploaded}")
 
-    # Write lightweight ID list for feed badges
+    # Step 2: Bulk upload all _files.json to S3 via sync
+    if not args.no_upload:
+        print("Uploading _files.json to S3 (bulk sync)...", flush=True)
+        try:
+            subprocess.run(
+                ["aws", "s3", "sync", str(SOURCES_DIR),
+                 f"s3://{OUR_S3_BUCKET}/{OUR_S3_PREFIX}/",
+                 "--exclude", "*", "--include", "*/_files.json",
+                 "--size-only"],
+                check=True,
+            )
+            print("Upload complete.")
+        except subprocess.CalledProcessError as e:
+            print(f"ERROR uploading: {e}")
+
+    # Step 3: Write lightweight ID list for feed badges
     IDS_FILE.parent.mkdir(parents=True, exist_ok=True)
     tmp = IDS_FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps(source_ids, separators=(",", ":")))
