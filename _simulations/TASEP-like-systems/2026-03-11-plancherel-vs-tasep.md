@@ -863,24 +863,11 @@ details.control-section {
         }
       }
     }
-    // Include |u| baseline in range
-    vMin = Math.min(vMin, 0);
     const vPad = (vMax - vMin) * 0.08 || 1;
     vMin -= vPad; vMax += vPad;
 
     function toX(u) { return margin.left + (u - uMin) / (uMax - uMin) * pw; }
     function toY(v) { return margin.top + ph - (v - vMin) / (vMax - vMin) * ph; }
-
-    // |u| baseline
-    ctx.strokeStyle = '#aaa';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 3]);
-    ctx.beginPath();
-    ctx.moveTo(toX(uMin), toY(Math.abs(uMin)));
-    ctx.lineTo(toX(0), toY(0));
-    ctx.lineTo(toX(uMax), toY(Math.abs(uMax)));
-    ctx.stroke();
-    ctx.setLineDash([]);
 
     // Vertical center line
     ctx.setLineDash([4, 4]);
@@ -896,9 +883,9 @@ details.control-section {
     const fillColor = getColor(fillVar);
     ctx.fillStyle = fillColor;
     ctx.beginPath();
-    ctx.moveTo(toX(inRange[0][uKey]), toY(0));
+    ctx.moveTo(toX(inRange[0][uKey]), toY(vMin));
     for (const p of inRange) ctx.lineTo(toX(p[uKey]), toY(p[vKey]));
-    ctx.lineTo(toX(inRange[inRange.length - 1][uKey]), toY(0));
+    ctx.lineTo(toX(inRange[inRange.length - 1][uKey]), toY(vMin));
     ctx.closePath();
     ctx.fill();
 
