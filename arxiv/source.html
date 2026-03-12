@@ -182,7 +182,6 @@ sitemap: false
 <script>
 (function() {
   var STORAGE_URL = '{{ site.storage_url }}';
-  var MANIFEST_URL = '{{ site.url }}/assets/data/arxiv-sources-manifest.json';
 
   var params = new URLSearchParams(window.location.search);
   var arxivId = params.get('id');
@@ -199,10 +198,13 @@ sitemap: false
   document.getElementById('source-pdf-link').href = 'https://arxiv.org/pdf/' + arxivId;
   document.getElementById('error-arxiv-link').href = 'https://arxiv.org/abs/' + arxivId;
 
-  fetch(MANIFEST_URL)
-    .then(function(r) { return r.json(); })
-    .then(function(manifest) {
-      var files = manifest[arxivId];
+  // Fetch per-paper file listing directly from S3 (avoids loading full 1.9MB manifest)
+  fetch(baseUrl + '_files.json')
+    .then(function(r) {
+      if (!r.ok) throw new Error('No source listing');
+      return r.json();
+    })
+    .then(function(files) {
       if (!files || files.length === 0) {
         document.getElementById('source-loading').hidden = true;
         document.getElementById('source-error').hidden = false;
