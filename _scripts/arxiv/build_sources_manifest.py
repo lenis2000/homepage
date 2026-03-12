@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Build a manifest of arxiv source files for the web viewer.
+Build arxiv source file listings for the web viewer.
 
-Scans local source directories first, falls back to S3 listing
-for papers not found locally.
-
-Output: assets/data/arxiv-sources-manifest.json
-Format: {"arxiv-id": [{"name": "main.tex", "size": 12345}, ...], ...}
+Outputs:
+  1. Per-paper _files.json in each local source dir (uploaded to S3)
+     — used by the source viewer page for instant loading
+  2. assets/data/arxiv-sources-ids.json — lightweight ID list
+     — used by the arxiv feed to show/hide "src" badges
 
 Usage:
-    python3 build_sources_manifest.py              # build manifest
-    python3 build_sources_manifest.py --s3-only    # only use S3 listings
+    python3 build_sources_manifest.py              # build + upload _files.json
     python3 build_sources_manifest.py --dry-run    # show stats, don't write
+    python3 build_sources_manifest.py --no-upload  # build locally only
 """
 
 import argparse
@@ -22,14 +22,15 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 SOURCES_DIR = SCRIPT_DIR / "sources"
-OUTPUT_FILE = REPO_ROOT / "assets" / "data" / "arxiv-sources-manifest.json"
+IDS_FILE = REPO_ROOT / "assets" / "data" / "arxiv-sources-ids.json"
 ARXIV_DIR = REPO_ROOT / "_arxiv"
 
 OUR_S3_BUCKET = "lpetrov.cc.storage"
 OUR_S3_PREFIX = "arxiv-sources"
 
 # Files to exclude from the manifest (not useful for viewing)
-EXCLUDE_FILES = {".DS_Store", "Thumbs.db", ".no-source", ".pdf-only", "manifest.json"}
+EXCLUDE_FILES = {".DS_Store", "Thumbs.db", ".no-source", ".pdf-only",
+                 "manifest.json", "_files.json"}
 EXCLUDE_EXTENSIONS = {".aux", ".log", ".out", ".synctex.gz", ".toc", ".nav", ".snm"}
 
 
@@ -79,88 +80,82 @@ def scan_local_dir(arxiv_id: str) -> list[dict] | None:
     return files if files else None
 
 
-def scan_s3_dir(arxiv_id: str) -> list[dict] | None:
-    """List files from S3 for a given arxiv paper."""
+def write_files_json(arxiv_id: str, files: list[dict]) -> Path:
+    """Write _files.json into the local source dir."""
+    d = SOURCES_DIR / safe_dirname(arxiv_id)
+    fpath = d / "_files.json"
+    fpath.write_text(json.dumps(files, separators=(",", ":")))
+    return fpath
+
+
+def upload_file_to_s3(local_path: Path, arxiv_id: str) -> bool:
+    """Upload a single file to the paper's S3 dir."""
     safe_id = safe_dirname(arxiv_id)
-    s3_path = f"s3://{OUR_S3_BUCKET}/{OUR_S3_PREFIX}/{safe_id}/"
+    s3_path = f"s3://{OUR_S3_BUCKET}/{OUR_S3_PREFIX}/{safe_id}/{local_path.name}"
     try:
-        result = subprocess.run(
-            ["aws", "s3", "ls", s3_path, "--no-cli-pager"],
-            check=True, capture_output=True, text=True, timeout=30,
+        subprocess.run(
+            ["aws", "s3", "cp", str(local_path), s3_path, "--quiet"],
+            check=True, capture_output=True,
         )
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        return None
-
-    files = []
-    for line in result.stdout.splitlines():
-        parts = line.split()
-        if len(parts) >= 4:
-            size = int(parts[2])
-            name = parts[3]
-            if name in EXCLUDE_FILES:
-                continue
-            ext = Path(name).suffix.lower()
-            if ext in EXCLUDE_EXTENSIONS:
-                continue
-            files.append({"name": name, "size": size})
-
-    return sorted(files, key=lambda f: f["name"]) if files else None
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
 
 def main():
     parser = argparse.ArgumentParser(description="Build arxiv sources manifest")
-    parser.add_argument("--s3-only", action="store_true",
-                        help="Only use S3 listings, skip local scan")
     parser.add_argument("--dry-run", action="store_true",
                         help="Show stats without writing output")
+    parser.add_argument("--no-upload", action="store_true",
+                        help="Don't upload _files.json to S3")
     args = parser.parse_args()
 
     all_ids = get_all_arxiv_ids()
-    manifest = {}
-    local_count = 0
-    s3_count = 0
+    source_ids = []
+    written = 0
+    uploaded = 0
     missing_count = 0
 
     print(f"Papers in feed: {len(all_ids)}")
 
     for i, arxiv_id in enumerate(all_ids):
-        files = None
-
-        # Try local first
-        if not args.s3_only:
-            files = scan_local_dir(arxiv_id)
-            if files:
-                local_count += 1
-
-        # Fall back to S3
-        if files is None:
-            files = scan_s3_dir(arxiv_id)
-            if files:
-                s3_count += 1
+        files = scan_local_dir(arxiv_id)
 
         if files:
-            manifest[arxiv_id] = files
+            source_ids.append(arxiv_id)
+
+            if not args.dry_run:
+                fpath = write_files_json(arxiv_id, files)
+                written += 1
+
+                if not args.no_upload:
+                    if upload_file_to_s3(fpath, arxiv_id):
+                        uploaded += 1
         else:
             missing_count += 1
 
         if (i + 1) % 500 == 0:
-            print(f"  processed {i+1}/{len(all_ids)}...")
+            print(f"  processed {i+1}/{len(all_ids)}..."
+                  + (f" ({uploaded} uploaded)" if not args.no_upload and not args.dry_run else ""))
 
-    print(f"\nLocal:   {local_count}")
-    print(f"S3:      {s3_count}")
-    print(f"Missing: {missing_count}")
-    print(f"Total in manifest: {len(manifest)}")
+    print(f"\nWith sources: {len(source_ids)}")
+    print(f"Missing:      {missing_count}")
 
     if args.dry_run:
-        print("(dry run — not writing output)")
+        print("(dry run — nothing written)")
         return
 
-    OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    tmp = OUTPUT_FILE.with_suffix(".tmp")
-    tmp.write_text(json.dumps(manifest, separators=(",", ":"), sort_keys=True))
-    tmp.rename(OUTPUT_FILE)
-    size_mb = OUTPUT_FILE.stat().st_size / (1024 * 1024)
-    print(f"Wrote {OUTPUT_FILE} ({size_mb:.1f} MB)")
+    print(f"Wrote _files.json: {written}")
+    if not args.no_upload:
+        print(f"Uploaded to S3:    {uploaded}")
+
+    # Write lightweight ID list for feed badges
+    IDS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = IDS_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(source_ids, separators=(",", ":")))
+    tmp.rename(IDS_FILE)
+    size_kb = IDS_FILE.stat().st_size / 1024
+    print(f"Wrote {IDS_FILE} ({size_kb:.0f} KB)")
 
 
 if __name__ == "__main__":

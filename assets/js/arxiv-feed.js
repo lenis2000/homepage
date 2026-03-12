@@ -298,20 +298,21 @@ document.addEventListener('DOMContentLoaded', function() {
             initButtons();
         });
 
-    // Load sources manifest to show "src" badges
-    var sourcesManifest = null;
-    fetch('/assets/data/arxiv-sources-manifest.json')
+    // Load lightweight source IDs to show "src" badges
+    var sourceIdSet = null;
+    fetch('/assets/data/arxiv-sources-ids.json')
         .then(function(r) { return r.json(); })
-        .then(function(manifest) {
-            sourcesManifest = manifest;
+        .then(function(ids) {
+            sourceIdSet = {};
+            ids.forEach(function(id) { sourceIdSet[id] = true; });
             applySrcBadges();
         })
-        .catch(function() { /* manifest not available yet */ });
+        .catch(function() { /* ids file not available yet */ });
 
     function applySrcBadges() {
-        if (!sourcesManifest) return;
+        if (!sourceIdSet) return;
         document.querySelectorAll('.arxiv-link-src[data-src-id]').forEach(function(el) {
-            if (sourcesManifest[el.dataset.srcId]) {
+            if (sourceIdSet[el.dataset.srcId]) {
                 el.hidden = false;
             }
         });
