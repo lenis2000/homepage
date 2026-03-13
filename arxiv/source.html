@@ -103,6 +103,9 @@ no-math: true
     max-height: 80vh;
     overflow: auto;
     line-height: 1.45;
+    background-color: #fdf6e3;
+    -webkit-overflow-scrolling: touch;
+    -webkit-transform: translateZ(0);
   }
   .code-with-gutter > pre {
     flex: 1;
@@ -242,6 +245,7 @@ no-math: true
   [data-theme="dark"] .tex-section-header { background: #37474F; border-bottom-color: #455A64; color: #87CEFA; }
   [data-theme="dark"] .tex-section-header:hover { background: #455A64; }
   [data-theme="dark"] .tex-section { border-left-color: #455A64; }
+  [data-theme="dark"] .code-with-gutter { background-color: #263238; }
   [data-theme="dark"] .line-gutter { color: #546E7A; border-right-color: #37474F; background-color: #263238; }
   [data-theme="dark"] .source-image-container { background: var(--bg-secondary, #1e1e1e); border-color: var(--border-color); }
   [data-theme="dark"] .source-pdf-container { border-color: var(--border-color); }
