@@ -138,6 +138,7 @@ window.addEventListener('wasm-loaded', async function() {
 
     // Frame: white bands covering jagged edges, orange inner line
     const FRAME_SIDE = 10;   // left/right width
+    const FRAME_TOP = 0;     // top height (no top frame)
     const FRAME_BOTTOM = 45; // bottom height (more coverage)
 
     function draw() {
@@ -147,10 +148,10 @@ window.addEventListener('wasm-loaded', async function() {
 
         if (dimers.length === 0) return;
 
-        // Clip left/right/bottom edges only (top is open — bridge extends beyond)
+        // Clip all four edges
         ctx.save();
         ctx.beginPath();
-        ctx.rect(FRAME_SIDE, 0, displayWidth - FRAME_SIDE * 2, displayHeight - FRAME_BOTTOM);
+        ctx.rect(FRAME_SIDE, FRAME_TOP, displayWidth - FRAME_SIDE * 2, displayHeight - FRAME_TOP - FRAME_BOTTOM);
         ctx.clip();
 
         // Batch by type for efficiency
@@ -183,20 +184,16 @@ window.addEventListener('wasm-loaded', async function() {
 
         ctx.restore();
 
-        // White bands cover jagged edges on left, right, bottom
+        // White bands cover jagged edges on all four sides
         ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, displayWidth, FRAME_TOP);
         ctx.fillRect(0, 0, FRAME_SIDE, displayHeight);
         ctx.fillRect(displayWidth - FRAME_SIDE, 0, FRAME_SIDE, displayHeight);
         ctx.fillRect(0, displayHeight - FRAME_BOTTOM, displayWidth, FRAME_BOTTOM);
-        // Thin orange inner border line
+        // Thin orange inner border line (closed rectangle)
         ctx.strokeStyle = '#C0362C';
         ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(FRAME_SIDE, 0);
-        ctx.lineTo(FRAME_SIDE, displayHeight - FRAME_BOTTOM);
-        ctx.lineTo(displayWidth - FRAME_SIDE, displayHeight - FRAME_BOTTOM);
-        ctx.lineTo(displayWidth - FRAME_SIDE, 0);
-        ctx.stroke();
+        ctx.strokeRect(FRAME_SIDE, FRAME_TOP, displayWidth - FRAME_SIDE * 2, displayHeight - FRAME_TOP - FRAME_BOTTOM);
     }
 
     function glauberLoop() {

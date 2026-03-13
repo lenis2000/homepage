@@ -97,6 +97,38 @@ no-math: true
     white-space: pre-wrap;
     word-break: break-word;
   }
+  /* Line numbers gutter */
+  .code-with-gutter {
+    display: flex;
+    max-height: 80vh;
+    overflow: auto;
+    line-height: 1.45;
+  }
+  .code-with-gutter > pre {
+    flex: 1;
+    min-width: 0;
+    max-height: none;
+    overflow: visible;
+  }
+  .line-gutter {
+    flex: none;
+    width: 3.5em;
+    padding: 1rem 0.75em 1rem 0;
+    text-align: right;
+    color: #93a1a1;
+    border-right: 1px solid #eee8d5;
+    background-color: #fdf6e3;
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: none;
+    white-space: pre;
+    font-family: 'Iosevka Fixed', 'Courier New', monospace;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    position: sticky;
+    left: 0;
+    z-index: 1;
+  }
   .source-code-header {
     display: flex;
     justify-content: space-between;
@@ -210,6 +242,7 @@ no-math: true
   [data-theme="dark"] .tex-section-header { background: #37474F; border-bottom-color: #455A64; color: #87CEFA; }
   [data-theme="dark"] .tex-section-header:hover { background: #455A64; }
   [data-theme="dark"] .tex-section { border-left-color: #455A64; }
+  [data-theme="dark"] .line-gutter { color: #546E7A; border-right-color: #37474F; background-color: #263238; }
   [data-theme="dark"] .source-image-container { background: var(--bg-secondary, #1e1e1e); border-color: var(--border-color); }
   [data-theme="dark"] .source-pdf-container { border-color: var(--border-color); }
 </style>
@@ -328,6 +361,26 @@ no-math: true
     }
   });
 
+  function addLineGutter(pre, startLine) {
+    if (!startLine) startLine = 1;
+    var text = pre.textContent || '';
+    var lines = text.split('\n');
+    if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+    var lineCount = Math.max(lines.length, 1);
+    var gutter = document.createElement('div');
+    gutter.className = 'line-gutter';
+    gutter.setAttribute('aria-hidden', 'true');
+    var nums = [];
+    for (var i = 0; i < lineCount; i++) nums.push(startLine + i);
+    gutter.textContent = nums.join('\n');
+    var wrapper = document.createElement('div');
+    wrapper.className = 'code-with-gutter';
+    pre.parentNode.insertBefore(wrapper, pre);
+    wrapper.appendChild(gutter);
+    wrapper.appendChild(pre);
+    return startLine + lineCount;
+  }
+
   function selectFile(filename, files) {
     // Update active state in file list
     var items = document.querySelectorAll('#file-list .list-group-item');
@@ -397,6 +450,7 @@ no-math: true
             pre.textContent = text;
             codeArea.innerHTML = '';
             codeArea.appendChild(pre);
+            addLineGutter(pre, 1);
           }
         })
         .catch(function(err) {
@@ -566,9 +620,14 @@ no-math: true
       return section;
     }
 
+    // Track line numbers across all sections
+    var currentLine = 1;
+
     // Preamble (collapsed by default)
     if (preamble) {
-      container.appendChild(makeSection('Preamble', preamble, false, ''));
+      var sec = makeSection('Preamble', preamble, false, '');
+      container.appendChild(sec);
+      currentLine = addLineGutter(sec.querySelector('pre'), currentLine);
     }
 
     // Body parts
@@ -589,7 +648,9 @@ no-math: true
                     (part.header.startsWith('\\subsection') || part.header.startsWith('\\subhead')) ? 'subsection' : 'section';
         var indent = level === 'subsubsection' ? '2em' :
                      level === 'subsection' ? '1em' : '';
-        container.appendChild(makeSection((part.num || '') + displayName, part.text, false, indent));
+        var sec = makeSection((part.num || '') + displayName, part.text, false, indent);
+        container.appendChild(sec);
+        currentLine = addLineGutter(sec.querySelector('pre'), currentLine);
       } else {
         // Intro text before first section — render immediately
         var pre = document.createElement('pre');
@@ -597,6 +658,7 @@ no-math: true
         code.textContent = part.text;
         pre.appendChild(code);
         container.appendChild(pre);
+        currentLine = addLineGutter(pre, currentLine);
       }
     });
   }

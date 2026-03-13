@@ -26202,6 +26202,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "1710.11603": {
+    "date": "2017-10-31",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "1710.11613": {
     "date": "2017-10-31",
     "decision": "ACCEPT",
@@ -28786,6 +28791,11 @@
     "date": "2018-11-08",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "1811.03425": {
+    "date": "2018-11-03",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "1811.03735": {
     "date": "2018-11-09",
@@ -62439,6 +62449,11 @@
     "date": "2006-12-01",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "math/0612058": {
+    "date": "2006-12-02",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "math/0612086": {
     "date": "2006-12-04",
