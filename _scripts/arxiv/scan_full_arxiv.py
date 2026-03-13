@@ -267,8 +267,8 @@ def main():
                         help="Embedding batch size (default: 8)")
     parser.add_argument("--id-prefix", type=str, default=None,
                         help="Only scan papers whose ID starts with this (e.g., '2601' for Jan 2026)")
-    parser.add_argument("--reject-weight", type=float, default=0.4,
-                        help="Weight for rejected-paper repulsion (default: 0.4). "
+    parser.add_argument("--reject-weight", type=float, default=0.1,
+                        help="Weight for rejected-paper repulsion (default: 0.1). "
                              "Score = max_sim_accepted - weight * max_sim_rejected")
     parser.add_argument("--import-accepted", action="store_true",
                         help="Import accepted papers from scan-review.json as posts")
