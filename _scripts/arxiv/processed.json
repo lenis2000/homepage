@@ -7324,6 +7324,7 @@
   "1011.4042": {
     "date": "2010-11-17",
     "decision": "ACCEPT",
+    "deleted": true,
     "source": "scan"
   },
   "1011.4045": {

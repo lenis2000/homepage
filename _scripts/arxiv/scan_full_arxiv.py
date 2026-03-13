@@ -148,6 +148,42 @@ def load_tracked_ids():
         return {e["id"] for e in json.load(f)}
 
 
+def load_rejected_ids():
+    """Get arXiv IDs previously rejected in review."""
+    from fetch_arxiv import load_processed
+    processed = load_processed()
+    return {aid for aid, info in processed.items() if info.get("decision") == "REJECT"}
+
+
+def load_rejected_vectors(rejected_ids, cache):
+    """Build a matrix of embedding vectors for rejected papers from Kaggle DB + cache."""
+    if not rejected_ids or not KAGGLE_DB.exists():
+        return None
+    kaggle_conn = sqlite3.connect(str(KAGGLE_DB))
+    # Fetch title+abstract for rejected papers to compute cache keys
+    vecs = []
+    placeholders_batch = 500
+    rejected_list = list(rejected_ids)
+    for start in range(0, len(rejected_list), placeholders_batch):
+        batch = rejected_list[start:start + placeholders_batch]
+        ph = ",".join("?" * len(batch))
+        rows = kaggle_conn.execute(
+            f"SELECT id, title, abstract FROM papers WHERE id IN ({ph})", batch
+        ).fetchall()
+        keys = []
+        for arxiv_id, title, abstract in rows:
+            text = f"{title}. {abstract}" if abstract else title
+            keys.append(text_key(text))
+        cached = cache.get_many(keys)
+        for k in keys:
+            if k in cached:
+                vecs.append(cached[k])
+    kaggle_conn.close()
+    if not vecs:
+        return None
+    return np.array(vecs, dtype=np.float32)
+
+
 def load_allowed_categories():
     """Top 20 categories by paper count in the feed."""
     return {
@@ -231,6 +267,9 @@ def main():
                         help="Embedding batch size (default: 8)")
     parser.add_argument("--id-prefix", type=str, default=None,
                         help="Only scan papers whose ID starts with this (e.g., '2601' for Jan 2026)")
+    parser.add_argument("--reject-weight", type=float, default=0.4,
+                        help="Weight for rejected-paper repulsion (default: 0.4). "
+                             "Score = max_sim_accepted - weight * max_sim_rejected")
     parser.add_argument("--import-accepted", action="store_true",
                         help="Import accepted papers from scan-review.json as posts")
     args = parser.parse_args()
@@ -249,14 +288,23 @@ def main():
     tracked_ids = load_tracked_ids()
     log(f"Tracked papers: {len(tracked_ids)}")
 
+    cache = EmbeddingCache(CACHE_DB)
+    log(f"Cache DB: {CACHE_DB} ({cache.count()} entries)")
+
+    rejected_ids = load_rejected_ids()
+    log(f"Rejected papers: {len(rejected_ids)}")
+
+    reject_vectors = load_rejected_vectors(rejected_ids, cache) if args.reject_weight > 0 else None
+    if reject_vectors is not None:
+        log(f"Reject vectors: {reject_vectors.shape[0]} (weight: {args.reject_weight})")
+    else:
+        log("Reject vectors: none (repulsion disabled)")
+
     allowed_cats = load_allowed_categories()
     log(f"Allowed categories: {len(allowed_cats)}")
 
     ref_vectors = load_reference_vectors()
     log(f"Reference vectors: {ref_vectors.shape}")
-
-    cache = EmbeddingCache(CACHE_DB)
-    log(f"Cache DB: {CACHE_DB} ({cache.count()} entries)")
 
     # Lazy-load model only if needed
     model = None
@@ -309,13 +357,23 @@ def main():
         vecs_array = np.array(
             [cached[k] for k in batch_keys], dtype=np.float32
         )
-        sims = vecs_array @ ref_vectors.T  # (batch, 4068)
+        sims = vecs_array @ ref_vectors.T  # (batch, N_ref)
         max_sims = sims.max(axis=1)
 
+        # Compute repulsion from rejected papers
+        if reject_vectors is not None:
+            reject_sims = vecs_array @ reject_vectors.T  # (batch, N_reject)
+            max_reject_sims = reject_sims.max(axis=1)
+        else:
+            max_reject_sims = np.zeros(len(batch_keys), dtype=np.float32)
+
         for i, sim in enumerate(max_sims):
-            if sim >= args.threshold and batch_meta[i][0] not in tracked_ids:
+            if batch_meta[i][0] in tracked_ids:
+                continue
+            effective_sim = float(sim) - args.reject_weight * float(max_reject_sims[i])
+            if effective_sim >= args.threshold:
                 candidates.append((
-                    float(sim),
+                    effective_sim,
                     batch_meta[i][0],  # arxiv_id
                     batch_meta[i][1],  # title
                     batch_meta[i][2],  # categories
@@ -354,7 +412,6 @@ def main():
         if arxiv_id in tracked_ids:
             processed += 1
             continue
-
         # Skip papers with no category overlap with our feed
         paper_cats = set(categories.split())
         if not paper_cats & allowed_cats:
