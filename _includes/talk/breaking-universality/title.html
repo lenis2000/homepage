@@ -1,29 +1,22 @@
-<section class="slide slide-center" id="title" data-title="Title" style="display: flex; flex-direction: column;">
-    <h1 style="font-size: clamp(2.5rem, 3.5vw, 4rem); line-height: 1.2;">Breaking Universality in Dimer Models</h1>
+<!-- APPROVED: Do not modify without explicit user request -->
+<section class="slide slide-center" id="title" data-title="Title" style="display: flex; flex-direction: row; align-items: center; padding: 3vh 3vw;">
+    <!-- Left: text -->
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center;">
+        <h1 style="font-size: clamp(2.5rem, 3.5vw, 4rem); line-height: 1.2;">Breaking Universality<br> in Dimer Models</h1>
 
-    <p class="author" style="margin-top: 1vh; font-size: clamp(1.5rem, 2.5vw, 2.2rem);">Leonid Petrov</p>
-    <p style="font-size: clamp(1.2rem, 2vw, 1.8rem); color: var(--slide-muted);">University of Virginia</p>
-    <p style="font-size: clamp(1.1rem, 1.8vw, 1.5rem); margin-top: 0.5vh; color: var(--slide-accent);">Joint work with
-        <strong><a href="https://alisaknizel.weebly.com/" target="_blank" style="color: #0066cc; text-decoration: underline;">Alisa Knizel<span class="sr-only"> (opens in new tab)</span></a></strong> (Columbia)
-        and
-        <strong><a href="https://sites.google.com/site/alexeybufetov/home" target="_blank" style="color: #0066cc; text-decoration: underline;">Alexey Bufetov<span class="sr-only"> (opens in new tab)</span></a></strong>,
-        <strong>Panagiotis Zografos</strong> (Leipzig)
-    </p>
+        <p class="author" style="margin-top: 2vh; font-size: clamp(1.5rem, 2.5vw, 2.2rem);">Leonid Petrov</p>
+        <p style="font-size: clamp(1.2rem, 2vw, 1.8rem); color: var(--slide-muted);">University of Virginia</p>
+        <br><br><br>
+        <p style="font-size: clamp(1.1rem, 1.8vw, 1.5rem); margin-top: 0.5vh; color: var(--slide-accent);">Joint work with
+            <strong>Alisa Knizel</strong> (Columbia)<br>
+            and <strong>Alexey Bufetov</strong>,
+            <strong>Panagiotis Zografos</strong> (Leipzig)
+        </p>
+    </div>
 
-    <div style="flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; gap: 3vw;">
-        <!-- Left: lozenge tiling (waterfall) -->
-        <div style="text-align: center;">
-            <img src="images/q_1.025.png" alt="q-Racah lozenge tiling with waterfall" style="height: 45vh; width: auto; border-radius: 8px;">
-            <div style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted); margin-top: 0.5vh;">Lozenge tiling waterfall</div>
-        </div>
-        <!-- Right: domino tiling (random weights) -->
-        <div style="text-align: center;">
-            <!-- TODO: add pre-sampled Aztec diamond image with random weights -->
-            <div style="height: 45vh; width: 40vh; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: clamp(1rem, 1.5vw, 1.3rem); color: var(--slide-muted);">
-                Aztec diamond with<br>random edge weights<br><br><em>(image placeholder)</em>
-            </div>
-            <div style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted); margin-top: 0.5vh;">Domino tiling with disorder</div>
-        </div>
+    <!-- Right: Golden Gate Bridge tiling (frame drawn in JS on top of lozenges) -->
+    <div style="display: flex; align-items: center; justify-content: center; padding-left: 2vw;">
+        <canvas id="title-canvas" width="1200" height="1600" style="cursor: pointer; height: 78vh; width: auto; display: block;"></canvas>
     </div>
 
     <!-- Funding acknowledgment logos -->
