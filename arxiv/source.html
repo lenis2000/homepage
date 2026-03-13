@@ -465,12 +465,34 @@ no-math: true
       body = text.substring(docIdx);
     }
 
+    // Find matching closing brace, handling nested braces
+    function findClosingBrace(str, openPos) {
+      var depth = 1, i = openPos + 1;
+      while (i < str.length && depth > 0) {
+        if (str[i] === '{') depth++;
+        else if (str[i] === '}') depth--;
+        i++;
+      }
+      return depth === 0 ? i : -1;
+    }
+
     // Find all section positions — LaTeX, Plain TeX (\beginsection), AMS-TeX (\head)
-    var sectionRegex = /^(\\(?:section|subsection|subsubsection)\*?\{[^}]*\}|\\beginsection\s*\{[^}]*\}|\\beginsection\s+\S[^\n]*|\\head\{[^}]*\}|\\subhead\{[^}]*\})/gm;
+    var sectionPrefixRe = /^(\\(?:section|subsection|subsubsection)\*?\{|\\beginsection\s*\{|\\beginsection\s+\S[^\n]*|\\head\{|\\subhead\{)/gm;
     var sections = [];
     var match;
-    while ((match = sectionRegex.exec(body)) !== null) {
-      sections.push({ index: match.index, header: match[1] });
+    while ((match = sectionPrefixRe.exec(body)) !== null) {
+      var prefix = match[1];
+      // For \beginsection without braces, the whole match is the header
+      if (prefix.indexOf('{') === -1) {
+        sections.push({ index: match.index, header: prefix });
+        continue;
+      }
+      // Find matching closing brace for the title argument
+      var braceOpen = match.index + prefix.length - 1;
+      var braceClose = findClosingBrace(body, braceOpen);
+      if (braceClose === -1) braceClose = body.indexOf('}', braceOpen + 1) + 1;
+      var fullHeader = body.substring(match.index, braceClose);
+      sections.push({ index: match.index, header: fullHeader });
     }
 
     var parts = [];
@@ -550,12 +572,17 @@ no-math: true
     // Body parts
     parts.forEach(function(part) {
       if (part.header) {
-        // Extract display name from various TeX dialects
-        var nameMatch = part.header.match(/\\(?:section|subsection|subsubsection)\*?\{([^}]*)\}/) ||
-                        part.header.match(/\\beginsection\s*\{([^}]*)\}/) ||
-                        part.header.match(/\\beginsection\s+(.+)/) ||
-                        part.header.match(/\\(?:sub)?head\{([^}]*)\}/);
-        var displayName = nameMatch ? nameMatch[1].trim() : part.header;
+        // Extract display name — strip the command prefix, then remove outer braces
+        var displayName = part.header
+          .replace(/^\\(?:section|subsection|subsubsection)\*?\{/, '')
+          .replace(/^\\beginsection\s*\{/, '')
+          .replace(/^\\beginsection\s+/, '')
+          .replace(/^\\(?:sub)?head\{/, '');
+        // Remove trailing } if we stripped a leading command with {
+        if (part.header !== displayName && displayName.charAt(displayName.length - 1) === '}') {
+          displayName = displayName.slice(0, -1);
+        }
+        displayName = displayName.trim();
         var level = part.header.startsWith('\\subsubsection') ? 'subsubsection' :
                     (part.header.startsWith('\\subsection') || part.header.startsWith('\\subhead')) ? 'subsection' : 'section';
         var indent = level === 'subsubsection' ? '2em' :
