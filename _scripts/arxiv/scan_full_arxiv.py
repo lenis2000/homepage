@@ -217,6 +217,22 @@ def import_accepted():
     log(f"Review: {len(accepted)} accepted, {len(rejected)} rejected, "
         f"{len(skipped)} skipped, {len(undecided)} undecided")
 
+    # Save rejected papers to processed.json so they don't reappear in future scans
+    if rejected:
+        processed_pre = load_processed()
+        rej_new = 0
+        for r in rejected:
+            aid = r["arxiv_id"]
+            if aid not in processed_pre:
+                processed_pre[aid] = {
+                    "source": "scan",
+                    "decision": "REJECT",
+                    "date": r["date"].split("T")[0],
+                }
+                rej_new += 1
+        save_processed(processed_pre)
+        log(f"Saved {rej_new} new rejections to processed.json")
+
     if not accepted:
         log("Nothing to import.")
         return 0
@@ -295,6 +311,9 @@ def main():
 
     rejected_ids = load_rejected_ids()
     log(f"Rejected papers: {len(rejected_ids)}")
+
+    # Exclude rejected papers from candidates — they've already been reviewed
+    tracked_ids = tracked_ids | rejected_ids
 
     reject_vectors = load_rejected_vectors(rejected_ids, cache) if args.reject_weight > 0 else None
     if reject_vectors is not None:

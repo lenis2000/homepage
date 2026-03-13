@@ -388,6 +388,22 @@ wasmInterface.setImaginaryQ(imaginary_q);  // Set q ∈ (0,1)
 await wasmInterface.initializeTiling(N, T, 0, 7, -kappasq);  // Pass -κ²
 ```
 
+**Importing pre-sampled tilings with `setDimers`:**
+```javascript
+// setDimers accepts flat Int32Array with 5 ints per dimer: [bn, bj, wn, wj, type]
+// This matches the JSON format from golden_gate.json etc.
+const count = dimers.length * 5;
+const dimerPtr = wasm._malloc(count * 4);
+for (let i = 0; i < dimers.length; i++) {
+    const d = dimers[i];
+    for (let k = 0; k < 5; k++)
+        wasm.setValue(dimerPtr + (i * 5 + k) * 4, d[k], 'i32');
+}
+const sdPtr = setDimersWasm(dimerPtr, count);
+freeStringWasm(sdPtr);
+wasm._free(dimerPtr);
+```
+
 **exportPaths returns object, not array:**
 ```javascript
 const result = JSON.parse(jsonStr);
@@ -589,7 +605,8 @@ Must update the JS file, not just the HTML include
 - Each talk lives at `/talk/<name>/index.html` with slides in `_includes/talk/<name>/*.html`
 - **Waterfall talk** (`/talk/waterfall/`): Multiple variants (applied-math, pure-math colloquium). ~18 slides per variant. Slides in `_includes/talk/waterfall/*.html`, each with `id` matching URL hash.
 - **Visual talk** (`/talk/visual/`): PWA with service worker + loading bar. ~23 slides across 3 parts (Counting/Randomness, Random Surfaces, How to Make Pictures) plus title/closing.
-- Both talks share WASM modules from `/talk/visual/sim/` and WebGPU engines from `/js/`
+- **Breaking-universality talk** (`/talk/breaking-universality/`): Seminar-level talk on two mechanisms that break universality: the waterfall (Knizel-Petrov, Part II) and random edge weights (Bufetov-Petrov-Zografos, Part III). Uses its own copies of waterfall slides (customized: no Minecraft, no general-audience slides like nature-builds). Part I covers universality in lozenge tilings as shared background.
+- All talks share WASM modules from `/talk/visual/sim/` and WebGPU engines from `/js/`
 
 ## Pane Colors
 
@@ -708,7 +725,9 @@ Must update the JS file, not just the HTML include
 
 ## Slide Reuse Across Talks
 
-- Same slide HTML/JS can be used in multiple talks (e.g., pure math colloquium vs applied math colloquium)
+- **CRITICAL: Copy slides, don't share them.** Each talk gets its own copies of HTML includes and JS files in its own `_includes/talk/<name>/` and `talk/<name>/js/` directories. Every individual talk is independently tailored.
+- When creating a new talk that reuses slides from another talk, copy the HTML and JS files into the new talk's directories, then customize.
+- Update `index.html` to reference local copies (`{% include talk/my-talk/slide.html %}` and `<script src="js/slide-sim.js">`) instead of shared paths.
 - Comment out slides in `index.html` with `<!-- -->` to disable for a specific talk variant
 - Comment out both the `{% include %}` and the `<script>` tag
 - Keep files intact so they can be re-enabled by uncommenting
