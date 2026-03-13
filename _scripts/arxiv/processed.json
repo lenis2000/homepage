@@ -37996,6 +37996,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2203.07317": {
+    "date": "2022-03-14",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "2203.07464": {
     "date": "2022-03-14",
     "decision": "REJECT",
@@ -38486,6 +38491,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "2204.13866": {
+    "date": "2022-04-29",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "2205.00878": {
     "date": "2022-05-02",
     "decision": "REJECT",
@@ -38520,6 +38530,11 @@
     "date": "2022-05-05",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "2205.02853": {
+    "date": "2022-05-05",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "2205.03017": {
     "date": "2022-05-06",
@@ -39010,6 +39025,11 @@
     "date": "2022-07-04",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "2207.02022": {
+    "date": "2022-07-05",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "2207.02068": {
     "date": "2022-07-05",
@@ -40040,6 +40060,11 @@
     "date": "2022-11-15",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "2211.08220": {
+    "date": "2022-11-15",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "2211.08933": {
     "date": "2022-11-16",
@@ -41675,6 +41700,11 @@
     "date": "2023-06-26",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "2306.16079": {
+    "date": "2023-06-28",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "2306.16393": {
     "date": "2023-06-28",
@@ -51241,6 +51271,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2601.05945": {
+    "date": "2026-01-09",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "2601.06283": {
     "date": "2026-01-09",
     "decision": "ACCEPT",
@@ -51365,6 +51400,11 @@
     "date": "2026-01-23",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "2601.16607": {
+    "date": "2026-01-23",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "2601.17071": {
     "date": "2026-01-22",

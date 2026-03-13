@@ -105,6 +105,20 @@ simulations: simulations/YYYY-MM-DD-slug/    # optional
 - Zero-gap grid: need explicit CSS `.col-6 { padding: 0; }` and `.row { margin: 0; }` — `g-0` alone doesn't remove all gutters
 - Floated images that are too tall push all subsequent content below — constrain with `max-height`
 
+## arXiv Source Viewer (`arxiv/source.html`)
+- Standalone page at `/arxiv/source/?id=XXXX.XXXXX` — loads files from S3, no Jekyll-rendered per-paper pages
+- Per-paper `_files.json` on S3 lists available files; `arxiv-sources-ids.json` controls badge visibility on feed
+- **Input flattening**: `\input{...}` commands are resolved client-side — fetches referenced `.tex` files from S3 and inlines them before rendering
+- **Auto-select logic**: `main.tex` → `.tex` file containing `\input{}` → largest `.tex` → first file
+- **Section folding**: Sections are numbered (1., 1.1., etc.) and collapsible; Cmd-F expands all, Escape collapses
+- Source files on S3 are never modified — all processing (flattening, folding, numbering) is client-side JS
+
+## arXiv Scanning & Embeddings
+- Kaggle DB scan: `make arxiv-scan ARGS="--id-prefix YY --threshold 0.8"` scans by year prefix
+- Embedding cache at `_scripts/arxiv/.embedding-cache-full.db` — cached papers are fast, uncached require model computation
+- `processed.json` tracks accepted/rejected papers — re-scanning already-processed years just iterates cached rows
+- Source use ideas tracked in `_scripts/arxiv/source_use_suggestions.md`
+
 ## User Preferences
 - **No co-author line in commits** — do NOT add `Co-Authored-By: Claude` to git commit messages
 - Don't run Jekyll builds - user handles deployment; Jekyll rebuild takes ~15s
