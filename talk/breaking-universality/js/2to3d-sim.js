@@ -664,193 +664,6 @@ function init2to3dHexagonSim() {
             if (renderer) renderer.render(scene, camera);
         }
 
-        // (Minecraft rendering removed for this talk variant)
-
-            // BFS heights
-            const vertexToDimers = new Map();
-            for (const dimer of currentDimers) {
-                for (const [n, j] of getVertexKeys(dimer)) {
-                    const key = `${n},${j}`;
-                    if (!vertexToDimers.has(key)) vertexToDimers.set(key, []);
-                    vertexToDimers.get(key).push(dimer);
-                }
-            }
-            const heights = new Map();
-            const fv = getVertexKeys(currentDimers[0]);
-            const startKey = `${fv[0][0]},${fv[0][1]}`;
-            heights.set(startKey, 0);
-            const queue = [startKey];
-            const visited = new Set();
-            while (queue.length > 0) {
-                const ck = queue.shift();
-                if (visited.has(ck)) continue;
-                visited.add(ck);
-                const ch = heights.get(ck);
-                const [cn, cj] = ck.split(',').map(Number);
-                for (const dimer of vertexToDimers.get(ck) || []) {
-                    const verts = getVertexKeys(dimer);
-                    const pattern = getHeightPattern(dimer.t);
-                    let myIdx = -1;
-                    for (let i = 0; i < 4; i++) {
-                        if (verts[i][0] === cn && verts[i][1] === cj) { myIdx = i; break; }
-                    }
-                    if (myIdx >= 0) {
-                        for (let i = 0; i < 4; i++) {
-                            const vkey = `${verts[i][0]},${verts[i][1]}`;
-                            if (!heights.has(vkey)) {
-                                heights.set(vkey, ch + (pattern[i] - pattern[myIdx]));
-                                queue.push(vkey);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Compute 3D verts per tile
-            const dimerV3D = [];
-            for (const dimer of currentDimers) {
-                const vk = getVertexKeys(dimer);
-                const h0 = heights.get(`${vk[0][0]},${vk[0][1]}`);
-                if (h0 === undefined) { dimerV3D.push(null); continue; }
-                const pattern = getHeightPattern(dimer.t);
-                const baseH = h0 - pattern[0];
-                dimerV3D.push(vk.map(([n, j], i) => to3D(n, j, baseH + pattern[i])));
-            }
-
-            // Texture types and spatial hash
-            const MC_TYPES = ['stone','dirt','grass','magma','diamond','emerald'];
-            const hashInts = (a, b, c) => {
-                let h = (a * 73856093) ^ (b * 19349663) ^ (c * 83492791);
-                h = ((h >> 16) ^ h) * 0x45d9f3b;
-                h = ((h >> 16) ^ h) * 0x45d9f3b;
-                return (h ^ (h >> 16)) & 0x7fffffff;
-            };
-            const texFromHash = (h) => {
-                const r = (h % 1000) / 1000;
-                if (r < 0.01) return 5;      // emerald (1%)
-                if (r < 0.05) return 4;      // diamond (4%)
-                if (r < 0.10) return 3;      // magma (5%)
-                if (r < 0.55) return 1;      // dirt (45%)
-                return 0;                    // stone (45%)
-            };
-
-            // Union-find: group tiles sharing cross-type 3D edges
-            const ufP = new Int32Array(currentDimers.length);
-            for (let i = 0; i < currentDimers.length; i++) ufP[i] = i;
-            const ufF = (x) => { while (ufP[x] !== x) { ufP[x] = ufP[ufP[x]]; x = ufP[x]; } return x; };
-            const ufU = (a, b) => { a = ufF(a); b = ufF(b); if (a !== b) ufP[a] = b; };
-
-            const edgeToTiles = new Map();
-            for (let di = 0; di < currentDimers.length; di++) {
-                const v = dimerV3D[di]; if (!v) continue;
-                for (let e = 0; e < 4; e++) {
-                    const a = v[e], b = v[(e+1)%4];
-                    const k1 = `${a.x},${a.y},${a.z}`, k2 = `${b.x},${b.y},${b.z}`;
-                    const ek = k1 < k2 ? `${k1}|${k2}` : `${k2}|${k1}`;
-                    if (!edgeToTiles.has(ek)) edgeToTiles.set(ek, []);
-                    edgeToTiles.get(ek).push(di);
-                }
-            }
-            for (const [, tiles] of edgeToTiles) {
-                if (tiles.length === 2 && currentDimers[tiles[0]].t !== currentDimers[tiles[1]].t) {
-                    ufU(tiles[0], tiles[1]);
-                }
-            }
-
-            // Assign texture per group via spatial hash of representative centroid
-            const tileTexture = new Uint8Array(currentDimers.length);
-            for (let di = 0; di < currentDimers.length; di++) {
-                const v = dimerV3D[di]; if (!v) continue;
-                const rep = ufF(di);
-                const rv = dimerV3D[rep];
-                const cx = Math.round((rv[0].x + rv[1].x + rv[2].x + rv[3].x) * 4);
-                const cy = Math.round((rv[0].y + rv[1].y + rv[2].y + rv[3].y) * 4);
-                const cz = Math.round((rv[0].z + rv[1].z + rv[2].z + rv[3].z) * 4);
-                let tex = texFromHash(hashInts(cx, cy, cz));
-                if (tex === 1 && currentDimers[di].t === 2) tex = 2; // grass on top of dirt
-                tileTexture[di] = tex;
-            }
-
-            // Build multi-material geometry
-            const geometry = new THREE.BufferGeometry();
-            const verts = [], norms = [], uvs = [];
-            const groupIdx = MC_TYPES.map(() => []);
-            const linePositions = [];
-            const gap = 0.03;
-
-            const addQuad = (v1, v2, v3, v4, grp, uvOff) => {
-                const base = verts.length / 3;
-                verts.push(v1.x,v1.y,v1.z, v2.x,v2.y,v2.z, v3.x,v3.y,v3.z, v4.x,v4.y,v4.z);
-                const e1x=v2.x-v1.x,e1y=v2.y-v1.y,e1z=v2.z-v1.z;
-                const e2x=v4.x-v1.x,e2y=v4.y-v1.y,e2z=v4.z-v1.z;
-                const nx=e1y*e2z-e1z*e2y, ny=e1z*e2x-e1x*e2z, nz=e1x*e2y-e1y*e2x;
-                const len=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
-                for(let i=0;i<4;i++) norms.push(nx/len,ny/len,nz/len);
-                uvs.push(uvOff,uvOff, uvOff+1,uvOff, uvOff+1,uvOff+1, uvOff,uvOff+1);
-                groupIdx[grp].push(base,base+1,base+2, base,base+2,base+3);
-            };
-
-            for (let di = 0; di < currentDimers.length; di++) {
-                const v3d = dimerV3D[di];
-                if (!v3d) continue;
-                const grp = tileTexture[di];
-                const uvOff = (di * 0.37) % 1;
-
-                // Shrink toward centroid for gap
-                const cx = (v3d[0].x+v3d[1].x+v3d[2].x+v3d[3].x)/4;
-                const cy = (v3d[0].y+v3d[1].y+v3d[2].y+v3d[3].y)/4;
-                const cz = (v3d[0].z+v3d[1].z+v3d[2].z+v3d[3].z)/4;
-                const s = v3d.map(v => ({
-                    x: v.x + (cx-v.x)*gap, y: v.y + (cy-v.y)*gap, z: v.z + (cz-v.z)*gap
-                }));
-
-                addQuad(s[0], s[1], s[2], s[3], grp, uvOff);
-
-                for (let e = 0; e < 4; e++) {
-                    const a = s[e], b = s[(e+1)%4];
-                    linePositions.push(a.x,a.y,a.z, b.x,b.y,b.z);
-                }
-            }
-
-            geometry.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
-            geometry.setAttribute('normal', new THREE.Float32BufferAttribute(norms, 3));
-            geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-            const allIdx = [];
-            const materials = [];
-            for (let g = 0; g < MC_TYPES.length; g++) {
-                const start = allIdx.length;
-                for (const idx of groupIdx[g]) allIdx.push(idx);
-                if (groupIdx[g].length > 0) {
-                    geometry.addGroup(start, groupIdx[g].length, materials.length);
-                    materials.push(new THREE.MeshLambertMaterial({
-                        map: generateMinecraftTexture(MC_TYPES[g]),
-                        side: THREE.DoubleSide,
-                        polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1
-                    }));
-                }
-            }
-            geometry.setIndex(allIdx);
-            geometry.computeBoundingSphere();
-            currentMaterial = null;
-            meshGroup.add(new THREE.Mesh(geometry, materials));
-
-            // Dark grid edge lines
-            const lineGeom = new THREE.BufferGeometry();
-            lineGeom.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
-            meshGroup.add(new THREE.LineSegments(lineGeom,
-                new THREE.LineBasicMaterial({ color: 0x1a1a1a, linewidth: 2 })));
-
-            if (needsCenterCamera) {
-                camera.position.set(-38.2, 9.9, 21.3);
-                camera.zoom = 1.968;
-                camera.updateProjectionMatrix();
-                controls.target.set(-2.2, -8.1, 3.3);
-                controls.update();
-                needsCenterCamera = false;
-            }
-            if (renderer) renderer.render(scene, camera);
-        }
-
         let isRunning = false;
         let animationId = null;
         let autoRotate = false;
@@ -861,7 +674,6 @@ function init2to3dHexagonSim() {
         function regenerate() {
             sampleHexagon(currentA, B, C);
             if (renderMode === 'lego') buildLegoGeometry();
-            else if (renderMode === 'minecraft') buildMinecraftGeometry();
             else buildGeometry();
             if (currentA === 1) {
                 descEl.innerHTML = `surface in <span id="bridge-box-size">1 × 12 × 9</span> box = 2D path in 12 × 9 rectangle`;
@@ -921,7 +733,7 @@ function init2to3dHexagonSim() {
                 window.slideEngine.registerSimulation('2to3d', {
                     start,
                     pause,
-                    steps: 14,
+                    steps: 13,
                     onSlideEnter() {
                         initThreeJS();
                         renderMode = 'standard';
@@ -944,7 +756,7 @@ function init2to3dHexagonSim() {
                         pause();
                         disposeThreeJS();
                     },
-                    // Step flow: 0=layer1, 1=LEGO(1), 2-9=LEGO(2-9), 10=MC(9), 11=rotate, 12=MacMahon, 13=snowflake, 14=sample
+                    // Step flow: 0=layer1, 1=LEGO(1), 2-9=LEGO(2-9), 10=rotate, 11=MacMahon, 12=snowflake, 13=sample
                     onStep(step) {
                         const macmahonEl = document.getElementById('macmahon-text');
                         const macmahonExEl = document.getElementById('macmahon-example');
@@ -974,21 +786,8 @@ function init2to3dHexagonSim() {
                             if (macmahonEl) macmahonEl.style.opacity = '0';
                             if (macmahonExEl) macmahonExEl.style.opacity = '0';
                         } else if (step === 10) {
-                            // Minecraft mode (layer 9)
-                            stopAutoRotate();
-                            renderMode = 'minecraft';
-                            if (currentA !== 9 || currentDimers.length === 0) {
-                                currentA = 9;
-                                sampleHexagon(9, B, C);
-                            }
-                            buildMinecraftGeometry();
-                            descEl.innerHTML = `uniformly random surface in <span id="bridge-box-size">9 × 12 × 9</span> box`;
-                            if (macmahonEl) macmahonEl.style.opacity = '0';
-                            if (macmahonExEl) macmahonExEl.style.opacity = '0';
-                        } else if (step === 11) {
                             // Standard + auto-rotate
                             renderMode = 'standard';
-                            // Reset camera up for predictable rotation axis
                             if (camera) camera.up.set(0, 0, 1);
                             if (currentA !== 9 || currentDimers.length === 0) {
                                 currentA = 9;
@@ -999,15 +798,15 @@ function init2to3dHexagonSim() {
                             startAutoRotate();
                             if (macmahonEl) macmahonEl.style.opacity = '0';
                             if (macmahonExEl) macmahonExEl.style.opacity = '0';
-                        } else if (step === 12) {
+                        } else if (step === 11) {
                             if (macmahonEl) macmahonEl.style.opacity = '1';
                             if (macmahonExEl) macmahonExEl.style.opacity = '1';
                             if (window.MathJax) MathJax.typeset();
-                        } else if (step === 13 && window.bridgeSnowflake) {
+                        } else if (step === 12 && window.bridgeSnowflake) {
                             stopAutoRotate();
                             document.getElementById('snowflake-title').style.opacity = '1';
                             window.bridgeSnowflake.showRegion();
-                        } else if (step === 14 && window.bridgeSnowflake) {
+                        } else if (step === 13 && window.bridgeSnowflake) {
                             const descEl = document.getElementById('snowflake-description');
                             if (descEl) descEl.textContent = 'picking one uniformly at random...';
                             setTimeout(() => {
@@ -1056,24 +855,8 @@ function init2to3dHexagonSim() {
                             if (snowflakeDescEl) snowflakeDescEl.textContent = '';
                             if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
                         } else if (step === 10) {
-                            // Minecraft mode (layer 9)
-                            stopAutoRotate();
-                            renderMode = 'minecraft';
-                            if (currentA !== 9 || currentDimers.length === 0) {
-                                currentA = 9;
-                                sampleHexagon(9, B, C);
-                            }
-                            buildMinecraftGeometry();
-                            descEl.innerHTML = `uniformly random surface in <span id="bridge-box-size">9 × 12 × 9</span> box`;
-                            if (macmahonEl) macmahonEl.style.opacity = '0';
-                            if (macmahonExEl) macmahonExEl.style.opacity = '0';
-                            if (snowflakeTitleEl) snowflakeTitleEl.style.opacity = '0';
-                            if (snowflakeDescEl) snowflakeDescEl.textContent = '';
-                            if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
-                        } else if (step === 11) {
                             // Standard + auto-rotate
                             renderMode = 'standard';
-                            // Reset camera up for predictable rotation axis
                             if (camera) camera.up.set(0, 0, 1);
                             if (currentA !== 9 || currentDimers.length === 0) {
                                 currentA = 9;
@@ -1087,13 +870,13 @@ function init2to3dHexagonSim() {
                             if (snowflakeTitleEl) snowflakeTitleEl.style.opacity = '0';
                             if (snowflakeDescEl) snowflakeDescEl.textContent = '';
                             if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
-                        } else if (step === 12) {
+                        } else if (step === 11) {
                             if (macmahonEl) macmahonEl.style.opacity = '1';
                             if (macmahonExEl) macmahonExEl.style.opacity = '1';
                             if (snowflakeTitleEl) snowflakeTitleEl.style.opacity = '0';
                             if (snowflakeDescEl) snowflakeDescEl.textContent = '';
                             if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
-                        } else if (step === 13 && window.bridgeSnowflake) {
+                        } else if (step === 12 && window.bridgeSnowflake) {
                             if (snowflakeTitleEl) snowflakeTitleEl.style.opacity = '1';
                             if (snowflakeDescEl) snowflakeDescEl.textContent = '';
                             window.bridgeSnowflake.showRegion();

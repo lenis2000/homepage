@@ -1169,6 +1169,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "0711.4161": {
+    "date": "2007-11-27",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "0711.4185": {
     "date": "2007-11-27",
     "decision": "ACCEPT",
@@ -36617,6 +36622,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2108.02728": {
+    "date": "2021-08-05",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "2108.02852": {
     "date": "2021-07-27",
     "decision": "REJECT",
@@ -39517,6 +39527,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2207.00546": {
+    "date": "2022-07-01",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "2207.00674": {
     "date": "2022-07-01",
     "decision": "ACCEPT",
@@ -40016,6 +40031,11 @@
     "date": "2022-09-08",
     "decision": "ACCEPT",
     "source": "frg-import"
+  },
+  "2209.04276": {
+    "date": "2022-09-09",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "2209.04337": {
     "date": "2022-09-09",
@@ -62450,7 +62470,17 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "math/0612057": {
+    "date": "2006-12-02",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "math/0612058": {
+    "date": "2006-12-02",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "math/0612059": {
     "date": "2006-12-02",
     "decision": "ACCEPT",
     "source": "scan"
