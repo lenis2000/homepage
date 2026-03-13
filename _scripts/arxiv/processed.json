@@ -15561,6 +15561,11 @@
     "decision": "ACCEPT",
     "source": "scan"
   },
+  "1312.1488": {
+    "date": "2013-12-05",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
   "1312.1625": {
     "date": "2013-12-05",
     "decision": "REJECT",
@@ -22447,6 +22452,11 @@
     "source": "fetch"
   },
   "1605.02931": {
+    "date": "2016-05-10",
+    "decision": "ACCEPT",
+    "source": "scan"
+  },
+  "1605.03003": {
     "date": "2016-05-10",
     "decision": "ACCEPT",
     "source": "scan"
@@ -59182,6 +59192,11 @@
     "date": "2003-04-03",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "math/0304119": {
+    "date": "2003-04-08",
+    "decision": "ACCEPT",
+    "source": "scan"
   },
   "math/0304134": {
     "date": "2003-04-10",
