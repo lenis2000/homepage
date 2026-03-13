@@ -69,6 +69,11 @@ nav_weight: 21
   The first version of this feed was imported from the <a href="http://frg.int-prob.org" target="_blank" rel="noopener">NSF FRG page<span class="sr-only"> (opens in new tab)</span></a>; now updated via automated arXiv queries.
   <br>
   Please <a href="mailto:lenia.petrov@gmail.com" class="u-underline">email me</a> if you notice a missing author or any mistakes.
+  <span class="arxiv-suggest-inline">
+    <label for="arxiv-suggest-id" class="sr-only">arXiv ID to suggest</label>
+    <input type="text" id="arxiv-suggest-id" class="form-control form-control-sm" placeholder="arXiv ID (e.g. 2401.12345)" style="width:13em;display:inline-block;vertical-align:middle;font-size:0.88em;color:#111;">
+    <button type="button" id="arxiv-suggest-btn" class="btn btn-sm btn-outline-secondary" style="vertical-align:middle;font-size:0.88em;color:#fff;background-color:#232d4b;border-color:#232d4b;" title="Opens your email client with a pre-filled message"><i class="fa-solid fa-envelope" style="margin-right:3px;"></i>Suggest add/remove</button>
+  </span>
   <br>
   <i class="fa-solid fa-rss mt-3"></i> <a href="/arxiv/feed.xml" class="u-underline">Subscribe via RSS</a> <i class="fa-solid fa-rss"></i>
 </p>
@@ -450,6 +455,23 @@ nav_weight: 21
   btn.addEventListener('click', function() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
+})();
+</script>
+
+<script>
+(function() {
+  var btn = document.getElementById('arxiv-suggest-btn');
+  var input = document.getElementById('arxiv-suggest-id');
+  if (!btn || !input) return;
+  function openSuggest() {
+    var id = input.value.trim();
+    if (!id) { input.focus(); return; }
+    var subject = encodeURIComponent('arXiv feed: ' + id);
+    var body = encodeURIComponent('Hi Leonid,\n\nRegarding the paper https://arxiv.org/abs/' + id + ' on the Integrable Probability arXiv Feed:\n\n[Please add / remove this paper because ...]\n');
+    window.location.href = 'mailto:lenia.petrov@gmail.com?subject=' + subject + '&body=' + body;
+  }
+  btn.addEventListener('click', openSuggest);
+  input.addEventListener('keydown', function(e) { if (e.key === 'Enter') openSuggest(); });
 })();
 </script>
 
