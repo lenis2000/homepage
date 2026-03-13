@@ -270,6 +270,8 @@ def main():
     parser.add_argument("--reject-weight", type=float, default=0.1,
                         help="Weight for rejected-paper repulsion (default: 0.1). "
                              "Score = max_sim_accepted - weight * max_sim_rejected")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Show candidates without writing to scan-review.json")
     parser.add_argument("--import-accepted", action="store_true",
                         help="Import accepted papers from scan-review.json as posts")
     args = parser.parse_args()
@@ -443,40 +445,43 @@ def main():
     # Sort by similarity descending
     candidates.sort(key=lambda x: -x[0])
 
-    # Append to review JSON for arxiv-review TUI (preserves previous decisions)
-    existing = []
-    existing_ids = set()
-    if REVIEW_FILE.exists():
-        with open(REVIEW_FILE, encoding="utf-8") as f:
-            existing = json.load(f)
-        existing_ids = {e["arxiv_id"] for e in existing}
+    if args.dry_run:
+        log(f"\nDry run — {len(candidates)} candidates (not written to review file)")
+    else:
+        # Append to review JSON for arxiv-review TUI (preserves previous decisions)
+        existing = []
+        existing_ids = set()
+        if REVIEW_FILE.exists():
+            with open(REVIEW_FILE, encoding="utf-8") as f:
+                existing = json.load(f)
+            existing_ids = {e["arxiv_id"] for e in existing}
 
-    new_count = 0
-    for sim, aid, title, cats, authors, abstract, date in candidates:
-        if aid in existing_ids:
-            continue
-        author_list = [_clean_author(a) for a in authors.replace(" and ", ", ").split(", ") if a.strip()]
-        existing.append({
-            "arxiv_id": aid,
-            "title": title,
-            "authors": author_list,
-            "categories": cats.split(),
-            "abstract": abstract,
-            "date": date or _arxiv_id_to_date_fallback(aid),
-            "matched_author": "",
-            "is_ambiguous": False,
-            "ai_decision": "ACCEPT",
-            "ai_confidence": f"{sim:.3f}",
-            "ai_reason": f"Cosine similarity {sim:.3f} to known int-prob papers",
-            "decision": "",
-        })
-        new_count += 1
+        new_count = 0
+        for sim, aid, title, cats, authors, abstract, date in candidates:
+            if aid in existing_ids:
+                continue
+            author_list = [_clean_author(a) for a in authors.replace(" and ", ", ").split(", ") if a.strip()]
+            existing.append({
+                "arxiv_id": aid,
+                "title": title,
+                "authors": author_list,
+                "categories": cats.split(),
+                "abstract": abstract,
+                "date": date or _arxiv_id_to_date_fallback(aid),
+                "matched_author": "",
+                "is_ambiguous": False,
+                "ai_decision": "ACCEPT",
+                "ai_confidence": f"{sim:.3f}",
+                "ai_reason": f"Cosine similarity {sim:.3f} to known int-prob papers",
+                "decision": "",
+            })
+            new_count += 1
 
-    with open(REVIEW_FILE, "w", encoding="utf-8") as f:
-        json.dump(existing, f, indent=2)
+        with open(REVIEW_FILE, "w", encoding="utf-8") as f:
+            json.dump(existing, f, indent=2)
 
-    log(f"Review file: {new_count} new + {len(existing_ids)} existing = {len(existing)} total")
-    log(f"Review with: arxiv-review {REVIEW_FILE}")
+        log(f"Review file: {new_count} new + {len(existing_ids)} existing = {len(existing)} total")
+        log(f"Review with: arxiv-review {REVIEW_FILE}")
 
     # Print top 20
     log(f"\nTop 20 candidates (threshold={args.threshold}):")
