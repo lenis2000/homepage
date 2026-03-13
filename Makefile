@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-sources arxiv-sources-upload arxiv-sources-upload-check arxiv-sources-convert-ps arxiv-sources-manifest arxiv-sources-process
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-search arxiv-sources arxiv-sources-upload arxiv-sources-upload-check arxiv-sources-convert-ps arxiv-sources-manifest arxiv-sources-process
 
 serve:
 	bundle exec jekyll serve 
@@ -113,7 +113,7 @@ deploy-local:
 	@echo "Local deploy complete!"
 
 arxiv-install:
-	cd _scripts/arxiv/arxiv-review && go build -o arxiv-review . && cp arxiv-review ~/bin/
+	cd _scripts/arxiv/arxiv-review && go build -o arxiv-review . && ln -sf $(CURDIR)/_scripts/arxiv/arxiv-review/arxiv-review ~/bin/arxiv-review
 
 arxiv: arxiv-venv
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/fetch_arxiv.py --days $(or $(DAYS),30) --review $(ARGS)
@@ -155,11 +155,14 @@ arxiv-scan-import:
 arxiv-add: arxiv-venv
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/add_paper.py $(or $(ID),$(filter-out $@,$(MAKECMDGOALS)))
 
+arxiv-search: arxiv-install
+	@arxiv-review search $(if $(NEW),-new) $(if $(N),-n $(N)) "$(or $(Q),$(filter-out $@,$(MAKECMDGOALS)))"
+
 arxiv-delete:
 	@python3 _scripts/arxiv/delete_paper.py $(or $(ID),$(filter-out $@,$(MAKECMDGOALS)))
 
-# Swallow extra positional args passed to arxiv-delete and arxiv-add (URLs, bare IDs)
-ifneq ($(filter arxiv-delete arxiv-add,$(MAKECMDGOALS)),)
+# Swallow extra positional args passed to arxiv-delete, arxiv-add, arxiv-search
+ifneq ($(filter arxiv-delete arxiv-add arxiv-search,$(MAKECMDGOALS)),)
 %:
 	@:
 endif

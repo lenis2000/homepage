@@ -2,9 +2,15 @@ package main
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -72,6 +78,410 @@ var (
 	headerStyle = lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("8")).Foreground(lipgloss.Color("15")).Padding(0, 1)
 	groupStyle  = lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("4")).Foreground(lipgloss.Color("15")).Padding(0, 1)
 )
+
+// --- arXiv API XML types ---
+
+type atomFeed struct {
+	XMLName      xml.Name    `xml:"feed"`
+	TotalResults int         `xml:"http://a9.org/-/spec/opensearch/1.1/ totalResults"`
+	Entries      []atomEntry `xml:"entry"`
+}
+
+type atomEntry struct {
+	ID         string       `xml:"id"`
+	Title      string       `xml:"title"`
+	Summary    string       `xml:"summary"`
+	Published  string       `xml:"published"`
+	Authors    []atomAuthor `xml:"author"`
+	Categories []atomCat    `xml:"category"`
+}
+
+type atomAuthor struct {
+	Name string `xml:"name"`
+}
+
+type atomCat struct {
+	Term string `xml:"term,attr"`
+}
+
+// --- processed.json types ---
+
+type processedEntry struct {
+	Date     string `json:"date"`
+	Decision string `json:"decision"`
+	Source   string `json:"source"`
+}
+
+// resolveScriptsDir finds the _scripts/arxiv/ directory relative to the binary.
+func resolveScriptsDir() string {
+	if d := os.Getenv("ARXIV_SCRIPTS_DIR"); d != "" {
+		return d
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	exe, err = filepath.EvalSymlinks(exe)
+	if err != nil {
+		return ""
+	}
+	// Binary is at _scripts/arxiv/arxiv-review/arxiv-review
+	// Scripts dir is _scripts/arxiv/
+	return filepath.Dir(filepath.Dir(exe))
+}
+
+func loadProcessed(scriptsDir string) map[string]processedEntry {
+	path := filepath.Join(scriptsDir, "processed.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return make(map[string]processedEntry)
+	}
+	var m map[string]processedEntry
+	if err := json.Unmarshal(data, &m); err != nil {
+		return make(map[string]processedEntry)
+	}
+	return m
+}
+
+var versionRe = regexp.MustCompile(`v\d+$`)
+
+func extractArxivID(rawURL string) string {
+	// <id> is like http://arxiv.org/abs/2506.12345v1
+	parts := strings.Split(rawURL, "/abs/")
+	if len(parts) < 2 {
+		return rawURL
+	}
+	id := strings.TrimSpace(parts[len(parts)-1])
+	return versionRe.ReplaceAllString(id, "")
+}
+
+func fetchArxivSearch(query string, maxResults int) ([]Paper, error) {
+	// Build URL with proper encoding — use url.Values to handle escaping
+	params := url.Values{}
+	params.Set("search_query", "all:"+query)
+	params.Set("start", "0")
+	params.Set("max_results", fmt.Sprintf("%d", maxResults))
+	params.Set("sortBy", "relevance")
+	apiURL := "https://export.arxiv.org/api/query?" + params.Encode()
+
+	resp, err := http.Get(apiURL)
+	if err != nil {
+		return nil, fmt.Errorf("HTTP request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading response: %w", err)
+	}
+
+	var feed atomFeed
+	if err := xml.Unmarshal(body, &feed); err != nil {
+		return nil, fmt.Errorf("parsing XML: %w", err)
+	}
+
+	var papers []Paper
+	for _, e := range feed.Entries {
+		arxivID := extractArxivID(e.ID)
+		if arxivID == "" {
+			continue
+		}
+
+		title := strings.Join(strings.Fields(e.Title), " ")
+		abstract := strings.TrimSpace(e.Summary)
+
+		var authors []string
+		for _, a := range e.Authors {
+			authors = append(authors, a.Name)
+		}
+
+		var cats []string
+		for _, c := range e.Categories {
+			cats = append(cats, c.Term)
+		}
+
+		papers = append(papers, Paper{
+			ArxivID:    arxivID,
+			Title:      title,
+			Authors:    authors,
+			Categories: cats,
+			Abstract:   abstract,
+			Date:       e.Published,
+		})
+	}
+	return papers, nil
+}
+
+// --- Search mode model ---
+
+type searchResultMsg struct {
+	papers []Paper
+	err    error
+}
+
+type addPaperResultMsg struct {
+	arxivID string
+	err     error
+	output  string
+}
+
+type searchModel struct {
+	query         string
+	papers        []Paper
+	processed     map[string]processedEntry
+	current       int
+	scroll        int
+	width         int
+	height        int
+	loading       bool
+	errMsg        string
+	addingID      string
+	statusMsg     string
+	scriptsDir    string
+	newOnly       bool
+	numResults    int
+}
+
+func doSearch(query string, maxResults int) tea.Cmd {
+	return func() tea.Msg {
+		papers, err := fetchArxivSearch(query, maxResults)
+		return searchResultMsg{papers: papers, err: err}
+	}
+}
+
+func doAddPaper(scriptsDir, arxivID string) tea.Cmd {
+	return func() tea.Msg {
+		venvPython := filepath.Join(scriptsDir, "venv", "bin", "python")
+		pythonBin := "python3"
+		if _, err := os.Stat(venvPython); err == nil {
+			pythonBin = venvPython
+		}
+		script := filepath.Join(scriptsDir, "add_paper.py")
+		cmd := exec.Command(pythonBin, script, arxivID, "--source", "search", "--no-related", "--no-index")
+		out, err := cmd.CombinedOutput()
+		return addPaperResultMsg{arxivID: arxivID, err: err, output: string(out)}
+	}
+}
+
+func initialSearchModel(query string, processed map[string]processedEntry, scriptsDir string, newOnly bool, numResults int) searchModel {
+	return searchModel{
+		query:      query,
+		processed:  processed,
+		loading:    true,
+		width:      80,
+		height:     24,
+		scriptsDir: scriptsDir,
+		newOnly:    newOnly,
+		numResults: numResults,
+	}
+}
+
+func (m searchModel) Init() tea.Cmd {
+	fetchCount := m.numResults
+	if m.newOnly {
+		fetchCount = m.numResults * 5 // fetch more to compensate for filtering
+	}
+	return doSearch(m.query, fetchCount)
+}
+
+func (m searchModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		m.scroll = 0
+
+	case searchResultMsg:
+		m.loading = false
+		if msg.err != nil {
+			m.errMsg = msg.err.Error()
+		} else {
+			papers := msg.papers
+			if m.newOnly {
+				var filtered []Paper
+				for _, p := range papers {
+					if _, ok := m.processed[p.ArxivID]; !ok {
+						filtered = append(filtered, p)
+						if len(filtered) >= m.numResults {
+							break
+						}
+					}
+				}
+				papers = filtered
+			} else if len(papers) > m.numResults {
+				papers = papers[:m.numResults]
+			}
+			if len(papers) == 0 {
+				m.errMsg = "No results found."
+			} else {
+				m.papers = papers
+			}
+		}
+
+	case addPaperResultMsg:
+		m.addingID = ""
+		if msg.err != nil {
+			m.statusMsg = fmt.Sprintf("Error adding %s: %s", msg.arxivID, msg.output)
+		} else {
+			m.statusMsg = fmt.Sprintf("Added %s", msg.arxivID)
+			// Reload processed.json to pick up the change
+			m.processed = loadProcessed(m.scriptsDir)
+		}
+
+	case tea.KeyMsg:
+		if m.loading || m.addingID != "" {
+			return m, nil
+		}
+
+		// Clear status on any key press
+		m.statusMsg = ""
+
+		if m.errMsg != "" {
+			return m, tea.Quit
+		}
+
+		switch msg.String() {
+		case "q", "ctrl+c":
+			return m, tea.Quit
+
+		case "a", "v":
+			if len(m.papers) == 0 {
+				break
+			}
+			p := m.papers[m.current]
+			entry, exists := m.processed[p.ArxivID]
+			if exists && entry.Decision == "ACCEPT" {
+				m.statusMsg = "Already accepted"
+				break
+			}
+			m.addingID = p.ArxivID
+			m.statusMsg = fmt.Sprintf("Adding %s...", p.ArxivID)
+			return m, doAddPaper(m.scriptsDir, p.ArxivID)
+
+		case "n", "right":
+			m.scroll = 0
+			if len(m.papers) > 0 {
+				m.current = (m.current + 1) % len(m.papers)
+			}
+
+		case "p", "left":
+			m.scroll = 0
+			if len(m.papers) > 0 {
+				m.current = (m.current - 1 + len(m.papers)) % len(m.papers)
+			}
+
+		case "j", "down":
+			m.scroll++
+
+		case "k", "up":
+			if m.scroll > 0 {
+				m.scroll--
+			}
+
+		case "o":
+			if len(m.papers) > 0 {
+				openURL("https://arxiv.org/pdf/" + m.papers[m.current].ArxivID)
+			}
+
+		case "O":
+			if len(m.papers) > 0 {
+				openURL("https://arxiv.org/abs/" + m.papers[m.current].ArxivID)
+			}
+		}
+	}
+	return m, nil
+}
+
+func (m searchModel) View() string {
+	if m.loading {
+		return fmt.Sprintf("\n  Searching arXiv for %q...\n", m.query)
+	}
+	if m.errMsg != "" {
+		return fmt.Sprintf("\n  %s\n  Press any key to exit.\n", m.errMsg)
+	}
+	if len(m.papers) == 0 {
+		return "\n  No results.\n"
+	}
+
+	p := m.papers[m.current]
+
+	// Header
+	searchHeaderStyle := lipgloss.NewStyle().Bold(true).Background(lipgloss.Color("5")).Foreground(lipgloss.Color("15")).Padding(0, 1)
+	header := searchHeaderStyle.Render(fmt.Sprintf(" arXiv Search  %d/%d ", m.current+1, len(m.papers)))
+	queryDisplay := dimStyle.Render(fmt.Sprintf("  %q", m.query))
+
+	// Status badge from processed.json
+	badge := statusStyle.Render("[NEW]")
+	entry, exists := m.processed[p.ArxivID]
+	if exists {
+		switch entry.Decision {
+		case "ACCEPT":
+			badge = acceptStyle.Render("[ACCEPTED]")
+		case "REJECT":
+			badge = rejectStyle.Render("[REJECTED]")
+		case "SKIP":
+			badge = dimStyle.Render("[SKIPPED]")
+		}
+	}
+
+	// Paper info
+	dateStr := p.Date
+	if len(dateStr) > 10 {
+		dateStr = dateStr[:10]
+	}
+	date := dateStyle.Render(dateStr)
+	authors := authorStyle.Render(strings.Join(p.Authors, ", "))
+	cats := catStyle.Render(strings.Join(p.Categories, " "))
+	title := titleStyle.Render(p.Title)
+
+	abstract := p.Abstract
+	if abstract == "" {
+		abstract = dimStyle.Render("(no abstract)")
+	}
+
+	lines := []string{
+		header + queryDisplay,
+		"",
+		fmt.Sprintf("  %s  %s  arXiv:%s", date, cats, p.ArxivID),
+		fmt.Sprintf("  %s", authors),
+		"",
+		fmt.Sprintf("  %s", title),
+		"",
+		fmt.Sprintf("  %s", badge),
+	}
+
+	// Status message (adding result)
+	if m.statusMsg != "" {
+		lines = append(lines, fmt.Sprintf("  %s", ambigStyle.Render(m.statusMsg)))
+	}
+
+	lines = append(lines, "")
+
+	// Abstract with word wrapping
+	maxW := m.width - 6
+	if maxW < 40 {
+		maxW = 40
+	}
+	absLines := wordWrap(abstract, maxW)
+	for _, l := range absLines {
+		lines = append(lines, "  "+l)
+	}
+
+	lines = append(lines, "")
+	lines = append(lines, helpStyle.Render("  a accept  n/p next/prev  j/k scroll  o PDF  O abs  q quit"))
+
+	// Apply scroll
+	content := strings.Join(lines, "\n")
+	allLines := strings.Split(content, "\n")
+	if m.scroll > 0 && m.scroll < len(allLines) {
+		allLines = allLines[m.scroll:]
+	}
+	if len(allLines) > m.height-1 {
+		allLines = allLines[:m.height-1]
+	}
+
+	return strings.Join(allLines, "\n")
+}
 
 // sortAndGroup sorts papers by matched_author then date descending,
 // and builds author group index. Papers matching multiple authors
@@ -609,13 +1019,7 @@ func wordWrap(s string, width int) []string {
 	return lines
 }
 
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "Usage: arxiv-review <review.json>")
-		os.Exit(1)
-	}
-
-	file := os.Args[1]
+func runReview(file string) {
 	data, err := os.ReadFile(file)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error reading %s: %v\n", file, err)
@@ -633,7 +1037,6 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Count already decided
 	undecided := 0
 	for _, p := range papers {
 		if p.Decision == "" {
@@ -652,5 +1055,62 @@ func main() {
 	if _, err := prog.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
+	}
+}
+
+func runSearch(query string, newOnly bool, numResults int) {
+	scriptsDir := resolveScriptsDir()
+	if scriptsDir == "" {
+		fmt.Fprintln(os.Stderr, "Cannot locate scripts directory. Set ARXIV_SCRIPTS_DIR or run from the build directory.")
+		os.Exit(1)
+	}
+
+	processed := loadProcessed(scriptsDir)
+	fmt.Printf("Searching arXiv for %q...\n", query)
+
+	m := initialSearchModel(query, processed, scriptsDir, newOnly, numResults)
+	prog := tea.NewProgram(m, tea.WithAltScreen())
+	if _, err := prog.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Fprintln(os.Stderr, "Usage: arxiv-review <review.json>")
+		fmt.Fprintln(os.Stderr, "       arxiv-review search [-new] \"query\"")
+		os.Exit(1)
+	}
+
+	if os.Args[1] == "search" {
+		if len(os.Args) < 3 {
+			fmt.Fprintln(os.Stderr, "Usage: arxiv-review search [-new] [-n NUM] \"query\"")
+			os.Exit(1)
+		}
+		newOnly := false
+		numResults := 10
+		args := os.Args[2:]
+		for len(args) > 0 && strings.HasPrefix(args[0], "-") {
+			switch {
+			case args[0] == "-new":
+				newOnly = true
+				args = args[1:]
+			case args[0] == "-n" && len(args) > 1:
+				fmt.Sscanf(args[1], "%d", &numResults)
+				args = args[2:]
+			default:
+				fmt.Fprintf(os.Stderr, "Unknown flag: %s\n", args[0])
+				os.Exit(1)
+			}
+		}
+		if len(args) == 0 {
+			fmt.Fprintln(os.Stderr, "Usage: arxiv-review search [-new] [-n NUM] \"query\"")
+			os.Exit(1)
+		}
+		query := strings.Join(args, " ")
+		runSearch(query, newOnly, numResults)
+	} else {
+		runReview(os.Args[1])
 	}
 }
