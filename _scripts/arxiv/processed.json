@@ -19257,6 +19257,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "1503.00163": {
+    "date": "2015-02-28",
+    "decision": "ACCEPT",
+    "source": "search"
+  },
   "1503.00304": {
     "date": "2015-03-01",
     "decision": "REJECT",
@@ -30232,6 +30237,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "1905.05154": {
+    "date": "2019-05-13",
+    "decision": "ACCEPT",
+    "source": "search"
+  },
   "1905.05314": {
     "date": "2019-05-13",
     "decision": "ACCEPT",
@@ -32176,6 +32186,11 @@
     "date": "2020-01-25",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "2001.09868": {
+    "date": "2020-01-27",
+    "decision": "ACCEPT",
+    "source": "search"
   },
   "2001.10017": {
     "date": "2020-01-27",
@@ -51907,6 +51922,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2512.22098": {
+    "date": "2025-12-26",
+    "decision": "ACCEPT",
+    "source": "search"
+  },
   "2512.22370": {
     "date": "2025-12-26",
     "decision": "REJECT",
@@ -52546,6 +52566,21 @@
     "date": "2026-02-10",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "2602.09997": {
+    "date": "2026-02-10",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
+  "2602.09998": {
+    "date": "2026-02-10",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
+  "2602.09999": {
+    "date": "2026-02-10",
+    "decision": "ACCEPT",
+    "source": "manual"
   },
   "2602.10396": {
     "date": "2026-02-11",

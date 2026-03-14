@@ -19,6 +19,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// scriptsDir can be set at build time via -ldflags "-X main.defaultScriptsDir=..."
+var defaultScriptsDir string
+
 // Paper represents a candidate paper for review.
 type Paper struct {
 	ArxivID      string   `json:"arxiv_id"`
@@ -112,10 +115,14 @@ type processedEntry struct {
 	Source   string `json:"source"`
 }
 
-// resolveScriptsDir finds the _scripts/arxiv/ directory relative to the binary.
+// resolveScriptsDir finds the _scripts/arxiv/ directory.
+// Priority: $ARXIV_SCRIPTS_DIR > compile-time defaultScriptsDir > relative to binary.
 func resolveScriptsDir() string {
 	if d := os.Getenv("ARXIV_SCRIPTS_DIR"); d != "" {
 		return d
+	}
+	if defaultScriptsDir != "" {
+		return defaultScriptsDir
 	}
 	exe, err := os.Executable()
 	if err != nil {

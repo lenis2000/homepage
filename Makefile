@@ -113,7 +113,7 @@ deploy-local:
 	@echo "Local deploy complete!"
 
 ~/bin/arxiv-review: _scripts/arxiv/arxiv-review/main.go _scripts/arxiv/arxiv-review/go.mod
-	cd _scripts/arxiv/arxiv-review && go build -o arxiv-review . && cp -f ./arxiv-review ~/bin/arxiv-review
+	cd _scripts/arxiv/arxiv-review && go build -ldflags "-X main.defaultScriptsDir=$(CURDIR)/_scripts/arxiv" -o arxiv-review . && cp -f ./arxiv-review ~/bin/arxiv-review
 
 arxiv-install: ~/bin/arxiv-review
 
