@@ -159,7 +159,11 @@ func fetchArxivSearch(query string, maxResults int, year string) ([]Paper, error
 	// Build URL with proper encoding — use url.Values to handle escaping
 	searchQuery := "all:" + query
 	if year != "" {
-		searchQuery += fmt.Sprintf(" AND submittedDate:[%s0101 TO %s1231]", year, year)
+		startYear, endYear := year, year
+		if parts := strings.SplitN(year, "-", 2); len(parts) == 2 && len(parts[1]) == 4 {
+			startYear, endYear = parts[0], parts[1]
+		}
+		searchQuery += fmt.Sprintf(" AND submittedDate:[%s0101 TO %s1231]", startYear, endYear)
 	}
 	params := url.Values{}
 	params.Set("search_query", searchQuery)

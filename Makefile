@@ -113,7 +113,7 @@ deploy-local:
 	@echo "Local deploy complete!"
 
 arxiv-install:
-	cd _scripts/arxiv/arxiv-review && go build -o arxiv-review . && ln -sf $(CURDIR)/_scripts/arxiv/arxiv-review/arxiv-review ~/bin/arxiv-review
+	cd _scripts/arxiv/arxiv-review && go build -o arxiv-review . && cp -f ./arxiv-review ~/bin/arxiv-review
 
 arxiv: arxiv-venv
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/fetch_arxiv.py --days $(or $(DAYS),30) --review $(ARGS)
