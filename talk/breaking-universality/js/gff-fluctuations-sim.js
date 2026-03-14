@@ -280,9 +280,6 @@ function initGFFFluctuationsSim() {
 
             controls.addEventListener('change', () => {
                 if (!isRunning && renderer) renderer.render(scene, camera);
-                console.log('[GFF] Camera pos:', camera.position.x.toFixed(1), camera.position.y.toFixed(1), camera.position.z.toFixed(1),
-                    '| Target:', controls.target.x.toFixed(1), controls.target.y.toFixed(1), controls.target.z.toFixed(1),
-                    '| Zoom:', camera.zoom.toFixed(3));
             });
 
             renderer.render(scene, camera);
@@ -465,7 +462,7 @@ function initGFFFluctuationsSim() {
         function drawBoundary(vertexSet, zLevel) {
             if (!meshGroup) return;
             const loops = computeBoundaryLoops(vertexSet);
-            const mat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+            const mat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2, depthTest: false });
             for (const loop of loops) {
                 const points = loop.map(key => {
                     const [n, j] = key.split(',').map(Number);
@@ -473,7 +470,9 @@ function initGFFFluctuationsSim() {
                 });
                 points.push(points[0]);
                 const geom = new THREE.BufferGeometry().setFromPoints(points);
-                meshGroup.add(new THREE.Line(geom, mat));
+                const line = new THREE.Line(geom, mat);
+                line.renderOrder = 999;
+                meshGroup.add(line);
             }
         }
 
@@ -698,27 +697,29 @@ function initGFFFluctuationsSim() {
                             doSample();
                         }
                         if (step === 2) {
-                            // Animate to top-down view, 90° CW rotated
+                            // Instant jump to top-down view, 90° CW rotated
+                            if (cameraAnimId) { cancelAnimationFrame(cameraAnimId); cameraAnimId = null; }
                             if (camera) camera.up.set(-1, 0, 0);
-                            animateCamera(
-                                { x: 54.8, y: 63.9, z: 139.1 },
-                                { x: 54.8, y: 63.9, z: -2.9 },
-                                0.243,
-                                500
-                            );
+                            camera.position.set(54.8, 63.9, 139.1);
+                            controls.target.set(54.8, 63.9, -2.9);
+                            camera.zoom = 0.243;
+                            camera.updateProjectionMatrix();
+                            controls.update();
+                            if (renderer) renderer.render(scene, camera);
                         }
                     },
 
                     onStepBack(step) {
                         if (step === 1) {
-                            // Restore Z-up and animate back to 3/4 view
+                            // Instant jump back to 3/4 view
+                            if (cameraAnimId) { cancelAnimationFrame(cameraAnimId); cameraAnimId = null; }
                             if (camera) camera.up.set(0, 0, 1);
-                            animateCamera(
-                                { x: 10.2, y: -36.6, z: 121.0 },
-                                { x: 54.5, y: 52.2, z: 19.5 },
-                                0.200,
-                                500
-                            );
+                            camera.position.set(10.2, -36.6, 121.0);
+                            controls.target.set(54.5, 52.2, 19.5);
+                            camera.zoom = 0.200;
+                            camera.updateProjectionMatrix();
+                            controls.update();
+                            if (renderer) renderer.render(scene, camera);
                         }
                     },
 

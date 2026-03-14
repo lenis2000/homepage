@@ -261,6 +261,21 @@ def format_journal_ref(info):
     return badge, ", ".join(parts)
 
 
+def yaml_quote(s):
+    """Safely quote a string for YAML front matter.
+
+    Handles embedded quotes, colons, newlines, and other YAML-breaking chars.
+    """
+    if not s:
+        return '""'
+    # Collapse whitespace/newlines to single spaces
+    s = re.sub(r'\s+', ' ', s).strip()
+    # If it contains double quotes, use single quotes (and escape single quotes)
+    if '"' in s:
+        return "'" + s.replace("'", "''") + "'"
+    return '"' + s + '"'
+
+
 def update_post_frontmatter(filepath, journal_name, journal_ref, doi):
     """Add journal-name, journal-ref, and doi to post YAML front matter. Returns True if changed."""
     text = filepath.read_text(encoding="utf-8")
@@ -270,15 +285,6 @@ def update_post_frontmatter(filepath, journal_name, journal_ref, doi):
 
     front = parts[1]
 
-    # Check if already has same values
-    existing_jn = re.search(r'^journal-name:\s*"?(.+?)"?\s*$', front, re.MULTILINE)
-    existing_jr = re.search(r'^journal-ref:\s*"?(.+?)"?\s*$', front, re.MULTILINE)
-    existing_doi = re.search(r'^doi:\s*"?(.+?)"?\s*$', front, re.MULTILINE)
-    if (existing_jn and existing_jn.group(1) == journal_name and
-            existing_jr and existing_jr.group(1) == journal_ref and
-            existing_doi and existing_doi.group(1) == doi):
-        return False
-
     # Remove old fields
     front_new = re.sub(r'\njournal-name:.*', '', front)
     front_new = re.sub(r'\njournal-ref:.*', '', front_new)
@@ -286,11 +292,11 @@ def update_post_frontmatter(filepath, journal_name, journal_ref, doi):
 
     additions = ""
     if journal_name:
-        additions += f'\njournal-name: "{journal_name}"'
+        additions += f'\njournal-name: {yaml_quote(journal_name)}'
     if journal_ref:
-        additions += f'\njournal-ref: "{journal_ref}"'
+        additions += f'\njournal-ref: {yaml_quote(journal_ref)}'
     if doi:
-        additions += f'\ndoi: "{doi}"'
+        additions += f'\ndoi: {yaml_quote(doi)}'
 
     if not additions:
         return False
@@ -315,13 +321,12 @@ def update_search_index(all_cached):
         aid = entry.get("id", "")
         info = all_cached.get(aid)
         if info and info["journal_name"]:
-            jr = format_journal_ref(info)
+            badge, jr = format_journal_ref(info)
             doi = info.get("doi", "")
-            jn = info["journal_name"]
-            if jn:
-                entry["jn"] = jn  # journal name (for badge)
+            if badge:
+                entry["jn"] = badge  # journal name badge
             if jr:
-                entry["jr"] = jr  # full journal ref
+                entry["jr"] = jr  # full journal ref (tooltip)
                 updated += 1
             if doi:
                 entry["d2"] = doi  # DOI
@@ -504,10 +509,9 @@ def main():
         if not info or not info["journal_name"]:
             continue
 
-        journal_name = info["journal_name"]
-        journal_ref = format_journal_ref(info)
+        badge, journal_ref = format_journal_ref(info)
         doi = info.get("doi", "")
-        if update_post_frontmatter(f, journal_name, journal_ref, doi):
+        if update_post_frontmatter(f, badge, journal_ref, doi):
             updated += 1
 
     print(f"Updated {updated} posts")

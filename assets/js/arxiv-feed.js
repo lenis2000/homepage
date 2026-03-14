@@ -727,25 +727,41 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Filtering ---
 
+    // Top journals (tier 1)
+    var TOP_JOURNALS = {
+        'Ann. Math.': 1, 'Acta Math.': 1, 'Invent. Math.': 1, 'JAMS': 1,
+        'Ann. ENS': 1, 'Publ. IHES': 1, 'Forum Math. Pi': 1, 'Cambridge J. Math.': 1
+    };
+
     function applyFilter() {
         stripMarks();
         var term = searchInput.value.trim();
 
+        // Secret "TOP" search: filter to top-journal papers
+        var isTopSearch = (term === 'TOP') && searchIndex;
+        if (isTopSearch) term = '';
+
         // Fast path: no filters active
-        if (!term && activeCategory === 'all' && activeDateFilter === 'all') {
+        if (!term && !isTopSearch && activeCategory === 'all' && activeDateFilter === 'all') {
             topMatchIds = {};
             topMatchList = [];
+            var se = document.getElementById('arxiv-top-stats');
+            if (se) se.setAttribute('hidden', '');
             resetDisplayList();
         } else if (searchIndex) {
             displayList = [];
             var scores = {};
+            var topJournalCounts = {};
             searchIndex.forEach(function(entry) {
                 var matchesCat = activeCategory === 'all' || entry.c.indexOf(activeCategory) !== -1;
                 if (!matchesCat) return;
 
                 if (!matchesDateFilter(entry.d)) return;
 
-                if (term) {
+                if (isTopSearch) {
+                    if (!entry.jn || !TOP_JOURNALS[entry.jn]) return;
+                    topJournalCounts[entry.jn] = (topJournalCounts[entry.jn] || 0) + 1;
+                } else if (term) {
                     var shortHay = entry.id + ' ' + entry.t + ' ' + entry.a;
                     var s = fzfMatch(term, shortHay, entry.s || '');
                     if (s === 0) return;
@@ -755,6 +771,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 var idx = idToIndex[entry.id];
                 if (idx !== undefined) displayList.push(idx);
             });
+
+            // Show TOP stats header
+            if (isTopSearch) {
+                var statsEl = document.getElementById('arxiv-top-stats');
+                if (!statsEl) {
+                    statsEl = document.createElement('div');
+                    statsEl.id = 'arxiv-top-stats';
+                    statsEl.style.cssText = 'padding:12px 8px;margin-bottom:8px;border-left:4px solid #b8860b;background:rgba(184,134,11,0.07);font-size:0.92em;line-height:1.6;';
+                    listEl.parentNode.insertBefore(statsEl, listEl);
+                }
+                var sorted = Object.keys(topJournalCounts).sort(function(a, b) {
+                    return topJournalCounts[b] - topJournalCounts[a];
+                });
+                var statsHtml = '<strong style="color:#b8860b">\u2605 Top Journal Papers: ' + displayList.length + '</strong><br>';
+                sorted.forEach(function(j) {
+                    statsHtml += '<span style="display:inline-block;margin:2px 8px 2px 0;padding:1px 6px;background:#2e7d32;color:#fff;border-radius:3px;font-size:0.85em">' + j + '</span> <span style="color:#666">' + topJournalCounts[j] + '</span>&ensp;';
+                });
+                statsEl.innerHTML = statsHtml;
+                statsEl.removeAttribute('hidden');
+            } else {
+                var statsEl = document.getElementById('arxiv-top-stats');
+                if (statsEl) statsEl.setAttribute('hidden', '');
+            }
             // Find top 5 matches by score
             topMatchIds = {};
             topMatchList = [];

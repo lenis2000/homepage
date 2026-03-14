@@ -6,8 +6,6 @@
     const N = 80; // Aztec diamond size
 
     let shufflingModule = null;
-    let simulateAztecIIDDirect = null;
-    let shufflingFreeString = null;
     let wasmReady = false;
 
     // Three.js state (lazy init)
@@ -27,8 +25,6 @@
         if (typeof createShufflingModule === 'undefined') return false;
         try {
             shufflingModule = await createShufflingModule();
-            simulateAztecIIDDirect = shufflingModule.cwrap('simulateAztecIIDDirect', 'number', ['number', 'number']);
-            shufflingFreeString = shufflingModule.cwrap('freeString', null, ['number']);
             wasmReady = true;
             return true;
         } catch (e) {
@@ -48,10 +44,13 @@
         for (let i = 0; i < numWeights; i++) {
             shufflingModule.setValue(weightsPtr + i * 8, 1.0, 'double');
         }
-        const resultPtr = await simulateAztecIIDDirect(N, weightsPtr);
+        const resultPtr = await shufflingModule.ccall(
+            'simulateAztecWithWeightMatrix', 'number',
+            ['number', 'number'], [N, weightsPtr], {async: true}
+        );
         shufflingModule._free(weightsPtr);
         const jsonStr = shufflingModule.UTF8ToString(resultPtr);
-        shufflingFreeString(resultPtr);
+        shufflingModule.ccall('freeString', null, ['number'], [resultPtr]);
         return JSON.parse(jsonStr);
     }
 
