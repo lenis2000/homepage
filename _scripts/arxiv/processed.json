@@ -23927,6 +23927,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "1611.00498": {
+    "date": "2016-11-02",
+    "decision": "ACCEPT",
+    "source": "search"
+  },
   "1611.00650": {
     "date": "2016-11-02",
     "decision": "ACCEPT",
@@ -25796,6 +25801,11 @@
     "date": "2017-08-18",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "1708.05553": {
+    "date": "2017-08-18",
+    "decision": "ACCEPT",
+    "source": "search"
   },
   "1708.05806": {
     "date": "2017-08-19",
@@ -55392,6 +55402,12 @@
     "date": "2001-07-22",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "gr-qc/0112012": {
+    "date": "2001-12-07",
+    "decision": "ACCEPT",
+    "deleted": true,
+    "source": "search"
   },
   "gr-qc/0204092": {
     "date": "2002-04-30",
