@@ -285,6 +285,10 @@ def update_post_frontmatter(filepath, journal_name, journal_ref, doi):
 
     front = parts[1]
 
+    # Skip posts with manually curated journal data
+    if re.search(r'\njournal-locked:\s*true', front):
+        return False
+
     # Remove old fields
     front_new = re.sub(r'\njournal-name:.*', '', front)
     front_new = re.sub(r'\njournal-ref:.*', '', front_new)

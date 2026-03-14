@@ -60,6 +60,21 @@ document.addEventListener('DOMContentLoaded', function() {
         monthMap[hdr.dataset.month] = hdr;
     }
 
+    // --- Append publication year to journal badges ---
+    function applyJournalYears(root) {
+        var badges = root.querySelectorAll('.arxiv-link-journal[data-journal-ref]');
+        for (var k = 0; k < badges.length; k++) {
+            var el = badges[k];
+            if (el.dataset.yrDone) continue;
+            // Strip page numbers before matching years so e.g. "pp. 2001" isn't mistaken for a year
+            var ref = el.getAttribute('data-journal-ref').replace(/pp\.?\s*\d+[\s\-]*\d*/g, '');
+            var m = ref.match(/\b((?:19|20)\d{2})\b/g);
+            if (m) el.childNodes[0].textContent += ' ' + m[m.length - 1];
+            el.dataset.yrDone = '1';
+        }
+    }
+    applyJournalYears(template.content);
+
     // --- LaTeX in titles ---
 
     var LATEX_CMD_SET = {};
@@ -273,6 +288,27 @@ document.addEventListener('DOMContentLoaded', function() {
         return total;
     }
 
+    // --- Search operator parsing ---
+    // Supports: in:"Journal Name" or in:JAMS, cat:math.PR, y:2024 or y:2020-2024
+    function parseSearchOperators(raw) {
+        var ops = { journal: null, cat: null, yearFrom: null, yearTo: null };
+        // Extract in:"..." or in:word
+        var rest = raw.replace(/\bin:"([^"]+)"/gi, function(_, v) { ops.journal = v; return ''; });
+        rest = rest.replace(/\bin:(\S+)/gi, function(_, v) {
+            if (!ops.journal) ops.journal = v;
+            return '';
+        });
+        // Extract cat:word
+        rest = rest.replace(/\bcat:(\S+)/gi, function(_, v) { ops.cat = v; return ''; });
+        // Extract y:YYYY or y:YYYY-YYYY
+        rest = rest.replace(/\by:(\d{4})(?:-(\d{4}))?/gi, function(_, from, to) {
+            ops.yearFrom = from;
+            ops.yearTo = to || from;
+            return '';
+        });
+        return { text: rest.replace(/\s+/g, ' ').trim(), ops: ops };
+    }
+
     // Display state
     var displayList = [];
     var renderedCount = 0;
@@ -424,7 +460,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Recount categories for papers matching current search + date (ignoring category filter)
     function recomputeCatCounts() {
-        var term = searchInput.value.trim();
+        var rawTerm = searchInput.value.trim();
+        var parsed = parseSearchOperators(rawTerm);
+        var term = parsed.text;
+        var rcOps = parsed.ops;
         var counts = {};
         var totalAll = 0;
 
@@ -432,6 +471,17 @@ document.addEventListener('DOMContentLoaded', function() {
         source.forEach(function(entry) {
             var dateStr = searchIndex ? entry.d : entry.date;
             if (!matchesDateFilter(dateStr)) return;
+
+            // Operator filters
+            if (rcOps.cat) {
+                var catStr = searchIndex ? entry.c : entry.categories;
+                if (catStr.indexOf(rcOps.cat) === -1) return;
+            }
+            if (rcOps.journal && searchIndex && entry.jn !== rcOps.journal) return;
+            if (rcOps.yearFrom) {
+                var yr = searchIndex ? entry.y : entry.year;
+                if (yr < rcOps.yearFrom || yr > (rcOps.yearTo || rcOps.yearFrom)) return;
+            }
 
             if (term) {
                 var shortH = searchIndex
@@ -519,6 +569,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 search: el.dataset.search || ''
             });
         }
+
+        applyJournalYears(tmp);
 
         // Update display to include overflow papers
         var hadFilter = activeCategory !== 'all' || activeDateFilter !== 'all' || searchInput.value;
@@ -735,14 +787,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function applyFilter() {
         stripMarks();
-        var term = searchInput.value.trim();
+        var rawTerm = searchInput.value.trim();
 
         // Secret "TOP" search: filter to top-journal papers
-        var isTopSearch = (term === 'TOP') && searchIndex;
-        if (isTopSearch) term = '';
+        var isTopSearch = (rawTerm === 'TOP') && searchIndex;
+
+        // Parse structured operators from search input
+        var parsed = parseSearchOperators(rawTerm);
+        var term = isTopSearch ? '' : parsed.text;
+        var ops = parsed.ops;
+        var hasOps = ops.journal || ops.cat || ops.yearFrom;
 
         // Fast path: no filters active
-        if (!term && !isTopSearch && activeCategory === 'all' && activeDateFilter === 'all') {
+        if (!term && !isTopSearch && !hasOps && activeCategory === 'all' && activeDateFilter === 'all') {
             topMatchIds = {};
             topMatchList = [];
             var se = document.getElementById('arxiv-top-stats');
@@ -757,6 +814,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!matchesCat) return;
 
                 if (!matchesDateFilter(entry.d)) return;
+
+                // Search operator filters
+                if (ops.cat && entry.c.indexOf(ops.cat) === -1) return;
+                if (ops.journal && entry.jn !== ops.journal) return;
+                if (ops.yearFrom) {
+                    var pubYear = entry.y;
+                    if (pubYear < ops.yearFrom || pubYear > ops.yearTo) return;
+                }
 
                 if (isTopSearch) {
                     if (!entry.jn || !TOP_JOURNALS[entry.jn]) return;
@@ -817,6 +882,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (!matchesDateFilter(p.date)) return;
 
+                // Search operator filters (limited without searchIndex)
+                if (ops.cat && p.categories.indexOf(ops.cat) === -1) return;
+                if (ops.yearFrom && (p.year < ops.yearFrom || p.year > (ops.yearTo || ops.yearFrom))) return;
+
                 if (term) {
                     var s = fzfMatch(term, p.search, '');
                     if (s === 0) return;
@@ -859,8 +928,12 @@ document.addEventListener('DOMContentLoaded', function() {
             statusTimeout = setTimeout(function() {
                 if (totalMatches === 0) {
                     statusRegion.textContent = 'No results found.';
-                } else if (term || activeCategory !== 'all' || activeDateFilter !== 'all') {
-                    statusRegion.textContent = totalMatches + ' result' + (totalMatches !== 1 ? 's' : '') + ' found.';
+                } else if (term || hasOps || activeCategory !== 'all' || activeDateFilter !== 'all') {
+                    var msg = totalMatches + ' result' + (totalMatches !== 1 ? 's' : '') + ' found.';
+                    if (ops.journal) msg += ' Filtered by journal: ' + ops.journal + '.';
+                    if (ops.cat) msg += ' Filtered by category: ' + ops.cat + '.';
+                    if (ops.yearFrom) msg += ' Year: ' + ops.yearFrom + (ops.yearTo !== ops.yearFrom ? '-' + ops.yearTo : '') + '.';
+                    statusRegion.textContent = msg;
                 } else {
                     statusRegion.textContent = '';
                 }
@@ -1080,6 +1153,44 @@ document.addEventListener('DOMContentLoaded', function() {
             var details = e.target.closest('.arxiv-body').querySelector('details');
             if (details) details.open = !details.open;
         }
+    });
+
+    // Click journal badge to filter by journal
+    listEl.addEventListener('click', function(e) {
+        var badge = e.target.closest('.arxiv-link-journal');
+        if (!badge) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var journalName = badge.getAttribute('data-journal-name');
+        if (!journalName) return;
+        var parsed = parseSearchOperators(searchInput.value);
+        if (parsed.ops.journal === journalName) {
+            searchInput.value = parsed.text;
+        } else {
+            var rest = parsed.text;
+            var quoted = journalName.indexOf(' ') !== -1 ? 'in:"' + journalName + '"' : 'in:' + journalName;
+            searchInput.value = (quoted + ' ' + rest).trim();
+        }
+        applyFilter();
+    });
+
+    // Click category badge on a paper to filter by that category
+    listEl.addEventListener('click', function(e) {
+        var badge = e.target.closest('.arxiv-cat-badge');
+        if (!badge) return;
+        if (badge.closest('#arxiv-cat-buttons')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var cat = badge.textContent.trim();
+        if (!cat) return;
+        var parsed = parseSearchOperators(searchInput.value);
+        if (parsed.ops.cat === cat) {
+            searchInput.value = parsed.text;
+        } else {
+            var rest = searchInput.value.replace(/\bcat:\S+/gi, '').replace(/\s+/g, ' ').trim();
+            searchInput.value = ('cat:' + cat + ' ' + rest).trim();
+        }
+        applyFilter();
     });
 
     // Related papers button

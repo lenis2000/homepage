@@ -13,7 +13,7 @@ nav_weight: 21
   <!-- Search Bar -->
   <div class="input-group mb-3">
     <label for="arxiv-search-input" class="sr-only">Search arXiv feed</label>
-    <input type="text" id="arxiv-search-input" class="form-control" placeholder="Search papers… (Esc to clear)" aria-label="Search arXiv feed" autocomplete="off">
+    <input type="text" id="arxiv-search-input" class="form-control" placeholder="Search… in:Journal cat:math.XX y:2024 (Esc to clear)" aria-label="Search arXiv feed" autocomplete="off">
     <button class="btn btn-outline-secondary" type="button" id="arxiv-search-clear" aria-label="Clear search and filters">Clear</button>
   </div>
 
@@ -106,7 +106,7 @@ nav_weight: 21
         <span class="arxiv-tags">{% if post.arxiv-categories.size > 0 %}<button class="arxiv-tags-toggle" aria-label="Show tags" aria-expanded="false">tags</button>{% endif %}{% for cat in post.arxiv-categories %}<span class="badge arxiv-cat-badge">{{ cat }}</span> {% endfor %}</span>
         <b>{{ post.authors | join: ", " }}</b>,
         "<em>{{ post.title }}</em>"
-        <span class="arxiv-links"><a href="https://arxiv.org/abs/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-abs">arXiv<span class="sr-only"> (opens in new tab)</span></a><a href="https://arxiv.org/pdf/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-pdf">pdf<span class="sr-only"> (opens in new tab)</span></a><a href="https://arxiv.org/html/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-html">html<span class="sr-only"> (opens in new tab)</span></a><a href="/arxiv/source/?id={{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-src" data-src-id="{{ post.arxiv-id }}" hidden>src<span class="sr-only"> (opens in new tab)</span></a>{% if post.journal-name %}<a {% if post.doi %}href="https://doi.org/{{ post.doi }}" target="_blank" rel="noopener"{% endif %} class="badge arxiv-link-badge arxiv-link-journal" title="{{ post.journal-ref }}">{{ post.journal-name }}<span class="sr-only"> (opens in new tab)</span></a>{% endif %}{% if post.related-papers.size > 0 %}<button class="arxiv-related-btn badge arxiv-link-badge" aria-expanded="false">Related</button>{% endif %}</span>
+        <span class="arxiv-links"><a href="https://arxiv.org/abs/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-abs">arXiv<span class="sr-only"> (opens in new tab)</span></a><a href="https://arxiv.org/pdf/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-pdf">pdf<span class="sr-only"> (opens in new tab)</span></a><a href="https://arxiv.org/html/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-html">html<span class="sr-only"> (opens in new tab)</span></a><a href="/arxiv/source/?id={{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-src" data-src-id="{{ post.arxiv-id }}" hidden>src<span class="sr-only"> (opens in new tab)</span></a>{% if post.journal-name %}<a {% if post.doi %}href="https://doi.org/{{ post.doi }}" target="_blank" rel="noopener"{% endif %} class="badge arxiv-link-badge arxiv-link-journal" title="{{ post.journal-ref }}" data-journal-ref="{{ post.journal-ref }}" data-journal-name="{{ post.journal-name }}">{{ post.journal-name }}<span class="sr-only"> (opens in new tab)</span></a>{% endif %}{% if post.related-papers.size > 0 %}<button class="arxiv-related-btn badge arxiv-link-badge" aria-expanded="false">Related</button>{% endif %}</span>
         {% if post.content != blank %}<details>
           <summary class="arxiv-abstract-toggle">Abstract</summary>
           <div class="arxiv-abstract">{{ post.content }}</div>
@@ -174,8 +174,8 @@ nav_weight: 21
   .arxiv-link-badge.arxiv-link-abs:hover { background-color: #8c1515; }
   .arxiv-link-badge.arxiv-link-pdf { background-color: #1a5276; }
   .arxiv-link-badge.arxiv-link-pdf:hover { background-color: #0d3b5e; }
-  .arxiv-link-badge.arxiv-link-html { background-color: #1e8449; }
-  .arxiv-link-badge.arxiv-link-html:hover { background-color: #166638; }
+  .arxiv-link-badge.arxiv-link-html { background-color: #0e7c86; }
+  .arxiv-link-badge.arxiv-link-html:hover { background-color: #0a5f67; }
   .arxiv-link-badge.arxiv-link-src { background-color: #b45309; }
   .arxiv-link-badge.arxiv-link-src:hover { background-color: #92400e; }
   .arxiv-body {
@@ -296,8 +296,10 @@ nav_weight: 21
     .arxiv-abstract-toggle { min-height: 44px; display: inline-flex; align-items: center; }
     .arxiv-dropdown-btn, #arxiv-cat-toggle { min-height: 44px; }
   }
-  .arxiv-link-badge.arxiv-link-journal { background-color: #2e7d32; max-width: 18em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+  .arxiv-link-badge.arxiv-link-journal { background-color: #2e7d32; max-width: 18em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; cursor: pointer; }
   .arxiv-link-badge.arxiv-link-journal:hover { background-color: #1b5e20; }
+  .arxiv-body .arxiv-cat-badge { cursor: pointer; }
+  .arxiv-body .arxiv-cat-badge:hover { opacity: 0.8; }
   .arxiv-body em { cursor: pointer; }
   .arxiv-body em:hover { text-decoration: underline; }
   /* Dark mode overrides */
@@ -310,8 +312,8 @@ nav_weight: 21
   [data-theme="dark"] .arxiv-link-badge.arxiv-link-abs:hover { background-color: #e74c3c; }
   [data-theme="dark"] .arxiv-link-badge.arxiv-link-pdf { background-color: #2980b9; }
   [data-theme="dark"] .arxiv-link-badge.arxiv-link-pdf:hover { background-color: #3498db; }
-  [data-theme="dark"] .arxiv-link-badge.arxiv-link-html { background-color: #27ae60; }
-  [data-theme="dark"] .arxiv-link-badge.arxiv-link-html:hover { background-color: #2ecc71; }
+  [data-theme="dark"] .arxiv-link-badge.arxiv-link-html { background-color: #0ea5b5; }
+  [data-theme="dark"] .arxiv-link-badge.arxiv-link-html:hover { background-color: #22d3ee; }
   [data-theme="dark"] .arxiv-link-badge.arxiv-link-src { background-color: #d97706; }
   [data-theme="dark"] .arxiv-link-badge.arxiv-link-src:hover { background-color: #f59e0b; }
   [data-theme="dark"] .arxiv-body b { color: var(--text-primary); }
