@@ -1004,7 +1004,21 @@ document.addEventListener('DOMContentLoaded', function() {
     var searchDebounce;
     function onSearchInput() {
         clearTimeout(searchDebounce);
-        searchDebounce = setTimeout(applyFilter, 150);
+        searchDebounce = setTimeout(function() {
+            applyFilter();
+            syncHashFromSearch();
+        }, 150);
+    }
+
+    function syncHashFromSearch() {
+        var val = searchInput.value.trim();
+        if (val) {
+            history.replaceState(null, null, '#q=' + encodeURIComponent(val));
+        } else if (activeCategory !== 'all') {
+            history.replaceState(null, null, '#' + activeCategory);
+        } else if (window.location.hash) {
+            history.replaceState(null, null, window.location.pathname + window.location.search);
+        }
     }
 
     function clearSearch() {
@@ -1172,6 +1186,7 @@ document.addEventListener('DOMContentLoaded', function() {
             searchInput.value = (quoted + ' ' + rest).trim();
         }
         applyFilter();
+        syncHashFromSearch();
     });
 
     // Click category badge on a paper to filter by that category
@@ -1191,6 +1206,7 @@ document.addEventListener('DOMContentLoaded', function() {
             searchInput.value = ('cat:' + cat + ' ' + rest).trim();
         }
         applyFilter();
+        syncHashFromSearch();
     });
 
     // Related papers button
@@ -1273,8 +1289,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // URL hash deep-linking
+    // URL hash deep-linking: #q=encoded+search or #category-name
     if (window.location.hash) {
-        pendingHash = window.location.hash.substring(1);
+        var rawHash = window.location.hash.substring(1);
+        if (rawHash.indexOf('q=') === 0) {
+            var query = decodeURIComponent(rawHash.substring(2));
+            searchInput.value = query;
+            // applyFilter will run after searchIndex loads via initButtons
+        } else {
+            pendingHash = rawHash;
+        }
+    }
+
+    // Help toggle
+    var helpBtn = document.getElementById('arxiv-search-help-btn');
+    var helpPanel = document.getElementById('arxiv-search-help');
+    if (helpBtn && helpPanel) {
+        helpBtn.addEventListener('click', function() {
+            var show = helpPanel.hidden;
+            helpPanel.hidden = !show;
+            helpBtn.setAttribute('aria-expanded', show ? 'true' : 'false');
+        });
     }
 });

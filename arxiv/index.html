@@ -14,7 +14,16 @@ nav_weight: 21
   <div class="input-group mb-3">
     <label for="arxiv-search-input" class="sr-only">Search arXiv feed</label>
     <input type="text" id="arxiv-search-input" class="form-control" placeholder="Search… in:Journal cat:math.XX y:2024 (Esc to clear)" aria-label="Search arXiv feed" autocomplete="off">
+    <button class="btn btn-outline-secondary" type="button" id="arxiv-search-help-btn" aria-label="Search help" aria-expanded="false" title="Search syntax help">?</button>
     <button class="btn btn-outline-secondary" type="button" id="arxiv-search-clear" aria-label="Clear search and filters">Clear</button>
+  </div>
+  <div id="arxiv-search-help" class="arxiv-search-help" hidden>
+    <strong>Search operators</strong> &mdash; combine freely with keywords<br>
+    <code>in:JAMS</code> or <code>in:"Ann. Probab."</code> &mdash; filter by journal<br>
+    <code>cat:math.PR</code> &mdash; filter by arXiv category<br>
+    <code>y:2024</code> or <code>y:2020-2024</code> &mdash; filter by year<br>
+    <code>TOP</code> &mdash; show top-journal papers only<br>
+    Click any <span style="background:#2e7d32;color:#fff;padding:1px 5px;border-radius:3px;font-size:0.85em">journal</span> or <span style="background:#6c757d;color:#fff;padding:1px 5px;border-radius:3px;font-size:0.85em">category</span> badge to filter. Esc to clear.
   </div>
 
   <!-- Date Range Dropdown -->
@@ -296,6 +305,11 @@ nav_weight: 21
     .arxiv-abstract-toggle { min-height: 44px; display: inline-flex; align-items: center; }
     .arxiv-dropdown-btn, #arxiv-cat-toggle { min-height: 44px; }
   }
+  .arxiv-search-help { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px 14px; margin-bottom: 12px; font-size: 0.9em; line-height: 1.7; }
+  .arxiv-search-help code { background: #e9ecef; padding: 1px 5px; border-radius: 3px; font-size: 0.95em; }
+  #arxiv-search-help-btn { font-weight: bold; min-width: 2.2em; }
+  [data-theme="dark"] .arxiv-search-help { background: #1a1a2e; border-color: #333; }
+  [data-theme="dark"] .arxiv-search-help code { background: #2a2a3e; }
   .arxiv-link-badge.arxiv-link-journal { background-color: #2e7d32; max-width: 18em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; cursor: pointer; }
   .arxiv-link-badge.arxiv-link-journal:hover { background-color: #1b5e20; }
   .arxiv-body .arxiv-cat-badge { cursor: pointer; }
