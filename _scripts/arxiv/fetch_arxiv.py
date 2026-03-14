@@ -309,8 +309,12 @@ def semantic_filter(papers, threshold=0.72):
     to_embed_idx = [i for i, k in enumerate(keys) if k not in cached]
 
     if to_embed_idx:
-        from sentence_transformers import SentenceTransformer
         import torch
+        # Use cached model without network requests if available
+        hf_cache = Path.home() / ".cache" / "huggingface" / "hub" / "models--BAAI--bge-m3"
+        if hf_cache.exists():
+            os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        from sentence_transformers import SentenceTransformer
         device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
         print(f"  Loading embedding model on {device}...")
         model = SentenceTransformer(MODEL_NAME).to(device)

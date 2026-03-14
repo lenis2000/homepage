@@ -9,6 +9,7 @@ Usage:
 
 import argparse
 import json
+import os
 import re
 import sqlite3
 import sys
@@ -103,8 +104,12 @@ def main():
     log(f"Cache hits: {len(keys) - len(to_embed_idx)}, need to embed: {len(to_embed_idx)}")
 
     if to_embed_idx:
-        from sentence_transformers import SentenceTransformer
         import torch
+        # Use cached model without network requests if available
+        hf_cache = Path.home() / ".cache" / "huggingface" / "hub" / "models--BAAI--bge-m3"
+        if hf_cache.exists():
+            os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        from sentence_transformers import SentenceTransformer
         device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
         log(f"Loading model on {device}...")
         model = SentenceTransformer(MODEL_NAME).to(device)

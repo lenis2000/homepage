@@ -140,14 +140,17 @@ def compute_embeddings(ids, texts, cache):
 
     if uncached_indices:
         log(f"Embedding {len(uncached_indices)} new papers (of {len(texts)} total)...")
-        from sentence_transformers import SentenceTransformer
         import torch
+        # Use cached model without network requests if available
+        hf_cache = Path.home() / ".cache" / "huggingface" / "hub" / "models--BAAI--bge-m3"
+        if hf_cache.exists():
+            os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        from sentence_transformers import SentenceTransformer
 
         device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
         log(f"Using device: {device}")
 
-        model = SentenceTransformer(MODEL_NAME)
-        model = model.to(device)
+        model = SentenceTransformer(MODEL_NAME).to(device)
 
         uncached_texts = [texts[i] for i in uncached_indices]
         embeddings = model.encode(
