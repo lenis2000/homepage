@@ -336,6 +336,7 @@ def update_search_index(all_cached):
                 entry["d2"] = doi  # DOI
         else:
             # No API data — preserve existing fields (API may be temporarily empty)
+            pass
 
     INDEX_FILE.write_text(
         json.dumps(index, ensure_ascii=False, separators=(",", ":")),
