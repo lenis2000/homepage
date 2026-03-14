@@ -196,7 +196,13 @@
         camera.up.set(0, 1, 0);
         camera.lookAt(0, 0, 0);
 
-        renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        try {
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        } catch (e) {
+            console.error('WebGL not available:', e);
+            setStatus('WebGL not available');
+            return;
+        }
         renderer.setSize(canvas.width, canvas.height);
 
         controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -389,8 +395,12 @@
 
         // Switch to 3D
         initThreeJS();
-        buildGFFSurface(gff);
-        setStatus(`GFF surface — (h₁ − h₂)/√2, N = ${N}`);
+        if (renderer) {
+            buildGFFSurface(gff);
+            setStatus(`GFF surface — (h₁ − h₂)/√2, N = ${N}`);
+        } else {
+            setStatus(`GFF computed (${gff.size} vertices) — WebGL required for 3D view`);
+        }
     }
 
     function reset() {
