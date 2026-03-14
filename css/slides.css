@@ -10,7 +10,13 @@
 :root {
     --slide-accent: #e57200;
     --slide-navy: #232D4B;
-    --slide-muted: #6c757d;
+    --slide-muted: #555555;
+}
+
+/* Citation styling — use class="cite" on [Author Year] spans */
+.slide .cite {
+    color: var(--slide-muted);
+    font-weight: 600;
 }
 
 /* ==================== Accessibility ==================== */
