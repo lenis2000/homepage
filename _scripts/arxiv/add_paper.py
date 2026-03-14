@@ -89,6 +89,57 @@ def fetch_paper(arxiv_id: str) -> dict:
     }
 
 
+def relevance_check(paper: dict) -> tuple[str, str]:
+    """Ask Claude whether this paper belongs in the integrable probability feed.
+
+    Returns (decision, reason) where decision is 'ACCEPT' or 'REJECT'.
+    Falls back to ('ACCEPT', '') if claude CLI is unavailable.
+    """
+    prompt = (
+        "You are reviewing an arXiv paper for inclusion in an integrable probability "
+        "community feed. The feed covers:\n"
+        "- KPZ universality, ASEP, TASEP, stochastic vertex models, exclusion processes\n"
+        "- Random matrices, determinantal/Pfaffian point processes, Tracy-Widom\n"
+        "- Random tilings, dimers, Arctic curves, limit shapes\n"
+        "- Macdonald/Schur/Hall-Littlewood processes, symmetric functions in probabilistic context\n"
+        "- Random polymers, last passage percolation, directed landscape\n"
+        "- Random partitions, random Young diagrams, asymptotic representation theory\n"
+        "- Integrable systems applied to probability, Riemann-Hilbert methods\n"
+        "- Stochastic PDE related to KPZ, random growth models\n"
+        "- Generalized hydrodynamics, hydrodynamic limits of integrable systems\n"
+        "- Random permutations, permutons, longest increasing subsequences\n"
+        "- Interacting particle systems with exact solvability\n\n"
+        f"Paper: arXiv:{paper['arxiv_id']}\n"
+        f"Title: {paper['title']}\n"
+        f"Authors: {', '.join(paper['authors'])}\n"
+        f"Categories: {', '.join(paper['categories'])}\n"
+        f"Abstract: {paper.get('abstract', '(no abstract)')}\n\n"
+        "Respond with EXACTLY one line: ACCEPT or REJECT followed by a brief reason.\n"
+        "Example: ACCEPT — paper studies TASEP with step initial condition\n"
+        "Example: REJECT — paper is about computer vision, unrelated to integrable probability"
+    )
+    try:
+        result = subprocess.run(
+            ["claude", "-p", prompt],
+            capture_output=True, text=True, timeout=60,
+        )
+        output = result.stdout.strip()
+        if output.startswith("ACCEPT"):
+            reason = output[len("ACCEPT"):].strip().lstrip("—-: ")
+            return "ACCEPT", reason
+        elif output.startswith("REJECT"):
+            reason = output[len("REJECT"):].strip().lstrip("—-: ")
+            return "REJECT", reason
+        # Couldn't parse — treat as uncertain
+        return "UNCERTAIN", output[:200]
+    except FileNotFoundError:
+        print("  WARN: claude CLI not found, skipping relevance check")
+        return "ACCEPT", ""
+    except subprocess.TimeoutExpired:
+        print("  WARN: claude CLI timed out, skipping relevance check")
+        return "ACCEPT", ""
+
+
 def main():
     parser = argparse.ArgumentParser(description="Add a single arXiv paper by ID")
     parser.add_argument("paper_id", help="arXiv ID, URL, or citation (e.g. 2505.15726)")
@@ -99,6 +150,8 @@ def main():
                         help="Skip search index rebuild")
     parser.add_argument("--source", default="manual",
                         help="Source tag (default: manual)")
+    parser.add_argument("-y", "--yes", action="store_true",
+                        help="Skip relevance check and confirmation prompt")
     args = parser.parse_args()
 
     arxiv_id = parse_arxiv_id(args.paper_id)
@@ -131,6 +184,29 @@ def main():
     if args.dry_run:
         print("\n  [DRY RUN] Would generate post and update indices.")
         return 0
+
+    # Relevance check (skip with -y or when called from search tool)
+    if not args.yes and args.source == "manual" and sys.stdin.isatty():
+        print("\n  Checking relevance to integrable probability...")
+        decision, reason = relevance_check(paper)
+        if decision == "REJECT":
+            print(f"  AI says REJECT: {reason}")
+            answer = input("  Add anyway? [y/N] ").strip().lower()
+            if answer not in ("y", "yes"):
+                print("  Aborted.")
+                return 0
+        elif decision == "UNCERTAIN":
+            print(f"  AI uncertain: {reason}")
+            answer = input("  Add anyway? [y/N] ").strip().lower()
+            if answer not in ("y", "yes"):
+                print("  Aborted.")
+                return 0
+        else:
+            print(f"  AI says ACCEPT: {reason}")
+            answer = input("  Proceed? [Y/n] ").strip().lower()
+            if answer in ("n", "no"):
+                print("  Aborted.")
+                return 0
 
     # Generate post
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
