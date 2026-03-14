@@ -17,6 +17,8 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
+from s3_upload_gate import should_upload, record_upload, days_until_next
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 SOURCES_DIR = SCRIPT_DIR / "sources"
 LOG_FILE = SOURCES_DIR / "convert-ps-failures.log"
@@ -55,7 +57,7 @@ def upload_dir_to_s3(arxiv_dir: Path) -> bool:
     s3_path = f"s3://{OUR_S3_BUCKET}/{OUR_S3_PREFIX}/{arxiv_dir.name}/"
     try:
         subprocess.run(
-            ["aws", "s3", "sync", str(arxiv_dir), s3_path, "--quiet"],
+            ["aws", "s3", "sync", str(arxiv_dir), s3_path, "--quiet", "--size-only"],
             check=True, capture_output=True,
         )
         return True
@@ -72,6 +74,8 @@ def main():
                         help="Show what would be converted")
     parser.add_argument("--limit", type=int, default=0,
                         help="Max dirs to process (0=all)")
+    parser.add_argument("--force-upload", action="store_true",
+                        help="Upload even if last upload was < 30 days ago")
     args = parser.parse_args()
 
     if not shutil.which("ps2pdf"):
@@ -136,16 +140,21 @@ def main():
         print(f"Failure log: {LOG_FILE}")
 
     if args.upload and dirs_to_upload:
-        print(f"\nUploading {len(dirs_to_upload)} dirs to S3...")
-        uploaded = 0
-        for i, d in enumerate(sorted(dirs_to_upload)):
-            print(f"[{i+1}/{len(dirs_to_upload)}] {d.name}...", end=" ", flush=True)
-            if upload_dir_to_s3(d):
-                uploaded += 1
-                print("OK")
-            else:
-                print("FAIL")
-        print(f"Uploaded: {uploaded}/{len(dirs_to_upload)}")
+        if not should_upload(force=args.force_upload):
+            print(f"\nSkipping S3 upload (next upload in {days_until_next():.0f} days, use --force-upload to override)")
+        else:
+            print(f"\nUploading {len(dirs_to_upload)} dirs to S3...")
+            uploaded = 0
+            for i, d in enumerate(sorted(dirs_to_upload)):
+                print(f"[{i+1}/{len(dirs_to_upload)}] {d.name}...", end=" ", flush=True)
+                if upload_dir_to_s3(d):
+                    uploaded += 1
+                    print("OK")
+                else:
+                    print("FAIL")
+            if uploaded > 0:
+                record_upload()
+            print(f"Uploaded: {uploaded}/{len(dirs_to_upload)}")
 
 
 if __name__ == "__main__":

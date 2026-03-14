@@ -20,6 +20,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from s3_upload_gate import should_upload, record_upload, days_until_next
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 SOURCES_DIR = SCRIPT_DIR / "sources"
@@ -81,12 +83,16 @@ def scan_local_dir(arxiv_id: str) -> list[dict] | None:
     return files if files else None
 
 
-def write_files_json(arxiv_id: str, files: list[dict]) -> Path:
-    """Write _files.json into the local source dir."""
+def write_files_json(arxiv_id: str, files: list[dict]) -> tuple[Path, bool]:
+    """Write _files.json into the local source dir. Returns (path, changed)."""
     d = SOURCES_DIR / safe_dirname(arxiv_id)
     fpath = d / "_files.json"
-    fpath.write_text(json.dumps(files, separators=(",", ":")))
-    return fpath
+    new_content = json.dumps(files, separators=(",", ":"))
+    # Skip write if content unchanged — preserves mtime so s3 sync skips it
+    if fpath.exists() and fpath.read_text() == new_content:
+        return fpath, False
+    fpath.write_text(new_content)
+    return fpath, True
 
 
 
@@ -96,11 +102,14 @@ def main():
                         help="Show stats without writing output")
     parser.add_argument("--no-upload", action="store_true",
                         help="Don't upload _files.json to S3")
+    parser.add_argument("--force-upload", action="store_true",
+                        help="Upload even if last upload was < 30 days ago")
     args = parser.parse_args()
 
     all_ids = get_all_arxiv_ids()
     source_ids = []
     written = 0
+    unchanged = 0
     missing_count = 0
 
     print(f"Papers in feed: {len(all_ids)}")
@@ -112,8 +121,11 @@ def main():
         if files:
             source_ids.append(arxiv_id)
             if not args.dry_run:
-                write_files_json(arxiv_id, files)
-                written += 1
+                _, changed = write_files_json(arxiv_id, files)
+                if changed:
+                    written += 1
+                else:
+                    unchanged += 1
         else:
             missing_count += 1
 
@@ -127,22 +139,27 @@ def main():
         print("(dry run — nothing written)")
         return
 
-    print(f"Wrote _files.json: {written}")
+    print(f"Wrote _files.json: {written} ({unchanged} unchanged, skipped)")
 
     # Step 2: Bulk upload all _files.json to S3 via sync
     if not args.no_upload:
-        print("Uploading _files.json to S3 (bulk sync)...", flush=True)
-        try:
-            subprocess.run(
-                ["aws", "s3", "sync", str(SOURCES_DIR),
-                 f"s3://{OUR_S3_BUCKET}/{OUR_S3_PREFIX}/",
-                 "--exclude", "*", "--include", "*/_files.json"],
-                check=True,
-            )
-            print("Upload complete.")
-        except subprocess.CalledProcessError as e:
-            print(f"ERROR uploading _files.json to S3: {e}", file=sys.stderr)
-            sys.exit(1)
+        if not should_upload(force=args.force_upload):
+            print(f"Skipping S3 upload (next upload in {days_until_next():.0f} days, use --force-upload to override)")
+        else:
+            print("Uploading _files.json to S3 (bulk sync, --size-only)...", flush=True)
+            try:
+                subprocess.run(
+                    ["aws", "s3", "sync", str(SOURCES_DIR),
+                     f"s3://{OUR_S3_BUCKET}/{OUR_S3_PREFIX}/",
+                     "--exclude", "*", "--include", "*/_files.json",
+                     "--size-only"],
+                    check=True,
+                )
+                record_upload()
+                print("Upload complete.")
+            except subprocess.CalledProcessError as e:
+                print(f"ERROR uploading _files.json to S3: {e}", file=sys.stderr)
+                sys.exit(1)
 
     # Step 3: Write lightweight ID list for feed badges
     IDS_FILE.parent.mkdir(parents=True, exist_ok=True)

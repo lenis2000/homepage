@@ -23,6 +23,8 @@ import gzip
 import io
 import json
 import subprocess
+
+from s3_upload_gate import should_upload, record_upload, days_until_next
 import tarfile
 import time
 import urllib.error
@@ -188,7 +190,7 @@ def upload_to_s3(arxiv_id: str, local_dir: Path) -> bool:
     s3_path = f"s3://{OUR_S3_BUCKET}/{OUR_S3_PREFIX}/{safe_id}/"
     try:
         subprocess.run(
-            ["aws", "s3", "sync", str(local_dir), s3_path, "--quiet"],
+            ["aws", "s3", "sync", str(local_dir), s3_path, "--quiet", "--size-only"],
             check=True, capture_output=True,
         )
         return True
@@ -213,6 +215,8 @@ def main():
                         help="Rename mis-detected files (e.g. PS saved as .tex)")
     parser.add_argument("--check", action="store_true",
                         help="Verify uploaded papers exist on S3")
+    parser.add_argument("--force-upload", action="store_true",
+                        help="Upload even if last upload was < 30 days ago")
     args = parser.parse_args()
 
     all_ids = get_all_arxiv_ids()
@@ -330,6 +334,15 @@ def main():
             print("All manifest-uploaded papers verified on S3.")
         return
 
+    # Check upload gate for any upload mode
+    do_upload = args.upload or args.upload_only
+    if do_upload and not should_upload(force=args.force_upload):
+        print(f"Skipping S3 upload (next upload in {days_until_next():.0f} days, use --force-upload to override)")
+        if args.upload_only:
+            return
+        # For --upload mode, continue downloading but skip uploads
+        args.upload = False
+
     # Upload-only mode
     if args.upload_only:
         downloaded_ids = [aid for aid in all_ids if is_downloaded(aid)]
@@ -361,6 +374,8 @@ def main():
             else:
                 print("FAIL")
             save_manifest(manifest)
+        if uploaded > 0:
+            record_upload()
         print(f"\nUploaded: {uploaded}/{len(to_upload)}")
         return
 
