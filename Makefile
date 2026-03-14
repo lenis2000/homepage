@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-full-update arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-search arxiv-sources arxiv-sources-upload arxiv-sources-upload-check arxiv-sources-convert-ps arxiv-sources-manifest arxiv-sources-process
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-venv arxiv-related arxiv-rebuild arxiv-full-update arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-search arxiv-sources arxiv-sources-upload arxiv-sources-upload-check arxiv-sources-convert-ps arxiv-sources-manifest arxiv-sources-process
 
 serve:
 	bundle exec jekyll serve 
@@ -112,8 +112,10 @@ deploy-local:
 	@$(MAKE) invalidate
 	@echo "Local deploy complete!"
 
-arxiv-install:
+~/bin/arxiv-review: _scripts/arxiv/arxiv-review/main.go _scripts/arxiv/arxiv-review/go.mod
 	cd _scripts/arxiv/arxiv-review && go build -o arxiv-review . && cp -f ./arxiv-review ~/bin/arxiv-review
+
+arxiv-install: ~/bin/arxiv-review
 
 arxiv: arxiv-venv
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/fetch_arxiv.py --days $(or $(DAYS),30) --review $(ARGS)
