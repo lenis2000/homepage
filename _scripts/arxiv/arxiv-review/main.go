@@ -155,10 +155,14 @@ func extractArxivID(rawURL string) string {
 	return versionRe.ReplaceAllString(id, "")
 }
 
-func fetchArxivSearch(query string, maxResults int) ([]Paper, error) {
+func fetchArxivSearch(query string, maxResults int, year string) ([]Paper, error) {
 	// Build URL with proper encoding — use url.Values to handle escaping
+	searchQuery := "all:" + query
+	if year != "" {
+		searchQuery += fmt.Sprintf(" AND submittedDate:[%s0101 TO %s1231]", year, year)
+	}
 	params := url.Values{}
-	params.Set("search_query", "all:"+query)
+	params.Set("search_query", searchQuery)
 	params.Set("start", "0")
 	params.Set("max_results", fmt.Sprintf("%d", maxResults))
 	params.Set("sortBy", "relevance")
@@ -240,11 +244,12 @@ type searchModel struct {
 	scriptsDir    string
 	newOnly       bool
 	numResults    int
+	year          string
 }
 
-func doSearch(query string, maxResults int) tea.Cmd {
+func doSearch(query string, maxResults int, year string) tea.Cmd {
 	return func() tea.Msg {
-		papers, err := fetchArxivSearch(query, maxResults)
+		papers, err := fetchArxivSearch(query, maxResults, year)
 		return searchResultMsg{papers: papers, err: err}
 	}
 }
@@ -263,7 +268,7 @@ func doAddPaper(scriptsDir, arxivID string) tea.Cmd {
 	}
 }
 
-func initialSearchModel(query string, processed map[string]processedEntry, scriptsDir string, newOnly bool, numResults int) searchModel {
+func initialSearchModel(query string, processed map[string]processedEntry, scriptsDir string, newOnly bool, numResults int, year string) searchModel {
 	return searchModel{
 		query:      query,
 		processed:  processed,
@@ -273,6 +278,7 @@ func initialSearchModel(query string, processed map[string]processedEntry, scrip
 		scriptsDir: scriptsDir,
 		newOnly:    newOnly,
 		numResults: numResults,
+		year:       year,
 	}
 }
 
@@ -281,7 +287,7 @@ func (m searchModel) Init() tea.Cmd {
 	if m.newOnly {
 		fetchCount = m.numResults * 5 // fetch more to compensate for filtering
 	}
-	return doSearch(m.query, fetchCount)
+	return doSearch(m.query, fetchCount, m.year)
 }
 
 func (m searchModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -1058,7 +1064,7 @@ func runReview(file string) {
 	}
 }
 
-func runSearch(query string, newOnly bool, numResults int) {
+func runSearch(query string, newOnly bool, numResults int, year string) {
 	scriptsDir := resolveScriptsDir()
 	if scriptsDir == "" {
 		fmt.Fprintln(os.Stderr, "Cannot locate scripts directory. Set ARXIV_SCRIPTS_DIR or run from the build directory.")
@@ -1066,9 +1072,13 @@ func runSearch(query string, newOnly bool, numResults int) {
 	}
 
 	processed := loadProcessed(scriptsDir)
-	fmt.Printf("Searching arXiv for %q...\n", query)
+	if year != "" {
+		fmt.Printf("Searching arXiv for %q (year %s)...\n", query, year)
+	} else {
+		fmt.Printf("Searching arXiv for %q...\n", query)
+	}
 
-	m := initialSearchModel(query, processed, scriptsDir, newOnly, numResults)
+	m := initialSearchModel(query, processed, scriptsDir, newOnly, numResults, year)
 	prog := tea.NewProgram(m, tea.WithAltScreen())
 	if _, err := prog.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -1085,11 +1095,12 @@ func main() {
 
 	if os.Args[1] == "search" {
 		if len(os.Args) < 3 {
-			fmt.Fprintln(os.Stderr, "Usage: arxiv-review search [-new] [-n NUM] \"query\"")
+			fmt.Fprintln(os.Stderr, "Usage: arxiv-review search [-new] [-n NUM] [-year YYYY] \"query\"")
 			os.Exit(1)
 		}
 		newOnly := false
 		numResults := 10
+		year := ""
 		args := os.Args[2:]
 		for len(args) > 0 && strings.HasPrefix(args[0], "-") {
 			switch {
@@ -1099,17 +1110,20 @@ func main() {
 			case args[0] == "-n" && len(args) > 1:
 				fmt.Sscanf(args[1], "%d", &numResults)
 				args = args[2:]
+			case args[0] == "-year" && len(args) > 1:
+				year = args[1]
+				args = args[2:]
 			default:
 				fmt.Fprintf(os.Stderr, "Unknown flag: %s\n", args[0])
 				os.Exit(1)
 			}
 		}
 		if len(args) == 0 {
-			fmt.Fprintln(os.Stderr, "Usage: arxiv-review search [-new] [-n NUM] \"query\"")
+			fmt.Fprintln(os.Stderr, "Usage: arxiv-review search [-new] [-n NUM] [-year YYYY] \"query\"")
 			os.Exit(1)
 		}
 		query := strings.Join(args, " ")
-		runSearch(query, newOnly, numResults)
+		runSearch(query, newOnly, numResults, year)
 	} else {
 		runReview(os.Args[1])
 	}

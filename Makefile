@@ -175,7 +175,7 @@ arxiv-add: arxiv-venv
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/add_paper.py $(or $(ID),$(filter-out $@,$(MAKECMDGOALS)))
 
 arxiv-search: arxiv-install
-	@arxiv-review search $(if $(NEW),-new) $(if $(N),-n $(N)) "$(or $(Q),$(filter-out $@,$(MAKECMDGOALS)))"
+	@arxiv-review search $(if $(NEW),-new) $(if $(N),-n $(N)) $(if $(YEAR),-year $(YEAR)) "$(or $(Q),$(filter-out $@,$(MAKECMDGOALS)))"
 
 arxiv-delete:
 	@python3 _scripts/arxiv/delete_paper.py $(or $(ID),$(filter-out $@,$(MAKECMDGOALS)))
