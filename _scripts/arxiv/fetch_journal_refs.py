@@ -335,10 +335,7 @@ def update_search_index(all_cached):
             if doi:
                 entry["d2"] = doi  # DOI
         else:
-            # Remove stale fields
-            entry.pop("jn", None)
-            entry.pop("jr", None)
-            entry.pop("d2", None)
+            # No API data — preserve existing fields (API may be temporarily empty)
 
     INDEX_FILE.write_text(
         json.dumps(index, ensure_ascii=False, separators=(",", ":")),

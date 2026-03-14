@@ -17,6 +17,7 @@ Usage:
 import argparse
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -135,13 +136,13 @@ def main():
             subprocess.run(
                 ["aws", "s3", "sync", str(SOURCES_DIR),
                  f"s3://{OUR_S3_BUCKET}/{OUR_S3_PREFIX}/",
-                 "--exclude", "*", "--include", "*/_files.json",
-                 "--size-only"],
+                 "--exclude", "*", "--include", "*/_files.json"],
                 check=True,
             )
             print("Upload complete.")
         except subprocess.CalledProcessError as e:
-            print(f"ERROR uploading: {e}")
+            print(f"ERROR uploading _files.json to S3: {e}", file=sys.stderr)
+            sys.exit(1)
 
     # Step 3: Write lightweight ID list for feed badges
     IDS_FILE.parent.mkdir(parents=True, exist_ok=True)
