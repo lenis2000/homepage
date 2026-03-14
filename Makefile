@@ -1,4 +1,4 @@
-.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-search arxiv-sources arxiv-sources-upload arxiv-sources-upload-check arxiv-sources-convert-ps arxiv-sources-manifest arxiv-sources-process
+.PHONY: serve invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-install arxiv-venv arxiv-related arxiv-rebuild arxiv-full-update arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-search arxiv-sources arxiv-sources-upload arxiv-sources-upload-check arxiv-sources-convert-ps arxiv-sources-manifest arxiv-sources-process
 
 serve:
 	bundle exec jekyll serve 
@@ -130,9 +130,28 @@ arxiv-venv:
 
 arxiv-rebuild:
 	python3 _scripts/arxiv/build_search_index.py
+	@$(MAKE) arxiv-journal-refs
 	@$(MAKE) arxiv-related
 	@$(MAKE) arxiv-sources-process
 	@$(MAKE) arxiv-sources-upload
+
+arxiv-full-update: arxiv-venv
+	@echo "=== Full arXiv update pipeline ==="
+	@echo "1/7 Rendering abstracts (KaTeX)..."
+	@python3 _scripts/arxiv/render_abstracts.py
+	@echo "2/7 Building search index..."
+	@python3 _scripts/arxiv/build_search_index.py
+	@echo "3/7 Fetching journal references..."
+	@python3 _scripts/arxiv/fetch_journal_refs.py
+	@echo "4/7 Downloading sources..."
+	@python3 _scripts/arxiv/download_sources.py
+	@echo "5/7 Processing sources (PS→PDF, manifest)..."
+	@$(MAKE) arxiv-sources-process
+	@echo "6/7 Uploading sources to S3..."
+	@python3 _scripts/arxiv/download_sources.py --upload-only
+	@echo "7/7 Building related-paper embeddings..."
+	@_scripts/arxiv/venv/bin/python _scripts/arxiv/build_arxiv_embeddings.py
+	@echo "=== Full update complete ==="
 
 arxiv-kaggle:
 	@echo "Downloading latest Kaggle arXiv metadata..."
@@ -187,3 +206,9 @@ arxiv-sources-process: arxiv-sources-convert-ps arxiv-sources-manifest
 
 arxiv-related: arxiv-venv
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/build_arxiv_embeddings.py
+
+arxiv-journal-refs:
+	python3 _scripts/arxiv/fetch_journal_refs.py $(ARGS)
+
+arxiv-journal-refs-stats:
+	python3 _scripts/arxiv/fetch_journal_refs.py --stats

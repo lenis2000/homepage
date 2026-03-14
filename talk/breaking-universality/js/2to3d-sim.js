@@ -675,11 +675,7 @@ function init2to3dHexagonSim() {
             sampleHexagon(currentA, B, C);
             if (renderMode === 'lego') buildLegoGeometry();
             else buildGeometry();
-            if (currentA === 1) {
-                descEl.innerHTML = `surface in <span id="bridge-box-size">1 × 12 × 9</span> box = 2D path in 12 × 9 rectangle`;
-            } else {
-                descEl.innerHTML = `uniformly random surface in <span id="bridge-box-size">${currentA} × 12 × 9</span> box`;
-            }
+            descEl.innerHTML = `surface in <span id="bridge-box-size">${currentA} × 12 × 9</span> box`;
             if (renderer) renderer.render(scene, camera);
         }
 
@@ -733,10 +729,11 @@ function init2to3dHexagonSim() {
                 window.slideEngine.registerSimulation('2to3d', {
                     start,
                     pause,
-                    steps: 13,
+                    steps: 5,
                     onSlideEnter() {
                         initThreeJS();
-                        renderMode = 'standard';
+                        renderMode = 'lego';
+                        currentA = 4;
                         needsCenterCamera = true;
                         stopAutoRotate();
 
@@ -756,37 +753,28 @@ function init2to3dHexagonSim() {
                         pause();
                         disposeThreeJS();
                     },
-                    // Step flow: 0=layer1, 1=LEGO(1), 2-9=LEGO(2-9), 10=rotate, 11=MacMahon, 12=snowflake, 13=sample
+                    // Step flow: 0=LEGO(4), 1=LEGO(9), 2=standard+rotate, 3=MacMahon, 4=snowflake, 5=sample
                     onStep(step) {
                         const macmahonEl = document.getElementById('macmahon-text');
                         const macmahonExEl = document.getElementById('macmahon-example');
                         if (step === 0) {
+                            // LEGO layer 4 (initial)
                             stopAutoRotate();
-                            renderMode = 'standard';
-                            setLayerCount(1);
+                            renderMode = 'lego';
+                            setLayerCount(4);
+                            descEl.innerHTML = `surface in <span id="bridge-box-size">4 × 12 × 9</span> box`;
                             if (macmahonEl) macmahonEl.style.opacity = '0';
                             if (macmahonExEl) macmahonExEl.style.opacity = '0';
                         } else if (step === 1) {
-                            // Switch to LEGO (layer 1)
+                            // LEGO layer 9
                             stopAutoRotate();
                             renderMode = 'lego';
-                            if (currentA !== 1 || currentDimers.length === 0) {
-                                currentA = 1;
-                                sampleHexagon(1, B, C);
-                            }
-                            buildLegoGeometry();
-                            descEl.innerHTML = `surface in <span id="bridge-box-size">1 × 12 × 9</span> box = 2D path in 12 × 9 rectangle`;
+                            setLayerCount(9);
+                            descEl.innerHTML = `surface in <span id="bridge-box-size">9 × 12 × 9</span> box`;
                             if (macmahonEl) macmahonEl.style.opacity = '0';
                             if (macmahonExEl) macmahonExEl.style.opacity = '0';
-                        } else if (step >= 2 && step <= 9) {
-                            // Layers 2-9 (LEGO skin)
-                            stopAutoRotate();
-                            renderMode = 'lego';
-                            setLayerCount(step);
-                            if (macmahonEl) macmahonEl.style.opacity = '0';
-                            if (macmahonExEl) macmahonExEl.style.opacity = '0';
-                        } else if (step === 10) {
-                            // Standard + auto-rotate
+                        } else if (step === 2) {
+                            // Standard coloring + auto-rotate
                             renderMode = 'standard';
                             if (camera) camera.up.set(0, 0, 1);
                             if (currentA !== 9 || currentDimers.length === 0) {
@@ -798,15 +786,15 @@ function init2to3dHexagonSim() {
                             startAutoRotate();
                             if (macmahonEl) macmahonEl.style.opacity = '0';
                             if (macmahonExEl) macmahonExEl.style.opacity = '0';
-                        } else if (step === 11) {
+                        } else if (step === 3) {
                             if (macmahonEl) macmahonEl.style.opacity = '1';
                             if (macmahonExEl) macmahonExEl.style.opacity = '1';
                             if (window.MathJax) MathJax.typeset();
-                        } else if (step === 12 && window.bridgeSnowflake) {
+                        } else if (step === 4 && window.bridgeSnowflake) {
                             stopAutoRotate();
                             document.getElementById('snowflake-title').style.opacity = '1';
                             window.bridgeSnowflake.showRegion();
-                        } else if (step === 13 && window.bridgeSnowflake) {
+                        } else if (step === 5 && window.bridgeSnowflake) {
                             const descEl = document.getElementById('snowflake-description');
                             if (descEl) descEl.textContent = 'picking one uniformly at random...';
                             setTimeout(() => {
@@ -821,40 +809,28 @@ function init2to3dHexagonSim() {
                         const snowflakeTitleEl = document.getElementById('snowflake-title');
                         const snowflakeDescEl = document.getElementById('snowflake-description');
                         if (step === 0) {
+                            // LEGO layer 4
                             stopAutoRotate();
-                            renderMode = 'standard';
-                            setLayerCount(1);
+                            renderMode = 'lego';
+                            setLayerCount(4);
+                            descEl.innerHTML = `surface in <span id="bridge-box-size">4 × 12 × 9</span> box`;
                             if (macmahonEl) macmahonEl.style.opacity = '0';
                             if (macmahonExEl) macmahonExEl.style.opacity = '0';
                             if (snowflakeTitleEl) snowflakeTitleEl.style.opacity = '0';
                             if (snowflakeDescEl) snowflakeDescEl.textContent = '';
                             if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
                         } else if (step === 1) {
-                            // LEGO (layer 1)
+                            // LEGO layer 9
                             stopAutoRotate();
                             renderMode = 'lego';
-                            if (currentA !== 1 || currentDimers.length === 0) {
-                                currentA = 1;
-                                sampleHexagon(1, B, C);
-                            }
-                            buildLegoGeometry();
-                            descEl.innerHTML = `surface in <span id="bridge-box-size">1 × 12 × 9</span> box = 2D path in 12 × 9 rectangle`;
+                            setLayerCount(9);
+                            descEl.innerHTML = `surface in <span id="bridge-box-size">9 × 12 × 9</span> box`;
                             if (macmahonEl) macmahonEl.style.opacity = '0';
                             if (macmahonExEl) macmahonExEl.style.opacity = '0';
                             if (snowflakeTitleEl) snowflakeTitleEl.style.opacity = '0';
                             if (snowflakeDescEl) snowflakeDescEl.textContent = '';
                             if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
-                        } else if (step >= 2 && step <= 9) {
-                            // Layers 2-9 (LEGO skin)
-                            stopAutoRotate();
-                            renderMode = 'lego';
-                            setLayerCount(step);
-                            if (macmahonEl) macmahonEl.style.opacity = '0';
-                            if (macmahonExEl) macmahonExEl.style.opacity = '0';
-                            if (snowflakeTitleEl) snowflakeTitleEl.style.opacity = '0';
-                            if (snowflakeDescEl) snowflakeDescEl.textContent = '';
-                            if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
-                        } else if (step === 10) {
+                        } else if (step === 2) {
                             // Standard + auto-rotate
                             renderMode = 'standard';
                             if (camera) camera.up.set(0, 0, 1);
@@ -870,13 +846,13 @@ function init2to3dHexagonSim() {
                             if (snowflakeTitleEl) snowflakeTitleEl.style.opacity = '0';
                             if (snowflakeDescEl) snowflakeDescEl.textContent = '';
                             if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
-                        } else if (step === 11) {
+                        } else if (step === 3) {
                             if (macmahonEl) macmahonEl.style.opacity = '1';
                             if (macmahonExEl) macmahonExEl.style.opacity = '1';
                             if (snowflakeTitleEl) snowflakeTitleEl.style.opacity = '0';
                             if (snowflakeDescEl) snowflakeDescEl.textContent = '';
                             if (window.bridgeSnowflake) window.bridgeSnowflake.clear();
-                        } else if (step === 12 && window.bridgeSnowflake) {
+                        } else if (step === 4 && window.bridgeSnowflake) {
                             if (snowflakeTitleEl) snowflakeTitleEl.style.opacity = '1';
                             if (snowflakeDescEl) snowflakeDescEl.textContent = '';
                             window.bridgeSnowflake.showRegion();

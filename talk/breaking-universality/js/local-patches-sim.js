@@ -756,39 +756,17 @@ function initLocalPatchesSim() {
                     sampleQueued(A, B, resetCamera);
                 }
 
-                const objShowStep = presets.length;     // step 5: show OBJ zoomed in
-                const objZoomStep = presets.length + 1; // step 6: zoom out
-
                 window.slideEngine.registerSimulation('local-patches', {
                     start() { startAutoRotate(); },
                     pause() { stopAutoRotate(); },
-                    steps: objZoomStep,
+                    steps: presets.length - 1,
                     onStep(step) {
-                        if (step === objShowStep) {
-                            stopAutoRotate();
-                            showBigOBJ();
-                        } else if (step === objZoomStep) {
-                            zoomOutOBJ();
-                        } else if (step >= 1 && step < presets.length) {
+                        if (step >= 1 && step < presets.length) {
                             applyPreset(step, false);
                         }
                     },
                     onStepBack(step) {
-                        if (step === objShowStep) {
-                            // Coming back from zoom-out: restore zoomed-in view
-                            if (cameraAnimId) { cancelAnimationFrame(cameraAnimId); cameraAnimId = null; }
-                            camera.position.set(-245.7, -546.0, 599.4);
-                            controls.target.set(-210.1, -592.0, 542.7);
-                            camera.zoom = 0.270;
-                            camera.updateProjectionMatrix();
-                            controls.update();
-                            if (renderer) renderer.render(scene, camera);
-                        } else if (step === objShowStep - 1) {
-                            // Coming back from OBJ to flat tiling
-                            restoreFlatTiling(step);
-                            applyPreset(step, false);
-                            startAutoRotate();
-                        } else if (step >= 0 && step < presets.length) {
+                        if (step >= 0 && step < presets.length) {
                             applyPreset(step, false);
                         }
                     },

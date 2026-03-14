@@ -32,7 +32,9 @@ const qpartSrc = '/talk/visual/sim/q-partition-cftp.js';
 
 Promise.all([
     loadScript(wasmSrc),
-    loadScript(qpartSrc)
+    loadScript(qpartSrc),
+    loadScript('/js/2025-12-11-t-embedding-shuffling.js')
+        .catch(e => console.log('Domino shuffling module not available'))
 ]).then(() => {
     // Load WebGPU engines, then signal ready
     Promise.all([
@@ -61,6 +63,8 @@ Promise.all([
 {% include talk/waterfall/complex-burgers.html %}
 
 {% include talk/waterfall/gff-fluctuations.html %}
+
+{% include talk/breaking-universality/domino-gff.html %}
 
 <!-- ===== Part II: Breaking Universality I — The Waterfall ===== -->
 
@@ -101,7 +105,7 @@ Promise.all([
 <script src="js/2to3d-sim.js" defer></script>
 <script src="/talk/waterfall/js/limit-shape-sim.js" defer></script>
 <script src="/talk/waterfall/js/universality-zoom-sim.js" defer></script>
-<script src="/talk/waterfall/js/gff-fluctuations-sim.js" defer></script>
+<script src="js/gff-fluctuations-sim.js" defer></script>
 
 <!-- Part II: reused waterfall simulations -->
 <script src="/talk/waterfall/js/q-volume-sim.js" defer></script>
@@ -111,6 +115,9 @@ Promise.all([
 
 <!-- Local patches simulation -->
 <script src="js/local-patches-sim.js" defer></script>
+
+<!-- Domino GFF simulation -->
+<script src="js/domino-gff-sim.js" defer></script>
 
 <!-- Title slide: Golden Gate Bridge tiling -->
 <script src="js/title-sim.js" defer></script>

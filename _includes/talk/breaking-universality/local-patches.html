@@ -11,13 +11,12 @@
                     <li>Approximate the surface by piecewise-planar patches</li>
                     <li>Each patch is a <strong>flat random surface</strong> with a given slope \((s_1, s_2)\)</li>
                     <li>For a given slope, the number of approximating 3D surfaces is \(\approx e^{N^2\cdot \sigma(s_1,s_2) }\)</li>
-                    <li><strong style="color: var(--slide-navy);">Not IID Bernoulli!</strong> Unlike 1D coin flips, the 2D patches are <strong>determinantal point processes</strong> — joint occupation probabilities have determinantal form</li>
                 </ul>
             </div>
 
             <!-- Variational principle -->
             <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-navy);">Variational principle</strong> <span style="color: var(--slide-muted);">[Cohn–Kenyon–Propp 2000]</span><strong style="color: var(--slide-navy);">:</strong><br>
+                <strong style="color: var(--slide-navy);">Variational principle</strong> <span class="cite">[Cohn–Kenyon–Propp 2000]</span><strong style="color: var(--slide-navy);">:</strong><br>
                 Limit shape \(z=h(x,y)\) maximizes
                 \[\displaystyle\iint \sigma(\nabla h)\, dxdy\]
                 subject to boundary conditions on \(h(x,y)\)
@@ -36,7 +35,7 @@
         <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 1vh;">
             <!-- Text above canvas -->
             <div style="font-size: clamp(0.96rem, 1.76vw, 1.44rem); text-align: center;">
-                Other 3D building blocks besides squares of three directions: <span style="color: var(--slide-muted);">[Kenyon–Okounkov–Sheffield 2006]</span>
+                Other 3D building blocks besides squares of three directions: <span class="cite">[Kenyon–Okounkov–Sheffield 2006]</span>
             </div>
             <!-- 3D tiling canvas (main) -->
             <canvas id="lp-tiling-canvas" width="1200" height="1000" style="height: 70vh; width:44vw; border: 1px solid #ccc;"></canvas>

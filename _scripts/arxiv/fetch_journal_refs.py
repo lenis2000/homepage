@@ -27,6 +27,8 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from journal_names import normalize_journal_name
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 POSTS_DIR = REPO_ROOT / "_arxiv"
@@ -241,11 +243,12 @@ def get_all_arxiv_ids():
 
 
 def format_journal_ref(info):
-    """Format structured journal info into a display string."""
+    """Format structured journal info into a display string using normalized name."""
     name = info.get("journal_name", "")
     if not name:
-        return ""
-    parts = [name]
+        return "", ""
+    badge, canonical = normalize_journal_name(name)
+    parts = [canonical]
     vol = info.get("journal_volume", "")
     if vol:
         parts.append(f"vol. {vol}")
@@ -255,7 +258,7 @@ def format_journal_ref(info):
     year = info.get("pub_year")
     if year:
         parts.append(f"({year})")
-    return ", ".join(parts)
+    return badge, ", ".join(parts)
 
 
 def update_post_frontmatter(filepath, journal_name, journal_ref, doi):

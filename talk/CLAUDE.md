@@ -422,12 +422,12 @@ this.paths = result.paths;  // Extract .paths from {paths: [...], n, t, s}
 | Formula text | `clamp(1.5rem, 2.5vw, 2rem)` | Math formulas (when space allows) |
 | Narrow-column formulas | `clamp(1.2rem, 2vw, 1.6rem)` | Formulas in ≤42vw columns |
 | Captions/labels | `clamp(0.75rem, 1vw, 1rem)` | Figure captions, small annotations |
-| References/citations | `clamp(1.2rem, 2.2vw, 1.8rem)` + `color: var(--slide-muted)` | Bibliography lists |
+| References/citations | `clamp(1.2rem, 2.2vw, 1.8rem)` + `.cite` class | Bibliography lists |
 
 **Citation styling:**
-- Inline citations: `<span style="color: var(--slide-muted);">[Author Year]</span>`
+- Inline citations: `<span class="cite">[Author Year]</span>` (uses `.cite` class from `slides.css`)
 - Theorem attributions: `<strong style="color: var(--slide-accent);">[Author Year]</strong>`
-- Reference lists: Standard body font + `var(--slide-muted)` color
+- `.cite` class: `color: var(--slide-muted); font-weight: 600` (semi-bold, darker than regular muted)
 
 ## Canvas Element Sizing
 
@@ -617,9 +617,10 @@ Must update the JS file, not just the HTML include
 
 ## Citation Style
 
-- **Inline citations** (after pane titles): `<strong style="color: var(--slide-accent);">Title</strong> <span style="color: var(--slide-muted);">[Author Year]</span>`
-- **Inline citations** (within text): `<span style="color: var(--slide-muted);">[Author Year]</span>`
-- **References section**: `<strong style="color: var(--slide-accent);">References:</strong>` followed by citations in muted color (inherited from parent div with `color: var(--slide-muted);`)
+- **Inline citations** (after pane titles): `<strong style="color: var(--slide-accent);">Title</strong> <span class="cite">[Author Year]</span>`
+- **Inline citations** (within text): `<span class="cite">[Author Year]</span>`
+- **References section**: `<strong style="color: var(--slide-accent);">References:</strong>` followed by citations using `.cite` class
+- **`.cite` CSS class** (in `css/slides.css`): `color: var(--slide-muted); font-weight: 600` — semi-bold, `#555555` color
 
 ## Simulation JS Files
 
@@ -725,7 +726,8 @@ Must update the JS file, not just the HTML include
 
 ## Slide Reuse Across Talks
 
-- **CRITICAL: Copy slides, don't share them.** Each talk gets its own copies of HTML includes and JS files in its own `_includes/talk/<name>/` and `talk/<name>/js/` directories. Every individual talk is independently tailored.
+- **CRITICAL: Copy slides, don't share them. NEVER use symlinks.** Each talk gets its own copies of HTML includes and JS files in its own `_includes/talk/<name>/` and `talk/<name>/js/` directories. Every individual talk is independently tailored.
+- **No symlinks between talks** — Jekyll's `listen` gem follows symlinks but can't watch the same directory twice, causing "directory is already being watched" errors. Always use real file copies.
 - When creating a new talk that reuses slides from another talk, copy the HTML and JS files into the new talk's directories, then customize.
 - Update `index.html` to reference local copies (`{% include talk/my-talk/slide.html %}` and `<script src="js/slide-sim.js">`) instead of shared paths.
 - Comment out slides in `index.html` with `<!-- -->` to disable for a specific talk variant
@@ -796,6 +798,7 @@ if (Array.isArray(child.material)) {
 - Animate with `requestAnimationFrame` loop using elapsed time
 - Typical duration: 1500-3000ms for slow, deliberate zoom
 - Can synchronize 3D (Three.js) and 2D (canvas) camera animations
+- **Top-down view gimbal lock**: When camera position and target differ only in Z (looking straight down), `camera.up=(0,0,1)` causes ambiguous orientation → sudden 90° rotation. Fix: either set `camera.up` to desired orientation (e.g., `(1,0,0)` for 90° CW) or add a slight offset to position so it's not perfectly vertical. Restore original `up` vector when animating back.
 
 ## Mathematical Content Sourcing
 
