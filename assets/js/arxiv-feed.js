@@ -472,12 +472,12 @@ document.addEventListener('DOMContentLoaded', function() {
             var dateStr = searchIndex ? entry.d : entry.date;
             if (!matchesDateFilter(dateStr)) return;
 
-            // Operator filters
+            // Operator filters (case-insensitive)
             if (rcOps.cat) {
                 var catStr = searchIndex ? entry.c : entry.categories;
-                if (catStr.indexOf(rcOps.cat) === -1) return;
+                if (catStr.toLowerCase().indexOf(rcOps.cat.toLowerCase()) === -1) return;
             }
-            if (rcOps.journal && searchIndex && entry.jn !== rcOps.journal) return;
+            if (rcOps.journal && searchIndex && (!entry.jn || entry.jn.toLowerCase() !== rcOps.journal.toLowerCase())) return;
             if (rcOps.yearFrom) {
                 var yr = searchIndex ? entry.y : entry.year;
                 if (yr < rcOps.yearFrom || yr > (rcOps.yearTo || rcOps.yearFrom)) return;
@@ -815,9 +815,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (!matchesDateFilter(entry.d)) return;
 
-                // Search operator filters
-                if (ops.cat && entry.c.indexOf(ops.cat) === -1) return;
-                if (ops.journal && entry.jn !== ops.journal) return;
+                // Search operator filters (case-insensitive)
+                if (ops.cat && entry.c.toLowerCase().indexOf(ops.cat.toLowerCase()) === -1) return;
+                if (ops.journal && (!entry.jn || entry.jn.toLowerCase() !== ops.journal.toLowerCase())) return;
                 if (ops.yearFrom) {
                     var pubYear = entry.y;
                     if (pubYear < ops.yearFrom || pubYear > ops.yearTo) return;
@@ -883,7 +883,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!matchesDateFilter(p.date)) return;
 
                 // Search operator filters (limited without searchIndex)
-                if (ops.cat && p.categories.indexOf(ops.cat) === -1) return;
+                if (ops.cat && p.categories.toLowerCase().indexOf(ops.cat.toLowerCase()) === -1) return;
                 if (ops.yearFrom && (p.year < ops.yearFrom || p.year > (ops.yearTo || ops.yearFrom))) return;
 
                 if (term) {
@@ -1178,7 +1178,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var journalName = badge.getAttribute('data-journal-name');
         if (!journalName) return;
         var parsed = parseSearchOperators(searchInput.value);
-        if (parsed.ops.journal === journalName) {
+        if (parsed.ops.journal && parsed.ops.journal.toLowerCase() === journalName.toLowerCase()) {
             searchInput.value = parsed.text;
         } else {
             var rest = parsed.text;
@@ -1199,7 +1199,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var cat = badge.textContent.trim();
         if (!cat) return;
         var parsed = parseSearchOperators(searchInput.value);
-        if (parsed.ops.cat === cat) {
+        if (parsed.ops.cat && parsed.ops.cat.toLowerCase() === cat.toLowerCase()) {
             searchInput.value = parsed.text;
         } else {
             var rest = searchInput.value.replace(/\bcat:\S+/gi, '').replace(/\s+/g, ' ').trim();
