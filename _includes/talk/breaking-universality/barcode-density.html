@@ -1,0 +1,133 @@
+<section class="slide slide-top" id="barcode-density" data-title="Barcode Density">
+    <h2 class="slide-title">The Barcode Density Guess</h2>
+
+    <div style="display: grid; grid-template-columns: 50vw 44vw; gap: 2vw; margin-top: 1vh; align-items: start;">
+        <!-- Left column -->
+        <div style="display: flex; flex-direction: column; gap: 1vh; font-size: clamp(1.1rem, 1.9vw, 1.5rem);">
+            <!-- Formula -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
+                <div style="text-align: center; font-size: clamp(1.3rem, 2.2vw, 1.8rem);">
+                    \(\displaystyle \rho(t) = \mathfrak{a}\left(1-\frac{t}{2}\right) \sum_{n \in \frac{1}{2}\mathbb{Z}_{\geq 0}} \frac{-q^{-n} \mathcal{F}_n^t(0) \mathcal{F}_n^{t-1}(0)}{\|\mathcal{F}_n\|_{\ell^2(\mathbb{Z})}^2}\)
+                </div>
+            </div>
+
+            <!-- Problem -->
+            <ul style="margin: 0; padding-left: 1.2em;">
+                <li>But... this series <strong>does not even converge</strong></li>
+            </ul>
+
+            <!-- Table 1: Simulation data -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1vw; font-size: clamp(0.8rem, 1.3vw, 1rem);">
+                <table style="width: 100%; border-collapse: collapse; text-align: center;">
+                    <tr style="border-bottom: 1px solid #999;">
+                        <th style="padding: 0.2vh 0.3vw;">T</th>
+                        <th style="padding: 0.2vh 0.3vw;">S</th>
+                        <th style="padding: 0.2vh 0.3vw;">N</th>
+                        <th style="padding: 0.2vh 0.3vw;">Even 1's</th>
+                        <th style="padding: 0.2vh 0.3vw;">Odd 1's</th>
+                        <th style="padding: 0.2vh 0.3vw;">Norm</th>
+                        <th style="padding: 0.2vh 0.3vw;">Even freq</th>
+                        <th style="padding: 0.2vh 0.3vw;">Odd freq</th>
+                    </tr>
+                    <tr>
+                        <td>400</td><td>200</td><td>200</td>
+                        <td>6,730</td><td>12,764</td><td>19,500</td>
+                        <td>0.345</td><td>0.655</td>
+                    </tr>
+                    <tr>
+                        <td>300</td><td>180</td><td>140</td>
+                        <td>3,626</td><td>6,886</td><td>10,500</td>
+                        <td>0.345</td><td>0.656</td>
+                    </tr>
+                    <tr>
+                        <td>400</td><td>20</td><td>20</td>
+                        <td>668</td><td>1,238</td><td>1,900</td>
+                        <td>0.352</td><td>0.652</td>
+                    </tr>
+                    <tr>
+                        <td>400</td><td>200</td><td>50</td>
+                        <td>1,716</td><td>3,367</td><td>5,000</td>
+                        <td>0.343</td><td>0.673</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Numerics bullet -->
+            <ul style="margin: 0; padding-left: 1.2em;">
+                <li>Get <strong>numerics</strong> for the barcode process: use AI agent (<code style="background: #eee; padding: 0 0.3em;">Claude code</code>) to port Vadim Gorin's <code style="background: #eee; padding: 0 0.3em;">Fortran</code> code into <code style="background: #eee; padding: 0 0.3em;">Python</code> for <strong>batch data collection</strong></li>
+            </ul>
+
+            <!-- Two-periodic result -->
+            <ul style="margin: 0; padding-left: 1.2em;">
+                <li>...And, the barcode process is indeed <strong style="color: var(--slide-navy);">two-periodic</strong>! The two densities match the two limits (independent of \(t\)):</li>
+            </ul>
+
+            <!-- Limit formulas -->
+            <div style="background: #fff3e0; border-left: 4px solid #E57200; padding: 0.6vh 1vw;">
+                <div style="text-align: center; font-size: clamp(1rem, 1.7vw, 1.35rem);">
+                    \(\displaystyle \rho_0(t) := \lim_{M\to\infty} \mathfrak{a}(1-\tfrac{t}{2}) \sum_{n=0}^{M+1/2} \frac{-q^{-n} \mathcal{F}_n^t(0)\mathcal{F}_n^{t-1}(0)}{\|\mathcal{F}_n\|^2_{\ell^2(\mathbb{Z})}}\)
+                </div>
+                <div style="text-align: center; font-size: clamp(1rem, 1.7vw, 1.35rem); margin-top: 0.5vh;">
+                    \(\displaystyle \rho_1(t) := \lim_{M\to\infty} \mathfrak{a}(1-\tfrac{t}{2}) \sum_{n=0}^{M} \frac{-q^{-n} \mathcal{F}_n^t(0)\mathcal{F}_n^{t-1}(0)}{\|\mathcal{F}_n\|^2_{\ell^2(\mathbb{Z})}}\)
+                </div>
+            </div>
+        </div>
+
+        <!-- Right column: Numerical table -->
+        <div style="display: flex; flex-direction: column; gap: 1vh;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1vw; font-size: clamp(0.75rem, 1.2vw, 0.95rem);">
+                <!-- Pre-limit column -->
+                <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.5vh 0.8vw;">
+                    <div style="text-align: center; font-weight: bold; color: var(--slide-accent); margin-bottom: 0.3vh;">(pre-limit)</div>
+                    <table style="width: 100%; border-collapse: collapse; text-align: center;">
+                        <tr style="border-bottom: 1px solid #999;">
+                            <th style="padding: 0.15vh 0.2vw;">\(t\)</th>
+                            <th style="padding: 0.15vh 0.2vw;">\(\hat{K}^{\mathrm{barcode}}_{(L)}(t,t)\)</th>
+                        </tr>
+                        <tr><td>−7</td><td>0.5523372977</td></tr>
+                        <tr><td>−6</td><td>0.4387439934</td></tr>
+                        <tr><td>−5</td><td>0.5598645425</td></tr>
+                        <tr><td>−4</td><td>0.4388625943</td></tr>
+                        <tr><td>−3</td><td>0.5609384574</td></tr>
+                        <tr><td>−2</td><td>0.4388797292</td></tr>
+                        <tr><td>−1</td><td>0.5610918461</td></tr>
+                        <tr><td>0</td><td>0.4388821809</td></tr>
+                        <tr><td>1</td><td>0.5611137582</td></tr>
+                        <tr><td>2</td><td>0.4388825313</td></tr>
+                        <tr><td>3</td><td>0.5611168883</td></tr>
+                        <tr><td>4</td><td>0.4388825813</td></tr>
+                        <tr><td>5</td><td>0.5611173341</td></tr>
+                        <tr><td>6</td><td>0.4388825883</td></tr>
+                        <tr><td>7</td><td>0.5611173877</td></tr>
+                    </table>
+                </div>
+
+                <!-- Sum up to M column -->
+                <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.5vh 0.8vw;">
+                    <div style="text-align: center; font-weight: bold; color: var(--slide-accent); margin-bottom: 0.3vh;">(sum up to \(M\))</div>
+                    <table style="width: 100%; border-collapse: collapse; text-align: center;">
+                        <tr style="border-bottom: 1px solid #999;">
+                            <th style="padding: 0.15vh 0.2vw;">\(t\)</th>
+                            <th style="padding: 0.15vh 0.2vw;">\(\mathcal{K}^{\mathrm{barcode}}_{(M)}(t,t)\)</th>
+                        </tr>
+                        <tr><td>−7</td><td>0.5611174103</td></tr>
+                        <tr><td>−6</td><td>0.4388825896</td></tr>
+                        <tr><td>−5</td><td>0.5611174103</td></tr>
+                        <tr><td>−4</td><td>0.4388825896</td></tr>
+                        <tr><td>−3</td><td>0.5611174103</td></tr>
+                        <tr><td>−2</td><td>0.4388825896</td></tr>
+                        <tr><td>−1</td><td>0.5611174103</td></tr>
+                        <tr><td>0</td><td>0.4388825896</td></tr>
+                        <tr><td>1</td><td>0.5611174103</td></tr>
+                        <tr><td>2</td><td>0.4388825896</td></tr>
+                        <tr><td>3</td><td>0.5611174103</td></tr>
+                        <tr><td>4</td><td>0.4388825896</td></tr>
+                        <tr><td>5</td><td>0.5611174103</td></tr>
+                        <tr><td>6</td><td>0.4388825896</td></tr>
+                        <tr><td>7</td><td>0.5611174103</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

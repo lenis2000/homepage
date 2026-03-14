@@ -1,0 +1,46 @@
+<section class="slide slide-top" id="barcode-conjecture" data-title="Barcode Conjecture">
+    <h2 class="slide-title">Barcode Kernel Conjecture [Knizel-P. 2025]</h2>
+
+    <div style="display: flex; flex-direction: column; gap: 3vh; margin-top: 4vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); width: 90%; margin-left: auto; margin-right: auto;">
+
+        <!-- Conjecture statement -->
+        <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 2vh 2vw;">
+            <strong style="color: var(--slide-navy); font-size: 1.1em;">Conjecture</strong> <span class="cite">[Knizel-P. 2025]</span>
+            <div style="margin-top: 1.5vh;">
+                There exists a <strong>barcode kernel</strong> \(\mathcal{K}^{\mathrm{barcode}}(s,t)\) governing the limiting determinantal point process. For \(s \ge t\):
+            </div>
+            <div style="text-align: center; margin-top: 2vh; font-size: 0.95em;">
+                \(\displaystyle \mathcal{K}^{\mathrm{barcode}}(s,t) = \lim_{M\to\infty} q^{(M+1)(s-t)} (-1)^{t-s} \sqrt{\frac{-\kappa^2 q^{1-s}}{(1-\kappa^2 q^{2-t})(1-\kappa^2 q^{1-s})}} \sum_{n=0}^{M+\frac{1}{2}} \frac{(-q^n)^{t-1-s} \mathcal{F}_n^s(0) \mathcal{F}_n^{t-1}(0)}{\|\mathcal{F}_n\|^2}.\)
+            </div>
+            <div style="margin-top: 1vh; color: var(--slide-muted); font-size: 0.9em;">
+                For \(s < t\), extend by symmetry: \(\mathcal{K}^{\mathrm{barcode}}(s,t) = \mathcal{K}^{\mathrm{barcode}}(t,s).\)
+            </div>
+        </div>
+
+        <!-- Two-column bottom section -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw;">
+            <!-- Key properties -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 2vh 2vw;">
+                <strong style="color: var(--slide-accent);">Properties:</strong>
+                <ul style="margin: 1vh 0 0 1.5em; padding: 0;">
+                    <li style="margin-bottom: 0.8vh;">The full kernel is <strong>two-periodic</strong> (2×2 block structure)</li>
+                    <li style="margin-bottom: 0.8vh;">Agrees with <strong>simulations</strong></li>
+                    <li>Agrees with <strong>numerical limits</strong> from pre-limit formulas</li>
+                </ul>
+            </div>
+
+            <!-- Still open -->
+            <div style="background: #fff3e0; border-left: 4px solid #E57200; padding: 2vh 2vw;">
+                <strong style="color: #E57200;">Still Open:</strong>
+                <ul style="margin: 1vh 0 0 1.5em; padding: 0;">
+                    <li>Rigorous derivation of the barcode kernel</li>
+                </ul>
+                <strong style="color: #E57200; display: block; margin-top: 1.5vh;">...but:</strong>
+                <ul style="margin: 1vh 0 0 1.5em; padding: 0;">
+                    <li>Existence of waterfall behavior was open from 2009 to 2025</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+</section>
