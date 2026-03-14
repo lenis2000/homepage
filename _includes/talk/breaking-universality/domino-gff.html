@@ -27,10 +27,11 @@
             </div>
         </div>
 
-        <!-- Right: canvas -->
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5vh;">
-            <canvas id="dgff-canvas" width="1200" height="1000" style="height: 72vh; width: auto;"></canvas>
-            <div id="dgff-status" style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted);">Press → to sample</div>
+        <!-- Right: canvases (2D for dominoes, WebGL for GFF) -->
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.5vh;">
+            <canvas id="dgff-canvas-2d" width="1200" height="1000" style="height: 72vh; width: auto;"></canvas>
+            <canvas id="dgff-canvas-3d" width="1200" height="1000" style="height: 72vh; width: auto; display: none;"></canvas>
+            <div id="dgff-status" style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted);"></div>
         </div>
     </div>
 </section>

@@ -2,8 +2,10 @@
     'use strict';
 
     const SLIDE_ID = 'domino-gff';
-    const CANVAS_ID = 'dgff-canvas';
-    const N = 80; // Aztec diamond size
+    const CANVAS_2D_ID = 'dgff-canvas-2d';
+    const CANVAS_3D_ID = 'dgff-canvas-3d';
+    const N_SMALL = 4;
+    const N_LARGE = 80;
 
     let shufflingModule = null;
     let wasmReady = false;
@@ -12,11 +14,26 @@
     let scene = null, renderer = null, camera = null, controls = null;
     let meshGroup = null;
     let renderLoopId = null;
-    let isIn3D = false;
 
     // Simulation state
     let currentStep = 0;
-    let lastDominoes = null;
+    let lastLargeDominoes = null;
+
+    // --- Canvas visibility ---
+
+    function show2D() {
+        const c2d = document.getElementById(CANVAS_2D_ID);
+        const c3d = document.getElementById(CANVAS_3D_ID);
+        if (c2d) c2d.style.display = '';
+        if (c3d) c3d.style.display = 'none';
+    }
+
+    function show3D() {
+        const c2d = document.getElementById(CANVAS_2D_ID);
+        const c3d = document.getElementById(CANVAS_3D_ID);
+        if (c2d) c2d.style.display = 'none';
+        if (c3d) c3d.style.display = '';
+    }
 
     // --- WASM initialization ---
 
@@ -35,18 +52,17 @@
 
     // --- Sampling ---
 
-    async function sampleUniformTiling() {
+    async function sampleTiling(n) {
         if (!wasmReady) return null;
-        const dim = 2 * N;
+        const dim = 2 * n;
         const numWeights = dim * dim;
         const weightsPtr = shufflingModule._malloc(numWeights * 8);
-        // All weights = 1.0 for uniform
         for (let i = 0; i < numWeights; i++) {
             shufflingModule.setValue(weightsPtr + i * 8, 1.0, 'double');
         }
         const resultPtr = await shufflingModule.ccall(
             'simulateAztecWithWeightMatrix', 'number',
-            ['number', 'number'], [N, weightsPtr], {async: true}
+            ['number', 'number'], [n, weightsPtr], {async: true}
         );
         shufflingModule._free(weightsPtr);
         const jsonStr = shufflingModule.UTF8ToString(resultPtr);
@@ -129,14 +145,13 @@
     // --- 2D domino drawing ---
 
     function drawDominoes(dominoes) {
-        const canvas = document.getElementById(CANVAS_ID);
+        const canvas = document.getElementById(CANVAS_2D_ID);
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (!dominoes || dominoes.length === 0) return;
 
-        // Find bounds
         let minX = Infinity, maxX = -Infinity;
         let minY = Infinity, maxY = -Infinity;
         for (const d of dominoes) {
@@ -153,7 +168,7 @@
         const scaleY = (canvas.height - 2 * padding) / rangeY;
         const scale = Math.min(scaleX, scaleY);
         const offX = (canvas.width - rangeX * scale) / 2 - minX * scale;
-        const offY = (canvas.height - rangeY * scale) / 2 + maxY * scale; // flip Y
+        const offY = (canvas.height - rangeY * scale) / 2 + maxY * scale;
 
         const colorMap = {
             blue: '#232D4B',
@@ -167,20 +182,19 @@
             const sy = offY - (d.y + d.h) * scale;
             const sw = d.w * scale;
             const sh = d.h * scale;
-
             ctx.fillStyle = colorMap[d.color] || '#999';
             ctx.fillRect(sx, sy, sw, sh);
             ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 0.5;
+            ctx.lineWidth = Math.max(1, scale * 0.15);
             ctx.strokeRect(sx, sy, sw, sh);
         }
     }
 
-    // --- 3D GFF surface ---
+    // --- 3D GFF surface (lazy Three.js on dedicated canvas) ---
 
     function initThreeJS() {
         if (renderer) return;
-        const canvas = document.getElementById(CANVAS_ID);
+        const canvas = document.getElementById(CANVAS_3D_ID);
         if (!canvas) return;
 
         scene = new THREE.Scene();
@@ -199,8 +213,7 @@
         try {
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         } catch (e) {
-            console.error('WebGL not available:', e);
-            setStatus('WebGL not available');
+            console.error('[domino-gff] WebGL not available:', e);
             return;
         }
         renderer.setSize(canvas.width, canvas.height);
@@ -209,7 +222,6 @@
         controls.enableDamping = true;
         controls.dampingFactor = 0.1;
 
-        // Lighting
         scene.add(new THREE.AmbientLight(0xffffff, 0.4));
         const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
         hemi.position.set(0, 20, 0);
@@ -231,7 +243,6 @@
             renderLoopId = requestAnimationFrame(renderLoop);
         }
         renderLoop();
-        isIn3D = true;
     }
 
     function disposeThreeJS() {
@@ -247,7 +258,6 @@
         }
         renderer.dispose();
         renderer = null; scene = null; camera = null; controls = null; meshGroup = null;
-        isIn3D = false;
     }
 
     function getHeightColor(h, maxAbsH) {
@@ -266,7 +276,6 @@
 
     function buildGFFSurface(heightDiff) {
         if (!meshGroup) return;
-        // Clear
         while (meshGroup.children.length > 0) {
             const m = meshGroup.children[0];
             if (m.geometry) m.geometry.dispose();
@@ -291,14 +300,12 @@
         const heightMap = new Map();
         for (const v of vertices) heightMap.set(`${v.gx},${v.gy}`, v.h);
 
-        // Detect step size
         const xCoords = [...new Set(vertices.map(v => v.gx))].sort((a, b) => a - b);
-        let stepX = 2;
+        let step = 2;
         for (let i = 1; i < xCoords.length; i++) {
             const diff = xCoords[i] - xCoords[i-1];
-            if (diff > 0) stepX = Math.min(stepX, diff);
+            if (diff > 0) step = Math.min(step, diff);
         }
-        const stepY = stepX;
 
         const positions = [];
         const colors = [];
@@ -308,18 +315,18 @@
         const centerY = (minY + maxY) / 2;
         const heightScale = 3;
 
-        for (let gx = minX; gx < maxX; gx += stepX) {
-            for (let gy = minY; gy < maxY; gy += stepY) {
+        for (let gx = minX; gx < maxX; gx += step) {
+            for (let gy = minY; gy < maxY; gy += step) {
                 const k00 = `${gx},${gy}`;
-                const k10 = `${gx+stepX},${gy}`;
-                const k01 = `${gx},${gy+stepY}`;
-                const k11 = `${gx+stepX},${gy+stepY}`;
+                const k10 = `${gx+step},${gy}`;
+                const k01 = `${gx},${gy+step}`;
+                const k11 = `${gx+step},${gy+step}`;
                 if (heightMap.has(k00) && heightMap.has(k10) && heightMap.has(k01) && heightMap.has(k11)) {
                     const h00 = heightMap.get(k00), h10 = heightMap.get(k10);
                     const h01 = heightMap.get(k01), h11 = heightMap.get(k11);
                     const idx = positions.length / 3;
-                    const x0 = (gx - centerX) * scale, x1 = (gx + stepX - centerX) * scale;
-                    const y0 = (gy - centerY) * scale, y1 = (gy + stepY - centerY) * scale;
+                    const x0 = (gx - centerX) * scale, x1 = (gx + step - centerX) * scale;
+                    const y0 = (gy - centerY) * scale, y1 = (gy + step - centerY) * scale;
                     positions.push(x0, h00 * heightScale, y0);
                     positions.push(x1, h10 * heightScale, y0);
                     positions.push(x0, h01 * heightScale, y1);
@@ -358,33 +365,42 @@
         if (el) el.textContent = text;
     }
 
-    async function showDominoTiling() {
-        setStatus('Sampling domino tiling...');
-        // Switch to 2D mode
-        if (isIn3D) disposeThreeJS();
-        const dominoes = await sampleUniformTiling();
+    // Step 1: small N=4 tiling (auto on slide enter)
+    async function showSmallTiling() {
+        show2D();
+        disposeThreeJS();
+        const dominoes = await sampleTiling(N_SMALL);
         if (!dominoes) { setStatus('WASM not ready'); return; }
-        lastDominoes = dominoes;
         drawDominoes(dominoes);
-        setStatus(`Uniform Aztec diamond, N = ${N} — ${dominoes.length} dominoes`);
+        setStatus(`Aztec diamond, N = ${N_SMALL}`);
     }
 
+    // Step 2: large N=80 tiling
+    async function showLargeTiling() {
+        show2D();
+        disposeThreeJS();
+        setStatus('Sampling...');
+        const dominoes = await sampleTiling(N_LARGE);
+        if (!dominoes) { setStatus('Sampling failed'); return; }
+        lastLargeDominoes = dominoes;
+        drawDominoes(dominoes);
+        setStatus(`Aztec diamond, N = ${N_LARGE} — ${dominoes.length} dominoes`);
+    }
+
+    // Step 3: GFF
     async function showGFF() {
-        setStatus('Sampling two tilings for GFF...');
-        // Show insight pane
         const insight = document.getElementById('dgff-insight');
         if (insight) insight.style.opacity = '1';
 
-        // Sample two independent tilings
-        const d1 = await sampleUniformTiling();
-        const d2 = await sampleUniformTiling();
+        setStatus('Sampling two tilings...');
+        const d1 = await sampleTiling(N_LARGE);
+        const d2 = await sampleTiling(N_LARGE);
         if (!d1 || !d2) { setStatus('Sampling failed'); return; }
 
-        setStatus('Computing height functions...');
+        setStatus('Computing GFF...');
         const h1 = calculateHeightFunction(d1);
         const h2 = calculateHeightFunction(d2);
 
-        // Compute GFF = (h1 - h2) / sqrt(2)
         const gff = new Map();
         const sqrt2 = Math.SQRT2;
         for (const [key, v1] of h1) {
@@ -393,28 +409,29 @@
             }
         }
 
-        // Switch to 3D
+        show3D();
         initThreeJS();
         if (renderer) {
             buildGFFSurface(gff);
-            setStatus(`GFF surface — (h₁ − h₂)/√2, N = ${N}`);
+            setStatus(`GFF — (h₁ − h₂)/√2, N = ${N_LARGE}`);
         } else {
-            setStatus(`GFF computed (${gff.size} vertices) — WebGL required for 3D view`);
+            setStatus('WebGL context unavailable');
         }
     }
 
     function reset() {
         currentStep = 0;
-        lastDominoes = null;
+        lastLargeDominoes = null;
         const insight = document.getElementById('dgff-insight');
         if (insight) insight.style.opacity = '0';
-        if (isIn3D) disposeThreeJS();
-        const canvas = document.getElementById(CANVAS_ID);
+        disposeThreeJS();
+        show2D();
+        const canvas = document.getElementById(CANVAS_2D_ID);
         if (canvas) {
             const ctx = canvas.getContext('2d');
             if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
-        setStatus('Press → to sample');
+        setStatus('');
     }
 
     // --- Slide engine registration ---
@@ -423,14 +440,16 @@
         if (!window.slideEngine) { setTimeout(tryInit, 100); return; }
 
         window.slideEngine.registerSimulation(SLIDE_ID, {
-            steps: 2,
+            steps: 3,
 
             async onStep(step) {
                 currentStep = step;
                 if (step === 1) {
                     await initShufflingWasm();
-                    await showDominoTiling();
+                    await showSmallTiling();
                 } else if (step === 2) {
+                    await showLargeTiling();
+                } else if (step === 3) {
                     await showGFF();
                 }
             },
@@ -440,13 +459,20 @@
                 if (step === 0) {
                     reset();
                 } else if (step === 1) {
-                    // Back to domino view
                     const insight = document.getElementById('dgff-insight');
                     if (insight) insight.style.opacity = '0';
-                    if (isIn3D) disposeThreeJS();
-                    if (lastDominoes) {
-                        drawDominoes(lastDominoes);
-                        setStatus(`Uniform Aztec diamond, N = ${N} — ${lastDominoes.length} dominoes`);
+                    disposeThreeJS();
+                    show2D();
+                    // Re-sample small tiling
+                    initShufflingWasm().then(() => showSmallTiling());
+                } else if (step === 2) {
+                    const insight = document.getElementById('dgff-insight');
+                    if (insight) insight.style.opacity = '0';
+                    disposeThreeJS();
+                    show2D();
+                    if (lastLargeDominoes) {
+                        drawDominoes(lastLargeDominoes);
+                        setStatus(`Aztec diamond, N = ${N_LARGE} — ${lastLargeDominoes.length} dominoes`);
                     }
                 }
             },
@@ -455,17 +481,15 @@
             pause() {},
 
             onSlideEnter() {
-                // Try to init WASM early
                 initShufflingWasm();
             },
 
             onSlideLeave() {
-                if (isIn3D) disposeThreeJS();
+                disposeThreeJS();
             }
         }, 0);
     }
 
-    // Initialize when DOM is ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', tryInit);
     } else {

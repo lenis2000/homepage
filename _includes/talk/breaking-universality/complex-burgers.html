@@ -1,0 +1,62 @@
+<section class="slide slide-top" id="complex-burgers" data-title="Complex Burgers Equation">
+    <h2 class="slide-title">The PDE Behind the Limit Shape</h2>
+
+    <div style="display: grid; grid-template-columns: 52vw 40vw; gap: 2vw; margin-top: 2vh; padding: 0 0 0 1vw;">
+        <!-- Left column: PDE content -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <!-- Euler-Lagrange -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Euler–Lagrange equation</strong>
+                <span class="cite">[Cohn–Kenyon–Propp 2000]</span><br>
+                \(\max \iint \sigma(\nabla h)\,dx\,dy\) yields
+                \(\displaystyle \text{div}\,\nabla\sigma \circ \nabla h = 0\)
+            </div>
+
+            <!-- Complex Burgers equation -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-navy);">Complex Burgers equation</strong>
+                <span class="cite">[Kenyon–Okounkov 2007]</span><br>
+                There exists a complex coordinate \(u=u(x,y)\) such that the Euler–Lagrange equation becomes
+                <div style="margin-top: 0.5vh; font-size: clamp(1.4rem, 2.5vw, 2rem); text-align: center;">
+                    \(\displaystyle u_x = u \, u_y\)
+                </div>
+                the complex inviscid <strong>Burgers equation</strong>.
+                The complex coordinate \(u(x,y)\) encodes the slope \(=\nabla h(x,y)\).
+            </div>
+
+            <!-- Arctic curve -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Arctic curve is like a shock of the complex Burgers equation</strong><br>
+                Where \(u\) becomes real, the complex conjugate solutions collide — this is the <strong>frozen boundary</strong>
+            </div>
+
+            <!-- Theorem 2 -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-navy);">Algebraic solutions:</strong>
+                For a <strong>simply connected</strong> polygonal boundary, the arctic curve is a real <strong>algebraic curve</strong> inscribed in the domain
+            </div>
+
+            <!-- Non-simply connected -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Beyond simply connected:</strong>
+                Non-simply connected frozen boundaries arise from non-simply connected domains, or from "gas bubbles" (not present in the uniform lozenge case).
+                <span class="cite">[Berggren–Nicoletti–Russkikh 2025, Borot–Gorin–Guionnet 2026]</span>
+            </div>
+        </div>
+
+        <!-- Right column: figures stacked vertically -->
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5vh;">
+            <div style="position: relative;">
+                <img src="images/frozen_sample.png" alt="Frozen regions and liquid region" style="max-height: 34vh; max-width: 100%; object-fit: contain;">
+                <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.3vh 0.6vw; border-radius: 3px; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold;">pre-sampled</div>
+            </div>
+            <div style="position: relative;">
+                <img src="images/nonsimplyconn_sample.png" alt="Non-simply connected domain arctic curve" style="max-height: 34vh; max-width: 100%; object-fit: contain;">
+                <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.3vh 0.6vw; border-radius: 3px; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold;">pre-sampled</div>
+            </div>
+            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; color: #333;">
+                Arctic curves separating <strong>frozen</strong> (facets) and <strong>liquid</strong> (random) phases
+            </div>
+        </div>
+    </div>
+</section>

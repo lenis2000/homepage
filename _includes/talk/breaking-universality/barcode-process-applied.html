@@ -1,0 +1,68 @@
+<section class="slide slide-top" id="barcode-process-applied" data-title="Barcode Process">
+    <h2 class="slide-title">The Conjectural Barcode Process [Knizel-P. 2025]</h2>
+
+    <!-- Three simulations in a row -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1vw; margin-top: 1vh; padding: 0 1.5vw;">
+        <!-- Sim 1: Vertical slice style (3D + diagonal slice) -->
+        <div id="bpa-sim1" style="display: flex; flex-direction: column; align-items: center;">
+            <canvas id="bpa-vs-3d" width="500" height="400" style="width: 100%; height: 19vh; background: #fff; border: 1px solid #ccc;"></canvas>
+            <canvas id="bpa-vs-slice" width="500" height="400" style="width: 100%; height: 19vh; background: #fff; border: 1px solid #ccc; margin-top: 0.3vh;"></canvas>
+            <div style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-navy); margin-top: 0.3vh;">Diagonal slice, <em>q</em> = 0.85</div>
+        </div>
+
+        <!-- Sim 2: Spectral transversal style (3D + horizontal slice) -->
+        <div id="bpa-sim2" style="display: flex; flex-direction: column; align-items: center;">
+            <canvas id="bpa-st-3d" width="500" height="400" style="width: 100%; height: 19vh; background: #fff; border: 1px solid #ccc;"></canvas>
+            <canvas id="bpa-st-slice" width="500" height="400" style="width: 100%; height: 19vh; background: #fff; border: 1px solid #ccc; margin-top: 0.3vh;"></canvas>
+            <div style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-accent); margin-top: 0.3vh;">Horizontal cross-section</div>
+        </div>
+
+        <!-- Sim 3: Why-2-periodic style (small orthographic, thick edges) -->
+        <div id="bpa-sim3" style="display: flex; flex-direction: column; align-items: center;">
+            <canvas id="bpa-w2p" width="700" height="600" style="width: 100%; height: 39vh; background: #fff; border: 1px solid #ccc;"></canvas>
+            <div style="display: flex; gap: 0.5vw; margin-top: 0.3vh;">
+                <button id="bpa-btn-1" style="width: 2vw; height: 2vw; border: 2px solid #232D4B; border-radius: 4px; background: #E57200; color: #fff; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold; cursor: pointer;">1</button>
+                <button id="bpa-btn-2" style="width: 2vw; height: 2vw; border: 2px solid #232D4B; border-radius: 4px; background: #fff; color: #232D4B; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold; cursor: pointer;">2</button>
+                <button id="bpa-btn-resample" style="padding: 0 0.8vw; height: 2vw; border: 2px solid #232D4B; border-radius: 4px; background: #232D4B; color: #fff; font-size: clamp(0.6rem, 1vw, 0.85rem); font-weight: bold; cursor: pointer;">resample</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Text panes -->
+    <div id="bpa-text-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1vw; margin-top: 1vh; padding: 0 1.5vw; font-size: clamp(1.1rem, 1.8vw, 1.4rem);">
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
+            <strong style="color: var(--slide-accent);">Spectral analysis (nonrigorous):</strong>
+            <ul style="margin: 0.3vh 0 0 0; padding-left: 1.2em; line-height: 1.5;">
+                <li>Put the <strong>physics hat</strong> on</li>
+                <li>Diagonalize the transversal operators via <em>q</em>-Racah eigenfunctions \(\mathcal{F}_n\)</li>
+                <li>Write <strong>barcode density</strong> as a series:
+                    <div style="text-align: center; margin: 0.3vh 0; font-size: clamp(1.2rem, 2vw, 1.6rem);">
+											\(\displaystyle \rho(t) = \sum_{n \in \frac{1}{2}\mathbb{Z}_{\geq 0}} \frac{(-q^{-n})\mathcal{F}_n(-\frac{t}{2})\mathcal{F}_n(1-\frac{t}{2})}{\|\mathcal{F}_n\|^2_{\ell^2(\mathbb{Z})}}\)
+                    </div>
+                </li>
+                <li>But... this series <strong>does not converge!</strong></li>
+                <li>Diverges "<strong>mildly</strong>": \(+c - c + c - c + \ldots\)</li>
+            </ul>
+        </div>
+
+        <div id="bpa-pane-right" style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 0.8vh 1.2vw; opacity: 0; transition: opacity 0.3s;">
+            <ul style="margin: 0.3vh 0 0 0; padding-left: 1.2em; line-height: 1.5;">
+							<li>So, we postulate that <strong>the 
+								sum "has two limits"!</strong>
+							</li>
+                <li>Two subsequential limits:</li>
+            </ul>
+            <div style="text-align: center; margin: 0.3vh 0; font-size: clamp(1.1rem, 1.8vw, 1.4rem);">
+                <strong style="color: var(--slide-accent);">\(\rho_0\)</strong> := lim (even partial sums) \(\approx 0.5611\)
+            </div>
+            <div style="text-align: center; margin: 0.3vh 0; font-size: clamp(1.1rem, 1.8vw, 1.4rem);">
+                <strong style="color: var(--slide-navy);">\(\rho_1\)</strong> := lim (odd partial sums) \(\approx 0.4389\)
+            </div>
+            <ul style="margin: 0.3vh 0 0 0; padding-left: 1.2em; line-height: 1.5;">
+                <li>Both limits are <strong>independent of \(t\)</strong></li>
+								<li>\(\rho_0+\rho_1 = 1\) (global direction of the waterfall plane)</li>
+								<li>And indeed, the <strong style="color: var(--slide-navy);">barcode process is 2-periodic (!)</strong></li>
+            </ul>
+        </div>
+    </div>
+</section>
