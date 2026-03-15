@@ -1,64 +1,24 @@
 <section class="slide slide-top" id="summary" data-title="Summary">
     <h2 class="slide-title">Summary</h2>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 2vh; padding: 0 2vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-
-        <!-- Left column -->
-        <div style="display: flex; flex-direction: column; gap: 2vh;">
-
-            <!-- Universality -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
-                <strong style="color: var(--slide-accent);">Universality in dimer models:</strong><br>
-                Random lozenge and domino tilings exhibit: <strong>deterministic limit shapes</strong>, local convergence to <strong>translation-invariant Gibbs measures</strong>, <strong>GFF</strong> global fluctuations, <strong>Airy</strong> processes at edges.
-            </div>
-
-            <!-- Mechanism 1: Waterfall -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw;">
-                <strong style="color: var(--slide-navy);">Mechanism 1 — The Waterfall</strong>
-                <span class="cite">[Knizel–P. 2025]</span>:<br>
-                A strong <strong>double-well potential</strong> (q-Racah weights with fixed \(q\)) induces <strong>dimensional collapse</strong>: 2D Gibbs measures → 1D barcode process with emergent <strong>period-two structure</strong>.
-                Powered by <strong>q-Racah orthogonal polynomials</strong>.
-            </div>
-
-            <!-- Mechanism 2: Random weights -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
-                <strong style="color: var(--slide-accent);">Mechanism 2 — Random edge weights</strong>
-                <span class="cite">[Bufetov–P.–Zografos 2025]</span>:<br>
-                Diagonally layered i.i.d. random weights on the Aztec diamond <strong>deform limit shapes</strong> and add <strong>Brownian motion</strong> to the fluctuations (on scale \(\sqrt{M}\) or \(O(1)\), depending on variance scaling). Powered by <strong>annealed Schur generating functions</strong>.
-            </div>
-        </div>
-
-        <!-- Right column -->
-        <div style="display: flex; flex-direction: column; gap: 2vh;">
-
-            <!-- Common thread -->
-            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw;">
-                <strong style="color: var(--slide-navy);">Common thread:</strong><br>
-                Both mechanisms <strong>break universality</strong> while preserving <strong>exact solvability</strong>. The key is finding the right algebraic structure:
-                <ul style="margin: 0.5vh 0 0 1.2em; padding: 0;">
-                    <li>q-Racah polynomials at the top of the q-Askey scheme</li>
-                    <li>Schur generating functions for disordered systems</li>
-                </ul>
-            </div>
-
-            <!-- Open questions -->
-            <div style="background: #fff3e0; border-left: 4px solid #E57200; padding: 1vh 1.5vw;">
-                <strong style="color: #E57200;">Open questions:</strong>
-                <ol style="margin: 0.5vh 0 0 1.2em; padding: 0;">
-                    <li>Rigorously justify the barcode kernel computations (divergent spectral series)</li>
-                    <li>Simpler mechanisms for dimensional collapse?</li>
-                    <li>Random weights with more general (non-one-periodic) structure?</li>
-                    <li>Combine both mechanisms: q-deformed weights + disorder?</li>
-                </ol>
-            </div>
-
-            <!-- References -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-muted); padding: 1vh 1.5vw; color: var(--slide-muted);">
-                <strong>References:</strong><br>
-                [Knizel–P.] arXiv:2507.22011<br>
-                [Bufetov–P.–Zografos] arXiv:2507.08560
-            </div>
-        </div>
-
-    </div>
+    <ul style="margin-top: 4vh; padding: 0 6vw; display: flex; flex-direction: column; gap: 2.5vh;">
+        <li style="font-size: clamp(1.7rem, 3.2vw, 2.5rem);"><strong>Universality</strong> is well-developed for dimer models.
+					Includes deterministic limit shapes, translation-invariant Gibbs measures locally, GFF fluctuations, Airy processes at edges, and other
+				typical behavior</li>
+        <li style="font-size: clamp(1.7rem, 3.2vw, 2.5rem);"><strong>The waterfall/barcode</strong> phenomenon <span class="cite">[Knizel–P.
+						2025]</span> describes an instance of dimensional collapse in the local behavior. So far, isolated in the q-Racah hexagon tilings, 
+					but should be present more broadly
+				</li>
+        <li style="font-size: clamp(1.7rem, 3.2vw, 2.5rem);"><strong>Random edge weights</strong> (disordered
+					dimer models)
+					is a new rich world with many new instances of universal asymptotic behavior
+					<span class="cite">[Bufetov–P.–Zografos 2025]</span>,
+					<span class="cite">[Moulard–Toninelli 2025]</span>,
+					<span class="cite">[Zografos 2025]</span>,
+					<span class="cite">[Duits–Van Peski 2025]</span>
+				</li>
+        <li style="font-size: clamp(1.7rem, 3.2vw, 2.5rem);">
+					Results presented today result on specifics of
+					<strong>breaking universality</strong> while preserving <strong>exact solvability</strong></li>
+    </ul>
 </section>
