@@ -96,7 +96,6 @@ def generate_post(data):
     yaml_title = clean_title.replace("\\", "\\\\").replace('"', '\\"')
 
     post = f"""---
-layout: post
 title: "{yaml_title}"
 arxiv-id: "{data['arxiv_id']}"
 date: {data['date']}

@@ -637,7 +637,6 @@ def generate_post(paper):
     abstract = _render_math(abstract)
 
     return f"""---
-layout: post
 title: "{yaml_title}"
 arxiv-id: "{paper['arxiv_id']}"
 date: {paper['date']}
