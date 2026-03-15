@@ -2,62 +2,44 @@
     <h2 class="slide-title">Schur Generating Functions</h2>
 
     <div style="display: grid; grid-template-columns: 48vw 44vw; gap: 2vw; margin-top: 2vh; padding: 0 1vw;">
-        <!-- Left: method description -->
+        <!-- Left: correspondence + SGF -->
         <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Schur process structure:</strong><br>
-                Domino tilings of the Aztec diamond with one-periodic weights are governed by <strong>Schur measures</strong>
+                <strong style="color: var(--slide-accent);">Dominos \(\leftrightarrow\) particles:</strong><br>
+                A domino tiling is encoded by a sequence of partitions. Under fixed one-periodic weights, the joint law is a <strong>Schur process</strong>
                 <span class="cite">[Johansson 2002], [Okounkov–Reshetikhin 2003]</span>
             </div>
 
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-navy);">Schur generating function</strong>
-                <span class="cite">[Bufetov–Gorin 2013]</span>:<br>
+                <span class="cite">[Gorin–Panova 2012], [Bufetov–Gorin 2013]</span>:<br>
                 <div style="text-align: center; margin-top: 0.5vh; font-size: clamp(1.3rem, 2.2vw, 1.7rem);">
-                    \(\displaystyle S_{\rho_N}(u_1,\ldots,u_k, 1^{N-k}) = \sum_{\lambda \in \mathbb{GT}_N} \rho_N(\lambda) \frac{s_\lambda(u_1,\ldots,u_k,1^{N-k})}{s_\lambda(1^N)}\)
+                    \(\displaystyle S_{\rho}(u_1,\ldots,u_N) = \sum_{\lambda} \rho(\lambda) \frac{s_\lambda(u_1,\ldots,u_N)}{s_\lambda(1^N)}\)
                 </div>
+                where \(\rho\) is the distribution of a partition \(\lambda\), and \(u_j \in \mathbb{C}\)
             </div>
 
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-accent);">For random weights</strong>
                 <span class="cite">[Bufetov–P.–Zografos 2025]</span>:<br>
+                The <strong>annealed</strong> SGF has an explicit product form (\(M\) is the size of the Aztec diamond,
+								\(N\) is the level):
                 <div style="text-align: center; margin-top: 0.5vh; font-size: clamp(1.3rem, 2.2vw, 1.7rem);">
-                    \(\displaystyle \lim_{N\to\infty} \sqrt[N]{S_{\rho_N}(u_1,\ldots,u_k,1^{N-k})} = \bigl(\mathbf{E}_{\mathcal{B}}\prod_{i=1}^k (1-\beta+u_i\beta)\bigr)^a\)
+                    \(\displaystyle S_{\rho}(x_1,\ldots,x_N) = \Bigl(\mathbf{E}\prod_{i=1}^N (1-\beta+x_i\beta)\Bigr)^{M-N}\),
                 </div>
+								where \(\beta\) is an independent copy of the random weights \(W_j\).
             </div>
 
             <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-navy);">Key point:</strong>
-                The <strong>annealed</strong> limit of the SGF factors into expectations over the weight distribution \(\mathcal{B}\). This drives both the LLN and CLT for the height function.
+                Asymptotics of the \(N\)-th root of the SGF as \(N\to\infty\) yield LLN and CLT for 
+								the particle system (and thus the height function of the domino tilings).
             </div>
         </div>
 
-        <!-- Right: limit shape equation -->
-        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Limit shape from the SGF:</strong><br>
-                Solve for \(z\) in the upper half-plane:
-                <div style="text-align: center; margin-top: 0.5vh; font-size: clamp(1.3rem, 2.2vw, 1.7rem);">
-                    \(\displaystyle \mathcal{F}(z) = \frac{z}{z-1} + az \, \mathbf{E}_{\mathcal{B}} \frac{\beta}{1-\beta+\beta z} = \alpha^{-1} y\)
-                </div>
-            </div>
-
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-navy);">Limiting density:</strong>
-                <div style="text-align: center; margin-top: 0.5vh; font-size: clamp(1.3rem, 2.2vw, 1.7rem);">
-                    \(\displaystyle (\alpha,y)\mapsto \frac{1}{\pi}\,\mathrm{Arg}\bigl(z(\alpha,y)\bigr)\)
-                </div>
-            </div>
-
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Arctic curve:</strong>
-                locus where \(\mathcal{F}(z)=\alpha^{-1}y\) has a <strong>double root</strong> in \(z\). Has an exact parametrization.
-            </div>
-
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-navy);">Self-averaging:</strong>
-                The limit shape is the same for <strong>almost every</strong> realization of the random weights (quenched = annealed at the LLN level)
-            </div>
+        <!-- Right: particles figure -->
+        <div style="display: flex; align-items: center; justify-content: center;">
+            <img src="{{site.storage_url}}/img/talks/bpz_particles.png" alt="Domino tiling to particle correspondence" style="max-height: 65vh; max-width: 100%; object-fit: contain;">
         </div>
     </div>
 </section>

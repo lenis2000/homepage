@@ -467,20 +467,16 @@
             onSlideEnter() {
                 showDiagram();
                 initThreeJS();
-                // Pre-sample
                 ensureSample().then(d => { if (d) cachedDominoes = d; });
             },
 
             onSlideLeave() {
                 showDiagram();
                 disposeThreeJS();
+                cachedDominoes = null;
+                samplePromise = null;
             }
         }, 0);
     }
     tryInit();
-
-    // Start sampling on page load so it's ready when slide is reached
-    window.addEventListener('wasm-loaded', () => {
-        ensureSample().then(d => { if (d) cachedDominoes = d; });
-    }, { once: true });
 })();
