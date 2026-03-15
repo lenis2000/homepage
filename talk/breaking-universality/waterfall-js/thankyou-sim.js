@@ -15,7 +15,13 @@ function initThankYouSim() {
         const wasm = await LozengeModule();
 
         const letters = ['T', 'H', 'A', 'N', 'K', 'Y', 'O', 'U'];
-        const colors = ['#E57200', '#232D4B', '#F9DCBF'];
+        // Stanford Cardinal for THANK, Berkeley Blue/Gold for YOU
+        const stanfordColors = ['#8C1515', '#4D0000', '#F2D4D4'];
+        const berkeleyColors = ['#003262', '#FDB515', '#D4E4F2'];
+        const thankLetters = new Set(['T', 'H', 'A', 'N', 'K']);
+        function colorsForLetter(letter) {
+            return thankLetters.has(letter) ? stanfordColors : berkeleyColors;
+        }
 
         const slope = 1 / Math.sqrt(3);
         const deltaC = 2 / Math.sqrt(3);
@@ -127,7 +133,8 @@ function initThankYouSim() {
 
         // Draw function for a letter
         function drawLetter(state) {
-            const { canvas, ctx, bounds, dimers } = state;
+            const { canvas, ctx, bounds, dimers, letter } = state;
+            const colors = colorsForLetter(letter);
             const { minX, maxX, minY, maxY } = bounds;
 
             // Use fixed dimensions to prevent zoom issues

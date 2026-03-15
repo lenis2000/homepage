@@ -51057,6 +51057,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2510.11846": {
+    "date": "2025-10-13",
+    "decision": "ACCEPT",
+    "source": "search"
+  },
   "2510.12046": {
     "date": "2025-10-14",
     "decision": "REJECT",
