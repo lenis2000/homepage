@@ -6,9 +6,9 @@
         <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-accent);">Limit shape equation:</strong><br>
-                Solve for \(z\) in the upper half-plane:
+                \((\alpha, y) \in [0,1]^2\) are coordinates in the Aztec diamond. Solve for \(z\) in the upper half-plane:
                 <div style="text-align: center; margin-top: 0.5vh; font-size: clamp(1.2rem, 2vw, 1.6rem);">
-                    \(\displaystyle \frac{z}{z-1} + az \, \mathbf{E}_{\mathcal{B}} \frac{\beta}{1-\beta+\beta z} = \alpha^{-1} y\)
+									\(\displaystyle \frac{z}{z-1} + (\alpha^{-1}-1) z \, \mathbf{E}\frac{\beta}{1-\beta+\beta z} = \alpha^{-1} y\)
                 </div>
             </div>
 
@@ -17,17 +17,11 @@
                 <div style="text-align: center; margin-top: 0.5vh; font-size: clamp(1.2rem, 2vw, 1.6rem);">
                     \(\displaystyle (\alpha,y)\mapsto \frac{1}{\pi}\,\mathrm{Arg}\bigl(z(\alpha,y)\bigr)\)
                 </div>
+                <strong style="color: var(--slide-navy);">Arctic curve</strong>
+								is the locus of double roots in \(z\), and we take real \(z\) as the parametrization of the
+								frozen boundary.
             </div>
 
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Arctic curve:</strong>
-                locus of <strong>double roots</strong> in \(z\). Has an exact parametrization.
-            </div>
-
-            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-navy);">Self-averaging:</strong>
-                quenched = annealed at the LLN level
-            </div>
         </div>
 
         <!-- Right: three examples -->
