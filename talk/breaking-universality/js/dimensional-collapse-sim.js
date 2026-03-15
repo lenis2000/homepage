@@ -596,7 +596,8 @@
         onSlideEnter() {
             initThreeJS();
             startRenderLoop();
-            setTimeout(() => initAndAnimate(), 100);
+            setCameraPosition(1);
+            setTimeout(() => resetToFinal(), 100);
         },
         onSlideLeave() {
             stopAnimation();

@@ -565,7 +565,7 @@
     const CAMERA_START = { pos: { x: 112.3, y: -2.8, z: 134.2 }, target: { x: 26.6, y: 43.7, z: 34.4 } };
     const CAMERA_END_LEFT = { pos: { x: 33.9, y: 42.4, z: 32.7 }, target: { x: 30.2, y: 44.7, z: 30.3 } };
     // Right zooms 2.5x less deep (2/5 of the distance)
-    const CAMERA_END_RIGHT = { pos: { x: 80.9, y: 15.3, z: 93.6 }, target: { x: 28.0, y: 44.1, z: 32.8 } };
+    const CAMERA_END_RIGHT = { pos: { x: 44.1, y: 23.3, z: 54.4 }, target: { x: 24.2, y: 34.2, z: 31.4 } };
     const ZOOM_DURATION = 4000; // 4 seconds for slow zoom
 
     let zoomAnimationId = null;
