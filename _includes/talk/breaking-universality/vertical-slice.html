@@ -46,14 +46,13 @@
             </div>
         </div>
 
-        <!-- Full-width problem pane with 2-column list -->
+        <!-- Full-width problem pane -->
         <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; margin-top: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
             <strong style="color: var(--slide-navy);">Problem:</strong>
-            <ul style="margin: 0.5vh 0 0 1.5em; padding: 0; columns: 2; column-gap: 4vw;">
-                <li>The local limit is <strong>symmetric but not self-adjoint</strong></li>
-                <li>Von Neumann deficiency \((1,1)\), so self-adjoint extension is <strong>not unique</strong>: a 1-dimensional family</li>
-                <li>Extension (and spectrum!) may depend on position in slice</li>
-                <li>Since we independently have the path concentration result, <strong>do we have to endure this?</strong></li>
+            <ul style="margin: 0.5vh 0 0 1.5em; padding: 0;">
+                <li>Limiting operator is symmetric but <strong>not self-adjoint</strong> (deficiency indices \((1,1)\))</li>
+                <li>Self-adjoint extension is not unique &mdash; spectrum may <strong>depend on position</strong> in the slice</li>
+                <li>Path concentration already gives the answer inside the waterfall region &mdash; <strong>no need for spectral analysis</strong> unless we want to study the waterfall edge</li>
             </ul>
         </div>
     </div>
