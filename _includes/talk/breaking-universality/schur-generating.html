@@ -1,6 +1,3 @@
-<!-- STUB: Schur Generating Functions -->
-<!-- TODO: Add visualization of Schur process structure / interlacing arrays -->
-<!-- Reference: existing simulation at /simulations/2025-12-03-schur-domino/ -->
 <section class="slide slide-top" id="schur-generating" data-title="Schur Generating Functions">
     <h2 class="slide-title">Schur Generating Functions</h2>
 
@@ -8,37 +5,58 @@
         <!-- Left: method description -->
         <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Exact solvability:</strong><br>
-                Domino tilings of the Aztec diamond are governed by <strong>Schur processes</strong>
+                <strong style="color: var(--slide-accent);">Schur process structure:</strong><br>
+                Domino tilings of the Aztec diamond with one-periodic weights are governed by <strong>Schur measures</strong>
                 <span class="cite">[Johansson 2002], [Okounkov–Reshetikhin 2003]</span>
             </div>
 
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-navy);">Annealed Schur generating function:</strong><br>
-                For <strong>random</strong> edge weights \(\alpha_k\), average the partition function over the disorder:
+                <strong style="color: var(--slide-navy);">Schur generating function</strong>
+                <span class="cite">[Bufetov–Gorin 2013]</span>:<br>
                 <div style="text-align: center; margin-top: 0.5vh; font-size: clamp(1.3rem, 2.2vw, 1.7rem);">
-                    \(\displaystyle \mathbb{E}_{\alpha}\left[\prod_k s_{\lambda^{(k)}/\lambda^{(k-1)}}(\alpha_k, \alpha_k^{-1})\right]\)
+                    \(\displaystyle S_{\rho_N}(u_1,\ldots,u_k, 1^{N-k}) = \sum_{\lambda \in \mathbb{GT}_N} \rho_N(\lambda) \frac{s_\lambda(u_1,\ldots,u_k,1^{N-k})}{s_\lambda(1^N)}\)
                 </div>
             </div>
 
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Key idea:</strong><br>
-                The <strong>annealed</strong> (disorder-averaged) correlation functions can be computed explicitly via Schur generating functions, yielding a <strong>determinantal point process</strong> with an explicit correlation kernel
+                <strong style="color: var(--slide-accent);">For random weights</strong>
+                <span class="cite">[Bufetov–P.–Zografos 2025]</span>:<br>
+                <div style="text-align: center; margin-top: 0.5vh; font-size: clamp(1.3rem, 2.2vw, 1.7rem);">
+                    \(\displaystyle \lim_{N\to\infty} \sqrt[N]{S_{\rho_N}(u_1,\ldots,u_k,1^{N-k})} = \bigl(\mathbf{E}_{\mathcal{B}}\prod_{i=1}^k (1-\beta+u_i\beta)\bigr)^a\)
+                </div>
             </div>
 
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-navy);">Extensions</strong>
-                <span class="cite">[Bufetov–P.–Zografos 2025]</span>:<br>
-                We substantially extend the LLN and CLT for particle systems via Schur generating functions to cover the random environment setting
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-navy);">Key point:</strong>
+                The <strong>annealed</strong> limit of the SGF factors into expectations over the weight distribution \(\mathcal{B}\). This drives both the LLN and CLT for the height function.
             </div>
         </div>
 
-        <!-- Right: placeholder for Schur process visualization -->
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1vh;">
-            <!-- TODO: add interlacing array / Schur process diagram -->
-            <div style="height: 55vh; width: 100%; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: clamp(1rem, 1.5vw, 1.3rem); color: var(--slide-muted); text-align: center; border: 1px solid #ccc;">
-                Schur process / interlacing array<br>visualization<br><br>
-                <em>(link to <a href="/simulations/2025-12-03-schur-domino/" target="_blank" style="color: #0066cc;">Schur process simulation</a>)</em>
+        <!-- Right: limit shape equation -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Limit shape from the SGF:</strong><br>
+                Solve for \(z\) in the upper half-plane:
+                <div style="text-align: center; margin-top: 0.5vh; font-size: clamp(1.3rem, 2.2vw, 1.7rem);">
+                    \(\displaystyle \mathcal{F}(z) = \frac{z}{z-1} + az \, \mathbf{E}_{\mathcal{B}} \frac{\beta}{1-\beta+\beta z} = \alpha^{-1} y\)
+                </div>
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-navy);">Limiting density:</strong>
+                <div style="text-align: center; margin-top: 0.5vh; font-size: clamp(1.3rem, 2.2vw, 1.7rem);">
+                    \(\displaystyle (\alpha,y)\mapsto \frac{1}{\pi}\,\mathrm{Arg}\bigl(z(\alpha,y)\bigr)\)
+                </div>
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-accent);">Arctic curve:</strong>
+                locus where \(\mathcal{F}(z)=\alpha^{-1}y\) has a <strong>double root</strong> in \(z\). Has an exact parametrization.
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-navy);">Self-averaging:</strong>
+                The limit shape is the same for <strong>almost every</strong> realization of the random weights (quenched = annealed at the LLN level)
             </div>
         </div>
     </div>

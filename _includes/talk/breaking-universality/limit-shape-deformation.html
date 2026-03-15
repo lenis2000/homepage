@@ -1,38 +1,49 @@
-<!-- STUB: Limit Shape Deformation by Random Weights -->
-<!-- TODO: Add side-by-side comparison of uniform vs deformed limit shapes -->
-<!-- TODO: Consider embedding T-embedding visualization (existing at /simulations/2025-12-11-t-embedding-arbitrary-weights/) -->
 <section class="slide slide-top" id="limit-shape-deformation" data-title="Limit Shapes Under Random Weights">
     <h2 class="slide-title">Limit Shapes Under Random Weights</h2>
 
-    <div style="display: grid; grid-template-columns: 48vw 44vw; gap: 2vw; margin-top: 2vh; padding: 0 1vw;">
-        <!-- Left: results -->
-        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Law of Large Numbers</strong>
-                <span class="cite">[Bufetov–P.–Zografos 2025]</span>:<br>
-                The random height function concentrates around a <strong>deterministic limit shape</strong>, which depends on the distribution of the edge weights
-            </div>
+    <!-- Three examples side by side -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5vw; margin-top: 2vh; padding: 0 2vw;">
 
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-navy);">Deformed arctic curve:</strong><br>
-                The frozen boundary is no longer a circle — it deforms according to the weight distribution
-            </div>
-
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Self-averaging:</strong><br>
-                The limit shape is the same for <strong>almost every</strong> realization of the random weights (quenched = annealed at the LLN level)
+        <!-- Uniform -->
+        <div style="text-align: center;">
+            <img src="{{site.storage_url}}/img/talks/bpz_uniform_arctic.png" style="height: 18vh; object-fit: contain;">
+            <img src="{{site.storage_url}}/img/talks/bpz_uniform.png" style="height: 24vh; object-fit: contain; margin-top: 0.5vh;">
+            <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); margin-top: 0.5vh;">
+                <strong>Uniform</strong><br>
+                \(W_i \equiv 1\)
             </div>
         </div>
 
-        <!-- Right: placeholder for comparison images -->
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2vh;">
-            <!-- TODO: replace with pre-sampled images showing limit shape deformation -->
-            <div style="height: 25vh; width: 100%; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: clamp(1rem, 1.5vw, 1.3rem); color: var(--slide-muted); text-align: center; border: 1px solid #ccc;">
-                Uniform weights<br>(arctic circle)
+        <!-- Bernoulli -->
+        <div style="text-align: center;">
+            <img src="{{site.storage_url}}/img/talks/bpz_Bernoulli_arctic.png" style="height: 18vh; object-fit: contain;">
+            <img src="{{site.storage_url}}/img/talks/bpz_Bernoulli.png" style="height: 24vh; object-fit: contain; margin-top: 0.5vh;">
+            <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); margin-top: 0.5vh;">
+                <strong>Bernoulli</strong><br>
+                \(\mathbf{P}(W_i\!=\!\tfrac12)=\mathbf{P}(W_i\!=\!5)=\tfrac12\)
             </div>
-            <div style="height: 25vh; width: 100%; background: #f0f0f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: clamp(1rem, 1.5vw, 1.3rem); color: var(--slide-muted); text-align: center; border: 1px solid #ccc;">
-                Random weights<br>(deformed arctic curve)
+        </div>
+
+        <!-- Continuous uniform -->
+        <div style="text-align: center;">
+            <img src="{{site.storage_url}}/img/talks/bpz_cont_uni_arctic.png" style="height: 18vh; object-fit: contain;">
+            <img src="{{site.storage_url}}/img/talks/bpz_cont_uni.png" style="height: 24vh; object-fit: contain; margin-top: 0.5vh;">
+            <div style="font-size: clamp(1rem, 1.8vw, 1.4rem); margin-top: 0.5vh;">
+                <strong>Continuous uniform</strong><br>
+                \(W_i \sim \mathrm{Unif}[0,2]\)
             </div>
+        </div>
+    </div>
+
+    <!-- Bottom: key observations -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 2vh; padding: 0 2vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
+            <strong style="color: var(--slide-accent);">Bernoulli:</strong>
+            same limit shape as deterministic 2-periodic weights with same values in the same proportions
+        </div>
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+            <strong style="color: var(--slide-navy);">Continuous uniform:</strong>
+            limit shape from the equation \(\mathcal{F}(z)=\alpha^{-1}y\) can only be solved <strong>numerically</strong>, but the arctic curve has an exact parametrization
         </div>
     </div>
 </section>

@@ -1,46 +1,40 @@
 <section class="slide slide-top" id="random-weights-setup" data-title="Random Edge Weights">
-    <h2 class="slide-title">One-Periodic Random Edge Weights <span class="cite">[Bufetov–P.–Zografos 2025]</span></h2>
+    <h2 class="slide-title">Diagonally Layered Disorder</h2>
 
     <div style="display: grid; grid-template-columns: 42vw 50vw; gap: 2vw; margin-top: 2vh; padding: 0 1vw;">
         <!-- Left: model description -->
         <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-accent);">Model:</strong><br>
-                Attach i.i.d. random weights \(W_1, \ldots, W_M \sim \mathcal{B}_M\) on \(\mathbb{R}_{>0}\) to edges in each diagonal layer of the Aztec diamond of size \(M\). Unlabeled edges have weight \(1\).
+								Attach i.i.d. random weights \(W_1, \ldots, W_M>0 \) to edges in diagonal layers of the Aztec diamond of size \(M\). Unlabeled edges have weight \(1\).
             </div>
 
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-navy);">Measure on tilings:</strong><br>
+                <strong style="color: var(--slide-navy);">Probability measure:</strong><br>
                 <div style="text-align: center; font-size: clamp(1.5rem, 2.5vw, 2rem); margin: 0.5vh 0;">
                     \(\displaystyle \mathbf{P}(D) = \frac{1}{Z} \prod_{e \in D} \operatorname{weight}(e)\)
                 </div>
             </div>
 
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">Two regimes as \(M \to \infty\):</strong>
+                <strong style="color: var(--slide-accent);">Two regimes as \(M \to \infty\):</strong> <span class="cite">[Bufetov–P.–Zografos 2025]</span>
                 <ol style="margin: 0.5vh 0 0 1.2em; padding: 0;">
-                    <li><strong>Critical vanishing variance:</strong> \(\operatorname{Var}[\mathcal{B}_M] \sim 1/M\).<br>
-                        Same limit shape; fluctuations = <strong>GFF + Brownian motion</strong></li>
-                    <li><strong>Fixed distribution:</strong> \(\mathcal{B}_M = \mathcal{B}\) independent of \(M\).<br>
-                        New limit shape; fluctuations on scale \(\sqrt{M}\) = <strong>Brownian motion</strong></li>
+                    <li><strong>Critical vanishing variance:</strong> \(\operatorname{Var}[W_j] \sim 1/M\).<br>
+											Same limit shape. Fluctuations live on scale \( \sqrt{\log M}\). <strong>GFF + Brownian motion</strong></li>
+                    <li style="margin: 0.5vh 0 0 0;"><strong>Fixed distribution</strong> of \(W_j\), independent of \(M\).<br>
+                        New limit shape, and fluctuations live on scale \(\sqrt{M}\).  <strong>Brownian motion only</strong></li>
                 </ol>
             </div>
         </div>
 
-        <!-- Right: images from the paper -->
-        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1vh;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1vw;">
-                <div style="text-align: center;">
-                    <img src="{{site.storage_url}}/arxiv-sources/2507.08560/200_Bernoulli.jpg" alt="Aztec diamond with Bernoulli random weights" style="max-height: 28vh; max-width: 100%; object-fit: contain;">
-                    <div style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted); margin-top: 0.3vh;">Bernoulli weights<br>\(\mathbf{P}(W_i=\tfrac12)=\mathbf{P}(W_i=5)=\tfrac12\)</div>
-                </div>
-                <div style="text-align: center;">
-                    <img src="{{site.storage_url}}/arxiv-sources/2507.08560/300_uniform.jpg" alt="Aztec diamond with uniform random weights" style="max-height: 28vh; max-width: 100%; object-fit: contain;">
-                    <div style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted); margin-top: 0.3vh;">Uniform weights<br>\(W_i \sim \mathrm{Unif}[0,2]\)</div>
-                </div>
+        <!-- Right: diagram (initially visible) / 3D simulation (shown on step) -->
+        <div style="position: relative;">
+            <div id="rw-diagram" style="text-align: center;">
+                <img src="{{site.storage_url}}/img/talks/aztec-4-grid-weights.png" alt="One-periodic weights on the Aztec diamond" style="max-height: 60vh; max-width: 100%; object-fit: contain;">
             </div>
-            <div style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted); text-align: center;">
-                Random tilings of size \(M=200\) and \(M=300\)
+            <div id="rw-sampling" style="display: none; height: 60vh; align-items: center; justify-content: center; font-size: clamp(1.5rem, 2.5vw, 2rem); color: var(--slide-muted);">Sampling...</div>
+            <div id="rw-canvas-wrap" style="display: none; text-align: center;">
+                <canvas id="random-weights-canvas" width="1000" height="800" style="height: 60vh; width: auto;"></canvas>
             </div>
         </div>
     </div>
