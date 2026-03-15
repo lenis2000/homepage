@@ -2,39 +2,16 @@
     'use strict';
 
     const SLIDE_ID = 'domino-gff';
-    const CANVAS_2D_ID = 'dgff-canvas-2d';
-    const CANVAS_3D_ID = 'dgff-canvas-3d';
-    const N = 80;
-    const Z_SCALE = 0.15;
+    const CANVAS_ID = 'dgff-canvas';
+    const N = 100;
 
     let shufflingModule = null;
     let wasmReady = false;
     let sampling = false;
 
-    // Three.js state (lazy init)
-    let scene = null, renderer = null, camera = null, controls = null;
-    let meshGroup = null;
-    let renderLoopId = null;
-
-    // Simulation state
+    // State
     let lastDominoes = null;
-    let gffBuilt = false;
-
-    // --- Canvas visibility ---
-
-    function show2D() {
-        const c2d = document.getElementById(CANVAS_2D_ID);
-        const c3d = document.getElementById(CANVAS_3D_ID);
-        if (c2d) c2d.style.display = '';
-        if (c3d) c3d.style.display = 'none';
-    }
-
-    function show3D() {
-        const c2d = document.getElementById(CANVAS_2D_ID);
-        const c3d = document.getElementById(CANVAS_3D_ID);
-        if (c2d) c2d.style.display = 'none';
-        if (c3d) c3d.style.display = '';
-    }
+    let lastGFF = null;
 
     // --- WASM initialization ---
 
@@ -169,7 +146,7 @@
     // --- 2D domino drawing (no borders) ---
 
     function drawDominoes(dominoes) {
-        const canvas = document.getElementById(CANVAS_2D_ID);
+        const canvas = document.getElementById(CANVAS_ID);
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -204,116 +181,31 @@
         }
     }
 
-    // --- GFF colormap: red/blue, same as lozenge version ---
+    // --- GFF colormap: gray at zero, blue negative, red positive ---
 
     function gffColor(h) {
         const t = Math.tanh(h / 1.5);
+        const gray = 0.75;
+        let r, g, b;
         if (t < 0) {
             const s = -t;
-            return [0.1 * (1 - s), 0.2 * (1 - s), 1.0];
+            r = gray * (1 - s); g = gray * (1 - s); b = gray + s * (1 - gray);
+        } else {
+            const s = t;
+            r = gray + s * (1 - gray); g = gray * (1 - s); b = gray * (1 - s);
         }
-        const s = t;
-        return [1.0, 0.15 * (1 - s), 0.05 * (1 - s)];
+        return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
     }
 
-    // --- Three.js lifecycle ---
+    // --- 2D GFF heatmap ---
 
-    function initThreeJS() {
-        if (renderer) return;
-        const canvas = document.getElementById(CANVAS_3D_ID);
-        if (!canvas) return;
+    function drawGFFHeatmap(gff) {
+        const canvas = document.getElementById(CANVAS_ID);
+        if (!canvas || !gff || gff.size === 0) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xffffff);
-
-        const aspect = canvas.width / canvas.height;
-        const frustumSize = 40;
-        camera = new THREE.OrthographicCamera(
-            -frustumSize * aspect / 2, frustumSize * aspect / 2,
-            frustumSize / 2, -frustumSize / 2, -5000, 6000
-        );
-        camera.position.set(20, 20, 30);
-        camera.up.set(0, 0, 1);
-        camera.lookAt(0, 0, 0);
-
-        try {
-            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-        } catch (e) {
-            console.error('[domino-gff] WebGL not available:', e);
-            return;
-        }
-        renderer.setSize(canvas.width, canvas.height);
-
-        controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.1;
-        controls.rotateSpeed = 0.8;
-
-        controls.addEventListener('change', () => {
-            const p = camera.position, t = controls.target, u = camera.up;
-            console.log(
-                `[domino-gff] pos: ${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${p.z.toFixed(1)}` +
-                ` | target: ${t.x.toFixed(1)}, ${t.y.toFixed(1)}, ${t.z.toFixed(1)}` +
-                ` | up: ${u.x.toFixed(3)}, ${u.y.toFixed(3)}, ${u.z.toFixed(3)}` +
-                ` | zoom: ${camera.zoom.toFixed(4)}`
-            );
-        });
-
-        scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-        const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
-        hemi.position.set(0, 20, 0);
-        scene.add(hemi);
-        const dir = new THREE.DirectionalLight(0xffffff, 0.6);
-        dir.position.set(10, 10, 15);
-        scene.add(dir);
-        const fill = new THREE.DirectionalLight(0xffffff, 0.25);
-        fill.position.set(-10, -5, -10);
-        scene.add(fill);
-
-        meshGroup = new THREE.Group();
-        scene.add(meshGroup);
-
-        function renderLoop() {
-            if (!renderer) return;
-            controls.update();
-            renderer.render(scene, camera);
-            renderLoopId = requestAnimationFrame(renderLoop);
-        }
-        renderLoop();
-    }
-
-    function disposeThreeJS() {
-        if (!renderer) return;
-        if (renderLoopId) { cancelAnimationFrame(renderLoopId); renderLoopId = null; }
-        if (meshGroup) {
-            while (meshGroup.children.length > 0) {
-                const child = meshGroup.children[0];
-                if (child.geometry) child.geometry.dispose();
-                if (child.material) child.material.dispose();
-                meshGroup.remove(child);
-            }
-        }
-        renderer.dispose();
-        renderer = null; scene = null; camera = null; controls = null; meshGroup = null;
-    }
-
-    function clearMeshGroup() {
-        if (!meshGroup) return;
-        while (meshGroup.children.length > 0) {
-            const m = meshGroup.children[0];
-            if (m.geometry) m.geometry.dispose();
-            if (m.material) m.material.dispose();
-            meshGroup.remove(m);
-        }
-    }
-
-    // --- 3D GFF surface from domino height functions ---
-
-    function buildGFFSurface(gff) {
-        clearMeshGroup();
-        if (!meshGroup || !gff || gff.size === 0) return;
-
-        // Find grid extents and step size
+        // Find grid extents and step
         let minGX = Infinity, maxGX = -Infinity;
         let minGY = Infinity, maxGY = -Infinity;
         for (const key of gff.keys()) {
@@ -329,52 +221,26 @@
             if (diff > 0) step = Math.min(step, diff);
         }
 
-        const positions = [], colors = [], indices = [];
-        const scaleXY = 60 / Math.max(maxGX - minGX, maxGY - minGY, 1);
-        const centerX = (minGX + maxGX) / 2, centerY = (minGY + maxGY) / 2;
+        const rangeGX = maxGX - minGX, rangeGY = maxGY - minGY;
+        const padding = 20;
+        const scale = Math.min(
+            (canvas.width - 2*padding) / rangeGX,
+            (canvas.height - 2*padding) / rangeGY
+        );
+        const offX = (canvas.width - rangeGX * scale) / 2 - minGX * scale;
+        const offY = (canvas.height - rangeGY * scale) / 2 + maxGY * scale;
 
-        for (let gx = minGX; gx < maxGX; gx += step) {
-            for (let gy = minGY; gy < maxGY; gy += step) {
-                const k00 = `${gx},${gy}`, k10 = `${gx+step},${gy}`;
-                const k01 = `${gx},${gy+step}`, k11 = `${gx+step},${gy+step}`;
-                if (gff.has(k00) && gff.has(k10) && gff.has(k01) && gff.has(k11)) {
-                    const h00 = gff.get(k00), h10 = gff.get(k10);
-                    const h01 = gff.get(k01), h11 = gff.get(k11);
-                    const idx = positions.length / 3;
-                    const x0 = (gx - centerX) * scaleXY, x1 = (gx + step - centerX) * scaleXY;
-                    const y0 = (gy - centerY) * scaleXY, y1 = (gy + step - centerY) * scaleXY;
-                    positions.push(x0, y0, h00 * Z_SCALE, x1, y0, h10 * Z_SCALE,
-                                   x0, y1, h01 * Z_SCALE, x1, y1, h11 * Z_SCALE);
-                    const c00 = gffColor(h00 * Z_SCALE), c10 = gffColor(h10 * Z_SCALE);
-                    const c01 = gffColor(h01 * Z_SCALE), c11 = gffColor(h11 * Z_SCALE);
-                    colors.push(...c00, ...c10, ...c01, ...c11);
-                    indices.push(idx, idx+1, idx+2, idx+1, idx+3, idx+2);
-                }
-            }
+        const cellW = Math.ceil(step * scale) + 1;
+        const cellH = Math.ceil(step * scale) + 1;
+
+        for (const [key, val] of gff) {
+            const [gx, gy] = key.split(',').map(Number);
+            const sx = gx * scale + offX;
+            const sy = offY - (gy + step) * scale;
+            const [r, g, b] = gffColor(val);
+            ctx.fillStyle = `rgb(${r},${g},${b})`;
+            ctx.fillRect(sx, sy, cellW, cellH);
         }
-        if (positions.length === 0) return;
-
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-        geometry.setIndex(indices);
-        geometry.computeVertexNormals();
-
-        meshGroup.add(new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
-            vertexColors: true, side: THREE.DoubleSide, flatShading: true,
-            roughness: 0.5, metalness: 0.15
-        })));
-
-        // Auto-fit camera
-        const box = new THREE.Box3().setFromObject(meshGroup);
-        const center = box.getCenter(new THREE.Vector3());
-        const size = box.getSize(new THREE.Vector3());
-        controls.target.copy(center);
-        const maxDim = Math.max(size.x, size.y, size.z);
-        camera.zoom = 35 / maxDim;
-        camera.position.set(center.x + maxDim * 0.4, center.y - maxDim * 0.6, center.z + maxDim * 0.5);
-        camera.updateProjectionMatrix();
-        controls.update();
     }
 
     // --- Step handling ---
@@ -385,7 +251,6 @@
     }
 
     async function showLargeTiling() {
-        show2D();
         setStatus('Sampling...');
         const dominoes = await sampleTiling(N);
         if (!dominoes) { setStatus('Sampling failed'); return; }
@@ -404,42 +269,25 @@
         const h1 = calculateHeightFunction(d1);
         const h2 = calculateHeightFunction(d2);
 
-        // GFF = (h1 - h2) / sqrt(2), centered
+        // GFF = (h1 - h2) / sqrt(2) — no mean centering needed,
+        // both height functions share the same root vertex at 0
         const gff = new Map();
         const sqrt2 = Math.SQRT2;
-        let sum = 0, count = 0;
         for (const [key, v1] of h1) {
             if (h2.has(key)) {
-                const val = (v1 - h2.get(key)) / sqrt2;
-                gff.set(key, val);
-                sum += val;
-                count++;
-            }
-        }
-        if (count > 0) {
-            const mean = sum / count;
-            for (const [key, val] of gff) {
-                gff.set(key, val - mean);
+                gff.set(key, (v1 - h2.get(key)) / sqrt2);
             }
         }
 
-        show3D();
-        initThreeJS();
-        if (renderer) {
-            buildGFFSurface(gff);
-            setStatus(`GFF ≈ (h₁ − h₂)/√2, N = ${N}`);
-            gffBuilt = true;
-        } else {
-            setStatus('WebGL context unavailable');
-        }
+        lastGFF = gff;
+        drawGFFHeatmap(gff);
+        setStatus(`GFF ≈ (h₁ − h₂)/√2, N = ${N}`);
     }
 
     function reset() {
         lastDominoes = null;
-        gffBuilt = false;
-        disposeThreeJS();
-        show2D();
-        const canvas = document.getElementById(CANVAS_2D_ID);
+        lastGFF = null;
+        const canvas = document.getElementById(CANVAS_ID);
         if (canvas) {
             const ctx = canvas.getContext('2d');
             if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -463,9 +311,6 @@
 
             onStepBack(step) {
                 if (step === 0) {
-                    disposeThreeJS();
-                    gffBuilt = false;
-                    show2D();
                     if (lastDominoes) {
                         drawDominoes(lastDominoes);
                         setStatus(`Aztec diamond, N = ${N}`);
@@ -483,9 +328,7 @@
                 }
             },
 
-            onSlideLeave() {
-                disposeThreeJS();
-            }
+            onSlideLeave() {}
         }, 0);
     }
 

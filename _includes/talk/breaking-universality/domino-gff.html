@@ -3,29 +3,28 @@
 
     <div style="display: grid; grid-template-columns: 40vw 52vw; gap: 2vw; margin-top: 1vh; padding: 0 1vw;">
         <!-- Left: text -->
-        <div style="display: flex; flex-direction: column; gap: 1.2vh;">
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+        <div style="display: flex; flex-direction: column; justify-content: center; gap: 3vh;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; font-size: clamp(1.5rem, 2.8vw, 2.2rem); text-align: left;">
                 <strong style="color: var(--slide-accent);">Same GFF for domino tilings</strong><br>
                 Height fluctuations of random domino tilings of the Aztec diamond converge to the <strong>Gaussian Free Field</strong>
                 — same universality class as lozenge tilings
             </div>
 
-            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1.5vh 1.5vw; font-size: clamp(1.5rem, 2.8vw, 2.2rem); text-align: left;">
                 <strong style="color: var(--slide-navy);">Covariance:</strong>
                 pulled back by conformal map \(u\) to \(\mathbb{H}\), same Green function structure
             </div>
 
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; font-size: clamp(1.5rem, 2.8vw, 2.2rem); text-align: left;">
                 <span class="cite">[Kenyon 2001], [Bufetov–Knizel 2018],
                 [Chelkak–Laslier–Russkikh 2020],
                 [Berggren–Nicoletti–Russkikh 2024]</span>
             </div>
         </div>
 
-        <!-- Right: canvases (2D flat tiling → 3D height function) -->
-        <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.5vh;">
-            <canvas id="dgff-canvas-2d" width="1200" height="1000" style="height: 72vh; width: auto;"></canvas>
-            <canvas id="dgff-canvas-3d" width="1200" height="1000" style="height: 72vh; width: auto; display: none;"></canvas>
+        <!-- Right: canvas (2D tiling → 2D GFF heatmap) -->
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 0.5vh; overflow: hidden;">
+            <canvas id="dgff-canvas" width="1200" height="1000" style="height: 72vh; max-width: 100%;"></canvas>
             <div id="dgff-status" style="font-size: clamp(0.75rem, 1vw, 1rem); color: var(--slide-muted);"></div>
         </div>
     </div>
