@@ -5,29 +5,24 @@
         <!-- Left: 3D canvas (building blocks → surface → tiling reveal) -->
         <div style="display: flex; flex-direction: column; align-items: center;">
             <canvas id="domino-intro-canvas" width="1000" height="800" style="height: 65vh; width: auto;"></canvas>
-            <div id="domino-intro-caption" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; margin-top: 1vh;">
-                4 building blocks for surfaces on the square grid
-            </div>
         </div>
 
         <!-- Right: text panes -->
-        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.5rem, 2.8vw, 2.2rem);">
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">4 non-flat building blocks</strong> instead of 3 flat squares
+                <strong style="color: var(--slide-accent);">4 non-flat building blocks</strong> instead of 3 flat squares.
+                <br>
+                    General theory for planar bipartite dimer models:
                 <span class="cite">[Kenyon–Okounkov–Sheffield 2006]</span>
             </div>
 
-            <div id="domino-intro-pane2" style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left; opacity: 0; transition: opacity 0.3s;">
-                <strong style="color: var(--slide-navy);">Glue into a surface:</strong>
-                same variational principle, limit shapes, universal fluctuations — on a different lattice
+            <div id="domino-intro-pane2" style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
+                <strong style="color: var(--slide-navy);">Glue into a surface.</strong>
+                <br>
+                The top-down view is a <strong style="color: var(--slide-navy);">domino tiling of the Aztec diamond</strong>.
             </div>
 
-            <div id="domino-intro-pane3" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left; opacity: 0; transition: opacity 0.3s;">
-                <strong style="color: var(--slide-accent);">Domino tiling:</strong>
-                the top-down view is a tiling of the Aztec diamond (\(n = 6\)) by \(1 \times 2\) dominoes
-            </div>
-
-            <div id="domino-intro-pane4" style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left; opacity: 0; transition: opacity 0.3s;">
+            <div id="domino-intro-pane4" style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
                 <strong style="color: var(--slide-navy);">Part III:</strong>
                 breaking universality for domino tilings via <strong>random edge weights</strong>
             </div>

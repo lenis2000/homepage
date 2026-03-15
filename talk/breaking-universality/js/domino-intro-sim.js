@@ -21,14 +21,19 @@
         target: { x: 0.1, y: -6.8, z: 4.3 },
         zoom: 1.0
     };
+    const CAM_BLOCKS_ROTATED = {
+        pos: { x: -11.0, y: 12.0, z: 50.0 },
+        target: { x: 0.1, y: -6.8, z: 8.0 },
+        zoom: 1.0
+    };
     const CAM_SURFACE_3D = {
         pos: { x: -39.7, y: 21.8, z: 41.4 },
         target: { x: 0.1, y: -8.8, z: -0.8 },
         zoom: 0.95
     };
     const CAM_TOPDOWN = {
-        pos: { x: 0.1, y: 56.8, z: -0.8 },
-        target: { x: 0.1, y: -8.8, z: -0.8 },
+        pos: { x: 2.4, y: 56.8, z: -4.8 },
+        target: { x: 2.4, y: -8.8, z: -5.8 },
         zoom: 0.95
     };
 
@@ -239,12 +244,6 @@
         }
         renderLoop();
 
-        // Camera debugging
-        controls.addEventListener('change', () => {
-            console.log('Camera pos:', camera.position.x.toFixed(1), camera.position.y.toFixed(1), camera.position.z.toFixed(1),
-                        '| Target:', controls.target.x.toFixed(1), controls.target.y.toFixed(1), controls.target.z.toFixed(1),
-                        '| Zoom:', camera.zoom.toFixed(2));
-        });
     }
 
     function disposeThreeJS() {
@@ -383,6 +382,7 @@
     function animateCamera(from, to, duration) {
         const t0 = performance.now();
         function ease(t) { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2; }
+
         function animate() {
             if (!camera || !controls) return;
             const elapsed = performance.now() - t0;
@@ -424,15 +424,6 @@
 
     // --- Captions ---
 
-    function setCaption(text) {
-        const el = document.getElementById('domino-intro-caption');
-        if (el) el.textContent = text;
-    }
-
-    function showPane(id, show) {
-        const el = document.getElementById(id);
-        if (el) el.style.opacity = show ? '1' : '0';
-    }
 
     // --- Sample and cache ---
 
@@ -454,24 +445,20 @@
                 if (!camera || !controls) return;
 
                 if (step === 1) {
-                    // Step 1: show full 3D surface, animate camera
+                    // Step 1: rotate building blocks slightly
+                    animateCamera(getCamState(), CAM_BLOCKS_ROTATED, 1500);
+                }
+                if (step === 2) {
+                    // Step 2: show full 3D surface
                     const dominoes = await ensureSample();
                     if (dominoes && meshGroup) {
                         buildDominoSurface(dominoes);
-                        animateCamera(CAM_BLOCKS, CAM_SURFACE_3D, 1500);
+                        animateCamera(CAM_BLOCKS_ROTATED, CAM_SURFACE_3D, 1500);
                     }
-                    setCaption('Aztec diamond, n = 6 — 3D surface');
-                    showPane('domino-intro-pane2', true);
-                }
-                if (step === 2) {
-                    // Step 2: rotate to top-down → domino tiling reveal
-                    animateCamera(getCamState(), CAM_TOPDOWN, 1500);
-                    setCaption('Aztec diamond, n = 6 — domino tiling');
-                    showPane('domino-intro-pane3', true);
                 }
                 if (step === 3) {
-                    // Step 3: Part III teaser
-                    showPane('domino-intro-pane4', true);
+                    // Step 3: rotate to top-down → domino tiling reveal
+                    animateCamera(getCamState(), CAM_TOPDOWN, 1500);
                 }
             },
 
@@ -479,20 +466,17 @@
                 if (!camera || !controls) return;
 
                 if (step === 2) {
-                    showPane('domino-intro-pane4', false);
-                }
-                if (step === 1) {
                     // Back from top-down to 3D
                     animateCamera(getCamState(), CAM_SURFACE_3D, 1500);
-                    setCaption('Aztec diamond, n = 6 — 3D surface');
-                    showPane('domino-intro-pane3', false);
+                }
+                if (step === 1) {
+                    // Back to rotated blocks
+                    buildBuildingBlocks();
+                    setCam(CAM_BLOCKS_ROTATED);
                 }
                 if (step === 0) {
-                    // Back to building blocks
-                    buildBuildingBlocks();
-                    setCam(CAM_BLOCKS);
-                    setCaption('4 building blocks for surfaces on the square grid');
-                    showPane('domino-intro-pane2', false);
+                    // Back to initial blocks view
+                    animateCamera(getCamState(), CAM_BLOCKS, 1500);
                 }
             },
 
@@ -504,7 +488,7 @@
                 // Start with building blocks
                 buildBuildingBlocks();
                 setCam(CAM_BLOCKS);
-                setCaption('4 building blocks for surfaces on the square grid');
+
                 // Pre-sample in background
                 ensureSample();
             },
