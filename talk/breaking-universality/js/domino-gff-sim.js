@@ -152,6 +152,8 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (!dominoes || dominoes.length === 0) return;
 
+        // Find unit cell size and bounding box
+        const unit = Math.min(...dominoes.map(d => Math.min(d.w, d.h)));
         let minX = Infinity, maxX = -Infinity;
         let minY = Infinity, maxY = -Infinity;
         for (const d of dominoes) {
@@ -161,30 +163,49 @@
             maxY = Math.max(maxY, d.y + d.h);
         }
 
-        const rangeX = maxX - minX, rangeY = maxY - minY;
-        const padding = 20;
-        const scale = Math.min(
-            (canvas.width - 2*padding) / rangeX,
-            (canvas.height - 2*padding) / rangeY
-        );
-        const offX = (canvas.width - rangeX * scale) / 2 - minX * scale;
-        const offY = (canvas.height - rangeY * scale) / 2 + maxY * scale;
+        const gridW = Math.round((maxX - minX) / unit);
+        const gridH = Math.round((maxY - minY) / unit);
+
+        // Draw to offscreen canvas at exact grid resolution (1 pixel per unit cell)
+        const offscreen = document.createElement('canvas');
+        offscreen.width = gridW;
+        offscreen.height = gridH;
+        const octx = offscreen.getContext('2d');
 
         const colorMap = { blue: '#232D4B', green: '#4B8B3B', yellow: '#E57200', red: '#C84E3A' };
 
         for (const d of dominoes) {
-            const sx = d.x * scale + offX;
-            const sy = offY - (d.y + d.h) * scale;
-            const sw = d.w * scale, sh = d.h * scale;
-            ctx.fillStyle = colorMap[d.color] || '#999';
-            ctx.fillRect(sx, sy, sw, sh);
+            const gx = Math.round((d.x - minX) / unit);
+            const gy = Math.round((maxY - d.y - d.h) / unit);
+            const gw = Math.round(d.w / unit);
+            const gh = Math.round(d.h / unit);
+            octx.fillStyle = colorMap[d.color] || '#999';
+            octx.fillRect(gx, gy, gw, gh);
         }
+
+        // Scale to main canvas with nearest-neighbor (no gaps, no moiré)
+        ctx.imageSmoothingEnabled = false;
+        const padding = 20;
+        const scale = Math.min(
+            (canvas.width - 2*padding) / gridW,
+            (canvas.height - 2*padding) / gridH
+        );
+        const drawW = gridW * scale, drawH = gridH * scale;
+        ctx.drawImage(offscreen,
+            (canvas.width - drawW) / 2, (canvas.height - drawH) / 2,
+            drawW, drawH);
     }
 
-    // --- GFF colormap: gray at zero, blue negative, red positive ---
+    // --- GFF colormap: discrete shades for ±2 height differences ---
+    // h = (h1 - h2)/√2; original diff h1-h2 is always even,
+    // so GFF values are multiples of √2. Each discrete level = height diff of 2.
 
     function gffColor(h) {
-        const t = Math.tanh(h / 1.5);
+        // Convert back to integer level (each step = height diff of 2)
+        const level = Math.round(h * Math.SQRT2 / 2);
+        const maxLevel = 6;
+        const clamped = Math.max(-maxLevel, Math.min(maxLevel, level));
+        const t = clamped / maxLevel; // -1 to 1, discrete steps
         const gray = 0.75;
         let r, g, b;
         if (t < 0) {
@@ -221,26 +242,39 @@
             if (diff > 0) step = Math.min(step, diff);
         }
 
-        const rangeGX = maxGX - minGX, rangeGY = maxGY - minGY;
-        const padding = 20;
-        const scale = Math.min(
-            (canvas.width - 2*padding) / rangeGX,
-            (canvas.height - 2*padding) / rangeGY
-        );
-        const offX = (canvas.width - rangeGX * scale) / 2 - minGX * scale;
-        const offY = (canvas.height - rangeGY * scale) / 2 + maxGY * scale;
-
-        const cellW = Math.ceil(step * scale) + 1;
-        const cellH = Math.ceil(step * scale) + 1;
+        // Draw to offscreen canvas at grid resolution
+        const gridW = Math.round((maxGX - minGX) / step) + 1;
+        const gridH = Math.round((maxGY - minGY) / step) + 1;
+        const offscreen = document.createElement('canvas');
+        offscreen.width = gridW;
+        offscreen.height = gridH;
+        const octx = offscreen.getContext('2d');
+        const imgData = octx.createImageData(gridW, gridH);
+        const data = imgData.data;
 
         for (const [key, val] of gff) {
             const [gx, gy] = key.split(',').map(Number);
-            const sx = gx * scale + offX;
-            const sy = offY - (gy + step) * scale;
-            const [r, g, b] = gffColor(val);
-            ctx.fillStyle = `rgb(${r},${g},${b})`;
-            ctx.fillRect(sx, sy, cellW, cellH);
+            const px = Math.round((gx - minGX) / step);
+            const py = Math.round((maxGY - gy) / step);
+            if (px >= 0 && px < gridW && py >= 0 && py < gridH) {
+                const [r, g, b] = gffColor(val);
+                const idx = (py * gridW + px) * 4;
+                data[idx] = r; data[idx+1] = g; data[idx+2] = b; data[idx+3] = 255;
+            }
         }
+        octx.putImageData(imgData, 0, 0);
+
+        // Scale to main canvas with nearest-neighbor
+        ctx.imageSmoothingEnabled = false;
+        const padding = 20;
+        const scale = Math.min(
+            (canvas.width - 2*padding) / gridW,
+            (canvas.height - 2*padding) / gridH
+        );
+        const drawW = gridW * scale, drawH = gridH * scale;
+        ctx.drawImage(offscreen,
+            (canvas.width - drawW) / 2, (canvas.height - drawH) / 2,
+            drawW, drawH);
     }
 
     // --- Step handling ---

@@ -3,23 +3,23 @@
     <!-- Top: Five tilings with q inputs -->
     <div style="display: flex; gap: 0.8vw; justify-content: center; margin-top: 1vh;">
         <div style="display: flex; flex-direction: column; align-items: center; width: 18.4vw;">
-            <canvas id="qvol-canvas-0" width="400" height="400" style="width: 18.4vw; height: 17.5vw; border: 1px solid #ccc;"></canvas>
+            <canvas id="qvol-canvas-0" width="400" height="400" style="width: 18.4vw; height: 18.4vw; border: 1px solid #ccc;"></canvas>
             <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-0" value="0.7" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
         </div>
         <div style="display: flex; flex-direction: column; align-items: center; width: 18.4vw;">
-            <canvas id="qvol-canvas-1" width="400" height="400" style="width: 18.4vw; height: 17.5vw; border: 1px solid #ccc;"></canvas>
+            <canvas id="qvol-canvas-1" width="400" height="400" style="width: 18.4vw; height: 18.4vw; border: 1px solid #ccc;"></canvas>
             <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-1" value="0.9" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
         </div>
         <div style="display: flex; flex-direction: column; align-items: center; width: 18.4vw;">
-            <canvas id="qvol-canvas-2" width="400" height="400" style="width: 18.4vw; height: 17.5vw; border: 1px solid #ccc;"></canvas>
+            <canvas id="qvol-canvas-2" width="400" height="400" style="width: 18.4vw; height: 18.4vw; border: 1px solid #ccc;"></canvas>
             <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-2" value="1" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
         </div>
         <div style="display: flex; flex-direction: column; align-items: center; width: 18.4vw;">
-            <canvas id="qvol-canvas-3" width="400" height="400" style="width: 18.4vw; height: 17.5vw; border: 1px solid #ccc;"></canvas>
+            <canvas id="qvol-canvas-3" width="400" height="400" style="width: 18.4vw; height: 18.4vw; border: 1px solid #ccc;"></canvas>
             <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-3" value="1.1" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
         </div>
         <div style="display: flex; flex-direction: column; align-items: center; width: 18.4vw;">
-            <canvas id="qvol-canvas-4" width="400" height="400" style="width: 18.4vw; height: 17.5vw; border: 1px solid #ccc;"></canvas>
+            <canvas id="qvol-canvas-4" width="400" height="400" style="width: 18.4vw; height: 18.4vw; border: 1px solid #ccc;"></canvas>
             <div style="font-size: clamp(0.8rem, 1.2vw, 1rem); margin-top: 0.5vh; display: flex; justify-content: center; align-items: center;">q = <input type="text" id="qvol-input-4" value="1.4" style="width: 3em; text-align: center; font-size: inherit; border: 1px solid #ccc; border-radius: 3px; margin-left: 0.3em;"></div>
         </div>
     </div>
@@ -29,7 +29,7 @@
         <button id="qvol-sample-btn" style="padding: 0.3em 1em; cursor: pointer; border: 1px solid #888; background: #fff; color: #555; border-radius: 3px; font-size: clamp(1rem, 1.5vw, 1.2rem);">Re-sample All</button>
     </div>
 
-    <!-- Bottom: Definition + Variational principle -->
+    <!-- Bottom row 1: Probability formula | Variational principle -->
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 4vh; padding: 0 2vw;">
         <!-- Probability formula -->
         <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; font-size: clamp(1.8rem, 2.8vw, 2.2rem); text-align: left;">
@@ -44,8 +44,19 @@
                 Maximize \(\displaystyle \iint \sigma(\nabla h) \, dx\,dy - \gamma \iint h \, dx\,dy\)
             </div>
             <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: #555; margin-top: 0.5vh;">
-                \(\gamma>0\): tilts toward less volume &nbsp;·&nbsp; \(\gamma<0\): tilts toward more volume
+                \(\gamma>0\): less volume &nbsp;·&nbsp; \(\gamma<0\): more volume
             </div>
+        </div>
+    </div>
+    <!-- Bottom row 2: Universality | q-Hahn -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 1.5vh; padding: 0 2vw;">
+        <!-- q-Hahn connection -->
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.5vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+            On the hexagon: related to <strong>q-Hahn</strong> orthogonal polynomials. <strong>Not the most general basic hypergeometric family</strong>...
+        </div>
+        <!-- Universality expectation -->
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1.5vh 1.5vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+            For \(q = e^{-\gamma/N} \to 1\): expect the <strong>same universal local behavior</strong> (pure states locally and GFF fluctuations globally) — but less is proven
         </div>
     </div>
 
