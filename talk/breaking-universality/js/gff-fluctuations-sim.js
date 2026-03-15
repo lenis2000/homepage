@@ -225,13 +225,20 @@ function initGFFFluctuationsSim() {
         // Same tanh approach as ultimate lozenge: zero is always gray
         function gffColor(h) {
             const t = Math.tanh(h / 1.5);
-            const alpha = Math.min(1, Math.abs(h) / 1);
+            const gray = 0.75;
+            let r, g, b;
             if (t < 0) {
                 const s = -t;
-                return [0.1 * (1 - s), 0.2 * (1 - s), 1.0, alpha];
+                r = gray * (1 - s);
+                g = gray * (1 - s);
+                b = gray + s * (1 - gray);
+            } else {
+                const s = t;
+                r = gray + s * (1 - gray);
+                g = gray * (1 - s);
+                b = gray * (1 - s);
             }
-            const s = t;
-            return [1.0, 0.15 * (1 - s), 0.05 * (1 - s), alpha];
+            return [r, g, b, 1.0];
         }
 
         // ---- Three.js ----
@@ -338,7 +345,7 @@ function initGFFFluctuationsSim() {
             return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
         }
 
-        function animateCamera(targetPos, targetLookAt, targetZoom, duration) {
+        function animateCamera(targetPos, targetLookAt, targetZoom, duration, targetUp) {
             if (cameraAnimId) cancelAnimationFrame(cameraAnimId);
             if (!camera || !controls) return;
 
@@ -348,8 +355,10 @@ function initGFFFluctuationsSim() {
             const startPos = camera.position.clone();
             const startTarget = controls.target.clone();
             const startZoom = camera.zoom;
+            const startUp = camera.up.clone();
             const endPos = new THREE.Vector3(targetPos.x, targetPos.y, targetPos.z);
             const endTarget = new THREE.Vector3(targetLookAt.x, targetLookAt.y, targetLookAt.z);
+            const endUp = targetUp ? new THREE.Vector3(targetUp.x, targetUp.y, targetUp.z) : null;
             const t0 = performance.now();
 
             function step() {
@@ -361,6 +370,9 @@ function initGFFFluctuationsSim() {
                 camera.position.lerpVectors(startPos, endPos, t);
                 controls.target.lerpVectors(startTarget, endTarget, t);
                 camera.zoom = startZoom + (targetZoom - startZoom) * t;
+                if (endUp) {
+                    camera.up.lerpVectors(startUp, endUp, t).normalize();
+                }
                 camera.updateProjectionMatrix();
                 controls.update();
                 if (renderer) renderer.render(scene, camera);
@@ -697,29 +709,31 @@ function initGFFFluctuationsSim() {
                             doSample();
                         }
                         if (step === 2) {
-                            // Instant jump to top-down view, 90° CW rotated
+                            // Animate to top-down view, interpolating up vector for 90° CCW
                             if (cameraAnimId) { cancelAnimationFrame(cameraAnimId); cameraAnimId = null; }
-                            if (camera) camera.up.set(-1, 0, 0);
-                            camera.position.set(54.8, 63.9, 139.1);
-                            controls.target.set(54.8, 63.9, -2.9);
-                            camera.zoom = 0.243;
-                            camera.updateProjectionMatrix();
-                            controls.update();
-                            if (renderer) renderer.render(scene, camera);
+                            startAnimation();
+                            animateCamera(
+                                { x: 54.8, y: 64.9, z: 139.1 },
+                                { x: 54.8, y: 63.9, z: -2.9 },
+                                0.243,
+                                1500,
+                                { x: -1, y: 0, z: 0 }
+                            );
                         }
                     },
 
                     onStepBack(step) {
                         if (step === 1) {
-                            // Instant jump back to 3/4 view
+                            // Animate back to 3/4 view, interpolating up vector back
                             if (cameraAnimId) { cancelAnimationFrame(cameraAnimId); cameraAnimId = null; }
-                            if (camera) camera.up.set(0, 0, 1);
-                            camera.position.set(10.2, -36.6, 121.0);
-                            controls.target.set(54.5, 52.2, 19.5);
-                            camera.zoom = 0.200;
-                            camera.updateProjectionMatrix();
-                            controls.update();
-                            if (renderer) renderer.render(scene, camera);
+                            startAnimation();
+                            animateCamera(
+                                { x: 10.2, y: -36.6, z: 121.0 },
+                                { x: 54.5, y: 52.2, z: 19.5 },
+                                0.200,
+                                1500,
+                                { x: 0, y: 0, z: 1 }
+                            );
                         }
                     },
 

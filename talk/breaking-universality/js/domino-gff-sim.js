@@ -4,8 +4,8 @@
     const SLIDE_ID = 'domino-gff';
     const CANVAS_2D_ID = 'dgff-canvas-2d';
     const CANVAS_3D_ID = 'dgff-canvas-3d';
-    const N_SMALL = 4;
-    const N_LARGE = 80;
+    const N = 80;
+    const Z_SCALE = 0.15;
 
     let shufflingModule = null;
     let wasmReady = false;
@@ -17,9 +17,8 @@
     let renderLoopId = null;
 
     // Simulation state
-    let currentStep = 0;
-    let lastSmallDominoes = null;
-    let lastLargeDominoes = null;
+    let lastDominoes = null;
+    let gffBuilt = false;
 
     // --- Canvas visibility ---
 
@@ -92,7 +91,7 @@
         }
     }
 
-    // --- Height function (from domino.md) ---
+    // --- Height function ---
 
     function calculateHeightFunction(dominoes) {
         if (!dominoes || dominoes.length === 0) return new Map();
@@ -162,46 +161,12 @@
             }
         }
 
-        // Negate heights (as in domino.md)
         const finalHeights = new Map();
         heights.forEach((h, key) => finalHeights.set(key, -h));
         return finalHeights;
     }
 
-    // --- createDominoFaces (from domino.md) ---
-
-    function createDominoFaces(domino, heightMap, scale) {
-        const isHorizontal = domino.w > domino.h;
-        let pts;
-        if (isHorizontal) {
-            const x = domino.x, y = domino.y;
-            pts = [
-                [x, y+2], [x+4, y+2], [x+4, y], [x, y],
-                [x+2, y+2], [x+2, y]
-            ];
-        } else {
-            const x = domino.x, y = domino.y;
-            pts = [
-                [x, y], [x, y+4], [x+2, y+4], [x+2, y],
-                [x, y+2], [x+2, y+2]
-            ];
-        }
-
-        const unit = isHorizontal ? domino.w / 4 : domino.h / 4;
-        const vertices = [];
-        for (const [x, y] of pts) {
-            const gridX = Math.round(x / unit);
-            const gridY = Math.round(y / unit);
-            const key = `${gridX},${gridY}`;
-            const z = heightMap.has(key) ? heightMap.get(key) : 0;
-            vertices.push([x / 2.0 - 0.5, z, y / 2.0 + 1.5]);
-        }
-
-        const avgHeight = vertices.reduce((sum, v) => sum + v[1], 0) / vertices.length;
-        return { color: domino.color, vertices, avgHeight };
-    }
-
-    // --- 2D domino drawing ---
+    // --- 2D domino drawing (no borders) ---
 
     function drawDominoes(dominoes) {
         const canvas = document.getElementById(CANVAS_2D_ID);
@@ -236,10 +201,19 @@
             const sw = d.w * scale, sh = d.h * scale;
             ctx.fillStyle = colorMap[d.color] || '#999';
             ctx.fillRect(sx, sy, sw, sh);
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = Math.max(1, scale * 0.15);
-            ctx.strokeRect(sx, sy, sw, sh);
         }
+    }
+
+    // --- GFF colormap: red/blue, same as lozenge version ---
+
+    function gffColor(h) {
+        const t = Math.tanh(h / 1.5);
+        if (t < 0) {
+            const s = -t;
+            return [0.1 * (1 - s), 0.2 * (1 - s), 1.0];
+        }
+        const s = t;
+        return [1.0, 0.15 * (1 - s), 0.05 * (1 - s)];
     }
 
     // --- Three.js lifecycle ---
@@ -256,10 +230,10 @@
         const frustumSize = 40;
         camera = new THREE.OrthographicCamera(
             -frustumSize * aspect / 2, frustumSize * aspect / 2,
-            frustumSize / 2, -frustumSize / 2, 1, 1000
+            frustumSize / 2, -frustumSize / 2, -5000, 6000
         );
-        camera.position.set(30, 50, 30);
-        camera.up.set(0, 1, 0);
+        camera.position.set(20, 20, 30);
+        camera.up.set(0, 0, 1);
         camera.lookAt(0, 0, 0);
 
         try {
@@ -273,6 +247,17 @@
         controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.1;
+        controls.rotateSpeed = 0.8;
+
+        controls.addEventListener('change', () => {
+            const p = camera.position, t = controls.target, u = camera.up;
+            console.log(
+                `[domino-gff] pos: ${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${p.z.toFixed(1)}` +
+                ` | target: ${t.x.toFixed(1)}, ${t.y.toFixed(1)}, ${t.z.toFixed(1)}` +
+                ` | up: ${u.x.toFixed(3)}, ${u.y.toFixed(3)}, ${u.z.toFixed(3)}` +
+                ` | zoom: ${camera.zoom.toFixed(4)}`
+            );
+        });
 
         scene.add(new THREE.AmbientLight(0xffffff, 0.4));
         const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
@@ -322,113 +307,22 @@
         }
     }
 
-    // --- 3D stepped domino rendering (from domino.md) ---
+    // --- 3D GFF surface from domino height functions ---
 
-    function buildDominoSurface(dominoes, n) {
-        clearMeshGroup();
-        if (!meshGroup || !dominoes) return;
-
-        const heightMap = calculateHeightFunction(dominoes);
-        const scale = 60 / (2 * n);
-
-        const threeColors = {
-            blue:   new THREE.Color('#232D4B'),
-            green:  new THREE.Color('#4B8B3B'),
-            yellow: new THREE.Color('#E57200'),
-            red:    new THREE.Color('#C84E3A')
-        };
-
-        // Compute faces with heights
-        const faces = dominoes.map(d => createDominoFaces(d, heightMap, scale));
-
-        // Height range for gradient
-        let minH = Infinity, maxH = -Infinity;
-        for (const f of faces) {
-            minH = Math.min(minH, f.avgHeight);
-            maxH = Math.max(maxH, f.avgHeight);
-        }
-        const hRange = maxH - minH || 1;
-
-        // Build meshes (from domino.md rendering pipeline)
-        for (const f of faces) {
-            const geom = new THREE.BufferGeometry();
-            const pos = [];
-            for (const v of f.vertices) {
-                pos.push(v[0] * scale, v[1] * scale, v[2] * scale);
-            }
-            geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-
-            const isH = (f.color === 'blue' || f.color === 'green');
-            const indices = isH
-                ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
-                : [0,1,3, 3,2,1, 0,1,4, 3,2,5];
-            geom.setIndex(indices);
-            geom.computeVertexNormals();
-
-            // Height gradient coloring
-            const baseColor = threeColors[f.color] || new THREE.Color(0x808080);
-            const t = (f.avgHeight - minH) / hRange;
-            const darkColor = baseColor.clone().multiplyScalar(0.4);
-            const finalColor = darkColor.lerp(baseColor, t);
-
-            const mat = new THREE.MeshStandardMaterial({
-                color: finalColor,
-                side: THREE.DoubleSide,
-                flatShading: true
-            });
-            meshGroup.add(new THREE.Mesh(geom, mat));
-        }
-
-        // Center the group (from domino.md)
-        const box = new THREE.Box3().setFromObject(meshGroup);
-        const center = box.getCenter(new THREE.Vector3());
-        meshGroup.position.sub(center);
-
-        const sizeXYZ = box.getSize(new THREE.Vector3());
-        const viewW = camera.right - camera.left;
-        const viewH = camera.top - camera.bottom;
-        const maxScale = 0.95 * Math.min(viewW / sizeXYZ.x, viewH / sizeXYZ.z);
-        meshGroup.scale.setScalar(maxScale);
-
-        controls.target.set(0, 0, 0);
-        controls.update();
-    }
-
-    // --- 3D GFF smooth surface ---
-
-    function gffColor(h, maxAbsH) {
-        const t = maxAbsH > 0 ? Math.tanh(h / (maxAbsH * 0.5)) : 0;
-        const gray = 0.75;
-        let r, g, b;
-        if (t < 0) {
-            const s = -t;
-            r = gray * (1 - s); g = gray * (1 - s); b = gray + s * (1 - gray);
-        } else {
-            const s = t;
-            r = gray + s * (1 - gray); g = gray * (1 - s); b = gray * (1 - s);
-        }
-        return new THREE.Color(r, g, b);
-    }
-
-    function buildGFFSurface(gff, maxAbsH) {
+    function buildGFFSurface(gff) {
         clearMeshGroup();
         if (!meshGroup || !gff || gff.size === 0) return;
 
-        const vertices = [];
-        let minX = Infinity, maxX = -Infinity;
-        let minY = Infinity, maxY = -Infinity;
-
-        for (const [key, h] of gff) {
+        // Find grid extents and step size
+        let minGX = Infinity, maxGX = -Infinity;
+        let minGY = Infinity, maxGY = -Infinity;
+        for (const key of gff.keys()) {
             const [gx, gy] = key.split(',').map(Number);
-            vertices.push({ gx, gy, h });
-            minX = Math.min(minX, gx); maxX = Math.max(maxX, gx);
-            minY = Math.min(minY, gy); maxY = Math.max(maxY, gy);
+            if (gx < minGX) minGX = gx; if (gx > maxGX) maxGX = gx;
+            if (gy < minGY) minGY = gy; if (gy > maxGY) maxGY = gy;
         }
 
-        const hMap = new Map();
-        for (const v of vertices) hMap.set(`${v.gx},${v.gy}`, v.h);
-
-        const xCoords = [...new Set(vertices.map(v => v.gx))].sort((a, b) => a - b);
+        const xCoords = [...new Set(Array.from(gff.keys()).map(k => Number(k.split(',')[0])))].sort((a, b) => a - b);
         let step = 2;
         for (let i = 1; i < xCoords.length; i++) {
             const diff = xCoords[i] - xCoords[i-1];
@@ -436,27 +330,25 @@
         }
 
         const positions = [], colors = [], indices = [];
-        const scale = 60 / Math.max(maxX - minX, maxY - minY, 1);
-        const centerX = (minX + maxX) / 2, centerY = (minY + maxY) / 2;
-        const heightScale = 3;
+        const scaleXY = 60 / Math.max(maxGX - minGX, maxGY - minGY, 1);
+        const centerX = (minGX + maxGX) / 2, centerY = (minGY + maxGY) / 2;
 
-        for (let gx = minX; gx < maxX; gx += step) {
-            for (let gy = minY; gy < maxY; gy += step) {
+        for (let gx = minGX; gx < maxGX; gx += step) {
+            for (let gy = minGY; gy < maxGY; gy += step) {
                 const k00 = `${gx},${gy}`, k10 = `${gx+step},${gy}`;
                 const k01 = `${gx},${gy+step}`, k11 = `${gx+step},${gy+step}`;
-                if (hMap.has(k00) && hMap.has(k10) && hMap.has(k01) && hMap.has(k11)) {
-                    const h00 = hMap.get(k00), h10 = hMap.get(k10);
-                    const h01 = hMap.get(k01), h11 = hMap.get(k11);
+                if (gff.has(k00) && gff.has(k10) && gff.has(k01) && gff.has(k11)) {
+                    const h00 = gff.get(k00), h10 = gff.get(k10);
+                    const h01 = gff.get(k01), h11 = gff.get(k11);
                     const idx = positions.length / 3;
-                    const x0 = (gx - centerX) * scale, x1 = (gx + step - centerX) * scale;
-                    const y0 = (gy - centerY) * scale, y1 = (gy + step - centerY) * scale;
-                    positions.push(x0, h00*heightScale, y0, x1, h10*heightScale, y0,
-                                   x0, h01*heightScale, y1, x1, h11*heightScale, y1);
-                    const c00 = gffColor(h00, maxAbsH), c10 = gffColor(h10, maxAbsH);
-                    const c01 = gffColor(h01, maxAbsH), c11 = gffColor(h11, maxAbsH);
-                    colors.push(c00.r,c00.g,c00.b, c10.r,c10.g,c10.b,
-                                c01.r,c01.g,c01.b, c11.r,c11.g,c11.b);
-                    indices.push(idx,idx+1,idx+2, idx+1,idx+3,idx+2);
+                    const x0 = (gx - centerX) * scaleXY, x1 = (gx + step - centerX) * scaleXY;
+                    const y0 = (gy - centerY) * scaleXY, y1 = (gy + step - centerY) * scaleXY;
+                    positions.push(x0, y0, h00 * Z_SCALE, x1, y0, h10 * Z_SCALE,
+                                   x0, y1, h01 * Z_SCALE, x1, y1, h11 * Z_SCALE);
+                    const c00 = gffColor(h00 * Z_SCALE), c10 = gffColor(h10 * Z_SCALE);
+                    const c01 = gffColor(h01 * Z_SCALE), c11 = gffColor(h11 * Z_SCALE);
+                    colors.push(...c00, ...c10, ...c01, ...c11);
+                    indices.push(idx, idx+1, idx+2, idx+1, idx+3, idx+2);
                 }
             }
         }
@@ -472,6 +364,17 @@
             vertexColors: true, side: THREE.DoubleSide, flatShading: true,
             roughness: 0.5, metalness: 0.15
         })));
+
+        // Auto-fit camera
+        const box = new THREE.Box3().setFromObject(meshGroup);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        controls.target.copy(center);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        camera.zoom = 35 / maxDim;
+        camera.position.set(center.x + maxDim * 0.4, center.y - maxDim * 0.6, center.z + maxDim * 0.5);
+        camera.updateProjectionMatrix();
+        controls.update();
     }
 
     // --- Step handling ---
@@ -481,80 +384,59 @@
         if (el) el.textContent = text;
     }
 
-    // Step 1: small N=4 tiling in 2D
-    async function showSmallTiling() {
-        disposeThreeJS();
-        show2D();
-        const dominoes = await sampleTiling(N_SMALL);
-        if (!dominoes) { setStatus('WASM not ready'); return; }
-        lastSmallDominoes = dominoes;
-        drawDominoes(dominoes);
-        setStatus(`Aztec diamond, N = ${N_SMALL}`);
-    }
-
-    // Step 2: same small tiling as 3D stepped height function (domino.md style)
-    function showSmallHeight() {
-        if (!lastSmallDominoes) return;
-        show3D();
-        initThreeJS();
-        if (!renderer) return;
-        buildDominoSurface(lastSmallDominoes, N_SMALL);
-        setStatus(`Height function h(x,y), N = ${N_SMALL}`);
-    }
-
-    // Step 3: large N=80 tiling in 2D
     async function showLargeTiling() {
-        disposeThreeJS();
         show2D();
         setStatus('Sampling...');
-        const dominoes = await sampleTiling(N_LARGE);
+        const dominoes = await sampleTiling(N);
         if (!dominoes) { setStatus('Sampling failed'); return; }
-        lastLargeDominoes = dominoes;
+        lastDominoes = dominoes;
         drawDominoes(dominoes);
-        setStatus(`Aztec diamond, N = ${N_LARGE} — ${dominoes.length} dominoes`);
+        setStatus(`Aztec diamond, N = ${N}`);
     }
 
-    // Step 4: GFF 3D surface
     async function showGFF() {
-        const insight = document.getElementById('dgff-insight');
-        if (insight) insight.style.opacity = '1';
-
         setStatus('Sampling two tilings...');
-        const d1 = await sampleTiling(N_LARGE);
-        const d2 = await sampleTiling(N_LARGE);
+        const d1 = await sampleTiling(N);
+        const d2 = await sampleTiling(N);
         if (!d1 || !d2) { setStatus('Sampling failed'); return; }
 
         setStatus('Computing GFF...');
         const h1 = calculateHeightFunction(d1);
         const h2 = calculateHeightFunction(d2);
 
+        // GFF = (h1 - h2) / sqrt(2), centered
         const gff = new Map();
         const sqrt2 = Math.SQRT2;
-        let maxAbsH = 0;
+        let sum = 0, count = 0;
         for (const [key, v1] of h1) {
             if (h2.has(key)) {
                 const val = (v1 - h2.get(key)) / sqrt2;
                 gff.set(key, val);
-                maxAbsH = Math.max(maxAbsH, Math.abs(val));
+                sum += val;
+                count++;
+            }
+        }
+        if (count > 0) {
+            const mean = sum / count;
+            for (const [key, val] of gff) {
+                gff.set(key, val - mean);
             }
         }
 
         show3D();
         initThreeJS();
         if (renderer) {
-            buildGFFSurface(gff, maxAbsH);
-            setStatus(`GFF — (h₁ − h₂)/√2, N = ${N_LARGE}`);
+            buildGFFSurface(gff);
+            setStatus(`GFF ≈ (h₁ − h₂)/√2, N = ${N}`);
+            gffBuilt = true;
         } else {
             setStatus('WebGL context unavailable');
         }
     }
 
     function reset() {
-        currentStep = 0;
-        lastSmallDominoes = null;
-        lastLargeDominoes = null;
-        const insight = document.getElementById('dgff-insight');
-        if (insight) insight.style.opacity = '0';
+        lastDominoes = null;
+        gffBuilt = false;
         disposeThreeJS();
         show2D();
         const canvas = document.getElementById(CANVAS_2D_ID);
@@ -571,44 +453,22 @@
         if (!window.slideEngine) { setTimeout(tryInit, 100); return; }
 
         window.slideEngine.registerSimulation(SLIDE_ID, {
-            steps: 4,
+            steps: 1,
 
             async onStep(step) {
-                currentStep = step;
                 if (step === 1) {
-                    await initShufflingWasm();
-                    await showSmallTiling();
-                } else if (step === 2) {
-                    showSmallHeight();
-                } else if (step === 3) {
-                    await showLargeTiling();
-                } else if (step === 4) {
                     await showGFF();
                 }
             },
 
             onStepBack(step) {
-                currentStep = step;
-                const insight = document.getElementById('dgff-insight');
-                if (insight) insight.style.opacity = '0';
-
                 if (step === 0) {
-                    reset();
-                } else if (step === 1) {
                     disposeThreeJS();
+                    gffBuilt = false;
                     show2D();
-                    if (lastSmallDominoes) {
-                        drawDominoes(lastSmallDominoes);
-                        setStatus(`Aztec diamond, N = ${N_SMALL}`);
-                    }
-                } else if (step === 2) {
-                    showSmallHeight();
-                } else if (step === 3) {
-                    disposeThreeJS();
-                    show2D();
-                    if (lastLargeDominoes) {
-                        drawDominoes(lastLargeDominoes);
-                        setStatus(`Aztec diamond, N = ${N_LARGE} — ${lastLargeDominoes.length} dominoes`);
+                    if (lastDominoes) {
+                        drawDominoes(lastDominoes);
+                        setStatus(`Aztec diamond, N = ${N}`);
                     }
                 }
             },
@@ -616,8 +476,11 @@
             start() {},
             pause() {},
 
-            onSlideEnter() {
-                initShufflingWasm();
+            async onSlideEnter() {
+                await initShufflingWasm();
+                if (!lastDominoes) {
+                    await showLargeTiling();
+                }
             },
 
             onSlideLeave() {
