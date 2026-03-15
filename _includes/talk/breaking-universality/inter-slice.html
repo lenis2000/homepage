@@ -22,27 +22,23 @@
             </div>
 
             <ul style="margin: 0; padding-left: 1.2em;">
-                <li><strong>How good is the guess?</strong></li>
+                <li id="is-howgood" style="opacity: 0; transition: opacity 0.3s;"><strong>How good is the guess?</strong></li>
                 <li id="is-diverge" style="opacity: 0; transition: opacity 0.3s;">But... this series <strong>does not even converge</strong></li>
                 <li id="is-mild" style="opacity: 0; transition: opacity 0.3s;">Series diverges "<strong>mildly</strong>", as \(+c-c+c-c+c-\ldots\)</li>
             </ul>
 
             <!-- Two-periodic + Limit formulas combined -->
             <div id="is-limits" style="background: #fff3e0; border-left: 4px solid #E57200; padding: 0.8vh 1vw; opacity: 0; transition: opacity 0.3s; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-                <div style="margin-bottom: 0.8vh;">...And, the barcode process is indeed <strong style="color: var(--slide-navy);">two-periodic</strong>! The two densities match the two limits (independent of \(t\)):</div>
-                <div style="text-align: center; font-size: clamp(1.1rem, 1.8vw, 1.4rem);">
-                    \(\displaystyle \rho_0(t) := \lim_{M\to\infty} \mathfrak{a}(1-\tfrac{t}{2}) \sum_{n=0}^{M+1/2} \frac{-q^{-n} \mathcal{F}_n^t(0)\mathcal{F}_n^{t-1}(0)}{\|\mathcal{F}_n\|^2_{\ell^2(\mathbb{Z})}}\)
-                </div>
-                <div style="text-align: center; font-size: clamp(1.1rem, 1.8vw, 1.4rem); margin-top: 0.8vh;">
-                    \(\displaystyle \rho_1(t) := \lim_{M\to\infty} \mathfrak{a}(1-\tfrac{t}{2}) \sum_{n=0}^{M} \frac{-q^{-n} \mathcal{F}_n^t(0)\mathcal{F}_n^{t-1}(0)}{\|\mathcal{F}_n\|^2_{\ell^2(\mathbb{Z})}}\)
-                </div>
+                ...And, the barcode process is indeed <strong style="color: var(--slide-navy);">two-periodic</strong>! Taking only <strong>even</strong> and only <strong>odd</strong> partial sums, we get <strong>two different limits</strong> \(\rho_0, \rho_1\) (independent of \(t\)), with \[\rho_0 + \rho_1 = 1\] (corresponds to the waterfall's slope in the \(xy\)-plane).
+               The sums \(\rho_0\) and \(\rho_1\)
+               match the two barcode densities.
             </div>
         </div>
 
         <!-- Right column: Formulas + Tables -->
         <div style="display: flex; flex-direction: column; gap: 0.8vh;">
-            <!-- All formulas in one pane - visible on step 0 -->
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1vw; display: flex; flex-direction: column; gap: 3vh;">
+            <!-- All formulas in one pane - revealed on step 1 -->
+            <div id="is-formulas" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1vw; display: flex; flex-direction: column; gap: 3vh; opacity: 0; transition: opacity 0.3s;">
                 <!-- Eigenfunction formula -->
                 <div style="text-align: left; font-size: clamp(1.25rem, 2.1vw, 1.7rem);">
                     \(\displaystyle \mathcal{F}_n(x) := \sqrt{1 + \chi^{-2} q^{-2x}} \sum_{i=-n}^{n} \frac{(-1)^{n+i} q^{-i/2}}{(q;q)_{n-i}(q;q)_{n+i}} \cdot \frac{1}{\theta_{\sqrt{q}}\bigl(\chi q^{x+i+\frac{1}{2}}\bigr)}\)
@@ -57,8 +53,8 @@
                 </div>
             </div>
 
-            <!-- a(x) and theta in one blue pane - visible on step 0 -->
-            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.6vh 1vw; display: flex; flex-direction: column; gap: 3vh;">
+            <!-- a(x) and theta in one blue pane - revealed on step 1 -->
+            <div id="is-defs" style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.6vh 1vw; display: flex; flex-direction: column; gap: 3vh; opacity: 0; transition: opacity 0.3s;">
                 <div style="text-align: left; font-size: clamp(1.25rem, 2vw, 1.6rem);">
                     \(\displaystyle \mathfrak{a}(x) := \left[\frac{\chi^2 q^{2x-1}}{(1+\chi^2 q^{2x})(1+\chi^2 q^{2x-1})}\right]^{1/2}\)
                 </div>

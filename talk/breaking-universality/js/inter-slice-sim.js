@@ -2,71 +2,56 @@
 (function() {
     const slideId = 'inter-slice';
 
-    function showElement(id) {
-        const el = document.getElementById(id);
-        if (el) el.style.opacity = '1';
-    }
-
-    function hideElement(id) {
-        const el = document.getElementById(id);
-        if (el) el.style.opacity = '0';
-    }
-
-    function reset() {
-        // Hide all step-dependent elements
-        hideElement('is-diverge');
-        hideElement('is-mild');
-        hideElement('is-limits');
-        hideElement('is-tables');
-    }
+    function show(id) { const el = document.getElementById(id); if (el) el.style.opacity = '1'; }
+    function hide(id) { const el = document.getElementById(id); if (el) el.style.opacity = '0'; }
 
     // Build order:
-    // Step 0: All bullets through "How good is the guess?" + 2 formula panes (visible by default)
-    // Step 1: "But... this series does not even converge"
-    // Step 2: "Series diverges mildly, as +c-c+c-c+c-..."
-    // Step 3: "two-periodic" + rho_0/rho_1 formulas (combined pane)
-    // Step 4: Numerical tables
+    // Step 0: Physics hat + rho formula (visible by default)
+    // Step 1: Right column formulas (F_n, a(x), theta)
+    // Step 2: "How good is the guess?"
+    // Step 3: "But... this series does not even converge"
+    // Step 4: "Series diverges mildly, as +c-c+c-c+c-..."
+    // Step 5: "two-periodic" + rho_0/rho_1 formulas
+    // Step 6: Numerical tables
+
+    function reset() {
+        hide('is-formulas');
+        hide('is-defs');
+        hide('is-howgood');
+        hide('is-diverge');
+        hide('is-mild');
+        hide('is-limits');
+        hide('is-tables');
+    }
 
     function onStep(step) {
-        if (step === 1) {
-            showElement('is-diverge');
-        }
-        if (step === 2) {
-            showElement('is-mild');
-        }
-        if (step === 3) {
-            showElement('is-limits');
-        }
-        if (step === 4) {
-            showElement('is-tables');
-        }
+        if (step === 1) { show('is-formulas'); show('is-defs'); }
+        if (step === 2) show('is-howgood');
+        if (step === 3) show('is-diverge');
+        if (step === 4) show('is-mild');
+        if (step === 5) show('is-limits');
+        if (step === 6) show('is-tables');
     }
 
     function onStepBack(step) {
-        if (step === 0) {
-            hideElement('is-diverge');
-        }
-        if (step === 1) {
-            hideElement('is-mild');
-        }
-        if (step === 2) {
-            hideElement('is-limits');
-        }
-        if (step === 3) {
-            hideElement('is-tables');
-        }
+        if (step === 0) { hide('is-formulas'); hide('is-defs'); }
+        if (step === 1) hide('is-howgood');
+        if (step === 2) hide('is-diverge');
+        if (step === 3) hide('is-mild');
+        if (step === 4) hide('is-limits');
+        if (step === 5) hide('is-tables');
     }
 
-    // Register with slide engine
     function registerWithEngine() {
         if (window.slideEngine) {
             window.slideEngine.registerSimulation(slideId, {
                 start() { },
                 pause() { },
-                steps: 4,
-                onStep: onStep,
-                onStepBack: onStepBack,
-                onSlideEnter() { reset(); },
+                steps: 6,
+                onStep,
+                onStepBack,
+                reset,
+                onSlideEnter() { },
                 onSlideLeave() { }
             }, 0);
         } else {
