@@ -54,7 +54,7 @@
             state.panX += (e.clientX - lastX) * (canvas.width / rect.width);
             state.panY += (e.clientY - lastY) * (canvas.height / rect.height);
             lastX = e.clientX;
-            lastY = e.clientX;
+            lastX = e.clientX;
             lastY = e.clientY;
             draw();
             console.log(`[${canvasId} drag] zoom: ${state.zoom.toFixed(3)}, panX: ${state.panX.toFixed(1)}, panY: ${state.panY.toFixed(1)}`);
