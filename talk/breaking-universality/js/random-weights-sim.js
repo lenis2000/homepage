@@ -312,10 +312,10 @@
         const scale = 60 / (2 * N);
 
         const threeColors = {
-            blue:   new THREE.Color('#4B8B3B'),
-            green:  new THREE.Color('#232D4B'),
-            yellow: new THREE.Color('#E57200'),
-            red:    new THREE.Color('#C84E3A')
+            yellow: new THREE.Color('#FFCD00'),
+            green:  new THREE.Color('#0057B7'),
+            blue:   new THREE.Color('#228B22'),
+            red:    new THREE.Color('#DC143C')
         };
 
         const faces = dominoes.map(d => createDominoFaces(d, heightMap, scale));

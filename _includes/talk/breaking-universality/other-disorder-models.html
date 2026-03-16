@@ -1,29 +1,31 @@
-<section class="slide slide-top" id="other-disorder-models" data-title="Other Models with Disorder">
-    <h2 class="slide-title">Disordered Dimer Models: 2025 Landscape</h2>
+<section class="slide slide-top" id="other-disorder-models" data-title="Diagonal Disorder Fluctuations">
+    <h2 class="slide-title">Diagonal Disorder Fluctuations</h2>
 
-    <div style="display: flex; flex-direction: column; gap: 1.5vh; margin-top: 2vh; padding: 0 2vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-            <strong style="color: var(--slide-accent);">Straight-layered weights on the Aztec diamond</strong>
-            <span class="cite">[Moulard–Toninelli 2025]</span><br>
-            Horizontal (not diagonal) layered i.i.d. weights. Different algebraic structure (free probability), but similar phenomenology: LLN with explicit limit shapes, CLT with Brownian motion component.
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; margin-top: 2vh; padding: 0 2vw;">
+        <!-- Annealed (BPZ) -->
+        <div style="text-align: center;">
+            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 1vh;">
+                <strong style="color: var(--slide-accent);">Annealed</strong>
+                <span class="cite">[Bufetov–P.–Zografos 2025]</span>
+            </div>
+            <div style="position: relative;">
+                <canvas id="odm-canvas-annealed" width="1400" height="1400" style="width: 100%; height: 68vh; cursor: grab; border: 1px solid #ddd;"></canvas>
+                <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.3vh 0.6vw; border-radius: 3px; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold;">pre-sampled</div>
+            </div>
         </div>
-
-        <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
-            <strong style="color: var(--slide-navy);">Gamma-distributed edge weights</strong>
-            <span class="cite">[Duits–Van Peski 2025]</span><br>
-            All edges carry i.i.d. Gamma-distributed weights. Connections to random matrix products and Lyapunov exponents. Determinantal structure via biorthogonal ensembles.
+        <!-- Quenched (Zografos) -->
+        <div style="text-align: center;">
+            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-bottom: 1vh;">
+                <strong style="color: var(--slide-navy);">Quenched</strong>
+                <span class="cite">[Zografos 2025]</span>
+            </div>
+            <div style="position: relative;">
+                <canvas id="odm-canvas-quenched" width="1400" height="1400" style="width: 100%; height: 68vh; cursor: grab; border: 1px solid #ddd;"></canvas>
+                <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.3vh 0.6vw; border-radius: 3px; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold;">pre-sampled</div>
+            </div>
         </div>
-
-        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-            <strong style="color: var(--slide-accent);">Fluctuation universality for layered weights</strong>
-            <span class="cite">[Zografos 2025]</span><br>
-            Extends the CLT results of [Bufetov–P.–Zografos] to more general weight distributions, establishing universality of the Brownian motion fluctuations.
-        </div>
-
-        <div style="background: #fff3e0; border-left: 4px solid #E57200; padding: 1vh 1.5vw; text-align: left;">
-            <strong style="color: #E57200;">Common themes:</strong>
-            disorder breaks GFF universality; new universal objects emerge (Brownian motion, Lyapunov exponents); exact solvability persists through different algebraic mechanisms
-        </div>
+    </div>
+    <div style="text-align: center; font-size: clamp(1.2rem, 2.2vw, 1.8rem); margin-top: 0.5vh; color: var(--slide-muted);">
+        Diagonal disorder, \(W_i \sim \mathrm{Uniform}[0,2]\), \(N=1000\)
     </div>
 </section>

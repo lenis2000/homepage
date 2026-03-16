@@ -93,7 +93,7 @@
         const gridH = Math.round((maxY - minY) / unit);
 
         const cos45 = Math.SQRT1_2;
-        const colorMap = { blue: '#232D4B', green: '#4B8B3B', yellow: '#E57200', red: '#C84E3A' };
+        const colorMap = { yellow: '#FFCD00', green: '#228B22', blue: '#0057B7', red: '#DC143C' };
 
         // Pre-compute rotated domino data and find tight bounding box
         let rMinX = Infinity, rMaxX = -Infinity, rMinY = Infinity, rMaxY = -Infinity;

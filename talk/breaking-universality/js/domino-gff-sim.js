@@ -172,7 +172,7 @@
         offscreen.height = gridH;
         const octx = offscreen.getContext('2d');
 
-        const colorMap = { blue: '#232D4B', green: '#4B8B3B', yellow: '#E57200', red: '#C84E3A' };
+        const colorMap = { yellow: '#FFCD00', green: '#228B22', blue: '#0057B7', red: '#DC143C' };
 
         for (const d of dominoes) {
             const gx = Math.round((d.x - minX) / unit);
