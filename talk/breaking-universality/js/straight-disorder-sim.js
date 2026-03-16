@@ -37,6 +37,7 @@
             state.panY = my - (my - state.panY) * factor;
             state.zoom *= factor;
             draw();
+            console.log(`[${canvasId}] zoom: ${state.zoom.toFixed(3)}, panX: ${state.panX.toFixed(1)}, panY: ${state.panY.toFixed(1)}`);
         }, { passive: false });
 
         canvas.addEventListener('mousedown', function(e) {
@@ -53,8 +54,10 @@
             state.panX += (e.clientX - lastX) * (canvas.width / rect.width);
             state.panY += (e.clientY - lastY) * (canvas.height / rect.height);
             lastX = e.clientX;
+            lastY = e.clientX;
             lastY = e.clientY;
             draw();
+            console.log(`[${canvasId} drag] zoom: ${state.zoom.toFixed(3)}, panX: ${state.panX.toFixed(1)}, panY: ${state.panY.toFixed(1)}`);
         });
 
         window.addEventListener('mouseup', function() {
