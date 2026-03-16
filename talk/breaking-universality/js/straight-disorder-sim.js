@@ -54,7 +54,6 @@
             state.panX += (e.clientX - lastX) * (canvas.width / rect.width);
             state.panY += (e.clientY - lastY) * (canvas.height / rect.height);
             lastX = e.clientX;
-            lastX = e.clientX;
             lastY = e.clientY;
             draw();
             console.log(`[${canvasId} drag] zoom: ${state.zoom.toFixed(3)}, panX: ${state.panX.toFixed(1)}, panY: ${state.panY.toFixed(1)}`);
@@ -70,15 +69,35 @@
         img.onload = draw;
         img.src = imgUrl;
 
-        return { draw, state, reset() { state.zoom = 1; state.panX = 0; state.panY = 0; draw(); } };
+        function animateTo(target, duration) {
+            const from = { zoom: state.zoom, panX: state.panX, panY: state.panY };
+            const t0 = performance.now();
+            function ease(t) { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2; }
+            function step() {
+                const elapsed = performance.now() - t0;
+                const t = Math.min(elapsed / duration, 1);
+                const e = ease(t);
+                state.zoom = from.zoom + (target.zoom - from.zoom) * e;
+                state.panX = from.panX + (target.panX - from.panX) * e;
+                state.panY = from.panY + (target.panY - from.panY) * e;
+                draw();
+                if (t < 1) requestAnimationFrame(step);
+            }
+            step();
+        }
+
+        return { draw, state, animateTo, reset() { state.zoom = 1; state.panX = 0; state.panY = 0; draw(); } };
     }
+
+    const ZOOM_TARGET = { zoom: 3.373, panX: -1464.1, panY: -1668.6 };
 
     let pzA = null, pzQ = null;
 
     function tryInit() {
         if (!window.slideEngine) { setTimeout(tryInit, 100); return; }
+        console.log('[straight-disorder] registering simulation');
         window.slideEngine.registerSimulation(SLIDE_ID, {
-            steps: 2,
+            steps: 3,
             start() {},
             pause() {},
 
@@ -104,13 +123,21 @@
                         pzQ.draw();
                     }
                 }
+                if (step === 3) {
+                    if (pzA) { Object.assign(pzA.state, ZOOM_TARGET); pzA.draw(); }
+                    if (pzQ) { Object.assign(pzQ.state, ZOOM_TARGET); pzQ.draw(); }
+                }
             },
 
             onStepBack(step) {
+                if (step === 2) {
+                    if (pzA) pzA.reset();
+                    if (pzQ) pzQ.reset();
+                }
                 if (step <= 1) {
                     const tilings = document.getElementById('sd-tilings');
                     const fluct = document.getElementById('sd-fluctuations');
-                    if (tilings) tilings.style.display = '';
+                    if (tilings) tilings.style.display = 'grid';
                     if (fluct) fluct.style.display = 'none';
                 }
                 if (step === 0) {
@@ -126,7 +153,7 @@
                 const fluct = document.getElementById('sd-fluctuations');
                 if (pw) pw.style.opacity = '1';
                 if (lw) lw.style.opacity = '0';
-                if (tilings) tilings.style.display = '';
+                if (tilings) tilings.style.display = 'grid';
                 if (fluct) fluct.style.display = 'none';
             },
             onSlideLeave() {
