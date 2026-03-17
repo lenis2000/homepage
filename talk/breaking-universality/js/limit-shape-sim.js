@@ -498,14 +498,24 @@ function initLimitShapeSim() {
         function animate() {
             if (!isRunning || !renderer || !camera || !controls) return;
 
-            if (autoRotate && meshGroup && rotateViewDir && rotateUpDir) {
-                // Oscillate tilt 0°→45°→0° during first rotation, then flat
-                rotateTiltPhase += rotateSpeed * 2;
-                const tilt = (Math.PI / 4) * 0.5 * (1 - Math.cos(rotateTiltPhase));
-                rotateAxis = rotateViewDir.clone().multiplyScalar(Math.cos(tilt))
-                    .add(rotateUpDir.clone().multiplyScalar(Math.sin(tilt))).normalize();
-                meshGroup.rotateOnAxis(rotateAxis, rotateSpeed);
+            if (autoRotate) {
+                // Rotate camera around Z-axis (same as lozenge-draw)
+                const offset = camera.position.clone().sub(controls.target);
+                offset.applyAxisAngle(rotateAxis, rotateSpeed);
+                camera.position.copy(controls.target).add(offset);
+                camera.lookAt(controls.target);
             }
+
+            if (cameraAnim) {
+                const t = Math.min((performance.now() - cameraAnim.startTime) / cameraAnim.duration, 1);
+                const ease = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2; // easeInOutCubic
+                camera.position.lerpVectors(cameraAnim.startPos, cameraAnim.targetPos, ease);
+                camera.zoom = cameraAnim.startZoom + (cameraAnim.targetZoom - cameraAnim.startZoom) * ease;
+                camera.updateProjectionMatrix();
+                camera.lookAt(controls.target);
+                if (t >= 1) cameraAnim = null;
+            }
+
             controls.update();
 
             renderer.render(scene, camera);
@@ -528,18 +538,28 @@ function initLimitShapeSim() {
 
         function startAutoRotate() {
             autoRotate = true;
-            // Store base vectors for oscillating tilt
-            if (camera && controls) {
-                rotateViewDir = camera.position.clone().sub(controls.target).normalize();
-                rotateUpDir = camera.up.clone().normalize();
-                rotateTiltPhase = 0;
-            }
             if (!isRunning) start();
         }
 
-        function stopAutoRotate() {
+        let cameraAnim = null;
+
+        function animateCameraTo(targetPos, targetZoom, duration = 2000) {
+            const startPos = camera.position.clone();
+            const startZoom = camera.zoom;
+            const startTime = performance.now();
+
+            cameraAnim = { targetPos, targetZoom, startPos, startZoom, startTime, duration };
+        }
+
+        function stopAutoRotate(flyTo) {
             autoRotate = false;
-            // Keep current rotation - don't reset
+            if (flyTo) {
+                animateCameraTo(
+                    new THREE.Vector3(flyTo.x, flyTo.y, flyTo.z),
+                    flyTo.zoom,
+                    2000
+                );
+            }
         }
 
         function clear() {
@@ -624,7 +644,7 @@ function initLimitShapeSim() {
                             if (statusEl) statusEl.textContent = '';
                             if (presampledLabel) presampledLabel.style.opacity = '1';
                         } else if (step === 4) {
-                            stopAutoRotate();
+                            stopAutoRotate({ x: -33.6, y: -59.5, z: 27.4, zoom: 0.02 });
                         } else if (step === 5) {
                             if (panelsEl) panelsEl.style.opacity = '1';
                         } else if (step === 6) {
