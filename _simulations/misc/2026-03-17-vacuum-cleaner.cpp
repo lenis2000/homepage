@@ -74,7 +74,7 @@ static const int CHUNK_CELLS_2D = CHUNK_SIZE_2D * CHUNK_SIZE_2D; // 65536
 
 struct Chunk2D {
     uint8_t generated[CHUNK_CELLS_2D]; // 0xFF = uninitialized, 0-15 = point count
-    uint16_t deleteMask[CHUNK_CELLS_2D];
+    uint32_t deleteMask[CHUNK_CELLS_2D];
 
     Chunk2D() {
         memset(generated, 0xFF, sizeof(generated));
@@ -89,7 +89,7 @@ static const int CHUNK_CELLS_3D = CHUNK_SIZE_3D * CHUNK_SIZE_3D * CHUNK_SIZE_3D;
 
 struct Chunk3D {
     uint8_t generated[CHUNK_CELLS_3D];
-    uint16_t deleteMask[CHUNK_CELLS_3D];
+    uint32_t deleteMask[CHUNK_CELLS_3D];
 
     Chunk3D() {
         memset(generated, 0xFF, sizeof(generated));
@@ -158,7 +158,7 @@ static void ensureCell2D(int cx, int cy, Chunk2D* chunk) {
     uint64_t seed = hashCell2D(cx, cy, g_globalSeed);
     SplitMix64 rng(seed);
     int n = poissonSample(rng);
-    if (n > 15) n = 15;
+    if (n > 20) n = 20;
     chunk->generated[idx] = (uint8_t)n;
     chunk->deleteMask[idx] = 0;
 }
@@ -189,7 +189,7 @@ static void ensureCell3D(int cx, int cy, int cz, Chunk3D* chunk) {
     uint64_t seed = hashCell3D(cx, cy, cz, g_globalSeed);
     SplitMix64 rng(seed);
     int n = poissonSample(rng);
-    if (n > 15) n = 15;
+    if (n > 20) n = 20;
     chunk->generated[idx] = (uint8_t)n;
     chunk->deleteMask[idx] = 0;
 }

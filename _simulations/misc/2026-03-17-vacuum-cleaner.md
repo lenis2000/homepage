@@ -910,9 +910,10 @@ details.control-section {
         centerX - viewHalfX, centerY - viewHalfY,
         centerX + viewHalfX, centerY + viewHalfY, 80000);
     } else {
+      const curZ3 = W._getCurrentZ();
       nearbyCount = W._enumerateNearby3D(
-        centerX - viewHalfX, centerY - viewHalfY, -viewHalfY,
-        centerX + viewHalfX, centerY + viewHalfY, viewHalfY, 80000);
+        centerX - viewHalfX, centerY - viewHalfY, curZ3 - viewHalfY,
+        centerX + viewHalfX, centerY + viewHalfY, curZ3 + viewHalfY, 80000);
     }
 
     // Draw Poisson points
