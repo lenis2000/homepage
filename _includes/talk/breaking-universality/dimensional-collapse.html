@@ -14,45 +14,28 @@
                 </div>
             </div>
 
-            <div id="dc-why" style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; margin-top: 1.5vh; opacity: 0; transition: opacity 0.3s;">
+            <div id="dc-why" style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; margin-top: 1.5vh;">
 <strong style="color: var(--slide-navy);">Why?</strong> \(\displaystyle\mathrm{w}(h) = \chi\, q^{h} + \frac{1}{\chi\, q^{h}}\) \(\to\) avoid center
             </div>
 
             <div id="dc-collapse" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; margin-top: 1.5vh; opacity: 0; transition: opacity 0.3s;">
-                <strong style="color: var(--slide-accent);">Dimensional collapse:</strong>
-                <div style="margin-top: 0.5vh;">
-                    In the waterfall, we have <strong>new universal local behavior</strong>, as in the old \(q\to 1\) pure states, it would be either:
-
-<ul style="margin-top: 0.5vh; margin-left: 1.5vw;">
-    <li><strong>frozen/semifrozen</strong> (no randomness but
-			<strong style="color: var(--slide-accent);">regular</strong> pattern of two colors)</li>
-    <li>or <strong>liquid/gaseous</strong> (all three colors present; phases differ by correlation decay).</li>
+                <strong style="color: var(--slide-accent);">Classical regime</strong> \(q = e^{-\gamma/N} \to 1\):
+<ul style="margin-top: 0.5vh; margin-left: 1.5vw; margin-bottom: 0;">
+    <li><strong>frozen/semifrozen</strong> (no randomness but regular pattern of one or two colors)</li>
+    <li>or <strong>liquid/gaseous</strong> (all three colors present; phases differ by correlation decay)</li>
 </ul>
-                    The waterfall has <strong style="color: var(--slide-accent);">random sequence of two colors</strong> → new <strong>1D regime</strong> not covered by
-                    <span class="cite">[Kenyon-Okounkov-Sheffield 2006]</span>
-                </div>
+            </div>
+
+            <div id="dc-new-regime" style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; margin-top: 1.5vh; opacity: 0; transition: opacity 0.3s;">
+                The waterfall has <strong style="color: var(--slide-navy);">random sequence of two colors</strong> → new <strong>1D regime</strong> not covered by
+                <span class="cite">[Kenyon-Okounkov-Sheffield 2006]</span>
             </div>
 
         </div>
 
-        <!-- Right column: 3D Simulation + barcode conjecture -->
+        <!-- Right column: 3D Simulation -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
-            <canvas id="dim-collapse-canvas" width="1300" height="800" style="height: 56vh; width: auto; background: #ffffff; border: 1px solid #ccc;"></canvas>
-
-            <!-- Barcode conjecture -->
-            <div style="width: 100%; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
-                <div id="dc-conjecture" style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
-                    <strong style="color: var(--slide-navy);">Conjecture</strong> <span class="cite">[Knizel-P. 2025]</span>
-                    <div style="margin-top: 0.5vh;">
-                        Nonrigorous asymptotic analysis
-												of spectral decompositions
-												of correlation kernels (via
-												\(q\)-Racah polynomials)
-yields an explicit <strong>barcode kernel</strong> \(\mathcal{K}^{\mathrm{barcode}}(s,t)\) for the residual 1D determinantal process in the cross-section.
-                        Confirmed by <strong>numerical limits</strong> of pre-limit kernels, and <strong>simulations</strong>.
-                    </div>
-                </div>
-            </div>
+            <canvas id="dim-collapse-canvas" width="800" height="800" style="height: 80vh; width: auto; background: #ffffff; border: 1px solid #ccc;"></canvas>
         </div>
     </div>
 </section>

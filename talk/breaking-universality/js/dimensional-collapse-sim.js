@@ -604,20 +604,15 @@
             disposeThreeJS();
         },
         reset() {
-            hideElement('dc-why');
             hideElement('dc-collapse');
-            hideElement('dc-conjecture');
+            hideElement('dc-new-regime');
         },
-        steps: 3,
+        steps: 1,
         onStep(step) {
-            if (step === 1) showElement('dc-why');
-            if (step === 2) showElement('dc-collapse');
-            if (step === 3) showElement('dc-conjecture');
+            if (step === 1) { showElement('dc-collapse'); showElement('dc-new-regime'); }
         },
         onStepBack(step) {
-            if (step === 0) hideElement('dc-why');
-            if (step === 1) hideElement('dc-collapse');
-            if (step === 2) hideElement('dc-conjecture');
+            if (step === 0) { hideElement('dc-collapse'); hideElement('dc-new-regime'); }
         }
     }, 0);
 
