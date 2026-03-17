@@ -53201,6 +53201,46 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2603.14398": {
+    "date": "2026-03-15",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2603.14744": {
+    "date": "2026-03-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2603.14862": {
+    "date": "2026-03-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2603.14906": {
+    "date": "2026-03-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2603.15116": {
+    "date": "2026-03-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2603.15141": {
+    "date": "2026-03-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2603.15207": {
+    "date": "2026-03-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2603.15353": {
+    "date": "2026-03-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
   "alg-geom/9712009": {
     "date": "1997-12-09",
     "decision": "ACCEPT",

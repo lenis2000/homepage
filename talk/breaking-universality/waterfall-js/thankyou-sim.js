@@ -15,12 +15,10 @@ function initThankYouSim() {
         const wasm = await LozengeModule();
 
         const letters = ['T', 'H', 'A', 'N', 'K', 'Y', 'O', 'U'];
-        // Stanford Cardinal for THANK, Berkeley Blue/Gold for YOU
-        const stanfordColors = ['#8C1515', '#4D0000', '#F2D4D4'];
+        // All Berkeley Blue/Gold
         const berkeleyColors = ['#003262', '#FDB515', '#D4E4F2'];
-        const thankLetters = new Set(['T', 'H', 'A', 'N', 'K']);
         function colorsForLetter(letter) {
-            return thankLetters.has(letter) ? stanfordColors : berkeleyColors;
+            return berkeleyColors;
         }
 
         const slope = 1 / Math.sqrt(3);
