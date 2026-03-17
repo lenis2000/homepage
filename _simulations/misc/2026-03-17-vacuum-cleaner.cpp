@@ -208,7 +208,7 @@ static void enumerateCell2D(int cx, int cy, double px, double py,
     ensureCell2D(cx, cy, chunk);
     int idx = cellIndex2D(cx, cy);
     int n = chunk->generated[idx];
-    uint8_t mask = chunk->deleteMask[idx];
+    uint32_t mask = chunk->deleteMask[idx];
     if (n == 0 || mask == ((1 << n) - 1)) return;
 
     uint64_t seed = hashCell2D(cx, cy, g_globalSeed);
@@ -234,7 +234,7 @@ static void enumerateCell3D(int cx, int cy, int cz, double px, double py, double
     ensureCell3D(cx, cy, cz, chunk);
     int idx = cellIndex3D(cx, cy, cz);
     int n = chunk->generated[idx];
-    uint8_t mask = chunk->deleteMask[idx];
+    uint32_t mask = chunk->deleteMask[idx];
     if (n == 0 || mask == ((1 << n) - 1)) return;
 
     uint64_t seed = hashCell3D(cx, cy, cz, g_globalSeed);
@@ -537,7 +537,7 @@ int enumerateNearby2D(double xMin, double yMin, double xMax, double yMax, int ma
             ensureCell2D(cx, cy, chunk);
             int idx = cellIndex2D(cx, cy);
             int n = chunk->generated[idx];
-            uint8_t mask = chunk->deleteMask[idx];
+            uint32_t mask = chunk->deleteMask[idx];
             if (n == 0 || mask == ((1 << n) - 1)) continue;
 
             uint64_t seed = hashCell2D(cx, cy, g_globalSeed);
@@ -578,7 +578,7 @@ int enumerateNearby3D(double xMin, double yMin, double zMin,
                 ensureCell3D(cx, cy, cz, chunk);
                 int idx = cellIndex3D(cx, cy, cz);
                 int n = chunk->generated[idx];
-                uint8_t mask = chunk->deleteMask[idx];
+                uint32_t mask = chunk->deleteMask[idx];
                 if (n == 0 || mask == ((1 << n) - 1)) continue;
 
                 uint64_t seed = hashCell3D(cx, cy, cz, g_globalSeed);
