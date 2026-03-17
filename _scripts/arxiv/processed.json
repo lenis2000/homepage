@@ -20717,6 +20717,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "1508.06239": {
+    "date": "2015-08-25",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "1508.06734": {
     "date": "2015-08-27",
     "decision": "ACCEPT",
@@ -22316,6 +22321,11 @@
     "date": "2016-03-31",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "1603.09740": {
+    "date": "2016-03-31",
+    "decision": "ACCEPT",
+    "source": "manual"
   },
   "1604.00423": {
     "date": "2016-04-01",

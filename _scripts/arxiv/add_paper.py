@@ -18,6 +18,8 @@ import json
 import re
 import subprocess
 import sys
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -57,36 +59,92 @@ def parse_arxiv_id(raw: str) -> str:
     return re.sub(r"v\d+$", "", raw)
 
 
-def fetch_paper(arxiv_id: str) -> dict:
-    """Fetch a single paper from the arXiv API."""
-    url = f"{ARXIV_API}?id_list={arxiv_id}"
-    response = urllib.request.urlopen(url).read()
-    feed = feedparser.parse(response)
+def fetch_from_kaggle(arxiv_id: str) -> dict:
+    """Fallback: fetch paper metadata from local Kaggle SQLite DB."""
+    import sqlite3
 
-    if not feed.entries:
+    from fetch_arxiv import KAGGLE_DB
+
+    if not KAGGLE_DB.exists():
         return None
-
-    entry = feed.entries[0]
-
-    # Check for "not found" — arXiv API returns an entry with error title
-    if "Error" in entry.get("title", ""):
+    try:
+        conn = sqlite3.connect(str(KAGGLE_DB))
+        row = conn.execute(
+            "SELECT title, abstract, categories, authors, date FROM papers WHERE id=?",
+            (arxiv_id,),
+        ).fetchone()
+        conn.close()
+    except Exception:
         return None
-
-    authors = [a.name for a in entry.authors]
-    title = re.sub(r"\s+", " ", entry.title.replace("\n", " ")).strip()
-    categories = [t["term"] for t in entry.tags]
-    abstract = re.sub(r"\s+", " ", entry.get("summary", "").strip())
-    published = entry.get("published", "")
-
+    if not row:
+        return None
+    title, abstract, categories_str, authors_str, date_str = row
+    categories = categories_str.split() if categories_str else []
+    if authors_str:
+        # Kaggle DB stores authors as "Name1, Name2" or "Name1 and Name2"
+        authors_str = authors_str.replace(" and ", ", ")
+        authors = [a.strip() for a in authors_str.split(",") if a.strip()]
+    else:
+        authors = []
     return {
         "arxiv_id": arxiv_id,
-        "title": title,
+        "title": re.sub(r"\s+", " ", title.replace("\n", " ")).strip(),
         "authors": authors,
-        "date": published,
+        "date": date_str or "",
         "primary_category": categories[0] if categories else "",
         "categories": categories,
-        "abstract": abstract,
+        "abstract": re.sub(r"\s+", " ", (abstract or "").strip()),
     }
+
+
+def fetch_paper(arxiv_id: str) -> dict:
+    """Fetch a single paper from the arXiv API, falling back to Kaggle DB."""
+    url = f"{ARXIV_API}?id_list={arxiv_id}"
+    try:
+        for attempt in range(5):
+            try:
+                response = urllib.request.urlopen(url).read()
+                break
+            except urllib.error.HTTPError as e:
+                if e.code == 429 and attempt < 4:
+                    wait = 3 * (attempt + 1)
+                    print(f"  Rate limited, retrying in {wait}s...")
+                    time.sleep(wait)
+                else:
+                    raise
+        feed = feedparser.parse(response)
+
+        if not feed.entries:
+            raise ValueError("No entries returned")
+
+        entry = feed.entries[0]
+
+        # Check for "not found" — arXiv API returns an entry with error title
+        if "Error" in entry.get("title", ""):
+            raise ValueError("Paper not found in API")
+
+        authors = [a.name for a in entry.authors]
+        title = re.sub(r"\s+", " ", entry.title.replace("\n", " ")).strip()
+        categories = [t["term"] for t in entry.tags]
+        abstract = re.sub(r"\s+", " ", entry.get("summary", "").strip())
+        published = entry.get("published", "")
+
+        return {
+            "arxiv_id": arxiv_id,
+            "title": title,
+            "authors": authors,
+            "date": published,
+            "primary_category": categories[0] if categories else "",
+            "categories": categories,
+            "abstract": abstract,
+        }
+    except Exception as e:
+        print(f"  arXiv API failed ({e}), trying Kaggle DB...")
+        paper = fetch_from_kaggle(arxiv_id)
+        if paper:
+            print("  Found in Kaggle DB")
+            return paper
+        return None
 
 
 def relevance_check(paper: dict) -> tuple[str, str]:
