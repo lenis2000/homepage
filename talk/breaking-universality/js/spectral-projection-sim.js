@@ -677,10 +677,7 @@
 
         // If this is the currently displayed sim and container is visible, update display
         if (simIdx === currentSimIdx) {
-            const container = document.getElementById('sp-sim-container');
-            if (container && container.style.opacity === '1') {
-                displaySimulation(simIdx);
-            }
+            displaySimulation(simIdx);
         }
     }
 
@@ -712,14 +709,12 @@
     }
 
     function reset() {
-        hideElement('sp-limit');
-        hideElement('sp-sine');
-        hideElement('sp-refs');
-        hideElement('sp-sim-container');
         hideElement('sp-frozen-label');
         currentSimIdx = 0;
         // Initialize Three.js and start sampling both on slide load
         initThreeJS();
+        displaySimulation(0);
+        startRenderLoop();
         if (!sampledData[0].sampling && !sampledData[0].sampled) {
             setTimeout(() => sampleQRacah(0), 100);
         }
@@ -729,41 +724,17 @@
     }
 
     function onStep(step) {
-        // Step 1: Show limit and sine kernel
+        // Step 1: Swap to frozen simulation (q=0.9)
         if (step >= 1) {
-            showElement('sp-limit');
-            showElement('sp-sine');
-        }
-        // Step 2: Show references
-        if (step >= 2) showElement('sp-refs');
-        // Step 3: Show first simulation (q=0.97)
-        if (step >= 3) {
-            showElement('sp-sim-container');
-            displaySimulation(0);
-            startRenderLoop();
-        }
-        // Step 4: Swap to second simulation (q=0.9) and show frozen label
-        if (step >= 4) {
             displaySimulation(1);
             showElement('sp-frozen-label');
         }
     }
 
     function onStepBack(step) {
-        if (step < 4 && step >= 3) {
-            // Back to first simulation
+        if (step < 1) {
             displaySimulation(0);
             hideElement('sp-frozen-label');
-        }
-        if (step < 3) {
-            hideElement('sp-sim-container');
-            hideElement('sp-frozen-label');
-            stopRenderLoop();
-        }
-        if (step < 2) hideElement('sp-refs');
-        if (step < 1) {
-            hideElement('sp-limit');
-            hideElement('sp-sine');
         }
     }
 
@@ -772,15 +743,12 @@
         if (window.slideEngine) {
             window.slideEngine.registerSimulation(slideId, {
                 start() {
-                    const container = document.getElementById('sp-sim-container');
-                    if (container && container.style.opacity === '1') {
-                        startRenderLoop();
-                    }
+                    startRenderLoop();
                 },
                 pause() {
                     stopRenderLoop();
                 },
-                steps: 4,
+                steps: 1,
                 onStep,
                 onStepBack,
                 onSlideEnter() { reset(); },

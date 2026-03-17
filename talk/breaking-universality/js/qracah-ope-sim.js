@@ -1,4 +1,4 @@
-// q-Racah OPE slide - 2 build steps
+// q-Racah OPE slide - 1 build step
 (function() {
     const slideId = 'qracah-ope';
 
@@ -10,19 +10,8 @@
             window.slideEngine.registerSimulation(slideId, {
                 start() { },
                 pause() { },
-                steps: 2,
-                onStep(step) {
-                    if (step === 1) show('ope-kernel');
-                    if (step === 2) show('ope-spectral');
-                },
-                onStepBack(step) {
-                    if (step === 0) hide('ope-kernel');
-                    if (step === 1) hide('ope-spectral');
-                },
-                reset() {
-                    hide('ope-kernel');
-                    hide('ope-spectral');
-                },
+                steps: 0,
+                reset() {},
                 onSlideEnter() { },
                 onSlideLeave() { }
             }, 0);

@@ -4,12 +4,12 @@
     <div style="display: grid; grid-template-columns: 32vw 62vw; gap: 2vw; margin-top: 1vh; height: calc(100% - 8vh); align-content: stretch;">
         <!-- Left column: Visual -->
         <div style="display: flex; flex-direction: column; align-items: center;">
-            <img src="images/fig_lozenge_and_paths.svg" alt="Lozenge tiling and paths" style="height: 45vh; width: auto;">
-            <p style="font-size: clamp(1.2rem, 2vw, 1.6rem); color: var(--slide-muted); margin-top: 0.5vh; text-align: center;">
+            <img src="images/fig_lozenge_and_paths.svg" alt="Lozenge tiling and paths" style="height: 45vh; width: auto; margin-bottom: -9vh;">
+            <p style="font-size: clamp(1.2rem, 2vw, 1.6rem); color: var(--slide-muted); margin-top: 0; text-align: center;">
                 Vertical slice \(\to\) \(N\) noncolliding paths
             </p>
             <!-- Correlation kernel - pushed to bottom -->
-            <div id="ope-kernel" style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1.2em 1.5em; margin-top: auto; width: 100%; font-size: clamp(1.2rem, 2.2vw, 1.8rem); opacity: 0; transition: opacity 0.3s;">
+            <div id="ope-kernel" style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1.2em 1.5em; margin-top: auto; width: 100%; font-size: clamp(1.2rem, 2.2vw, 1.8rem);">
                 <strong style="color: var(--slide-navy);">Correlation kernel:</strong>
                 <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.6rem, 2.8vw, 2.2rem);">
                     \(\displaystyle K_t(x, y) = \sum_{n=0}^{N-1} f_n^t(x) f_n^t(y)\)
@@ -64,13 +64,12 @@
                 </div>
             </div>
 
-            <!-- Spectral projection method -->
-            <div id="ope-spectral" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw; opacity: 0; transition: opacity 0.3s;">
-                <strong style="color: var(--slide-accent);">Spectral projection method</strong> <span class="cite">[Olshanski 2008], [Tao 2011]</span>
-                <div style="margin-top: 0.5vh;">
-                    If q-difference operators converge, their spectral projections converge
-                </div>
+            <!-- Correlations -->
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw;">
+                <strong style="color: var(--slide-accent);">Correlations:</strong>
+                \(\displaystyle \mathbb{P}(\text{particles at } p_1, \ldots, p_m) = \det\bigl[K_t(p_i, p_j)\bigr]_{i,j=1}^{m}\)
             </div>
+
         </div>
     </div>
 </section>

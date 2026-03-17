@@ -94,7 +94,7 @@ function initLimitShapeSim() {
         }
 
         let currentDimers = [];
-        const colors = ['#FFFFFF', '#FFFFFF', '#FFFFFF'];
+        const colors = ['#E57200', '#232D4B', '#F9DCBF']; // UVA Orange, Navy, Cream
 
         // Three.js setup - LAZY LOADED
         let renderer = null;
@@ -102,7 +102,6 @@ function initLimitShapeSim() {
         let camera = null;
         let controls = null;
         let meshGroup = null;
-        let rotationLights = [];
         const frustumSize = 52;
         let aspect = 1;
 
@@ -110,7 +109,7 @@ function initLimitShapeSim() {
             if (renderer) return;
 
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x1a1a2e);
+            scene.background = new THREE.Color(0xffffff);
             renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -126,30 +125,17 @@ function initLimitShapeSim() {
             controls.enablePan = true;
             controls.enableZoom = true;
 
-            // Lighting
-            scene.add(new THREE.AmbientLight(0xffffff, 0.35));
-            const hemi = new THREE.HemisphereLight(0x6666aa, 0x222244, 0.25);
+            // Mathematical preset lighting
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const hemi = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.2);
             hemi.position.set(0, 20, 0);
             scene.add(hemi);
-            const directional = new THREE.DirectionalLight(0xffffff, 1.2);
-            directional.position.set(15, 20, 5);
+            const directional = new THREE.DirectionalLight(0xffffff, 0.4);
+            directional.position.set(0, 20, 0);
             scene.add(directional);
-            const fill = new THREE.DirectionalLight(0xffffff, 0.3);
-            fill.position.set(-10, 5, -5);
+            const fill = new THREE.DirectionalLight(0xffffff, 0.2);
+            fill.position.set(0, -10, 0);
             scene.add(fill);
-
-            rotationLights = [];
-            const rotationLightConfigs = [
-                { pos: [-30, 10, 30], color: 0xffaa66, intensity: 0.7 },
-                { pos: [-30, 10, -30], color: 0xffcc88, intensity: 0.6 }
-            ];
-            for (const cfg of rotationLightConfigs) {
-                const light = new THREE.DirectionalLight(cfg.color, cfg.intensity);
-                light.position.set(cfg.pos[0], cfg.pos[1], cfg.pos[2]);
-                light.visible = false;
-                scene.add(light);
-                rotationLights.push(light);
-            }
 
             meshGroup = new THREE.Group();
             scene.add(meshGroup);
@@ -183,7 +169,6 @@ function initLimitShapeSim() {
             camera = null;
             controls = null;
             meshGroup = null;
-            rotationLights = [];
         }
 
         function resize() {
@@ -300,20 +285,22 @@ function initLimitShapeSim() {
             geometry.setAttribute('color', new THREE.Float32BufferAttribute(vertexColors, 3));
             geometry.setIndex(indices);
 
-            currentMaterial = new THREE.MeshStandardMaterial({
-                vertexColors: true, side: THREE.DoubleSide, flatShading: true, roughness: 0.3, metalness: autoRotate ? 0.35 : 0.5,
-                color: 0xddeeff
+            // Center geometry at origin so rotation works naturally
+            geometry.computeBoundingBox();
+            const center = new THREE.Vector3();
+            geometry.boundingBox.getCenter(center);
+            geometry.translate(-center.x, -center.y, -center.z);
+
+            currentMaterial = new THREE.MeshPhongMaterial({
+                vertexColors: true, side: THREE.DoubleSide, flatShading: true, shininess: 60
             });
             meshGroup.add(new THREE.Mesh(geometry, currentMaterial));
 
             const edgesGeometry = new THREE.EdgesGeometry(geometry, 10);
-            meshGroup.add(new THREE.LineSegments(edgesGeometry, new THREE.LineBasicMaterial({ color: 0x222222, opacity: 0.4, transparent: true })));
+            meshGroup.add(new THREE.LineSegments(edgesGeometry, new THREE.LineBasicMaterial({ color: 0x000000, opacity: 1.0 })));
 
             if (controls) {
-                const box = new THREE.Box3().setFromObject(meshGroup);
-                const center = new THREE.Vector3();
-                box.getCenter(center);
-                controls.target.copy(center);
+                controls.target.set(0, 0, 0);
                 controls.update();
             }
         }
@@ -449,21 +436,43 @@ function initLimitShapeSim() {
                     meshGroup.remove(child);
                 }
 
-                const objMaterial = new THREE.MeshStandardMaterial({
-                    side: THREE.DoubleSide,
-                    flatShading: true,
-                    roughness: 0.3,
-                    metalness: autoRotate ? 0.35 : 0.5,
-                    color: 0xddeeff
-                });
+                // Color OBJ faces by normal direction (UVA colors)
+                const UVA_ORANGE = new THREE.Color('#E57200');
+                const UVA_NAVY = new THREE.Color('#232D4B');
+                const UVA_CREAM = new THREE.Color('#F9DCBF');
 
                 obj.traverse((child) => {
                     if (child.isMesh) {
-                        child.material = objMaterial;
-                        meshGroup.add(child.clone());
+                        let geo = child.geometry.clone();
+                        geo.computeVertexNormals();
+                        if (geo.index) geo = geo.toNonIndexed();
+
+                        const normals = geo.getAttribute('normal');
+                        const colorAttr = new Float32Array(normals.count * 3);
+                        for (let i = 0; i < normals.count; i += 3) {
+                            // Use first vertex normal of each face
+                            const nx = Math.abs(normals.getX(i));
+                            const ny = Math.abs(normals.getY(i));
+                            const nz = Math.abs(normals.getZ(i));
+                            let color;
+                            if (nx >= ny && nx >= nz) color = UVA_ORANGE;
+                            else if (ny >= nx && ny >= nz) color = UVA_NAVY;
+                            else color = UVA_CREAM;
+                            for (let j = 0; j < 3; j++) {
+                                colorAttr[(i + j) * 3] = color.r;
+                                colorAttr[(i + j) * 3 + 1] = color.g;
+                                colorAttr[(i + j) * 3 + 2] = color.b;
+                            }
+                        }
+                        geo.setAttribute('color', new THREE.BufferAttribute(colorAttr, 3));
+
+                        const mat = new THREE.MeshPhongMaterial({
+                            vertexColors: true, side: THREE.DoubleSide, flatShading: true, shininess: 60
+                        });
+                        meshGroup.add(new THREE.Mesh(geo, mat));
+                        currentMaterial = mat;
                     }
                 });
-                currentMaterial = objMaterial;
 
                 if (camera) {
                     camera.zoom = 0.01;
@@ -481,19 +490,24 @@ function initLimitShapeSim() {
         let isRunning = false;
         let animationId = null;
         let autoRotate = false;
-        const rotateSpeed = 0.008;
-        const rotateAxis = new THREE.Vector3(1, 1, 1).normalize();
+        const rotateSpeed = 0.01;
+        const rotateAxis = new THREE.Vector3(0, 0, 1);
         let currentMaterial = null;
         let hasSampled = false;
 
         function animate() {
             if (!isRunning || !renderer || !camera || !controls) return;
 
-            if (autoRotate && meshGroup) {
+            if (autoRotate && meshGroup && rotateViewDir && rotateUpDir) {
+                // Oscillate tilt 0°→45°→0° during first rotation, then flat
+                rotateTiltPhase += rotateSpeed * 2;
+                const tilt = (Math.PI / 4) * 0.5 * (1 - Math.cos(rotateTiltPhase));
+                rotateAxis = rotateViewDir.clone().multiplyScalar(Math.cos(tilt))
+                    .add(rotateUpDir.clone().multiplyScalar(Math.sin(tilt))).normalize();
                 meshGroup.rotateOnAxis(rotateAxis, rotateSpeed);
             }
-
             controls.update();
+
             renderer.render(scene, camera);
             animationId = requestAnimationFrame(animate);
         }
@@ -514,16 +528,18 @@ function initLimitShapeSim() {
 
         function startAutoRotate() {
             autoRotate = true;
-            for (const light of rotationLights) if (light) light.visible = true;
-            if (currentMaterial) currentMaterial.metalness = 0.35;
+            // Store base vectors for oscillating tilt
+            if (camera && controls) {
+                rotateViewDir = camera.position.clone().sub(controls.target).normalize();
+                rotateUpDir = camera.up.clone().normalize();
+                rotateTiltPhase = 0;
+            }
             if (!isRunning) start();
         }
 
         function stopAutoRotate() {
             autoRotate = false;
-            for (const light of rotationLights) if (light) light.visible = false;
-            if (currentMaterial) currentMaterial.metalness = 0.5;
-            if (meshGroup) meshGroup.rotation.set(0, 0, 0);
+            // Keep current rotation - don't reset
         }
 
         function clear() {
@@ -551,11 +567,16 @@ function initLimitShapeSim() {
                     onSlideEnter() {
                         initThreeJS();
                         if (camera && controls) {
-                            camera.position.set(22.6, -118.1, 11.9);
+                            camera.position.set(30.1, -52.9, -41.5);
                             camera.zoom = 1.0;
                             camera.updateProjectionMatrix();
-                            controls.target.set(0.0, -48.0, 32.0);
+                            controls.target.set(0, 0, 0);
                             controls.update();
+                            canvas.addEventListener('pointerup', () => {
+                                console.log('Camera pos:', camera.position.x.toFixed(1), camera.position.y.toFixed(1), camera.position.z.toFixed(1),
+                                    '| Target:', controls.target.x.toFixed(1), controls.target.y.toFixed(1), controls.target.z.toFixed(1),
+                                    '| Zoom:', camera.zoom.toFixed(2));
+                            });
                             controls.addEventListener('change', () => {
                                 if (!isRunning && renderer) renderer.render(scene, camera);
                             });
@@ -569,6 +590,9 @@ function initLimitShapeSim() {
                             getMinimalTiling();
                             buildGeometry();
                             if (renderer) renderer.render(scene, camera);
+                            console.log('LIMIT-SHAPE Camera pos:', camera.position.x.toFixed(1), camera.position.y.toFixed(1), camera.position.z.toFixed(1),
+                                '| Target:', controls.target.x.toFixed(1), controls.target.y.toFixed(1), controls.target.z.toFixed(1),
+                                '| Zoom:', camera.zoom.toFixed(2));
                         }, 50);
                         start();
                     },
