@@ -482,18 +482,15 @@ function initLimitShapeSim() {
         let animationId = null;
         let autoRotate = false;
         const rotateSpeed = 0.008;
+        const rotateAxis = new THREE.Vector3(1, 1, 1).normalize();
         let currentMaterial = null;
         let hasSampled = false;
 
         function animate() {
             if (!isRunning || !renderer || !camera || !controls) return;
 
-            if (autoRotate) {
-                const axis = new THREE.Vector3(1, 1, 1).normalize();
-                const offset = camera.position.clone().sub(controls.target);
-                offset.applyAxisAngle(axis, rotateSpeed);
-                camera.position.copy(controls.target).add(offset);
-                camera.lookAt(controls.target);
+            if (autoRotate && meshGroup) {
+                meshGroup.rotateOnAxis(rotateAxis, rotateSpeed);
             }
 
             controls.update();
@@ -526,6 +523,7 @@ function initLimitShapeSim() {
             autoRotate = false;
             for (const light of rotationLights) if (light) light.visible = false;
             if (currentMaterial) currentMaterial.metalness = 0.5;
+            if (meshGroup) meshGroup.rotation.set(0, 0, 0);
         }
 
         function clear() {
