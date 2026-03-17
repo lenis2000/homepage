@@ -592,11 +592,6 @@ function initLimitShapeSim() {
                             camera.updateProjectionMatrix();
                             controls.target.set(0, 0, 0);
                             controls.update();
-                            canvas.addEventListener('pointerup', () => {
-                                console.log('Camera pos:', camera.position.x.toFixed(1), camera.position.y.toFixed(1), camera.position.z.toFixed(1),
-                                    '| Target:', controls.target.x.toFixed(1), controls.target.y.toFixed(1), controls.target.z.toFixed(1),
-                                    '| Zoom:', camera.zoom.toFixed(2));
-                            });
                             controls.addEventListener('change', () => {
                                 if (!isRunning && renderer) renderer.render(scene, camera);
                             });
@@ -610,9 +605,6 @@ function initLimitShapeSim() {
                             getMinimalTiling();
                             buildGeometry();
                             if (renderer) renderer.render(scene, camera);
-                            console.log('LIMIT-SHAPE Camera pos:', camera.position.x.toFixed(1), camera.position.y.toFixed(1), camera.position.z.toFixed(1),
-                                '| Target:', controls.target.x.toFixed(1), controls.target.y.toFixed(1), controls.target.z.toFixed(1),
-                                '| Zoom:', camera.zoom.toFixed(2));
                         }, 50);
                         start();
                     },
