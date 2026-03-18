@@ -425,6 +425,7 @@ no-math: true
           '<button id="wrap-toggle" class="btn btn-sm btn-outline-secondary">' +
             'Wrap: ' + (wrapEnabled ? 'On' : 'Off') +
           '</button> ' +
+          '<button id="copy-btn" class="btn btn-sm btn-outline-secondary">Copy</button> ' +
           '<a href="' + url + '" download class="btn btn-sm btn-outline-secondary">Download</a>' +
         '</span>' +
       '</div>' +
@@ -436,6 +437,18 @@ no-math: true
         wrapEnabled = !wrapEnabled;
         this.textContent = 'Wrap: ' + (wrapEnabled ? 'On' : 'Off');
         document.getElementById('code-area').classList.toggle('soft-wrap', wrapEnabled);
+      });
+
+      var copyBtn = document.getElementById('copy-btn');
+      copyBtn.addEventListener('click', function() {
+        var codeArea = document.getElementById('code-area');
+        var pre = codeArea.querySelector('pre');
+        if (!pre) return;
+        var text = pre.textContent || '';
+        navigator.clipboard.writeText(text).then(function() {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(function() { copyBtn.textContent = 'Copy'; }, 1500);
+        });
       });
 
       fetch(url)
