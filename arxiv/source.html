@@ -440,12 +440,10 @@ no-math: true
       });
 
       var copyBtn = document.getElementById('copy-btn');
+      var rawFileText = '';
       copyBtn.addEventListener('click', function() {
-        var codeArea = document.getElementById('code-area');
-        var pre = codeArea.querySelector('pre');
-        if (!pre) return;
-        var text = pre.textContent || '';
-        navigator.clipboard.writeText(text).then(function() {
+        if (!rawFileText) return;
+        navigator.clipboard.writeText(rawFileText).then(function() {
           copyBtn.textContent = 'Copied!';
           setTimeout(function() { copyBtn.textContent = 'Copy'; }, 1500);
         });
@@ -460,9 +458,11 @@ no-math: true
           var codeArea = document.getElementById('code-area');
           if (ext === 'tex' || ext === 'sty' || ext === 'cls') {
             flattenInputs(text, files, baseUrl).then(function(flattened) {
+              rawFileText = flattened;
               renderTexLazy(codeArea, flattened);
             });
           } else {
+            rawFileText = text;
             var pre = document.createElement('pre');
             pre.textContent = text;
             codeArea.innerHTML = '';
