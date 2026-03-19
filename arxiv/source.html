@@ -97,40 +97,30 @@ no-math: true
     white-space: pre-wrap;
     word-break: break-word;
   }
-  /* Line numbers gutter */
-  .code-with-gutter {
-    display: flex;
-    max-height: 80vh;
-    overflow: auto;
-    line-height: 1.45;
-    background-color: #fdf6e3;
-    -webkit-overflow-scrolling: touch;
-    -webkit-transform: translateZ(0);
+  /* Per-line line numbers — stays aligned when lines wrap */
+  pre.line-numbered {
+    padding-left: 5em !important;
   }
-  .code-with-gutter > pre {
-    flex: 1;
-    min-width: 0;
-    max-height: none;
-    overflow: visible;
+  pre.line-numbered code {
+    display: block;
   }
-  .line-gutter {
-    flex: none;
-    width: 3.5em;
-    padding: 1rem 0.75em 1rem 0;
+  .code-line {
+    display: block;
+    position: relative;
+  }
+  .code-line::before {
+    content: attr(data-line);
+    position: absolute;
+    left: -4.5em;
+    width: 4em;
+    padding-right: 0.75em;
+    box-sizing: border-box;
     text-align: right;
     color: #93a1a1;
     border-right: 1px solid #eee8d5;
-    background-color: #fdf6e3;
     user-select: none;
     -webkit-user-select: none;
     pointer-events: none;
-    white-space: pre;
-    font-family: 'Iosevka Fixed', 'Courier New', monospace;
-    font-size: 0.85rem;
-    line-height: 1.45;
-    position: sticky;
-    left: 0;
-    z-index: 1;
   }
   .source-code-header {
     display: flex;
@@ -245,8 +235,7 @@ no-math: true
   [data-theme="dark"] .tex-section-header { background: #37474F; border-bottom-color: #455A64; color: #87CEFA; }
   [data-theme="dark"] .tex-section-header:hover { background: #455A64; }
   [data-theme="dark"] .tex-section { border-left-color: #455A64; }
-  [data-theme="dark"] .code-with-gutter { background-color: #263238; }
-  [data-theme="dark"] .line-gutter { color: #546E7A; border-right-color: #37474F; background-color: #263238; }
+  [data-theme="dark"] .code-line::before { color: #546E7A; border-right-color: #37474F; }
   [data-theme="dark"] .source-image-container { background: var(--bg-secondary, #1e1e1e); border-color: var(--border-color); }
   [data-theme="dark"] .source-pdf-container { border-color: var(--border-color); }
 </style>
@@ -367,21 +356,27 @@ no-math: true
 
   function addLineGutter(pre, startLine) {
     if (!startLine) startLine = 1;
-    var text = pre.textContent || '';
+    var code = pre.querySelector('code');
+    var text = (code || pre).textContent || '';
     var lines = text.split('\n');
     if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
     var lineCount = Math.max(lines.length, 1);
-    var gutter = document.createElement('div');
-    gutter.className = 'line-gutter';
-    gutter.setAttribute('aria-hidden', 'true');
-    var nums = [];
-    for (var i = 0; i < lineCount; i++) nums.push(startLine + i);
-    gutter.textContent = nums.join('\n');
-    var wrapper = document.createElement('div');
-    wrapper.className = 'code-with-gutter';
-    pre.parentNode.insertBefore(wrapper, pre);
-    wrapper.appendChild(gutter);
-    wrapper.appendChild(pre);
+    if (!code) {
+      code = document.createElement('code');
+      pre.textContent = '';
+      pre.appendChild(code);
+    }
+    code.textContent = '';
+    for (var i = 0; i < lineCount; i++) {
+      var lineEl = document.createElement('div');
+      lineEl.className = 'code-line';
+      lineEl.setAttribute('data-line', String(startLine + i));
+      var line = i < lines.length ? lines[i] : '';
+      lineEl.textContent = line;
+      if (!line) lineEl.innerHTML = '\u200b';
+      code.appendChild(lineEl);
+    }
+    pre.classList.add('line-numbered');
     return startLine + lineCount;
   }
 
@@ -626,8 +621,15 @@ no-math: true
         if (wasOpen) delete section.dataset.autoExpanded;
         // Highlight on first open
         if (!wasOpen && window.Prism && !code.dataset.highlighted) {
-          code.className = 'language-latex';
-          Prism.highlightElement(code);
+          code.querySelectorAll('.code-line').forEach(function(lineEl) {
+            var lineText = lineEl.textContent;
+            if (!lineText || lineText === '\u200b') return;
+            var tmp = document.createElement('code');
+            tmp.className = 'language-latex';
+            tmp.textContent = lineText;
+            Prism.highlightElement(tmp);
+            lineEl.innerHTML = tmp.innerHTML;
+          });
           code.dataset.highlighted = '1';
         }
       });
