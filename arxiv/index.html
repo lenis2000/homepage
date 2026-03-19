@@ -118,7 +118,7 @@ nav_weight: 21
         <span class="arxiv-links"><a href="https://arxiv.org/abs/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-abs">arXiv<span class="sr-only"> (opens in new tab)</span></a><a href="https://arxiv.org/pdf/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-pdf">pdf<span class="sr-only"> (opens in new tab)</span></a><a href="https://arxiv.org/html/{{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-html">html<span class="sr-only"> (opens in new tab)</span></a><a href="/arxiv/source/?id={{ post.arxiv-id }}" target="_blank" rel="noopener" class="badge arxiv-link-badge arxiv-link-src" data-src-id="{{ post.arxiv-id }}" hidden>src<span class="sr-only"> (opens in new tab)</span></a>{% if post.related-papers.size > 0 %}<button class="arxiv-related-btn badge arxiv-link-badge" aria-expanded="false">Related</button>{% endif %}</span>
         {% if post.content != blank %}<details>
           <summary class="arxiv-abstract-toggle">Abstract</summary>
-          <div class="arxiv-abstract">{{ post.content }}</div>
+          <div class="arxiv-abstract">{{ post.content }}{% if post.journal-ref %}<div class="arxiv-journal-ref">Published in: {% if post.doi %}<a href="https://doi.org/{{ post.doi }}" target="_blank" rel="noopener">{{ post.journal-ref }}</a>{% else %}{{ post.journal-ref }}{% endif %}</div>{% endif %}</div>
         </details>{% endif %}
         <div class="arxiv-related-dropdown" hidden></div>
       </div>
@@ -219,6 +219,17 @@ nav_weight: 21
     border-left: 3px solid #ccc;
     font-size: 0.92em;
     line-height: 1.5;
+  }
+  .arxiv-journal-ref {
+    margin-top: 0.5em;
+    font-size: 0.9em;
+    color: #555;
+  }
+  .arxiv-journal-ref a {
+    color: #1a5276;
+  }
+  .arxiv-journal-ref a:hover {
+    color: #0d3b5e;
   }
   .arxiv-list .search-highlight {
     background-color: #fff3cd;
