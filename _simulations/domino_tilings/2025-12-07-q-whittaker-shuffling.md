@@ -330,10 +330,9 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
     ctx.fillStyle = '#fafafa';
     ctx.fillRect(0, 0, rect.width, rect.height);
 
-    if (currentN === 0) return;
-
-    const maxN = Math.max(currentN, targetN);
+    const maxN = Math.max(currentN, targetN, 1);
     const cellSize = Math.min(rect.width, rect.height) / (2 * maxN + 2);
+    if (cellSize <= 0) return;
     const cx = rect.width / 2;
     const cy = rect.height / 2;
 
@@ -343,6 +342,22 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
       ctx.rotate(-Math.PI / 4);
       ctx.scale(1 / Math.sqrt(2), 1 / Math.sqrt(2));
     }
+
+    // Checkerboard background for whole lattice.
+    // Parity shifts with currentN so the SW border (x+y = -n) stays white.
+    // The shift happens at the slide step: add 1 when phase === 'slid' since
+    // currentN hasn't incremented yet but the slide has already happened.
+    const parityOffset = currentN + (phase === 'slid' ? 1 : 0);
+    const boardExtent = Math.ceil(Math.max(rect.width, rect.height) / cellSize * (rotated ? Math.SQRT2 : 1)) + 2;
+    for (let gx = -boardExtent; gx <= boardExtent; gx++) {
+      for (let gy = -boardExtent; gy <= boardExtent; gy++) {
+        const isWhite = ((gx + gy + parityOffset) % 2 + 2) % 2 === 0;
+        ctx.fillStyle = isWhite ? '#ffffff' : '#d8d8d8';
+        ctx.fillRect(gx * cellSize, -(gy + 1) * cellSize, cellSize, cellSize);
+      }
+    }
+
+    if (currentN === 0) { ctx.restore(); return; }
 
     const colors = getColors();
     const typeColor = {'N': 0, 'S': 1, 'E': 2, 'W': 3};
@@ -360,19 +375,19 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
         const isHole = (d.type === 'N' || d.type === 'E');
         const radius = cellSize * 0.35;
 
-        // Get center positions of the two cells in the domino
+        // Center positions with lattice cell coords (lx, ly) for checkerboard lookup.
+        // Vertical domino: py = -(d.y+2)*cellSize, so first center is cell (d.x, d.y+1),
+        // second center is cell (d.x, d.y).
         let centers;
         if (isHoriz) {
-          // Horizontal domino: two cells side by side
           centers = [
-            { x: px + cellSize / 2, y: py + cellSize / 2 },
-            { x: px + cellSize * 1.5, y: py + cellSize / 2 }
+            { x: px + cellSize / 2,       y: py + cellSize / 2, lx: d.x,     ly: d.y },
+            { x: px + cellSize * 1.5,     y: py + cellSize / 2, lx: d.x + 1, ly: d.y }
           ];
         } else {
-          // Vertical domino: two cells stacked
           centers = [
-            { x: px + cellSize / 2, y: py + cellSize / 2 },
-            { x: px + cellSize / 2, y: py + cellSize * 1.5 }
+            { x: px + cellSize / 2, y: py + cellSize / 2,       lx: d.x, ly: d.y + 1 },
+            { x: px + cellSize / 2, y: py + cellSize * 1.5,     lx: d.x, ly: d.y }
           ];
         }
 
@@ -384,10 +399,17 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
             ctx.lineWidth = Math.max(1, cellSize / 15);
             ctx.stroke();
           } else {
-            ctx.fillStyle = '#000';
+            // Color by checkerboard cell: white cell → orange, black cell → green
+            const isWhiteCell = ((c.lx + c.ly + parityOffset) % 2 + 2) % 2 === 0;
+            ctx.fillStyle = isWhiteCell ? '#FF8C00' : '#228B22';
             ctx.fill();
           }
         });
+
+        // Faint domino border on top of particles
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.lineWidth = Math.max(0.5, cellSize / 20);
+        ctx.strokeRect(px, py, w, h);
       } else {
         // Normal domino view with colors
         // Highlight bad blocks in red during 'badblocks' phase
