@@ -1873,6 +1873,7 @@ async function initializeApp() {
     const dpr = window.devicePixelRatio || 1;
     const w = rect.width;
     const h = rect.height;
+    if (w < 1 || h < 1) return;  // Canvas not yet laid out
     canvas.width = w * dpr;
     canvas.height = h * dpr;
     ctx.scale(dpr, dpr);
@@ -5393,6 +5394,9 @@ async function initializeApp() {
       });
 
       detailedState = null;
+
+      // Re-render canvas after restoring visibility
+      redrawOnly();
     }
   });
 
