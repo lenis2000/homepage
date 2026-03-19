@@ -423,7 +423,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings sample
     <h4>Classical Domino Shuffling Algorithm (EKLP 1992)</h4>
     <div style="padding: 10px; font-size: 0.95em; line-height: 1.6;">
 
-      <p><strong>Setup:</strong> The Aztec diamond $\mathcal{A}_n$ of order $n$ consists of all unit squares $[i, i+1] \times [j, j+1]$ with $|i| + |j| < n$. It contains $2n^2$ unit squares and is tiled by $n^2$ dominoes.</p>
+      <p><strong>Setup:</strong> The Aztec diamond $\mathcal{A}_n$ of order $n$ consists of all unit squares $[i, i+1] \times [j, j+1]$ with $|i| + |j| < n$. It contains $2n(n+1)$ unit squares and is tiled by $n(n+1)$ dominoes.</p>
 
       <p><strong>Domino Types:</strong> Each domino is classified by orientation and parity:
       <ul style="margin: 5px 0 10px 20px;">

@@ -12,8 +12,8 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 
 <div style="margin-bottom: 10px;">
   <label>Target n: <input id="n-input" type="number" value="10" min="1" max="200" style="width: 60px;" aria-label="Target diamond size n"></label>
-  <label style="margin-left: 15px;">q: <input id="q-input" type="number" value="0" min="0" max="0.999" step="0.01" style="width: 70px;" aria-label="q-Whittaker parameter"></label>
-  <input id="q-slider" type="range" min="0" max="999" value="0" style="width: 120px; vertical-align: middle;" aria-label="q slider">
+  <label style="margin-left: 15px;">q: <input id="q-input" type="number" value="0" min="0" max="1" step="0.01" style="width: 70px;" aria-label="q-Whittaker parameter"></label>
+  <input id="q-slider" type="range" min="0" max="1000" value="0" style="width: 120px; vertical-align: middle;" aria-label="q slider">
   <span id="q-display" style="margin-left: 5px; font-family: monospace;">q=0</span>
 </div>
 
@@ -200,6 +200,8 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
       }
 
       // Case 2: generic — the q-cascade
+      const lam_k = getPart(lam, k);
+      const nu_bar_k = getPart(mu, k);
       let stoppedAt;
       if (q === 0) {
         // Schur case: deterministic — stop at first unblocked particle
@@ -210,10 +212,39 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
         if (cellLabel) {
           logStep(`  island[${k},${m}] (len=${islandLen}): q=0 deterministic → stopped@${stoppedAt}`);
         }
+      } else if (q >= 1) {
+        // q=1 limit: (1-q^a)/(1-q^b) → a/b by L'Hôpital; standalone 1-q^a → 0
+        if (k === 0) {
+          // f_0 = 1 - 1^gap = 0, all g_s = 0 → cascade reaches end
+          stoppedAt = m + 1;
+          if (cellLabel) {
+            logStep(`  island[${k},${m}] (len=${islandLen}): q=1 limit`);
+            logStep(`    f_0 = 0 (q=1 limit) → cascade passes to end → stopped@${m+1}`);
+          }
+        } else {
+          const gap_num = lam_k - nu_bar_k + 1;
+          const gap_den = getPart(mu, k - 1) - nu_bar_k + 1;
+          let f_k;
+          if (gap_num <= 0) f_k = 0;
+          else if (gap_den <= 0) f_k = 1;
+          else f_k = gap_num / gap_den;
+          const u_f = Math.random();
+          if (cellLabel) {
+            logStep(`  island[${k},${m}] (len=${islandLen}): q=1 limit`);
+            logStep(`    f_${k} = ${gap_num}/${gap_den} = ${f_k.toFixed(4)}  (L'Hôpital: gap_num/gap_den; λ_${k}=${lam_k}, ν̄_${k}=${nu_bar_k}, ν̄_${k-1}=${getPart(mu, k-1)})`);
+          }
+          if (u_f < f_k) {
+            stoppedAt = k;
+            stepProb *= f_k;
+            if (cellLabel) logStep(`    U=${u_f.toFixed(4)} < f_${k}=${f_k.toFixed(4)} → STOP at ${k}  [P(choice)=${f_k.toFixed(4)}]`);
+          } else {
+            stoppedAt = m + 1;
+            stepProb *= (1 - f_k);
+            if (cellLabel) logStep(`    U=${u_f.toFixed(4)} ≥ f_${k}=${f_k.toFixed(4)} → all g_s=0 (q=1) → STOP at ${m+1}  [P(pass)=${(1-f_k).toFixed(4)}]`);
+          }
+        }
       } else {
         // q-Whittaker case: probabilistic cascade
-        const lam_k = getPart(lam, k);
-        const nu_bar_k = getPart(mu, k);
         let f_k;
         if (k === 0) {
           // k=0: ν̄_{-1} = ∞, so denominator = 1
@@ -946,7 +977,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
   // ============ Event listeners ============
 
   function syncQ(val) {
-    qParam = Math.min(0.999, Math.max(0, val));
+    qParam = Math.min(1, Math.max(0, val));
     document.getElementById('q-input').value = qParam.toFixed(3);
     document.getElementById('q-slider').value = Math.round(qParam * 1000);
     document.getElementById('q-display').textContent = `q=${qParam.toFixed(3)}`;
@@ -1003,11 +1034,26 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 
 <p><strong>The cascade within each trench:</strong> For a trench of L consecutive empty blocks, all blocks receive one orientation except exactly one — the <em>domain wall</em> — which receives the opposite. The domain wall position is chosen by a sequential random process:</p>
 <ol>
-  <li>At the first block, stop with probability f<sub>k</sub> = (1 − q<sup>gap</sup>) / (1 − q<sup>denom</sup>)</li>
+  <li>At the first block, stop with probability f<sub>k</sub> = (1 − q<sup>gap<sub>num</sub></sup>) / (1 − q<sup>gap<sub>den</sub></sup>)</li>
   <li>At each subsequent block s, stop with probability g<sub>s</sub> = 1 − q<sup>gap<sub>s</sub></sup></li>
   <li>If the cascade reaches the end without stopping, the last block is the domain wall</li>
 </ol>
-<p>The "gap" values encode local geometric constraints from the surrounding dominos.</p>
+<p>Here gap<sub>num</sub> = λ<sub>k</sub> − ν̄<sub>k</sub> + 1, gap<sub>den</sub> = ν̄<sub>k−1</sub> − ν̄<sub>k</sub> + 1, and gap<sub>s</sub> = λ<sub>s</sub> − ν̄<sub>s</sub> + 1. Note that f<sub>k</sub> is a <em>ratio</em> of (1 − q<sup>n</sup>) terms, while g<sub>s</sub> is a bare (1 − q<sup>n</sup>).</p>
+
+<h4>q = 1 limit</h4>
+
+<p>At q = 1, the cascade probabilities have well-defined limits via L'Hôpital's rule (equivalently, using q-integers [n]<sub>q</sub> = 1 + q + ⋯ + q<sup>n−1</sup> with [n]<sub>1</sub> = n):</p>
+<ul>
+  <li><strong>f<sub>k</sub></strong> (ratio): (1 − q<sup>a</sup>)/(1 − q<sup>b</sup>) = [a]<sub>q</sub>/[b]<sub>q</sub> → <strong>a/b</strong> as q → 1. This is a valid probability since a ≤ b by the interlacing constraints.</li>
+  <li><strong>f<sub>0</sub></strong> (bare, no denominator): 1 − q<sup>gap</sup> → <strong>0</strong>.</li>
+  <li><strong>g<sub>s</sub></strong> (bare): 1 − q<sup>gap<sub>s</sub></sup> → <strong>0</strong> for all subsequent positions.</li>
+</ul>
+<p>Consequently, at q = 1 each island has only <strong>two possible outcomes</strong>:</p>
+<ol>
+  <li>Domain wall at the <strong>first position</strong> k (probability a/b when k &gt; 0; impossible when k = 0)</li>
+  <li>Domain wall at the <strong>last position</strong> m + 1 (probability 1 − a/b, or certainty when k = 0)</li>
+</ol>
+<p>All intermediate stops are forbidden — the cascade is all-or-nothing. The key asymmetry: f<sub>k</sub> is a ratio of (1 − q<sup>n</sup>) terms (finite limit), while f<sub>0</sub> and all g<sub>s</sub> are bare (1 − q<sup>n</sup>) (vanishing limit).</p>
 
 <hr style="margin: 15px 0;">
 
@@ -1015,7 +1061,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 <ul>
   <li>At q = 0: the <strong>arctic circle</strong> — a sharp boundary between the frozen corners and the disordered center.</li>
   <li>At q &gt; 0: the disordered region <strong>shrinks</strong>. The arctic boundary moves inward. Try q = 0.3, 0.5, 0.8 to see the effect.</li>
-  <li>At q → 1: the tiling approaches a <strong>fully frozen</strong> state (one of the four "brick-wall" patterns).</li>
+  <li>At q = 1: each island resolves as <strong>all-or-nothing</strong> — domain wall at the first or last position only. Enable Granular steps to see the integer-ratio probabilities (e.g., 2/3, 1/4) in the log.</li>
   <li>Toggle <strong>Particles</strong> to see the particle/hole representation (filled circles = S,W dominoes; open circles = N,E dominoes).</li>
 </ul>
 
