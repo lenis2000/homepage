@@ -30,6 +30,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 
 <div style="margin-bottom: 10px;">
   <button id="reset-btn">Reset</button>
+  <button id="back-btn" disabled>← Back</button>
   <button id="step-btn">Step</button>
   <button id="auto-btn">Auto</button>
   <button id="instant-btn">Instant</button>
@@ -285,6 +286,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 
   function doStep() {
     if (currentN >= targetN && phase === 'complete') return;
+    saveSnapshot();
     if (granular) granularStep(); else shuffleStep();
     updateUI();
     render();
@@ -294,6 +296,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
     currentN = 0;
     dominoes = [];
     phase = 'complete';
+    history = [];
     stopAuto();
     updateUI();
     render();
@@ -304,6 +307,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
     currentN = 0;
     dominoes = [];
     phase = 'complete';
+    history = [];
     while (currentN < targetN) {
       shuffleStep();
     }
@@ -323,6 +327,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
     }
     document.getElementById('step-indicator').textContent = `n=${currentN}${phaseText}`;
     document.getElementById('step-btn').disabled = currentN >= targetN && phase === 'complete';
+    document.getElementById('back-btn').disabled = history.length === 0;
   }
 
   function startAuto() {
@@ -449,6 +454,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 
   // Event listeners
   document.getElementById('step-btn').addEventListener('click', doStep);
+  document.getElementById('back-btn').addEventListener('click', stepBack);
   document.getElementById('reset-btn').addEventListener('click', reset);
   document.getElementById('auto-btn').addEventListener('click', () => autoInterval ? stopAuto() : startAuto());
   document.getElementById('instant-btn').addEventListener('click', instant);
