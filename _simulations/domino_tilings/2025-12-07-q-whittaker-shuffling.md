@@ -40,7 +40,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 
 <div style="margin-bottom: 10px;">
   <label><input type="checkbox" id="granular-cb"> Granular steps</label>
-  <label style="margin-left: 15px;"><input type="checkbox" id="rotate-cb" checked> Rotate 45°</label>
+  <label style="margin-left: 15px;"><input type="checkbox" id="rotate-cb"> Rotate 45°</label>
   <label style="margin-left: 15px;"><input type="checkbox" id="holes-cb"> Particles</label>
   <select id="palette-select" style="margin-left: 15px;" aria-label="Color palette"></select>
 </div>
@@ -59,7 +59,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
   // N/S are horizontal, E/W are vertical
   let dominoes = [];
   let autoInterval = null;
-  let rotated = true;
+  let rotated = false;
   let granular = false;
   let showHoles = false;
   let phase = 'complete';  // 'complete', 'badblocks', 'deleted', 'slid'
@@ -367,16 +367,13 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
       ctx.scale(1 / Math.sqrt(2), 1 / Math.sqrt(2));
     }
 
-    // Checkerboard background for whole lattice.
-    // Parity shifts with currentN so the SW border (x+y = -n) stays white.
-    // The shift happens at the slide step: add 1 when phase === 'slid' since
-    // currentN hasn't incremented yet but the slide has already happened.
+    // Checkerboard background. parityOffset shifts with slide step so SW border stays consistent.
     const parityOffset = currentN + (phase === 'slid' ? 1 : 0);
     const boardExtent = Math.ceil(Math.max(rect.width, rect.height) / cellSize * (rotated ? Math.SQRT2 : 1)) + 2;
     for (let gx = -boardExtent; gx <= boardExtent; gx++) {
       for (let gy = -boardExtent; gy <= boardExtent; gy++) {
         const isWhite = ((gx + gy + parityOffset) % 2 + 2) % 2 === 0;
-        ctx.fillStyle = isWhite ? '#ffffff' : '#d8d8d8';
+        ctx.fillStyle = isWhite ? '#d8d8d8' : '#ffffff';
         ctx.fillRect(gx * cellSize, -(gy + 1) * cellSize, cellSize, cellSize);
       }
     }
