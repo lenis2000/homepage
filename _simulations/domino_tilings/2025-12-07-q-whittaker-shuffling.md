@@ -63,6 +63,25 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
   let showHoles = false;
   let phase = 'complete';  // 'complete', 'badblocks', 'deleted', 'slid'
   let badDominoes = new Set();  // For highlighting bad blocks
+  let history = [];  // Step-back history stack
+  const MAX_HISTORY = 200;
+
+  function saveSnapshot() {
+    history.push({ currentN, dominoes: dominoes.map(d => ({...d})), phase, badDominoes: new Set(badDominoes) });
+    if (history.length > MAX_HISTORY) history.shift();
+  }
+
+  function stepBack() {
+    if (history.length === 0) return;
+    stopAuto();
+    const snap = history.pop();
+    currentN = snap.currentN;
+    dominoes = snap.dominoes;
+    phase = snap.phase;
+    badDominoes = snap.badDominoes;
+    updateUI();
+    render();
+  }
 
   // Palette
   const palettes = window.ColorSchemes || [{ name: 'Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
@@ -401,7 +420,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
           } else {
             // Color by checkerboard cell: white cell → orange, black cell → green
             const isWhiteCell = ((c.lx + c.ly + parityOffset) % 2 + 2) % 2 === 0;
-            ctx.fillStyle = isWhiteCell ? '#FF8C00' : '#228B22';
+            ctx.fillStyle = isWhiteCell ? '#228B22' : '#FF8C00';
             ctx.fill();
           }
         });
