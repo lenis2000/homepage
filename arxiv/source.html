@@ -98,21 +98,18 @@ no-math: true
     word-break: break-word;
   }
   /* Per-line line numbers — stays aligned when lines wrap */
-  pre.line-numbered {
-    padding-left: 5em !important;
-  }
   pre.line-numbered code {
     display: block;
   }
   .code-line {
     display: block;
-    position: relative;
+    padding-left: 5em;
   }
   .code-line::before {
     content: attr(data-line);
-    position: absolute;
-    left: -4.5em;
-    width: 4em;
+    display: inline-block;
+    width: 4.5em;
+    margin-left: -5em;
     padding-right: 0.75em;
     box-sizing: border-box;
     text-align: right;
