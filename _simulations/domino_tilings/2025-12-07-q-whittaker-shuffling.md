@@ -25,13 +25,13 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 <a href="#aztec-canvas" class="skip-link">Skip to simulation canvas</a>
 
 <div style="margin-bottom: 10px;">
-  <label>Target n: <input id="n-input" type="number" value="10" min="1" max="50" style="width: 60px;" aria-label="Target diamond size n"></label>
+  <label>Target n: <input id="n-input" type="number" value="5" min="1" max="50" style="width: 60px;" aria-label="Target diamond size n"></label>
 </div>
 
 <div style="margin-bottom: 10px;">
   <button id="reset-btn">Reset</button>
   <button id="back-btn" disabled>← Back</button>
-  <button id="step-btn">Step</button>
+  <button id="step-btn">Step →</button>
   <button id="auto-btn">Auto</button>
   <button id="instant-btn">Instant</button>
   <label style="margin-left: 10px;">Speed: <input id="speed-slider" type="range" min="50" max="500" value="150" style="width: 80px; vertical-align: middle;" aria-label="Animation speed"></label>
@@ -39,13 +39,16 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 </div>
 
 <div style="margin-bottom: 10px;">
-  <label><input type="checkbox" id="granular-cb"> Granular steps</label>
+  <label><input type="checkbox" id="granular-cb" checked> Granular steps</label>
   <label style="margin-left: 15px;"><input type="checkbox" id="rotate-cb"> Rotate 45°</label>
-  <label style="margin-left: 15px;"><input type="checkbox" id="holes-cb"> Particles</label>
+  <label style="margin-left: 15px;"><input type="checkbox" id="holes-cb" checked> Particles</label>
+  <label style="margin-left: 15px;"><input type="checkbox" id="partitions-cb" checked> Show λ,μ</label>
   <select id="palette-select" style="margin-left: 15px;" aria-label="Color palette"></select>
 </div>
 
 <canvas id="aztec-canvas" style="width: 100%; height: 70vh; border: 1px solid #ccc; background: #fafafa;" role="img" aria-label="Aztec diamond domino tiling built by shuffling algorithm"></canvas>
+
+<div id="interlacing-display" style="display:none; margin-top: 8px;"></div>
 
 <script>
 (function() {
@@ -54,18 +57,22 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 
   // State
   let currentN = 0;
-  let targetN = 10;
+  let targetN = 5;
   // Dominoes: {x, y, type} where type is 'N', 'S', 'E', 'W'
   // N/S are horizontal, E/W are vertical
   let dominoes = [];
   let autoInterval = null;
   let rotated = false;
-  let granular = false;
-  let showHoles = false;
+  let granular = true;
+  let showHoles = true;
   let phase = 'complete';  // 'complete', 'badblocks', 'deleted', 'slid'
   let badDominoes = new Set();  // For highlighting bad blocks
   let history = [];  // Step-back history stack
   const MAX_HISTORY = 200;
+  let showPartitions = true;
+  let deletedBlockPositions = [];  // {bx, by} for each deleted bad block
+  let predetParticles = new Set(); // "x,y" strings for predetermined particle cells
+  let predetHoles = new Set();     // "x,y" strings for predetermined hole cells
 
   function saveSnapshot() {
     history.push({ currentN, dominoes: dominoes.map(d => ({...d})), phase, badDominoes: new Set(badDominoes) });
@@ -82,6 +89,51 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
     badDominoes = snap.badDominoes;
     updateUI();
     render();
+  }
+
+  // Superscript helper for partition labels
+  function toSup(n) {
+    const sups = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+    return String(n).split('').map(c => sups[parseInt(c)] || c).join('');
+  }
+
+  // Compute partition for each diagonal from current domino state.
+  // nDiag = currentN (or currentN+1 during slid phase).
+  // Particle convention: cell (px,py) is a particle if S domino at (px-1,py) or W domino at (px,py-1).
+  function computeDiagonalPartitions(nDiag) {
+    const sDom = new Set();
+    const wDom = new Set();
+    dominoes.forEach(d => {
+      if (d.type === 'S') sDom.add(`${d.x},${d.y}`);
+      if (d.type === 'W') wDom.add(`${d.x},${d.y}`);
+    });
+    const result = [];
+    for (let k = 0; k <= 2 * nDiag; k++) {
+      const diag = k - (nDiag + 1);  // x+y value for this diagonal
+      const cells = [];
+      for (let x = -nDiag - 1; x <= nDiag + 1; x++) {
+        const y = diag - x;
+        if (inDiamond(x, y, nDiag)) cells.push({x, y});
+      }
+      // Particle positions (1-indexed along cells sorted by x)
+      const particlePos = [];
+      cells.forEach((c, i) => {
+        if (sDom.has(`${c.x - 1},${c.y}`) || wDom.has(`${c.x},${c.y - 1}`) ||
+            sDom.has(`${c.x},${c.y}`) || wDom.has(`${c.x},${c.y}`) ||
+            predetParticles.has(`${c.x},${c.y}`))
+          particlePos.push(i + 1);
+      });
+      // Bijection {s1<...<sh} -> partition: λi = s_{h+1-i} - (h+1-i)
+      const h = particlePos.length;
+      const partitionRaw = [];
+      for (let i = 1; i <= h; i++) partitionRaw.push(particlePos[h - i] - (h + 1 - i));
+      // Trim trailing zeros — (0,0,0) = ∅
+      const partition = partitionRaw.slice(0, partitionRaw.findLastIndex(v => v > 0) + 1);
+      const isLambda = k % 2 === 1;
+      const num = isLambda ? (k + 1) / 2 : k / 2;
+      result.push({ k, d: diag, label: (isLambda ? 'λ' : 'μ') + toSup(num), partition, cells, isLambda });
+    }
+    return result;
   }
 
   // Palette
@@ -125,9 +177,11 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
   }
 
   // Find bad blocks: 2x2 blocks filled by N-S pair or E-W pair
+  // Returns { bad: Set of domino indices, blocks: [{bx, by}] }
   function findBadBlocks(n) {
     const cellMap = buildCellMap();
     const bad = new Set();
+    const blocks = [];
 
     for (let bx = -n; bx < n; bx++) {
       for (let by = -n; by < n; by++) {
@@ -146,6 +200,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
           if (dominoes[d00].type === 'N' && dominoes[d01].type === 'S') {
             bad.add(d00);
             bad.add(d01);
+            blocks.push({bx, by});
           }
         }
 
@@ -154,11 +209,12 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
           if (dominoes[d00].type === 'E' && dominoes[d10].type === 'W') {
             bad.add(d00);
             bad.add(d10);
+            blocks.push({bx, by});
           }
         }
       }
     }
-    return bad;
+    return { bad, blocks };
   }
 
   // Delete bad dominoes
@@ -244,7 +300,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
     }
 
     // 1. Delete bad blocks
-    const bad = findBadBlocks(currentN);
+    const { bad } = findBadBlocks(currentN);
     deleteBadDominoes(bad);
 
     // 2. Slide
@@ -265,19 +321,49 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 
     if (phase === 'complete') {
       // Find bad blocks (highlight them)
-      badDominoes = findBadBlocks(currentN);
+      const result = findBadBlocks(currentN);
+      badDominoes = result.bad;
+      deletedBlockPositions = result.blocks;
       phase = 'badblocks';
     } else if (phase === 'badblocks') {
-      // Delete bad blocks
+      // Delete bad blocks, keep predetermined particles
+      // NE of each bad block → particle, SW → hole
+      predetParticles = new Set();
+      predetHoles = new Set();
+      deletedBlockPositions.forEach(({bx, by}) => {
+        predetParticles.add(`${bx+1},${by+1}`); // NE → particle
+        predetHoles.add(`${bx},${by}`);          // SW → hole
+      });
       deleteBadDominoes(badDominoes);
       badDominoes = new Set();
       phase = 'deleted';
     } else if (phase === 'deleted') {
-      // Slide
+      // Slide, then find new empty 2x2 blocks with predetermined particles
       slideDominoes();
+      predetParticles = new Set();
+      predetHoles = new Set();
+      const n1 = currentN + 1;
+      const occupied = new Set();
+      dominoes.forEach(d => {
+        dominoCells(d).forEach(c => occupied.add(`${c.x},${c.y}`));
+      });
+      for (let bx = -n1; bx < n1; bx++) {
+        for (let by = -n1; by < n1; by++) {
+          if (!inDiamond(bx, by, n1) || !inDiamond(bx+1, by, n1) ||
+              !inDiamond(bx, by+1, n1) || !inDiamond(bx+1, by+1, n1)) continue;
+          if (!occupied.has(`${bx},${by}`) && !occupied.has(`${bx+1},${by}`) &&
+              !occupied.has(`${bx},${by+1}`) && !occupied.has(`${bx+1},${by+1}`)) {
+            predetParticles.add(`${bx},${by}`);    // SW → particle
+            predetHoles.add(`${bx+1},${by+1}`);    // NE → hole
+          }
+        }
+      }
       phase = 'slid';
     } else if (phase === 'slid') {
-      // Fill holes
+      // Fill remaining cells
+      predetParticles = new Set();
+      predetHoles = new Set();
+      deletedBlockPositions = [];
       currentN++;
       createDominoes(currentN);
       phase = 'complete';
@@ -297,6 +383,9 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
     dominoes = [];
     phase = 'complete';
     history = [];
+    predetParticles = new Set();
+    predetHoles = new Set();
+    deletedBlockPositions = [];
     stopAuto();
     updateUI();
     render();
@@ -308,6 +397,9 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
     dominoes = [];
     phase = 'complete';
     history = [];
+    predetParticles = new Set();
+    predetHoles = new Set();
+    deletedBlockPositions = [];
     while (currentN < targetN) {
       shuffleStep();
     }
@@ -366,6 +458,8 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
       ctx.rotate(-Math.PI / 4);
       ctx.scale(1 / Math.sqrt(2), 1 / Math.sqrt(2));
     }
+    // Flip tiling across SW/NE axis: (x,y) → (y,x) in lattice
+    ctx.transform(0, -1, -1, 0, 0, 0);
 
     // Checkerboard background. parityOffset shifts with slide step so SW border stays consistent.
     const parityOffset = currentN + (phase === 'slid' ? 1 : 0);
@@ -446,7 +540,137 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
       }
     });
 
+    // Draw orphan/predetermined particles and holes (during deleted/slid phases)
+    if (showHoles && (predetParticles.size > 0 || predetHoles.size > 0)) {
+      const radius = cellSize * 0.35;
+      const parityOffset = currentN + (phase === 'slid' ? 1 : 0);
+      predetParticles.forEach(key => {
+        const [px2, py2] = key.split(',').map(Number);
+        const ccx = (px2 + 0.5) * cellSize;
+        const ccy = -(py2 + 0.5) * cellSize;
+        ctx.beginPath();
+        ctx.arc(ccx, ccy, radius, 0, Math.PI * 2);
+        const isWhiteCell = ((px2 + py2 + parityOffset) % 2 + 2) % 2 === 0;
+        ctx.fillStyle = isWhiteCell ? '#228B22' : '#FF8C00';
+        ctx.fill();
+      });
+      predetHoles.forEach(key => {
+        const [px2, py2] = key.split(',').map(Number);
+        const ccx = (px2 + 0.5) * cellSize;
+        const ccy = -(py2 + 0.5) * cellSize;
+        ctx.beginPath();
+        ctx.arc(ccx, ccy, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = Math.max(1, cellSize / 15);
+        ctx.stroke();
+      });
+    }
+
     ctx.restore();
+
+    // Partition labels — drawn after restore so text is always horizontal
+    if (showPartitions && currentN > 0) {
+      const nDiag = currentN + (phase === 'slid' ? 1 : 0);
+      const diags = computeDiagonalPartitions(nDiag);
+      const fontSize = Math.max(14, Math.min(28, cellSize * 1.7)) * 2;
+      ctx.font = `${fontSize}px serif`;
+      ctx.textBaseline = 'middle';
+      diags.forEach(info => {
+        if (info.cells.length === 0) return;
+        // After SW/NE flip, NW end = original xMax, SE end = original xMin
+        let dx, dy;
+        if (info.isLambda) {
+          // λ: NW end of flipped diagonal (original xMax cell), right-aligned
+          const xMax = info.cells[info.cells.length - 1].x;
+          const yAtXMax = info.d - xMax;
+          const odx = (xMax + 1) * cellSize + cellSize * 0.2;
+          const ody = -(yAtXMax + 1.5) * cellSize;
+          dx = -ody; dy = -odx;
+          ctx.textAlign = 'right';
+        } else {
+          // μ: SE end of flipped diagonal (original xMin cell), left-aligned
+          const xMin = info.cells[0].x;
+          const yAtXMin = info.d - xMin;
+          const odx = xMin * cellSize - cellSize * 0.2;
+          const ody = -(yAtXMin - 0.5) * cellSize;
+          dx = -ody; dy = -odx;
+          ctx.textAlign = 'left';
+        }
+        // Convert to screen coords (handles both rotated and non-rotated)
+        let sx, sy;
+        if (rotated) {
+          sx = cx + (dx + dy) / 2;
+          sy = cy + (dy - dx) / 2;
+        } else {
+          sx = cx + dx;
+          sy = cy + dy;
+        }
+        ctx.fillStyle = info.isLambda ? '#1a6b2e' : '#a01010';
+        let text = info.label;
+        if (info.isLambda) {
+          if (info.partition.length > 0 && cellSize > 22)
+            text += '=(' + info.partition.join(',') + ')';
+        } else {
+          // Always spell out μ partition values on canvas
+          text += ' = ' + (info.partition.length ? '(' + info.partition.join(',') + ')' : '∅');
+        }
+        ctx.fillText(text, sx, sy);
+      });
+    }
+
+    renderInterlacingDisplay();
+  }
+
+  // Interlacing check display
+  function renderInterlacingDisplay() {
+    const el = document.getElementById('interlacing-display');
+    if (!showPartitions || currentN === 0) { el.style.display = 'none'; return; }
+    const nDiag = currentN + (phase === 'slid' ? 1 : 0);
+    const diags = computeDiagonalPartitions(nDiag);
+    const mus = diags.filter(d => !d.isLambda);
+    const lambdas = diags.filter(d => d.isLambda);
+
+    function fmtPart(info) {
+      return info.label + ' = ' + (info.partition.length ? '(' + info.partition.join(',') + ')' : '∅');
+    }
+    function padPart(p, len) { return (p + Array(len).fill(0)).slice(0, len); }
+
+    // Vertical strip: λ_i - μ_i ∈ {0,1} for all i
+    function checkVertStrip(mu, lam) {
+      const len = Math.max(mu.length, lam.length);
+      for (let i = 0; i < len; i++) {
+        const d = (lam[i] || 0) - (mu[i] || 0);
+        if (d < 0 || d > 1) return false;
+      }
+      return true;
+    }
+    // Horizontal strip: λ_1 ≥ μ_1 ≥ λ_2 ≥ μ_2 ≥ ...
+    function checkHorizStrip(mu, lam) {
+      const len = Math.max(mu.length, lam.length);
+      for (let i = 0; i < len; i++) {
+        if ((lam[i] || 0) < (mu[i] || 0)) return false;
+        if ((mu[i] || 0) < (lam[i + 1] || 0)) return false;
+      }
+      return true;
+    }
+
+    // Build sequence: μ⁰ ≺' λ¹ ≻ μ¹ ≺' λ² ≻ μ² ...
+    const lines = [];
+    const N = lambdas.length; // = mus.length - 1
+    lines.push(fmtPart(mus[0]));
+    for (let k = 0; k < N; k++) {
+      const mu_k = mus[k].partition;
+      const lam_k1 = lambdas[k].partition;
+      const vOk = checkVertStrip(mu_k, lam_k1);
+      lines.push('  ≺\' ' + fmtPart(lambdas[k]) + '    <span style="color:' + (vOk ? '#1a6b2e' : '#c00') + '">vert ' + (vOk ? '✓' : '✗') + '</span>');
+
+      const mu_k1 = mus[k + 1].partition;
+      const hOk = checkHorizStrip(mu_k1, lam_k1);
+      lines.push('  ≻  ' + fmtPart(mus[k + 1]) + '    <span style="color:' + (hOk ? '#1a6b2e' : '#c00') + '">horiz ' + (hOk ? '✓' : '✗') + '</span>');
+    }
+
+    el.style.display = 'block';
+    el.innerHTML = '<pre style="margin:0;font-size:0.82em;line-height:1.5;font-family:monospace;">' + lines.join('\n') + '</pre>';
   }
 
   // Event listeners
@@ -455,15 +679,22 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
   document.getElementById('reset-btn').addEventListener('click', reset);
   document.getElementById('auto-btn').addEventListener('click', () => autoInterval ? stopAuto() : startAuto());
   document.getElementById('instant-btn').addEventListener('click', instant);
-  document.getElementById('n-input').addEventListener('change', e => { targetN = parseInt(e.target.value) || 10; updateUI(); });
+  document.getElementById('n-input').addEventListener('change', e => { targetN = parseInt(e.target.value) || 5; updateUI(); });
   document.getElementById('palette-select').addEventListener('change', e => { paletteIndex = parseInt(e.target.value); render(); });
   document.getElementById('rotate-cb').addEventListener('change', e => { rotated = e.target.checked; render(); });
   document.getElementById('granular-cb').addEventListener('change', e => { granular = e.target.checked; updateUI(); });
   document.getElementById('holes-cb').addEventListener('change', e => { showHoles = e.target.checked; render(); });
+  document.getElementById('partitions-cb').addEventListener('change', e => { showPartitions = e.target.checked; render(); });
+
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'k') doStep();
+    else if (e.key === 'j') stepBack();
+  });
 
   window.addEventListener('resize', render);
 
-  targetN = parseInt(document.getElementById('n-input').value) || 10;
+  targetN = parseInt(document.getElementById('n-input').value) || 5;
   render();
 })();
 </script>

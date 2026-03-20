@@ -5229,6 +5229,7 @@ async function initializeApp() {
         ctx.stroke();
       }
     }
+
   }
 
   // Update detailed mode UI
