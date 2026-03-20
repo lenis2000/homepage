@@ -2,9 +2,10 @@
 """
 Fetch journal publication data for arXiv feed papers.
 
-Cross-references two sources:
+Cross-references three sources:
   1. Semantic Scholar batch API (best coverage, DOIs, structured journal data)
   2. arXiv API (journal_ref field, when authors update their submissions)
+  3. CrossRef API (authoritative journal publication year from DOI)
 
 Usage:
     python3 _scripts/arxiv/fetch_journal_refs.py              # fetch + update posts + rebuild index
@@ -23,6 +24,7 @@ import re
 import sqlite3
 import sys
 import time
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -49,6 +51,11 @@ ARXIV_NS = {
     "arxiv": "http://arxiv.org/schemas/atom",
 }
 
+CROSSREF_API = "https://api.crossref.org/works"
+CROSSREF_RATE_LIMIT = 0.05  # 20 req/s with polite pool (mailto in User-Agent)
+CROSSREF_MAILTO = "petrov@virginia.edu"
+CROSSREF_BATCH_SIZE = 40  # DOIs per batch filter request
+
 
 # ── Cache ──────────────────────────────────────────────────────────────
 
@@ -66,6 +73,11 @@ def init_cache():
         fetched_at TEXT DEFAULT (datetime('now')),
         raw_json TEXT
     )""")
+    # Add crossref_year column (migration for existing caches)
+    try:
+        db.execute("ALTER TABLE journal_refs ADD COLUMN crossref_year INTEGER")
+    except sqlite3.OperationalError:
+        pass  # column already exists
     db.commit()
     return db
 
@@ -76,7 +88,7 @@ def get_cached(db, arxiv_ids):
         batch = arxiv_ids[i:i + 500]
         placeholders = ",".join("?" * len(batch))
         rows = db.execute(
-            f"SELECT arxiv_id, journal_name, journal_volume, journal_pages, doi, venue, pub_year "
+            f"SELECT arxiv_id, journal_name, journal_volume, journal_pages, doi, venue, pub_year, crossref_year "
             f"FROM journal_refs WHERE arxiv_id IN ({placeholders})",
             batch,
         ).fetchall()
@@ -87,16 +99,26 @@ def get_cached(db, arxiv_ids):
                 "journal_pages": row[3] or "",
                 "doi": row[4] or "",
                 "venue": row[5] or "",
-                "pub_year": row[6],
+                "pub_year": row[7] if row[7] else row[6],  # prefer crossref_year
             }
     return cached
 
 
 def save_to_cache(db, results):
     db.executemany(
-        """INSERT OR REPLACE INTO journal_refs
+        """INSERT INTO journal_refs
            (arxiv_id, journal_name, journal_volume, journal_pages, doi, venue, pub_year, source, raw_json)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(arxiv_id) DO UPDATE SET
+             journal_name=excluded.journal_name,
+             journal_volume=excluded.journal_volume,
+             journal_pages=excluded.journal_pages,
+             doi=excluded.doi,
+             venue=excluded.venue,
+             pub_year=excluded.pub_year,
+             source=excluded.source,
+             raw_json=excluded.raw_json,
+             fetched_at=datetime('now')""",
         results,
     )
     db.commit()
@@ -200,6 +222,63 @@ def arxiv_fetch_batch(arxiv_ids):
         if journal_ref or doi:
             results[aid] = {"journal_ref_raw": journal_ref, "doi": doi}
 
+    return results
+
+
+# ── CrossRef API ──────────────────────────────────────────────────────
+
+def crossref_fetch_year(doi):
+    """Query CrossRef for the publication year of a single DOI. Returns year or None."""
+    url = f"{CROSSREF_API}/{urllib.request.quote(doi, safe='')}"
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": f"FetchJournalRefs/1.0 (mailto:{CROSSREF_MAILTO})"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read())
+    except Exception:
+        return None
+
+    msg = data.get("message", {})
+    # Prefer published-print > published-online > issued
+    for field in ("published-print", "published-online", "issued"):
+        parts = (msg.get(field) or {}).get("date-parts")
+        if parts and parts[0] and parts[0][0]:
+            return int(parts[0][0])
+    return None
+
+
+def crossref_fetch_batch(dois):
+    """Query CrossRef for publication years of multiple DOIs using filter API.
+    Returns dict of doi -> year."""
+    results = {}
+    # CrossRef filter supports multiple DOIs comma-separated
+    filter_str = ",".join(f"doi:{d}" for d in dois)
+    params = urllib.parse.urlencode({
+        "filter": filter_str,
+        "select": "DOI,published-print,published-online,issued",
+        "rows": len(dois),
+    })
+    url = f"{CROSSREF_API}?{params}"
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": f"FetchJournalRefs/1.0 (mailto:{CROSSREF_MAILTO})"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = json.loads(resp.read())
+    except Exception as e:
+        print(f"  CrossRef batch failed: {e}")
+        return results
+
+    for item in data.get("message", {}).get("items", []):
+        doi_key = item.get("DOI", "")
+        for field in ("published-print", "published-online", "issued"):
+            parts = (item.get(field) or {}).get("date-parts")
+            if parts and parts[0] and parts[0][0]:
+                results[doi_key.lower()] = int(parts[0][0])
+                break
     return results
 
 
@@ -491,6 +570,54 @@ def main():
         total_s2 = (len(to_fetch) + S2_BATCH_SIZE - 1) // S2_BATCH_SIZE
         total_ax = (len(to_fetch) + ARXIV_BATCH_SIZE - 1) // ARXIV_BATCH_SIZE
         print(f"[dry-run] Would make {total_s2} S2 + {total_ax} arXiv batch requests")
+
+    # ── Phase 3: CrossRef publication years ──
+    if not args.dry_run:
+        # Find all cached entries with DOIs but no crossref_year
+        rows = db.execute(
+            "SELECT arxiv_id, doi FROM journal_refs WHERE doi != '' AND doi IS NOT NULL AND crossref_year IS NULL"
+        ).fetchall()
+        doi_to_aids = {}  # doi_lower -> [arxiv_ids]
+        for aid, doi in rows:
+            doi_to_aids.setdefault(doi.lower(), []).append(aid)
+
+        if doi_to_aids:
+            dois_to_fetch = list(doi_to_aids.keys())
+            print(f"\n=== Phase 3: CrossRef publication years ({len(dois_to_fetch)} DOIs) ===")
+            cr_results = {}  # doi_lower -> year
+            for i in range(0, len(dois_to_fetch), CROSSREF_BATCH_SIZE):
+                batch = dois_to_fetch[i:i + CROSSREF_BATCH_SIZE]
+                n = i // CROSSREF_BATCH_SIZE + 1
+                total_batches = (len(dois_to_fetch) + CROSSREF_BATCH_SIZE - 1) // CROSSREF_BATCH_SIZE
+                if n % 25 == 1 or n == total_batches:
+                    print(f"  CrossRef batch {n}/{total_batches}...")
+
+                batch_results = crossref_fetch_batch(batch)
+                cr_results.update(batch_results)
+
+                # Fall back to individual requests for misses
+                for doi in batch:
+                    if doi.lower() not in cr_results:
+                        year = crossref_fetch_year(doi)
+                        if year:
+                            cr_results[doi.lower()] = year
+
+                if i + CROSSREF_BATCH_SIZE < len(dois_to_fetch):
+                    time.sleep(CROSSREF_RATE_LIMIT)
+
+            # Update cache with crossref years
+            updates = []
+            for doi_lower, year in cr_results.items():
+                for aid in doi_to_aids.get(doi_lower, []):
+                    updates.append((year, aid))
+            if updates:
+                db.executemany(
+                    "UPDATE journal_refs SET crossref_year = ? WHERE arxiv_id = ?",
+                    updates,
+                )
+                db.commit()
+            cr_found = len(cr_results)
+            print(f"  CrossRef: {cr_found} publication years found, {len(updates)} cache entries updated")
 
     # ── Update files ──
     if args.dry_run or args.no_update:

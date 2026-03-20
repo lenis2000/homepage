@@ -70,9 +70,6 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
   let history = [];  // Step-back history stack
   const MAX_HISTORY = 200;
   let showPartitions = true;
-  let deletedBlockPositions = [];  // {bx, by} for each deleted bad block
-  let predetParticles = new Set(); // "x,y" strings for predetermined particle cells
-  let predetHoles = new Set();     // "x,y" strings for predetermined hole cells
 
   function saveSnapshot() {
     history.push({ currentN, dominoes: dominoes.map(d => ({...d})), phase, badDominoes: new Set(badDominoes) });
@@ -119,8 +116,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
       const particlePos = [];
       cells.forEach((c, i) => {
         if (sDom.has(`${c.x - 1},${c.y}`) || wDom.has(`${c.x},${c.y - 1}`) ||
-            sDom.has(`${c.x},${c.y}`) || wDom.has(`${c.x},${c.y}`) ||
-            predetParticles.has(`${c.x},${c.y}`))
+            sDom.has(`${c.x},${c.y}`) || wDom.has(`${c.x},${c.y}`))
           particlePos.push(i + 1);
       });
       // Bijection {s1<...<sh} -> partition: λi = s_{h+1-i} - (h+1-i)
@@ -177,11 +173,9 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
   }
 
   // Find bad blocks: 2x2 blocks filled by N-S pair or E-W pair
-  // Returns { bad: Set of domino indices, blocks: [{bx, by}] }
   function findBadBlocks(n) {
     const cellMap = buildCellMap();
     const bad = new Set();
-    const blocks = [];
 
     for (let bx = -n; bx < n; bx++) {
       for (let by = -n; by < n; by++) {
@@ -200,7 +194,6 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
           if (dominoes[d00].type === 'N' && dominoes[d01].type === 'S') {
             bad.add(d00);
             bad.add(d01);
-            blocks.push({bx, by});
           }
         }
 
@@ -209,12 +202,11 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
           if (dominoes[d00].type === 'E' && dominoes[d10].type === 'W') {
             bad.add(d00);
             bad.add(d10);
-            blocks.push({bx, by});
           }
         }
       }
     }
-    return { bad, blocks };
+    return bad;
   }
 
   // Delete bad dominoes
@@ -300,7 +292,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
     }
 
     // 1. Delete bad blocks
-    const { bad } = findBadBlocks(currentN);
+    const bad = findBadBlocks(currentN);
     deleteBadDominoes(bad);
 
     // 2. Slide
@@ -321,49 +313,19 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 
     if (phase === 'complete') {
       // Find bad blocks (highlight them)
-      const result = findBadBlocks(currentN);
-      badDominoes = result.bad;
-      deletedBlockPositions = result.blocks;
+      badDominoes = findBadBlocks(currentN);
       phase = 'badblocks';
     } else if (phase === 'badblocks') {
-      // Delete bad blocks, keep predetermined particles
-      // NE of each bad block → particle, SW → hole
-      predetParticles = new Set();
-      predetHoles = new Set();
-      deletedBlockPositions.forEach(({bx, by}) => {
-        predetParticles.add(`${bx+1},${by+1}`); // NE → particle
-        predetHoles.add(`${bx},${by}`);          // SW → hole
-      });
+      // Delete bad blocks
       deleteBadDominoes(badDominoes);
       badDominoes = new Set();
       phase = 'deleted';
     } else if (phase === 'deleted') {
-      // Slide, then find new empty 2x2 blocks with predetermined particles
+      // Slide
       slideDominoes();
-      predetParticles = new Set();
-      predetHoles = new Set();
-      const n1 = currentN + 1;
-      const occupied = new Set();
-      dominoes.forEach(d => {
-        dominoCells(d).forEach(c => occupied.add(`${c.x},${c.y}`));
-      });
-      for (let bx = -n1; bx < n1; bx++) {
-        for (let by = -n1; by < n1; by++) {
-          if (!inDiamond(bx, by, n1) || !inDiamond(bx+1, by, n1) ||
-              !inDiamond(bx, by+1, n1) || !inDiamond(bx+1, by+1, n1)) continue;
-          if (!occupied.has(`${bx},${by}`) && !occupied.has(`${bx+1},${by}`) &&
-              !occupied.has(`${bx},${by+1}`) && !occupied.has(`${bx+1},${by+1}`)) {
-            predetParticles.add(`${bx},${by}`);    // SW → particle
-            predetHoles.add(`${bx+1},${by+1}`);    // NE → hole
-          }
-        }
-      }
       phase = 'slid';
     } else if (phase === 'slid') {
-      // Fill remaining cells
-      predetParticles = new Set();
-      predetHoles = new Set();
-      deletedBlockPositions = [];
+      // Fill holes
       currentN++;
       createDominoes(currentN);
       phase = 'complete';
@@ -383,9 +345,6 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
     dominoes = [];
     phase = 'complete';
     history = [];
-    predetParticles = new Set();
-    predetHoles = new Set();
-    deletedBlockPositions = [];
     stopAuto();
     updateUI();
     render();
@@ -397,9 +356,6 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
     dominoes = [];
     phase = 'complete';
     history = [];
-    predetParticles = new Set();
-    predetHoles = new Set();
-    deletedBlockPositions = [];
     while (currentN < targetN) {
       shuffleStep();
     }
@@ -539,32 +495,6 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
         ctx.strokeRect(px, py, w, h);
       }
     });
-
-    // Draw orphan/predetermined particles and holes (during deleted/slid phases)
-    if (showHoles && (predetParticles.size > 0 || predetHoles.size > 0)) {
-      const radius = cellSize * 0.35;
-      const parityOffset = currentN + (phase === 'slid' ? 1 : 0);
-      predetParticles.forEach(key => {
-        const [px2, py2] = key.split(',').map(Number);
-        const ccx = (px2 + 0.5) * cellSize;
-        const ccy = -(py2 + 0.5) * cellSize;
-        ctx.beginPath();
-        ctx.arc(ccx, ccy, radius, 0, Math.PI * 2);
-        const isWhiteCell = ((px2 + py2 + parityOffset) % 2 + 2) % 2 === 0;
-        ctx.fillStyle = isWhiteCell ? '#228B22' : '#FF8C00';
-        ctx.fill();
-      });
-      predetHoles.forEach(key => {
-        const [px2, py2] = key.split(',').map(Number);
-        const ccx = (px2 + 0.5) * cellSize;
-        const ccy = -(py2 + 0.5) * cellSize;
-        ctx.beginPath();
-        ctx.arc(ccx, ccy, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = Math.max(1, cellSize / 15);
-        ctx.stroke();
-      });
-    }
 
     ctx.restore();
 
