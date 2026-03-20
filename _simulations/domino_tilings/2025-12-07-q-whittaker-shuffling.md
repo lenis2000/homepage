@@ -507,26 +507,22 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
       ctx.textBaseline = 'middle';
       diags.forEach(info => {
         if (info.cells.length === 0) return;
-        // After SW/NE flip, NW end = original xMax, SE end = original xMin
         let dx, dy;
         if (info.isLambda) {
-          // λ: NW end of flipped diagonal (original xMax cell), right-aligned
-          const xMax = info.cells[info.cells.length - 1].x;
-          const yAtXMax = info.d - xMax;
-          const odx = (xMax + 1) * cellSize + cellSize * 0.2;
-          const ody = -(yAtXMax + 1.5) * cellSize;
-          dx = -ody; dy = -odx;
-          ctx.textAlign = 'right';
-        } else {
-          // μ: SE end of flipped diagonal (original xMin cell), left-aligned
+          // λ: label at NW end (min-x cell), right-aligned, to the left
           const xMin = info.cells[0].x;
           const yAtXMin = info.d - xMin;
-          const odx = xMin * cellSize - cellSize * 0.2;
-          const ody = -(yAtXMin - 0.5) * cellSize;
-          dx = -ody; dy = -odx;
+          dx = (xMin - 0.5) * cellSize - cellSize * 0.2;
+          dy = -(yAtXMin + 1.5) * cellSize;
+          ctx.textAlign = 'right';
+        } else {
+          // μ: label at SE end (max-x cell), shifted one step right and one step down
+          const xMax = info.cells[info.cells.length - 1].x;
+          const yAtXMax = info.d - xMax;
+          dx = (xMax + 1.5) * cellSize + cellSize * 0.2;
+          dy = -(yAtXMax - 0.5) * cellSize;
           ctx.textAlign = 'left';
         }
-        // Convert to screen coords (handles both rotated and non-rotated)
         let sx, sy;
         if (rotated) {
           sx = cx + (dx + dy) / 2;
