@@ -1,5 +1,5 @@
 ---
-title: q-Whittaker Domino Shuffling
+title: Shuffling Algorithm for Domino Tilings in Terms of Particles
 model: domino-tilings
 author: 'Leonid Petrov'
 code:
@@ -9,18 +9,6 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 ---
 
 <script src="/js/colorschemes.js"></script>
-
-<div style="background: linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%); border: 2px dashed #856404; border-radius: 8px; padding: 15px 20px; margin-bottom: 20px;">
-  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-    <span style="font-size: 1.5em;">🚧</span>
-    <strong style="color: #856404; font-size: 1.1em;">q-Whittaker Deformation: Coming Soon</strong>
-  </div>
-  <p style="margin: 0 0 10px 0; color: #664d03;">Currently running <strong>uniform shuffling</strong> (q = 0). The q &gt; 0 deformation will modify the hole-filling step to introduce correlations based on partition-valued stopping probabilities. For a working q-Whittaker implementation, see <a href="/simulations/2025-12-04-rsk-sampling/" style="color: #0056b3; font-weight: bold;">q-RSK Sampling of Domino Tilings</a>.</p>
-  <div style="display: flex; align-items: center; gap: 15px; opacity: 0.6;">
-    <label style="color: #664d03;">q = <input type="number" value="0" min="0" max="1" step="0.01" style="width: 60px;" disabled></label>
-    <span style="font-size: 0.9em; color: #856404; font-style: italic;">Parameter disabled until implementation</span>
-  </div>
-</div>
 
 <a href="#aztec-canvas" class="skip-link">Skip to simulation canvas</a>
 
@@ -225,8 +213,6 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
   }
 
   // Fill empty 2x2 blocks with uniform random choice
-  // TODO: q-Whittaker deformation will be implemented here
-  // See RSK sampling implementation for the partition-based q-Whittaker algorithm
   function createDominoes(n) {
     const occupied = new Set();
     dominoes.forEach(d => {
@@ -637,20 +623,9 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
 
     <hr style="margin: 15px 0;">
 
-    <h4>q-Whittaker Deformation (TODO)</h4>
-    <p>The q-Whittaker deformation of domino shuffling modifies <strong>Step 3 (Fill holes)</strong> to introduce correlations between adjacent empty blocks based on partition-valued stopping probabilities.</p>
-
-    <p>For a working implementation using the partition-based q-Whittaker algorithm (via RSK growth diagrams), see:</p>
-    <ul>
-      <li><a href="/simulations/domino/2025-12-04-RSK-sampling/">q-RSK Sampling of Domino Tilings</a> — samples from q-Whittaker measure using growth diagram dynamics</li>
-    </ul>
-
-    <p>The challenge for direct shuffling is translating partition indices (where islands are detected as consecutive i with μ<sub>i</sub> − κ<sub>i</sub> = 1) into geometric empty-block positions.</p>
-
     <p><strong>References:</strong></p>
     <ul>
       <li><a href="https://arxiv.org/abs/math/9201305">arXiv:math/9201305</a> — Elkies, Kuperberg, Larsen, Propp (EKLP shuffling)</li>
-      <li><a href="https://arxiv.org/abs/1504.00666">arXiv:1504.00666</a> — Matveev, Petrov (q-RSK and q-Whittaker)</li>
     </ul>
   </div>
 </details>
