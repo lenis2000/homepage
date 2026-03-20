@@ -534,8 +534,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
         ctx.fillStyle = info.isLambda ? '#1a6b2e' : '#a01010';
         let text = info.label;
         if (info.isLambda) {
-          if (info.partition.length > 0 && cellSize > 22)
-            text += '=(' + info.partition.join(',') + ')';
+          text += '=' + (info.partition.length ? '(' + info.partition.join(',') + ')' : '∅');
         } else {
           // Always spell out μ partition values on canvas
           text += ' = ' + (info.partition.length ? '(' + info.partition.join(',') + ')' : '∅');
