@@ -248,13 +248,13 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
         if (info.isLambda) {
           const xMin = info.cells[0].x;
           const yAtXMin = info.d - xMin;
-          dx = (xMin - 0.5) * cellSize - cellSize * 0.2;
+          dx = (xMin - 0.5) * cellSize - cellSize * 0.2 + cellSize * 0.5;
           dy = -(yAtXMin + 1.5) * cellSize;
           ctx.textAlign = 'right';
         } else {
           const xMax = info.cells[info.cells.length - 1].x;
           const yAtXMax = info.d - xMax;
-          dx = (xMax + 1.5) * cellSize + cellSize * 0.2;
+          dx = (xMax + 1.5) * cellSize + cellSize * 0.2 - cellSize * 0.5;
           dy = -(yAtXMax - 0.5) * cellSize;
           ctx.textAlign = 'left';
         }

@@ -498,14 +498,14 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
           // λ: label at NW end (min-x cell), right-aligned, to the left
           const xMin = info.cells[0].x;
           const yAtXMin = info.d - xMin;
-          dx = (xMin - 0.5) * cellSize - cellSize * 0.2;
+          dx = (xMin - 0.5) * cellSize - cellSize * 0.2 + cellSize * 0.5;
           dy = -(yAtXMin + 1.5) * cellSize;
           ctx.textAlign = 'right';
         } else {
           // μ: label at SE end (max-x cell), shifted one step right and one step down
           const xMax = info.cells[info.cells.length - 1].x;
           const yAtXMax = info.d - xMax;
-          dx = (xMax + 1.5) * cellSize + cellSize * 0.2;
+          dx = (xMax + 1.5) * cellSize + cellSize * 0.2 - cellSize * 0.5;
           dy = -(yAtXMax - 0.5) * cellSize;
           ctx.textAlign = 'left';
         }
