@@ -116,7 +116,7 @@
     return ((x + y + parityOffset) % 2 + 2) % 2 === 1;
   }
 
-  // Find shaded particles/holes of bad blocks — only on black squares
+  // Find shaded particles/holes of bad blocks — only on black (#d8d8d8) squares
   // NE = particle, SW = hole
   function findBadBlockShaded(n) {
     const cellMap = buildCellMap();
@@ -138,11 +138,8 @@
         if (d00 === d01 && d10 === d11 && d00 !== d10 &&
             dominoes[d00].type === 'E' && dominoes[d10].type === 'W') isBad = true;
         if (isBad) {
-          // SW and NE are on the same diagonal — only shade if on black square
-          if (isBlackCell(bx, by, parity)) {
-            particles.add(`${bx+1},${by+1}`);  // NE = particle
-            holes.add(`${bx},${by}`);            // SW = hole
-          }
+          particles.add(`${bx+1},${by+1}`);  // NE = always particle
+          holes.add(`${bx},${by}`);            // SW = always hole
         }
       }
     }
@@ -167,12 +164,12 @@
             !inDiamond(bx, by+1, n) || !inDiamond(bx+1, by+1, n)) continue;
         if (!occupied.has(`${bx},${by}`) && !occupied.has(`${bx+1},${by}`) &&
             !occupied.has(`${bx},${by+1}`) && !occupied.has(`${bx+1},${by+1}`)) {
-          // SW = particle, NE = hole (deterministic diagonal)
-          if (isBlackCell(bx, by, parity)) particles.add(`${bx},${by}`);
-          if (isBlackCell(bx+1, by+1, parity)) holes.add(`${bx+1},${by+1}`);
+          // SW = particle, NE = hole (always, deterministic)
+          particles.add(`${bx},${by}`);
+          holes.add(`${bx+1},${by+1}`);
           // SE, NW = gray (random diagonal)
-          if (isBlackCell(bx+1, by, parity)) shaded.add(`${bx+1},${by}`);
-          if (isBlackCell(bx, by+1, parity)) shaded.add(`${bx},${by+1}`);
+          shaded.add(`${bx+1},${by}`);
+          shaded.add(`${bx},${by+1}`);
         }
       }
     }
@@ -276,10 +273,7 @@
     } else if (phase === 'badblocks') {
       deleteBadDominoes(badDominoes);
       badDominoes = new Set();
-      // Move to gray ghosts after deletion
-      shadedGray = new Set([...shadedParticles, ...shadedHoles]);
-      shadedParticles = new Set();
-      shadedHoles = new Set();
+      // Keep shadedParticles (NE) and shadedHoles (SW) as real particles/holes
       phase = 'deleted';
     } else if (phase === 'deleted') {
       slideDominoes();

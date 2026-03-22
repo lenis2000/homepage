@@ -261,38 +261,44 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
       });
       const radius = cellSize * 0.35;
 
-      // Real particles (colored, not gray) — SW of empty blocks
+      // Helper: check if cell is on a white (#ffffff) square
+      function isWhiteSq(x, y) {
+        return ((x + y + parityOffset) % 2 + 2) % 2 !== 0;
+      }
+
+      // Real particles (colored) — only on white (#ffffff) squares
       s.shadedParticles.forEach(key => {
         if (occupied.has(key)) return;
         const [cx2, cy2] = key.split(',').map(Number);
+        if (!isWhiteSq(cx2, cy2)) return;
         const gpx = cx2 * cellSize + cellSize / 2;
         const gpy = -(cy2 + 1) * cellSize + cellSize / 2;
-        const isWhiteCell = ((cx2 + cy2 + parityOffset) % 2 + 2) % 2 === 0;
+        const isWC = ((cx2 + cy2 + parityOffset) % 2 + 2) % 2 === 0;
         ctx.beginPath();
         ctx.arc(gpx, gpy, radius, 0, Math.PI * 2);
-        ctx.fillStyle = isWhiteCell ? '#228B22' : '#FF8C00';
+        ctx.fillStyle = isWC ? '#228B22' : '#FF8C00';
         ctx.fill();
       });
 
-      // Real holes (empty circles) — NE of empty blocks
+      // Real holes (empty circles) — only on white (#ffffff) squares
       s.shadedHoles.forEach(key => {
         if (occupied.has(key)) return;
         const [cx2, cy2] = key.split(',').map(Number);
+        if (!isWhiteSq(cx2, cy2)) return;
         const gpx = cx2 * cellSize + cellSize / 2;
         const gpy = -(cy2 + 1) * cellSize + cellSize / 2;
         ctx.beginPath();
         ctx.arc(gpx, gpy, radius, 0, Math.PI * 2);
-        if (borderWidth > 0) {
-          ctx.strokeStyle = '#000';
-          ctx.lineWidth = Math.max(0.5, cellSize / 5) * borderWidth;
-          ctx.stroke();
-        }
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = Math.max(0.5, cellSize / 5) * Math.max(borderWidth, 0.3);
+        ctx.stroke();
       });
 
-      // Gray shaded (undetermined) — SE/NW of empty blocks, SW/NE of deleted bad blocks
+      // Gray shaded (undetermined) — only on white (#ffffff) squares
       s.shadedGray.forEach(key => {
         if (occupied.has(key)) return;
         const [cx2, cy2] = key.split(',').map(Number);
+        if (!isWhiteSq(cx2, cy2)) return;
         const gpx = cx2 * cellSize + cellSize / 2;
         const gpy = -(cy2 + 1) * cellSize + cellSize / 2;
         ctx.beginPath();
