@@ -33,6 +33,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
   <label style="margin-left: 15px;"><input type="checkbox" id="holes-cb" checked> Particles</label>
   <label style="margin-left: 15px;"><input type="checkbox" id="partitions-cb" checked> Show λ,μ</label>
   <select id="palette-select" style="margin-left: 15px;" aria-label="Color palette"></select>
+  <label style="margin-left: 15px;">Border: <input id="border-slider" type="range" min="0" max="100" value="50" style="width: 80px; vertical-align: middle;" aria-label="Domino border width"></label>
 </div>
 
 <canvas id="aztec-canvas" style="width: 100%; height: 70vh; border: 1px solid #ccc; background: #fafafa;" role="img" aria-label="Aztec diamond domino tiling built by shuffling algorithm"></canvas>
@@ -71,6 +72,8 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
   });
 
   function getColors() { return palettes[paletteIndex].colors; }
+
+  let borderWidth = 0.5; // 0 to 1, maps slider 0–100
 
   // --- Step / reset / instant (bridge engine ↔ display) ---
 
@@ -205,22 +208,36 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
         }
 
         centers.forEach(c => {
+          const cellKey = `${c.lx},${c.ly}`;
+          const isShaded = s.shadedParticles.has(cellKey) || s.shadedHoles.has(cellKey);
           ctx.beginPath();
           ctx.arc(c.x, c.y, radius, 0, Math.PI * 2);
-          if (isHole) {
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = Math.max(1, cellSize / 15);
-            ctx.stroke();
+          if (isShaded) {
+            ctx.fillStyle = 'rgba(128,128,128,0.4)';
+            ctx.fill();
+          } else if (isHole) {
+            if (borderWidth > 0) {
+              ctx.strokeStyle = '#000';
+              ctx.lineWidth = Math.max(0.5, cellSize / 5) * borderWidth;
+              ctx.stroke();
+            }
           } else {
             const isWhiteCell = ((c.lx + c.ly + parityOffset) % 2 + 2) % 2 === 0;
             ctx.fillStyle = isWhiteCell ? '#228B22' : '#FF8C00';
             ctx.fill();
+            if (borderWidth > 0) {
+              ctx.strokeStyle = '#000';
+              ctx.lineWidth = Math.max(0.5, cellSize / 5) * borderWidth;
+              ctx.stroke();
+            }
           }
         });
 
-        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-        ctx.lineWidth = Math.max(0.5, cellSize / 20);
-        ctx.strokeRect(px, py, w, h);
+        if (borderWidth > 0) {
+          ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+          ctx.lineWidth = Math.max(0.5, cellSize / 5) * borderWidth;
+          ctx.strokeRect(px, py, w, h);
+        }
       } else {
         if (s.phase === 'badblocks' && s.badDominoes.has(idx)) {
           ctx.fillStyle = '#FF0000';
@@ -228,11 +245,62 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
           ctx.fillStyle = colors[typeColor[d.type]];
         }
         ctx.fillRect(px, py, w, h);
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = Math.max(1, cellSize / 20);
-        ctx.strokeRect(px, py, w, h);
+        if (borderWidth > 0) {
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = Math.max(0.5, cellSize / 5) * borderWidth;
+          ctx.strokeRect(px, py, w, h);
+        }
       }
     });
+
+    // Draw ghost circles for cells not covered by any domino
+    if (showHoles && (s.shadedParticles.size > 0 || s.shadedHoles.size > 0 || s.shadedGray.size > 0)) {
+      const occupied = new Set();
+      s.dominoes.forEach(d => {
+        E.dominoCells(d).forEach(c => occupied.add(`${c.x},${c.y}`));
+      });
+      const radius = cellSize * 0.35;
+
+      // Real particles (colored, not gray) — SW of empty blocks
+      s.shadedParticles.forEach(key => {
+        if (occupied.has(key)) return;
+        const [cx2, cy2] = key.split(',').map(Number);
+        const gpx = cx2 * cellSize + cellSize / 2;
+        const gpy = -(cy2 + 1) * cellSize + cellSize / 2;
+        const isWhiteCell = ((cx2 + cy2 + parityOffset) % 2 + 2) % 2 === 0;
+        ctx.beginPath();
+        ctx.arc(gpx, gpy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = isWhiteCell ? '#228B22' : '#FF8C00';
+        ctx.fill();
+      });
+
+      // Real holes (empty circles) — NE of empty blocks
+      s.shadedHoles.forEach(key => {
+        if (occupied.has(key)) return;
+        const [cx2, cy2] = key.split(',').map(Number);
+        const gpx = cx2 * cellSize + cellSize / 2;
+        const gpy = -(cy2 + 1) * cellSize + cellSize / 2;
+        ctx.beginPath();
+        ctx.arc(gpx, gpy, radius, 0, Math.PI * 2);
+        if (borderWidth > 0) {
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = Math.max(0.5, cellSize / 5) * borderWidth;
+          ctx.stroke();
+        }
+      });
+
+      // Gray shaded (undetermined) — SE/NW of empty blocks, SW/NE of deleted bad blocks
+      s.shadedGray.forEach(key => {
+        if (occupied.has(key)) return;
+        const [cx2, cy2] = key.split(',').map(Number);
+        const gpx = cx2 * cellSize + cellSize / 2;
+        const gpy = -(cy2 + 1) * cellSize + cellSize / 2;
+        ctx.beginPath();
+        ctx.arc(gpx, gpy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(128,128,128,0.4)';
+        ctx.fill();
+      });
+    }
 
     ctx.restore();
 
@@ -340,6 +408,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
   document.getElementById('rotate-cb').addEventListener('change', e => { rotated = e.target.checked; render(); });
   document.getElementById('granular-cb').addEventListener('change', e => { granular = e.target.checked; updateUI(); });
   document.getElementById('holes-cb').addEventListener('change', e => { showHoles = e.target.checked; render(); });
+  document.getElementById('border-slider').addEventListener('input', e => { borderWidth = parseInt(e.target.value) / 100; render(); });
   document.getElementById('partitions-cb').addEventListener('change', e => { showPartitions = e.target.checked; render(); });
 
   document.addEventListener('keydown', e => {

@@ -12,13 +12,16 @@
   let dominoes = [];
   let phase = 'complete';  // 'complete', 'badblocks', 'deleted', 'slid'
   let badDominoes = new Set();
+  let shadedParticles = new Set();  // cells to draw as shaded filled circles
+  let shadedHoles = new Set();      // cells to draw as shaded empty circles
+  let shadedGray = new Set();       // cells to draw as gray (undetermined)
   let history = [];
   const MAX_HISTORY = 200;
 
   // --- Accessors ---
 
   function getState() {
-    return { currentN, targetN, dominoes, phase, badDominoes, historyLen: history.length };
+    return { currentN, targetN, dominoes, phase, badDominoes, shadedParticles, shadedHoles, shadedGray, historyLen: history.length };
   }
 
   function setTargetN(n) { targetN = n; }
@@ -26,7 +29,7 @@
   // --- History ---
 
   function saveSnapshot() {
-    history.push({ currentN, dominoes: dominoes.map(d => ({...d})), phase, badDominoes: new Set(badDominoes) });
+    history.push({ currentN, dominoes: dominoes.map(d => ({...d})), phase, badDominoes: new Set(badDominoes), shadedParticles: new Set(shadedParticles), shadedHoles: new Set(shadedHoles), shadedGray: new Set(shadedGray) });
     if (history.length > MAX_HISTORY) history.shift();
   }
 
@@ -37,6 +40,9 @@
     dominoes = snap.dominoes;
     phase = snap.phase;
     badDominoes = snap.badDominoes;
+    shadedParticles = snap.shadedParticles;
+    shadedHoles = snap.shadedHoles;
+    shadedGray = snap.shadedGray;
     return true;
   }
 
@@ -103,6 +109,74 @@
       }
     }
     return bad;
+  }
+
+  // Check if cell is on a black square given parityOffset
+  function isBlackCell(x, y, parityOffset) {
+    return ((x + y + parityOffset) % 2 + 2) % 2 === 1;
+  }
+
+  // Find shaded particles/holes of bad blocks — only on black squares
+  // NE = particle, SW = hole
+  function findBadBlockShaded(n) {
+    const cellMap = buildCellMap();
+    const parity = n;  // parityOffset during badblocks/deleted phase
+    const particles = new Set();
+    const holes = new Set();
+    for (let bx = -n; bx < n; bx++) {
+      for (let by = -n; by < n; by++) {
+        if (!inDiamond(bx, by, n) || !inDiamond(bx+1, by, n) ||
+            !inDiamond(bx, by+1, n) || !inDiamond(bx+1, by+1, n)) continue;
+        const d00 = cellMap.get(`${bx},${by}`);
+        const d10 = cellMap.get(`${bx+1},${by}`);
+        const d01 = cellMap.get(`${bx},${by+1}`);
+        const d11 = cellMap.get(`${bx+1},${by+1}`);
+        if (d00 === undefined || d10 === undefined || d01 === undefined || d11 === undefined) continue;
+        let isBad = false;
+        if (d00 === d10 && d01 === d11 && d00 !== d01 &&
+            dominoes[d00].type === 'N' && dominoes[d01].type === 'S') isBad = true;
+        if (d00 === d01 && d10 === d11 && d00 !== d10 &&
+            dominoes[d00].type === 'E' && dominoes[d10].type === 'W') isBad = true;
+        if (isBad) {
+          // SW and NE are on the same diagonal — only shade if on black square
+          if (isBlackCell(bx, by, parity)) {
+            particles.add(`${bx+1},${by+1}`);  // NE = particle
+            holes.add(`${bx},${by}`);            // SW = hole
+          }
+        }
+      }
+    }
+    return { particles, holes };
+  }
+
+  // Find particles/holes/shaded of empty blocks after slide
+  // Only cells on white (#ffffff) squares get anything drawn
+  // SW = particle, NE = hole, SE/NW = gray shaded
+  function findEmptyBlockShaded(n) {
+    const occupied = new Set();
+    dominoes.forEach(d => {
+      dominoCells(d).forEach(c => occupied.add(`${c.x},${c.y}`));
+    });
+    const parity = currentN + 1;  // parityOffset during slid phase
+    const particles = new Set();
+    const holes = new Set();
+    const shaded = new Set();
+    for (let bx = -n; bx < n; bx++) {
+      for (let by = -n; by < n; by++) {
+        if (!inDiamond(bx, by, n) || !inDiamond(bx+1, by, n) ||
+            !inDiamond(bx, by+1, n) || !inDiamond(bx+1, by+1, n)) continue;
+        if (!occupied.has(`${bx},${by}`) && !occupied.has(`${bx+1},${by}`) &&
+            !occupied.has(`${bx},${by+1}`) && !occupied.has(`${bx+1},${by+1}`)) {
+          // SW = particle, NE = hole (deterministic diagonal)
+          if (isBlackCell(bx, by, parity)) particles.add(`${bx},${by}`);
+          if (isBlackCell(bx+1, by+1, parity)) holes.add(`${bx+1},${by+1}`);
+          // SE, NW = gray (random diagonal)
+          if (isBlackCell(bx+1, by, parity)) shaded.add(`${bx+1},${by}`);
+          if (isBlackCell(bx, by+1, parity)) shaded.add(`${bx},${by+1}`);
+        }
+      }
+    }
+    return { particles, holes, shaded };
   }
 
   function deleteBadDominoes(badSet) {
@@ -194,17 +268,32 @@
 
     if (phase === 'complete') {
       badDominoes = findBadBlocks(currentN);
+      const sh = findBadBlockShaded(currentN);
+      shadedParticles = sh.particles;
+      shadedHoles = sh.holes;
+      shadedGray = new Set();
       phase = 'badblocks';
     } else if (phase === 'badblocks') {
       deleteBadDominoes(badDominoes);
       badDominoes = new Set();
+      // Move to gray ghosts after deletion
+      shadedGray = new Set([...shadedParticles, ...shadedHoles]);
+      shadedParticles = new Set();
+      shadedHoles = new Set();
       phase = 'deleted';
     } else if (phase === 'deleted') {
       slideDominoes();
+      const sh = findEmptyBlockShaded(currentN + 1);
+      shadedParticles = sh.particles;
+      shadedHoles = sh.holes;
+      shadedGray = sh.shaded;
       phase = 'slid';
     } else if (phase === 'slid') {
       currentN++;
       createDominoes(currentN);
+      shadedParticles = new Set();
+      shadedHoles = new Set();
+      shadedGray = new Set();
       phase = 'complete';
     }
   }
@@ -214,6 +303,9 @@
     dominoes = [];
     phase = 'complete';
     badDominoes = new Set();
+    shadedParticles = new Set();
+    shadedHoles = new Set();
+    shadedGray = new Set();
     history = [];
   }
 
@@ -251,8 +343,10 @@
       }
       const particlePos = [];
       cells.forEach((c, i) => {
+        const key = `${c.x},${c.y}`;
         if (sDom.has(`${c.x - 1},${c.y}`) || wDom.has(`${c.x},${c.y - 1}`) ||
-            sDom.has(`${c.x},${c.y}`) || wDom.has(`${c.x},${c.y}`))
+            sDom.has(key) || wDom.has(key) ||
+            shadedParticles.has(key))
           particlePos.push(i + 1);
       });
       const h = particlePos.length;
