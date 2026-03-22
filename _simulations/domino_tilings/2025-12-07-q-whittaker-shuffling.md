@@ -488,7 +488,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
     if (showPartitions && currentN > 0) {
       const nDiag = currentN + (phase === 'slid' ? 1 : 0);
       const diags = computeDiagonalPartitions(nDiag);
-      const fontSize = Math.max(14, Math.min(28, cellSize * 1.7)) * 2;
+      const fontSize = Math.max(11, Math.min(22, cellSize * 1.36)) * 1.6;
       ctx.font = `${fontSize}px serif`;
       ctx.textBaseline = 'middle';
       diags.forEach(info => {
