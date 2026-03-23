@@ -208,14 +208,9 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
         }
 
         centers.forEach(c => {
-          const cellKey = `${c.lx},${c.ly}`;
-          const isShaded = s.shadedParticles.has(cellKey) || s.shadedHoles.has(cellKey);
           ctx.beginPath();
           ctx.arc(c.x, c.y, radius, 0, Math.PI * 2);
-          if (isShaded) {
-            ctx.fillStyle = 'rgba(128,128,128,0.4)';
-            ctx.fill();
-          } else if (isHole) {
+          if (isHole) {
             if (borderWidth > 0) {
               ctx.strokeStyle = '#000';
               ctx.lineWidth = Math.max(0.5, cellSize / 5) * borderWidth;
@@ -252,61 +247,6 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings genera
         }
       }
     });
-
-    // Draw ghost circles for cells not covered by any domino
-    if (showHoles && (s.shadedParticles.size > 0 || s.shadedHoles.size > 0 || s.shadedGray.size > 0)) {
-      const occupied = new Set();
-      s.dominoes.forEach(d => {
-        E.dominoCells(d).forEach(c => occupied.add(`${c.x},${c.y}`));
-      });
-      const radius = cellSize * 0.35;
-
-      // Helper: check if cell is on a white (#ffffff) square
-      function isWhiteSq(x, y) {
-        return ((x + y + parityOffset) % 2 + 2) % 2 !== 0;
-      }
-
-      // Real particles (colored) — only on white (#ffffff) squares
-      s.shadedParticles.forEach(key => {
-        if (occupied.has(key)) return;
-        const [cx2, cy2] = key.split(',').map(Number);
-        if (!isWhiteSq(cx2, cy2)) return;
-        const gpx = cx2 * cellSize + cellSize / 2;
-        const gpy = -(cy2 + 1) * cellSize + cellSize / 2;
-        const isWC = ((cx2 + cy2 + parityOffset) % 2 + 2) % 2 === 0;
-        ctx.beginPath();
-        ctx.arc(gpx, gpy, radius, 0, Math.PI * 2);
-        ctx.fillStyle = isWC ? '#228B22' : '#FF8C00';
-        ctx.fill();
-      });
-
-      // Real holes (empty circles) — only on white (#ffffff) squares
-      s.shadedHoles.forEach(key => {
-        if (occupied.has(key)) return;
-        const [cx2, cy2] = key.split(',').map(Number);
-        if (!isWhiteSq(cx2, cy2)) return;
-        const gpx = cx2 * cellSize + cellSize / 2;
-        const gpy = -(cy2 + 1) * cellSize + cellSize / 2;
-        ctx.beginPath();
-        ctx.arc(gpx, gpy, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = Math.max(0.5, cellSize / 5) * Math.max(borderWidth, 0.3);
-        ctx.stroke();
-      });
-
-      // Gray shaded (undetermined) — only on white (#ffffff) squares
-      s.shadedGray.forEach(key => {
-        if (occupied.has(key)) return;
-        const [cx2, cy2] = key.split(',').map(Number);
-        if (!isWhiteSq(cx2, cy2)) return;
-        const gpx = cx2 * cellSize + cellSize / 2;
-        const gpy = -(cy2 + 1) * cellSize + cellSize / 2;
-        ctx.beginPath();
-        ctx.arc(gpx, gpy, radius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(128,128,128,0.4)';
-        ctx.fill();
-      });
-    }
 
     ctx.restore();
 
