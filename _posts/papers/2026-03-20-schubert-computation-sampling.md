@@ -1,6 +1,7 @@
 ---
 layout: post
 title: "Computation and sampling for Schubert specializations"
+arXiv: 2603.20104 [math.CO]
 coauthors:
   - name: David Anderson
     web: https://people.math.osu.edu/anderson.2804/
