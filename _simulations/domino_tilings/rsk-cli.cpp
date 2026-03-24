@@ -29,6 +29,9 @@ Usage:
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 using namespace std;
 
@@ -75,7 +78,7 @@ private:
     static inline uint64_t rotl(uint64_t x, int k) { return (x << k) | (x >> (64 - k)); }
 };
 
-static Xoshiro256pp rng;
+static thread_local Xoshiro256pp rng;
 
 // ============================================================
 // q-RSK algorithm (from 2025-12-04-RSK-sampling.cpp)
@@ -110,9 +113,9 @@ inline double computeG(int lam_i, int nu_bar_i, double q) {
     return d <= 0 ? 0.0 : oneMinusQtoN(q, d);
 }
 
-// Static buffers (reused across calls)
-static vector<int> s_moved, s_nuParts;
-static vector<pair<int,int>> s_islands;
+// Static buffers (reused across calls, thread-local for OpenMP)
+static thread_local vector<int> s_moved, s_nuParts;
+static thread_local vector<pair<int,int>> s_islands;
 
 void sampleVHq(const Partition& lam, const Partition& mu, const Partition& kappa,
                int bit, double q, Partition& out)
@@ -806,28 +809,44 @@ int main(int argc, char* argv[]) {
             else { cerr << "Error: cannot open " << args.boundaryFile << endl; return 1; }
         }
 
-        *out << "(* n=" << args.n << " q=" << args.q << " alpha=" << args.alpha
-             << " samples=" << args.batch << " *)\n{";
+        // Pre-allocate results
+        vector<vector<int>> results(args.batch);
+        volatile int completed = 0;
 
-        for (int s = 0; s < args.batch; s++) {
-            auto partitions = aztecDiamondSample(args.n, args.alpha, args.q);
-            auto bc = extractBoundary(partitions, args.n);
-            auto bv = boundaryVector(bc, args.n);
+        // Seed each thread differently
+        uint64_t baseSeed = args.seed >= 0 ? args.seed : chrono::high_resolution_clock::now().time_since_epoch().count();
 
-            if (s > 0) *out << ",\n";
-            printMathematicaRow(bv, *out);
+        #pragma omp parallel
+        {
+            int tid = 0;
+            #ifdef _OPENMP
+            tid = omp_get_thread_num();
+            #endif
+            rng.seed(baseSeed + tid * 1000003ULL);
 
-            // Progress
-            if ((s + 1) % max(1, args.batch / 20) == 0 || s + 1 == args.batch) {
-                auto now = chrono::high_resolution_clock::now();
-                double elapsed = chrono::duration<double>(now - t0).count();
-                double rate = (s + 1) / elapsed;
-                double eta = (args.batch - s - 1) / rate;
-                fprintf(stderr, "\r%d/%d  %.1f/s  ~%ds left   ",
-                        s+1, args.batch, rate, (int)eta);
+            #pragma omp for schedule(dynamic, 1)
+            for (int s = 0; s < args.batch; s++) {
+                auto partitions = aztecDiamondSample(args.n, args.alpha, args.q);
+                auto bc = extractBoundary(partitions, args.n);
+                results[s] = boundaryVector(bc, args.n);
+
+                #pragma omp atomic
+                completed++;
             }
         }
 
+        // Progress thread: print from main after parallel section
+        // (progress during parallel is tricky, so just report after)
+        // Actually let's do inline progress with a separate loop
+        // Re-do: use a monitoring approach
+
+        // Write output
+        *out << "(* n=" << args.n << " q=" << args.q << " alpha=" << args.alpha
+             << " samples=" << args.batch << " *)\n{";
+        for (int s = 0; s < args.batch; s++) {
+            if (s > 0) *out << ",\n";
+            printMathematicaRow(results[s], *out);
+        }
         *out << "}\n";
 
         auto t1 = chrono::high_resolution_clock::now();
