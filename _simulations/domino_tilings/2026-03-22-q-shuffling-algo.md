@@ -6,6 +6,7 @@ code:
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/domino_tilings/2026-03-22-q-shuffling-algo.md'
     txt: 'Pure JavaScript implementation of q-weighted EKLP shuffling'
 a11y-description: "Interactive simulation of Aztec diamond domino tilings generated step-by-step via the q-weighted domino shuffling algorithm. Watch each shuffle phase: identify bad blocks, delete, slide, and fill with q-dependent probabilities. Adjust target size n and parameter q; use granular mode to see individual phases."
+published: false
 ---
 
 <script src="/js/colorschemes.js"></script>
