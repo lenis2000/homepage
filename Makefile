@@ -176,13 +176,13 @@ arxiv-full-update: arxiv-venv
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/build_arxiv_embeddings.py
 	@echo "=== Full update complete ==="
 
-arxiv-kaggle:
+arxiv-kaggle: arxiv-venv
 	@echo "Downloading latest Kaggle arXiv metadata..."
 	@mkdir -p ~/Data/arxiv
-	@pip install --quiet kaggle && kaggle datasets download -d Cornell-University/arxiv -p ~/Data/arxiv --unzip
+	@_scripts/arxiv/venv/bin/pip install --quiet kaggle && _scripts/arxiv/venv/bin/kaggle datasets download -d Cornell-University/arxiv -p ~/Data/arxiv --unzip
 	@echo "Importing into SQLite..."
 	@rm -f ~/Data/arxiv/arxiv-metadata.db
-	python3 _scripts/arxiv/import_kaggle_to_sqlite.py
+	_scripts/arxiv/venv/bin/python _scripts/arxiv/import_kaggle_to_sqlite.py
 	@echo "Done. Run 'make arxiv-rebuild' to update indices."
 
 arxiv-import:
