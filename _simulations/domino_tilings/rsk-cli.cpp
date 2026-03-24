@@ -28,6 +28,7 @@ Usage:
 #include <chrono>
 #include <iostream>
 #include <fstream>
+#include <atomic>
 #include <unordered_map>
 #ifdef _OPENMP
 #include <omp.h>
@@ -701,6 +702,7 @@ struct Args {
     int imgSize = 0;  // 0 = auto
     int seed = -1;
     int batch = 0;      // 0 = single sample, >0 = batch mode
+    int threads = 0;    // 0 = all cores
     bool help = false;
 };
 
@@ -720,6 +722,7 @@ Args parseArgs(int argc, char* argv[]) {
         else if (arg == "--scale" && i+1 < argc) a.imgSize = stoi(argv[++i]);
         else if (arg == "--seed" && i+1 < argc) a.seed = stoi(argv[++i]);
         else if ((arg == "--batch" || arg == "-B") && i+1 < argc) a.batch = stoi(argv[++i]);
+        else if ((arg == "--threads" || arg == "-t") && i+1 < argc) a.threads = stoi(argv[++i]);
         else if (arg[0] != '-' && arg[0] >= '0' && arg[0] <= '9') a.n = stoi(arg);
     }
     return a;
@@ -769,6 +772,7 @@ Output:
 Batch:
   -B, --batch N       Sample N tilings, output as Mathematica array to stdout
                       Each row is one boundary curve f(k)
+  -t, --threads N     Number of threads (default: all cores)
 
 Other:
   --seed VALUE        RNG seed (default: random)
@@ -809,9 +813,14 @@ int main(int argc, char* argv[]) {
             else { cerr << "Error: cannot open " << args.boundaryFile << endl; return 1; }
         }
 
+        #ifdef _OPENMP
+        if (args.threads > 0) omp_set_num_threads(args.threads);
+        fprintf(stderr, "Using %d threads\n", omp_get_max_threads());
+        #endif
+
         // Pre-allocate results
         vector<vector<int>> results(args.batch);
-        volatile int completed = 0;
+        atomic<int> completed{0};
 
         // Seed each thread differently
         uint64_t baseSeed = args.seed >= 0 ? args.seed : chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -830,15 +839,18 @@ int main(int argc, char* argv[]) {
                 auto bc = extractBoundary(partitions, args.n);
                 results[s] = boundaryVector(bc, args.n);
 
-                #pragma omp atomic
-                completed++;
+                int done = ++completed;
+                // Thread 0 prints progress
+                if (tid == 0) {
+                    auto now = chrono::high_resolution_clock::now();
+                    double elapsed = chrono::duration<double>(now - t0).count();
+                    double rate = done / elapsed;
+                    double eta = (args.batch - done) / rate;
+                    fprintf(stderr, "\r%d/%d  %.1f/s  ~%ds left   ",
+                            done, args.batch, rate, (int)eta);
+                }
             }
         }
-
-        // Progress thread: print from main after parallel section
-        // (progress during parallel is tricky, so just report after)
-        // Actually let's do inline progress with a separate loop
-        // Re-do: use a monitoring approach
 
         // Write output
         *out << "(* n=" << args.n << " q=" << args.q << " alpha=" << args.alpha
