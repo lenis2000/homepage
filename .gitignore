@@ -154,3 +154,4 @@ gha-creds-*.json
 /data-art/data-is-art-submission.md
 /_scripts/arxiv/__pycache__/fetch_arxiv.cpython-314.pyc
 /_scripts/arxiv/__pycache__/backfill_kaggle.cpython-314.pyc
+/_simulations/domino_tilings/rsk-cli
