@@ -491,27 +491,19 @@ void renderPNG(const vector<Domino>& dominoes, const vector<LatticePoint>& pts,
         }
     }
 
-    // Draw boundary curve (top = orange-red, bottom = blue)
-    // Group particles by diagonal for screen coords
-    unordered_map<int, vector<const LatticePoint*>> diagPts;
-    for (const auto& p : pts)
-        if (p.inSubset) diagPts[p.diag].push_back(&p);
-    for (auto& [d, v] : diagPts)
-        sort(v.begin(), v.end(), [](auto a, auto b) { return a->posInDiag < b->posInDiag; });
-
-    auto drawThickLine = [&](int x0, int y0, int x1, int y1, RGB col, int thickness) {
-        // Bresenham with thickness
+    // Thick line helper for graph below
+    auto drawThickLine = [&](vector<uint8_t>& buf, int bW, int bH,
+                             int x0, int y0, int x1, int y1, RGB col, int thickness) {
         int dx = abs(x1-x0), dy = abs(y1-y0);
         int sx = x0<x1?1:-1, sy = y0<y1?1:-1;
-        int err = dx - dy;
-        int r = thickness / 2;
+        int err = dx - dy, r = thickness / 2;
         while (true) {
             for (int ty = -r; ty <= r; ty++)
                 for (int tx = -r; tx <= r; tx++) {
                     int px = x0+tx, py = y0+ty;
-                    if (px >= 0 && px < W && py >= 0 && py < H) {
-                        int idx = (py*W+px)*3;
-                        pixels[idx] = col.r; pixels[idx+1] = col.g; pixels[idx+2] = col.b;
+                    if (px >= 0 && px < bW && py >= 0 && py < bH) {
+                        int idx = (py*bW+px)*3;
+                        buf[idx] = col.r; buf[idx+1] = col.g; buf[idx+2] = col.b;
                     }
                 }
             if (x0 == x1 && y0 == y1) break;
@@ -521,51 +513,158 @@ void renderPNG(const vector<Domino>& dominoes, const vector<LatticePoint>& pts,
         }
     };
 
-    // Sort diagonals
-    vector<int> sortedDiags;
-    for (auto& [d, _] : diagPts) sortedDiags.push_back(d);
-    sort(sortedDiags.begin(), sortedDiags.end());
+    // Draw top particle (largest position) on each diagonal
+    {
+        // Group particles by diagonal, find the top one
+        unordered_map<int, const LatticePoint*> topByDiag;
+        for (const auto& p : pts) {
+            if (!p.inSubset) continue;
+            auto it = topByDiag.find(p.diag);
+            if (it == topByDiag.end() || p.posInDiag > it->second->posInDiag)
+                topByDiag[p.diag] = &p;
+        }
 
-    int thick = max(2, imgSize / 300);
-
-    // Top boundary (orange-red)
-    for (int i = 0; i + 1 < (int)sortedDiags.size(); i++) {
-        auto& v1 = diagPts[sortedDiags[i]];
-        auto& v2 = diagPts[sortedDiags[i+1]];
-        if (v1.empty() || v2.empty()) continue;
-        auto [px1, py1] = toPixel(v1.back()->sx, v1.back()->sy);
-        auto [px2, py2] = toPixel(v2.back()->sx, v2.back()->sy);
-        drawThickLine(px1, py1, px2, py2, {232, 62, 0}, thick);
+        int dotR = max(2, imgSize / (4 * n));
+        // Draw dots
+        for (auto& [d, tp] : topByDiag) {
+            auto [px, py] = toPixel(tp->sx, tp->sy);
+            // Black filled dot with white outline
+            for (int dy = -dotR-1; dy <= dotR+1; dy++)
+                for (int dx = -dotR-1; dx <= dotR+1; dx++) {
+                    int d2 = dx*dx + dy*dy;
+                    int x = px+dx, y = py+dy;
+                    if (x < 0 || x >= W || y < 0 || y >= H) continue;
+                    int idx = (y*W+x)*3;
+                    if (d2 <= dotR*dotR) {
+                        pixels[idx] = 0; pixels[idx+1] = 0; pixels[idx+2] = 0;
+                    } else if (d2 <= (dotR+1)*(dotR+1)) {
+                        pixels[idx] = 255; pixels[idx+1] = 255; pixels[idx+2] = 255;
+                    }
+                }
+        }
+        // Connect with line
+        vector<int> sortedD;
+        for (auto& [d, _] : topByDiag) sortedD.push_back(d);
+        sort(sortedD.begin(), sortedD.end());
+        for (int i = 0; i + 1 < (int)sortedD.size(); i++) {
+            auto [x0, y0] = toPixel(topByDiag[sortedD[i]]->sx, topByDiag[sortedD[i]]->sy);
+            auto [x1, y1] = toPixel(topByDiag[sortedD[i+1]]->sx, topByDiag[sortedD[i+1]]->sy);
+            // Bresenham 2px thick
+            int ddx = abs(x1-x0), ddy = abs(y1-y0);
+            int sx = x0<x1?1:-1, sy = y0<y1?1:-1, err = ddx-ddy;
+            while (true) {
+                for (int t = -1; t <= 1; t++) {
+                    if (x0+t>=0&&x0+t<W&&y0>=0&&y0<H) { int idx=(y0*W+x0+t)*3; pixels[idx]=232; pixels[idx+1]=62; pixels[idx+2]=0; }
+                    if (x0>=0&&x0<W&&y0+t>=0&&y0+t<H) { int idx=((y0+t)*W+x0)*3; pixels[idx]=232; pixels[idx+1]=62; pixels[idx+2]=0; }
+                }
+                if (x0==x1&&y0==y1) break;
+                int e2=2*err;
+                if (e2>-ddy){err-=ddy;x0+=sx;}
+                if (e2<ddx){err+=ddx;y0+=sy;}
+            }
+        }
     }
 
-    // Bottom boundary (blue)
-    for (int i = 0; i + 1 < (int)sortedDiags.size(); i++) {
-        auto& v1 = diagPts[sortedDiags[i]];
-        auto& v2 = diagPts[sortedDiags[i+1]];
-        if (v1.empty() || v2.empty()) continue;
-        auto [px1, py1] = toPixel(v1.front()->sx, v1.front()->sy);
-        auto [px2, py2] = toPixel(v2.front()->sx, v2.front()->sy);
-        drawThickLine(px1, py1, px2, py2, {0, 100, 200}, thick);
+    // ---- Draw f(k) = topPos graph below the tiling ----
+    int graphH = H / 4;
+    int totalH = H + graphH + 10; // 10px gap
+    vector<uint8_t> fullPixels(W * totalH * 3, 255); // white
+    // Copy tiling into top portion
+    memcpy(fullPixels.data(), pixels.data(), W * H * 3);
+
+    int graphTop = H + 10;
+    int graphBot = totalH - 20;
+    int graphLeft = 40, graphRight = W - 20;
+    int gw = graphRight - graphLeft, gh = graphBot - graphTop;
+
+    // Axes
+    auto setPixel = [&](int x, int y, RGB c) {
+        if (x >= 0 && x < W && y >= 0 && y < totalH) {
+            int idx = (y * W + x) * 3;
+            fullPixels[idx] = c.r; fullPixels[idx+1] = c.g; fullPixels[idx+2] = c.b;
+        }
+    };
+    auto hline = [&](int x0, int x1, int y, RGB c) { for (int x = x0; x <= x1; x++) setPixel(x, y, c); };
+    auto vline = [&](int x, int y0, int y1, RGB c) { for (int y = y0; y <= y1; y++) setPixel(x, y, c); };
+
+    RGB axisCol = {150, 150, 150};
+    hline(graphLeft, graphRight, graphBot, axisCol);
+    vline(graphLeft, graphTop, graphBot, axisCol);
+
+    // Parity-corrected: -1 on (n+1)-diags, skip last zero
+    int numDiags = 2 * n + 1;
+    vector<double> fvals;
+    for (int idx = 0; idx < numDiags - 1; idx++) {
+        int val = bc.topPos[idx];
+        if (bc.diagSize[idx] == n + 1) val -= 1;
+        fvals.push_back((double)val);
     }
 
-    stbi_write_png(filename.c_str(), W, H, 3, pixels.data(), W * 3);
-    cerr << "Saved " << filename << " (" << W << "x" << H << ")" << endl;
+    // Skip frozen part (topPos == n)
+    int plotStart = 0;
+    for (int i = 0; i < (int)fvals.size(); i++) {
+        if (fvals[i] < n - 0.5) { plotStart = max(0, i - 2); break; }
+    }
+    int plotEnd = (int)fvals.size() - 1;
+
+    double minVal = fvals[plotEnd], maxVal = fvals[plotStart];
+    for (int i = plotStart; i <= plotEnd; i++) {
+        minVal = min(minVal, fvals[i]);
+        maxVal = max(maxVal, fvals[i]);
+    }
+    double valPad = max(1.0, (maxVal - minVal) * 0.05);
+    minVal -= valPad; maxVal += valPad;
+
+    auto kToX = [&](int k) { return graphLeft + (int)((double)(k - plotStart) / (plotEnd - plotStart) * gw); };
+    auto vToY = [&](double v) { return graphBot - (int)((v - minVal) / (maxVal - minVal) * gh); };
+
+    // Grid lines
+    int numGrid = 5;
+    for (int g = 0; g <= numGrid; g++) {
+        double v = minVal + g * (maxVal - minVal) / numGrid;
+        int y = vToY(v);
+        for (int x = graphLeft; x <= graphRight; x += 3) setPixel(x, y, {230, 230, 230});
+    }
+
+    // Connect with thick orange line + dots
+    RGB plotCol = {232, 62, 0};
+    for (int i = plotStart; i + 1 <= plotEnd; i++) {
+        int x0 = kToX(i), y0 = vToY(fvals[i]);
+        int x1 = kToX(i+1), y1 = vToY(fvals[i+1]);
+        int ddx = abs(x1-x0), ddy = abs(y1-y0);
+        int sx = x0<x1?1:-1, sy = y0<y1?1:-1, err = ddx-ddy;
+        int lx = x0, ly = y0;
+        while (true) {
+            for (int t = -1; t <= 1; t++) { setPixel(lx, ly+t, plotCol); setPixel(lx+t, ly, plotCol); }
+            if (lx == x1 && ly == y1) break;
+            int e2 = 2*err;
+            if (e2 > -ddy) { err -= ddy; lx += sx; }
+            if (e2 < ddx) { err += ddx; ly += sy; }
+        }
+    }
+    for (int i = plotStart; i <= plotEnd; i++) {
+        int cx = kToX(i), cy = vToY(fvals[i]);
+        for (int dy = -2; dy <= 2; dy++)
+            for (int dx = -2; dx <= 2; dx++)
+                if (dx*dx + dy*dy <= 5) setPixel(cx+dx, cy+dy, plotCol);
+    }
+
+    stbi_write_png(filename.c_str(), W, totalH, 3, fullPixels.data(), W * 3);
+    cerr << "Saved " << filename << " (" << W << "x" << totalH << ")" << endl;
 }
 
 // ============================================================
 // Text output
 // ============================================================
 void printBoundary(const BoundaryCurve& bc, int n, ostream& out) {
-    out << "# Boundary curve for Aztec diamond n=" << n << endl;
-    out << "# diagIdx  geomDiag  diagSize  numParticles  topPos  bottomPos  topNorm  bottomNorm" << endl;
+    // topPos on n-sized diagonals reported as-is; on (n+1)-sized diagonals subtract 1
+    // so all values are on the same 1..n scale, all integers
+    out << "# n=" << n << "  f(k) = topPos (parity-corrected: -1 on (n+1)-diags)" << endl;
     int numDiags = 2 * n + 1;
-    for (int idx = 0; idx < numDiags; idx++) {
-        int geomDiag = idx - n;
-        double topNorm = bc.diagSize[idx] > 0 ? (double)bc.topPos[idx] / bc.diagSize[idx] : 0;
-        double botNorm = bc.diagSize[idx] > 0 ? (double)bc.bottomPos[idx] / bc.diagSize[idx] : 0;
-        out << idx << "\t" << geomDiag << "\t" << bc.diagSize[idx] << "\t"
-            << bc.numParticles[idx] << "\t" << bc.topPos[idx] << "\t" << bc.bottomPos[idx]
-            << "\t" << topNorm << "\t" << botNorm << endl;
+    for (int idx = 0; idx < numDiags - 1; idx++) {
+        int val = bc.topPos[idx];
+        if (bc.diagSize[idx] == n + 1) val -= 1;
+        out << val << endl;
     }
 }
 
@@ -598,6 +697,7 @@ struct Args {
     bool verbose = false;
     int imgSize = 0;  // 0 = auto
     int seed = -1;
+    int batch = 0;      // 0 = single sample, >0 = batch mode
     bool help = false;
 };
 
@@ -616,9 +716,33 @@ Args parseArgs(int argc, char* argv[]) {
         else if (arg == "--verbose" || arg == "-v") a.verbose = true;
         else if (arg == "--scale" && i+1 < argc) a.imgSize = stoi(argv[++i]);
         else if (arg == "--seed" && i+1 < argc) a.seed = stoi(argv[++i]);
+        else if ((arg == "--batch" || arg == "-B") && i+1 < argc) a.batch = stoi(argv[++i]);
         else if (arg[0] != '-' && arg[0] >= '0' && arg[0] <= '9') a.n = stoi(arg);
     }
     return a;
+}
+
+// Extract parity-corrected boundary as integer vector
+vector<int> boundaryVector(const BoundaryCurve& bc, int n) {
+    int numDiags = 2 * n + 1;
+    vector<int> v;
+    v.reserve(numDiags - 1);
+    for (int idx = 0; idx < numDiags - 1; idx++) {
+        int val = bc.topPos[idx];
+        if (bc.diagSize[idx] == n + 1) val -= 1;
+        v.push_back(val);
+    }
+    return v;
+}
+
+// Print a single boundary as Mathematica list
+void printMathematicaRow(const vector<int>& v, ostream& out) {
+    out << "{";
+    for (int i = 0; i < (int)v.size(); i++) {
+        if (i > 0) out << ",";
+        out << v[i];
+    }
+    out << "}";
 }
 
 void printHelp() {
@@ -639,6 +763,10 @@ Output:
   --partitions        Print partition sequence to stderr
   -v, --verbose       Verbose output
 
+Batch:
+  -B, --batch N       Sample N tilings, output as Mathematica array to stdout
+                      Each row is one boundary curve f(k)
+
 Other:
   --seed VALUE        RNG seed (default: random)
   -h, --help          Show this help
@@ -647,7 +775,8 @@ Examples:
   ./rsk-cli 50                            # sample, print timing
   ./rsk-cli 100 --q 0.8 -b               # print boundary
   ./rsk-cli 200 --alpha 0.5 -o tile.png   # save PNG
-  ./rsk-cli 100 -b --boundary-file c.txt -o t.png  # both
+  ./rsk-cli 100 -B 1000 > data.m          # batch → Mathematica
+  ./rsk-cli 100 -B 1000 --boundary-file data.m  # same, to file
 )HELP";
 }
 
@@ -664,28 +793,71 @@ int main(int argc, char* argv[]) {
     if (args.verbose)
         cerr << "n=" << args.n << " q=" << args.q << " alpha=" << args.alpha << endl;
 
-    // Sample
+    // ---- Batch mode ----
+    if (args.batch > 0) {
+        auto t0 = chrono::high_resolution_clock::now();
+
+        // Choose output stream
+        ofstream fout;
+        ostream* out = &cout;
+        if (!args.boundaryFile.empty()) {
+            fout.open(args.boundaryFile);
+            if (fout) out = &fout;
+            else { cerr << "Error: cannot open " << args.boundaryFile << endl; return 1; }
+        }
+
+        *out << "(* n=" << args.n << " q=" << args.q << " alpha=" << args.alpha
+             << " samples=" << args.batch << " *)\n{";
+
+        for (int s = 0; s < args.batch; s++) {
+            auto partitions = aztecDiamondSample(args.n, args.alpha, args.q);
+            auto bc = extractBoundary(partitions, args.n);
+            auto bv = boundaryVector(bc, args.n);
+
+            if (s > 0) *out << ",\n";
+            printMathematicaRow(bv, *out);
+
+            // Progress
+            if ((s + 1) % max(1, args.batch / 20) == 0 || s + 1 == args.batch) {
+                auto now = chrono::high_resolution_clock::now();
+                double elapsed = chrono::duration<double>(now - t0).count();
+                double rate = (s + 1) / elapsed;
+                double eta = (args.batch - s - 1) / rate;
+                fprintf(stderr, "\r%d/%d  %.1f/s  ~%ds left   ",
+                        s+1, args.batch, rate, (int)eta);
+            }
+        }
+
+        *out << "}\n";
+
+        auto t1 = chrono::high_resolution_clock::now();
+        double totalSec = chrono::duration<double>(t1 - t0).count();
+        cerr << "\rDone: " << args.batch << " samples in " << totalSec << "s ("
+             << args.batch / totalSec << "/s)" << endl;
+
+        if (!args.boundaryFile.empty()) cerr << "Saved " << args.boundaryFile << endl;
+        return 0;
+    }
+
+    // ---- Single sample mode ----
     auto t0 = chrono::high_resolution_clock::now();
     auto partitions = aztecDiamondSample(args.n, args.alpha, args.q);
     auto t1 = chrono::high_resolution_clock::now();
-    double sampleMs = chrono::duration<double, milli>(t1 - t0).count();
-
-    cerr << "Sampled n=" << args.n << " in " << sampleMs << " ms" << endl;
+    cerr << "Sampled n=" << args.n << " in "
+         << chrono::duration<double, milli>(t1 - t0).count() << " ms" << endl;
 
     if (args.printParts) printPartitions(partitions, args.n);
 
-    // Extract boundary
     auto bc = extractBoundary(partitions, args.n);
 
     if (args.printBound) printBoundary(bc, args.n, cout);
 
-    if (!args.boundaryFile.empty()) {
+    if (!args.boundaryFile.empty() && args.batch == 0) {
         ofstream f(args.boundaryFile);
         if (f) { printBoundary(bc, args.n, f); cerr << "Saved " << args.boundaryFile << endl; }
         else cerr << "Error: cannot open " << args.boundaryFile << endl;
     }
 
-    // PNG
     if (!args.output.empty()) {
         int imgSize = args.imgSize > 0 ? args.imgSize : max(400, min(4000, args.n * 20));
         auto t2 = chrono::high_resolution_clock::now();

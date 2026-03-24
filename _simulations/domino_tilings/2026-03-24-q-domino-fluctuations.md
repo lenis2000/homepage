@@ -121,12 +121,23 @@ published: true
 <div id="stats-bar" role="status" aria-live="polite">Samples: 0 &nbsp;|&nbsp; Mean: — &nbsp;|&nbsp; SD: — &nbsp;|&nbsp; Skew: — &nbsp;|&nbsp; Kurt: — &nbsp;|&nbsp; JB: —</div>
 <details style="margin: 4px 0 8px 0; font-size: 0.85em; color: #555;">
 <summary style="cursor:pointer;">Stats legend</summary>
-<b>SD</b> = standard deviation. <b>Skew</b> = skewness (0 for symmetric). <b>Kurt</b> = excess kurtosis (0 for normal; positive = heavy tails, negative = light tails). <b>JB</b> = Jarque-Bera statistic, a normality test based on skewness and kurtosis: JB = n/6·(S² + K²/4). Under the null hypothesis of normality, JB ~ χ²(2). <b>p</b> = p-value; large p (say >0.05) means the data is consistent with normality; small p rejects normality.
+<b>SD</b> = standard deviation. <b>Skew</b> = skewness (0 for symmetric). <b>Kurt</b> = excess kurtosis (0 for normal). <b>JB</b> = Jarque-Bera normality test: JB = n/6·(S² + K²/4), p from χ²(2). <span style="color:#c00"><b>[TW]</b></span> = Tracy-Widom F₂ reference: skew 0.224, excess kurt 0.093. Histogram overlays: <span style="color:rgba(200,0,0,0.85)">red solid</span> = TW F₂, <span style="color:rgba(0,160,0,0.7)">green dashed</span> = Gaussian (Edgeworth expansion, matched to empirical SD).
 </details>
 
 <canvas id="tiling-canvas"></canvas>
 
 <canvas id="histogram-canvas"></canvas>
+
+<div style="margin: 16px 0 8px 0; border-top: 1px solid #ddd; padding-top: 12px;">
+  <div class="controls-row">
+    <b style="font-size:0.95em;">Scaling test</b>
+    <label>Samples/n: <input id="scaling-samples" type="number" value="200" min="20" max="2000" style="width:70px;"></label>
+    <button id="scaling-btn">Run</button>
+    <span id="scaling-status" style="font-family:monospace; font-size:12px; color:#666;"></span>
+  </div>
+</div>
+<div id="scaling-result" style="font-family:monospace; font-size:13px; padding:6px 10px; background:#f5f5f5; border:1px solid #ddd; border-radius:4px; margin:4px 0; display:none;" role="status"></div>
+<canvas id="scaling-canvas" style="width:100%; height:250px; border:1px solid #ccc; background:#fafafa;"></canvas>
 
 <script>
 if (typeof createRSKModule === 'undefined') {
@@ -415,6 +426,10 @@ async function initializeApp() {
     return isHorizontal ? defaultColors[2] : defaultColors[3];
   }
 
+  // ========== Tracy-Widom F2 Reference (Bornemann 2010) ==========
+  const TW_F2_SKEW = 0.224084203610;
+  const TW_F2_KURT = 0.0934480876;  // excess kurtosis
+
   // ========== WASM Sampling ==========
   async function aztecDiamondSample(n, x, y, q) {
     if (n === 0) return [[]];
@@ -643,6 +658,7 @@ async function initializeApp() {
       density: heightSamples.length > 0 ? b.length / (heightSamples.length * binWidth) : 0
     }));
 
+    const sd = d3.deviation(heightSamples) || 0;
     const maxDensity = d3.max(normalized, d => d.density) || 1;
     const yScale = d3.scaleLinear().domain([0, maxDensity * 1.1]).range([h - margin.bottom, margin.top]);
 
@@ -692,8 +708,64 @@ async function initializeApp() {
       ctx.fillRect(bx + 0.5, by, bw - 1, bh);
     }
 
+    // Overlay: Gaussian and TW F2 density curves
+    if (sd > 0 && heightSamples.length >= 10) {
+      const sqrt2pi = Math.sqrt(2 * Math.PI);
+      for (const curve of ['gaussian', 'tw']) {
+        ctx.beginPath();
+        if (curve === 'gaussian') {
+          ctx.strokeStyle = 'rgba(0, 160, 0, 0.7)';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([5, 3]);
+        } else {
+          ctx.strokeStyle = 'rgba(200, 0, 0, 0.85)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([]);
+        }
+        let first = true;
+        for (let px = margin.left; px <= w - margin.right; px += 1) {
+          const x = xScale.invert(px);
+          const z = x / sd;
+          const phi = Math.exp(-z * z / 2) / sqrt2pi;
+          let density;
+          if (curve === 'gaussian') {
+            density = phi / sd;
+          } else {
+            const H3 = z * z * z - 3 * z;
+            const H4 = z * z * z * z - 6 * z * z + 3;
+            const H6 = Math.pow(z, 6) - 15 * Math.pow(z, 4) + 45 * z * z - 15;
+            const corr = 1 + TW_F2_SKEW / 6 * H3 + TW_F2_KURT / 24 * H4
+              + TW_F2_SKEW * TW_F2_SKEW / 72 * H6;
+            density = Math.max(0, phi * corr / sd);
+          }
+          const py = yScale(density);
+          if (py >= margin.top - 5 && py <= h - margin.bottom + 5) {
+            if (first) { ctx.moveTo(px, py); first = false; }
+            else ctx.lineTo(px, py);
+          }
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      // Curve legend (top-right)
+      const lx = w - margin.right - 105;
+      const ly = margin.top + 8;
+      ctx.font = '10px "SF Mono", Monaco, monospace';
+      ctx.textAlign = 'left';
+      ctx.strokeStyle = 'rgba(200, 0, 0, 0.85)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx + 18, ly); ctx.stroke();
+      ctx.fillStyle = '#333';
+      ctx.fillText('TW F\u2082', lx + 22, ly + 3);
+      ctx.strokeStyle = 'rgba(0, 160, 0, 0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 3]);
+      ctx.beginPath(); ctx.moveTo(lx, ly + 14); ctx.lineTo(lx + 18, ly + 14); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillText('Gaussian', lx + 22, ly + 17);
+    }
+
     // Legend
-    const sd = d3.deviation(heightSamples) || 0;
     const skew = heightSamples.length > 2 ? computeSkewness(heightSamples, mean, sd) : 0;
     const kurt = heightSamples.length > 3 ? computeKurtosis(heightSamples, mean, sd) : 0;
     const { jb, p: jbP } = jarqueBera(heightSamples);
@@ -762,8 +834,8 @@ async function initializeApp() {
       `Samples: ${heightSamples.length} &nbsp;|&nbsp; ` +
       `Mean: ${mean.toFixed(3)} &nbsp;|&nbsp; ` +
       `SD: ${sd.toFixed(3)} &nbsp;|&nbsp; ` +
-      `Skew: ${skew.toFixed(3)} &nbsp;|&nbsp; ` +
-      `Kurt: ${kurt.toFixed(3)} &nbsp;|&nbsp; ` +
+      `Skew: ${skew.toFixed(3)} <span style="color:#c00">[TW=${TW_F2_SKEW.toFixed(3)}]</span> &nbsp;|&nbsp; ` +
+      `Kurt: ${kurt.toFixed(3)} <span style="color:#c00">[TW=${TW_F2_KURT.toFixed(3)}]</span> &nbsp;|&nbsp; ` +
       `JB: ${jb.toFixed(2)} (p=${pStr})`;
   }
 
@@ -950,6 +1022,236 @@ async function initializeApp() {
     drawHistogram();
     renderTiling();
   });
+
+  // ========== Scaling Test ==========
+  const scalingCanvas = document.getElementById('scaling-canvas');
+  const scalingBtn = document.getElementById('scaling-btn');
+  const scalingSamplesInput = document.getElementById('scaling-samples');
+  const scalingStatus = document.getElementById('scaling-status');
+  const scalingResult = document.getElementById('scaling-result');
+  let scalingData = [];
+  let scalingCancelRequested = false;
+
+  function linReg(x, y) {
+    const n = x.length;
+    let sx = 0, sy = 0, sxx = 0, sxy = 0;
+    for (let i = 0; i < n; i++) { sx += x[i]; sy += y[i]; sxx += x[i]*x[i]; sxy += x[i]*y[i]; }
+    const slope = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+    const intercept = (sy - slope * sx) / n;
+    const yMean = sy / n;
+    let ssTot = 0, ssRes = 0;
+    for (let i = 0; i < n; i++) {
+      ssTot += (y[i] - yMean) ** 2;
+      ssRes += (y[i] - slope * x[i] - intercept) ** 2;
+    }
+    return { slope, intercept, r2: ssTot > 0 ? 1 - ssRes / ssTot : 0 };
+  }
+
+  async function runScalingTest() {
+    if (scalingCancelRequested === false && scalingBtn.textContent === 'Stop') {
+      scalingCancelRequested = true;
+      return;
+    }
+    const q = parseFloat(qInput.value);
+    const baseSamples = parseInt(scalingSamplesInput.value) || 200;
+    // ~10 points, geometrically spaced from 5 to 500
+    const nValues = [20, 50, 100, 200, 300, 400, 500, 750, 1000];
+    const family = familySelect.value;
+    const savedN = currentN;
+
+    scalingBtn.textContent = 'Stop';
+    scalingCancelRequested = false;
+    scalingData = [];
+    scalingResult.style.display = 'none';
+
+    if (highPrecisionCb.checked) setHighPrecision(1);
+    else setHighPrecision(0);
+
+    for (const n of nValues) {
+      if (scalingCancelRequested) break;
+      currentN = n;
+      await recreateWasm();
+
+      const x = Array(n).fill(1);
+      const y = Array(n).fill(1);
+      const diagIdx = n; // center diagonal
+      const samples = [];
+      // Scale down samples for large n: full at n≤20, then ~1/n relative cost
+      const samplesPerN = Math.max(20, Math.round(baseSamples * Math.min(1, 20 / n)));
+
+      for (let i = 0; i < samplesPerN; i++) {
+        if (scalingCancelRequested) break;
+        const partitions = await aztecDiamondSample(n, x, y, q);
+        if (!partitions) continue;
+        const h = extractMeasurement(partitions, diagIdx, family, n);
+        samples.push(h);
+
+        wasmSampleCount++;
+        if (wasmSampleCount % 50 === 0) await recreateWasm();
+
+        if (i % 10 === 0) {
+          scalingStatus.textContent = `n=${n}: ${i+1}/${samplesPerN}`;
+          await new Promise(r => requestAnimationFrame(r));
+        }
+      }
+
+      if (samples.length > 1) {
+        scalingData.push({ n, mean: d3.mean(samples), sd: d3.deviation(samples), count: samples.length });
+        drawScalingPlot();
+      }
+    }
+
+    // Restore original n
+    currentN = savedN;
+
+    // Fit and display result
+    const pts = scalingData.filter(d => d.sd > 0);
+    if (pts.length >= 2) {
+      const { slope, r2 } = linReg(pts.map(d => Math.log(d.n)), pts.map(d => Math.log(d.sd)));
+      scalingResult.style.display = 'block';
+      scalingResult.innerHTML =
+        `SD ~ n<sup>\u03B1</sup>: fitted <b>\u03B1 = ${slope.toFixed(3)}</b> (R\u00B2=${r2.toFixed(3)}) &nbsp;·&nbsp; ` +
+        `<span style="color:#c00">TW: \u03B1=\u2153\u22480.333</span> &nbsp;·&nbsp; ` +
+        `<span style="color:#07a">CLT: \u03B1=\u00BD=0.500</span>`;
+    }
+
+    scalingBtn.textContent = 'Run';
+    scalingStatus.textContent = scalingCancelRequested ? 'Cancelled' : 'Done';
+    scalingCancelRequested = false;
+    drawScalingPlot();
+  }
+
+  function drawScalingPlot() {
+    const setup = setupCanvas(scalingCanvas);
+    if (!setup) return;
+    const { ctx, w, h } = setup;
+    const margin = { top: 25, right: 20, bottom: 35, left: 55 };
+
+    ctx.clearRect(0, 0, w, h);
+
+    if (scalingData.length === 0) {
+      ctx.fillStyle = '#888';
+      ctx.font = '14px "franklingothic-book", Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Scaling test: SD vs n (20\u20131000) at center diagonal, log-log fit', w / 2, h / 2);
+      return;
+    }
+
+    const pts = scalingData.filter(d => d.sd > 0);
+    if (pts.length === 0) return;
+
+    const logNs = pts.map(d => Math.log(d.n));
+    const logSDs = pts.map(d => Math.log(d.sd));
+
+    const xPad = 0.3, yPad = 0.4;
+    const xMin = Math.min(...logNs) - xPad, xMax = Math.max(...logNs) + xPad;
+    const yMin = Math.min(...logSDs) - yPad, yMax = Math.max(...logSDs) + yPad;
+
+    const xScale = d3.scaleLinear().domain([xMin, xMax]).range([margin.left, w - margin.right]);
+    const yScl = d3.scaleLinear().domain([yMin, yMax]).range([h - margin.bottom, margin.top]);
+
+    // Grid
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(margin.left, h - margin.bottom);
+    ctx.lineTo(w - margin.right, h - margin.bottom);
+    ctx.moveTo(margin.left, margin.top);
+    ctx.lineTo(margin.left, h - margin.bottom);
+    ctx.stroke();
+
+    // X ticks (actual n values)
+    ctx.fillStyle = '#888';
+    ctx.font = '10px "SF Mono", Monaco, monospace';
+    ctx.textAlign = 'center';
+    for (const n of [20, 50, 100, 200, 500, 1000]) { // tick values
+      const lx = Math.log(n);
+      if (lx >= xMin && lx <= xMax) {
+        const tx = xScale(lx);
+        ctx.fillText(`${n}`, tx, h - margin.bottom + 14);
+      }
+    }
+
+    // Y ticks (actual SD values)
+    ctx.textAlign = 'right';
+    const yTicks = yScl.ticks(5);
+    for (const t of yTicks) {
+      const ty = yScl(t);
+      ctx.fillText(Math.exp(t).toFixed(2), margin.left - 5, ty + 3);
+      ctx.strokeStyle = '#eee';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath(); ctx.moveTo(margin.left, ty); ctx.lineTo(w - margin.right, ty); ctx.stroke();
+    }
+
+    // Reference slope lines through data centroid
+    const cxLog = d3.mean(logNs), cyLog = d3.mean(logSDs);
+    for (const { slope, color, label } of [
+      { slope: 1/3, color: 'rgba(200, 0, 0, 0.35)', label: '\u03B1=1/3' },
+      { slope: 1/2, color: 'rgba(0, 120, 180, 0.35)', label: '\u03B1=1/2' }
+    ]) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(xScale(xMin), yScl(cyLog + slope * (xMin - cxLog)));
+      ctx.lineTo(xScale(xMax), yScl(cyLog + slope * (xMax - cxLog)));
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Fitted line
+    if (pts.length >= 2) {
+      const { slope, intercept } = linReg(logNs, logSDs);
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(xScale(xMin), yScl(slope * xMin + intercept));
+      ctx.lineTo(xScale(xMax), yScl(slope * xMax + intercept));
+      ctx.stroke();
+    }
+
+    // Data points
+    ctx.fillStyle = '#232D4B';
+    for (let i = 0; i < pts.length; i++) {
+      ctx.beginPath();
+      ctx.arc(xScale(logNs[i]), yScl(logSDs[i]), 4, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Legend (top-right)
+    const lx = w - margin.right - 120;
+    const ly = margin.top + 4;
+    ctx.font = '10px "SF Mono", Monaco, monospace';
+    ctx.textAlign = 'left';
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = 'rgba(200, 0, 0, 0.5)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx + 18, ly); ctx.stroke();
+    ctx.fillStyle = '#c00'; ctx.fillText('\u03B1=1/3 (TW)', lx + 22, ly + 3);
+    ctx.strokeStyle = 'rgba(0, 120, 180, 0.5)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(lx, ly + 14); ctx.lineTo(lx + 18, ly + 14); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#07a'; ctx.fillText('\u03B1=1/2 (CLT)', lx + 22, ly + 17);
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(lx, ly + 28); ctx.lineTo(lx + 18, ly + 28); ctx.stroke();
+    ctx.fillStyle = '#333'; ctx.fillText('Fitted', lx + 22, ly + 31);
+
+    // Axis labels
+    ctx.fillStyle = '#888';
+    ctx.textAlign = 'center';
+    ctx.font = '11px "franklingothic-book", Arial, sans-serif';
+    ctx.fillText('n (log scale)', w / 2, h - 2);
+    ctx.save();
+    ctx.translate(12, h / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('SD (log scale)', 0, 0);
+    ctx.restore();
+  }
+
+  scalingBtn.addEventListener('click', runScalingTest);
+  drawScalingPlot();
 
   // ========== Init ==========
   updateParamsForN(currentN);

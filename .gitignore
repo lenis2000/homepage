@@ -155,3 +155,4 @@ gha-creds-*.json
 /_scripts/arxiv/__pycache__/fetch_arxiv.cpython-314.pyc
 /_scripts/arxiv/__pycache__/backfill_kaggle.cpython-314.pyc
 /_simulations/domino_tilings/rsk-cli
+/_simulations/domino_tilings/data.m
