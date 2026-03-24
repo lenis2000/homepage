@@ -804,14 +804,34 @@ int main(int argc, char* argv[]) {
     if (args.batch > 0) {
         auto t0 = chrono::high_resolution_clock::now();
 
-        // Choose output stream
-        ofstream fout;
-        ostream* out = &cout;
-        if (!args.boundaryFile.empty()) {
-            fout.open(args.boundaryFile);
-            if (fout) out = &fout;
-            else { cerr << "Error: cannot open " << args.boundaryFile << endl; return 1; }
+        // Auto-generate filename if none given
+        string outFile = args.boundaryFile;
+        if (outFile.empty()) {
+            // Format q and alpha without trailing zeros
+            auto fmtNum = [](double v) -> string {
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%.4g", v);
+                return buf;
+            };
+            // Timestamp
+            auto now_t = chrono::system_clock::now();
+            auto tt = chrono::system_clock::to_time_t(now_t);
+            struct tm ltm;
+            localtime_r(&tt, &ltm);
+            char ts[32];
+            strftime(ts, sizeof(ts), "%Y%m%d_%H%M%S", &ltm);
+
+            outFile = "qw_domino_n" + to_string(args.n)
+                    + "_q" + fmtNum(args.q)
+                    + "_a" + fmtNum(args.alpha)
+                    + "_B" + to_string(args.batch)
+                    + "_" + string(ts) + ".m";
         }
+
+        ofstream fout(outFile);
+        if (!fout) { cerr << "Error: cannot open " << outFile << endl; return 1; }
+        ostream* out = &fout;
+        cerr << "Output: " << outFile << endl;
 
         #ifdef _OPENMP
         if (args.threads > 0) omp_set_num_threads(args.threads);
@@ -864,9 +884,7 @@ int main(int argc, char* argv[]) {
         auto t1 = chrono::high_resolution_clock::now();
         double totalSec = chrono::duration<double>(t1 - t0).count();
         cerr << "\rDone: " << args.batch << " samples in " << totalSec << "s ("
-             << args.batch / totalSec << "/s)" << endl;
-
-        if (!args.boundaryFile.empty()) cerr << "Saved " << args.boundaryFile << endl;
+             << args.batch / totalSec << "/s)  →  " << outFile << endl;
         return 0;
     }
 

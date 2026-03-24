@@ -9,6 +9,7 @@ coauthors:
     web: https://sites.google.com/usc.edu/gpanova/home?authuser=0
   - name: Leonid Petrov
 comments: false
+selected: true
 categories: blog math preprint
 # journal-ref:
 # journal-web:
