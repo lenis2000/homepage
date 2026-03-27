@@ -53521,6 +53521,26 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2603.24640": {
+    "date": "2026-03-25",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2603.25007": {
+    "date": "2026-03-26",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2603.25149": {
+    "date": "2026-03-26",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2603.25459": {
+    "date": "2026-03-26",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
   "alg-geom/9712009": {
     "date": "1997-12-09",
     "decision": "ACCEPT",
