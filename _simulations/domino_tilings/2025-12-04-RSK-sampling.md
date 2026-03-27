@@ -237,10 +237,12 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings sample
     <label for="x-params" style="width: 16px;">x:</label>
     <input id="x-params" type="text" class="param-input" value="1^4" style="flex: 1;">
   </div>
+  <div id="x-params-note" style="font-size: 0.78em; color: #888; margin: -2px 0 4px 24px; display: none;"></div>
   <div style="display: flex; gap: 8px; align-items: center;">
     <label for="y-params" style="width: 16px;">y:</label>
     <input id="y-params" type="text" class="param-input" value="1^4" style="flex: 1;">
   </div>
+  <div id="y-params-note" style="font-size: 0.78em; color: #888; margin: -2px 0 0 24px; display: none;"></div>
 </div>
 
 <!-- Zoom Controls and Export -->
@@ -1423,6 +1425,40 @@ async function initializeApp() {
     return arr.map(x => x.toString()).join(',');
   }
 
+  // Summarize param array as run-length groups, e.g. "100×5, 100×1"
+  function summarizeParams(arr) {
+    if (arr.length === 0) return '';
+    const allEqual = arr.every(v => v === arr[0]);
+    if (allEqual) return '';
+    const runs = [];
+    let i = 0;
+    while (i < arr.length) {
+      const v = arr[i];
+      let count = 0;
+      while (i < arr.length && arr[i] === v) { count++; i++; }
+      const vStr = Number.isInteger(v) ? v.toString() : parseFloat(v.toPrecision(6)).toString();
+      runs.push(count > 1 ? count + '×' + vStr : vStr);
+    }
+    // Collapse if too many groups
+    if (runs.length > 6) {
+      return runs.slice(0, 3).join(', ') + ', …, ' + runs.slice(-2).join(', ') + '  (' + arr.length + ' total)';
+    }
+    return runs.join(', ');
+  }
+
+  function updateParamNotes() {
+    const xNote = document.getElementById('x-params-note');
+    const yNote = document.getElementById('y-params-note');
+    const xArr = parseCSV(document.getElementById('x-params').value);
+    const yArr = parseCSV(document.getElementById('y-params').value);
+    const xSummary = summarizeParams(xArr);
+    const ySummary = summarizeParams(yArr);
+    xNote.style.display = xSummary ? '' : 'none';
+    xNote.textContent = xSummary;
+    yNote.style.display = ySummary ? '' : 'none';
+    yNote.textContent = ySummary;
+  }
+
   // Update parameters display based on n
   function updateParamsForN(newN) {
     const xParamsField = document.getElementById("x-params");
@@ -1440,6 +1476,7 @@ async function initializeApp() {
 
     xParamsField.value = arrayToCSV(newX);
     yParamsField.value = arrayToCSV(newY);
+    updateParamNotes();
   }
 
   // ========== Particle Count Functions ==========
@@ -2989,6 +3026,7 @@ async function initializeApp() {
     const ones = Array(currentN).fill(1);
     document.getElementById("x-params").value = arrayToCSV(ones);
     document.getElementById("y-params").value = arrayToCSV(ones);
+    updateParamNotes();
   });
 
   // Show particles checkbox handler - fast redraw
@@ -3234,7 +3272,12 @@ async function initializeApp() {
     }
     document.getElementById("x-params").value = arrayToCSV(xArr);
     document.getElementById("y-params").value = arrayToCSV(yArr);
+    updateParamNotes();
   });
+
+  // Update param notes on manual edits
+  document.getElementById("x-params").addEventListener("input", updateParamNotes);
+  document.getElementById("y-params").addEventListener("input", updateParamNotes);
 
   // ========== Color Scheme Controls ==========
 

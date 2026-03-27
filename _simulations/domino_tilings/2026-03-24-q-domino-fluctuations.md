@@ -92,6 +92,10 @@ published: true
   <label style="flex:1;">x params: <input id="x-params" class="param-input" value="1^10" aria-label="Schur x specialization"></label>
   <label style="flex:1;">y params: <input id="y-params" class="param-input" value="1^10" aria-label="Schur y specialization"></label>
 </div>
+<div style="display:flex; gap:10px;">
+  <div id="x-params-note" style="flex:1; font-size:0.78em; color:#888; margin:-4px 0 4px 0; display:none;"></div>
+  <div id="y-params-note" style="flex:1; font-size:0.78em; color:#888; margin:-4px 0 4px 0; display:none;"></div>
+</div>
 
 <div class="controls-row">
   <label>Family:
@@ -232,6 +236,35 @@ async function initializeApp() {
 
   function arrayToCSV(arr) { return arr.map(x => x.toString()).join(','); }
 
+  function summarizeParams(arr) {
+    if (arr.length === 0) return '';
+    if (arr.every(v => v === arr[0])) return '';
+    const runs = [];
+    let i = 0;
+    while (i < arr.length) {
+      const v = arr[i];
+      let count = 0;
+      while (i < arr.length && arr[i] === v) { count++; i++; }
+      const vStr = Number.isInteger(v) ? v.toString() : parseFloat(v.toPrecision(6)).toString();
+      runs.push(count > 1 ? count + '×' + vStr : vStr);
+    }
+    if (runs.length > 6) {
+      return runs.slice(0, 3).join(', ') + ', …, ' + runs.slice(-2).join(', ') + '  (' + arr.length + ' total)';
+    }
+    return runs.join(', ');
+  }
+
+  function updateParamNotes() {
+    const xNote = document.getElementById('x-params-note');
+    const yNote = document.getElementById('y-params-note');
+    const xSummary = summarizeParams(parseCSV(xParamsField.value));
+    const ySummary = summarizeParams(parseCSV(yParamsField.value));
+    xNote.style.display = xSummary ? '' : 'none';
+    xNote.textContent = xSummary;
+    yNote.style.display = ySummary ? '' : 'none';
+    yNote.textContent = ySummary;
+  }
+
   function updateParamsForN(newN) {
     const currentX = parseCSV(xParamsField.value);
     const currentY = parseCSV(yParamsField.value);
@@ -242,6 +275,7 @@ async function initializeApp() {
     }
     xParamsField.value = arrayToCSV(newX);
     yParamsField.value = arrayToCSV(newY);
+    updateParamNotes();
   }
 
   // ========== Lattice / Partition Utilities ==========
@@ -989,6 +1023,9 @@ async function initializeApp() {
   }
 
   // ========== Event Handlers ==========
+  xParamsField.addEventListener('input', updateParamNotes);
+  yParamsField.addEventListener('input', updateParamNotes);
+
   sampleBtn.addEventListener('click', () => sampleOne(true));
   batchBtn.addEventListener('click', runBatch);
   clearBtn.addEventListener('click', () => {
