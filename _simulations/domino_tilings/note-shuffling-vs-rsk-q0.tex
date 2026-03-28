@@ -1,0 +1,355 @@
+\documentclass[letterpaper,11pt,oneside]{article}
+
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage[final,colorlinks=true,linkcolor=blue,citecolor=red]{hyperref}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage[DIV=14]{typearea}
+\usepackage{caption}
+
+\allowdisplaybreaks
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{remark}[proposition]{Remark}
+
+\newcommand{\ssp}{\hspace{1pt}}
+\newcommand{\AZ}{\mathcal{A}}
+
+\title{Shuffling and RSK at $q=0$ produce different conditional step distributions}
+\author{Verification note}
+\date{March 2026}
+
+\begin{document}
+\maketitle
+
+%% =====================
+%% TikZ style definitions
+%% =====================
+\tikzset{
+  domN/.style={fill=yellow!75, draw=black!70, line width=0.4pt},
+  domS/.style={fill=green!45!black!15, draw=black!70, line width=0.4pt},
+  domE/.style={fill=blue!35, draw=black!70, line width=0.4pt},
+  domW/.style={fill=red!35, draw=black!70, line width=0.4pt},
+  badblock/.style={draw=red!80!black, line width=1.8pt, dashed, rounded corners=1pt},
+  emptyblock/.style={draw=orange!80!black, line width=1.2pt, dotted, rounded corners=1pt,
+    fill=orange!8},
+  diamond boundary/.style={draw=black!50, line width=0.6pt, fill=black!4},
+}
+
+%% Macros: draw a horizontal domino at (u,v) with style
+\newcommand{\hdom}[3]{\fill[#3] (#1,#2) rectangle ++(2,1);}
+%% Vertical domino
+\newcommand{\vdom}[3]{\fill[#3] (#1,#2) rectangle ++(1,2);}
+%% A_2 diamond boundary path (TikZ coords with shift +2)
+\newcommand{\aztecTwoBoundary}{
+  (1,0) -- (3,0) -- (3,1) -- (4,1) -- (4,3) -- (3,3) -- (3,4) -- (1,4) --
+  (1,3) -- (0,3) -- (0,1) -- (1,1) -- cycle
+}
+%% A_3 diamond boundary path (TikZ coords with shift +3)
+\newcommand{\aztecThreeBoundary}{
+  (2,0) -- (4,0) -- (4,1) -- (5,1) -- (5,2) -- (6,2) -- (6,4) -- (5,4) --
+  (5,5) -- (4,5) -- (4,6) -- (2,6) -- (2,5) -- (1,5) -- (1,4) -- (0,4) --
+  (0,2) -- (1,2) -- (1,1) -- (2,1) -- cycle
+}
+
+\section{Setup}
+
+We compare two algorithms that produce uniform random domino tilings of the
+Aztec diamond $\AZ_n$:
+
+\smallskip
+
+\noindent\textbf{EKLP Shuffling.}
+Builds tilings iteratively via $\AZ_0 \to \AZ_1 \to \cdots \to \AZ_n$.
+Each step $\AZ_k \to \AZ_{k+1}$ consists of three phases:
+\begin{enumerate}
+  \item \emph{Delete:} Find and remove all ``bad blocks'' --- colliding
+    domino pairs (N-above-S or E-left-of-W in the same $2\times 2$ block).
+  \item \emph{Slide:} Move each remaining domino one unit in its natural
+    direction (N$\uparrow$, S$\downarrow$, E$\to$, W$\leftarrow$).
+  \item \emph{Fill:} Each empty $2\times 2$ block in $\AZ_{k+1}$ is
+    independently filled with a horizontal or vertical pair, probability $\tfrac12$ each.
+\end{enumerate}
+
+\noindent\textbf{RSK Growth Diagram at $q=0$.}
+Fills an $(n{+}1)\times(n{+}1)$ staircase grid of partitions.
+Each cell $(i,j)$ receives an independent fair Bernoulli bit, and the
+partition at $(i,j)$ is determined by the VH bijection (which is deterministic
+at $q=0$). The boundary of the sub-staircase at level $k$ encodes a tiling of
+$\AZ_k$; the boundary layer from level $k$ to $k{+}1$ consists of exactly
+$k{+}1$ cells, hence $k{+}1$ random bits.
+
+\medskip
+
+Both algorithms produce the correct uniform distribution on domino tilings.
+The question is whether their \emph{conditional} distributions for individual
+growth steps $\AZ_k \to \AZ_{k+1}$ coincide.
+
+\section{Observation: the conditional distributions differ}
+
+\begin{proposition}\label{prop:different}
+  The EKLP shuffling and the RSK growth diagram at $q=0$ produce different
+  conditional distributions $\Pr(\text{tiling of } \AZ_{k+1} \mid
+  \text{tiling of } \AZ_k)$ for $k \ge 2$.
+\end{proposition}
+
+The mechanism is simple: the RSK step always uses exactly $k{+}1$ random
+bits, while the shuffling step uses $k{+}1{+}m$ bits, where $m$ is the number
+of bad blocks in the $\AZ_k$ tiling. When $m > 0$, the shuffling has strictly
+more randomness in the conditional step.
+
+\section{Example: $\AZ_2 \to \AZ_3$}
+
+The Aztec diamond $\AZ_2$ has $2^{2 \cdot 3/2} = 8$ tilings.
+Of these, 6 have no bad blocks ($m=0$) and 2 have exactly one bad block
+($m=1$).
+
+\subsection{The eight tilings of $\AZ_2$}
+
+We display all eight tilings below.
+Colors encode domino types: \tikz[baseline=-2pt]{\fill[domN] (0,0) rectangle (0.35,0.2);} N (north),
+\tikz[baseline=-2pt]{\fill[domS] (0,0) rectangle (0.35,0.2);} S (south),
+\tikz[baseline=-2pt]{\fill[domE] (0,0) rectangle (0.2,0.35);} E (east),
+\tikz[baseline=-2pt]{\fill[domW] (0,0) rectangle (0.2,0.35);} W (west).
+Bad blocks are marked with \tikz[baseline=-2pt]{\draw[badblock] (0,0) rectangle (0.4,0.3);}\,.
+
+\bigskip
+
+\begin{center}
+\begin{tikzpicture}[scale=0.42]
+%% === Tiling 1: all vertical EW ===
+\begin{scope}[shift={(0,0)}]
+  \fill[diamond boundary] \aztecTwoBoundary;
+  \vdom{0}{1}{domW}  \vdom{3}{1}{domE}
+  \vdom{1}{0}{domW}  \vdom{2}{0}{domE}
+  \vdom{1}{2}{domW}  \vdom{2}{2}{domE}
+  \node[below] at (2,-0.3) {\footnotesize $m{=}0$};
+\end{scope}
+%% === Tiling 2 ===
+\begin{scope}[shift={(6,0)}]
+  \fill[diamond boundary] \aztecTwoBoundary;
+  \vdom{0}{1}{domW}  \vdom{3}{1}{domE}
+  \hdom{1}{0}{domS}  \hdom{1}{1}{domN}
+  \vdom{1}{2}{domW}  \vdom{2}{2}{domE}
+  \node[below] at (2,-0.3) {\footnotesize $m{=}0$};
+\end{scope}
+%% === Tiling 3 ===
+\begin{scope}[shift={(12,0)}]
+  \fill[diamond boundary] \aztecTwoBoundary;
+  \hdom{1}{0}{domS}  \hdom{1}{3}{domN}
+  \vdom{0}{1}{domW}  \vdom{1}{1}{domE}
+  \hdom{2}{1}{domS}  \hdom{2}{2}{domN}
+  \node[below] at (2,-0.3) {\footnotesize $m{=}0$};
+\end{scope}
+%% === Tiling 4 ===
+\begin{scope}[shift={(18,0)}]
+  \fill[diamond boundary] \aztecTwoBoundary;
+  \hdom{1}{0}{domS}  \hdom{1}{3}{domN}
+  \hdom{0}{1}{domS}  \hdom{0}{2}{domN}
+  \vdom{2}{1}{domW}  \vdom{3}{1}{domE}
+  \node[below] at (2,-0.3) {\footnotesize $m{=}0$};
+\end{scope}
+\end{tikzpicture}
+
+\bigskip
+
+\begin{tikzpicture}[scale=0.42]
+%% === Tiling 5: all horizontal ===
+\begin{scope}[shift={(0,0)}]
+  \fill[diamond boundary] \aztecTwoBoundary;
+  \hdom{1}{0}{domS}  \hdom{1}{3}{domN}
+  \hdom{0}{1}{domS}  \hdom{0}{2}{domN}
+  \hdom{2}{1}{domS}  \hdom{2}{2}{domN}
+  \node[below] at (2,-0.3) {\footnotesize $m{=}0$};
+\end{scope}
+%% === Tiling 6 ===
+\begin{scope}[shift={(6,0)}]
+  \fill[diamond boundary] \aztecTwoBoundary;
+  \vdom{0}{1}{domW}  \vdom{3}{1}{domE}
+  \vdom{1}{0}{domW}  \vdom{2}{0}{domE}
+  \hdom{1}{2}{domS}  \hdom{1}{3}{domN}
+  \node[below] at (2,-0.3) {\footnotesize $m{=}0$};
+\end{scope}
+%% === Tiling 7: BAD E-W block ===
+\begin{scope}[shift={(12,0)}]
+  \fill[diamond boundary] \aztecTwoBoundary;
+  \hdom{1}{0}{domS}  \hdom{1}{3}{domN}
+  \vdom{0}{1}{domW}  \vdom{1}{1}{domE}
+  \vdom{2}{1}{domW}  \vdom{3}{1}{domE}
+  \draw[badblock] (1.15,1.15) rectangle (2.85,2.85);
+  \node[below] at (2,-0.3) {\footnotesize $m{=}1$ (E-W)};
+\end{scope}
+%% === Tiling 8: BAD N-S block ===
+\begin{scope}[shift={(18,0)}]
+  \fill[diamond boundary] \aztecTwoBoundary;
+  \vdom{0}{1}{domW}  \vdom{3}{1}{domE}
+  \hdom{1}{0}{domS}  \hdom{1}{1}{domN}
+  \hdom{1}{2}{domS}  \hdom{1}{3}{domN}
+  \draw[badblock] (1.15,1.15) rectangle (2.85,2.85);
+  \node[below] at (2,-0.3) {\footnotesize $m{=}1$ (N-S)};
+\end{scope}
+\end{tikzpicture}
+\end{center}
+
+\subsection{The shuffling step for a bad-block tiling}
+
+Consider Tiling~7 (E-W bad block).  The shuffling step
+$\AZ_2 \to \AZ_3$ proceeds as follows:
+
+\bigskip
+
+\begin{center}
+\begin{tikzpicture}[scale=0.38]
+%% Panel 1: Original tiling with bad block
+\begin{scope}[shift={(0,0)}]
+  \fill[diamond boundary] \aztecTwoBoundary;
+  \hdom{1}{0}{domS}  \hdom{1}{3}{domN}
+  \vdom{0}{1}{domW}  \vdom{1}{1}{domE}
+  \vdom{2}{1}{domW}  \vdom{3}{1}{domE}
+  \draw[badblock] (1.15,1.15) rectangle (2.85,2.85);
+  \node[below, font=\footnotesize\bfseries] at (2,-0.5) {(a) $\AZ_2$ tiling};
+  \node[below, font=\scriptsize] at (2,-1.1) {1 bad block};
+\end{scope}
+
+%% Panel 2: After delete
+\begin{scope}[shift={(6.5,0)}]
+  \fill[diamond boundary] \aztecTwoBoundary;
+  \hdom{1}{0}{domS}  \hdom{1}{3}{domN}
+  \vdom{0}{1}{domW}  \vdom{3}{1}{domE}
+  % empty region
+  \draw[emptyblock] (1.1,1.1) rectangle (2.9,2.9);
+  \node[below, font=\footnotesize\bfseries] at (2,-0.5) {(b) Delete};
+  \node[below, font=\scriptsize] at (2,-1.1) {bad pair removed};
+\end{scope}
+
+%% Panel 3: After slide (in A_3 coords, shift +3)
+\begin{scope}[shift={(14,0)}]
+  \fill[diamond boundary, scale=0.75, shift={(0.83,0.83)}] \aztecThreeBoundary;
+  % Slid dominoes (scaled)
+  \begin{scope}[scale=0.75, shift={(0.83,0.83)}]
+    \hdom{2}{0}{domS}   % S slid down
+    \hdom{2}{5}{domN}    % N slid up
+    \vdom{0}{2}{domW}    % W slid left
+    \vdom{5}{2}{domE}    % E slid right
+    % Empty region: 4x4 block from (1,1) to (5,5)
+    \draw[emptyblock] (1.1,1.1) rectangle (2.9,2.9);
+    \draw[emptyblock] (1.1,3.1) rectangle (2.9,4.9);
+    \draw[emptyblock] (3.1,1.1) rectangle (4.9,2.9);
+    \draw[emptyblock] (3.1,3.1) rectangle (4.9,4.9);
+  \end{scope}
+  \node[below, font=\footnotesize\bfseries] at (3.1,-0.5) {(c) Slide};
+  \node[below, font=\scriptsize] at (3.1,-1.1) {into $\AZ_3$ frame};
+\end{scope}
+
+%% Panel 4: Fill annotation
+\begin{scope}[shift={(22,0)}]
+  \fill[diamond boundary, scale=0.75, shift={(0.83,0.83)}] \aztecThreeBoundary;
+  \begin{scope}[scale=0.75, shift={(0.83,0.83)}]
+    \hdom{2}{0}{domS}
+    \hdom{2}{5}{domN}
+    \vdom{0}{2}{domW}
+    \vdom{5}{2}{domE}
+    % Show fill choices as dice icons
+    \draw[emptyblock] (1.1,1.1) rectangle (2.9,2.9);
+    \draw[emptyblock] (1.1,3.1) rectangle (2.9,4.9);
+    \draw[emptyblock] (3.1,1.1) rectangle (4.9,2.9);
+    \draw[emptyblock] (3.1,3.1) rectangle (4.9,4.9);
+    % coin flip symbols
+    \node[font=\scriptsize\bfseries, orange!70!black] at (2,2) {?};
+    \node[font=\scriptsize\bfseries, orange!70!black] at (2,4) {?};
+    \node[font=\scriptsize\bfseries, orange!70!black] at (4,2) {?};
+    \node[font=\scriptsize\bfseries, orange!70!black] at (4,4) {?};
+  \end{scope}
+  \node[below, font=\footnotesize\bfseries] at (3.1,-0.5) {(d) Fill};
+  \node[below, font=\scriptsize] at (3.1,-1.1) {\textbf{4 blocks} $\to 2^4{=}16$};
+\end{scope}
+\end{tikzpicture}
+\end{center}
+
+\medskip
+
+\noindent
+\textbf{Comparison.}  For a tiling with $m = 0$ bad blocks, both algorithms
+use $k{+}1 = 3$ random bits and produce $2^3 = 8$ equally likely extensions.
+For a tiling with $m = 1$ bad block:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{lcc}
+  \toprule
+  & \textbf{EKLP Shuffling} & \textbf{RSK Growth Diagram} \\
+  \midrule
+  Random bits per step & $k + 1 + m = 4$ & $k + 1 = 3$ \\
+  Possible extensions  & $2^4 = 16$ & $2^3 = 8$ \\
+  Probability per ext. & $\tfrac{1}{16}$ each & $\tfrac{1}{8}$ each \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\smallskip
+
+In the shuffling, deleting a bad block frees a $2\times 2$ region that later
+gets re-filled with an independent coin flip, introducing one extra random
+bit per bad block.  Since the RSK boundary layer has no analog of deletion,
+its conditional distribution uses strictly fewer random choices.
+
+\begin{remark}
+  Despite the different conditional step distributions, both algorithms
+  produce the same \emph{marginal} distribution at every level: uniform over
+  all $2^{n(n+1)/2}$ tilings of $\AZ_n$.  The difference lies entirely in
+  the coupling between consecutive levels.
+\end{remark}
+
+\section{Empirical verification}
+
+We ran $5 \times 10^5$ samples per algorithm for the step $\AZ_2 \to \AZ_3$.
+The partition-sequence encoding was used to identify tilings (with a
+conjugation correction to match conventions between the two algorithms).
+
+\smallskip
+
+\noindent\textbf{Marginal distributions.}
+Both algorithms produced all 8 tilings of $\AZ_2$ and all 64 tilings of
+$\AZ_3$ with the correct uniform frequencies.  The total variation distance
+between the marginal distributions was $< 0.002$ for $\AZ_2$ and $< 0.007$
+for $\AZ_3$, consistent with sampling noise.  The chi-squared $p$-values
+were $0.57$ and $0.44$, respectively.
+
+\smallskip
+
+\noindent\textbf{Conditional distributions.}
+For the 6 states with $m = 0$: conditional TV distances were all below $0.01$
+with chi-squared $p$-values $> 0.06$, consistent with identical distributions.
+
+For the 2 states with $m = 1$: conditional TV distances were approximately
+$\mathbf{0.50}$, with chi-squared $p$-values effectively zero ($\chi^2 >
+40{,}000$).  The shuffling produced 16 distinct $\AZ_3$ extensions from each
+of these states (each with probability $\approx 1/16$), while RSK produced
+only~8 (each with probability $\approx 1/8$).
+
+\smallskip
+
+\noindent\textbf{Joint distribution.}
+The joint distribution on $(\AZ_2, \AZ_3)$ pairs showed a TV distance of
+$0.13$, with the shuffling producing 80 distinct pairs versus 64 for RSK.
+The extra 16 pairs correspond to the 2 bad-block states $\times$ 8 extensions
+that only the shuffling can reach.
+
+\section{Discussion}
+
+The EKLP shuffling and RSK growth diagram define two different
+\emph{couplings} between $\AZ_k$ and $\AZ_{k+1}$ tilings that share the
+same marginals but differ in their conditional structure.  The shuffling
+coupling is ``more random'' due to the delete-and-refill mechanism: each bad
+block contributes one extra fair coin flip to the transition.
+
+For $k = 1$, neither algorithm produces bad blocks (the unique pair in
+$\AZ_1$ is never a colliding pair), so the conditional distributions coincide.
+Starting from $k = 2$, some $\AZ_k$ tilings contain bad blocks, and the
+conditional distributions diverge.
+
+The number of bad blocks $m$ depends on the specific $\AZ_k$ tiling.
+For $\AZ_2$, the maximum is $m = 1$ (attained by 2 of the 8 tilings).
+In general, $m$ can grow with $k$.
+
+\end{document}

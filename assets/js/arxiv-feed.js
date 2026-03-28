@@ -1237,6 +1237,11 @@ document.addEventListener('DOMContentLoaded', function() {
             var catBadges = cats.map(function(c) {
                 return '<span class="badge arxiv-cat-badge">' + c + '</span>';
             }).join(' ');
+            var journalBadge = '';
+            if (entry.jn) {
+                var jHref = entry.doi ? ' href="https://doi.org/' + entry.doi + '" target="_blank" rel="noopener"' : '';
+                journalBadge = ' <a' + jHref + ' class="badge arxiv-link-badge arxiv-link-journal" title="' + (entry.jr || entry.jn).replace(/"/g, '&quot;') + '" data-journal-ref="' + (entry.jr || '').replace(/"/g, '&quot;') + '" data-journal-name="' + entry.jn.replace(/"/g, '&quot;') + '">' + entry.jn + '</a>';
+            }
             // Check if paper is on the page (rendered)
             var onPage = !!paperMap[rid] && listEl.contains(paperMap[rid]);
             var titleText = texifyTitle(entry.t);
@@ -1248,6 +1253,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     '<span class="arxiv-related-date">' + entry.d + '</span> ' +
                     '<a href="https://arxiv.org/abs/' + rid + '" target="_blank" rel="noopener" class="arxiv-id-label">' + rid + '</a> ' +
                     catBadges +
+                    journalBadge +
                 '</div>' +
                 '<div>' + titleLink + '</div>' +
                 '<div class="arxiv-related-authors">' + entry.a + '</div>' +
@@ -1262,6 +1268,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }).join('');
 
         dropdown.innerHTML = html;
+        applyJournalYears(dropdown);
         dropdown.hidden = false;
         btn.setAttribute('aria-expanded', 'true');
         if (window.renderMathInElement) {

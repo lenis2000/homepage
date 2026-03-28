@@ -99,7 +99,7 @@ def parse_post(filepath):
     body = parts[2] if len(parts) > 2 else ""
     abstract = _strip_to_plain(body)
 
-    return {
+    entry = {
         "id": arxiv_id,
         "t": title,
         "a": ", ".join(authors) if isinstance(authors, list) else str(authors),
@@ -108,6 +108,19 @@ def parse_post(filepath):
         "d": date_short,
         "s": abstract,
     }
+
+    # Journal metadata (only include if present to keep index compact)
+    jn = fm.get("journal-name", "")
+    if jn:
+        entry["jn"] = jn
+    jr = fm.get("journal-ref", "")
+    if jr:
+        entry["jr"] = jr
+    doi = fm.get("doi", "")
+    if doi:
+        entry["doi"] = doi
+
+    return entry
 
 
 def main():
