@@ -289,13 +289,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // --- Search operator parsing ---
-    // Supports: in:"Journal Name" or in:JAMS, cat:math.PR, y:2024 or y:2020-2024
+    // Supports: in:"Journal Name" or in:JAMS, cat:math.PR, y:2024 or y:2020-2024, au:"Author Name" or au:Surname
+
+    // Normalize diacritics for author matching (é→e, ä→a, etc.)
+    function normalizeDiacritics(s) {
+        return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function authorMatches(authorField, query) {
+        // authorField: comma-separated author string, query: search term
+        var qNorm = normalizeDiacritics(query).toLowerCase();
+        var authors = authorField.split(/,\s*/);
+        for (var i = 0; i < authors.length; i++) {
+            var aNorm = normalizeDiacritics(authors[i]).toLowerCase();
+            if (aNorm.indexOf(qNorm) !== -1) return true;
+        }
+        return false;
+    }
+
     function parseSearchOperators(raw) {
-        var ops = { journal: null, cat: null, yearFrom: null, yearTo: null };
+        var ops = { journal: null, cat: null, yearFrom: null, yearTo: null, author: null };
         // Extract in:"..." or in:word
         var rest = raw.replace(/\bin:"([^"]+)"/gi, function(_, v) { ops.journal = v; return ''; });
         rest = rest.replace(/\bin:(\S+)/gi, function(_, v) {
             if (!ops.journal) ops.journal = v;
+            return '';
+        });
+        // Extract au:"..." or au:word
+        rest = rest.replace(/\bau:"([^"]+)"/gi, function(_, v) { ops.author = v; return ''; });
+        rest = rest.replace(/\bau:(\S+)/gi, function(_, v) {
+            if (!ops.author) ops.author = v;
             return '';
         });
         // Extract cat:word
@@ -478,6 +501,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (catStr.toLowerCase().indexOf(rcOps.cat.toLowerCase()) === -1) return;
             }
             if (rcOps.journal && searchIndex && (!entry.jn || entry.jn.toLowerCase() !== rcOps.journal.toLowerCase())) return;
+            if (rcOps.author) {
+                var auField = searchIndex ? entry.a : entry.search;
+                if (!authorMatches(auField, rcOps.author)) return;
+            }
             if (rcOps.yearFrom) {
                 var yr = searchIndex ? entry.y : entry.year;
                 if (yr < rcOps.yearFrom || yr > (rcOps.yearTo || rcOps.yearFrom)) return;
@@ -796,7 +823,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var parsed = parseSearchOperators(rawTerm);
         var term = isTopSearch ? '' : parsed.text;
         var ops = parsed.ops;
-        var hasOps = ops.journal || ops.cat || ops.yearFrom;
+        var hasOps = ops.journal || ops.cat || ops.yearFrom || ops.author;
 
         // Fast path: no filters active
         if (!term && !isTopSearch && !hasOps && activeCategory === 'all' && activeDateFilter === 'all') {
@@ -818,6 +845,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Search operator filters (case-insensitive)
                 if (ops.cat && entry.c.toLowerCase().indexOf(ops.cat.toLowerCase()) === -1) return;
                 if (ops.journal && (!entry.jn || entry.jn.toLowerCase() !== ops.journal.toLowerCase())) return;
+                if (ops.author && !authorMatches(entry.a, ops.author)) return;
                 if (ops.yearFrom) {
                     var pubYear = entry.y;
                     if (pubYear < ops.yearFrom || pubYear > ops.yearTo) return;
@@ -884,6 +912,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Search operator filters (limited without searchIndex)
                 if (ops.cat && p.categories.toLowerCase().indexOf(ops.cat.toLowerCase()) === -1) return;
+                if (ops.author && !authorMatches(p.search, ops.author)) return;
                 if (ops.yearFrom && (p.year < ops.yearFrom || p.year > (ops.yearTo || ops.yearFrom))) return;
 
                 if (term) {
@@ -930,6 +959,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     statusRegion.textContent = 'No results found.';
                 } else if (term || hasOps || activeCategory !== 'all' || activeDateFilter !== 'all') {
                     var msg = totalMatches + ' result' + (totalMatches !== 1 ? 's' : '') + ' found.';
+                    if (ops.author) msg += ' Filtered by author: ' + ops.author + '.';
                     if (ops.journal) msg += ' Filtered by journal: ' + ops.journal + '.';
                     if (ops.cat) msg += ' Filtered by category: ' + ops.cat + '.';
                     if (ops.yearFrom) msg += ' Year: ' + ops.yearFrom + (ops.yearTo !== ops.yearFrom ? '-' + ops.yearTo : '') + '.';
@@ -1183,6 +1213,28 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             var rest = parsed.text;
             var quoted = journalName.indexOf(' ') !== -1 ? 'in:"' + journalName + '"' : 'in:' + journalName;
+            searchInput.value = (quoted + ' ' + rest).trim();
+        }
+        applyFilter();
+        syncHashFromSearch();
+    });
+
+    // Click author name to filter by author
+    listEl.addEventListener('click', function(e) {
+        var span = e.target.closest('.arxiv-author-name');
+        if (!span) return;
+        e.preventDefault();
+        e.stopPropagation();
+        var name = span.textContent.trim();
+        if (!name) return;
+        var parsed = parseSearchOperators(searchInput.value);
+        if (parsed.ops.author && normalizeDiacritics(parsed.ops.author).toLowerCase() === normalizeDiacritics(name).toLowerCase()) {
+            // Toggle off: clicking same author removes the filter
+            searchInput.value = parsed.text;
+        } else {
+            // Replace any existing au: and add this one
+            var rest = parsed.text;
+            var quoted = name.indexOf(' ') !== -1 ? 'au:"' + name + '"' : 'au:' + name;
             searchInput.value = (quoted + ' ' + rest).trim();
         }
         applyFilter();
