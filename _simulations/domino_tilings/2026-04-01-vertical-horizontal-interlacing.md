@@ -128,33 +128,25 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     return parts.length === 0 ? '∅' : '(' + parts.join(',') + ')';
   }
 
-  function isVerticalStrip(lambda, mu) {
-    const len = Math.max(lambda.length, mu.length);
-    for (let i = 0; i < len; i++) {
-      const d = (lambda[i] || 0) - (mu[i] || 0);
-      if (d < 0 || d > 1) return false;
-    }
-    return true;
-  }
 
-  function isHorizontalStrip(lambda, mu) {
-    const len = Math.max(lambda.length, mu.length);
-    for (let i = 0; i < len; i++) {
-      if ((lambda[i] || 0) < (mu[i] || 0)) return false;
-      if ((mu[i] || 0) < (lambda[i + 1] || 0)) return false;
-    }
-    return true;
-  }
-
-  function enumerateMu(lamTop, lamBot, k, N) {
+  function enumerateMu(k, N, topPSet, botPSet) {
     const numPos = N - 1;
     if (numPos < k || k < 0) return [];
+    const botHolesSet = new Set();
+    for (let j = 1; j <= N; j++) if (!botPSet.has(j)) botHolesSet.add(j);
     const results = [];
     function gen(start, chosen) {
       if (chosen.length === k) {
-        const mu = particlesToPartition(chosen);
-        if (isVerticalStrip(lamTop, mu) && isHorizontalStrip(lamBot, mu)) {
-          results.push({ particles: [...chosen], partition: mu });
+        // Geometric check: can all μ positions be matched?
+        const muPSet = new Set(chosen);
+        const muParts = [], muHoles = [];
+        for (let j = 1; j <= numPos; j++) {
+          if (muPSet.has(j)) muParts.push(j); else muHoles.push(j);
+        }
+        const partOk = bipartiteMatch(muParts, topPSet, N, false).length === muParts.length;
+        const holeOk = bipartiteMatch(muHoles, botHolesSet, N, false).length === muHoles.length;
+        if (partOk && holeOk) {
+          results.push({ particles: [...chosen], partition: particlesToPartition(chosen) });
         }
         return;
       }
@@ -172,7 +164,7 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   // Enumerate all valid ν: (k+1) particles on (N+1) positions
   // ν/λ_bot vertical strip, λ_top/ν horizontal strip
   // Also checks geometric feasibility of the domino matching
-  function enumerateNu(lamTop, lamBot, k, N, topPSet, botPSet) {
+  function enumerateNu(k, N, topPSet, botPSet) {
     const kNu = k + 1;
     const numPos = N + 1;
     if (kNu < 0 || numPos < kNu) return [];
@@ -180,8 +172,9 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     function gen(start, chosen) {
       if (chosen.length === kNu) {
         const nu = particlesToPartition(chosen);
-        if (isVerticalStrip(nu, lamBot) && isHorizontalStrip(lamTop, nu)) {
+        {
           // Geometric check: can all ν positions be matched to λ neighbors?
+          // (replaces partition-level strip conditions which fail across different row sizes)
           const nuPSet = new Set(chosen);
           const nuHoles = [], nuParts = [];
           for (let j = 1; j <= numPos; j++) {
@@ -189,14 +182,8 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
           }
           const topHolesSet = new Set();
           for (let j = 1; j <= N; j++) if (!topPSet.has(j)) topHolesSet.add(j);
-          const holeMatch = bipartiteMatch(nuHoles, topHolesSet, N, true);
-          const partMatch = bipartiteMatch(nuParts, botPSet, N, true);
-          const holeOk = holeMatch.length === nuHoles.length;
-          const partOk = partMatch.length === nuParts.length;
-          console.log('ν candidate', [...chosen], 'std', nu,
-            'holes', nuHoles, '→ topHoles', [...topHolesSet], 'matched', holeMatch.length, '/', nuHoles.length,
-            'parts', nuParts, '→ botParts', [...botPSet], 'matched', partMatch.length, '/', nuParts.length,
-            holeOk && partOk ? '✓ ACCEPTED' : '✗ REJECTED');
+          const holeOk = bipartiteMatch(nuHoles, topHolesSet, N, true).length === nuHoles.length;
+          const partOk = bipartiteMatch(nuParts, botPSet, N, true).length === nuParts.length;
           if (holeOk && partOk) {
             results.push({ particles: [...chosen], partition: nu });
           }
@@ -298,8 +285,6 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
 
   // Derived from positions
   function getK() { return lamTopPos.size; }
-  function getLamTopPart() { return lamTopPos.size > 0 ? particlesToPartition([...lamTopPos]) : []; }
-  function getLamBotPart() { return lamBotPos.size > 0 ? particlesToPartition([...lamBotPos]) : []; }
 
   // ═══════════════════════════════════════════════════════════════
   // RENDERING
@@ -644,8 +629,6 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
 
   function recompute() {
     const k = getK();
-    const lamTopPart = getLamTopPart();
-    const lamBotPart = getLamBotPart();
 
     // Validate: λ_top has k, λ_bot has k+1, all positions in range
     const topOk = [...lamTopPos].every(p => p >= 1 && p <= N);
@@ -653,17 +636,12 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     const kOk = k >= 0 && lamBotPos.size === k + 1;
 
     const valid = topOk && botOk && kOk;
-    allMu = valid ? enumerateMu(lamTopPart, lamBotPart, k, N) : [];
-    allNu = valid ? enumerateNu(lamTopPart, lamBotPart, k, N, lamTopPos, lamBotPos) : [];
+    allMu = valid ? enumerateMu(k, N, lamTopPos, lamBotPos) : [];
+    allNu = valid ? enumerateNu(k, N, lamTopPos, lamBotPos) : [];
     muIndex = Math.min(muIndex, Math.max(0, allMu.length - 1));
     nuIndex = Math.min(nuIndex, Math.max(0, allNu.length - 1));
     muForcedInfo = computeForcedFree(allMu, N - 1);
     nuForcedInfo = computeForcedFree(allNu, N + 1);
-    console.log('=== recompute ===');
-    console.log('N =', N, 'k =', k, 'lamTop =', [...lamTopPos], 'lamBot =', [...lamBotPos]);
-    console.log('allMu:', allMu.length, allMu.map(m => m.particles));
-    console.log('allNu:', allNu.length, allNu.map(n => n.particles));
-    console.log('nuForced:', [...nuForcedInfo.forced], 'nuFree:', [...nuForcedInfo.free], 'nuForcedHoles:', [...nuForcedInfo.forcedHoles]);
     updateMuDisplay();
     updateNuDisplay();
     render();
