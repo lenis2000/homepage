@@ -189,8 +189,14 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
           }
           const topHolesSet = new Set();
           for (let j = 1; j <= N; j++) if (!topPSet.has(j)) topHolesSet.add(j);
-          const holeOk = bipartiteMatch(nuHoles, topHolesSet, N, true).length === nuHoles.length;
-          const partOk = bipartiteMatch(nuParts, botPSet, N, true).length === nuParts.length;
+          const holeMatch = bipartiteMatch(nuHoles, topHolesSet, N, true);
+          const partMatch = bipartiteMatch(nuParts, botPSet, N, true);
+          const holeOk = holeMatch.length === nuHoles.length;
+          const partOk = partMatch.length === nuParts.length;
+          console.log('ν candidate', [...chosen], 'std', nu,
+            'holes', nuHoles, '→ topHoles', [...topHolesSet], 'matched', holeMatch.length, '/', nuHoles.length,
+            'parts', nuParts, '→ botParts', [...botPSet], 'matched', partMatch.length, '/', nuParts.length,
+            holeOk && partOk ? '✓ ACCEPTED' : '✗ REJECTED');
           if (holeOk && partOk) {
             results.push({ particles: [...chosen], partition: nu });
           }
@@ -653,6 +659,11 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     nuIndex = Math.min(nuIndex, Math.max(0, allNu.length - 1));
     muForcedInfo = computeForcedFree(allMu, N - 1);
     nuForcedInfo = computeForcedFree(allNu, N + 1);
+    console.log('=== recompute ===');
+    console.log('N =', N, 'k =', k, 'lamTop =', [...lamTopPos], 'lamBot =', [...lamBotPos]);
+    console.log('allMu:', allMu.length, allMu.map(m => m.particles));
+    console.log('allNu:', allNu.length, allNu.map(n => n.particles));
+    console.log('nuForced:', [...nuForcedInfo.forced], 'nuFree:', [...nuForcedInfo.free], 'nuForcedHoles:', [...nuForcedInfo.forcedHoles]);
     updateMuDisplay();
     updateNuDisplay();
     render();
