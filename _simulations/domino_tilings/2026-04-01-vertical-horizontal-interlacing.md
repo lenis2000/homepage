@@ -171,7 +171,8 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
 
   // Enumerate all valid ν: (k+1) particles on (N+1) positions
   // ν/λ_bot vertical strip, λ_top/ν horizontal strip
-  function enumerateNu(lamTop, lamBot, k, N) {
+  // Also checks geometric feasibility of the domino matching
+  function enumerateNu(lamTop, lamBot, k, N, topPSet, botPSet) {
     const kNu = k + 1;
     const numPos = N + 1;
     if (kNu < 0 || numPos < kNu) return [];
@@ -180,7 +181,19 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
       if (chosen.length === kNu) {
         const nu = particlesToPartition(chosen);
         if (isVerticalStrip(nu, lamBot) && isHorizontalStrip(lamTop, nu)) {
-          results.push({ particles: [...chosen], partition: nu });
+          // Geometric check: can all ν positions be matched to λ neighbors?
+          const nuPSet = new Set(chosen);
+          const nuHoles = [], nuParts = [];
+          for (let j = 1; j <= numPos; j++) {
+            if (nuPSet.has(j)) nuParts.push(j); else nuHoles.push(j);
+          }
+          const topHolesSet = new Set();
+          for (let j = 1; j <= N; j++) if (!topPSet.has(j)) topHolesSet.add(j);
+          const holeOk = bipartiteMatch(nuHoles, topHolesSet, N, true).length === nuHoles.length;
+          const partOk = bipartiteMatch(nuParts, botPSet, N, true).length === nuParts.length;
+          if (holeOk && partOk) {
+            results.push({ particles: [...chosen], partition: nu });
+          }
         }
         return;
       }
@@ -212,24 +225,57 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     return { forced, free, forcedHoles };
   }
 
-  // Compute non-crossing matching between μ positions and λ positions
-  // midSet = set of μ positions to match (particles or holes)
-  // outerSet = set of λ positions that can be matched
-  // Each μ[j] can connect to λ[j] or λ[j+1]
-  function computeMatching(midSet, outerSet, nMid) {
-    const used = new Set();
-    const pairs = [];
-    for (let j = 1; j <= nMid; j++) {
-      if (!midSet.has(j)) continue;
-      if (outerSet.has(j) && !used.has(j)) {
-        pairs.push({ outer: j, mid: j });
-        used.add(j);
-      } else if (outerSet.has(j + 1) && !used.has(j + 1)) {
-        pairs.push({ outer: j + 1, mid: j });
-        used.add(j + 1);
+  // Augmenting-path bipartite matching for interval graphs
+  // midToMatch: array of middle positions that need a match
+  // outerValid: Set of outer positions that can be matched
+  // nOuter: size of outer row
+  // midIsBigger: if true, mid[j]→outer[j-1] or outer[j]; if false, mid[j]→outer[j] or outer[j+1]
+  function bipartiteMatch(midToMatch, outerValid, nOuter, midIsBigger) {
+    const match = {};  // outer → mid
+    let visited;
+    function neighbors(j) {
+      const r = [];
+      if (midIsBigger) {
+        if (j - 1 >= 1 && j - 1 <= nOuter && outerValid.has(j - 1)) r.push(j - 1);
+        if (j <= nOuter && outerValid.has(j)) r.push(j);
+      } else {
+        if (j >= 1 && j <= nOuter && outerValid.has(j)) r.push(j);
+        if (j + 1 <= nOuter && outerValid.has(j + 1)) r.push(j + 1);
       }
+      return r;
     }
+    function augment(j) {
+      for (const c of neighbors(j)) {
+        if (visited.has(c)) continue;
+        visited.add(c);
+        if (!(c in match) || augment(match[c])) { match[c] = j; return true; }
+      }
+      return false;
+    }
+    for (const j of midToMatch) { visited = new Set(); augment(j); }
+    const pairs = [];
+    for (const [o, m] of Object.entries(match)) pairs.push({ mid: m, outer: parseInt(o) });
     return pairs;
+  }
+
+  // Match ALL middle positions to outer rows (for rendering dominos)
+  // Before: μ smaller, mid[j]→outer[j] or outer[j+1]
+  // After: ν bigger, mid[j]→outer[j-1] or outer[j]
+  function computeAllDominos(midPSet, topPSet, botPSet, nMid, nOuter, midIsBigger) {
+    const midParticles = [], midHoles = [];
+    for (let j = 1; j <= nMid; j++) {
+      if (midPSet.has(j)) midParticles.push(j); else midHoles.push(j);
+    }
+    // Particle dominos: Before→top strip, After→bottom strip
+    const particleTarget = midIsBigger ? botPSet : topPSet;
+    // Hole dominos: Before→bottom strip, After→top strip
+    const holeTarget = new Set();
+    const holeSource = midIsBigger ? topPSet : botPSet;
+    for (let j = 1; j <= nOuter; j++) if (!holeSource.has(j)) holeTarget.add(j);
+
+    const particlePairs = bipartiteMatch(midParticles, particleTarget, nOuter, midIsBigger);
+    const holePairs = bipartiteMatch(midHoles, holeTarget, nOuter, midIsBigger);
+    return { particlePairs, holePairs };
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -392,24 +438,16 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     const muPSet = hasMu ? new Set(mu.particles) : new Set();
 
     if (hasMu) {
-      // Compute holes
-      const topHoles = new Set();
-      for (let j = 1; j <= nTop; j++) if (!topPSet.has(j)) topHoles.add(j);
-      const botHoles = new Set();
-      for (let j = 1; j <= nBot; j++) if (!botPSet.has(j)) botHoles.add(j);
-      const muHoles = new Set();
-      for (let j = 1; j <= nMid; j++) if (!muPSet.has(j)) muHoles.add(j);
+      // Before: μ is smaller row. mid[j]→outer[j] or outer[j+1]
+      // Particle dominos → top strip (μ particles to λ_top particles)
+      // Hole dominos → bottom strip (μ holes to λ_bot holes)
+      const { particlePairs, holePairs } = computeAllDominos(muPSet, topPSet, botPSet, nMid, nTop, false);
 
-      // Compute matchings
-      const topMatch = computeMatching(muPSet, topPSet, nMid);
-      const botMatch = computeMatching(muHoles, botHoles, nMid);
-
-      // Draw dominos
-      topMatch.forEach(p => {
+      particlePairs.forEach(p => {
         drawDomino(ctx, lay.posX(p.outer, nTop, 0), lay.y0,
                    lay.posX(p.mid, nMid, 1), lay.y1, u, DOMINO_GREEN, DOMINO_EDGE);
       });
-      botMatch.forEach(p => {
+      holePairs.forEach(p => {
         drawDomino(ctx, lay.posX(p.mid, nMid, 1), lay.y1,
                    lay.posX(p.outer, nBot, 0), lay.y2, u, DOMINO_GRAY, DOMINO_EDGE);
       });
@@ -480,23 +518,18 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     const nuPSet = hasNu ? new Set(nu.particles) : new Set();
 
     if (hasNu) {
-      const topHoles = new Set();
-      for (let j = 1; j <= nTop; j++) if (!topPSet.has(j)) topHoles.add(j);
-      const nuHoles = new Set();
-      for (let j = 1; j <= nMid; j++) if (!nuPSet.has(j)) nuHoles.add(j);
+      // After: ν is bigger row. mid[j]→outer[j-1] or outer[j]
+      // Particle dominos → bottom strip (ν particles to λ_bot particles)
+      // Hole dominos → top strip (ν holes to λ_top holes)
+      const { particlePairs, holePairs } = computeAllDominos(nuPSet, topPSet, botPSet, nMid, nTop, true);
 
-      // Top strip: λ_top ↔ ν — hole dominos (λ_top/ν horizontal strip)
-      const topHoleMatch = computeMatchingReverse(topHoles, nuHoles, nTop);
-      // Bottom strip: ν ↔ λ_bot — particle dominos (ν/λ_bot vertical strip)
-      const botPartMatch = computeMatchingReverse(botPSet, nuPSet, nBot);
-
-      topHoleMatch.forEach(p => {
-        drawDomino(ctx, lay.posX(p.mid, nTop, 0), lay.y0,
-                   lay.posX(p.outer, nMid, -1), lay.y1, u, DOMINO_GRAY, DOMINO_EDGE);
+      holePairs.forEach(p => {
+        drawDomino(ctx, lay.posX(p.outer, nTop, 0), lay.y0,
+                   lay.posX(p.mid, nMid, -1), lay.y1, u, DOMINO_GRAY, DOMINO_EDGE);
       });
-      botPartMatch.forEach(p => {
-        drawDomino(ctx, lay.posX(p.outer, nMid, -1), lay.y1,
-                   lay.posX(p.mid, nBot, 0), lay.y2, u, DOMINO_GREEN, DOMINO_EDGE);
+      particlePairs.forEach(p => {
+        drawDomino(ctx, lay.posX(p.mid, nMid, -1), lay.y1,
+                   lay.posX(p.outer, nBot, 0), lay.y2, u, DOMINO_GREEN, DOMINO_EDGE);
       });
     }
 
@@ -550,23 +583,6 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
 
   // Matching for After panel where the OUTER row (ν) has MORE positions
   // innerSet = positions from inner row (λ) to match
-  // outerSet = positions from outer row (ν) that can match
-  // Inner[j] sits between Outer[j] and Outer[j+1]
-  function computeMatchingReverse(innerSet, outerSet, nInner) {
-    const used = new Set();
-    const pairs = [];
-    for (let j = 1; j <= nInner; j++) {
-      if (!innerSet.has(j)) continue;
-      if (outerSet.has(j) && !used.has(j)) {
-        pairs.push({ mid: j, outer: j });
-        used.add(j);
-      } else if (outerSet.has(j + 1) && !used.has(j + 1)) {
-        pairs.push({ mid: j, outer: j + 1 });
-        used.add(j + 1);
-      }
-    }
-    return pairs;
-  }
 
   function render() { renderBefore(); renderAfter(); }
 
@@ -632,7 +648,7 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
 
     const valid = topOk && botOk && kOk;
     allMu = valid ? enumerateMu(lamTopPart, lamBotPart, k, N) : [];
-    allNu = valid ? enumerateNu(lamTopPart, lamBotPart, k, N) : [];
+    allNu = valid ? enumerateNu(lamTopPart, lamBotPart, k, N, lamTopPos, lamBotPos) : [];
     muIndex = Math.min(muIndex, Math.max(0, allMu.length - 1));
     nuIndex = Math.min(nuIndex, Math.max(0, allNu.length - 1));
     muForcedInfo = computeForcedFree(allMu, N - 1);
