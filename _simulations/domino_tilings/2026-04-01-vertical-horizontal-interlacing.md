@@ -63,7 +63,18 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
 
 <canvas id="after-canvas" class="int-canvas" style="height: 280px;" role="img" aria-label="After: particle configurations with dominos on diagonal lattice"></canvas>
 
-<div id="nu-label" class="info-line" style="font-size:14px; font-weight:bold; margin-top:4px;"></div>
+<div class="mu-nav">
+  <button id="nu-prev">← Prev</button>
+  <span id="nu-label" class="mu-label">ν = ∅</span>
+  <button id="nu-next">Next →</button>
+  <span id="nu-count" class="info-line"></span>
+</div>
+
+<div class="forced-legend">
+  <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#228B22"/></svg> free</span>
+  <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#228B22" stroke="#c00" stroke-width="2"/></svg> forced particle</span>
+  <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="none" stroke="#c00" stroke-width="2"/></svg> forced hole</span>
+</div>
 
 <script>
 (function() {
@@ -158,16 +169,17 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     return results;
   }
 
-  function computeNu(lamTop, lamBot, muPart, k, N) {
+  // Enumerate all valid ν: (k+1) particles on (N+1) positions
+  // ν/λ_bot vertical strip, λ_top/ν horizontal strip
+  function enumerateNu(lamTop, lamBot, k, N) {
     const kNu = k + 1;
     const numPos = N + 1;
-    if (kNu < 0 || numPos < kNu) return null;
-    const target = sum(lamTop) + sum(lamBot) - sum(muPart);
+    if (kNu < 0 || numPos < kNu) return [];
     const results = [];
     function gen(start, chosen) {
       if (chosen.length === kNu) {
         const nu = particlesToPartition(chosen);
-        if (sum(nu) === target && isVerticalStrip(nu, lamBot) && isHorizontalStrip(lamTop, nu)) {
+        if (isVerticalStrip(nu, lamBot) && isHorizontalStrip(lamTop, nu)) {
           results.push({ particles: [...chosen], partition: nu });
         }
         return;
@@ -180,17 +192,17 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
       }
     }
     gen(1, []);
-    return results.length > 0 ? results[0] : null;
+    return results;
   }
 
   function sum(a) { return a.reduce((s, v) => s + v, 0); }
 
-  function computeForcedFree(allMu, N) {
-    if (allMu.length === 0) return { forced: new Set(), free: new Set(), forcedHoles: new Set() };
-    const numPos = N - 1;
+  // Compute forced/free for a list of particle configs on numPos positions
+  function computeForcedFree(allConfigs, numPos) {
+    if (allConfigs.length === 0) return { forced: new Set(), free: new Set(), forcedHoles: new Set() };
     const counts = new Array(numPos + 1).fill(0);
-    allMu.forEach(m => m.particles.forEach(p => counts[p]++));
-    const total = allMu.length;
+    allConfigs.forEach(m => m.particles.forEach(p => counts[p]++));
+    const total = allConfigs.length;
     const forced = new Set(), forcedHoles = new Set(), free = new Set();
     for (let p = 1; p <= numPos; p++) {
       if (counts[p] === total) forced.add(p);
@@ -228,7 +240,9 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   let lamTopPos = new Set([2, 4]);      // display: (2,1), k=2
   let lamBotPos = new Set([1, 3, 4]);   // display: (2,1,1), k+1=3
   let allMu = [], muIndex = 0;
-  let forcedInfo = { forced: new Set(), free: new Set(), forcedHoles: new Set() };
+  let allNu = [], nuIndex = 0;
+  let muForcedInfo = { forced: new Set(), free: new Set(), forcedHoles: new Set() };
+  let nuForcedInfo = { forced: new Set(), free: new Set(), forcedHoles: new Set() };
 
   // Derived from positions
   function getK() { return lamTopPos.size; }
@@ -274,8 +288,8 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
       return 2 * (n - 1) - 1;                        // ν type: -1, 1, 3, ...
     }
     function minX(n, isOffset) {
-      if (isOffset <= 1) return 0;
-      return -1;  // ν type protrudes left
+      if (isOffset < 0) return -1;  // ν type protrudes left
+      return 0;
     }
 
     // Determine offsets: which row types
@@ -412,10 +426,10 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
       for (let j = 1; j <= nMid; j++) {
         const x = lay.posX(j, nMid, 1);
         if (muPSet.has(j)) {
-          const isF = forcedInfo.forced.has(j);
+          const isF = muForcedInfo.forced.has(j);
           drawCircle(ctx, x, lay.y1, lay.radius, ORANGE, isF ? FORCED_RING : null, isF ? 2.5 : 0);
         } else {
-          const isFH = forcedInfo.forcedHoles.has(j);
+          const isFH = muForcedInfo.forcedHoles.has(j);
           drawCircle(ctx, x, lay.y1, lay.radius, '#fafafa', isFH ? FORCED_RING : HOLE_STROKE, isFH ? 2.5 : 1.5);
         }
       }
@@ -455,99 +469,83 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     ctx.fillStyle = '#fafafa';
     ctx.fillRect(0, 0, w, h);
 
-    if (allMu.length === 0) {
-      ctx.fillStyle = '#999'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('No valid μ → no ν.', w / 2, h / 2);
-      document.getElementById('nu-label').textContent = '';
-      return;
-    }
-
-    const mu = allMu[muIndex];
-    const k = getK();
-    const lamTopPart = getLamTopPart();
-    const lamBotPart = getLamBotPart();
-    const nu = computeNu(lamTopPart, lamBotPart, mu.partition, k, N);
-    if (!nu) {
-      ctx.fillStyle = '#999'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText('Could not compute ν.', w / 2, h / 2);
-      document.getElementById('nu-label').textContent = '';
-      return;
-    }
-    document.getElementById('nu-label').textContent = 'ν = ' + fmtDisplay(nu.particles, N + 1);
-
+    const hasNu = allNu.length > 0;
+    const nu = hasNu ? allNu[nuIndex] : null;
     const nTop = N, nMid = N + 1, nBot = N;
     const lay = computeLayout(w, h, nTop, nMid, nBot);
     const u = lay.u;
 
     const topPSet = lamTopPos;
     const botPSet = lamBotPos;
-    const nuPSet = new Set(nu.particles);
+    const nuPSet = hasNu ? new Set(nu.particles) : new Set();
 
-    // Holes
-    const topHoles = new Set();
-    for (let j = 1; j <= nTop; j++) if (!topPSet.has(j)) topHoles.add(j);
-    const botHoles = new Set();
-    for (let j = 1; j <= nBot; j++) if (!botPSet.has(j)) botHoles.add(j);
-    const nuHoles = new Set();
-    for (let j = 1; j <= nMid; j++) if (!nuPSet.has(j)) nuHoles.add(j);
+    if (hasNu) {
+      const topHoles = new Set();
+      for (let j = 1; j <= nTop; j++) if (!topPSet.has(j)) topHoles.add(j);
+      const nuHoles = new Set();
+      for (let j = 1; j <= nMid; j++) if (!nuPSet.has(j)) nuHoles.add(j);
 
-    // After: ν/λ_bot vertical (particle dominos), λ_top/ν horizontal (hole dominos)
-    // Top strip: λ_top (N) ↔ ν (N+1) — hole dominos
-    // Here ν has MORE positions. λ_top[j] sits between ν[j] and ν[j+1].
-    // So we match λ_top holes to ν holes, with λ_top[j] connecting to ν[j] or ν[j+1].
-    const topHoleMatch = computeMatchingReverse(topHoles, nuHoles, nTop);
+      // Top strip: λ_top ↔ ν — hole dominos (λ_top/ν horizontal strip)
+      const topHoleMatch = computeMatchingReverse(topHoles, nuHoles, nTop);
+      // Bottom strip: ν ↔ λ_bot — particle dominos (ν/λ_bot vertical strip)
+      const botPartMatch = computeMatchingReverse(botPSet, nuPSet, nBot);
 
-    // Bottom strip: ν (N+1) ↔ λ_bot (N) — particle dominos
-    // λ_bot[j] sits between ν[j] and ν[j+1].
-    // Match λ_bot particles to ν particles.
-    const botPartMatch = computeMatchingReverse(botPSet, nuPSet, nBot);
+      topHoleMatch.forEach(p => {
+        drawDomino(ctx, lay.posX(p.mid, nTop, 0), lay.y0,
+                   lay.posX(p.outer, nMid, -1), lay.y1, u, DOMINO_GRAY, DOMINO_EDGE);
+      });
+      botPartMatch.forEach(p => {
+        drawDomino(ctx, lay.posX(p.outer, nMid, -1), lay.y1,
+                   lay.posX(p.mid, nBot, 0), lay.y2, u, DOMINO_GREEN, DOMINO_EDGE);
+      });
+    }
 
-    // Dominos
-    topHoleMatch.forEach(p => {
-      const cx1 = lay.posX(p.mid, nTop, 0);
-      const cx2 = lay.posX(p.outer, nMid, -1);
-      drawDomino(ctx, cx1, lay.y0, cx2, lay.y1, u, DOMINO_GRAY, DOMINO_EDGE);
-    });
-    botPartMatch.forEach(p => {
-      const cx1 = lay.posX(p.outer, nMid, -1);
-      const cx2 = lay.posX(p.mid, nBot, 0);
-      drawDomino(ctx, cx1, lay.y1, cx2, lay.y2, u, DOMINO_GREEN, DOMINO_EDGE);
-    });
-
-    // 3. Circles — After: λ=orange, ν=green
+    // Always draw λ_top (orange in After)
     for (let j = 1; j <= nTop; j++) {
       const x = lay.posX(j, nTop, 0);
       if (topPSet.has(j)) drawCircle(ctx, x, lay.y0, lay.radius, ORANGE, null);
       else drawCircle(ctx, x, lay.y0, lay.radius, '#fafafa', HOLE_STROKE, 1.5);
     }
-    for (let j = 1; j <= nMid; j++) {
-      const x = lay.posX(j, nMid, -1);
-      if (nuPSet.has(j)) drawCircle(ctx, x, lay.y1, lay.radius, GREEN, null);
-      else drawCircle(ctx, x, lay.y1, lay.radius, '#fafafa', HOLE_STROKE, 1.5);
+    // ν circles (green) with forced/free
+    if (hasNu) {
+      for (let j = 1; j <= nMid; j++) {
+        const x = lay.posX(j, nMid, -1);
+        if (nuPSet.has(j)) {
+          const isF = nuForcedInfo.forced.has(j);
+          drawCircle(ctx, x, lay.y1, lay.radius, GREEN, isF ? FORCED_RING : null, isF ? 2.5 : 0);
+        } else {
+          const isFH = nuForcedInfo.forcedHoles.has(j);
+          drawCircle(ctx, x, lay.y1, lay.radius, '#fafafa', isFH ? FORCED_RING : HOLE_STROKE, isFH ? 2.5 : 1.5);
+        }
+      }
     }
+    // Always draw λ_bot (orange in After)
     for (let j = 1; j <= nBot; j++) {
       const x = lay.posX(j, nBot, 0);
       if (botPSet.has(j)) drawCircle(ctx, x, lay.y2, lay.radius, ORANGE, null);
       else drawCircle(ctx, x, lay.y2, lay.radius, '#fafafa', HOLE_STROKE, 1.5);
     }
 
-    // 4. Labels
+    // Labels
     ctx.font = 'bold 12px sans-serif'; ctx.textBaseline = 'middle';
     ctx.textAlign = 'right';
     ctx.fillStyle = '#c06000';
     ctx.fillText('λᵗᵒᵖ', lay.posX(1, nTop, 0) - u - 6, lay.y0);
-    ctx.fillStyle = '#1a6b2e';
-    ctx.fillText('ν', lay.posX(1, nMid, -1) - u - 6, lay.y1);
+    if (hasNu) { ctx.fillStyle = '#1a6b2e'; ctx.fillText('ν', lay.posX(1, nMid, -1) - u - 6, lay.y1); }
     ctx.fillStyle = '#c06000';
     ctx.fillText('λᵇᵒᵗ', lay.posX(1, nBot, 0) - u - 6, lay.y2);
 
     ctx.textAlign = 'left';
     ctx.fillStyle = '#c06000';
     ctx.fillText(fmtDisplay([...lamTopPos], N), lay.posX(nTop, nTop, 0) + u + 8, lay.y0);
-    ctx.fillStyle = '#1a6b2e';
-    ctx.fillText(fmtDisplay(nu.particles, N + 1), lay.posX(nMid, nMid, -1) + u + 8, lay.y1);
+    if (hasNu) { ctx.fillStyle = '#1a6b2e'; ctx.fillText(fmtDisplay(nu.particles, N + 1), lay.posX(nMid, nMid, -1) + u + 8, lay.y1); }
     ctx.fillStyle = '#c06000';
     ctx.fillText(fmtDisplay([...lamBotPos], N), lay.posX(nBot, nBot, 0) + u + 8, lay.y2);
+
+    if (!hasNu) {
+      ctx.fillStyle = 'rgba(200,0,0,0.7)'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('No valid ν — adjust λ values', w / 2, lay.y1);
+    }
   }
 
   // Matching for After panel where the OUTER row (ν) has MORE positions
@@ -632,10 +630,15 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     const botOk = [...lamBotPos].every(p => p >= 1 && p <= N);
     const kOk = k >= 0 && lamBotPos.size === k + 1;
 
-    allMu = (topOk && botOk && kOk) ? enumerateMu(lamTopPart, lamBotPart, k, N) : [];
+    const valid = topOk && botOk && kOk;
+    allMu = valid ? enumerateMu(lamTopPart, lamBotPart, k, N) : [];
+    allNu = valid ? enumerateNu(lamTopPart, lamBotPart, k, N) : [];
     muIndex = Math.min(muIndex, Math.max(0, allMu.length - 1));
-    forcedInfo = computeForcedFree(allMu, N);
+    nuIndex = Math.min(nuIndex, Math.max(0, allNu.length - 1));
+    muForcedInfo = computeForcedFree(allMu, N - 1);
+    nuForcedInfo = computeForcedFree(allNu, N + 1);
     updateMuDisplay();
+    updateNuDisplay();
     render();
   }
 
@@ -652,6 +655,19 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     document.getElementById('mu-next').disabled = muIndex >= allMu.length - 1;
   }
 
+  function updateNuDisplay() {
+    const label = document.getElementById('nu-label');
+    const count = document.getElementById('nu-count');
+    if (allNu.length === 0) {
+      label.textContent = 'ν: none'; count.textContent = '0 valid ν';
+    } else {
+      label.textContent = 'ν = ' + fmtDisplay(allNu[nuIndex].particles, N + 1);
+      count.textContent = (nuIndex + 1) + ' of ' + allNu.length;
+    }
+    document.getElementById('nu-prev').disabled = nuIndex <= 0;
+    document.getElementById('nu-next').disabled = nuIndex >= allNu.length - 1;
+  }
+
   document.getElementById('lattice-n').addEventListener('change', recomputeFromInputs);
   document.getElementById('particle-k').addEventListener('change', recomputeFromInputs);
   document.getElementById('lam-top-input').addEventListener('change', recomputeFromInputs);
@@ -661,6 +677,12 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   });
   document.getElementById('mu-next').addEventListener('click', () => {
     if (muIndex < allMu.length - 1) { muIndex++; updateMuDisplay(); render(); }
+  });
+  document.getElementById('nu-prev').addEventListener('click', () => {
+    if (nuIndex > 0) { nuIndex--; updateNuDisplay(); render(); }
+  });
+  document.getElementById('nu-next').addEventListener('click', () => {
+    if (nuIndex < allNu.length - 1) { nuIndex++; updateNuDisplay(); render(); }
   });
 
   // Click to toggle λ particles
