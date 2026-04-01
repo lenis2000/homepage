@@ -11,6 +11,7 @@ Usage:
     python3 _scripts/arxiv/fetch_journal_refs.py              # fetch + update posts + rebuild index
     python3 _scripts/arxiv/fetch_journal_refs.py --dry-run    # preview only
     python3 _scripts/arxiv/fetch_journal_refs.py --refresh    # ignore cache, re-fetch all
+    python3 _scripts/arxiv/fetch_journal_refs.py --refresh-empty  # re-fetch only papers with no journal ref
     python3 _scripts/arxiv/fetch_journal_refs.py --stats      # show stats only
     python3 _scripts/arxiv/fetch_journal_refs.py --no-update  # fetch + cache, skip file updates
 
@@ -459,6 +460,8 @@ def main():
     parser = argparse.ArgumentParser(description="Fetch journal refs from S2 + arXiv")
     parser.add_argument("--dry-run", action="store_true", help="Preview without modifying files")
     parser.add_argument("--refresh", action="store_true", help="Re-fetch all, ignoring cache")
+    parser.add_argument("--refresh-empty", action="store_true",
+                        help="Re-fetch only papers with no journal ref in cache")
     parser.add_argument("--stats", action="store_true", help="Show statistics only")
     parser.add_argument("--no-update", action="store_true", help="Fetch and cache only")
     args = parser.parse_args()
@@ -479,6 +482,10 @@ def main():
     # Determine which IDs need fetching
     if args.refresh:
         to_fetch = all_ids
+    elif args.refresh_empty:
+        cached = get_cached(db, all_ids)
+        to_fetch = [aid for aid in all_ids
+                    if aid not in cached or not cached[aid]["journal_name"]]
     else:
         cached = get_cached(db, all_ids)
         to_fetch = [aid for aid in all_ids if aid not in cached]
