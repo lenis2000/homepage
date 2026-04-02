@@ -89,7 +89,15 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
 
 <div id="weight-sums" class="info-line" style="margin: 12px 0; padding: 8px; background: #f0f0f0; border-radius: 4px; white-space: pre-wrap; font-size: 12px;"></div>
 
-<div id="mma-coupling" class="info-line" style="margin: 12px 0; padding: 8px; background: #f5f0e8; border-radius: 4px; white-space: pre-wrap; font-size: 11px;"></div>
+<div class="int-row" style="margin-top: 12px;">
+  <label>Generic Mathematica code for k =</label>
+  <select id="mma-k-select" style="width: 60px;">
+    <option value="1">1</option>
+    <option value="2" selected>2</option>
+    <option value="3">3</option>
+  </select>
+</div>
+<div id="mma-coupling" class="info-line" style="margin: 4px 0 12px 0; padding: 8px; background: #f5f0e8; border-radius: 4px; white-space: pre-wrap; font-size: 11px;"></div>
 
 <script>
 (function() {
@@ -801,147 +809,124 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     }
   }
 
-  // Generate Mathematica coupling code
+  // Generate GENERIC Mathematica coupling code for symbolic λ's
   function updateCouplingCode() {
     const el = document.getElementById('mma-coupling');
-    if (allMu.length === 0 || allNu.length === 0) { el.innerHTML = ''; return; }
-
-    const tVar = document.getElementById('param-t').value || 't';
-    const topStd = posToStdPart([...lamTopPos], N);
-    const botStd = posToStdPart([...lamBotPos], N);
-    const k = getK();
-
-    function partList(positions, latticeN) {
-      const p = positionsToDisplayPart(positions, latticeN);
-      return '{' + (p.length ? [...p].join(', ') : '0') + '}';
-    }
-    function pMma(poly) {
-      const p = polyTrim(poly);
-      if (!p.length || (p.length === 1 && p[0] === 0)) return '0';
-      const tNum = parseFloat(tVar);
-      if (!isNaN(tNum) && tVar.trim() !== '') return '' + Math.round(polyEval(p, tNum)*1e6)/1e6;
-      const terms = [];
-      for (let i = 0; i < p.length; i++) {
-        if (Math.abs(p[i]) < 1e-12) continue;
-        const c = Math.round(p[i]);
-        if (i === 0) terms.push(c+'');
-        else if (i === 1) terms.push(c === 1 ? tVar : c === -1 ? '-'+tVar : c+' '+tVar);
-        else terms.push((c===1?'':c===-1?'-':c+' ')+tVar+'^'+i);
-      }
-      return terms.join(' + ').replace(/\+ -/g, '- ');
-    }
+    const kSel = parseInt(document.getElementById('mma-k-select').value) || 2;
 
     try {
+      const k = kSel;
+      const aVars = Array.from({length: k}, (_, i) => 'a' + (i+1));
+      const bVars = Array.from({length: k+1}, (_, i) => 'b' + (i+1));
       const L = [];
-      L.push('(* ═══ Coupling equations for Mathematica ═══ *)');
-      L.push('(* λ_top = ' + partList([...lamTopPos], N) + ', λ_bot = ' + partList([...lamBotPos], N) + ' *)');
-      L.push('(* N = ' + N + ', k = ' + k + ' *)');
+
+      L.push('(* ═══ Generic coupling equations, k=' + k + ' ═══ *)');
+      L.push('(* λ_top = (' + aVars.join(', ') + '), k parts *)')
+      L.push('(* λ_bot = (' + bVars.join(', ') + '), k+1 parts *)');
+      L.push('(* μ = k parts, vert strip λ_top/μ, horiz strip λ_bot/μ *)');
+      L.push('(* ν = k+1 parts, vert strip ν/λ_bot, horiz strip ν/λ_top *)');
+      L.push('(* Assume generic interlacing: ' + bVars[bVars.length-1] + ' \\[LessEqual] ' + aVars[aVars.length-1] + '-1 < ' + aVars[aVars.length-1] + ' \\[LessEqual] ... \\[LessEqual] ' + aVars[0] + ' \\[LessEqual] ' + bVars[0] + ' *)');
+      L.push('');
+      L.push('Clear["Global`*"]');
+      L.push('');
+      L.push('(* q-binomial *)');
+      L.push('qBin[n_, k_, t_] := Product[(1 - t^(n - j + 1))/(1 - t^j), {j, 1, k}]');
       L.push('');
 
-      // ψ and ψ' definitions
-      L.push('(* q-Whittaker skew functions (q = t) *)');
-      L.push('qBinom[n_, k_, t_] := Product[(1 - t^(n-j+1))/(1 - t^j), {j, 1, k}]');
-      L.push('psiH[lam_, mu_, t_] := Product[qBinom[lam[[i]] - If[i < Length[lam], lam[[i+1]], 0], lam[[i]] - If[i <= Length[mu], mu[[i]], 0], t], {i, 1, Length[lam]}]');
-      L.push('psiV[lam_, mu_, t_] := Product[If[lam[[i]] == mu[[i]] && (If[i < Length[lam], lam[[i+1]], 0] == If[i < Length[mu], mu[[i+1]], 0] + 1), 1 - t^(mu[[i]] - If[i < Length[mu], mu[[i+1]], 0]), 1], {i, 1, Length[mu]}]');
+      // λ_top and λ_bot
+      L.push('lamTop = {' + aVars.join(', ') + '};');
+      L.push('lamBot = {' + bVars.join(', ') + '};');
       L.push('');
 
-      // List μ's and ν's with weights
-      L.push('(* Valid μ configurations and weights *)');
-      const muLabels = [], nuLabels = [];
-      allMu.forEach((mu, i) => {
-        const ms = posToStdPart(mu.particles, N-1);
-        const wV = psi_vert([...lamTopPos], N, mu.particles, N-1);
-        const wH = psi_horiz([...lamBotPos], N, mu.particles, N-1);
-        const w = polyMul(wV.poly, wH.poly);
-        const label = 'mu' + (i+1);
-        muLabels.push(label);
-        L.push(label + ' = ' + JSON.stringify([...ms]) + '; (* display: ' + partList(mu.particles, N-1) + ', W = ' + pMma(w) + ' *)');
-      });
-      L.push('');
-      L.push('(* Valid ν configurations and weights *)');
-      allNu.forEach((nu, i) => {
-        const ns = posToStdPart(nu.particles, N+1);
-        const wV = psi_vert(nu.particles, N+1, [...lamBotPos], N);
-        const wH = psi_horiz(nu.particles, N+1, [...lamTopPos], N);
-        const w = polyMul(wV.poly, wH.poly);
-        const label = 'nu' + (i+1);
-        nuLabels.push(label);
-        L.push(label + ' = ' + JSON.stringify([...ns]) + '; (* display: ' + partList(nu.particles, N+1) + ', W = ' + pMma(w) + ' *)');
-      });
+      // Enumerate μ: m_i ∈ {a_i, a_i-1}, with horiz strip condition
+      // c_i = a_i - m_i ∈ {0,1}. 2^k choices.
+      L.push('(* ── Enumerate μ: c_i = a_i - m_i ∈ {0,1}, 2^' + k + ' choices ── *)');
+      L.push('(* Filter by horizontal strip: b1 ≥ m1 ≥ b2 ≥ m2 ≥ ... ≥ b_{k+1} *)');
+      L.push('allC = Tuples[{0, 1}, ' + k + '];');
+      L.push('muFromC[c_] := lamTop - c;');
+      L.push('horizStripQ[mu_] := And @@ Table[');
+      L.push('  lamBot[[i]] >= mu[[i]] >= If[i < Length[lamBot], lamBot[[i+1]], 0],');
+      L.push('{i, 1, Length[mu]}];');
+      L.push('validC = Select[allC, horizStripQ[muFromC[#]] &];');
+      L.push('muList = muFromC /@ validC;');
+      L.push('nMu = Length[muList];');
+      L.push('Print["Valid μ: ", nMu, " configs"];');
       L.push('');
 
-      // Weight vectors
-      L.push('(* Weight vectors *)');
-      const muWExprs = allMu.map((mu, i) => {
-        const wV = psi_vert([...lamTopPos], N, mu.particles, N-1);
-        const wH = psi_horiz([...lamBotPos], N, mu.particles, N-1);
-        return pMma(polyMul(wV.poly, wH.poly));
-      });
-      const nuWExprs = allNu.map((nu, i) => {
-        const wV = psi_vert(nu.particles, N+1, [...lamBotPos], N);
-        const wH = psi_horiz(nu.particles, N+1, [...lamTopPos], N);
-        return pMma(polyMul(wV.poly, wH.poly));
-      });
-      L.push('wMu = {' + muWExprs.join(', ') + '};');
-      L.push('wNu = {' + nuWExprs.join(', ') + '};');
+      // W(μ) = ψ'(λ_top/μ) · ψ(λ_bot/μ)
+      L.push('(* ── Weights W(μ) = ψ\'(λ_top/μ) · ψ(λ_bot/μ) ── *)');
+      L.push('psiPrimeVert[lam_, mu_] := Module[{L = Append[lam, 0], M = Append[mu, 0]},');
+      L.push('  Product[If[L[[i]] == M[[i]] && L[[i+1]] == M[[i+1]] + 1,');
+      L.push('    1 - t^(M[[i]] - M[[i+1]]), 1], {i, 1, Length[mu]}]]');
+      L.push('');
+      L.push('psiHoriz[lam_, mu_] := Module[{L = Append[lam, 0], M = Append[PadRight[mu, Length[lam]], 0]},');
+      L.push('  Product[qBin[L[[i]] - L[[i+1]], L[[i]] - M[[i]], t], {i, 1, Length[lam]}]]');
+      L.push('');
+      L.push('wMuFn[mu_] := Simplify[psiPrimeVert[lamTop, mu] psiHoriz[lamBot, mu]]');
+      L.push('wMuVec = wMuFn /@ muList;');
+      L.push('Print["W(μ) = ", wMuVec];');
       L.push('');
 
-      // Transition matrix as unknowns
-      const nMu = allMu.length, nNu = allNu.length;
-      L.push('(* Transition matrix P[i,j] = P(ν_j | μ_i) *)');
-      L.push('nMu = ' + nMu + '; nNu = ' + nNu + ';');
+      // Enumerate ν: d_i = n_i - b_i ∈ {0,1}, 2^{k+1} choices
+      L.push('(* ── Enumerate ν: d_i = n_i - b_i ∈ {0,1}, 2^' + (k+1) + ' choices ── *)');
+      L.push('(* Filter by horizontal strip: n1 ≥ a1 ≥ n2 ≥ a2 ≥ ... ≥ a_k ≥ n_{k+1} *)');
+      L.push('allD = Tuples[{0, 1}, ' + (k+1) + '];');
+      L.push('nuFromD[d_] := lamBot + d;');
+      L.push('horizStripNuQ[nu_] := And @@ Table[');
+      L.push('  nu[[i]] >= lamTop[[i]] >= If[i < Length[nu], nu[[i+1]], 0],');
+      L.push('{i, 1, Length[lamTop]}] && OrderedQ[Reverse[nu]];');
+      L.push('validD = Select[allD, horizStripNuQ[nuFromD[#]] &];');
+      L.push('nuList = nuFromD /@ validD;');
+      L.push('nNu = Length[nuList];');
+      L.push('Print["Valid ν: ", nNu, " configs"];');
+      L.push('');
+
+      // W(ν)
+      L.push('wNuFn[nu_] := Simplify[psiPrimeVert[nu, lamBot] psiHoriz[nu, lamTop]]');
+      L.push('wNuVec = wNuFn /@ nuList;');
+      L.push('Print["W(ν) = ", wNuVec];');
+      L.push('');
+
+      // Cauchy check
+      L.push('(* Cauchy identity: Σ W(ν) == 2 Σ W(μ) *)');
+      L.push('Print["Cauchy: ", Simplify[Total[wNuVec] - 2 Total[wMuVec]]]');
+      L.push('');
+
+      // Coupling
+      L.push('(* ── Coupling P[ν|μ]: nMu × nNu matrix ── *)');
       L.push('P = Array[p, {nMu, nNu}];');
+      L.push('rowEqs = Table[Total[P[[i]]] == 1, {i, nMu}];');
+      L.push('margEqs = Table[Sum[wMuVec[[i]] P[[i, j]], {i, nMu}] == wNuVec[[j]]/2, {j, nNu}];');
+      L.push('posEqs = Flatten[Table[p[i, j] >= 0, {i, nMu}, {j, nNu}]];');
       L.push('');
-
-      // Constraints
-      L.push('(* Constraint 1: row sums = 1 *)');
-      L.push('rowSumEqs = Table[Total[P[[i]]] == 1, {i, nMu}];');
-      L.push('');
-      L.push('(* Constraint 2: marginal Σ_μ W(μ)P(ν|μ) = W(ν)/2 *)');
-      L.push('marginalEqs = Table[Sum[wMu[[i]] P[[i, j]], {i, nMu}] == wNu[[j]]/2, {j, nNu}];');
-      L.push('');
-      L.push('(* Constraint 3: positivity *)');
-      L.push('posConstraints = Flatten[Table[p[i, j] >= 0, {i, nMu}, {j, nNu}]];');
-      L.push('');
-      L.push('allEqs = Join[rowSumEqs, marginalEqs];');
+      L.push('allEqs = Join[rowEqs, margEqs];');
       L.push('allVars = Flatten[P];');
       L.push('');
-
-      // Column RSK solution
-      L.push('(* Column RSK solution (one valid coupling) *)');
-      const trans = computeTransitionMatrix();
-      L.push('pColRSK = {');
-      allMu.forEach((mu, i) => {
-        const row = [];
-        allNu.forEach((nu, j) => {
-          const mk = mu.particles.join(','), nk = nu.particles.join(',');
-          const key = mk + '|' + nk;
-          if (trans[key]) {
-            // P(ν|μ) = (p0+p1)/2
-            const total = polyAdd(trans[key].p0, trans[key].p1);
-            row.push(pMma(polyDiv(total, [2])));
-          } else {
-            row.push('0');
-          }
-        });
-        L.push('  {' + row.join(', ') + '}' + (i < nMu-1 ? ',' : ''));
-      });
-      L.push('};');
+      L.push('(* Solve symbolically *)');
+      L.push('sol = Solve[allEqs, allVars] // Simplify;');
+      L.push('Print["General P = ", P /. sol[[1]] // Simplify]');
       L.push('');
 
-      // Solve
-      L.push('(* Solve for general coupling *)');
-      L.push('sol = Solve[allEqs, allVars];');
+      // Numeric test
+      const testA = Array.from({length: k}, (_, i) => (k-i)*2+1);
+      const testB = Array.from({length: k+1}, (_, i) => (k-i)*2);
+      const testRules = aVars.map((a,i) => a + ' -> ' + testA[i]).concat(bVars.map((b,i) => b + ' -> ' + testB[i]));
+      L.push('(* ── Numeric test ── *)');
+      L.push('testRules = {' + testRules.join(', ') + '};');
+      L.push('Print["Test λ_top = ", lamTop /. testRules, ", λ_bot = ", lamBot /. testRules]');
+      L.push('Print["Test W(μ) = ", wMuVec /. testRules // Simplify]');
+      L.push('Print["Test W(ν) = ", wNuVec /. testRules // Simplify]');
+      L.push('Print["Test P = ", P /. sol[[1]] /. testRules // Simplify]');
       L.push('');
-      L.push('(* Find couplings with specific structure *)');
-      L.push('(* E.g., search for product-form or Markov solutions: *)');
-      L.push('(* FindInstance[Join[allEqs, posConstraints, {your extra factorization conditions}], allVars, Reals] *)');
+      L.push('(* ── Search for structured couplings ── *)');
+      L.push('(* Add your factorization conditions and use: *)');
+      L.push('(* FindInstance[Join[allEqs /. testRules, posEqs /. testRules, {extra}], allVars, Reals] *)');
 
       const mmaCode = L.join('\n');
       el.innerHTML = '<div style="position:relative;">' +
         '<button id="copy-coupling-btn" style="position:absolute;right:4px;top:4px;padding:2px 8px;font-size:11px;cursor:pointer;">Copy</button>' +
-        '<b style="font-size:12px;">Mathematica coupling equations</b>' +
-        '<pre style="margin:4px 0 0 0;padding-right:50px;font-size:10px;line-height:1.4;">' + mmaCode + '</pre></div>';
+        '<b style="font-size:12px;">Mathematica: generic coupling for k=' + k + '</b>' +
+        '<pre style="margin:4px 0 0 0;padding-right:50px;font-size:10px;line-height:1.4;max-height:400px;overflow-y:auto;">' + mmaCode + '</pre></div>';
       document.getElementById('copy-coupling-btn').addEventListener('click', function() {
         navigator.clipboard.writeText(mmaCode).then(() => {
           this.textContent = 'Copied!';
@@ -1506,7 +1491,8 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   document.getElementById('particle-k').addEventListener('change', recomputeFromInputs);
   document.getElementById('lam-top-input').addEventListener('change', recomputeFromInputs);
   document.getElementById('lam-bot-input').addEventListener('change', recomputeFromInputs);
-  document.getElementById('param-t').addEventListener('change', updateWeights);
+  document.getElementById('param-t').addEventListener('change', () => { updateWeights(); updateCouplingCode(); });
+  document.getElementById('mma-k-select').addEventListener('change', updateCouplingCode);
   document.getElementById('mu-prev').addEventListener('click', () => {
     if (muIndex > 0) { muIndex--; updateMuDisplay(); render(); }
   });
