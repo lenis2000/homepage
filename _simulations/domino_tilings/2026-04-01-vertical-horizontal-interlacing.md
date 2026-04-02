@@ -8,10 +8,6 @@ code:
 a11y-description: "Interactive explorer for the RSK-style transition between partitions represented as particle configurations on a diagonal lattice. Set two partitions lambda-top and lambda-bottom, enumerate valid intermediate partitions mu, see forced vs free particles, and compute the output partition nu."
 ---
 
-<script src="/js/nerdamer.core.js"></script>
-<script src="/js/nerdamer-Calculus.js"></script>
-<script src="/js/nerdamer-Algebra.js"></script>
-
 <style>
 .int-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
 .int-row label { font-size: 13px; min-width: 70px; }
@@ -47,12 +43,9 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
 </div>
 
 <div class="int-row">
-  <label>Parameters:</label>
+  <label>Parameter:</label>
   t = <input id="param-t" type="text" value="t" style="width:50px; font-family:monospace;">
-  β = <input id="param-beta" type="text" value="b" style="width:50px; font-family:monospace;">
 </div>
-
-<div id="weight-sums" class="info-line" style="margin: 8px 0; padding: 6px; background: #f0f0f0; border-radius: 4px; white-space: pre-wrap;"></div>
 
 <div class="panel-label">Before: λ<sup>top</sup>/μ vertical strip, λ<sup>bot</sup>/μ horizontal strip</div>
 
@@ -92,9 +85,10 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="none" stroke="#c00" stroke-width="2"/></svg> forced hole</span>
 </div>
 
+<div id="weight-sums" class="info-line" style="margin: 12px 0; padding: 8px; background: #f0f0f0; border-radius: 4px; white-space: pre-wrap; font-size: 12px;"></div>
+
 <script>
 (function() {
-  console.log('Interlacing explorer loading...', typeof nerdamer);
   // ═══════════════════════════════════════════════════════════════
   // MATH
   // ═══════════════════════════════════════════════════════════════
@@ -289,21 +283,91 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // WEIGHTS (symbolic, using nerdamer with q=t)
+  // WEIGHTS — lightweight polynomial arithmetic in t (q=t)
   // ═══════════════════════════════════════════════════════════════
 
-  // Conjugate partition: transpose the Young diagram
+  // Poly = array of coefficients: [c0, c1, c2, ...] means c0 + c1*t + c2*t^2 + ...
+  const ZERO = [0], ONE = [1];
+  function polyTrim(p) { while (p.length > 1 && p[p.length-1] === 0) p.pop(); return p; }
+  function polyAdd(a, b) {
+    const r = new Array(Math.max(a.length, b.length)).fill(0);
+    for (let i = 0; i < a.length; i++) r[i] += a[i];
+    for (let i = 0; i < b.length; i++) r[i] += b[i];
+    return polyTrim(r);
+  }
+  function polyMul(a, b) {
+    if (a.length === 1 && a[0] === 0) return [0];
+    if (b.length === 1 && b[0] === 0) return [0];
+    const r = new Array(a.length + b.length - 1).fill(0);
+    for (let i = 0; i < a.length; i++)
+      for (let j = 0; j < b.length; j++) r[i+j] += a[i] * b[j];
+    return polyTrim(r);
+  }
+  // (1 - t^n) as polynomial
+  function poly1minusTn(n) {
+    if (n === 0) return [0];
+    const r = new Array(n + 1).fill(0); r[0] = 1; r[n] = -1; return r;
+  }
+  // (1 + t + t^2 + ... + t^{n-1}) = (1-t^n)/(1-t)
+  function polyGeom(n) {
+    if (n <= 0) return [0];
+    return new Array(n).fill(1);
+  }
+  // q-binomial [n choose k]_t as polynomial
+  function qBinom(n, k) {
+    if (k < 0 || k > n) return [0];
+    if (k === 0 || k === n) return [1];
+    // [n,k]_t = [n,k-1]_t * (1-t^{n-k+1})/(1-t^k)
+    // Build iteratively: start with 1, multiply by (1+t+...+t^{n-j}) for j=1..k
+    // Actually: [n,k] = prod_{j=1}^{k} (1-t^{n-j+1})/(1-t^j)
+    // = prod_{j=1}^{k} (1+t+...+t^{n-j})  when we expand
+    let r = [1];
+    for (let j = 1; j <= k; j++) {
+      // (1-t^{n-j+1})/(1-t^j) = polyGeom(n-j+1) if j=1, else need full division
+      // Actually: (1-t^a)/(1-t^b) where a=n-j+1, b=j
+      // For q-binomials, this always divides evenly as a polynomial
+      r = polyMul(r, poly1minusTn(n - j + 1));
+      r = polyDiv(r, poly1minusTn(j));
+    }
+    return r;
+  }
+  // Polynomial division (exact, no remainder expected)
+  function polyDiv(a, b) {
+    a = [...a]; b = [...b];
+    polyTrim(a); polyTrim(b);
+    if (b.length === 1 && b[0] === 0) return [0]; // div by zero
+    const r = new Array(Math.max(0, a.length - b.length + 1)).fill(0);
+    for (let i = r.length - 1; i >= 0; i--) {
+      r[i] = a[i + b.length - 1] / b[b.length - 1];
+      for (let j = 0; j < b.length; j++) a[i + j] -= r[i] * b[j];
+    }
+    return polyTrim(r);
+  }
+  // Format polynomial in t as string
+  function polyStr(p, tVar) {
+    tVar = tVar || 't';
+    p = polyTrim(p);
+    if (p.length === 0 || (p.length === 1 && p[0] === 0)) return '0';
+    const terms = [];
+    for (let i = 0; i < p.length; i++) {
+      if (Math.abs(p[i]) < 1e-12) continue;
+      const c = Math.round(p[i] * 1e6) / 1e6;
+      if (i === 0) terms.push('' + c);
+      else if (i === 1) terms.push(c === 1 ? tVar : c === -1 ? '-' + tVar : c + tVar);
+      else terms.push((c === 1 ? '' : c === -1 ? '-' : c) + tVar + '^' + i);
+    }
+    return terms.length === 0 ? '0' : terms.join(' + ').replace(/\+ -/g, '- ');
+  }
+
+  // Conjugate partition
   function conjugate(lambda) {
     if (lambda.length === 0) return [];
-    const maxPart = lambda[0];
     const conj = [];
-    for (let j = 1; j <= maxPart; j++) {
-      conj.push(lambda.filter(p => p >= j).length);
-    }
+    for (let j = 1; j <= lambda[0]; j++) conj.push(lambda.filter(p => p >= j).length);
     return conj;
   }
 
-  // Convert display-convention positions to standard partition
+  // Positions → standard partition
   function posToStdPart(positions, latticeN) {
     const k = positions.length;
     if (k === 0) return [];
@@ -314,149 +378,115 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     return parts;
   }
 
-  // P^Wh_{λ/μ}(β; q=t) for horizontal strip λ/μ (λ ⊃ μ)
-  // = ∏_i [λ_i - λ_{i+1} choose λ_i - μ_i]_t · β^{|λ|-|μ|}
-  // where [n choose k]_t = ∏_{j=1}^{k} (1-t^{n-j+1})/(1-t^j)
-  function pWhittaker(lamPos, lamN, muPos, muN, tVar, betaVar) {
-    const lam = posToStdPart(lamPos, lamN);
-    const mu = posToStdPart(muPos, muN);
-    // Pad to same length
+  // P^Wh_{λ/μ}(β; t) for horizontal strip = ∏_i [λ_i-λ_{i+1} choose λ_i-μ_i]_t · β^{|λ|-|μ|}
+  function pWhittaker(lamPos, lamN, muPos, muN) {
+    const lam = posToStdPart(lamPos, lamN), mu = posToStdPart(muPos, muN);
     const len = Math.max(lam.length, mu.length) + 1;
-    const L = i => (i < lam.length ? lam[i] : 0);
-    const M = i => (i < mu.length ? mu[i] : 0);
-
-    const factors = [];
-    const sizeDiff = (lam.reduce((a, b) => a + b, 0) || 0) - (mu.reduce((a, b) => a + b, 0) || 0);
-
+    const L = i => lam[i] || 0, M = i => mu[i] || 0;
+    let poly = [1];
     for (let i = 0; i < len; i++) {
-      const n = L(i) - L(i + 1);  // λ_i - λ_{i+1}
-      const k = L(i) - M(i);       // λ_i - μ_i
-      if (k < 0 || k > n) return nerdamer('0');  // not a valid strip
-      if (k === 0 || n === 0) continue;
-      // [n choose k]_t = ∏_{j=1}^{k} (1-t^{n-j+1})/(1-t^j)
-      for (let j = 1; j <= k; j++) {
-        factors.push('(1-' + tVar + '^' + (n - j + 1) + ')/(1-' + tVar + '^' + j + ')');
-      }
+      const n = L(i) - L(i + 1), k = L(i) - M(i);
+      if (k < 0 || k > n) return { poly: [0], betaPow: 0 };
+      if (k > 0) poly = polyMul(poly, qBinom(n, k));
     }
-    if (sizeDiff > 0) factors.push(betaVar + '^' + sizeDiff);
-    else if (sizeDiff < 0) return nerdamer('0');
-
-    return factors.length > 0 ? nerdamer('expand(' + factors.join('*') + ')') : nerdamer('1');
+    const sizeDiff = (lam.reduce((a,b) => a+b, 0)||0) - (mu.reduce((a,b) => a+b, 0)||0);
+    return { poly, betaPow: sizeDiff };
   }
 
-  // P^HL_{λ/μ}(β; t) for vertical strip (applied to conjugate partitions)
-  // λ'/μ' is a horizontal strip of the conjugates
-  // P^HL = ∏_{i: λ'_i = μ'_i, λ'_{i+1} = μ'_{i+1}+1} (1 - t^{μ'_i - μ'_{i+1}}) · β^{|λ|-|μ|}
-  function pHL(lamPos, lamN, muPos, muN, tVar, betaVar) {
-    const lam = posToStdPart(lamPos, lamN);
-    const mu = posToStdPart(muPos, muN);
-    const lamC = conjugate(lam);
-    const muC = conjugate(mu);
-
+  // P^HL_{λ/μ}(β; t) for vertical strip (uses conjugate partitions)
+  function pHL(lamPos, lamN, muPos, muN) {
+    const lam = posToStdPart(lamPos, lamN), mu = posToStdPart(muPos, muN);
+    const lamC = conjugate(lam), muC = conjugate(mu);
     const len = Math.max(lamC.length, muC.length) + 1;
-    const LC = i => (i < lamC.length ? lamC[i] : 0);
-    const MC = i => (i < muC.length ? muC[i] : 0);
-    const sizeDiff = (lam.reduce((a, b) => a + b, 0) || 0) - (mu.reduce((a, b) => a + b, 0) || 0);
-
-    const factors = [];
+    const LC = i => lamC[i] || 0, MC = i => muC[i] || 0;
+    let poly = [1];
     for (let i = 0; i < len; i++) {
       if (LC(i) === MC(i) && LC(i + 1) === MC(i + 1) + 1) {
         const exp = MC(i) - MC(i + 1);
-        if (exp > 0) factors.push('(1-' + tVar + '^' + exp + ')');
+        if (exp > 0) poly = polyMul(poly, poly1minusTn(exp));
       }
     }
-    if (sizeDiff > 0) factors.push(betaVar + '^' + sizeDiff);
-    else if (sizeDiff < 0) return nerdamer('0');
-
-    return factors.length > 0 ? nerdamer('expand(' + factors.join('*') + ')') : nerdamer('1');
+    const sizeDiff = (lam.reduce((a,b) => a+b, 0)||0) - (mu.reduce((a,b) => a+b, 0)||0);
+    return { poly, betaPow: sizeDiff };
   }
 
-  // Compute total weight for a Before configuration (given μ)
-  // W_before(μ) = P^HL_{λ_top/μ}(β;t) · P^Wh_{λ_bot/μ}(β;t)
-  function weightBefore(muParticles, tVar, betaVar) {
-    const wHL = pHL([...lamTopPos], N, muParticles, N - 1, tVar, betaVar);
-    const wWh = pWhittaker([...lamBotPos], N, muParticles, N - 1, tVar, betaVar);
-    return nerdamer('expand((' + wHL.toString() + ')*(' + wWh.toString() + '))');
+  // Format weight (β=1, so just polynomial in t)
+  function fmtWeight(w, tVar) {
+    return polyStr(w.poly, tVar) || '0';
   }
 
-  // Compute total weight for an After configuration (given ν)
-  // W_after(ν) = P^HL_{ν/λ_bot}(β;t) · P^Wh_{ν/λ_top}(β;t)
-  function weightAfter(nuParticles, tVar, betaVar) {
-    const wHL = pHL(nuParticles, N + 1, [...lamBotPos], N, tVar, betaVar);
-    const wWh = pWhittaker(nuParticles, N + 1, [...lamTopPos], N, tVar, betaVar);
-    return nerdamer('expand((' + wHL.toString() + ')*(' + wWh.toString() + '))');
+  // Multiply two weights
+  function weightMul(a, b) {
+    return { poly: polyMul(a.poly, b.poly), betaPow: a.betaPow + b.betaPow };
   }
 
-  // Compute and display weight sums
+  // Add weights (must have same betaPow)
+  function weightAdd(a, b) {
+    if (a.betaPow !== b.betaPow) {
+      // Can't add different beta powers simply — expand as poly in beta too
+      // For now return a flag
+      return null;
+    }
+    return { poly: polyAdd(a.poly, b.poly), betaPow: a.betaPow };
+  }
+
   function updateWeights() {
     const el = document.getElementById('weight-sums');
-    if (typeof nerdamer === 'undefined') { el.innerHTML = 'nerdamer not loaded'; return; }
     if (allMu.length === 0 && allNu.length === 0) { el.innerHTML = ''; return; }
     const tVar = document.getElementById('param-t').value || 't';
-    const betaVar = document.getElementById('param-beta').value || 'b';
 
     try {
-      let sumBefore = nerdamer('0');
-      const muWeights = [];
-      allMu.forEach((mu, i) => {
-        const w = weightBefore(mu.particles, tVar, betaVar);
-        muWeights.push(w.toString());
-        sumBefore = nerdamer('expand((' + sumBefore.toString() + ')+(' + w.toString() + '))');
+      const muWeights = allMu.map(mu => {
+        const wHL = pHL([...lamTopPos], N, mu.particles, N - 1);
+        const wWh = pWhittaker([...lamBotPos], N, mu.particles, N - 1);
+        return weightMul(wHL, wWh);
       });
 
-      let sumAfter = nerdamer('0');
-      const nuWeights = [];
-      allNu.forEach((nu, i) => {
-        const w = weightAfter(nu.particles, tVar, betaVar);
-        nuWeights.push(w.toString());
-        sumAfter = nerdamer('expand((' + sumAfter.toString() + ')+(' + w.toString() + '))');
+      const nuWeights = allNu.map(nu => {
+        const wHL = pHL(nu.particles, N + 1, [...lamBotPos], N);
+        const wWh = pWhittaker(nu.particles, N + 1, [...lamTopPos], N);
+        return weightMul(wHL, wWh);
       });
+
+      // Sum weights (all should have same betaPow within each group)
+      let sumMu = { poly: [0], betaPow: muWeights.length > 0 ? muWeights[0].betaPow : 0 };
+      muWeights.forEach(w => { sumMu = weightAdd(sumMu, w) || sumMu; });
+
+      let sumNu = { poly: [0], betaPow: nuWeights.length > 0 ? nuWeights[0].betaPow : 0 };
+      nuWeights.forEach(w => { sumNu = weightAdd(sumNu, w) || sumNu; });
 
       const lines = [];
-      allMu.forEach((mu, i) => {
-        lines.push('W(μ=' + fmtDisplay(mu.particles, N - 1) + ') = ' + muWeights[i]);
+      muWeights.forEach((w, i) => {
+        lines.push('W(μ=' + fmtDisplay(allMu[i].particles, N - 1) + ') = ' + fmtWeight(w, tVar));
       });
-      lines.push('Σ_μ = ' + sumBefore.toString());
+      lines.push('<b>Σ_μ = ' + fmtWeight(sumMu, tVar) + '</b>');
       lines.push('');
-      allNu.forEach((nu, i) => {
-        lines.push('W(ν=' + fmtDisplay(nu.particles, N + 1) + ') = ' + nuWeights[i]);
+      nuWeights.forEach((w, i) => {
+        lines.push('W(ν=' + fmtDisplay(allNu[i].particles, N + 1) + ') = ' + fmtWeight(w, tVar));
       });
-      lines.push('Σ_ν = ' + sumAfter.toString());
+      lines.push('<b>Σ_ν = ' + fmtWeight(sumNu, tVar) + '</b>');
 
-      // Check ratio — try hard to simplify
-      if (sumBefore.toString() !== '0' && sumAfter.toString() !== '0') {
-        const numStr = sumBefore.toString();
-        const denStr = sumAfter.toString();
-        let ratio;
-        try {
-          // First try: direct simplify
-          ratio = nerdamer('simplify((' + numStr + ')/(' + denStr + '))');
-          // Second pass: expand then simplify again
-          ratio = nerdamer('simplify(expand(' + ratio.toString() + '))');
-          // Third pass: try factoring
-          const factored = nerdamer('factor((' + numStr + ')/(' + denStr + '))');
-          // Pick the shorter representation
-          const rs = ratio.toString(), fs = factored.toString();
-          if (fs.length < rs.length) ratio = factored;
-        } catch (e2) {
-          ratio = nerdamer('(' + numStr + ')/(' + denStr + ')');
-        }
+      // Compute ratio as polynomial division
+      if (sumMu.poly.some(c => c !== 0) && sumNu.poly.some(c => c !== 0)) {
+        const ratioP = polyDiv(sumMu.poly, sumNu.poly);
+        // Check if division is exact
+        const check = polyMul(ratioP, sumNu.poly);
+        const exact = sumMu.poly.every((c, i) => Math.abs(c - (check[i]||0)) < 1e-9) &&
+                      check.every((c, i) => Math.abs(c - (sumMu.poly[i]||0)) < 1e-9);
+        const ratioStr = polyStr(ratioP, tVar);
         lines.push('');
-        lines.push('Σ_μ / Σ_ν = ' + ratio.toString());
-
-        // Also try: check if ratio is independent of t (substitute t=0 and t=1/2)
-        try {
-          const r0 = nerdamer(ratio.toString()).evaluate({ t: 0 });
-          const r1 = nerdamer(ratio.toString()).evaluate({ t: 0.5 });
-          if (r0.toString() === r1.toString()) {
-            lines.push('  (= ' + r0.toString() + ', independent of t)');
-          }
-        } catch (e3) {}
+        if (exact) {
+          lines.push('<b>Σ_μ / Σ_ν = ' + ratioStr + '</b>');
+        } else {
+          lines.push('Σ_μ / Σ_ν is not a polynomial in ' + tVar);
+          lines.push('  Σ_μ = ' + polyStr(sumMu.poly, tVar));
+          lines.push('  Σ_ν = ' + polyStr(sumNu.poly, tVar));
+        }
       }
 
       el.innerHTML = lines.join('\n');
     } catch (e) {
-      el.innerHTML = 'Weight computation error: ' + e.message;
+      el.innerHTML = 'Error: ' + e.message;
     }
   }
 
@@ -921,7 +951,6 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   document.getElementById('lam-top-input').addEventListener('change', recomputeFromInputs);
   document.getElementById('lam-bot-input').addEventListener('change', recomputeFromInputs);
   document.getElementById('param-t').addEventListener('change', updateWeights);
-  document.getElementById('param-beta').addEventListener('change', updateWeights);
   document.getElementById('mu-prev').addEventListener('click', () => {
     if (muIndex > 0) { muIndex--; updateMuDisplay(); render(); }
   });
