@@ -420,14 +420,9 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     return { poly: polyMul(a.poly, b.poly), betaPow: a.betaPow + b.betaPow };
   }
 
-  // Add weights (must have same betaPow)
+  // Add weights (β=1 so betaPow irrelevant)
   function weightAdd(a, b) {
-    if (a.betaPow !== b.betaPow) {
-      // Can't add different beta powers simply — expand as poly in beta too
-      // For now return a flag
-      return null;
-    }
-    return { poly: polyAdd(a.poly, b.poly), betaPow: a.betaPow };
+    return { poly: polyAdd(a.poly, b.poly), betaPow: 0 };
   }
 
   function updateWeights() {
