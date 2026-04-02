@@ -450,9 +450,7 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   // Column insertion conditional probability (poly in t), excluding Bernoulli factor
   // All inputs are standard partitions (descending lists)
   // Vj = 0 or 1
-  function colInsertionProb(lam, nu, lb, nb, Vj) {
-    const j = Math.max(lam.length, nu.length, 1);
-    const jm1 = Math.max(lb.length, nb.length, 1);
+  function colInsertionProb(lam, nu, lb, nb, Vj, j, jm1) {
     // Pad to 1-indexed access
     const L = i => (i >= 1 && i <= j) ? (lam[i-1] || 0) : 0;
     const N_ = i => (i >= 1 && i <= j) ? (nu[i-1] || 0) : 0;
@@ -608,8 +606,9 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
         // P(ν|μ) = Σ_{Vj} P(Vj) · colProb(λ_bot, ν, μ, λ_top, Vj)
         // With β=a=1: P(Vj=1) = 1/2, P(Vj=0) = 1/2
         // But we keep it as polynomial, so include both Vj contributions
-        const p0 = colInsertionProb(lamBotStd, nuStd, muStd, lamTopStd, 0);
-        const p1 = colInsertionProb(lamBotStd, nuStd, muStd, lamTopStd, 1);
+        const kk = getK();
+        const p0 = colInsertionProb(lamBotStd, nuStd, muStd, lamTopStd, 0, kk+1, kk);
+        const p1 = colInsertionProb(lamBotStd, nuStd, muStd, lamTopStd, 1, kk+1, kk);
         // Total (unnormalized, both Vj weighted equally): p0 + p1
         // The Bernoulli factor and (1+βa) normalization should give us the right thing
         const total = polyAdd(p0, p1);
