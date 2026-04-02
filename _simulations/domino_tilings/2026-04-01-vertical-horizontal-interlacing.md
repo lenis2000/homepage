@@ -651,14 +651,39 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     render();
   }
 
+  // Show partition-level strip verification
+  function stripCheck(aPos, aN, bPos, bN, label) {
+    const aDisp = positionsToDisplayPart(aPos, aN);
+    const bDisp = positionsToDisplayPart(bPos, bN);
+    const len = Math.max(aDisp.length, bDisp.length);
+    const diffs = [];
+    let ok = true;
+    for (let i = 0; i < len; i++) {
+      const d = (aDisp[i] || 0) - (bDisp[i] || 0);
+      diffs.push(d);
+      if (d < 0) ok = false;
+    }
+    const aStr = aDisp.length ? '(' + aDisp.join(',') + ')' : '∅';
+    const bStr = bDisp.length ? '(' + bDisp.join(',') + ')' : '∅';
+    const diffStr = '(' + diffs.join(',') + ')';
+    const color = ok ? '#1a6b2e' : '#c00';
+    return '<span style="color:' + color + '">' + label + ': ' + aStr + ' − ' + bStr + ' = ' + diffStr + (ok ? ' ✓' : ' ✗') + '</span>';
+  }
+
   function updateMuDisplay() {
     const label = document.getElementById('mu-label');
     const count = document.getElementById('mu-count');
+    const strips = document.getElementById('mu-strips');
     if (allMu.length === 0) {
       label.textContent = 'μ: none'; count.textContent = '0 valid μ';
+      strips.innerHTML = '';
     } else {
-      label.textContent = 'μ = ' + fmtDisplay(allMu[muIndex].particles, N - 1);
+      const mu = allMu[muIndex];
+      label.textContent = 'μ = ' + fmtDisplay(mu.particles, N - 1);
       count.textContent = (muIndex + 1) + ' of ' + allMu.length;
+      strips.innerHTML =
+        stripCheck([...lamTopPos], N, mu.particles, N - 1, 'λᵗᵒᵖ/μ vert') + ' &nbsp; ' +
+        stripCheck([...lamBotPos], N, mu.particles, N - 1, 'λᵇᵒᵗ/μ horiz');
     }
     document.getElementById('mu-prev').disabled = muIndex <= 0;
     document.getElementById('mu-next').disabled = muIndex >= allMu.length - 1;
@@ -667,11 +692,17 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   function updateNuDisplay() {
     const label = document.getElementById('nu-label');
     const count = document.getElementById('nu-count');
+    const strips = document.getElementById('nu-strips');
     if (allNu.length === 0) {
       label.textContent = 'ν: none'; count.textContent = '0 valid ν';
+      strips.innerHTML = '';
     } else {
-      label.textContent = 'ν = ' + fmtDisplay(allNu[nuIndex].particles, N + 1);
+      const nu = allNu[nuIndex];
+      label.textContent = 'ν = ' + fmtDisplay(nu.particles, N + 1);
       count.textContent = (nuIndex + 1) + ' of ' + allNu.length;
+      strips.innerHTML =
+        stripCheck(nu.particles, N + 1, [...lamBotPos], N, 'ν/λᵇᵒᵗ vert') + ' &nbsp; ' +
+        stripCheck(nu.particles, N + 1, [...lamTopPos], N, 'ν/λᵗᵒᵖ horiz');
     }
     document.getElementById('nu-prev').disabled = nuIndex <= 0;
     document.getElementById('nu-next').disabled = nuIndex >= allNu.length - 1;
