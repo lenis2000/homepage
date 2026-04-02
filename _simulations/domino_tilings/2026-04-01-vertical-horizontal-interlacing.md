@@ -404,38 +404,40 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     return parts;
   }
 
-  // P^HL_{λ/μ}(β; t) for HORIZONTAL strip
-  // = ∏_{i: λ'_i=μ'_i, λ'_{i+1}=μ'_{i+1}+1} (1-t^{μ'_i-μ'_{i+1}}) · β^{|λ|-|μ|}
-  function pHL_horiz(lamPos, lamN, muPos, muN) {
+  // ψ_{λ/μ} for HORIZONTAL strip (Matveev-Petrov eq 3.10)
+  // = ∏_{i=1}^{ℓ(μ)} [λ_i-λ_{i+1} choose λ_i-μ_i]_t
+  // Uses ORIGINAL parts (not conjugated)
+  function psi_horiz(lamPos, lamN, muPos, muN) {
     const lam = posToStdPart(lamPos, lamN), mu = posToStdPart(muPos, muN);
-    const lamC = conjugate(lam), muC = conjugate(mu);
-    const len = Math.max(lamC.length, muC.length) + 1;
-    const LC = i => lamC[i] || 0, MC = i => muC[i] || 0;
-    let poly = [1];
-    for (let i = 0; i < len; i++) {
-      if (LC(i) === MC(i) && LC(i + 1) === MC(i + 1) + 1) {
-        const exp = MC(i) - MC(i + 1);
-        if (exp > 0) poly = polyMul(poly, poly1minusTn(exp));
-      }
-    }
-    const sizeDiff = (lam.reduce((a,b) => a+b, 0)||0) - (mu.reduce((a,b) => a+b, 0)||0);
-    return { poly, betaPow: sizeDiff };
-  }
-
-  // ρ_β(Q^HL_{λ/μ}) for VERTICAL strip λ/μ
-  // = P^Wh_{λ'/μ'}(β; t) where λ', μ' are conjugates
-  // P^Wh formula: ∏_i [λ'_i-λ'_{i+1} choose λ'_i-μ'_i]_t · β^{|λ|-|μ|}
-  function pWh_vert(lamPos, lamN, muPos, muN) {
-    const lam = posToStdPart(lamPos, lamN), mu = posToStdPart(muPos, muN);
-    // Conjugate: vertical strip λ/μ becomes horizontal strip λ'/μ'
-    const lamC = conjugate(lam), muC = conjugate(mu);
-    const len = Math.max(lamC.length, muC.length) + 1;
-    const L = i => lamC[i] || 0, M = i => muC[i] || 0;
+    const len = Math.max(lam.length, mu.length) + 1;
+    const L = i => lam[i] || 0, M = i => mu[i] || 0;
     let poly = [1];
     for (let i = 0; i < len; i++) {
       const n = L(i) - L(i + 1), k = L(i) - M(i);
       if (k < 0 || k > n) return { poly: [0], betaPow: 0 };
       if (k > 0) poly = polyMul(poly, qBinom(n, k));
+    }
+    const sizeDiff = (lam.reduce((a,b) => a+b, 0)||0) - (mu.reduce((a,b) => a+b, 0)||0);
+    return { poly, betaPow: sizeDiff };
+  }
+
+  // ψ'_{λ/μ} for VERTICAL strip (Matveev-Petrov eq 3.13)
+  // = ∏_{i: λ_i=μ_i, λ_{i+1}=μ_{i+1}+1} (1-t^{μ_i-μ_{i+1}})
+  // Uses ORIGINAL parts (not conjugated)
+  function psi_vert(lamPos, lamN, muPos, muN) {
+    const lam = posToStdPart(lamPos, lamN), mu = posToStdPart(muPos, muN);
+    const len = Math.max(lam.length, mu.length) + 1;
+    const L = i => lam[i] || 0, M = i => mu[i] || 0;
+    // Check vertical strip
+    for (let i = 0; i < len; i++) {
+      if (L(i) - M(i) < 0 || L(i) - M(i) > 1) return { poly: [0], betaPow: 0 };
+    }
+    let poly = [1];
+    for (let i = 0; i < len; i++) {
+      if (L(i) === M(i) && L(i + 1) === M(i + 1) + 1) {
+        const exp = M(i) - M(i + 1);
+        if (exp > 0) poly = polyMul(poly, poly1minusTn(exp));
+      }
     }
     const sizeDiff = (lam.reduce((a,b) => a+b, 0)||0) - (mu.reduce((a,b) => a+b, 0)||0);
     return { poly, betaPow: sizeDiff };
@@ -648,18 +650,16 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
 
     try {
       const muWeights = allMu.map(mu => {
-        // Before: λ_top/μ vertical strip → P^Wh of conjugates
-        //         λ_bot/μ horizontal strip → P^HL
-        const wVert = pWh_vert([...lamTopPos], N, mu.particles, N - 1);
-        const wHoriz = pHL_horiz([...lamBotPos], N, mu.particles, N - 1);
+        // Before: ψ'(λ_top/μ) vertical · ψ(λ_bot/μ) horizontal
+        const wVert = psi_vert([...lamTopPos], N, mu.particles, N - 1);
+        const wHoriz = psi_horiz([...lamBotPos], N, mu.particles, N - 1);
         return weightMul(wVert, wHoriz);
       });
 
       const nuWeights = allNu.map(nu => {
-        // After: ν/λ_bot vertical strip → P^Wh of conjugates
-        //        ν/λ_top horizontal strip (i.e. λ_top ⊃ ν) → P^HL
-        const wVert = pWh_vert(nu.particles, N + 1, [...lamBotPos], N);
-        const wHoriz = pHL_horiz(nu.particles, N + 1, [...lamTopPos], N);
+        // After: ψ'(ν/λ_bot) vertical · ψ(ν/λ_top) horizontal
+        const wVert = psi_vert(nu.particles, N + 1, [...lamBotPos], N);
+        const wHoriz = psi_horiz(nu.particles, N + 1, [...lamTopPos], N);
         return weightMul(wVert, wHoriz);
       });
 
