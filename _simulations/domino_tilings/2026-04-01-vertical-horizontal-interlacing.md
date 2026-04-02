@@ -435,6 +435,188 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     return { poly, betaPow: sizeDiff };
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // COLUMN INSERTION DYNAMICS (Matveev-Petrov 1504.00666 §3.2.2)
+  // Maps Before (λ_bot, μ) → After (ν) given vertical strip λ_top/μ
+  // Paper notation: λ=λ_bot, λ̄=μ, ν̄=λ_top, ν=output
+  // ═══════════════════════════════════════════════════════════════
+
+  // Column insertion conditional probability (poly in t), excluding Bernoulli factor
+  // All inputs are standard partitions (descending lists)
+  // Vj = 0 or 1
+  function colInsertionProb(lam, nu, lb, nb, Vj) {
+    const j = Math.max(lam.length, nu.length, 1);
+    const jm1 = Math.max(lb.length, nb.length, 1);
+    // Pad to 1-indexed access
+    const L = i => (i >= 1 && i <= j) ? (lam[i-1] || 0) : 0;
+    const N_ = i => (i >= 1 && i <= j) ? (nu[i-1] || 0) : 0;
+    const Lb = i => (i >= 1 && i <= jm1) ? (lb[i-1] || 0) : 0;
+    const Nb = i => (i >= 1 && i <= jm1) ? (nb[i-1] || 0) : 0;
+
+    // Movement vectors
+    const d = {}, c = {};
+    for (let i = 1; i <= j; i++) { d[i] = N_(i) - L(i); if (d[i] < 0 || d[i] > 1) return [0]; }
+    for (let i = 1; i <= jm1; i++) { c[i] = Nb(i) - Lb(i); if (c[i] < 0 || c[i] > 1) return [0]; }
+
+    // f'_k and g'_s (eq 5.2)
+    function fp(k) {
+      if (k <= 1) return [1]; // ν̄_0 = +∞
+      const nbkm1 = Nb(k-1), lk = L(k), nbk = Nb(k);
+      // (1-t^{ν̄_{k-1}-λ_k}) / (1-t^{ν̄_{k-1}-ν̄_k+1})
+      const a = nbkm1 - lk, b = nbkm1 - nbk + 1;
+      if (b <= 0) return [1];
+      return polyDiv(poly1minusTn(a), poly1minusTn(b));
+    }
+    function gp(s) {
+      if (s <= 1) return [1];
+      const nbsm1 = Nb(s-1), ls = L(s);
+      return poly1minusTn(nbsm1 - ls);
+    }
+
+    // Find moved lower particles (1-indexed)
+    const moved = [];
+    for (let i = 1; i <= jm1; i++) if (c[i] === 1) moved.push(i);
+    moved.sort((a,b) => a-b);
+
+    let prob = [1];
+    const claimed = new Set();
+
+    // Part 1: pairs of moved lower particles
+    const pairs = [];
+    for (let idx = 0; idx < moved.length; idx++) {
+      const kp = moved[idx];
+      const rp = idx > 0 ? moved[idx-1] : 0;
+      pairs.push([rp, kp]);
+    }
+
+    for (const [rp, kp] of pairs) {
+      const cands = [];
+      for (let s = rp+1; s <= kp; s++) cands.push(s);
+
+      if (rp+1 === kp) {
+        if (d[kp] !== 1) return [0];
+        claimed.add(kp);
+        continue;
+      }
+
+      let sp = null;
+      for (const s of cands) {
+        if (d[s] === 1 && !claimed.has(s)) { sp = s; break; }
+      }
+      if (sp === null) return [0];
+      claimed.add(sp);
+
+      if (sp === kp) {
+        prob = polyMul(prob, fp(kp));
+      } else if (rp+1 < sp && sp < kp) {
+        let p = polyMul([1], polySub([1], fp(kp)));
+        for (let ip = kp-1; ip > sp; ip--) p = polyMul(p, polySub([1], gp(ip)));
+        p = polyMul(p, gp(sp));
+        prob = polyMul(prob, p);
+      } else if (sp === rp+1) {
+        let p = polySub([1], fp(kp));
+        for (let ip = kp-1; ip > rp+1; ip--) p = polyMul(p, polySub([1], gp(ip)));
+        prob = polyMul(prob, p);
+      } else return [0];
+    }
+
+    // Part 2: V_j=1 triggers one additional move
+    if (Vj === 1) {
+      if (moved.length === 0) {
+        // No lower particles moved, one of λ_1..λ_j moves
+        let sp = null;
+        for (let s = 1; s <= j; s++) {
+          if (d[s] === 1 && !claimed.has(s)) { sp = s; break; }
+        }
+        if (sp === null) return [0];
+        claimed.add(sp);
+        const mp = 0;
+        if (sp === j) {
+          prob = polyMul(prob, gp(j));
+        } else if (sp > mp+1 && sp < j) {
+          let p = [1];
+          for (let ip = j; ip > sp; ip--) p = polyMul(p, polySub([1], gp(ip)));
+          p = polyMul(p, gp(sp));
+          prob = polyMul(prob, p);
+        } else if (sp === mp+1) {
+          let p = [1];
+          for (let ip = j; ip > 1; ip--) p = polyMul(p, polySub([1], gp(ip)));
+          prob = polyMul(prob, p);
+        }
+      } else {
+        const mp = moved[moved.length - 1]; // leftmost = largest index
+        if (mp === jm1) {
+          if (d[j] !== 1) return [0];
+          claimed.add(j);
+        } else {
+          let sp = null;
+          for (let s = mp+1; s <= j; s++) {
+            if (d[s] === 1 && !claimed.has(s)) { sp = s; break; }
+          }
+          if (sp === null) return [0];
+          claimed.add(sp);
+          if (sp === j) {
+            prob = polyMul(prob, gp(j));
+          } else if (sp > mp+1 && sp < j) {
+            let p = polySub([1], gp(j));
+            for (let ip = j-1; ip > sp; ip--) p = polyMul(p, polySub([1], gp(ip)));
+            p = polyMul(p, gp(sp));
+            prob = polyMul(prob, p);
+          } else if (sp === mp+1) {
+            let p = polySub([1], gp(j));
+            for (let ip = j-1; ip > mp+1; ip--) p = polyMul(p, polySub([1], gp(ip)));
+            prob = polyMul(prob, p);
+          }
+        }
+      }
+    }
+
+    // Verify all moved upper particles accounted for
+    for (let s = 1; s <= j; s++) {
+      if (d[s] === 1 && !claimed.has(s)) return [0];
+      if (d[s] === 0 && claimed.has(s)) return [0];
+    }
+
+    return polyTrim(prob);
+  }
+
+  // polySub: a - b
+  function polySub(a, b) {
+    const r = new Array(Math.max(a.length, b.length)).fill(0);
+    for (let i = 0; i < a.length; i++) r[i] += a[i];
+    for (let i = 0; i < b.length; i++) r[i] -= b[i];
+    return polyTrim(r);
+  }
+
+  // Compute full transition matrix P(ν | μ) for column insertion
+  // Returns map: "mu_key|nu_key" → polynomial in t
+  function computeTransitionMatrix() {
+    const lamBotStd = posToStdPart([...lamBotPos], N);
+    const lamTopStd = posToStdPart([...lamTopPos], N);
+
+    const transitions = {};
+    allMu.forEach(mu => {
+      const muStd = posToStdPart(mu.particles, N - 1);
+      allNu.forEach(nu => {
+        const nuStd = posToStdPart(nu.particles, N + 1);
+        // P(ν|μ) = Σ_{Vj} P(Vj) · colProb(λ_bot, ν, μ, λ_top, Vj)
+        // With β=a=1: P(Vj=1) = 1/2, P(Vj=0) = 1/2
+        // But we keep it as polynomial, so include both Vj contributions
+        const p0 = colInsertionProb(lamBotStd, nuStd, muStd, lamTopStd, 0);
+        const p1 = colInsertionProb(lamBotStd, nuStd, muStd, lamTopStd, 1);
+        // Total (unnormalized, both Vj weighted equally): p0 + p1
+        // The Bernoulli factor and (1+βa) normalization should give us the right thing
+        const total = polyAdd(p0, p1);
+        if (total.some(c => Math.abs(c) > 1e-12)) {
+          const mk = mu.particles.join(',');
+          const nk = nu.particles.join(',');
+          transitions[mk + '|' + nk] = { p0, p1, total, muDisp: fmtDisplay(mu.particles, N-1), nuDisp: fmtDisplay(nu.particles, N+1) };
+        }
+      });
+    });
+    return transitions;
+  }
+
   // Format weight (β=1, so just polynomial in t)
   function fmtWeight(w, tVar) {
     return polyStr(w.poly, tVar) || '0';
@@ -532,6 +714,24 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
         mmaLines.push('W[nu -> ' + partMma(nu.particles, N + 1) + '] = ' + polyMma(nuWeights[i].poly, tVar) + ';');
       });
       mmaLines.push('sumNu = ' + polyMma(sumNu.poly, tVar) + ';');
+
+      // Column insertion transition matrix
+      mmaLines.push('');
+      mmaLines.push('(* Column insertion transition P[nu|mu] *)');
+      const trans = computeTransitionMatrix();
+      allMu.forEach(mu => {
+        const mk = mu.particles.join(',');
+        allNu.forEach(nu => {
+          const nk = nu.particles.join(',');
+          const key = mk + '|' + nk;
+          if (trans[key] && trans[key].total.some(c => Math.abs(c) > 1e-12)) {
+            const t0 = polyMma(trans[key].p0, tVar);
+            const t1 = polyMma(trans[key].p1, tVar);
+            mmaLines.push('P[' + partMma(nu.particles, N+1) + ' | ' + partMma(mu.particles, N-1) +
+              '] = {Vj0 -> ' + t0 + ', Vj1 -> ' + t1 + '};');
+          }
+        });
+      });
 
       const mmaText = mmaLines.join('\n');
       el.innerHTML = '<div style="position:relative;">' +
