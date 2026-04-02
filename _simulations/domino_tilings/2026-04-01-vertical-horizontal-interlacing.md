@@ -1182,37 +1182,50 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
         }
       }
 
-      // Draw factor labels between dominos
-      ctx.font = '10px monospace';
+      // Draw ψ' factor arcs between dominos
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
       factorLocations.forEach(fl => {
         const x1 = lay.posX(fl.leftPos, nMid, 1);
         const x2 = lay.posX(fl.rightPos, nMid, 1);
         const midX = (x1 + x2) / 2;
-        // Draw a bracket/arc between the two particles
+        const arcY = lay.y1 + u * 0.85;
+        // Thick red dashed arc
         ctx.strokeStyle = '#c00';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([3, 2]);
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([5, 3]);
         ctx.beginPath();
-        ctx.moveTo(x1, lay.y1 + lay.radius + 2);
-        ctx.quadraticCurveTo(midX, lay.y1 + u * 0.7, x2, lay.y1 + lay.radius + 2);
+        ctx.moveTo(x1, lay.y1 + lay.radius + 3);
+        ctx.quadraticCurveTo(midX, arcY, x2, lay.y1 + lay.radius + 3);
         ctx.stroke();
         ctx.setLineDash([]);
-        // Label
+        // Label with background
+        ctx.font = 'bold 12px monospace';
+        const label = fl.factor;
+        const tw = ctx.measureText(label).width;
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.fillRect(midX - tw/2 - 3, arcY - 8, tw + 6, 16);
         ctx.fillStyle = '#c00';
-        ctx.fillText(fl.factor, midX, lay.y1 + u * 0.55);
+        ctx.fillText(label, midX, arcY - 6);
       });
 
-      // Draw c labels on particle dominos
-      ctx.font = '9px monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
+      // Draw c labels (↕/=) on particle dominos — bigger and bolder
       muSorted.forEach(pos => {
         const x = lay.posX(pos, nMid, 1);
         const cv = cLattice[pos];
-        ctx.fillStyle = cv === 1 ? '#1a6b2e' : '#888';
-        ctx.fillText(cv === 1 ? '↕' : '=', x, lay.y0 + u * 0.15);
+        const label = cv === 1 ? '↕' : '=';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        // Background pill
+        const tw = ctx.measureText(label).width;
+        const lx = x, ly = lay.y0 + u * 0.22;
+        ctx.fillStyle = cv === 1 ? 'rgba(34,139,34,0.15)' : 'rgba(150,150,150,0.15)';
+        ctx.beginPath();
+        ctx.arc(lx, ly - 4, Math.max(tw/2 + 4, 8), 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = cv === 1 ? '#1a6b2e' : '#999';
+        ctx.fillText(label, lx, ly + 4);
       });
 
       // Show symbolic weight = product of factors
