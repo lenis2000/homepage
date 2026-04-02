@@ -468,8 +468,6 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
                       check.every((c, i) => Math.abs(c - (sumMu.poly[i]||0)) < 1e-9);
         if (exact) {
           summaryHTML += ' &nbsp;&nbsp; Σ_μ/Σ_ν = ' + polyStr(ratioP, tVar);
-        } else {
-          summaryHTML += ' &nbsp;&nbsp; <span style="color:#c00">Σ_μ/Σ_ν not polynomial</span>';
         }
       }
       sumEl.innerHTML = summaryHTML;
