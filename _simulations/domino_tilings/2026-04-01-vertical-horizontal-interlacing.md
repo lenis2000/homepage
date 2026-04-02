@@ -72,6 +72,8 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   <span id="nu-count" class="info-line"></span>
 </div>
 
+<div id="nu-strips" class="info-line"></div>
+
 <div class="forced-legend">
   <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#228B22"/></svg> free</span>
   <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#228B22" stroke="#c00" stroke-width="2"/></svg> forced particle</span>
