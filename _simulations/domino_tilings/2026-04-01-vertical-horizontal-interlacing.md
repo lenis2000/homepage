@@ -94,6 +94,7 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
 
 <script>
 (function() {
+  console.log('Interlacing explorer loading...', typeof nerdamer);
   // ═══════════════════════════════════════════════════════════════
   // MATH
   // ═══════════════════════════════════════════════════════════════
@@ -389,6 +390,7 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   // Compute and display weight sums
   function updateWeights() {
     const el = document.getElementById('weight-sums');
+    if (typeof nerdamer === 'undefined') { el.innerHTML = 'nerdamer not loaded'; return; }
     if (allMu.length === 0 && allNu.length === 0) { el.innerHTML = ''; return; }
     const tVar = document.getElementById('param-t').value || 't';
     const betaVar = document.getElementById('param-beta').value || 'b';
