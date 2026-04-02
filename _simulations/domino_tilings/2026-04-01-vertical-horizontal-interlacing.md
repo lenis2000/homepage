@@ -761,10 +761,10 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
           polyMma(sumP, tVar) + (ok ? ' ✓' : ' ✗ expected 2') + ' *)');
       });
 
-      // Check 2: Σ_μ W(μ)·P(ν|μ) ∝ W(ν) (marginal consistency)
-      // Main eq: Σ_μ [bern · U_cond · ψ·ψ'] = (1/(1+βa)) · ψ_ν·ψ'_ν
-      // With β=a=1: Σ_μ W(μ) · (p0+p1)/2 = W(ν)  [since Σ_ν/Σ_μ = 2]
-      // So: Σ_μ W(μ)·(p0+p1) = 2·W(ν)
+      // Check 2: Σ_μ W(μ)·P(ν|μ) = W(ν) (marginal consistency)
+      // Main eq: Σ_μ U_j · ψ·ψ' = (1/(1+βa))·ψ_ν·ψ'_ν
+      // U_j = P(Vj)·p_cond, and (p0+p1) has exactly one nonzero term per ν
+      // P(Vj)=1/2 cancels with 1/(1+βa)=1/2, giving: Σ_μ W(μ)·(p0+p1) = W(ν)
       allNu.forEach((nu, ni) => {
         const nk = nu.particles.join(',');
         let lhs = [0];
@@ -775,11 +775,11 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
             lhs = polyAdd(lhs, polyMul(muWeights[mi].poly, trans[key].total));
           }
         });
-        const rhs = polyMul([2], nuWeights[ni].poly);
+        const rhs = nuWeights[ni].poly;
         const ok = polyEqual(lhs, rhs);
         if (!ok) allChecksOk = false;
         mmaLines.push('(* Σ_μ W(μ)P[ν=' + partMma(nu.particles, N+1) + '|μ] = ' +
-          polyMma(lhs, tVar) + (ok ? ' = 2·W(ν) ✓' : ' ✗ expected ' + polyMma(rhs, tVar)) + ' *)');
+          polyMma(lhs, tVar) + (ok ? ' = W(ν) ✓' : ' ✗ expected ' + polyMma(rhs, tVar)) + ' *)');
       });
 
       mmaLines.push(allChecksOk ? '(* ALL CHECKS PASSED ✓ *)' : '(* SOME CHECKS FAILED ✗ *)');
