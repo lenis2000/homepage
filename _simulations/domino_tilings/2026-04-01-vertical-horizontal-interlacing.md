@@ -1076,36 +1076,34 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
         ctx.fillText(cv === 1 ? '↕' : '=', x, lay.y0 + u * 0.15);
       });
 
-      // Show normalized weight as a bar
-      const muW = allMu.map(m => {
-        const wV = psi_vert([...lamTopPos], N, m.particles, N-1);
-        const wH = psi_horiz([...lamBotPos], N, m.particles, N-1);
-        return { poly: polyMul(wV.poly, wH.poly) };
-      });
-      const tNum = parseFloat(tVar);
-      if (!isNaN(tNum)) {
-        const weights = muW.map(w => polyEval(w.poly, tNum));
-        const total = weights.reduce((a,b) => a+b, 0);
-        if (total > 0) {
-          const prob = weights[muIndex] / total;
-          // Draw probability bar at bottom of canvas
-          const barY = lay.y2 + u * 1.1;
-          const barW = (w - 80) * 0.6;
-          const barX = 40;
-          ctx.fillStyle = '#eee';
-          ctx.fillRect(barX, barY, barW, 8);
-          ctx.fillStyle = 'rgba(34,139,34,0.5)';
-          ctx.fillRect(barX, barY, barW * prob, 8);
-          ctx.strokeStyle = '#999';
-          ctx.lineWidth = 0.5;
-          ctx.strokeRect(barX, barY, barW, 8);
-          ctx.fillStyle = '#333';
-          ctx.font = '10px sans-serif';
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('P(μ) = ' + (prob * 100).toFixed(1) + '%', barX + barW + 6, barY + 4);
+      // Show symbolic weight = product of factors
+      const wV = psi_vert([...lamTopPos], N, mu.particles, N-1);
+      const wH = psi_horiz([...lamBotPos], N, mu.particles, N-1);
+      const wPoly = polyMul(wV.poly, wH.poly);
+      const wStr = polyStr(wPoly, tVar);
+
+      // Build factor decomposition string
+      const factors = [];
+      factorLocations.forEach(fl => factors.push(fl.factor));
+      // ψ (horizontal strip) factors
+      const botStd = posToStdPart([...lamBotPos], N);
+      const muStdH = posToStdPart(mu.particles, N-1);
+      const lenH = Math.max(botStd.length, muStdH.length) + 1;
+      for (let i = 0; i < lenH; i++) {
+        const bi = botStd[i]||0, bi1 = botStd[i+1]||0, mi = muStdH[i]||0;
+        const nn = bi - bi1, kk = bi - mi;
+        if (kk > 0 && nn > 0 && !(nn === kk)) {
+          factors.push('[' + nn + ',' + kk + ']_' + tVar);
         }
       }
+
+      const barY = lay.y2 + u * 0.85;
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = '#333';
+      const factorStr = factors.length > 0 ? factors.join(' · ') : '1';
+      ctx.fillText('W(μ) = ' + factorStr + ' = ' + wStr, w / 2, barY);
     }
 
     // "No valid μ" message overlay
