@@ -499,17 +499,50 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
       }
       sumEl.innerHTML = summaryHTML;
 
-      // Details at bottom: individual weights
-      const lines = [];
-      muWeights.forEach((w, i) => {
-        lines.push('W(μ=' + fmtDisplay(allMu[i].particles, N - 1) + ') = ' + fmtWeight(w, tVar));
-      });
-      lines.push('');
-      nuWeights.forEach((w, i) => {
-        lines.push('W(ν=' + fmtDisplay(allNu[i].particles, N + 1) + ') = ' + fmtWeight(w, tVar));
-      });
+      // Details at bottom: Mathematica-style with copy button
+      function polyMma(p, tv) {
+        p = polyTrim(p);
+        if (p.length === 0 || (p.length === 1 && p[0] === 0)) return '0';
+        const tNum = parseFloat(tv);
+        if (!isNaN(tNum) && tv.trim() !== '') return '' + Math.round(polyEval(p, tNum) * 1e6) / 1e6;
+        const terms = [];
+        for (let i = 0; i < p.length; i++) {
+          if (Math.abs(p[i]) < 1e-12) continue;
+          const c = Math.round(p[i]);
+          if (i === 0) terms.push(c + '');
+          else if (i === 1) terms.push(c === 1 ? tv : c === -1 ? '-' + tv : c + ' ' + tv);
+          else terms.push((c === 1 ? '' : c === -1 ? '-' : c + ' ') + tv + '^' + i);
+        }
+        return terms.join(' + ').replace(/\+ -/g, '- ');
+      }
+      function partMma(positions, latticeN) {
+        const parts = positionsToDisplayPart(positions, latticeN);
+        return parts.length === 0 ? '{}' : '{' + parts.join(', ') + '}';
+      }
 
-      el.innerHTML = lines.join('\n');
+      const mmaLines = [];
+      mmaLines.push('(* Before weights *)');
+      allMu.forEach((mu, i) => {
+        mmaLines.push('W[mu -> ' + partMma(mu.particles, N - 1) + '] = ' + polyMma(muWeights[i].poly, tVar) + ';');
+      });
+      mmaLines.push('sumMu = ' + polyMma(sumMu.poly, tVar) + ';');
+      mmaLines.push('');
+      mmaLines.push('(* After weights *)');
+      allNu.forEach((nu, i) => {
+        mmaLines.push('W[nu -> ' + partMma(nu.particles, N + 1) + '] = ' + polyMma(nuWeights[i].poly, tVar) + ';');
+      });
+      mmaLines.push('sumNu = ' + polyMma(sumNu.poly, tVar) + ';');
+
+      const mmaText = mmaLines.join('\n');
+      el.innerHTML = '<div style="position:relative;">' +
+        '<button id="copy-weights-btn" style="position:absolute;right:4px;top:4px;padding:2px 8px;font-size:11px;cursor:pointer;">Copy</button>' +
+        '<pre id="weights-pre" style="margin:0;padding-right:50px;font-size:11px;line-height:1.5;">' + mmaText + '</pre></div>';
+      document.getElementById('copy-weights-btn').addEventListener('click', function() {
+        navigator.clipboard.writeText(mmaText).then(() => {
+          this.textContent = 'Copied!';
+          setTimeout(() => this.textContent = 'Copy', 1500);
+        });
+      });
     } catch (e) {
       el.innerHTML = 'Error: ' + e.message;
     }
