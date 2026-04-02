@@ -353,6 +353,12 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     return s;
   }
 
+  function polyEqual(a, b) {
+    a = polyTrim([...a]); b = polyTrim([...b]);
+    if (a.length !== b.length) return false;
+    return a.every((c, i) => Math.abs(c - b[i]) < 1e-9);
+  }
+
   function polyStr(p, tVar) {
     tVar = tVar || 't';
     p = polyTrim(p);
@@ -732,6 +738,52 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
           }
         });
       });
+
+      // Symbolic consistency checks
+      mmaLines.push('');
+      mmaLines.push('(* === Consistency checks === *)');
+      let allChecksOk = true;
+
+      // Check 1: For each μ, Σ_ν P(ν|μ) = 1 (transitions sum to 1)
+      // With β=a=1: P(ν|μ) = (1/2)·p0 + (1/2)·p1, and Σ should be 1
+      // Equivalently: Σ_ν (p0+p1) = 2
+      allMu.forEach(mu => {
+        const mk = mu.particles.join(',');
+        let sumP = [0];
+        allNu.forEach(nu => {
+          const nk = nu.particles.join(',');
+          const key = mk + '|' + nk;
+          if (trans[key]) sumP = polyAdd(sumP, trans[key].total);
+        });
+        const expected = [2]; // (p0+p1) should sum to 2 = (1+βa)
+        const ok = polyEqual(sumP, expected);
+        if (!ok) allChecksOk = false;
+        mmaLines.push('(* Σ_ν P[ν|μ=' + partMma(mu.particles, N-1) + '] = ' +
+          polyMma(sumP, tVar) + (ok ? ' ✓' : ' ✗ expected 2') + ' *)');
+      });
+
+      // Check 2: Σ_μ W(μ)·P(ν|μ) ∝ W(ν) (marginal consistency)
+      // Main eq: Σ_μ [bern · U_cond · ψ·ψ'] = (1/(1+βa)) · ψ_ν·ψ'_ν
+      // With β=a=1: Σ_μ W(μ) · (p0+p1)/2 = W(ν)  [since Σ_ν/Σ_μ = 2]
+      // So: Σ_μ W(μ)·(p0+p1) = 2·W(ν)
+      allNu.forEach((nu, ni) => {
+        const nk = nu.particles.join(',');
+        let lhs = [0];
+        allMu.forEach((mu, mi) => {
+          const mk = mu.particles.join(',');
+          const key = mk + '|' + nk;
+          if (trans[key]) {
+            lhs = polyAdd(lhs, polyMul(muWeights[mi].poly, trans[key].total));
+          }
+        });
+        const rhs = polyMul([2], nuWeights[ni].poly);
+        const ok = polyEqual(lhs, rhs);
+        if (!ok) allChecksOk = false;
+        mmaLines.push('(* Σ_μ W(μ)P[ν=' + partMma(nu.particles, N+1) + '|μ] = ' +
+          polyMma(lhs, tVar) + (ok ? ' = 2·W(ν) ✓' : ' ✗ expected ' + polyMma(rhs, tVar)) + ' *)');
+      });
+
+      mmaLines.push(allChecksOk ? '(* ALL CHECKS PASSED ✓ *)' : '(* SOME CHECKS FAILED ✗ *)');
 
       const mmaText = mmaLines.join('\n');
       el.innerHTML = '<div style="position:relative;">' +
