@@ -17,7 +17,7 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
 .mu-nav { display: flex; align-items: center; gap: 6px; margin: 8px 0; }
 .mu-nav button { padding: 2px 10px; }
 .mu-nav .mu-label { font-weight: bold; font-size: 14px; min-width: 140px; text-align: center; }
-.panel-label { font-weight: bold; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #666; margin: 10px 0 4px 0; }
+.panel-label { font-weight: bold; font-size: 13px; letter-spacing: 0.5px; color: #666; margin: 10px 0 4px 0; }
 .info-line { font-size: 12px; color: #555; margin: 2px 0; font-family: monospace; }
 .forced-legend { display: inline-flex; align-items: center; gap: 12px; font-size: 12px; margin: 4px 0; }
 .forced-legend span { display: inline-flex; align-items: center; gap: 3px; }
@@ -42,7 +42,7 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   <span id="lam-bot-info" class="info-line"></span>
 </div>
 
-<div class="panel-label">Before: λ<sup>top</sup>/μ vertical strip, μ/λ<sup>bot</sup> horizontal strip</div>
+<div class="panel-label">Before: λ<sup>top</sup>/μ vertical strip, λ<sup>bot</sup>/μ horizontal strip</div>
 
 <canvas id="before-canvas" class="int-canvas" style="height: 280px;" role="img" aria-label="Before: particle configurations with dominos on diagonal lattice"></canvas>
 
@@ -53,13 +53,15 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   <span id="mu-count" class="info-line"></span>
 </div>
 
+<div id="mu-strips" class="info-line"></div>
+
 <div class="forced-legend">
   <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#FF8C00"/></svg> free</span>
   <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="#FF8C00" stroke="#c00" stroke-width="2"/></svg> forced particle</span>
   <span><svg width="14" height="14"><circle cx="7" cy="7" r="5" fill="none" stroke="#c00" stroke-width="2"/></svg> forced hole</span>
 </div>
 
-<div class="panel-label">After: ν/λ<sup>bot</sup> vertical strip, λ<sup>top</sup>/ν horizontal strip</div>
+<div class="panel-label">After: ν/λ<sup>bot</sup> vertical strip, ν/λ<sup>top</sup> horizontal strip</div>
 
 <canvas id="after-canvas" class="int-canvas" style="height: 280px;" role="img" aria-label="After: particle configurations with dominos on diagonal lattice"></canvas>
 
