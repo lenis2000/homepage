@@ -47,6 +47,8 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   t = <input id="param-t" type="text" value="t" style="width:50px; font-family:monospace;">
 </div>
 
+<div id="weight-summary" class="info-line" style="margin: 6px 0; padding: 6px; background: #f0f0f0; border-radius: 4px; font-weight: bold;"></div>
+
 <div class="panel-label">Before: λ<sup>top</sup>/μ vertical strip, λ<sup>bot</sup>/μ horizontal strip</div>
 
 <canvas id="before-canvas" class="int-canvas" style="height: 280px;" role="img" aria-label="Before: particle configurations with dominos on diagonal lattice"></canvas>
@@ -427,7 +429,11 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
 
   function updateWeights() {
     const el = document.getElementById('weight-sums');
-    if (allMu.length === 0 && allNu.length === 0) { el.innerHTML = ''; return; }
+    if (allMu.length === 0 && allNu.length === 0) {
+      el.innerHTML = '';
+      document.getElementById('weight-summary').innerHTML = '';
+      return;
+    }
     const tVar = document.getElementById('param-t').value || 't';
 
     try {
@@ -450,34 +456,33 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
       let sumNu = { poly: [0], betaPow: nuWeights.length > 0 ? nuWeights[0].betaPow : 0 };
       nuWeights.forEach(w => { sumNu = weightAdd(sumNu, w) || sumNu; });
 
+      // Summary at top: just the sums and ratio
+      const sumEl = document.getElementById('weight-summary');
+      const sumMuStr = fmtWeight(sumMu, tVar);
+      const sumNuStr = fmtWeight(sumNu, tVar);
+      let summaryHTML = 'Σ_μ = ' + sumMuStr + ' &nbsp;&nbsp; Σ_ν = ' + sumNuStr;
+      if (sumMu.poly.some(c => c !== 0) && sumNu.poly.some(c => c !== 0)) {
+        const ratioP = polyDiv(sumMu.poly, sumNu.poly);
+        const check = polyMul(ratioP, sumNu.poly);
+        const exact = sumMu.poly.every((c, i) => Math.abs(c - (check[i]||0)) < 1e-9) &&
+                      check.every((c, i) => Math.abs(c - (sumMu.poly[i]||0)) < 1e-9);
+        if (exact) {
+          summaryHTML += ' &nbsp;&nbsp; Σ_μ/Σ_ν = ' + polyStr(ratioP, tVar);
+        } else {
+          summaryHTML += ' &nbsp;&nbsp; <span style="color:#c00">Σ_μ/Σ_ν not polynomial</span>';
+        }
+      }
+      sumEl.innerHTML = summaryHTML;
+
+      // Details at bottom: individual weights
       const lines = [];
       muWeights.forEach((w, i) => {
         lines.push('W(μ=' + fmtDisplay(allMu[i].particles, N - 1) + ') = ' + fmtWeight(w, tVar));
       });
-      lines.push('<b>Σ_μ = ' + fmtWeight(sumMu, tVar) + '</b>');
       lines.push('');
       nuWeights.forEach((w, i) => {
         lines.push('W(ν=' + fmtDisplay(allNu[i].particles, N + 1) + ') = ' + fmtWeight(w, tVar));
       });
-      lines.push('<b>Σ_ν = ' + fmtWeight(sumNu, tVar) + '</b>');
-
-      // Compute ratio as polynomial division
-      if (sumMu.poly.some(c => c !== 0) && sumNu.poly.some(c => c !== 0)) {
-        const ratioP = polyDiv(sumMu.poly, sumNu.poly);
-        // Check if division is exact
-        const check = polyMul(ratioP, sumNu.poly);
-        const exact = sumMu.poly.every((c, i) => Math.abs(c - (check[i]||0)) < 1e-9) &&
-                      check.every((c, i) => Math.abs(c - (sumMu.poly[i]||0)) < 1e-9);
-        const ratioStr = polyStr(ratioP, tVar);
-        lines.push('');
-        if (exact) {
-          lines.push('<b>Σ_μ / Σ_ν = ' + ratioStr + '</b>');
-        } else {
-          lines.push('Σ_μ / Σ_ν is not a polynomial in ' + tVar);
-          lines.push('  Σ_μ = ' + polyStr(sumMu.poly, tVar));
-          lines.push('  Σ_ν = ' + polyStr(sumNu.poly, tVar));
-        }
-      }
 
       el.innerHTML = lines.join('\n');
     } catch (e) {
