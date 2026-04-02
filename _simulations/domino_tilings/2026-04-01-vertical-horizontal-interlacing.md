@@ -346,17 +346,35 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     return polyTrim(r);
   }
   // Format polynomial in t as string
+  // Evaluate polynomial at numeric t, or format symbolically
+  function polyEval(p, tVal) {
+    let s = 0;
+    for (let i = 0; i < p.length; i++) s += p[i] * Math.pow(tVal, i);
+    return s;
+  }
+
   function polyStr(p, tVar) {
     tVar = tVar || 't';
     p = polyTrim(p);
     if (p.length === 0 || (p.length === 1 && p[0] === 0)) return '0';
+
+    // If tVar is numeric, evaluate
+    const tNum = parseFloat(tVar);
+    if (!isNaN(tNum) && tVar.trim() !== '') {
+      const val = polyEval(p, tNum);
+      return '' + (Math.round(val * 1e6) / 1e6);
+    }
+
+    // Symbolic display
     const terms = [];
     for (let i = 0; i < p.length; i++) {
       if (Math.abs(p[i]) < 1e-12) continue;
       const c = Math.round(p[i] * 1e6) / 1e6;
-      if (i === 0) terms.push('' + c);
-      else if (i === 1) terms.push(c === 1 ? tVar : c === -1 ? '-' + tVar : c + tVar);
-      else terms.push((c === 1 ? '' : c === -1 ? '-' : c) + tVar + '^' + i);
+      if (i === 0) { terms.push('' + c); continue; }
+      const tPow = i === 1 ? tVar : tVar + '^' + i;
+      if (c === 1) terms.push(tPow);
+      else if (c === -1) terms.push('-' + tPow);
+      else terms.push(c + '*' + tPow);
     }
     return terms.length === 0 ? '0' : terms.join(' + ').replace(/\+ -/g, '- ');
   }
