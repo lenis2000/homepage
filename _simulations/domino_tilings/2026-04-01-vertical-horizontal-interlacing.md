@@ -652,22 +652,44 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   }
 
   // Show partition-level strip verification
-  function stripCheck(aPos, aN, bPos, bN, label) {
-    const aDisp = positionsToDisplayPart(aPos, aN);
-    const bDisp = positionsToDisplayPart(bPos, bN);
-    const len = Math.max(aDisp.length, bDisp.length);
+  function vertStripCheck(aPos, aN, bPos, bN, label) {
+    // Vertical strip: a_i - b_i ∈ {0,1} for all i
+    const a = positionsToDisplayPart(aPos, aN);
+    const b = positionsToDisplayPart(bPos, bN);
+    const len = Math.max(a.length, b.length);
     const diffs = [];
     let ok = true;
     for (let i = 0; i < len; i++) {
-      const d = (aDisp[i] || 0) - (bDisp[i] || 0);
+      const d = (a[i] || 0) - (b[i] || 0);
       diffs.push(d);
-      if (d < 0) ok = false;
+      if (d < 0 || d > 1) ok = false;
     }
-    const aStr = aDisp.length ? '(' + aDisp.join(',') + ')' : '∅';
-    const bStr = bDisp.length ? '(' + bDisp.join(',') + ')' : '∅';
-    const diffStr = '(' + diffs.join(',') + ')';
+    const aS = a.length ? '(' + a.join(',') + ')' : '∅';
+    const bS = b.length ? '(' + b.join(',') + ')' : '∅';
     const color = ok ? '#1a6b2e' : '#c00';
-    return '<span style="color:' + color + '">' + label + ': ' + aStr + ' − ' + bStr + ' = ' + diffStr + (ok ? ' ✓' : ' ✗') + '</span>';
+    return '<span style="color:' + color + '">' + label + ': ' + aS + ' − ' + bS + ' = (' + diffs.join(',') + ')' + (ok ? ' ✓' : ' ✗') + '</span>';
+  }
+
+  function horizStripCheck(aPos, aN, bPos, bN, label) {
+    // Horizontal strip: a₁ ≥ b₁ ≥ a₂ ≥ b₂ ≥ ... (interlacing)
+    // a has one more part than b (or same)
+    const a = positionsToDisplayPart(aPos, aN);
+    const b = positionsToDisplayPart(bPos, bN);
+    const seq = [];
+    const maxLen = Math.max(a.length, b.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (i < a.length) seq.push(a[i]);
+      if (i < b.length) seq.push(b[i]);
+    }
+    if (a.length > b.length && a.length > maxLen) seq.push(a[a.length - 1]);
+    let ok = true;
+    for (let i = 1; i < seq.length; i++) {
+      if (seq[i] > seq[i - 1]) ok = false;
+    }
+    const aS = a.length ? '(' + a.join(',') + ')' : '∅';
+    const bS = b.length ? '(' + b.join(',') + ')' : '∅';
+    const color = ok ? '#1a6b2e' : '#c00';
+    return '<span style="color:' + color + '">' + label + ': ' + seq.join(' ≥ ') + (ok ? ' ✓' : ' ✗') + '</span>';
   }
 
   function updateMuDisplay() {
@@ -682,8 +704,8 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
       label.textContent = 'μ = ' + fmtDisplay(mu.particles, N - 1);
       count.textContent = (muIndex + 1) + ' of ' + allMu.length;
       strips.innerHTML =
-        stripCheck([...lamTopPos], N, mu.particles, N - 1, 'λᵗᵒᵖ/μ vert') + ' &nbsp; ' +
-        stripCheck([...lamBotPos], N, mu.particles, N - 1, 'λᵇᵒᵗ/μ horiz');
+        vertStripCheck([...lamTopPos], N, mu.particles, N - 1, 'λᵗᵒᵖ/μ') + '<br>' +
+        horizStripCheck([...lamBotPos], N, mu.particles, N - 1, 'λᵇᵒᵗ/μ');
     }
     document.getElementById('mu-prev').disabled = muIndex <= 0;
     document.getElementById('mu-next').disabled = muIndex >= allMu.length - 1;
@@ -701,8 +723,8 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
       label.textContent = 'ν = ' + fmtDisplay(nu.particles, N + 1);
       count.textContent = (nuIndex + 1) + ' of ' + allNu.length;
       strips.innerHTML =
-        stripCheck(nu.particles, N + 1, [...lamBotPos], N, 'ν/λᵇᵒᵗ vert') + ' &nbsp; ' +
-        stripCheck(nu.particles, N + 1, [...lamTopPos], N, 'ν/λᵗᵒᵖ horiz');
+        vertStripCheck(nu.particles, N + 1, [...lamBotPos], N, 'ν/λᵇᵒᵗ') + '<br>' +
+        horizStripCheck(nu.particles, N + 1, [...lamTopPos], N, 'ν/λᵗᵒᵖ');
     }
     document.getElementById('nu-prev').disabled = nuIndex <= 0;
     document.getElementById('nu-next').disabled = nuIndex >= allNu.length - 1;
