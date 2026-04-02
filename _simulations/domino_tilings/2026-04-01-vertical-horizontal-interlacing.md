@@ -1014,6 +1014,100 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     ctx.fillStyle = '#1a6b2e';
     ctx.fillText(fmtDisplay([...lamBotPos], N), lay.posX(nBot, nBot, 0) + u + 8, lay.y2);
 
+    // Weight factor labels on dominos
+    if (hasMu) {
+      const tVar = document.getElementById('param-t').value || 't';
+      // Compute c-values (vertical strip λ_top/μ) on lattice positions
+      const topStd = posToStdPart([...lamTopPos], N);
+      const muStd = posToStdPart(mu.particles, N - 1);
+      const k = getK();
+      const cStd = [];
+      for (let i = 0; i < k; i++) cStd.push((topStd[i]||0) - (muStd[i]||0));
+
+      // Map std rows to lattice positions: std row i (1-indexed) ↔ mu_sorted[k-i]
+      const muSorted = [...mu.particles].sort((a,b) => a-b);
+      const cLattice = {};
+      for (let p = 0; p < muSorted.length; p++) {
+        const stdRow = k - p - 1; // 0-indexed std row
+        cLattice[muSorted[p]] = cStd[stdRow] || 0;
+      }
+
+      // Find ψ' factor locations: consecutive particles where c_left=1, c_right=0
+      const factorLocations = []; // {leftPos, rightPos, gap, factor}
+      for (let p = 0; p < muSorted.length - 1; p++) {
+        const left = muSorted[p], right = muSorted[p+1];
+        const cLeft = cLattice[left], cRight = cLattice[right];
+        const gap = right - left - 1;
+        if (cLeft === 1 && cRight === 0 && gap > 0) {
+          factorLocations.push({leftPos: left, rightPos: right, gap, factor: '1-' + tVar + (gap>1 ? '^'+gap : '')});
+        }
+      }
+
+      // Draw factor labels between dominos
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      factorLocations.forEach(fl => {
+        const x1 = lay.posX(fl.leftPos, nMid, 1);
+        const x2 = lay.posX(fl.rightPos, nMid, 1);
+        const midX = (x1 + x2) / 2;
+        // Draw a bracket/arc between the two particles
+        ctx.strokeStyle = '#c00';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 2]);
+        ctx.beginPath();
+        ctx.moveTo(x1, lay.y1 + lay.radius + 2);
+        ctx.quadraticCurveTo(midX, lay.y1 + u * 0.7, x2, lay.y1 + lay.radius + 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // Label
+        ctx.fillStyle = '#c00';
+        ctx.fillText(fl.factor, midX, lay.y1 + u * 0.55);
+      });
+
+      // Draw c labels on particle dominos
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      muSorted.forEach(pos => {
+        const x = lay.posX(pos, nMid, 1);
+        const cv = cLattice[pos];
+        ctx.fillStyle = cv === 1 ? '#1a6b2e' : '#888';
+        ctx.fillText(cv === 1 ? '↕' : '=', x, lay.y0 + u * 0.15);
+      });
+
+      // Show normalized weight as a bar
+      const muW = allMu.map(m => {
+        const wV = psi_vert([...lamTopPos], N, m.particles, N-1);
+        const wH = psi_horiz([...lamBotPos], N, m.particles, N-1);
+        return { poly: polyMul(wV.poly, wH.poly) };
+      });
+      const tNum = parseFloat(tVar);
+      if (!isNaN(tNum)) {
+        const weights = muW.map(w => polyEval(w.poly, tNum));
+        const total = weights.reduce((a,b) => a+b, 0);
+        if (total > 0) {
+          const prob = weights[muIndex] / total;
+          // Draw probability bar at bottom of canvas
+          const barY = lay.y2 + u * 1.1;
+          const barW = (w - 80) * 0.6;
+          const barX = 40;
+          ctx.fillStyle = '#eee';
+          ctx.fillRect(barX, barY, barW, 8);
+          ctx.fillStyle = 'rgba(34,139,34,0.5)';
+          ctx.fillRect(barX, barY, barW * prob, 8);
+          ctx.strokeStyle = '#999';
+          ctx.lineWidth = 0.5;
+          ctx.strokeRect(barX, barY, barW, 8);
+          ctx.fillStyle = '#333';
+          ctx.font = '10px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('P(μ) = ' + (prob * 100).toFixed(1) + '%', barX + barW + 6, barY + 4);
+        }
+      }
+    }
+
     // "No valid μ" message overlay
     if (!hasMu) {
       ctx.fillStyle = 'rgba(200,0,0,0.7)'; ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
