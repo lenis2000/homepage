@@ -25,20 +25,20 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
 
 <div class="int-row">
   <label>Lattice N:</label>
-  <input id="lattice-n" type="number" value="5" min="2" max="15">
+  <input id="lattice-n" type="number" value="8" min="2" max="15">
   <label style="margin-left:12px;">Particles k:</label>
-  <input id="particle-k" type="number" value="2" min="1" max="15">
+  <input id="particle-k" type="number" value="4" min="1" max="15">
 </div>
 
 <div class="int-row">
   <label>λ<sup>top</sup>:</label>
-  <input id="lam-top-input" type="text" value="(2,1)" placeholder="(2,1)">
+  <input id="lam-top-input" type="text" value="(3,3,2)" placeholder="(3,3,2)">
   <span id="lam-top-info" class="info-line"></span>
 </div>
 
 <div class="int-row">
   <label>λ<sup>bot</sup>:</label>
-  <input id="lam-bot-input" type="text" value="(2,1,1)">
+  <input id="lam-bot-input" type="text" value="(3,2,2,1)">
   <span id="lam-bot-info" class="info-line"></span>
 </div>
 
@@ -552,9 +552,9 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   // STATE — positions are the primary state, partitions derived
   // ═══════════════════════════════════════════════════════════════
 
-  let N = 5;
-  let lamTopPos = new Set([2, 4]);      // display: (2,1), k=2
-  let lamBotPos = new Set([1, 3, 4]);   // display: (2,1,1), k+1=3
+  let N = 8;
+  let lamTopPos = new Set([2, 3, 5, 8]);   // display: (3,3,2), k=4
+  let lamBotPos = new Set([1, 3, 4, 6, 8]); // display: (3,2,2,1), k+1=5
   let allMu = [], muIndex = 0;
   let allNu = [], nuIndex = 0;
   let muForcedInfo = { forced: new Set(), free: new Set(), forcedHoles: new Set() };
