@@ -89,6 +89,8 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
 
 <div id="weight-sums" class="info-line" style="margin: 12px 0; padding: 8px; background: #f0f0f0; border-radius: 4px; white-space: pre-wrap; font-size: 12px;"></div>
 
+<div id="mma-coupling" class="info-line" style="margin: 12px 0; padding: 8px; background: #f5f0e8; border-radius: 4px; white-space: pre-wrap; font-size: 11px;"></div>
+
 <script>
 (function() {
   // ═══════════════════════════════════════════════════════════════
@@ -799,6 +801,158 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     }
   }
 
+  // Generate Mathematica coupling code
+  function updateCouplingCode() {
+    const el = document.getElementById('mma-coupling');
+    if (allMu.length === 0 || allNu.length === 0) { el.innerHTML = ''; return; }
+
+    const tVar = document.getElementById('param-t').value || 't';
+    const topStd = posToStdPart([...lamTopPos], N);
+    const botStd = posToStdPart([...lamBotPos], N);
+    const k = getK();
+
+    function partList(positions, latticeN) {
+      const p = positionsToDisplayPart(positions, latticeN);
+      return '{' + (p.length ? [...p].join(', ') : '0') + '}';
+    }
+    function pMma(poly) {
+      const p = polyTrim(poly);
+      if (!p.length || (p.length === 1 && p[0] === 0)) return '0';
+      const tNum = parseFloat(tVar);
+      if (!isNaN(tNum) && tVar.trim() !== '') return '' + Math.round(polyEval(p, tNum)*1e6)/1e6;
+      const terms = [];
+      for (let i = 0; i < p.length; i++) {
+        if (Math.abs(p[i]) < 1e-12) continue;
+        const c = Math.round(p[i]);
+        if (i === 0) terms.push(c+'');
+        else if (i === 1) terms.push(c === 1 ? tVar : c === -1 ? '-'+tVar : c+' '+tVar);
+        else terms.push((c===1?'':c===-1?'-':c+' ')+tVar+'^'+i);
+      }
+      return terms.join(' + ').replace(/\+ -/g, '- ');
+    }
+
+    try {
+      const L = [];
+      L.push('(* ═══ Coupling equations for Mathematica ═══ *)');
+      L.push('(* λ_top = ' + partList([...lamTopPos], N) + ', λ_bot = ' + partList([...lamBotPos], N) + ' *)');
+      L.push('(* N = ' + N + ', k = ' + k + ' *)');
+      L.push('');
+
+      // ψ and ψ' definitions
+      L.push('(* q-Whittaker skew functions (q = t) *)');
+      L.push('qBinom[n_, k_, t_] := Product[(1 - t^(n-j+1))/(1 - t^j), {j, 1, k}]');
+      L.push('psiH[lam_, mu_, t_] := Product[qBinom[lam[[i]] - If[i < Length[lam], lam[[i+1]], 0], lam[[i]] - If[i <= Length[mu], mu[[i]], 0], t], {i, 1, Length[lam]}]');
+      L.push('psiV[lam_, mu_, t_] := Product[If[lam[[i]] == mu[[i]] && (If[i < Length[lam], lam[[i+1]], 0] == If[i < Length[mu], mu[[i+1]], 0] + 1), 1 - t^(mu[[i]] - If[i < Length[mu], mu[[i+1]], 0]), 1], {i, 1, Length[mu]}]');
+      L.push('');
+
+      // List μ's and ν's with weights
+      L.push('(* Valid μ configurations and weights *)');
+      const muLabels = [], nuLabels = [];
+      allMu.forEach((mu, i) => {
+        const ms = posToStdPart(mu.particles, N-1);
+        const wV = psi_vert([...lamTopPos], N, mu.particles, N-1);
+        const wH = psi_horiz([...lamBotPos], N, mu.particles, N-1);
+        const w = polyMul(wV.poly, wH.poly);
+        const label = 'mu' + (i+1);
+        muLabels.push(label);
+        L.push(label + ' = ' + JSON.stringify([...ms]) + '; (* display: ' + partList(mu.particles, N-1) + ', W = ' + pMma(w) + ' *)');
+      });
+      L.push('');
+      L.push('(* Valid ν configurations and weights *)');
+      allNu.forEach((nu, i) => {
+        const ns = posToStdPart(nu.particles, N+1);
+        const wV = psi_vert(nu.particles, N+1, [...lamBotPos], N);
+        const wH = psi_horiz(nu.particles, N+1, [...lamTopPos], N);
+        const w = polyMul(wV.poly, wH.poly);
+        const label = 'nu' + (i+1);
+        nuLabels.push(label);
+        L.push(label + ' = ' + JSON.stringify([...ns]) + '; (* display: ' + partList(nu.particles, N+1) + ', W = ' + pMma(w) + ' *)');
+      });
+      L.push('');
+
+      // Weight vectors
+      L.push('(* Weight vectors *)');
+      const muWExprs = allMu.map((mu, i) => {
+        const wV = psi_vert([...lamTopPos], N, mu.particles, N-1);
+        const wH = psi_horiz([...lamBotPos], N, mu.particles, N-1);
+        return pMma(polyMul(wV.poly, wH.poly));
+      });
+      const nuWExprs = allNu.map((nu, i) => {
+        const wV = psi_vert(nu.particles, N+1, [...lamBotPos], N);
+        const wH = psi_horiz(nu.particles, N+1, [...lamTopPos], N);
+        return pMma(polyMul(wV.poly, wH.poly));
+      });
+      L.push('wMu = {' + muWExprs.join(', ') + '};');
+      L.push('wNu = {' + nuWExprs.join(', ') + '};');
+      L.push('');
+
+      // Transition matrix as unknowns
+      const nMu = allMu.length, nNu = allNu.length;
+      L.push('(* Transition matrix P[i,j] = P(ν_j | μ_i) *)');
+      L.push('nMu = ' + nMu + '; nNu = ' + nNu + ';');
+      L.push('P = Array[p, {nMu, nNu}];');
+      L.push('');
+
+      // Constraints
+      L.push('(* Constraint 1: row sums = 1 *)');
+      L.push('rowSumEqs = Table[Total[P[[i]]] == 1, {i, nMu}];');
+      L.push('');
+      L.push('(* Constraint 2: marginal Σ_μ W(μ)P(ν|μ) = W(ν)/2 *)');
+      L.push('marginalEqs = Table[Sum[wMu[[i]] P[[i, j]], {i, nMu}] == wNu[[j]]/2, {j, nNu}];');
+      L.push('');
+      L.push('(* Constraint 3: positivity *)');
+      L.push('posConstraints = Flatten[Table[p[i, j] >= 0, {i, nMu}, {j, nNu}]];');
+      L.push('');
+      L.push('allEqs = Join[rowSumEqs, marginalEqs];');
+      L.push('allVars = Flatten[P];');
+      L.push('');
+
+      // Column RSK solution
+      L.push('(* Column RSK solution (one valid coupling) *)');
+      const trans = computeTransitionMatrix();
+      L.push('pColRSK = {');
+      allMu.forEach((mu, i) => {
+        const row = [];
+        allNu.forEach((nu, j) => {
+          const mk = mu.particles.join(','), nk = nu.particles.join(',');
+          const key = mk + '|' + nk;
+          if (trans[key]) {
+            // P(ν|μ) = (p0+p1)/2
+            const total = polyAdd(trans[key].p0, trans[key].p1);
+            row.push(pMma(polyDiv(total, [2])));
+          } else {
+            row.push('0');
+          }
+        });
+        L.push('  {' + row.join(', ') + '}' + (i < nMu-1 ? ',' : ''));
+      });
+      L.push('};');
+      L.push('');
+
+      // Solve
+      L.push('(* Solve for general coupling *)');
+      L.push('sol = Solve[allEqs, allVars];');
+      L.push('');
+      L.push('(* Find couplings with specific structure *)');
+      L.push('(* E.g., search for product-form or Markov solutions: *)');
+      L.push('(* FindInstance[Join[allEqs, posConstraints, {your extra factorization conditions}], allVars, Reals] *)');
+
+      const mmaCode = L.join('\n');
+      el.innerHTML = '<div style="position:relative;">' +
+        '<button id="copy-coupling-btn" style="position:absolute;right:4px;top:4px;padding:2px 8px;font-size:11px;cursor:pointer;">Copy</button>' +
+        '<b style="font-size:12px;">Mathematica coupling equations</b>' +
+        '<pre style="margin:4px 0 0 0;padding-right:50px;font-size:10px;line-height:1.4;">' + mmaCode + '</pre></div>';
+      document.getElementById('copy-coupling-btn').addEventListener('click', function() {
+        navigator.clipboard.writeText(mmaCode).then(() => {
+          this.textContent = 'Copied!';
+          setTimeout(() => this.textContent = 'Copy', 1500);
+        });
+      });
+    } catch (e) {
+      el.innerHTML = 'Coupling code error: ' + e.message;
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // STATE — positions are the primary state, partitions derived
   // ═══════════════════════════════════════════════════════════════
@@ -1265,6 +1419,7 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     updateMuDisplay();
     updateNuDisplay();
     updateWeights();
+    updateCouplingCode();
     render();
   }
 
