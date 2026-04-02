@@ -8,6 +8,10 @@ code:
 a11y-description: "Interactive explorer for the RSK-style transition between partitions represented as particle configurations on a diagonal lattice. Set two partitions lambda-top and lambda-bottom, enumerate valid intermediate partitions mu, see forced vs free particles, and compute the output partition nu."
 ---
 
+<script src="/js/nerdamer.core.js"></script>
+<script src="/js/nerdamer-Calculus.js"></script>
+<script src="/js/nerdamer-Algebra.js"></script>
+
 <style>
 .int-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
 .int-row label { font-size: 13px; min-width: 70px; }
@@ -41,6 +45,14 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   <input id="lam-bot-input" type="text" value="(2,1,1)">
   <span id="lam-bot-info" class="info-line"></span>
 </div>
+
+<div class="int-row">
+  <label>Parameters:</label>
+  t = <input id="param-t" type="text" value="t" style="width:50px; font-family:monospace;">
+  β = <input id="param-beta" type="text" value="b" style="width:50px; font-family:monospace;">
+</div>
+
+<div id="weight-sums" class="info-line" style="margin: 8px 0; padding: 6px; background: #f0f0f0; border-radius: 4px; white-space: pre-wrap;"></div>
 
 <div class="panel-label">Before: λ<sup>top</sup>/μ vertical strip, λ<sup>bot</sup>/μ horizontal strip</div>
 
@@ -273,6 +285,153 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     const particlePairs = bipartiteMatch(midParticles, particleTarget, nOuter, midIsBigger);
     const holePairs = bipartiteMatch(midHoles, holeTarget, nOuter, midIsBigger);
     return { particlePairs, holePairs };
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // WEIGHTS (symbolic, using nerdamer with q=t)
+  // ═══════════════════════════════════════════════════════════════
+
+  // Conjugate partition: transpose the Young diagram
+  function conjugate(lambda) {
+    if (lambda.length === 0) return [];
+    const maxPart = lambda[0];
+    const conj = [];
+    for (let j = 1; j <= maxPart; j++) {
+      conj.push(lambda.filter(p => p >= j).length);
+    }
+    return conj;
+  }
+
+  // Convert display-convention positions to standard partition
+  function posToStdPart(positions, latticeN) {
+    const k = positions.length;
+    if (k === 0) return [];
+    const sorted = [...positions].sort((a, b) => a - b);
+    const parts = [];
+    for (let i = 1; i <= k; i++) parts.push(sorted[k - i] - (k + 1 - i));
+    while (parts.length > 0 && parts[parts.length - 1] === 0) parts.pop();
+    return parts;
+  }
+
+  // P^Wh_{λ/μ}(β; q=t) for horizontal strip λ/μ (λ ⊃ μ)
+  // = ∏_i [λ_i - λ_{i+1} choose λ_i - μ_i]_t · β^{|λ|-|μ|}
+  // where [n choose k]_t = ∏_{j=1}^{k} (1-t^{n-j+1})/(1-t^j)
+  function pWhittaker(lamPos, lamN, muPos, muN, tVar, betaVar) {
+    const lam = posToStdPart(lamPos, lamN);
+    const mu = posToStdPart(muPos, muN);
+    // Pad to same length
+    const len = Math.max(lam.length, mu.length) + 1;
+    const L = i => (i < lam.length ? lam[i] : 0);
+    const M = i => (i < mu.length ? mu[i] : 0);
+
+    const factors = [];
+    const sizeDiff = (lam.reduce((a, b) => a + b, 0) || 0) - (mu.reduce((a, b) => a + b, 0) || 0);
+
+    for (let i = 0; i < len; i++) {
+      const n = L(i) - L(i + 1);  // λ_i - λ_{i+1}
+      const k = L(i) - M(i);       // λ_i - μ_i
+      if (k < 0 || k > n) return nerdamer('0');  // not a valid strip
+      if (k === 0 || n === 0) continue;
+      // [n choose k]_t = ∏_{j=1}^{k} (1-t^{n-j+1})/(1-t^j)
+      for (let j = 1; j <= k; j++) {
+        factors.push('(1-' + tVar + '^' + (n - j + 1) + ')/(1-' + tVar + '^' + j + ')');
+      }
+    }
+    if (sizeDiff > 0) factors.push(betaVar + '^' + sizeDiff);
+    else if (sizeDiff < 0) return nerdamer('0');
+
+    return factors.length > 0 ? nerdamer('expand(' + factors.join('*') + ')') : nerdamer('1');
+  }
+
+  // P^HL_{λ/μ}(β; t) for vertical strip (applied to conjugate partitions)
+  // λ'/μ' is a horizontal strip of the conjugates
+  // P^HL = ∏_{i: λ'_i = μ'_i, λ'_{i+1} = μ'_{i+1}+1} (1 - t^{μ'_i - μ'_{i+1}}) · β^{|λ|-|μ|}
+  function pHL(lamPos, lamN, muPos, muN, tVar, betaVar) {
+    const lam = posToStdPart(lamPos, lamN);
+    const mu = posToStdPart(muPos, muN);
+    const lamC = conjugate(lam);
+    const muC = conjugate(mu);
+
+    const len = Math.max(lamC.length, muC.length) + 1;
+    const LC = i => (i < lamC.length ? lamC[i] : 0);
+    const MC = i => (i < muC.length ? muC[i] : 0);
+    const sizeDiff = (lam.reduce((a, b) => a + b, 0) || 0) - (mu.reduce((a, b) => a + b, 0) || 0);
+
+    const factors = [];
+    for (let i = 0; i < len; i++) {
+      if (LC(i) === MC(i) && LC(i + 1) === MC(i + 1) + 1) {
+        const exp = MC(i) - MC(i + 1);
+        if (exp > 0) factors.push('(1-' + tVar + '^' + exp + ')');
+      }
+    }
+    if (sizeDiff > 0) factors.push(betaVar + '^' + sizeDiff);
+    else if (sizeDiff < 0) return nerdamer('0');
+
+    return factors.length > 0 ? nerdamer('expand(' + factors.join('*') + ')') : nerdamer('1');
+  }
+
+  // Compute total weight for a Before configuration (given μ)
+  // W_before(μ) = P^HL_{λ_top/μ}(β;t) · P^Wh_{λ_bot/μ}(β;t)
+  function weightBefore(muParticles, tVar, betaVar) {
+    const wHL = pHL([...lamTopPos], N, muParticles, N - 1, tVar, betaVar);
+    const wWh = pWhittaker([...lamBotPos], N, muParticles, N - 1, tVar, betaVar);
+    return nerdamer('expand((' + wHL.toString() + ')*(' + wWh.toString() + '))');
+  }
+
+  // Compute total weight for an After configuration (given ν)
+  // W_after(ν) = P^HL_{ν/λ_bot}(β;t) · P^Wh_{ν/λ_top}(β;t)
+  function weightAfter(nuParticles, tVar, betaVar) {
+    const wHL = pHL(nuParticles, N + 1, [...lamBotPos], N, tVar, betaVar);
+    const wWh = pWhittaker(nuParticles, N + 1, [...lamTopPos], N, tVar, betaVar);
+    return nerdamer('expand((' + wHL.toString() + ')*(' + wWh.toString() + '))');
+  }
+
+  // Compute and display weight sums
+  function updateWeights() {
+    const el = document.getElementById('weight-sums');
+    if (allMu.length === 0 && allNu.length === 0) { el.innerHTML = ''; return; }
+    const tVar = document.getElementById('param-t').value || 't';
+    const betaVar = document.getElementById('param-beta').value || 'b';
+
+    try {
+      let sumBefore = nerdamer('0');
+      const muWeights = [];
+      allMu.forEach((mu, i) => {
+        const w = weightBefore(mu.particles, tVar, betaVar);
+        muWeights.push(w.toString());
+        sumBefore = nerdamer('expand((' + sumBefore.toString() + ')+(' + w.toString() + '))');
+      });
+
+      let sumAfter = nerdamer('0');
+      const nuWeights = [];
+      allNu.forEach((nu, i) => {
+        const w = weightAfter(nu.particles, tVar, betaVar);
+        nuWeights.push(w.toString());
+        sumAfter = nerdamer('expand((' + sumAfter.toString() + ')+(' + w.toString() + '))');
+      });
+
+      const lines = [];
+      allMu.forEach((mu, i) => {
+        lines.push('W(μ=' + fmtDisplay(mu.particles, N - 1) + ') = ' + muWeights[i]);
+      });
+      lines.push('Σ_μ = ' + sumBefore.toString());
+      lines.push('');
+      allNu.forEach((nu, i) => {
+        lines.push('W(ν=' + fmtDisplay(nu.particles, N + 1) + ') = ' + nuWeights[i]);
+      });
+      lines.push('Σ_ν = ' + sumAfter.toString());
+
+      // Check ratio
+      if (sumBefore.toString() !== '0' && sumAfter.toString() !== '0') {
+        const ratio = nerdamer('simplify((' + sumBefore.toString() + ')/(' + sumAfter.toString() + '))');
+        lines.push('');
+        lines.push('Σ_μ / Σ_ν = ' + ratio.toString());
+      }
+
+      el.innerHTML = lines.join('\n');
+    } catch (e) {
+      el.innerHTML = 'Weight computation error: ' + e.message;
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -648,6 +807,7 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
     nuForcedInfo = computeForcedFree(allNu, N + 1);
     updateMuDisplay();
     updateNuDisplay();
+    updateWeights();
     render();
   }
 
@@ -734,6 +894,8 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
   document.getElementById('particle-k').addEventListener('change', recomputeFromInputs);
   document.getElementById('lam-top-input').addEventListener('change', recomputeFromInputs);
   document.getElementById('lam-bot-input').addEventListener('change', recomputeFromInputs);
+  document.getElementById('param-t').addEventListener('change', updateWeights);
+  document.getElementById('param-beta').addEventListener('change', updateWeights);
   document.getElementById('mu-prev').addEventListener('click', () => {
     if (muIndex > 0) { muIndex--; updateMuDisplay(); render(); }
   });
