@@ -421,11 +421,35 @@ a11y-description: "Interactive explorer for the RSK-style transition between par
       });
       lines.push('Σ_ν = ' + sumAfter.toString());
 
-      // Check ratio
+      // Check ratio — try hard to simplify
       if (sumBefore.toString() !== '0' && sumAfter.toString() !== '0') {
-        const ratio = nerdamer('simplify((' + sumBefore.toString() + ')/(' + sumAfter.toString() + '))');
+        const numStr = sumBefore.toString();
+        const denStr = sumAfter.toString();
+        let ratio;
+        try {
+          // First try: direct simplify
+          ratio = nerdamer('simplify((' + numStr + ')/(' + denStr + '))');
+          // Second pass: expand then simplify again
+          ratio = nerdamer('simplify(expand(' + ratio.toString() + '))');
+          // Third pass: try factoring
+          const factored = nerdamer('factor((' + numStr + ')/(' + denStr + '))');
+          // Pick the shorter representation
+          const rs = ratio.toString(), fs = factored.toString();
+          if (fs.length < rs.length) ratio = factored;
+        } catch (e2) {
+          ratio = nerdamer('(' + numStr + ')/(' + denStr + ')');
+        }
         lines.push('');
         lines.push('Σ_μ / Σ_ν = ' + ratio.toString());
+
+        // Also try: check if ratio is independent of t (substitute t=0 and t=1/2)
+        try {
+          const r0 = nerdamer(ratio.toString()).evaluate({ t: 0 });
+          const r1 = nerdamer(ratio.toString()).evaluate({ t: 0.5 });
+          if (r0.toString() === r1.toString()) {
+            lines.push('  (= ' + r0.toString() + ', independent of t)');
+          }
+        } catch (e3) {}
       }
 
       el.innerHTML = lines.join('\n');
