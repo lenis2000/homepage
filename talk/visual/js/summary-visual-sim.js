@@ -1,7 +1,7 @@
 // APPROVED: Do not modify without explicit user request
 /**
  * Summary Visual Slide — Three Static Escher Tilings
- * Loads SHAPE.json (non-simply-connected), sets hole winding to 6, 16, 22.
+ * Loads SHAPE-escher-feb2026.json (non-simply-connected), sets hole winding to 6, 16, 22.
  * GPU CFTP sampling, 2D canvas rendering with UVA colors.
  * Samples one after the other, displays each as it completes. No animation.
  */
@@ -75,7 +75,7 @@
 
     async function loadShape() {
         if (shapeTrianglesJSON) return shapeTrianglesJSON;
-        const resp = await fetch('/letters/SHAPE.json');
+        const resp = await fetch('/letters/SHAPE-escher-feb2026.json');
         const data = await resp.json();
         shapeTrianglesJSON = data.triangles;
         return shapeTrianglesJSON;
