@@ -337,7 +337,7 @@ function resize() {
         // Load shape + sample
         let shapeTriangles = null;
         try {
-            const resp = await fetch('/letters/SHAPE.json');
+            const resp = await fetch('/letters/SHAPE-escher-feb2026.json');
             const data = await resp.json();
             shapeTriangles = data.triangles;
         } catch (e) {

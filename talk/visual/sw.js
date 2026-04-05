@@ -1,5 +1,5 @@
 // Service Worker for Visual Talk — Aggressive Precaching
-const CACHE_NAME = 'visual-talk-v9';
+const CACHE_NAME = 'visual-talk-v10';
 
 // All assets to precache
 const PRECACHE_ASSETS = [
@@ -109,7 +109,7 @@ const PRECACHE_ASSETS = [
   '/letters/cardio.json',
   '/letters/shape_for_arctic_small.json',
   '/letters/big_snoflake.json',
-  '/letters/SHAPE.json',
+  '/letters/SHAPE-escher-feb2026.json',
 
   // 3D models
   '/talk/visual/images/big_shape.obj',
