@@ -48797,6 +48797,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2503.08172": {
+    "date": "2025-03-11",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "2503.08235": {
     "date": "2025-03-11",
     "decision": "REJECT",
