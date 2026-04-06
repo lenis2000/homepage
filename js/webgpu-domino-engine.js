@@ -169,9 +169,10 @@ class WebGPUDominoEngine {
         this.numFaces = Math.max(0, (width - 1) * (height - 1));
         console.log(`[GPU] Grid: ${width}x${height} = ${this.numCells} cells, ${this.numFaces} faces`);
 
-        // Create region mask buffer
+        // Create region mask buffer (size must be multiple of 4 for WebGPU)
+        const regionBufSize = Math.max(Math.ceil(regionMask.byteLength / 4) * 4, 4);
         this.regionBuffer = this.device.createBuffer({
-            size: Math.max(regionMask.byteLength, 4),
+            size: regionBufSize,
             usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
             mappedAtCreation: true
         });
