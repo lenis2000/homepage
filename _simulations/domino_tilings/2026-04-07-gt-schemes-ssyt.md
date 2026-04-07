@@ -529,7 +529,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
     // Show SSYT tableaux
     var configsEl = document.getElementById('gt-configs');
     if (document.getElementById('gt-show-configs').checked && result.configs.length > 0) {
-      var maxShow = Math.min(result.configs.length, 200);
+      var maxShow = result.configs.length;
       var html = '<strong>' + result.configs.length + ' tableaux (shape ' + partStr(lambda) + '):</strong><br>';
       for (var ci = 0; ci < maxShow; ci++) {
         var cfg = result.configs[ci];
