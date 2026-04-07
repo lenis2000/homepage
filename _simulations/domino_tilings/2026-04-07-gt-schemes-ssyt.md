@@ -46,7 +46,9 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
   </select>
   <label style="margin-left:12px;">λ:</label>
   <input id="gt-lambda" type="text" value="(2,2,1)" placeholder="(2,2,1)" aria-label="Partition lambda">
-  <span class="gt-info" style="color:#888;">(≤ N rows; SSYT shape)</span>
+  <label style="margin-left:8px;">μ:</label>
+  <input id="gt-mu" type="text" value="" placeholder="∅" aria-label="Partition mu" style="width:80px;font-family:monospace;font-size:14px;">
+  <span class="gt-info" style="color:#888;">(≤ N rows; skew shape λ/μ)</span>
 </div>
 
 <div class="gt-row">
@@ -56,6 +58,12 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
   </label>
   <label style="margin-left:12px; font-size:13px;">
     <input type="checkbox" id="gt-a-one"> Set a=1
+  </label>
+  <label style="margin-left:12px; font-size:13px;">
+    a on: <select id="gt-a-parity" style="font-size:13px;">
+      <option value="odd">odd entries</option>
+      <option value="even">even entries</option>
+    </select>
   </label>
 </div>
 
@@ -193,7 +201,13 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
   //  GT SCHEME ENUMERATION (vertical strips only)
   // ═══════════════════════════════════════════════════
 
-  function computeGTSchemes(fixedLambda, k) {
+  function arraysEqual(a, b) {
+    if (a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  }
+
+  function computeGTSchemes(fixedLambda, k, startPartition) {
     var numVars = k;
     var cache = new Map();
     var configCount = 0;
@@ -218,11 +232,11 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
         var subs = enumVertStripSubs(lambda);
         for (var si = 0; si < subs.length; si++) {
           var mu = subs[si];
-          if (mu.length === 0) {
+          if (arraysEqual(mu, startPartition)) {
             configCount++;
             if (configCount > MAX_CONFIGS) { aborted = true; break; }
             var mono = new Array(numVars).fill(0);
-            mono[0] = lamSize;
+            mono[0] = lamSize - partSize(startPartition);
             if (wantConfigs) configs.push(chain.concat([{ level: 1, part: lambda.slice() }]));
             var p = new Map(); p.set(makeKey(mono), 1);
             result = polyAddPoly(result, p);
@@ -290,12 +304,14 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
   // ═══════════════════════════════════════════════════
 
   function countAlphaSSYT(ssyt) {
+    var entryParity = document.getElementById('gt-a-parity').value === 'odd' ? 1 : 0;
     var count = 0;
     var alphaBoxes = new Set();
     for (var r = 0; r < ssyt.shape.length; r++) {
       for (var c = 0; c < ssyt.shape[r]; c++) {
         var entry = ssyt.filling[r][c];
-        if (entry % 2 === 1 && (r + c) % 2 === 0) {
+        if (entry === 0) continue; // skip μ cells in skew shape
+        if (entry % 2 === entryParity && (r + c) % 2 === 0) {
           count++;
           alphaBoxes.add(entry + ',' + c); // key: "level,origRow"
         }
@@ -308,10 +324,12 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
   //  SSYT CONSTRUCTION & RENDERING
   // ═══════════════════════════════════════════════════
 
-  function configToSSYT(config, fixedLambda) {
+  function configToSSYT(config, fixedLambda, innerMu) {
     var conjShape = conjugatePartition(fixedLambda);
-    if (conjShape.length === 0) return { shape: [], filling: [] };
-    var chain = [[]];
+    var conjInner = innerMu ? conjugatePartition(innerMu) : [];
+    if (conjShape.length === 0) return { shape: conjShape, filling: [], inner: conjInner };
+    var startPart = innerMu || [];
+    var chain = [startPart];
     var sortedConfig = config.slice().sort(function(a, b) { return a.level - b.level; });
     for (var i = 0; i < sortedConfig.length; i++) chain.push(sortedConfig[i].part);
     var fillingOrig = [];
@@ -328,30 +346,34 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
       filling[r] = [];
       for (var c = 0; c < conjShape[r]; c++) filling[r][c] = fillingOrig[c][r];
     }
-    return { shape: conjShape, filling: filling };
+    return { shape: conjShape, filling: filling, inner: conjInner };
   }
 
   var ssytColors = ['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4',
                     '#42d4f4','#f032e6','#bfef45','#fabed4','#469990'];
 
   function renderSSYThtml(ssyt, alphaBoxes) {
-    var shape = ssyt.shape, filling = ssyt.filling;
+    var shape = ssyt.shape, filling = ssyt.filling, inner = ssyt.inner || [];
     if (shape.length === 0) return '<span style="font-size:12px;color:#888;">∅</span>';
     var maxCols = shape[0];
     var html = '<table class="ssyt">';
     for (var r = 0; r < shape.length; r++) {
+      var innerCols = r < inner.length ? inner[r] : 0;
       html += '<tr>';
       for (var c = 0; c < maxCols; c++) {
-        if (c < shape[r]) {
+        if (c < innerCols) {
+          // Inner μ cell — blank
+          html += '<td class="empty"></td>';
+        } else if (c < shape[r]) {
           var val = filling[r][c];
           var origRow = c;
-          var isAlpha = alphaBoxes && alphaBoxes.has(val + ',' + origRow);
+          var isAlpha = alphaBoxes && val > 0 && alphaBoxes.has(val + ',' + origRow);
           var checker = (r + c) % 2 === 0 ? '#ccc' : '#fff';
-          var col = ssytColors[(val - 1) % ssytColors.length];
+          var col = ssytColors[((val || 1) - 1) % ssytColors.length];
           if (isAlpha) {
             html += '<td style="color:#fff;background:' + col + ';border-radius:50%;">' + val + '</td>';
           } else {
-            html += '<td style="color:' + col + ';background:' + checker + ';">' + val + '</td>';
+            html += '<td style="color:' + col + ';background:' + checker + ';">' + (val || '') + '</td>';
           }
         } else {
           html += '<td class="empty"></td>';
@@ -443,7 +465,10 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
     chain += '  (fixed)';
     document.getElementById('gt-chain').textContent = chain;
     var formulaEl = document.getElementById('gt-formula');
-    var latex = '\\displaystyle s_{\\lambda}(x_1,\\ldots,x_' + k + ') = \\sum ';
+    var muLabel = document.getElementById('gt-mu').value.trim();
+    var isSkew = muLabel && muLabel !== '∅' && muLabel !== '';
+    var shapeLatex = isSkew ? '\\lambda/\\mu' : '\\lambda';
+    var latex = '\\displaystyle s_{' + shapeLatex + '}(x_1,\\ldots,x_' + k + ') = \\sum ';
     for (var i = 1; i <= k; i++) {
       latex += 'x_{' + i + '}^{|\\lambda^{' + i + '}|-|\\lambda^{' + (i - 1) + '}|}';
       if (i < k) latex += '\\, ';
@@ -454,6 +479,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
   function doCompute() {
     var k = parseInt(document.getElementById('gt-k').value);
     var lambdaStr = document.getElementById('gt-lambda').value;
+    var muStr = document.getElementById('gt-mu').value.trim();
     var aOne = document.getElementById('gt-a-one').checked;
     var errorEl = document.getElementById('gt-error');
     var resultEl = document.getElementById('gt-result');
@@ -466,9 +492,19 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
       errorEl.textContent = 'Number of rows (' + lambda.length + ') must be ≤ N = ' + k; return;
     }
 
+    var mu = (muStr === '' || muStr === '∅') ? [] : parsePartition(muStr);
+    if (mu === null) { errorEl.textContent = 'Invalid μ.'; return; }
+    // Validate μ ⊂ λ
+    for (var i = 0; i < mu.length; i++) {
+      if ((mu[i] || 0) > (lambda[i] || 0)) {
+        errorEl.textContent = 'μ must fit inside λ (μ_' + (i+1) + '=' + mu[i] + ' > λ_' + (i+1) + '=' + (lambda[i]||0) + ')'; return;
+      }
+    }
+
     var t0 = performance.now();
-    var gtEndpoint = conjugatePartition(lambda); // GT scheme ends at conj(λ)
-    var result = computeGTSchemes(gtEndpoint, k);
+    var gtEndpoint = conjugatePartition(lambda);
+    var gtStart = conjugatePartition(mu);
+    var result = computeGTSchemes(gtEndpoint, k, gtStart);
     var elapsed = (performance.now() - t0).toFixed(1);
 
     var nonZero = 0;
@@ -498,7 +534,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
           expsX[sortedCfg[j].level - 1] = partSize(sortedCfg[j].part) - prevSize;
           prevSize = partSize(sortedCfg[j].part);
         }
-        var ssyt = configToSSYT(cfg, gtEndpoint);
+        var ssyt = configToSSYT(cfg, gtEndpoint, gtStart);
         var alphaRes = countAlphaSSYT(ssyt);
         var fullExps = expsX.concat([alphaRes.count]);
         polyAddTo(polyA, makeKey(fullExps), 1);
@@ -530,7 +566,8 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
     var configsEl = document.getElementById('gt-configs');
     if (document.getElementById('gt-show-configs').checked && result.configs.length > 0) {
       var maxShow = result.configs.length;
-      var html = '<strong>' + result.configs.length + ' tableaux (shape ' + partStr(lambda) + '):</strong><br>';
+      var shapeStr = mu.length > 0 ? partStr(lambda) + '/' + partStr(mu) : partStr(lambda);
+      var html = '<strong>' + result.configs.length + ' tableaux (shape ' + shapeStr + '):</strong><br>';
       for (var ci = 0; ci < maxShow; ci++) {
         var cfg = result.configs[ci];
         var sortedCfg = cfg.slice().sort(function(a, b) { return a.level - b.level; });
@@ -541,7 +578,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
           prevSize = partSize(sortedCfg[j].part);
           if (exp > 0) weightParts.push('x' + toSub(sortedCfg[j].level) + (exp === 1 ? '' : toSup(exp)));
         }
-        var ssyt = configToSSYT(cfg, gtEndpoint);
+        var ssyt = configToSSYT(cfg, gtEndpoint, gtStart);
         var alphaBoxesSet = null;
         if (!aOne) {
           var alphaRes = countAlphaSSYT(ssyt);
