@@ -43,7 +43,7 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
   </select>
   <label style="margin-left:12px;">λ:</label>
   <input id="gt-lambda" type="text" value="(2,2,1)" placeholder="(2,2,1)" aria-label="Partition lambda">
-  <span class="gt-info" style="color:#888;">(parts ≤ N; SSYT shape)</span>
+  <span class="gt-info" style="color:#888;">(≤ N rows; SSYT shape)</span>
 </div>
 
 <div class="gt-row">
@@ -456,8 +456,8 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
 
     var lambda = parsePartition(lambdaStr);
     if (lambda === null) { errorEl.textContent = 'Invalid partition.'; return; }
-    if (lambda.length > 0 && lambda[0] > k) {
-      errorEl.textContent = 'Largest part (' + lambda[0] + ') must be ≤ N = ' + k; return;
+    if (lambda.length > k) {
+      errorEl.textContent = 'Number of rows (' + lambda.length + ') must be ≤ N = ' + k; return;
     }
 
     var t0 = performance.now();
