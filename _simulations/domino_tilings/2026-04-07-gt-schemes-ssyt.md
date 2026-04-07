@@ -65,6 +65,9 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
       <option value="even">even entries</option>
     </select>
   </label>
+  <label style="margin-left:12px; font-size:13px;">
+    offset: <input id="gt-offset" type="number" value="0" min="0" style="width:40px;font-size:13px;" title="Entry offset: entry i becomes i+offset for parity check">
+  </label>
 </div>
 
 <div id="gt-chain" class="gt-chain"></div>
@@ -83,6 +86,11 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
 <div id="gt-branching" style="margin-top:12px;padding:10px;background:#f0f8f0;border:1px solid #ccc;border-radius:4px;display:none;">
   <div style="font-weight:bold;font-size:13px;margin-bottom:6px;">Branching rule check: s<sub>λ</sub>(x<sub>1</sub>,…,x<sub>N</sub>) = Σ<sub>μ⊂λ</sub> s<sub>μ</sub>(x<sub>1</sub>,…,x<sub>M</sub>) · s<sub>λ/μ</sub>(x<sub>M+1</sub>,…,x<sub>N</sub>)</div>
   <div id="gt-branching-result" class="gt-info"></div>
+</div>
+
+<div style="margin-top:8px;">
+  <button id="gt-mass-branch" style="font-size:12px;padding:4px 12px;cursor:pointer;">Mass test branching rule (a-weighted, all M)</button>
+  <span id="gt-mass-branch-result" style="font-size:12px;margin-left:8px;"></span>
 </div>
 
 <details style="margin-top: 16px;">
@@ -308,15 +316,16 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
   //  a-weighted iff: entry has selected parity AND (r+c) even (dark cell)
   // ═══════════════════════════════════════════════════
 
-  function countAlphaSSYT(ssyt) {
+  function countAlphaSSYT(ssyt, offset) {
     var entryParity = document.getElementById('gt-a-parity').value === 'odd' ? 1 : 0;
+    var off = offset || 0;
     var count = 0;
     var alphaBoxes = new Set();
     for (var r = 0; r < ssyt.shape.length; r++) {
       for (var c = 0; c < ssyt.shape[r]; c++) {
         var entry = ssyt.filling[r][c];
-        if (entry === 0) continue; // skip μ cells in skew shape
-        if (entry % 2 === entryParity && (r + c) % 2 === 0) {
+        if (entry === 0) continue;
+        if ((entry + off) % 2 === entryParity && (r + c) % 2 === 0) {
           count++;
           alphaBoxes.add(entry + ',' + c); // key: "level,origRow"
         }
@@ -486,6 +495,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
     var lambdaStr = document.getElementById('gt-lambda').value;
     var muStr = document.getElementById('gt-mu').value.trim();
     var aOne = document.getElementById('gt-a-one').checked;
+    var userOffset = parseInt(document.getElementById('gt-offset').value) || 0;
     var errorEl = document.getElementById('gt-error');
     var resultEl = document.getElementById('gt-result');
     errorEl.textContent = '';
@@ -539,8 +549,8 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
           expsX[sortedCfg[j].level - 1] = partSize(sortedCfg[j].part) - prevSize;
           prevSize = partSize(sortedCfg[j].part);
         }
-        var ssyt = configToSSYT(cfg, gtEndpoint, gtStart);
-        var alphaRes = countAlphaSSYT(ssyt);
+        var ssytA = configToSSYT(cfg, gtEndpoint, gtStart);
+        var alphaRes = countAlphaSSYT(ssytA, userOffset);
         var fullExps = expsX.concat([alphaRes.count]);
         polyAddTo(polyA, makeKey(fullExps), 1);
       }
@@ -586,7 +596,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
         var ssyt = configToSSYT(cfg, gtEndpoint, gtStart);
         var alphaBoxesSet = null;
         if (!aOne) {
-          var alphaRes = countAlphaSSYT(ssyt);
+          var alphaRes = countAlphaSSYT(ssyt, userOffset);
           if (alphaRes.count > 0) weightParts.push('a' + (alphaRes.count === 1 ? '' : toSup(alphaRes.count)));
           alphaBoxesSet = alphaRes.alphaBoxes;
         }
@@ -752,6 +762,151 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
       branchEl.style.display = 'none';
     }
   }
+
+  // ═══════════════════════════════════════════════════
+  //  MASS BRANCHING RULE TEST
+  // ═══════════════════════════════════════════════════
+
+  function genPartitions(n, maxParts, maxVal) {
+    var results = [];
+    function rec(remaining, parts, maxP) {
+      if (remaining === 0) { results.push(parts.slice()); return; }
+      if (parts.length >= maxParts || maxP <= 0) return;
+      for (var p = Math.min(remaining, maxP, maxVal); p >= 1; p--) {
+        parts.push(p); rec(remaining - p, parts, p); parts.pop();
+      }
+    }
+    rec(n, [], maxVal); return results;
+  }
+
+  function runMassBranchTest() {
+    var el = document.getElementById('gt-mass-branch-result');
+    el.textContent = 'Running...'; el.style.color = '#666';
+    setTimeout(function() {
+      var maxSize = 6, maxK = 4, passed = 0, failed = 0, failures = [];
+      var entryParity = document.getElementById('gt-a-parity').value === 'odd' ? 1 : 0;
+
+      for (var kk = 2; kk <= maxK; kk++) {
+        for (var sz = 1; sz <= maxSize; sz++) {
+          var partitions = genPartitions(sz, 20, 20);
+          for (var pi = 0; pi < partitions.length; pi++) {
+            var lam = partitions[pi];
+            if (lam.length > kk) continue; // need ℓ(λ) ≤ N
+
+            for (var M = 1; M < kk; M++) { // test all splits
+              // Compute s_λ^(a)(x_1,...,x_N) directly
+              var conjLam = conjugatePartition(lam);
+              var resLam = computeGTSchemes(conjLam, kk, []);
+              if (resLam.configs.length === 0) continue;
+              var sLamA = new Map();
+              for (var ci = 0; ci < resLam.configs.length; ci++) {
+                var cfg = resLam.configs[ci];
+                var sc = cfg.slice().sort(function(a,b){return a.level-b.level;});
+                var ex = new Array(kk).fill(0); var pv = 0;
+                for (var j = 0; j < sc.length; j++) { ex[sc[j].level-1] = partSize(sc[j].part)-pv; pv=partSize(sc[j].part); }
+                var ssyt = configToSSYT(cfg, conjLam, []);
+                var aCount = 0;
+                for (var r = 0; r < ssyt.shape.length; r++)
+                  for (var c = 0; c < ssyt.shape[r]; c++) {
+                    var entry = ssyt.filling[r][c];
+                    if (entry > 0 && (entry % 2) === entryParity && (r+c) % 2 === 0) aCount++;
+                  }
+                polyAddTo(sLamA, makeKey(ex.concat([aCount])), 1);
+              }
+
+              // Branching sum over all μ ⊂ λ with λ/μ valid for split at M
+              var allMu2 = [];
+              function enumS2(lam2, idx, cur) {
+                if (idx >= lam2.length) { var t=cur.slice(); while(t.length>0&&t[t.length-1]===0)t.pop(); allMu2.push(t); return; }
+                var hi = lam2[idx]; if (idx>0) hi=Math.min(hi,cur[idx-1]);
+                for (var v=0;v<=hi;v++){cur.push(v);enumS2(lam2,idx+1,cur);cur.pop();}
+              }
+              allMu2 = []; enumS2(lam, 0, []);
+
+              var branchA = new Map();
+              for (var mi = 0; mi < allMu2.length; mi++) {
+                var muB = allMu2[mi];
+                // s_μ^(a)(x_1,...,x_M) with offset 0
+                var conjMuB = conjugatePartition(muB);
+                if (conjMuB.length > 0 && conjMuB[0] > M) continue; // parts of conj(μ) ≤ M
+                var resMu = computeGTSchemes(conjMuB, M, []);
+                if (resMu.configs.length === 0 && partSize(muB) > 0) continue;
+                var sMuA = new Map();
+                if (partSize(muB) === 0) {
+                  sMuA.set(makeKey(new Array(M+1).fill(0)), 1);
+                } else {
+                  for (var ci = 0; ci < resMu.configs.length; ci++) {
+                    var cfg = resMu.configs[ci];
+                    var sc = cfg.slice().sort(function(a,b){return a.level-b.level;});
+                    var ex = new Array(M).fill(0); var pv = 0;
+                    for (var j = 0; j < sc.length; j++) { ex[sc[j].level-1] = partSize(sc[j].part)-pv; pv=partSize(sc[j].part); }
+                    var ssyt = configToSSYT(cfg, conjMuB, []);
+                    var aC = 0;
+                    for (var r = 0; r < ssyt.shape.length; r++)
+                      for (var c = 0; c < ssyt.shape[r]; c++) {
+                        var entry = ssyt.filling[r][c];
+                        if (entry > 0 && (entry % 2) === entryParity && (r+c) % 2 === 0) aC++;
+                      }
+                    polyAddTo(sMuA, makeKey(ex.concat([aC])), 1);
+                  }
+                }
+
+                // s_{λ/μ}^(a)(x_{M+1},...,x_N) with offset M
+                var conjLamB = conjugatePartition(lam);
+                var conjMuB2 = conjugatePartition(muB);
+                var resSkew = computeGTSchemes(conjLamB, kk - M, conjMuB2);
+                if (resSkew.configs.length === 0 && partSize(lam) > partSize(muB)) continue;
+                var sSkewA = new Map();
+                if (resSkew.configCount === 0 && partSize(lam) === partSize(muB)) {
+                  sSkewA.set(makeKey(new Array(kk-M+1).fill(0)), 1);
+                } else {
+                  for (var ci = 0; ci < resSkew.configs.length; ci++) {
+                    var cfg = resSkew.configs[ci];
+                    var sc = cfg.slice().sort(function(a,b){return a.level-b.level;});
+                    var ex = new Array(kk-M).fill(0); var pv = 0;
+                    for (var j = 0; j < sc.length; j++) { ex[sc[j].level-1] = partSize(sc[j].part)-pv; pv=partSize(sc[j].part); }
+                    var ssyt = configToSSYT(cfg, conjLamB, conjMuB2);
+                    var aC = 0;
+                    for (var r = 0; r < ssyt.shape.length; r++)
+                      for (var c = 0; c < ssyt.shape[r]; c++) {
+                        var entry = ssyt.filling[r][c];
+                        if (entry > 0 && ((entry + M) % 2) === entryParity && (r+c) % 2 === 0) aC++;
+                      }
+                    polyAddTo(sSkewA, makeKey(ex.concat([aC])), 1);
+                  }
+                }
+
+                // Multiply sMuA * sSkewA → full polynomial in kk vars + a
+                sMuA.forEach(function(cMu, keyMu) {
+                  sSkewA.forEach(function(cSkew, keySkew) {
+                    var eMu = parseKey(keyMu), eSkew = parseKey(keySkew);
+                    var xFull = eMu.slice(0,M).concat(eSkew.slice(0,kk-M));
+                    var aFull = eMu[M] + eSkew[kk-M];
+                    polyAddTo(branchA, makeKey(xFull.concat([aFull])), cMu * cSkew);
+                  });
+                });
+              }
+
+              if (polyEqual(sLamA, branchA)) { passed++; }
+              else {
+                failed++;
+                if (failures.length < 3) failures.push('N=' + kk + ' λ=' + partStr(lam) + ' M=' + M);
+              }
+            }
+          }
+        }
+      }
+      if (failed === 0) {
+        el.style.color = '#1a6b2e';
+        el.textContent = '✓ All ' + passed + ' cases passed (N≤' + maxK + ', |λ|≤' + maxSize + ', all M splits)';
+      } else {
+        el.style.color = '#c00';
+        el.textContent = '✗ ' + failed + '/' + (passed+failed) + ' failed. First: ' + failures.join('; ');
+      }
+    }, 50);
+  }
+
+  document.getElementById('gt-mass-branch').addEventListener('click', runMassBranchTest);
 
   document.getElementById('gt-copy-mma').addEventListener('click', function() {
     navigator.clipboard.writeText(lastMmaString).then(function() {
