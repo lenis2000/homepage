@@ -84,7 +84,14 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
 <div id="gt-error" class="gt-error"></div>
 
 <div id="gt-branching" style="margin-top:12px;padding:10px;background:#f0f8f0;border:1px solid #ccc;border-radius:4px;display:none;">
-  <div style="font-weight:bold;font-size:13px;margin-bottom:6px;">Branching rule check: s<sub>λ</sub>(x<sub>1</sub>,…,x<sub>N</sub>) = Σ<sub>μ⊂λ</sub> s<sub>μ</sub>(x<sub>1</sub>,…,x<sub>M</sub>) · s<sub>λ/μ</sub>(x<sub>M+1</sub>,…,x<sub>N</sub>)</div>
+  <div style="font-weight:bold;font-size:13px;margin-bottom:6px;">Branching rule (M=1)</div>
+  <div style="font-size:13px;line-height:1.5;margin-bottom:6px;">
+    <strong>Statement.</strong> Define the checkerboard weight: for an SSYT $T$ of shape $\lambda/\mu$, 
+    $$\mathrm{wt}_a(T) = \prod_{i} x_i^{m_i(T)} \cdot a^{\#\{(r,c) \in T : r+c \text{ even},\; \text{entry odd}\}}$$
+    where $m_i(T)$ is the number of entries equal to $i$. Then
+    $$s_{\lambda}^{(a)}(x_1,\ldots,x_N) = \sum_{\mu:\,\lambda/\mu\text{ horiz.\ strip}} s_{\mu}^{(a)}(x_1,\ldots,x_{N-1})\cdot x_N^{|\lambda/\mu|}\cdot a^{d(\lambda/\mu)}$$
+    where $d(\lambda/\mu) = \#\{(r,c)\in \lambda/\mu : r+c\text{ even}\}$ if $N$ is odd, and $0$ if $N$ is even.
+  </div>
   <div id="gt-branching-result" class="gt-info"></div>
 </div>
 
