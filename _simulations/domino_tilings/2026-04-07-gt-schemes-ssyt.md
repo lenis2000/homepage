@@ -76,6 +76,11 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes (seq
 
 <div id="gt-error" class="gt-error"></div>
 
+<div style="margin-top:8px;">
+  <button id="gt-mass-test" style="font-size:12px;padding:4px 12px;cursor:pointer;">Run mass test (local formula vs dimer engine)</button>
+  <span id="gt-mass-result" style="font-size:12px;margin-left:8px;"></span>
+</div>
+
 <details style="margin-top: 16px;">
 <summary style="cursor: pointer; font-weight: bold; font-size: 14px;">How it works</summary>
 <div style="margin-top: 8px; font-size: 14px; line-height: 1.6;">
@@ -86,7 +91,13 @@ where each $\prec'$ is a vertical strip ($\lambda^i_j - \lambda^{i-1}_j \in \\{0
 
 The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambda^i|-|\lambda^{i-1}|}$ per scheme.
 
-**2&times;2 periodic weight $a$:** Each GT scheme determines a domino tiling of a half-Aztec diamond (via the particle-to-domino correspondence). The parameter $a$ weights specific horizontal dominos satisfying the 2&times;2 periodicity condition on the square lattice. <span style="background:#ffe0e0;padding:0 3px;">Pink cells</span> in each SSYT mark boxes whose corresponding domino carries weight $a$. This is a **non-local** property &mdash; it depends on the full GT scheme through a bipartite matching, not just the individual box.
+**2&times;2 periodic weight $a$:** Each GT scheme determines a domino tiling of a half-Aztec diamond (via the particle-to-domino correspondence). The parameter $a$ weights specific horizontal dominos satisfying the 2&times;2 periodicity condition. Remarkably, the $a$-weight is a **purely local** property of the SSYT:
+
+A box with entry $i$ at position (row $r$, col $c$) carries weight $a$ iff:
+1. $(2i - n - 3) \equiv 2 \pmod{4}$, where $n$ is the Aztec diamond size &mdash; this selects entry parity ($n \equiv 1$: odd entries; $n \equiv 3$: even entries)
+2. $r \equiv c \pmod{2}$ (for $x$-odd parity) or $r \not\equiv c \pmod{2}$ (for $x$-even)
+
+<span style="background:#ffe0e0;padding:0 3px;">Pink cells</span> mark $a$-weighted boxes. The rule is a **checkerboard on the tableau** filtered by **entry parity**.
 
 </div>
 </details>
@@ -450,6 +461,170 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
   }
 
   // ═══════════════════════════════════════════════════
+  //  LOCAL ALPHA FORMULA TEST
+  // ═══════════════════════════════════════════════════
+
+  // Test: compare dimer-based α count with a local SSYT formula.
+  // Formula: a box with entry i at SSYT position (row r, col c) carries weight α iff:
+  //   (1) ((2*i - nn - 3) % 4 + 4) % 4 === 2
+  //   (2) x-odd parity: (r + c) % 2 === 0;  x-even parity: (r + c) % 2 === 1
+  function countAlphaLocal(ssyt, nn) {
+    var xPar = document.getElementById('gt-a-parity').value === 'odd' ? 1 : 0;
+    var count = 0;
+    var alphaBoxes = new Set();
+    for (var r = 0; r < ssyt.shape.length; r++) {
+      for (var c = 0; c < ssyt.shape[r]; c++) {
+        var i = ssyt.filling[r][c]; // entry = level
+        var cond1 = (((2 * i - nn - 3) % 4) + 4) % 4 === 2;
+        var cond2 = xPar === 1
+          ? ((r + c) % 2 === 0)
+          : ((r + c) % 2 === 1);
+        if (cond1 && cond2) {
+          count++;
+          // To match dimer engine key format: "level,origRow" where origRow = c
+          // (SSYT cell (r,c) corresponds to original lambda cell (c,r), so origRow = c)
+          alphaBoxes.add(i + ',' + c);
+        }
+      }
+    }
+    return { count: count, alphaBoxes: alphaBoxes };
+  }
+
+  function testAlphaFormula(configs, k, nn, fixedLambda) {
+    var mismatches = [];
+    for (var ci = 0; ci < configs.length; ci++) {
+      var cfg = configs[ci];
+      // Method A: dimer engine
+      var dimerResult = countAlphaDimers(cfg, k, nn);
+      // Method B: local SSYT formula
+      var ssyt = configToSSYT(cfg, fixedLambda);
+      var localResult = countAlphaLocal(ssyt, nn);
+
+      if (dimerResult.count !== localResult.count) {
+        mismatches.push({
+          idx: ci,
+          dimerCount: dimerResult.count,
+          localCount: localResult.count,
+          dimerBoxes: Array.from(dimerResult.alphaBoxes).sort().join('; '),
+          localBoxes: Array.from(localResult.alphaBoxes).sort().join('; ')
+        });
+      }
+    }
+    if (mismatches.length === 0) {
+      return {
+        match: true,
+        details: 'Local formula matches dimer engine for all ' + configs.length + ' configs'
+      };
+    } else {
+      var first = mismatches[0];
+      return {
+        match: false,
+        details: 'Mismatch at config #' + (first.idx + 1) + ': dimer=' + first.dimerCount +
+          ' local=' + first.localCount + ' (dimer boxes: ' + first.dimerBoxes +
+          ', local boxes: ' + first.localBoxes + '). Total mismatches: ' + mismatches.length + '/' + configs.length
+      };
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  MASS TEST: all partitions up to given size, both parities
+  // ═══════════════════════════════════════════════════
+
+  // Generate all partitions of n with at most maxParts parts, each ≤ maxVal
+  function genPartitions(n, maxParts, maxVal) {
+    var results = [];
+    function rec(remaining, parts, maxP) {
+      if (remaining === 0) { results.push(parts.slice()); return; }
+      if (parts.length >= maxParts || maxP <= 0) return;
+      for (var p = Math.min(remaining, maxP, maxVal); p >= 1; p--) {
+        parts.push(p);
+        rec(remaining - p, parts, p);
+        parts.pop();
+      }
+    }
+    rec(n, [], maxVal);
+    return results;
+  }
+
+  function runMassTest() {
+    var el = document.getElementById('gt-mass-result');
+    el.textContent = 'Running...';
+    el.style.color = '#666';
+
+    setTimeout(function() {
+      var totalConfigs = 0, totalCases = 0, failures = [];
+      var maxSize = 6; // |λ| up to 6
+      var maxK = 5;
+
+      for (var k = 1; k <= maxK; k++) {
+        for (var sz = 0; sz <= maxSize; sz++) {
+          var partitions = genPartitions(sz, k, k); // parts ≤ k, at most k parts
+          // Also include partitions with fewer parts
+          if (sz === 0) partitions = [[]];
+
+          for (var pi = 0; pi < partitions.length; pi++) {
+            var lam = partitions[pi];
+            if (lam.length > 0 && lam[0] > k) continue;
+
+            // Test both x-parities
+            for (var xp = 0; xp < 2; xp++) {
+              var savedParity = document.getElementById('gt-a-parity').value;
+              document.getElementById('gt-a-parity').value = xp === 0 ? 'odd' : 'even';
+
+              // Force config computation
+              var oldShow = document.getElementById('gt-show-configs').checked;
+              document.getElementById('gt-show-configs').checked = true;
+              var oldA1 = document.getElementById('gt-a-one').checked;
+              document.getElementById('gt-a-one').checked = false;
+
+              var result = computeGTSchemes(lam, k);
+              if (result.configs.length === 0) continue;
+
+              // Compute globalNN
+              var nn = 1;
+              for (var ci = 0; ci < result.configs.length; ci++) {
+                var cc = result.configs[ci];
+                for (var ei = 0; ei < cc.length; ei++) {
+                  nn = Math.max(nn, cc[ei].part.length + cc[ei].level - 1);
+                }
+                for (var ei = 0; ei < cc.length; ei++) {
+                  if (cc[ei].level < k) nn = Math.max(nn, cc[ei].part.length + cc[ei].level);
+                }
+              }
+
+              var testResult = testAlphaFormula(result.configs, k, nn, lam);
+              totalCases++;
+              totalConfigs += result.configs.length;
+
+              if (!testResult.match) {
+                failures.push('k=' + k + ' λ=' + partStr(lam) + ' xPar=' + (xp === 0 ? 'odd' : 'even') +
+                  ': ' + testResult.details);
+                if (failures.length >= 5) break; // stop after 5 failures
+              }
+
+              // Restore
+              document.getElementById('gt-a-parity').value = savedParity;
+              document.getElementById('gt-show-configs').checked = oldShow;
+              document.getElementById('gt-a-one').checked = oldA1;
+            }
+            if (failures.length >= 5) break;
+          }
+          if (failures.length >= 5) break;
+        }
+        if (failures.length >= 5) break;
+      }
+
+      if (failures.length === 0) {
+        el.style.color = '#1a6b2e';
+        el.textContent = '✓ All ' + totalCases + ' cases passed (' + totalConfigs + ' total GT schemes, k≤' + maxK + ', |λ|≤' + maxSize + ', both parities)';
+      } else {
+        el.style.color = '#c00';
+        el.textContent = '✗ ' + failures.length + ' failures out of ' + totalCases + ' cases. First: ' + failures[0];
+      }
+    }, 50);
+  }
+
+  // ═══════════════════════════════════════════════════
   //  POLYNOMIAL DISPLAY
   // ═══════════════════════════════════════════════════
 
@@ -684,8 +859,9 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
           expsX[sortedCfg[j].level - 1] = partSize(sortedCfg[j].part) - prevSize;
           prevSize = partSize(sortedCfg[j].part);
         }
-        // α count from dimer engine
-        var alphaResult = countAlphaDimers(cfg, k, globalNN);
+        // α count via local SSYT formula
+        var ssytForAlpha = configToSSYT(cfg, lambda);
+        var alphaResult = countAlphaLocal(ssytForAlpha, globalNN);
         var aDeg = alphaResult.count;
         var fullExps = expsX.concat([aDeg]);
         polyAddTo(polyA, makeKey(fullExps), 1);
@@ -708,9 +884,21 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
       var conjLam = conjugatePartition(lambda);
       var ssytPoly = computeSchurSSYT(conjLam, k);
       var match = polyEqual(result.poly, ssytPoly);
-      verifyEl.innerHTML = match
+      var verifyHtml = match
         ? '<span style="color:#1a6b2e;">✓ At a=1: matches s<sub>' + partStr(conjLam) + '</sub>(x<sub>1</sub>,…,x<sub>' + k + '</sub>) via SSYT</span>'
         : '<span style="color:#c00;">✗ MISMATCH with s<sub>' + partStr(conjLam) + '</sub></span>';
+
+      // Local α formula test
+      if (result.configs.length > 0) {
+        var alphaTest = testAlphaFormula(result.configs, k, globalNN, lambda);
+        if (alphaTest.match) {
+          verifyHtml += '<br><span style="color:#1a6b2e;">✓ Local α formula matches dimer engine for all ' + result.configs.length + ' configs (nn=' + globalNN + ')</span>';
+        } else {
+          verifyHtml += '<br><span style="color:#c00;">✗ ' + alphaTest.details + '</span>';
+        }
+      }
+
+      verifyEl.innerHTML = verifyHtml;
       verifyEl.style.display = 'block';
     } else { verifyEl.style.display = 'none'; }
 
@@ -731,15 +919,15 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
           prevSize = partSize(sortedCfg[j].part);
           if (exp > 0) weightParts.push('x' + toSub(sortedCfg[j].level) + (exp === 1 ? '' : toSup(exp)));
         }
+        var ssyt = configToSSYT(cfg, lambda);
         var alphaBoxesSet = null;
         if (!aOne) {
-          var alphaRes = countAlphaDimers(cfg, k, globalNN);
+          // Use local SSYT formula (verified against dimer engine)
+          var alphaRes = countAlphaLocal(ssyt, globalNN);
           if (alphaRes.count > 0) weightParts.push('a' + (alphaRes.count === 1 ? '' : toSup(alphaRes.count)));
           alphaBoxesSet = alphaRes.alphaBoxes;
         }
         var weightStr = weightParts.length > 0 ? weightParts.join('') : '1';
-
-        var ssyt = configToSSYT(cfg, lambda);
         var block = '<div class="config-block"><div class="config-header">#' + (ci + 1) + ' ' + weightStr + '</div>';
         block += renderSSYThtml(ssyt, alphaBoxesSet);
         block += '</div>';
@@ -759,6 +947,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
       setTimeout(function() { btn.textContent = 'Copy Mathematica'; }, 1500);
     });
   });
+  document.getElementById('gt-mass-test').addEventListener('click', runMassTest);
   document.getElementById('gt-compute').addEventListener('click', doCompute);
   document.getElementById('gt-k').addEventListener('change', updateChainDisplay);
   document.getElementById('gt-lambda').addEventListener('keydown', function(e) {
