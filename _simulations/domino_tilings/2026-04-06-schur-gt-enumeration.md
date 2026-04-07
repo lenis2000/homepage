@@ -1,5 +1,5 @@
 ---
-title: Schur Polynomial via GT Pattern Enumeration
+title: 2×2 Periodic Dimer Partition Functions
 model: domino-tilings
 author: 'Leonid Petrov'
 code:

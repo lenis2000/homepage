@@ -119,6 +119,36 @@ simulations: simulations/YYYY-MM-DD-slug/    # optional
 - `processed.json` tracks accepted/rejected papers — re-scanning already-processed years just iterates cached rows
 - Source use ideas tracked in `_scripts/arxiv/source_use_suggestions.md`
 
+## Schur/GT Pattern Simulation (`2026-04-06-schur-gt-enumeration.md`)
+
+### Particle-Partition Bijection (Aztec Diamond)
+- Partition λ with h particles: positions s_i = λ_{h+1-i} + i for i=1,...,h
+- **h is NOT the number of nonzero parts** — it's fixed by the diagonal: h = nn - ⌊d_code/2⌋
+- Empty partition ∅ with h=n means ALL n positions are particles (tightest packing)
+- nn (Aztec size) = max over all config entries of (ℓ+level for μ, ℓ+level-1 for λ)
+
+### Diagonal Sort Order (CRITICAL)
+- At same level, λ comes BEFORE μ: `a.type === 'lam' ? -1 : 1`
+- λ^j is at diagonal 2j-1, μ^j is at diagonal 2j. λ has lower d_code.
+- Getting this backwards swaps nLam/nMu assignments and breaks particle counts
+
+### Domino Reconstruction from GT Patterns
+- For each μ row: particles match UP to λ above, holes match DOWN to λ below
+- Between (μ,λ) going up: particle↔particle dominos
+- Between (λ,μ) going up: hole↔hole dominos
+- Bipartite matching: μ pos j → λ pos j or j+1 (midIsBigger=false)
+
+### 2×2 Periodic Weights (parameter a)
+- isAlpha: horizontal + black-left/white-right + (gx+gy)%4===2 + gx parity (toggle)
+- x-odd vs x-even gives two different polynomials
+- Setting a=1 recovers standard (unweighted) polynomial
+
+### KaTeX on This Site
+- Version 0.7.1, loaded async — use retry with setTimeout for initial render
+- Inline mode (`displayMode: false`) with `\displaystyle` prefix allows natural line wrapping
+- Add `.katex { white-space: normal !important; }` CSS for wrapping
+- Truncate polynomials >60 terms with "... (N more terms)" to avoid KaTeX crashes
+
 ## User Preferences
 - **No co-author line in commits** — do NOT add `Co-Authored-By: Claude` to git commit messages
 - Don't run Jekyll builds - user handles deployment; Jekyll rebuild takes ~15s
