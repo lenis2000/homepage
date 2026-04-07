@@ -54,6 +54,12 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
     <input type="checkbox" id="gt-a-one"> Set a=1
   </label>
   <label style="margin-left:12px; font-size:13px;">
+    α-parity: <select id="gt-a-parity" style="font-size:13px;">
+      <option value="odd">x odd</option>
+      <option value="even">x even</option>
+    </select>
+  </label>
+  <label style="margin-left:12px; font-size:13px;">
     View: <select id="gt-view" style="font-size:13px;">
       <option value="particles">Particles</option>
       <option value="dimers" selected>Dimers</option>
@@ -506,7 +512,8 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
           var gx = Math.min(x1, x2), gy = Math.min(y1, y2);
           var horiz = (y1 === y2);
           // isAlpha: horizontal AND left cell is black (odd parity)
-          var isA = horiz && (((gx + gy + parityOffset) % 2 + 2) % 2 === 1) && (((gx + gy) % 4 + 4) % 4 === 2) && (((gx % 2) + 2) % 2 === 1);
+          var xPar = document.getElementById('gt-a-parity').value === 'odd' ? 1 : 0;
+          var isA = horiz && (((gx + gy + parityOffset) % 2 + 2) % 2 === 1) && (((gx + gy) % 4 + 4) % 4 === 2) && (((gx % 2) + 2) % 2 === xPar);
           dominos.push({ gx: gx, gy: gy, horiz: horiz, isParticle: true, isAlpha: isA });
         }
       }
@@ -522,7 +529,8 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
           var x2 = lamBelow.x_min + (p.outer - 1), y2 = lamBelow.d_val - x2;
           var gx = Math.min(x1, x2), gy = Math.min(y1, y2);
           var horiz = (y1 === y2);
-          var isA = horiz && (((gx + gy + parityOffset) % 2 + 2) % 2 === 1) && (((gx + gy) % 4 + 4) % 4 === 2) && (((gx % 2) + 2) % 2 === 1);
+          var xPar = document.getElementById('gt-a-parity').value === 'odd' ? 1 : 0;
+          var isA = horiz && (((gx + gy + parityOffset) % 2 + 2) % 2 === 1) && (((gx + gy) % 4 + 4) % 4 === 2) && (((gx % 2) + 2) % 2 === xPar);
           dominos.push({ gx: gx, gy: gy, horiz: horiz, isParticle: false, isAlpha: isA });
         }
       }
