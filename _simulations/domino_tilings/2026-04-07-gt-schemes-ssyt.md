@@ -638,15 +638,52 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
         return true;
       }
 
-      // Branching sum (M=1): Σ_μ s_μ(x_1,...,x_{N-1}) · x_N^{|λ|-|μ|}
+      // Count dark cells in skew shape lam/mu
+      function darkCellsInStrip(lam, mu) {
+        var count = 0;
+        for (var r = 0; r < lam.length; r++) {
+          var from = r < mu.length ? mu[r] : 0;
+          for (var c = from; c < lam[r]; c++) {
+            if ((r + c) % 2 === 0) count++;
+          }
+        }
+        return count;
+      }
+
+      // Helper: compute a-weighted polynomial for shape nu with N vars
+      function computeAWeightedPoly(nu, numVars) {
+        var conjNu = conjugatePartition(nu);
+        var res = computeGTSchemes(conjNu, numVars, []);
+        if (res.configs.length === 0) {
+          // No configs but might have polynomial from cache
+          return res.poly; // just x-polynomial, no a
+        }
+        var polyA = new Map();
+        for (var ci = 0; ci < res.configs.length; ci++) {
+          var cfg = res.configs[ci];
+          var sortedCfg = cfg.slice().sort(function(a2,b2){return a2.level-b2.level;});
+          var expsX = new Array(numVars).fill(0);
+          var prev = 0;
+          for (var j = 0; j < sortedCfg.length; j++) {
+            expsX[sortedCfg[j].level-1] = partSize(sortedCfg[j].part) - prev;
+            prev = partSize(sortedCfg[j].part);
+          }
+          var ssytB = configToSSYT(cfg, conjNu, []);
+          var alphaB = countAlphaSSYT(ssytB);
+          var fullExps = expsX.concat([alphaB.count]);
+          polyAddTo(polyA, makeKey(fullExps), 1);
+        }
+        return polyA;
+      }
+
+      // ── Standard branching (no a) ──
       var branchSum = new Map();
       var branchTerms = [];
       for (var mi = 0; mi < allMu.length; mi++) {
         var muB = allMu[mi];
-        if (!isHorizStrip(lambda, muB)) continue; // only horizontal strips
+        if (!isHorizStrip(lambda, muB)) continue;
         var stripSize = partSize(lambda) - partSize(muB);
-        var sMu = computeSchurSSYT(muB, k - 1); // s_μ in N-1 variables
-        // Multiply by x_N^stripSize: append exponent to each monomial
+        var sMu = computeSchurSSYT(muB, k - 1);
         sMu.forEach(function(c, key) {
           var exps = parseKey(key).concat([stripSize]);
           polyAddTo(branchSum, makeKey(exps), c);
@@ -654,12 +691,62 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
         var xTerm = stripSize === 0 ? '' : stripSize === 1 ? '·x<sub>' + k + '</sub>' : '·x<sub>' + k + '</sub><sup>' + stripSize + '</sup>';
         branchTerms.push('s<sub>' + partStr(muB) + '</sub>' + xTerm);
       }
-
       var branchMatch = polyEqual(sLam, branchSum);
       var branchHtml = branchMatch
-        ? '<span style="color:#1a6b2e;">✓ Branching rule (M=1) verified</span>'
-        : '<span style="color:#c00;">✗ Branching rule (M=1) FAILED</span>';
+        ? '<span style="color:#1a6b2e;">✓ Branching (a=1) verified</span>'
+        : '<span style="color:#c00;">✗ Branching (a=1) FAILED</span>';
       branchHtml += '<br><span style="font-size:11px;">' + branchTerms.join(' + ') + '</span>';
+
+      // ── a-weighted branching ──
+      if (!aOne) {
+        var entryParity = document.getElementById('gt-a-parity').value === 'odd' ? 1 : 0;
+        // s_λ^(a) from main computation
+        var sLamA = new Map();
+        for (var ci = 0; ci < result.configs.length; ci++) {
+          var cfg = result.configs[ci];
+          var sortedCfg = cfg.slice().sort(function(a2,b2){return a2.level-b2.level;});
+          var expsX = new Array(k).fill(0); var prev = 0;
+          for (var j = 0; j < sortedCfg.length; j++) {
+            expsX[sortedCfg[j].level-1] = partSize(sortedCfg[j].part) - prev;
+            prev = partSize(sortedCfg[j].part);
+          }
+          var ssytB = configToSSYT(cfg, gtEndpoint, gtStart);
+          var alphaB = countAlphaSSYT(ssytB);
+          polyAddTo(sLamA, makeKey(expsX.concat([alphaB.count])), 1);
+        }
+
+        // Branching: Σ_μ s_μ^(a)(x_1..x_{N-1}) · x_N^{strip} · a^{darkCells if N parity matches}
+        var branchSumA = new Map();
+        var branchTermsA = [];
+        for (var mi = 0; mi < allMu.length; mi++) {
+          var muB = allMu[mi];
+          if (!isHorizStrip(lambda, muB)) continue;
+          var stripSize = partSize(lambda) - partSize(muB);
+          // a-exponent from entry N on dark cells of strip
+          var aDegStrip = (k % 2 === entryParity) ? darkCellsInStrip(lambda, muB) : 0;
+          // s_μ^(a) in N-1 variables
+          var sMuA = computeAWeightedPoly(muB, k - 1);
+          // Multiply: append x_N exponent and add a-strip contribution
+          sMuA.forEach(function(c, key) {
+            var exps = parseKey(key);
+            // exps has k-1 x-vars + 1 a-var = k entries
+            var xExps = exps.slice(0, k - 1);
+            var aExp = exps[k - 1];
+            var fullExps = xExps.concat([stripSize, aExp + aDegStrip]);
+            polyAddTo(branchSumA, makeKey(fullExps), c);
+          });
+          var aTerm = aDegStrip > 0 ? (aDegStrip === 1 ? '·a' : '·a<sup>' + aDegStrip + '</sup>') : '';
+          var xTerm = stripSize === 0 ? '' : stripSize === 1 ? '·x<sub>' + k + '</sub>' : '·x<sub>' + k + '</sub><sup>' + stripSize + '</sup>';
+          branchTermsA.push('s<sub>' + partStr(muB) + '</sub><sup>(a)</sup>' + xTerm + aTerm);
+        }
+
+        var branchMatchA = polyEqual(sLamA, branchSumA);
+        branchHtml += '<br>' + (branchMatchA
+          ? '<span style="color:#1a6b2e;">✓ Branching with a verified</span>'
+          : '<span style="color:#c00;">✗ Branching with a FAILED</span>');
+        branchHtml += '<br><span style="font-size:11px;">' + branchTermsA.join(' + ') + '</span>';
+      }
+
       branchResEl.innerHTML = branchHtml;
     } else {
       branchEl.style.display = 'none';
