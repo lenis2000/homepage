@@ -761,8 +761,8 @@ A box with entry $i$ at position (row $r$, col $c$) carries weight $a$ iff:
           var val = filling[r][c]; // val = level
           var origRow = c;         // SSYT(r,c) → λ(c,r), original row = c
           var isAlpha = alphaBoxes && alphaBoxes.has(val + ',' + origRow);
-          var checker = (r + c) % 2 === 0 ? '#fff' : '#eee';
-          var bg = isAlpha ? '#ffe0e0' : checker;
+          var checker = (r + c) % 2 === 0 ? '#ccc' : '#fff';
+          var bg = isAlpha ? '#e05050' : checker;
           var col = ssytColors[(val - 1) % ssytColors.length];
           html += '<td style="color:' + col + ';background:' + bg + ';">' + val + '</td>';
         } else {
