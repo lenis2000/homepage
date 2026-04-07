@@ -651,7 +651,8 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
           var exps = parseKey(key).concat([stripSize]);
           polyAddTo(branchSum, makeKey(exps), c);
         });
-        branchTerms.push('s<sub>' + partStr(muB) + '</sub>·x<sub>' + k + '</sub><sup>' + stripSize + '</sup>');
+        var xTerm = stripSize === 0 ? '' : stripSize === 1 ? '·x<sub>' + k + '</sub>' : '·x<sub>' + k + '</sub><sup>' + stripSize + '</sup>';
+        branchTerms.push('s<sub>' + partStr(muB) + '</sub>' + xTerm);
       }
 
       var branchMatch = polyEqual(sLam, branchSum);
