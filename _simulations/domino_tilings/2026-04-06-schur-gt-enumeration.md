@@ -32,23 +32,32 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
   <label>Level k:</label>
   <select id="gt-k" aria-label="Level k">
     <option value="1">1</option>
-    <option value="2">2</option>
-    <option value="3" selected>3</option>
+    <option value="2" selected>2</option>
+    <option value="3">3</option>
     <option value="4">4</option>
     <option value="5">5</option>
   </select>
   <label style="margin-left:12px;">λ<sup>k</sup>:</label>
-  <input id="gt-lambda" type="text" value="(3,3,2)" placeholder="(3,3,2)" aria-label="Partition lambda">
+  <input id="gt-lambda" type="text" value="(2,1)" placeholder="(2,1)" aria-label="Partition lambda">
   <span class="gt-info" style="color:#888;">(parts ≤ k)</span>
 </div>
 
 <div class="gt-row">
   <button id="gt-compute" class="gt-btn">Compute</button>
   <label style="margin-left:12px; font-size:13px;">
-    <input type="checkbox" id="gt-show-configs"> Show configurations
+    <input type="checkbox" id="gt-show-configs" checked> Show configurations
   </label>
   <label style="margin-left:12px; font-size:13px;">
     <input type="checkbox" id="gt-y-zero"> Set all y<sub>i</sub> = 0
+  </label>
+  <label style="margin-left:12px; font-size:13px;">
+    <input type="checkbox" id="gt-a-one"> Set a=1
+  </label>
+  <label style="margin-left:12px; font-size:13px;">
+    View: <select id="gt-view" style="font-size:13px;">
+      <option value="particles">Particles</option>
+      <option value="dimers" selected>Dimers</option>
+    </select>
   </label>
 </div>
 
@@ -58,6 +67,7 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
 <div id="gt-result" class="gt-output" style="display:none;">
   <div class="gt-info"><strong>Configurations:</strong> <span id="gt-count">0</span> &ensp;|&ensp; <strong>Polynomial terms:</strong> <span id="gt-terms">0</span> &ensp;|&ensp; <span id="gt-time"></span></div>
   <div id="gt-poly" class="gt-poly"></div>
+  <div><button id="gt-copy-mma" style="font-size:11px;padding:2px 8px;margin:4px 0;display:none;cursor:pointer;">Copy Mathematica</button></div>
   <div id="gt-verify" class="gt-info" style="display:none;"></div>
   <div id="gt-configs" class="gt-configs" style="display:none;"></div>
 </div>
@@ -202,7 +212,8 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
     var cache = new Map();
     var configCount = 0;
     var configs = [];
-    var wantConfigs = document.getElementById('gt-show-configs').checked;
+    var wantConfigs = document.getElementById('gt-show-configs').checked ||
+                      !document.getElementById('gt-a-one').checked;
     var MAX_CONFIGS = 50000;
     var aborted = false;
 
@@ -328,6 +339,30 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
   //  POLYNOMIAL → LaTeX
   // ═══════════════════════════════════════════════════
 
+  var MAX_LATEX_TERMS = 60;
+  var lastMmaString = '';
+
+  // Convert polynomial Map to Mathematica string
+  function polyToMma(poly, varNames) {
+    var entries = [];
+    poly.forEach(function(c, key) { if (c !== 0) entries.push([key, c]); });
+    if (entries.length === 0) return '0';
+    var terms = [];
+    for (var t = 0; t < entries.length; t++) {
+      var exps = parseKey(entries[t][0]), coeff = entries[t][1];
+      var factors = [];
+      if (Math.abs(coeff) !== 1 || exps.every(function(e){return e===0;})) factors.push(String(coeff));
+      else if (coeff === -1) factors.push('-1');
+      for (var i = 0; i < exps.length; i++) {
+        if (exps[i] === 0) continue;
+        if (exps[i] === 1) factors.push(varNames[i]);
+        else factors.push(varNames[i] + '^' + exps[i]);
+      }
+      terms.push(factors.join('*') || '1');
+    }
+    return terms.join(' + ').replace(/\+ -/g, '- ');
+  }
+
   function polyToLatex(poly, k, yZero) {
     var entries = [];
     poly.forEach(function(c, key) { if (c !== 0) entries.push([key, c]); });
@@ -358,6 +393,10 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
       else if (absCoeff !== 1) monoStr = absCoeff + '\\,' + monoStr;
       if (t === 0) latex += (coeff < 0 ? '-' : '') + monoStr;
       else latex += ' ' + sign + ' ' + monoStr;
+      if (t >= MAX_LATEX_TERMS - 1 && t < entries.length - 1) {
+        latex += ' + \\cdots\\;(' + (entries.length - t - 1) + '\\text{ more terms})';
+        break;
+      }
     }
     return latex;
   }
@@ -416,6 +455,81 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
     return pairs;
   }
 
+  // Reconstruct dominos from a config. Returns {dominos, diagInfo, allCells}.
+  // Each domino = {gx, gy, horiz, isParticle, isAlpha}
+  // isAlpha = horizontal AND left cell is black (carries weight a in 2x2 periodic)
+  function reconstructDominos(config, k, nn) {
+    var sorted = config.slice().sort(function(a, b) {
+      if (a.level !== b.level) return a.level - b.level;
+      return a.type === 'lam' ? -1 : 1;
+    });
+    var parityOffset = nn;
+    var diagInfo = [], allCells = [];
+    for (var ri = 0; ri < sorted.length; ri++) {
+      var entry = sorted[ri];
+      var isLam = entry.type === 'lam';
+      var d_val = ri - (nn + 1);
+      var x_min = Math.ceil((d_val - nn) / 2);
+      var x_max = Math.floor((nn + d_val) / 2);
+      var nPos = x_max - x_min + 1;
+      var h = isLam ? (nn - (entry.level - 1)) : (nn - entry.level);
+      if (h < 0) h = 0;
+      var positions = partitionToPositions(entry.part, h);
+      var posSet = {};
+      for (var pi = 0; pi < positions.length; pi++) posSet[positions[pi]] = true;
+      var cells = [];
+      for (var x = x_min; x <= x_max; x++) {
+        var posIdx = x - x_min + 1;
+        var cell = { gx: x, gy: d_val - x, isParticle: !!posSet[posIdx] };
+        cells.push(cell); allCells.push(cell);
+      }
+      diagInfo.push({ entry: entry, isLam: isLam, d_val: d_val, x_min: x_min, nPos: nPos, posSet: posSet, cells: cells });
+    }
+    var dominos = [];
+    for (var ri = 0; ri < diagInfo.length; ri++) {
+      var diag = diagInfo[ri];
+      if (diag.isLam) continue;
+      var muParticles = [], muHoles = [];
+      for (var j = 1; j <= diag.nPos; j++) {
+        if (diag.posSet[j]) muParticles.push(j); else muHoles.push(j);
+      }
+      var lamAboveIdx = ri + 1;
+      if (lamAboveIdx < diagInfo.length && muParticles.length > 0) {
+        var lamAbove = diagInfo[lamAboveIdx];
+        var pTarget = {};
+        for (var j = 1; j <= lamAbove.nPos; j++) if (lamAbove.posSet[j]) pTarget[j] = true;
+        var pPairs = bipartiteMatch(muParticles, pTarget, lamAbove.nPos, false);
+        for (var di = 0; di < pPairs.length; di++) {
+          var p = pPairs[di];
+          var x1 = diag.x_min + (p.mid - 1), y1 = diag.d_val - x1;
+          var x2 = lamAbove.x_min + (p.outer - 1), y2 = lamAbove.d_val - x2;
+          var gx = Math.min(x1, x2), gy = Math.min(y1, y2);
+          var horiz = (y1 === y2);
+          // isAlpha: horizontal AND left cell is black (odd parity)
+          var isA = horiz && (((gx + gy + parityOffset) % 2 + 2) % 2 === 1);
+          dominos.push({ gx: gx, gy: gy, horiz: horiz, isParticle: true, isAlpha: isA });
+        }
+      }
+      var lamBelowIdx = ri - 1;
+      if (lamBelowIdx >= 0 && muHoles.length > 0) {
+        var lamBelow = diagInfo[lamBelowIdx];
+        var hTarget = {};
+        for (var j = 1; j <= lamBelow.nPos; j++) if (!lamBelow.posSet[j]) hTarget[j] = true;
+        var hPairs = bipartiteMatch(muHoles, hTarget, lamBelow.nPos, false);
+        for (var di = 0; di < hPairs.length; di++) {
+          var p = hPairs[di];
+          var x1 = diag.x_min + (p.mid - 1), y1 = diag.d_val - x1;
+          var x2 = lamBelow.x_min + (p.outer - 1), y2 = lamBelow.d_val - x2;
+          var gx = Math.min(x1, x2), gy = Math.min(y1, y2);
+          var horiz = (y1 === y2);
+          var isA = horiz && (((gx + gy + parityOffset) % 2 + 2) % 2 === 1);
+          dominos.push({ gx: gx, gy: gy, horiz: horiz, isParticle: false, isAlpha: isA });
+        }
+      }
+    }
+    return { dominos: dominos, diagInfo: diagInfo, allCells: allCells };
+  }
+
   // Match all positions between two adjacent rows
   function computeDominos(midPSet, topPSet, nMid, nTop, midIsBigger) {
     var midParticles = [], midHoles = [];
@@ -433,13 +547,8 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
     };
   }
 
-  // Render a single configuration on a canvas
-  // Uses exact geometry from interlacing explorer:
-  // - Diamond-shaped unit cells at each position
-  // - λ positions at lattice x = 0, 2, 4, ... (even)
-  // - μ positions at lattice x = 1, 3, 5, ... (odd, staggered)
-  // - Dominos: μ particles match UP to λ above, μ holes match DOWN to λ below
-  function renderConfig(canvas, config, k, yZero) {
+  // Render config on square lattice with domino outlines.
+  function renderConfig(canvas, config, k, yZero, nn, viewMode) {
     var dpr = window.devicePixelRatio || 1;
     var cw = canvas.width / dpr, ch = canvas.height / dpr;
     var ctx = canvas.getContext('2d');
@@ -447,108 +556,109 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
     ctx.save();
     ctx.scale(dpr, dpr);
 
-    // Sort entries bottom to top: mu0, lam1, mu1, lam2, ..., lamK
-    var sorted = config.slice().sort(function(a, b) {
-      if (a.level !== b.level) return a.level - b.level;
-      return a.type === 'mu' ? -1 : 1;
-    });
+    var rd = reconstructDominos(config, k, nn);
+    var dominos = rd.dominos, diagInfo = rd.diagInfo, allCells = rd.allCells;
 
-    // Compute lattice size n
-    var lamK = sorted[sorted.length - 1].part;
-    var ell = lamK.length;
-    var n = ell + k - 1;
-    if (n < 1) n = 1;
-    var nLam = n + 1, nMu = n;
+    if (allCells.length === 0) { ctx.restore(); return; }
 
-    var numRows = sorted.length;
-
-    // Layout matching interlacing explorer
-    var maxLatticeX = Math.max(2 * (nLam - 1), 2 * (nMu - 1) + 1);
-    var minLatticeX = 0;
-    var midLattice = (minLatticeX + maxLatticeX) / 2;
-    var spanX = maxLatticeX - minLatticeX;
-
-    var margin = 6;
-    var u = Math.min((cw - 2 * margin) / (spanX + 2), (ch - 2 * margin) / (numRows + 1));
-    u = Math.min(u, 16);
-    var radius = u * 0.30;
-    var centerX = cw / 2;
-
-    function posX(j, isLam) {
-      var latticeX = isLam ? 2 * (j - 1) : 2 * (j - 1) + 1;
-      return centerX + (latticeX - midLattice) * u;
+    // Bounding box
+    var minGx = allCells[0].gx, maxGx = allCells[0].gx;
+    var minGy = allCells[0].gy, maxGy = allCells[0].gy;
+    for (var i = 1; i < allCells.length; i++) {
+      var c = allCells[i];
+      if (c.gx < minGx) minGx = c.gx; if (c.gx > maxGx) maxGx = c.gx;
+      if (c.gy < minGy) minGy = c.gy; if (c.gy > maxGy) maxGy = c.gy;
     }
 
-    // Row 0 (μ⁰) at bottom (largest y), top row at smallest y
-    var topY = margin + u;
-    function rowY(ri) { return topY + (numRows - 1 - ri) * u; }
+    var spanX = maxGx - minGx + 1, spanY = maxGy - minGy + 1;
+    var margin = 4;
+    var cellSize = Math.min((cw - 2 * margin) / (spanX + 1), (ch - 2 * margin) / (spanY + 1));
+    cellSize = Math.min(cellSize, 24);
+    var radius = cellSize * 0.35;
+    var midGx = (minGx + maxGx + 1) / 2, midGy = (minGy + maxGy + 1) / 2;
+    var parityOffset = nn;
 
-    // Build row data with correct h (number of particles per diagonal)
-    var rows = [];
-    for (var ri = 0; ri < sorted.length; ri++) {
-      var entry = sorted[ri];
-      var isLam = entry.type === 'lam';
-      var nPos = isLam ? nLam : nMu;
-      var h = isLam ? (n - (entry.level - 1)) : (n - entry.level);
-      if (h < 0) h = 0;
-      var positions = partitionToPositions(entry.part, h);
-      var pSet = {};
-      for (var pi = 0; pi < positions.length; pi++) pSet[positions[pi]] = true;
-      rows.push({ entry: entry, isLam: isLam, nPos: nPos, pSet: pSet, y: rowY(ri) });
+    function pxX(gx) { return cw / 2 + (gx - midGx) * cellSize; }
+    function pxY(gy) { return ch / 2 - (gy + 1 - midGy) * cellSize; }
+
+    // ── 2. Draw checkerboard for ALL cells ──
+    for (var i = 0; i < allCells.length; i++) {
+      var c = allCells[i];
+      var isWhite = ((c.gx + c.gy + parityOffset) % 2 + 2) % 2 === 0;
+      ctx.fillStyle = isWhite ? '#d8d8d8' : '#fff';
+      ctx.fillRect(pxX(c.gx), pxY(c.gy), cellSize, cellSize);
     }
 
-    // Draw dominos: for each μ row, particles go UP to λ above, holes go DOWN to λ below
-    for (var ri = 0; ri < rows.length; ri++) {
-      var row = rows[ri];
-      if (row.isLam) continue; // Only process μ rows
-
-      var muParticles = [], muHoles = [];
-      for (var j = 1; j <= row.nPos; j++) {
-        if (row.pSet[j]) muParticles.push(j); else muHoles.push(j);
-      }
-
-      // Particle dominos: μ particles → λ ABOVE particles
-      var lamAbove = (ri + 1 < rows.length) ? rows[ri + 1] : null;
-      if (lamAbove && muParticles.length > 0) {
-        var pTarget = {};
-        for (var j = 1; j <= lamAbove.nPos; j++) if (lamAbove.pSet[j]) pTarget[j] = true;
-        var pPairs = bipartiteMatch(muParticles, pTarget, lamAbove.nPos, false);
-        for (var di = 0; di < pPairs.length; di++) {
-          var p = pPairs[di];
-          drawDomino(ctx, posX(p.mid, false), row.y,
-                     posX(p.outer, true), lamAbove.y, u, DOMINO_GREEN, DOMINO_EDGE);
-        }
-      }
-
-      // Hole dominos: μ holes → λ BELOW holes
-      var lamBelow = (ri - 1 >= 0) ? rows[ri - 1] : null;
-      if (lamBelow && muHoles.length > 0) {
-        var hTarget = {};
-        for (var j = 1; j <= lamBelow.nPos; j++) if (!lamBelow.pSet[j]) hTarget[j] = true;
-        var hPairs = bipartiteMatch(muHoles, hTarget, lamBelow.nPos, false);
-        for (var di = 0; di < hPairs.length; di++) {
-          var p = hPairs[di];
-          drawDomino(ctx, posX(p.mid, false), row.y,
-                     posX(p.outer, true), lamBelow.y, u, 'rgba(200,200,200,0.25)', DOMINO_EDGE);
-        }
-      }
-    }
-
-    // Draw circles on top — μ orange, λ green
-    for (var ri = 0; ri < rows.length; ri++) {
-      var row = rows[ri];
-      var color = row.isLam ? GREEN : ORANGE;
-      for (var j = 1; j <= row.nPos; j++) {
-        var x = posX(j, row.isLam);
-        if (row.pSet[j]) {
-          drawCircle(ctx, x, row.y, radius, color, null, 0);
+    if (viewMode === 'dimers') {
+      // ── DIMER VIEW: dots connected by thick lines ──
+      var dotR = cellSize * 0.18;
+      var lineW = Math.max(2, cellSize * 0.14);
+      var hasAlpha = !document.getElementById('gt-a-one').checked; // show a-weighted dimers
+      ctx.lineCap = 'round';
+      for (var i = 0; i < dominos.length; i++) {
+        var d = dominos[i];
+        // When α is set: highlight dimers carrying weight a (horizontal, black→white)
+        var color = hasAlpha ? (d.isAlpha ? '#c00' : '#aaa') : '#000';
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineW;
+        var cx1, cy1, cx2, cy2;
+        if (d.horiz) {
+          cx1 = pxX(d.gx) + cellSize / 2;
+          cy1 = pxY(d.gy) + cellSize / 2;
+          cx2 = pxX(d.gx + 1) + cellSize / 2;
+          cy2 = cy1;
         } else {
-          drawCircle(ctx, x, row.y, radius, '#fafafa', HOLE_STROKE, 1.5);
+          cx1 = pxX(d.gx) + cellSize / 2;
+          cy1 = pxY(d.gy) + cellSize / 2;
+          cx2 = cx1;
+          cy2 = pxY(d.gy + 1) + cellSize / 2;
+        }
+        // Line
+        ctx.beginPath();
+        ctx.moveTo(cx1, cy1);
+        ctx.lineTo(cx2, cy2);
+        ctx.stroke();
+        // Dots
+        ctx.beginPath(); ctx.arc(cx1, cy1, dotR, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx2, cy2, dotR, 0, Math.PI * 2); ctx.fill();
+      }
+    } else {
+      // ── PARTICLE VIEW ──
+      // 3. Draw domino outlines
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = Math.max(1.5, cellSize / 8);
+      for (var i = 0; i < dominos.length; i++) {
+        var d = dominos[i];
+        if (d.horiz) {
+          ctx.strokeRect(pxX(d.gx), pxY(d.gy), 2 * cellSize, cellSize);
+        } else {
+          ctx.strokeRect(pxX(d.gx), pxY(d.gy + 1), cellSize, 2 * cellSize);
+        }
+      }
+      // 4. Draw circles at cell centers
+      for (var i = 0; i < allCells.length; i++) {
+        var c = allCells[i];
+        var cx = pxX(c.gx) + cellSize / 2;
+        var cy = pxY(c.gy) + cellSize / 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        if (c.isParticle) {
+          var isWhiteCell = ((c.gx + c.gy + parityOffset) % 2 + 2) % 2 === 0;
+          ctx.fillStyle = isWhiteCell ? '#228B22' : '#FF8C00';
+          ctx.fill();
+        } else {
+          ctx.fillStyle = '#fff';
+          ctx.fill();
+          ctx.strokeStyle = '#000';
+          ctx.lineWidth = Math.max(1, cellSize / 12);
+          ctx.stroke();
         }
       }
     }
 
     ctx.restore();
+
   }
 
   function drawDomino(ctx, cx1, cy1, cx2, cy2, u, fill, stroke) {
@@ -635,9 +745,107 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
     document.getElementById('gt-terms').textContent = nonZero;
     document.getElementById('gt-time').textContent = elapsed + ' ms';
 
+    // Compute global nn from ALL configs (needed for domino reconstruction)
+    var globalNN = 1;
+    for (var ci0 = 0; ci0 < result.configs.length; ci0++) {
+      var cc0 = result.configs[ci0];
+      for (var ei0 = 0; ei0 < cc0.length; ei0++) {
+        var e0 = cc0[ei0];
+        globalNN = Math.max(globalNN, e0.type === 'lam' ? e0.part.length + e0.level - 1 : e0.part.length + e0.level);
+      }
+    }
+
     var polyEl = document.getElementById('gt-poly');
-    if (nonZero === 0) { polyEl.textContent = '0 (no valid GT patterns)'; }
-    else { renderLatex('\\displaystyle ' + polyToLatex(result.poly, k, yZero), polyEl, false); }
+    var aOne = document.getElementById('gt-a-one').checked;
+
+    if (nonZero === 0) {
+      polyEl.textContent = '0 (no valid GT patterns)';
+    } else if (!aOne) {
+      // Full polynomial in x_i, y_i AND a (2×2 periodic weight)
+      // For each config: standard (x,y) exponents + a^(count of α-dimers)
+      var numVarsOrig = yZero ? k : (2 * k - 1);
+      var polyA = new Map(); // keys have numVarsOrig + 1 entries (last = a exponent)
+      for (var ci2 = 0; ci2 < result.configs.length; ci2++) {
+        var cfg = result.configs[ci2];
+        // Compute (x,y) exponents
+        var sorted2 = cfg.slice().sort(function(a, b) {
+          if (a.level !== b.level) return a.level - b.level;
+          return a.type === 'lam' ? -1 : 1;
+        });
+        var byKey2 = {};
+        for (var ei2 = 0; ei2 < sorted2.length; ei2++)
+          byKey2[(sorted2[ei2].type === 'mu' ? 'mu' : 'lam') + sorted2[ei2].level] = sorted2[ei2].part;
+        var expsA = new Array(numVarsOrig + 1).fill(0);
+        for (var j2 = 1; j2 <= k; j2++) {
+          var lam2 = byKey2['lam' + j2] || [];
+          var muPrev2 = byKey2['mu' + (j2 - 1)] || [];
+          expsA[yZero ? (j2 - 1) : 2 * (j2 - 1)] = partSize(lam2) - partSize(muPrev2);
+          if (!yZero && j2 < k) {
+            var muCur2 = byKey2['mu' + j2] || [];
+            expsA[2 * (j2 - 1) + 1] = partSize(lam2) - partSize(muCur2);
+          }
+        }
+        // Count α-dimers
+        var rd2 = reconstructDominos(cfg, k, globalNN);
+        var aDeg2 = 0;
+        for (var di2 = 0; di2 < rd2.dominos.length; di2++) {
+          if (rd2.dominos[di2].isAlpha) aDeg2++;
+        }
+        expsA[numVarsOrig] = aDeg2;
+        polyAddTo(polyA, makeKey(expsA), 1);
+      }
+      // Format as LaTeX with variable names x1,y1,...,xk,a
+      var varNamesA = [];
+      if (yZero) { for (var i = 1; i <= k; i++) varNamesA.push('x_{' + i + '}'); }
+      else { for (var i = 1; i <= k; i++) { varNamesA.push('x_{' + i + '}'); if (i < k) varNamesA.push('y_{' + i + '}'); } }
+      varNamesA.push('a');
+      var entriesA = [];
+      polyA.forEach(function(c, key) { if (c !== 0) entriesA.push([key, c]); });
+      entriesA.sort(function(a, b) {
+        var ea = parseKey(a[0]), eb = parseKey(b[0]);
+        var sa = 0, sb = 0;
+        for (var i = 0; i < ea.length; i++) sa += ea[i];
+        for (var i = 0; i < eb.length; i++) sb += eb[i];
+        if (sa !== sb) return sb - sa;
+        for (var i = 0; i < ea.length; i++) { if (ea[i] !== eb[i]) return eb[i] - ea[i]; }
+        return 0;
+      });
+      var latexA = '';
+      for (var t = 0; t < entriesA.length; t++) {
+        var key = entriesA[t][0], coeff = entriesA[t][1];
+        var exps = parseKey(key), absC = Math.abs(coeff), sign = coeff > 0 ? '+' : '-';
+        var mono = '';
+        for (var i = 0; i < exps.length; i++) {
+          if (exps[i] === 0) continue;
+          if (exps[i] === 1) mono += varNamesA[i];
+          else mono += varNamesA[i] + '^{' + exps[i] + '}';
+        }
+        if (mono === '') mono = String(absC);
+        else if (absC !== 1) mono = absC + '\\,' + mono;
+        if (t === 0) latexA += (coeff < 0 ? '-' : '') + mono;
+        else latexA += ' ' + sign + ' ' + mono;
+        if (t >= MAX_LATEX_TERMS - 1 && t < entriesA.length - 1) {
+          latexA += ' + \\cdots\\;(' + (entriesA.length - t - 1) + '\\text{ more terms})';
+          break;
+        }
+      }
+      renderLatex('\\displaystyle ' + (latexA || '0'), polyEl, false);
+      // Mathematica string for α polynomial
+      var mmaVarNamesA = [];
+      if (yZero) { for (var i = 1; i <= k; i++) mmaVarNamesA.push('x[' + i + ']'); }
+      else { for (var i = 1; i <= k; i++) { mmaVarNamesA.push('x[' + i + ']'); if (i < k) mmaVarNamesA.push('y[' + i + ']'); } }
+      mmaVarNamesA.push('a');
+      lastMmaString = polyToMma(polyA, mmaVarNamesA);
+    } else {
+      renderLatex('\\displaystyle ' + polyToLatex(result.poly, k, yZero), polyEl, false);
+      // Mathematica string for standard polynomial
+      var mmaVarNames = [];
+      if (yZero) { for (var i = 1; i <= k; i++) mmaVarNames.push('x[' + i + ']'); }
+      else { for (var i = 1; i <= k; i++) { mmaVarNames.push('x[' + i + ']'); if (i < k) mmaVarNames.push('y[' + i + ']'); } }
+      lastMmaString = polyToMma(result.poly, mmaVarNames);
+    }
+    var copyBtn = document.getElementById('gt-copy-mma');
+    copyBtn.style.display = nonZero > 0 ? 'inline-block' : 'none';
 
     // SSYT verification when y=0
     var verifyEl = document.getElementById('gt-verify');
@@ -646,7 +854,7 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
       var ssytPoly = computeSchurSSYT(conjLam, k);
       var match = polyEqual(result.poly, ssytPoly);
       verifyEl.innerHTML = match
-        ? '<span style="color:#1a6b2e;">✓ = s<sub>' + partStr(conjLam) + '</sub>(x<sub>1</sub>,…,x<sub>' + k + '</sub>)</span>'
+        ? '<span style="color:#1a6b2e;">✓ At a=1, yᵢ=0: matches s<sub>' + partStr(conjLam) + '</sub>(x<sub>1</sub>,…,x<sub>' + k + '</sub>) via SSYT</span>'
         : '<span style="color:#c00;">✗ MISMATCH with s<sub>' + partStr(conjLam) + '</sub></span>';
       verifyEl.style.display = 'block';
     } else { verifyEl.style.display = 'none'; }
@@ -661,8 +869,8 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
       if (yZero) { for (var j = 1; j <= k; j++) varN.push('x' + toSub(j)); }
       else { for (var j = 1; j <= k; j++) { varN.push('x' + toSub(j)); if (j < k) varN.push('y' + toSub(j)); } }
 
-      var numRows = yZero ? (2 * k) : (2 * k);  // mu0, lam1, [mu1, lam2, ...], lamK
-      var canvasW = 260, canvasH = Math.max(100, numRows * 22 + 30);
+      var numRows = 2 * k + 1;
+      var canvasW = 420, canvasH = Math.max(200, (2 * globalNN + 2) * 22 + 50);
       var dpr = window.devicePixelRatio || 1;
 
       var html = '<strong>' + result.configs.length + ' configurations:</strong><br>';
@@ -673,7 +881,7 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
         // Compute weight
         var sorted = c.slice().sort(function(a, b) {
           if (a.level !== b.level) return a.level - b.level;
-          return a.type === 'mu' ? -1 : 1;
+          return a.type === 'lam' ? -1 : 1;
         });
         var byKey = {};
         for (var ei = 0; ei < sorted.length; ei++)
@@ -711,7 +919,8 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
         block.appendChild(cvs);
         configsEl.appendChild(block);
 
-        renderConfig(cvs, c, k, yZero);
+        var viewMode = document.getElementById('gt-view').value;
+        renderConfig(cvs, c, k, yZero, globalNN, viewMode);
       }
       configsEl.style.display = 'block';
     } else { configsEl.style.display = 'none'; }
@@ -719,6 +928,13 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
     resultEl.style.display = 'block';
   }
 
+  document.getElementById('gt-copy-mma').addEventListener('click', function() {
+    navigator.clipboard.writeText(lastMmaString).then(function() {
+      var btn = document.getElementById('gt-copy-mma');
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = 'Copy Mathematica'; }, 1500);
+    });
+  });
   document.getElementById('gt-compute').addEventListener('click', doCompute);
   document.getElementById('gt-k').addEventListener('change', updateChainDisplay);
   document.getElementById('gt-lambda').addEventListener('keydown', function(e) {
@@ -726,5 +942,8 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
   });
 
   updateChainDisplay();
+  // Run compute after page fully loads (KaTeX may not be ready yet)
+  if (document.readyState === 'complete') { doCompute(); }
+  else { window.addEventListener('load', doCompute); }
 })();
 </script>
