@@ -33,17 +33,17 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
 </style>
 
 <div class="gt-row">
-  <label>Level k:</label>
-  <select id="gt-k" aria-label="Level k">
+  <label>N:</label>
+  <select id="gt-k" aria-label="Number of variables N">
     <option value="1">1</option>
     <option value="2">2</option>
     <option value="3" selected>3</option>
     <option value="4">4</option>
     <option value="5">5</option>
   </select>
-  <label style="margin-left:12px;">λ':</label>
-  <input id="gt-lambda" type="text" value="(2,2,1)" placeholder="(2,2,1)" aria-label="Partition lambda-prime">
-  <span class="gt-info" style="color:#888;">(parts ≤ k; SSYT shape)</span>
+  <label style="margin-left:12px;">λ:</label>
+  <input id="gt-lambda" type="text" value="(2,2,1)" placeholder="(2,2,1)" aria-label="Partition lambda">
+  <span class="gt-info" style="color:#888;">(parts ≤ N; SSYT shape)</span>
 </div>
 
 <div class="gt-row">
@@ -53,12 +53,6 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
   </label>
   <label style="margin-left:12px; font-size:13px;">
     <input type="checkbox" id="gt-a-one"> Set a=1
-  </label>
-  <label style="margin-left:12px; font-size:13px;">
-    a-weight: <select id="gt-a-parity" style="font-size:13px;">
-      <option value="odd">odd entries</option>
-      <option value="even">even entries</option>
-    </select> on dark cells
   </label>
 </div>
 
@@ -293,13 +287,12 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
   // ═══════════════════════════════════════════════════
 
   function countAlphaSSYT(ssyt) {
-    var entryParity = document.getElementById('gt-a-parity').value === 'odd' ? 1 : 0;
     var count = 0;
     var alphaBoxes = new Set();
     for (var r = 0; r < ssyt.shape.length; r++) {
       for (var c = 0; c < ssyt.shape[r]; c++) {
         var entry = ssyt.filling[r][c];
-        if ((entry % 2) === entryParity && (r + c) % 2 === 0) {
+        if (entry % 2 === 1 && (r + c) % 2 === 0) {
           count++;
           alphaBoxes.add(entry + ',' + c); // key: "level,origRow"
         }
@@ -444,7 +437,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
     chain += '  (fixed)';
     document.getElementById('gt-chain').textContent = chain;
     var formulaEl = document.getElementById('gt-formula');
-    var latex = '\\displaystyle s_{\\lambda\'}(x_1,\\ldots,x_' + k + ') = \\sum ';
+    var latex = '\\displaystyle s_{\\lambda}(x_1,\\ldots,x_' + k + ') = \\sum ';
     for (var i = 1; i <= k; i++) {
       latex += 'x_{' + i + '}^{|\\lambda^{' + i + '}|-|\\lambda^{' + (i - 1) + '}|}';
       if (i < k) latex += '\\, ';
@@ -464,11 +457,12 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
     var lambda = parsePartition(lambdaStr);
     if (lambda === null) { errorEl.textContent = 'Invalid partition.'; return; }
     if (lambda.length > 0 && lambda[0] > k) {
-      errorEl.textContent = 'Largest part (' + lambda[0] + ') must be ≤ k = ' + k; return;
+      errorEl.textContent = 'Largest part (' + lambda[0] + ') must be ≤ N = ' + k; return;
     }
 
     var t0 = performance.now();
-    var result = computeGTSchemes(lambda, k);
+    var gtEndpoint = conjugatePartition(lambda); // GT scheme ends at conj(λ)
+    var result = computeGTSchemes(gtEndpoint, k);
     var elapsed = (performance.now() - t0).toFixed(1);
 
     var nonZero = 0;
@@ -498,7 +492,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
           expsX[sortedCfg[j].level - 1] = partSize(sortedCfg[j].part) - prevSize;
           prevSize = partSize(sortedCfg[j].part);
         }
-        var ssyt = configToSSYT(cfg, lambda);
+        var ssyt = configToSSYT(cfg, gtEndpoint);
         var alphaRes = countAlphaSSYT(ssyt);
         var fullExps = expsX.concat([alphaRes.count]);
         polyAddTo(polyA, makeKey(fullExps), 1);
@@ -518,12 +512,11 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
     // SSYT verification
     var verifyEl = document.getElementById('gt-verify');
     if (nonZero > 0) {
-      var conjLam = conjugatePartition(lambda);
-      var ssytPoly = computeSchurSSYT(conjLam, k);
+      var ssytPoly = computeSchurSSYT(lambda, k);
       var match = polyEqual(result.poly, ssytPoly);
       verifyEl.innerHTML = match
-        ? '<span style="color:#1a6b2e;">✓ At a=1: matches s<sub>' + partStr(conjLam) + '</sub>(x<sub>1</sub>,…,x<sub>' + k + '</sub>) via SSYT</span>'
-        : '<span style="color:#c00;">✗ MISMATCH with s<sub>' + partStr(conjLam) + '</sub></span>';
+        ? '<span style="color:#1a6b2e;">✓ At a=1: matches s<sub>' + partStr(lambda) + '</sub>(x<sub>1</sub>,…,x<sub>' + k + '</sub>) via SSYT</span>'
+        : '<span style="color:#c00;">✗ MISMATCH with s<sub>' + partStr(lambda) + '</sub></span>';
       verifyEl.style.display = 'block';
     } else { verifyEl.style.display = 'none'; }
 
@@ -531,7 +524,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
     var configsEl = document.getElementById('gt-configs');
     if (document.getElementById('gt-show-configs').checked && result.configs.length > 0) {
       var maxShow = Math.min(result.configs.length, 200);
-      var html = '<strong>' + result.configs.length + ' tableaux (shape ' + partStr(conjugatePartition(lambda)) + '):</strong><br>';
+      var html = '<strong>' + result.configs.length + ' tableaux (shape ' + partStr(lambda) + '):</strong><br>';
       for (var ci = 0; ci < maxShow; ci++) {
         var cfg = result.configs[ci];
         var sortedCfg = cfg.slice().sort(function(a, b) { return a.level - b.level; });
@@ -542,7 +535,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
           prevSize = partSize(sortedCfg[j].part);
           if (exp > 0) weightParts.push('x' + toSub(sortedCfg[j].level) + (exp === 1 ? '' : toSup(exp)));
         }
-        var ssyt = configToSSYT(cfg, lambda);
+        var ssyt = configToSSYT(cfg, gtEndpoint);
         var alphaBoxesSet = null;
         if (!aOne) {
           var alphaRes = countAlphaSSYT(ssyt);
