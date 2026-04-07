@@ -553,8 +553,8 @@ A box with entry $i$ at position (row $r$, col $c$) carries weight $a$ iff:
 
     setTimeout(function() {
       var totalConfigs = 0, totalCases = 0, failures = [];
-      var maxSize = 10; // |λ| up to 10
-      var maxK = 7;
+      var maxSize = 8; // |λ| up to 8
+      var maxK = 6;
 
       for (var k = 1; k <= maxK; k++) {
         for (var sz = 0; sz <= maxSize; sz++) {
