@@ -722,9 +722,16 @@ document.addEventListener('keyup', function(e) {
   boardC.addEventListener('touchend', function(e) {
     if (state !== 'playing' || !piece) return;
     e.preventDefault();
+    var t = e.changedTouches[0];
+    var dy = t.clientY - startY;
     var elapsed = performance.now() - startTime;
-    if (movedCells === 0 && elapsed < 300) {
-      // Tap = rotate
+    // Swipe up = hard drop (check first to prevent rotate)
+    if (dy < -60) {
+      hardDrop();
+      return;
+    }
+    // Tap = rotate (no movement, short duration)
+    if (movedCells === 0 && elapsed < 300 && Math.abs(dy) < 15) {
       rotatePiece();
     }
   }, {passive: false});
@@ -801,22 +808,6 @@ overlayBtn.addEventListener('click', function() {
 document.addEventListener('visibilitychange', function() {
   if (document.hidden && state === 'playing') togglePause();
 });
-
-// ── Swipe up/down on board for hard drop ──
-(function() {
-  var sy = 0, active = false;
-  boardC.addEventListener('touchstart', function(e) {
-    sy = e.touches[0].clientY;
-    active = true;
-  }, {passive: true});
-  boardC.addEventListener('touchend', function(e) {
-    if (!active || state !== 'playing' || !piece) return;
-    active = false;
-    var dy = e.changedTouches[0].clientY - sy;
-    // Fast swipe up = hard drop (alternative gesture)
-    if (dy < -60) hardDrop();
-  }, {passive: true});
-})();
 
 // ── Init ──
 function init() {

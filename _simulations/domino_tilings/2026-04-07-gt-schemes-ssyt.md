@@ -329,7 +329,7 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes (seq
   }
 
   // Reconstruct dominos from a GT scheme config (y=0 means μ^i = λ^i)
-  // Returns count of α-weighted dimers
+  // Returns {count, alphaBoxes} where alphaBoxes is Set of "level,origRow" strings
   function countAlphaDimers(config, k, nn) {
     // Build the full interlacing sequence: μ⁰=∅, λ¹, μ¹=λ¹, λ², μ²=λ², ..., λ^k
     // With y=0: μ^i = λ^i for all i
@@ -367,16 +367,24 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes (seq
 
     var xPar = document.getElementById('gt-a-parity').value === 'odd' ? 1 : 0;
     var alphaCount = 0;
+    var alphaBoxes = new Set(); // "level,origRow" keys for α-weighted boxes
+
+    // Store level info per diagonal
+    var diagLevels = [];
+    for (var ri = 0; ri < sorted.length; ri++) diagLevels.push(sorted[ri].level);
 
     for (var ri = 0; ri < diagInfo.length; ri++) {
       var diag = diagInfo[ri];
       if (diag.isLam) continue;
       var muParticles = [];
       for (var j = 1; j <= diag.nPos; j++) if (diag.posSet[j]) muParticles.push(j);
+      var h_mu = muParticles.length;
 
+      // Particle dominos: μ particles → λ ABOVE particles
       var lamAboveIdx = ri + 1;
       if (lamAboveIdx < diagInfo.length && muParticles.length > 0) {
         var lamAbove = diagInfo[lamAboveIdx];
+        var lamLevel = diagLevels[lamAboveIdx]; // this is level i of λ^i
         var pTarget = {};
         for (var j = 1; j <= lamAbove.nPos; j++) if (lamAbove.posSet[j]) pTarget[j] = true;
         var pPairs = bipartiteMatch(muParticles, pTarget, lamAbove.nPos, false);
@@ -390,10 +398,17 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes (seq
               && (((gx + gy) % 4 + 4) % 4 === 2)
               && (((gx % 2) + 2) % 2 === xPar)) {
             alphaCount++;
+            // Determine partition row: particle at muParticles index → row h_mu - idx
+            // p.mid is the diagonal position; find its index in muParticles
+            var pidx = muParticles.indexOf(p.mid);
+            if (pidx >= 0) {
+              var origRow = h_mu - 1 - pidx; // 0-indexed partition row
+              alphaBoxes.add(lamLevel + ',' + origRow);
+            }
           }
         }
       }
-      // Hole dominos (μ holes → λ below) — same logic
+      // Hole dominos (μ holes → λ below) — these don't add boxes, skip for SSYT tracking
       var muHoles = [];
       for (var j = 1; j <= diag.nPos; j++) if (!diag.posSet[j]) muHoles.push(j);
       var lamBelowIdx = ri - 1;
@@ -416,7 +431,7 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes (seq
         }
       }
     }
-    return alphaCount;
+    return { count: alphaCount, alphaBoxes: alphaBoxes };
   }
 
   // ═══════════════════════════════════════════════════
@@ -543,7 +558,9 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes (seq
   var ssytColors = ['#e6194b','#3cb44b','#4363d8','#f58231','#911eb4',
                     '#42d4f4','#f032e6','#bfef45','#fabed4','#469990'];
 
-  function renderSSYThtml(ssyt) {
+  // alphaBoxes: Set of "level,origRow" strings (or null if a=1)
+  // SSYT cell at (r,c) → original λ cell at (c,r) → origRow = c
+  function renderSSYThtml(ssyt, alphaBoxes) {
     var shape = ssyt.shape, filling = ssyt.filling;
     if (shape.length === 0) return '<span style="font-size:12px;color:#888;">∅</span>';
     var maxCols = shape[0];
@@ -552,9 +569,12 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes (seq
       html += '<tr>';
       for (var c = 0; c < maxCols; c++) {
         if (c < shape[r]) {
-          var val = filling[r][c];
+          var val = filling[r][c]; // val = level
+          var origRow = c;         // SSYT(r,c) → λ(c,r), original row = c
+          var isAlpha = alphaBoxes && alphaBoxes.has(val + ',' + origRow);
           var col = ssytColors[(val - 1) % ssytColors.length];
-          html += '<td style="color:' + col + ';">' + val + '</td>';
+          var bg = isAlpha ? '#ffe0e0' : '#fff';
+          html += '<td style="color:' + col + ';background:' + bg + ';">' + val + '</td>';
         } else {
           html += '<td class="empty"></td>';
         }
@@ -650,7 +670,8 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes (seq
           prevSize = partSize(sortedCfg[j].part);
         }
         // α count from dimer engine
-        var aDeg = countAlphaDimers(cfg, k, globalNN);
+        var alphaResult = countAlphaDimers(cfg, k, globalNN);
+        var aDeg = alphaResult.count;
         var fullExps = expsX.concat([aDeg]);
         polyAddTo(polyA, makeKey(fullExps), 1);
       }
@@ -695,15 +716,17 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes (seq
           prevSize = partSize(sortedCfg[j].part);
           if (exp > 0) weightParts.push('x' + toSub(sortedCfg[j].level) + (exp === 1 ? '' : toSup(exp)));
         }
+        var alphaBoxesSet = null;
         if (!aOne) {
-          var aDeg = countAlphaDimers(cfg, k, globalNN);
-          if (aDeg > 0) weightParts.push('a' + (aDeg === 1 ? '' : toSup(aDeg)));
+          var alphaRes = countAlphaDimers(cfg, k, globalNN);
+          if (alphaRes.count > 0) weightParts.push('a' + (alphaRes.count === 1 ? '' : toSup(alphaRes.count)));
+          alphaBoxesSet = alphaRes.alphaBoxes;
         }
         var weightStr = weightParts.length > 0 ? weightParts.join('') : '1';
 
         var ssyt = configToSSYT(cfg, lambda);
         var block = '<div class="config-block"><div class="config-header">#' + (ci + 1) + ' ' + weightStr + '</div>';
-        block += renderSSYThtml(ssyt);
+        block += renderSSYThtml(ssyt, alphaBoxesSet);
         block += '</div>';
         html += block;
       }
