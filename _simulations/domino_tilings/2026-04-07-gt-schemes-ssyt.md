@@ -40,6 +40,9 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
     <option value="3" selected>3</option>
     <option value="4">4</option>
     <option value="5">5</option>
+    <option value="6">6</option>
+    <option value="7">7</option>
+    <option value="8">8</option>
   </select>
   <label style="margin-left:12px;">λ:</label>
   <input id="gt-lambda" type="text" value="(2,2,1)" placeholder="(2,2,1)" aria-label="Partition lambda">
