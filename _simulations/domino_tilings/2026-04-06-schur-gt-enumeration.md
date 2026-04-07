@@ -506,7 +506,7 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
           var gx = Math.min(x1, x2), gy = Math.min(y1, y2);
           var horiz = (y1 === y2);
           // isAlpha: horizontal AND left cell is black (odd parity)
-          var isA = horiz && (((gx + gy + parityOffset) % 2 + 2) % 2 === 1);
+          var isA = horiz && (((gx + gy + parityOffset) % 2 + 2) % 2 === 1) && (((gx + gy) % 4 + 4) % 4 === 2) && (((gx % 2) + 2) % 2 === 1);
           dominos.push({ gx: gx, gy: gy, horiz: horiz, isParticle: true, isAlpha: isA });
         }
       }
@@ -522,7 +522,7 @@ a11y-description: "Interactive tool for computing Schur-type polynomials by enum
           var x2 = lamBelow.x_min + (p.outer - 1), y2 = lamBelow.d_val - x2;
           var gx = Math.min(x1, x2), gy = Math.min(y1, y2);
           var horiz = (y1 === y2);
-          var isA = horiz && (((gx + gy + parityOffset) % 2 + 2) % 2 === 1);
+          var isA = horiz && (((gx + gy + parityOffset) % 2 + 2) % 2 === 1) && (((gx + gy) % 4 + 4) % 4 === 2) && (((gx % 2) + 2) % 2 === 1);
           dominos.push({ gx: gx, gy: gy, horiz: horiz, isParticle: false, isAlpha: isA });
         }
       }
