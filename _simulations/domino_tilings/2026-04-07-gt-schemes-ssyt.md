@@ -837,7 +837,8 @@ A box with entry $i$ at position (row $r$, col $c$) carries weight $a$ iff:
     document.getElementById('gt-count').textContent =
       result.configCount + (result.aborted ? ' (aborted)' : '');
     document.getElementById('gt-terms').textContent = nonZero;
-    document.getElementById('gt-time').textContent = elapsed + ' ms';
+    document.getElementById('gt-time').textContent = elapsed + ' ms' +
+      (globalNN % 2 === 0 && !aOne ? '  ⚠ nn=' + globalNN + ' is even → no α-weight (try different λ\' or k)' : '  (nn=' + globalNN + ')');
 
     var polyEl = document.getElementById('gt-poly');
     var xVarLatex = []; var xVarMma = [];
