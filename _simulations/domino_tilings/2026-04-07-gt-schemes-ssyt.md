@@ -80,6 +80,11 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
 
 <div id="gt-error" class="gt-error"></div>
 
+<div id="gt-branching" style="margin-top:12px;padding:10px;background:#f0f8f0;border:1px solid #ccc;border-radius:4px;display:none;">
+  <div style="font-weight:bold;font-size:13px;margin-bottom:6px;">Branching rule check: s<sub>λ</sub>(x<sub>1</sub>,…,x<sub>N</sub>) = Σ<sub>μ⊂λ</sub> s<sub>μ</sub>(x<sub>1</sub>,…,x<sub>M</sub>) · s<sub>λ/μ</sub>(x<sub>M+1</sub>,…,x<sub>N</sub>)</div>
+  <div id="gt-branching-result" class="gt-info"></div>
+</div>
+
 <details style="margin-top: 16px;">
 <summary style="cursor: pointer; font-weight: bold; font-size: 14px;">How it works</summary>
 <div style="margin-top: 8px; font-size: 14px; line-height: 1.6;">
@@ -596,6 +601,61 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
     } else { configsEl.style.display = 'none'; }
 
     resultEl.style.display = 'block';
+
+    // ── Branching rule check ──
+    var branchEl = document.getElementById('gt-branching');
+    var branchResEl = document.getElementById('gt-branching-result');
+    if (nonZero > 0 && k >= 2 && mu.length === 0) {
+      branchEl.style.display = 'block';
+      var M = Math.floor(k / 2); // split: first M variables, last N-M variables
+      // Compute s_λ(x_1,...,x_N) via SSYT
+      var sLam = computeSchurSSYT(lambda, k);
+      // Enumerate all μ ⊂ λ: subpartitions
+      var allMu = [];
+      function enumSubs(lam, idx, cur) {
+        if (idx >= lam.length) {
+          var t = cur.slice(); while (t.length > 0 && t[t.length-1] === 0) t.pop();
+          allMu.push(t); return;
+        }
+        var hi = lam[idx], lo = (idx+1 < lam.length ? lam[idx+1] : 0);
+        // Also bounded by previous part of cur
+        if (idx > 0) hi = Math.min(hi, cur[idx-1]);
+        for (var v = lo; v <= hi; v++) { cur.push(v); enumSubs(lam, idx+1, cur); cur.pop(); }
+      }
+      enumSubs(lambda, 0, []);
+
+      // Sum: Σ_μ s_μ(x_1,...,x_M) * s_{λ/μ}(x_{M+1},...,x_N)
+      var branchSum = new Map();
+      var branchTerms = [];
+      for (var mi = 0; mi < allMu.length; mi++) {
+        var muB = allMu[mi];
+        // s_μ in x_1,...,x_M
+        var sMu = computeSchurSSYT(muB, M);
+        // s_{λ/μ} in variables x_{M+1},...,x_N (N-M variables)
+        var conjLamB = conjugatePartition(lambda);
+        var conjMuB = conjugatePartition(muB);
+        var skewResult = computeGTSchemes(conjLamB, k - M, conjMuB);
+        if (skewResult.configCount === 0) continue;
+        var sSkew = skewResult.poly; // polynomial in (k-M) variables
+
+        // Multiply: s_μ(x_1..x_M) * s_{λ/μ}(x_{M+1}..x_N) → polynomial in N variables
+        sMu.forEach(function(cMu, keyMu) {
+          sSkew.forEach(function(cSkew, keySkew) {
+            var expsFull = parseKey(keyMu).concat(parseKey(keySkew));
+            polyAddTo(branchSum, makeKey(expsFull), cMu * cSkew);
+          });
+        });
+        if (partSize(muB) > 0 || muB.length === 0)
+          branchTerms.push(partStr(muB));
+      }
+
+      var branchMatch = polyEqual(sLam, branchSum);
+      branchResEl.innerHTML = branchMatch
+        ? '<span style="color:#1a6b2e;">✓ Branching rule verified (M=' + M + ', ' + allMu.length + ' subpartitions μ: ' + branchTerms.slice(0,10).join(', ') + (branchTerms.length > 10 ? ', …' : '') + ')</span>'
+        : '<span style="color:#c00;">✗ Branching rule FAILED (M=' + M + ')</span>';
+    } else {
+      branchEl.style.display = 'none';
+    }
   }
 
   document.getElementById('gt-copy-mma').addEventListener('click', function() {
