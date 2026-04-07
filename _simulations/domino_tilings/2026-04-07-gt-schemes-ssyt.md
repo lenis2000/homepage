@@ -476,9 +476,8 @@ A box with entry $i$ at position (row $r$, col $c$) carries weight $a$ iff:
       for (var c = 0; c < ssyt.shape[r]; c++) {
         var i = ssyt.filling[r][c]; // entry = level
         var cond1 = (((2 * i - nn - 3) % 4) + 4) % 4 === 2;
-        var cond2 = xPar === 1
-          ? ((r + c) % 2 === 0)
-          : ((r + c) % 2 === 1);
+        // gx = r - c - 1, so gx % 2 = (r - c - 1) % 2 = (r + c + 1) % 2
+        var cond2 = ((((r + c + 1) % 2) + 2) % 2) === xPar;
         if (cond1 && cond2) {
           count++;
           // To match dimer engine key format: "level,origRow" where origRow = c
