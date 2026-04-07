@@ -344,7 +344,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
           var origRow = c;
           var isAlpha = alphaBoxes && alphaBoxes.has(val + ',' + origRow);
           var checker = (r + c) % 2 === 0 ? '#ccc' : '#fff';
-          var bg = isAlpha ? '#e05050' : checker;
+          var bg = isAlpha ? '#f0a0a0' : checker;
           var col = ssytColors[(val - 1) % ssytColors.length];
           html += '<td style="color:' + col + ';background:' + bg + ';">' + val + '</td>';
         } else {
