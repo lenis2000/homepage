@@ -100,20 +100,6 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
   <span id="gt-mass-branch-result" style="font-size:12px;margin-left:8px;"></span>
 </div>
 
-<details style="margin-top: 16px;">
-<summary style="cursor: pointer; font-weight: bold; font-size: 14px;">How it works</summary>
-<div style="margin-top: 8px; font-size: 14px; line-height: 1.6;">
-
-Fix a partition $\lambda'$ (the SSYT shape) and level $k$. We enumerate all GT schemes
-$$\varnothing = \lambda^0 \prec' \lambda^1 \prec' \lambda^2 \prec' \cdots \prec' \lambda^k$$
-where each $\prec'$ is a vertical strip. Each scheme bijects to an SSYT of shape $\lambda'$: place entry $i$ in the boxes of $\lambda^i \setminus \lambda^{i-1}$.
-
-The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambda^i|-|\lambda^{i-1}|}$ per scheme.
-
-**Checkerboard weight $a$:** The SSYT has a checkerboard coloring (dark = $r+c$ even, white = $r+c$ odd). The parameter $a$ weights boxes on <span style="background:#ccc;padding:0 3px;">dark cells</span> with the selected entry parity (odd or even). <span style="background:#e05050;color:#fff;padding:0 3px;">Red cells</span> carry weight $a$.
-
-</div>
-</details>
 
 <script>
 (function() {
