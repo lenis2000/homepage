@@ -76,6 +76,21 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes (seq
 
 <div id="gt-error" class="gt-error"></div>
 
+<details style="margin-top: 16px;">
+<summary style="cursor: pointer; font-weight: bold; font-size: 14px;">How it works</summary>
+<div style="margin-top: 8px; font-size: 14px; line-height: 1.6;">
+
+Fix a partition $\lambda'$ (the SSYT shape) and level $k$. We enumerate all Gelfand-Tsetlin schemes
+$$\varnothing = \lambda^0 \prec' \lambda^1 \prec' \lambda^2 \prec' \cdots \prec' \lambda^k$$
+where each $\prec'$ is a vertical strip ($\lambda^i_j - \lambda^{i-1}_j \in \\{0,1\\}$). Each scheme bijects to a semi-standard Young tableau of shape $\lambda'$ (conjugate): place entry $i$ in the boxes of $\lambda^i \setminus \lambda^{i-1}$.
+
+The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambda^i|-|\lambda^{i-1}|}$ per scheme.
+
+**2&times;2 periodic weight $a$:** Each GT scheme determines a domino tiling of a half-Aztec diamond (via the particle-to-domino correspondence). The parameter $a$ weights specific horizontal dominos satisfying the 2&times;2 periodicity condition on the square lattice. <span style="background:#ffe0e0;padding:0 3px;">Pink cells</span> in each SSYT mark boxes whose corresponding domino carries weight $a$. This is a **non-local** property &mdash; it depends on the full GT scheme through a bipartite matching, not just the individual box.
+
+</div>
+</details>
+
 <script>
 (function() {
   // ═══════════════════════════════════════════════════
