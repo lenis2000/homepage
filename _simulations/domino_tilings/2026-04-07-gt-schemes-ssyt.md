@@ -540,11 +540,12 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
     } else if (!aOne && result.configs.length > 0) {
       // Polynomial with checkerboard a-weight
       var polyA = new Map();
+      var startSize = partSize(gtStart);
       for (var ci = 0; ci < result.configs.length; ci++) {
         var cfg = result.configs[ci];
         var sortedCfg = cfg.slice().sort(function(a, b) { return a.level - b.level; });
         var expsX = new Array(k).fill(0);
-        var prevSize = 0;
+        var prevSize = startSize;
         for (var j = 0; j < sortedCfg.length; j++) {
           expsX[sortedCfg[j].level - 1] = partSize(sortedCfg[j].part) - prevSize;
           prevSize = partSize(sortedCfg[j].part);
@@ -586,7 +587,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
       for (var ci = 0; ci < maxShow; ci++) {
         var cfg = result.configs[ci];
         var sortedCfg = cfg.slice().sort(function(a, b) { return a.level - b.level; });
-        var prevSize = 0;
+        var prevSize = startSize;
         var weightParts = [];
         for (var j = 0; j < sortedCfg.length; j++) {
           var exp = partSize(sortedCfg[j].part) - prevSize;
@@ -715,7 +716,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
         for (var ci = 0; ci < result.configs.length; ci++) {
           var cfg = result.configs[ci];
           var sortedCfg = cfg.slice().sort(function(a2,b2){return a2.level-b2.level;});
-          var expsX = new Array(k).fill(0); var prev = 0;
+          var expsX = new Array(k).fill(0); var prev = startSize;
           for (var j = 0; j < sortedCfg.length; j++) {
             expsX[sortedCfg[j].level-1] = partSize(sortedCfg[j].part) - prev;
             prev = partSize(sortedCfg[j].part);
@@ -863,7 +864,7 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
                   for (var ci = 0; ci < resSkew.configs.length; ci++) {
                     var cfg = resSkew.configs[ci];
                     var sc = cfg.slice().sort(function(a,b){return a.level-b.level;});
-                    var ex = new Array(kk-M).fill(0); var pv = 0;
+                    var ex = new Array(kk-M).fill(0); var pv = partSize(conjMuB2);
                     for (var j = 0; j < sc.length; j++) { ex[sc[j].level-1] = partSize(sc[j].part)-pv; pv=partSize(sc[j].part); }
                     var ssyt = configToSSYT(cfg, conjLamB, conjMuB2);
                     var aC = 0;
