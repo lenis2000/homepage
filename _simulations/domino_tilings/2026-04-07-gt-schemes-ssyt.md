@@ -602,57 +602,64 @@ The polynomial is $s_{\lambda'}(x_1,\ldots,x_k)$ with weight $\prod x_i^{|\lambd
 
     resultEl.style.display = 'block';
 
-    // ── Branching rule check ──
+    // ── Branching rule check (M=1) ──
+    // s_λ(x_1,...,x_N) = Σ_{μ: λ/μ horiz strip} s_μ(x_1,...,x_{N-1}) · x_N^{|λ|-|μ|}
     var branchEl = document.getElementById('gt-branching');
     var branchResEl = document.getElementById('gt-branching-result');
     if (nonZero > 0 && k >= 2 && mu.length === 0) {
       branchEl.style.display = 'block';
-      var M = Math.floor(k / 2); // split: first M variables, last N-M variables
       // Compute s_λ(x_1,...,x_N) via SSYT
       var sLam = computeSchurSSYT(lambda, k);
-      // Enumerate all μ ⊂ λ: subpartitions
+      // Enumerate all μ ⊂ λ (subpartitions)
       var allMu = [];
       function enumSubs(lam, idx, cur) {
         if (idx >= lam.length) {
           var t = cur.slice(); while (t.length > 0 && t[t.length-1] === 0) t.pop();
           allMu.push(t); return;
         }
-        var hi = lam[idx], lo = (idx+1 < lam.length ? lam[idx+1] : 0);
-        // Also bounded by previous part of cur
-        if (idx > 0) hi = Math.min(hi, cur[idx-1]);
-        for (var v = lo; v <= hi; v++) { cur.push(v); enumSubs(lam, idx+1, cur); cur.pop(); }
+        var hi = lam[idx];
+        if (idx > 0) hi = Math.min(hi, cur[idx-1]); // decreasing
+        for (var v = 0; v <= hi; v++) { cur.push(v); enumSubs(lam, idx+1, cur); cur.pop(); }
       }
       enumSubs(lambda, 0, []);
 
-      // Sum: Σ_μ s_μ(x_1,...,x_M) * s_{λ/μ}(x_{M+1},...,x_N)
+      // Check: is λ/μ a horizontal strip? (λ'_j - μ'_j ≤ 1 for all j, i.e. no two boxes in same column)
+      function isHorizStrip(lam, mu) {
+        for (var j = 0; j < lam.length; j++) {
+          var d = (lam[j] || 0) - (mu[j] || 0);
+          if (d < 0) return false;
+        }
+        // Check horizontal strip: interlacing λ_1 ≥ μ_1 ≥ λ_2 ≥ μ_2 ≥ ...
+        var len = Math.max(lam.length, mu.length);
+        for (var i = 0; i < len; i++) {
+          if ((lam[i]||0) < (mu[i]||0)) return false;
+          if ((mu[i]||0) < (lam[i+1]||0)) return false;
+        }
+        return true;
+      }
+
+      // Branching sum (M=1): Σ_μ s_μ(x_1,...,x_{N-1}) · x_N^{|λ|-|μ|}
       var branchSum = new Map();
       var branchTerms = [];
       for (var mi = 0; mi < allMu.length; mi++) {
         var muB = allMu[mi];
-        // s_μ in x_1,...,x_M
-        var sMu = computeSchurSSYT(muB, M);
-        // s_{λ/μ} in variables x_{M+1},...,x_N (N-M variables)
-        var conjLamB = conjugatePartition(lambda);
-        var conjMuB = conjugatePartition(muB);
-        var skewResult = computeGTSchemes(conjLamB, k - M, conjMuB);
-        if (skewResult.configCount === 0) continue;
-        var sSkew = skewResult.poly; // polynomial in (k-M) variables
-
-        // Multiply: s_μ(x_1..x_M) * s_{λ/μ}(x_{M+1}..x_N) → polynomial in N variables
-        sMu.forEach(function(cMu, keyMu) {
-          sSkew.forEach(function(cSkew, keySkew) {
-            var expsFull = parseKey(keyMu).concat(parseKey(keySkew));
-            polyAddTo(branchSum, makeKey(expsFull), cMu * cSkew);
-          });
+        if (!isHorizStrip(lambda, muB)) continue; // only horizontal strips
+        var stripSize = partSize(lambda) - partSize(muB);
+        var sMu = computeSchurSSYT(muB, k - 1); // s_μ in N-1 variables
+        // Multiply by x_N^stripSize: append exponent to each monomial
+        sMu.forEach(function(c, key) {
+          var exps = parseKey(key).concat([stripSize]);
+          polyAddTo(branchSum, makeKey(exps), c);
         });
-        if (partSize(muB) > 0 || muB.length === 0)
-          branchTerms.push(partStr(muB));
+        branchTerms.push('s<sub>' + partStr(muB) + '</sub>·x<sub>' + k + '</sub><sup>' + stripSize + '</sup>');
       }
 
       var branchMatch = polyEqual(sLam, branchSum);
-      branchResEl.innerHTML = branchMatch
-        ? '<span style="color:#1a6b2e;">✓ Branching rule verified (M=' + M + ', ' + allMu.length + ' subpartitions μ: ' + branchTerms.slice(0,10).join(', ') + (branchTerms.length > 10 ? ', …' : '') + ')</span>'
-        : '<span style="color:#c00;">✗ Branching rule FAILED (M=' + M + ')</span>';
+      var branchHtml = branchMatch
+        ? '<span style="color:#1a6b2e;">✓ Branching rule (M=1) verified</span>'
+        : '<span style="color:#c00;">✗ Branching rule (M=1) FAILED</span>';
+      branchHtml += '<br><span style="font-size:11px;">' + branchTerms.join(' + ') + '</span>';
+      branchResEl.innerHTML = branchHtml;
     } else {
       branchEl.style.display = 'none';
     }
