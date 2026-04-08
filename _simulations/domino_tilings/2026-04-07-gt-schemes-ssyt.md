@@ -815,135 +815,15 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
 
       mma += '(* === CHECKS === *)\n\n';
 
-      mma += '(* 1. Verify JS matches Mathematica SSYT enumeration *)\n';
-      mma += 'saMma = aSchur[' + lamStr + ', ' + k + '];\n';
-      mma += 'Print["JS vs MMA: ", Simplify[saJS - saMma]];\n\n';
-
-      mma += '(* 2. At a=1: standard Schur *)\n';
-      mma += 'Print["a=1 check: ", Simplify[(saJS /. a -> 1) - schur[' + lamStr + ', ' + k + ']]];\n\n';
-
-      mma += '(* 3. Pairwise symmetry tests *)\n';
-      for (var i = 1; i < k; i++) {
-        mma += 'Print["Sym x[' + i + ']<->x[' + (i+1) + ']: ",\n';
-        mma += '  Simplify[saJS - (saJS /. {x[' + i + ']->x[' + (i+1) + '], x[' + (i+1) + ']->x[' + i + ']})]];\n';
-      }
-
-      mma += '\n(* 4. Operator tests *)\n';
-      mma += 'Print["Euler (total degree): ",\n';
-      mma += '  Simplify[Sum[x[i] D[saJS, x[i]], {i, ' + k + '}] / saJS]];\n';
-      mma += 'Print["Sum x_i^2 d/dx_i: ",\n';
-      mma += '  Simplify[Sum[x[i]^2 D[saJS, x[i]], {i, ' + k + '}] / saJS]];\n';
-      mma += '(* Calogero-Sutherland type: *)\n';
-      mma += 'csOp = Sum[x[i]^2 D[saJS, x[i], x[i]], {i, ' + k + '}] +\n';
-      mma += '  2 Sum[x[i]*x[j]/(x[i]-x[j]) (D[saJS, x[i]] - D[saJS, x[j]]),\n';
-      mma += '    {i, ' + k + '}, {j, i+1, ' + k + '}];\n';
-      mma += 'Print["CS eigenvalue? ", Simplify[csOp / saJS]];\n\n';
-
-      mma += '(* 5. a=0: restricted tableaux *)\n';
-      mma += 'Print["At a=0: ", Expand[saJS /. a -> 0]];\n';
-      mma += 'Print["At a=-1: ", Expand[saJS /. a -> -1]];\n\n';
-
-      mma += '(* 6. Symmetrization *)\n';
-      mma += 'symPart = 1/' + k + '! * Sum[saJS /. Thread[Array[x,' + k + '] -> Array[x,' + k + '][[perm]]],\n';
-      mma += '  {perm, Permutations[Range[' + k + ']]}];\n';
-      mma += 'Print["Symmetrized: ", Expand[symPart]];\n';
-      mma += '(* Express in monomial symmetric basis: *)\n';
-      mma += 'Print["Sym at a=1: ", Expand[symPart /. a -> 1]];\n\n';
-
-      mma += '(* 7. Tangent at a=1: first-order perturbation *)\n';
-      mma += 'tang = D[saJS, a] /. a -> 1;\n';
-      mma += 'Print["d/da at a=1: ", Expand[tang]];\n';
-      mma += 'Print["d/da at a=1 / s_lam: ", Simplify[tang / (saJS /. a -> 1)]];\n\n';
-
-      mma += '(* 8. Cherednik-Dunkl type operators *)\n';
-      mma += '(* s_ij = transposition operator: (s_ij f)(x) = f(...,x_j,...,x_i,...) *)\n';
       mma += 'sij[f_, i_, j_] := f /. {x[i] -> x[j], x[j] -> x[i]};\n\n';
 
-      mma += '(* Dunkl operator: D_i = d/dx_i + t * Sum_{j!=i} (1 - s_ij)/(x_i - x_j) *)\n';
-      mma += 'dunkl[f_, i_, n_, t_] := D[f, x[i]] +\n';
-      mma += '  t * Sum[If[j != i, (f - sij[f, i, j])/(x[i] - x[j]), 0], {j, n}];\n\n';
+      mma += '(* 1. Verify JS = MMA, a=1 = Schur *)\n';
+      mma += 'Print["JS vs MMA: ", Simplify[saJS - aSchur[' + lamStr + ', ' + k + ']]];\n';
+      mma += 'Print["a=1 check: ", Simplify[(saJS /. a -> 1) - schur[' + lamStr + ', ' + k + ']]];\n\n';
 
-      mma += '(* Cherednik operator: Y_i = t*x_i*d/dx_i + Sum_{j<i} x_i s_ij/(x_i-x_j) - Sum_{j>i} x_j s_ij/(x_i-x_j) + (i-1)*t - (n-i) *)\n';
-      mma += '(* Try: is Y_i saJS = eigenvalue * saJS? *)\n';
-      mma += 'chered[f_, i_, n_, t_] := t*x[i]*D[f, x[i]] +\n';
-      mma += '  Sum[If[j < i, x[i]*(sij[f,i,j])/(x[i]-x[j]), 0], {j, n}] -\n';
-      mma += '  Sum[If[j > i, x[j]*(sij[f,i,j])/(x[i]-x[j]), 0], {j, n}] +\n';
-      mma += '  ((i - 1)*t - (n - i))*f;\n\n';
-
-      mma += 'Print["--- Dunkl D_1 (t=1): ---"];\n';
-      mma += 'Print[Simplify[dunkl[saJS, 1, ' + k + ', 1] / saJS]];\n';
-      mma += 'Print["--- Dunkl D_1 (t=a): ---"];\n';
-      mma += 'Print[Simplify[dunkl[saJS, 1, ' + k + ', a] / saJS]];\n\n';
-
-      mma += 'Print["--- Cherednik Y_1 (t=1): ---"];\n';
-      mma += 'Print[Simplify[chered[saJS, 1, ' + k + ', 1] / saJS]];\n';
-      mma += 'Print["--- Cherednik Y_1 (t=a): ---"];\n';
-      mma += 'Print[Simplify[chered[saJS, 1, ' + k + ', a] / saJS]];\n\n';
-
-      mma += '(* 9. Modified operator: mix derivative + checkerboard-weighted permutation *)\n';
-      mma += '(* Try: T_i = x_i*d/dx_i + a * Sum_{j!=i, j same parity} s_ij*x_i/(x_i-x_j) *)\n';
-      mma += 'modOp[f_, i_, n_] := x[i]*D[f, x[i]] +\n';
-      mma += '  a * Sum[If[j != i && Mod[i, 2] == Mod[j, 2], x[i]*sij[f,i,j]/(x[i]-x[j]), 0], {j, n}];\n';
-      mma += 'Print["--- Modified T_1 (same-parity swaps): ---"];\n';
-      mma += 'Print[Simplify[modOp[saJS, 1, ' + k + '] / saJS]];\n\n';
-
-      mma += '(* 10. Try sum of Cherednik operators *)\n';
-      mma += 'sumY = Sum[chered[saJS, i, ' + k + ', 1], {i, ' + k + '}];\n';
-      mma += 'Print["--- Sum Y_i (t=1): ---"];\n';
-      mma += 'Print[Simplify[sumY / saJS]];\n';
-      mma += 'sumY2 = Sum[chered[saJS, i, ' + k + ', 1]^2, {i, ' + k + '}] // Expand;\n';
-      mma += 'Print["--- Sum Y_i^2 (t=1) eigenvalue? ---"];\n';
-      mma += 'Print[Simplify[sumY2 / saJS]];\n\n';
-
-      // Two-species operator section
-      var nOdd = Math.ceil(k/2), nEven = Math.floor(k/2);
-      mma += '(* ═══════════════════════════════════════ *)\n';
-      mma += '(* 11. TWO-SPECIES OPERATORS *)\n';
-      mma += '(* Odd vars: x[1],x[3],x[5],... Even vars: x[2],x[4],x[6],... *)\n';
-      mma += '(* ═══════════════════════════════════════ *)\n\n';
-
-      mma += '(* Species-Dunkl: D_i^A operates within species A, coupled to B via a *)\n';
-      mma += '(* Within same species: standard Dunkl exchange *)\n';
-      mma += '(* Cross-species: weighted exchange *)\n';
-      mma += 'specDunkl[f_, i_, n_, tSame_, tCross_] := x[i]*D[f, x[i]] +\n';
-      mma += '  tSame * Sum[If[j != i && Mod[j,2]==Mod[i,2],\n';
-      mma += '    x[i]*sij[f,i,j]/(x[i]-x[j]), 0], {j,n}] +\n';
-      mma += '  tCross * Sum[If[Mod[j,2]!=Mod[i,2],\n';
-      mma += '    x[i]*sij[f,i,j]/(x[i]-x[j]), 0], {j,n}];\n\n';
-
-      mma += 'Print["--- Species-Dunkl D_1 (tSame=1, tCross=a): ---"];\n';
-      mma += 'Print[Simplify[specDunkl[saJS, 1, ' + k + ', 1, a] / saJS]];\n';
-      mma += 'Print["--- Species-Dunkl D_1 (tSame=a, tCross=1): ---"];\n';
-      mma += 'Print[Simplify[specDunkl[saJS, 1, ' + k + ', a, 1] / saJS]];\n';
-      mma += 'Print["--- Species-Dunkl D_2 (tSame=1, tCross=a): ---"];\n';
-      mma += 'Print[Simplify[specDunkl[saJS, 2, ' + k + ', 1, a] / saJS]];\n\n';
-
-      mma += '(* 12. Diagonal operator: x_i * d/dx_i for each variable *)\n';
-      mma += '(* Check if there exists a LINEAR combination of x_i d/dx_i that gives eigenvalue *)\n';
-      mma += 'Print["--- Individual x_i d/dx_i ratios: ---"];\n';
-      for (var i = 1; i <= k; i++) {
-        mma += 'Print["  x[' + i + '] d/dx[' + i + ']: ", Simplify[x[' + i + ']*D[saJS,x[' + i + ']]/saJS]];\n';
-      }
-
-      mma += '\n(* 13. Shift operator: x_i -> a*x_i for odd i *)\n';
-      mma += 'shifted = saJS /. Table[x[i] -> If[OddQ[i], a*x[i], x[i]], {i,' + k + '}];\n';
-      mma += 'Print["--- s(a*x_odd, x_even) / s(x) = ---"];\n';
-      mma += 'Print[Simplify[shifted / saJS]];\n\n';
-
-      mma += '(* 14. Check: is s_lam^(a)(x) = s_lam(a^c1 x1, a^c2 x2, ...) for some constants c_i? *)\n';
-      mma += '(* If so, the function is just a rescaling *)\n';
-      mma += 'Print["--- Ratio saJS / schur with x[i]->a^(ci) x[i]: ---"];\n';
-      mma += 'Module[{c},\n';
-      mma += '  c = Table[ci[i], {i,' + k + '}];\n';
-      mma += '  Print[Simplify[(saJS /. a -> 1) / (saJS /. Table[x[i] -> a^ci[i]*x[i], {i,' + k + '}]) /. a -> 1]]];\n\n';
-
-      mma += '(* 15. Perturbative: write s^(a) = s + (a-1)*Q + (a-1)^2*R + ... *)\n';
-      mma += 'tang1 = D[saJS, a] /. a -> 1;\n';
-      mma += 'tang2 = D[saJS, {a, 2}] /. a -> 1;\n';
-      mma += 'Print["--- d/da|_{a=1} as fraction of s: ---"];\n';
-      mma += 'Print[Simplify[tang1 / (saJS /. a -> 1)]];\n';
-      mma += 'Print["--- d^2/da^2|_{a=1} as fraction of s: ---"];\n';
-      mma += 'Print[Simplify[tang2 / (saJS /. a -> 1)]];\n';
+      mma += '(* 2. Perturbative structure *)\n';
+      mma += 'Print["d/da|_{a=1} / s: ", Simplify[D[saJS, a] /. a -> 1] / Simplify[saJS /. a -> 1] // Simplify];\n';
+      mma += 'Print["d^2/da^2|_{a=1} / s: ", Simplify[D[saJS, {a,2}] /. a -> 1] / Simplify[saJS /. a -> 1] // Simplify];\n\n';
 
       mma += '\n(* ═══════════════════════════════════════ *)\n';
       mma += '(* 16. a-DEFORMED SYMMETRIC FUNCTIONS *)\n';
