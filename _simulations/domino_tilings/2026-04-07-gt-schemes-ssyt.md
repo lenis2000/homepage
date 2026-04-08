@@ -771,54 +771,79 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
       var shapeDesc = isSkew ? lamStr + '/' + muStrMma : lamStr;
 
       var mma = '';
-      mma += '(* a-weighted Schur function s_' + partStr(lambda) + (isSkew ? '/' + partStr(mu) : '') + '^(a) with N=' + k + ' *)\n\n';
+      mma += '(* a-weighted Schur function s_' + partStr(lambda) + (isSkew ? '/' + partStr(mu) : '') + '^(a) with N=' + k + ' *)\n';
+      mma += '(* Self-contained: no external packages needed *)\n\n';
 
-      mma += '(* Definition: checkerboard weight on SSYT *)\n';
-      mma += 'ClearAll[aSchur, darkCells, ssytWeight];\n';
-      mma += 'darkCells[tab_] := Count[\n';
-      mma += '  Flatten[Table[{r, c, tab[[r, c]]}, {r, Length[tab]}, {c, Length[tab[[r]]]}], 1],\n';
-      mma += '  {r_, c_, v_} /; EvenQ[r + c - 2] && OddQ[v]];\n\n';
+      mma += '(* === SSYT ENUMERATION === *)\n';
+      mma += 'ClearAll[enumSSYT, aSchur, schur];\n';
+      mma += '(* Enumerate all SSYT of shape lam/mu with entries in {1,...,n} *)\n';
+      mma += 'enumSSYT[lam_, mu_, n_] := Module[{cells, res},\n';
+      mma += '  cells = Flatten[Table[If[(c > (If[r <= Length[mu], mu[[r]], 0])),\n';
+      mma += '    {r, c}, Nothing], {r, Length[lam]}, {c, lam[[r]]}], 1];\n';
+      mma += '  If[cells === {}, Return[{{}}]];\n';
+      mma += '  res = {{}}; Do[\n';
+      mma += '    res = Flatten[Table[Module[{r = cells[[idx, 1]], c = cells[[idx, 2]], lo = 1, tab = t},\n';
+      mma += '      If[idx > 1, Module[{prev},\n';
+      mma += '        (* row constraint: weakly increasing *)\n';
+      mma += '        If[cells[[idx - 1, 1]] == r && cells[[idx - 1, 2]] == c - 1,\n';
+      mma += '          lo = Max[lo, t[[-1]]]];\n';
+      mma += '        (* column constraint: strictly increasing *)\n';
+      mma += '        Do[If[cells[[j, 1]] == r - 1 && cells[[j, 2]] == c,\n';
+      mma += '          lo = Max[lo, tab[[j]] + 1]], {j, idx - 1}]]];\n';
+      mma += '      Table[Append[tab, v], {v, lo, n}]\n';
+      mma += '    ], {t, res}], 1];\n';
+      mma += '  , {idx, Length[cells]}];\n';
+      mma += '  Table[{cells, tab}, {tab, res}]];\n\n';
 
-      mma += '(* Generate all SSYT of shape lam (or skew lam/mu) with entries in {1,...,n} *)\n';
+      mma += '(* a-weighted Schur: wt = prod x_i * a^(odd entries on dark cells) *)\n';
       mma += 'aSchur[lam_, n_] := aSchur[lam, {}, n];\n';
-      mma += 'aSchur[lam_, mu_, n_] := Module[{tabs, shape = lam},\n';
-      mma += '  tabs = If[mu === {}, \n';
-      mma += '    SemiStandardTableaux[shape, n],\n';
-      mma += '    SemiStandardTableaux[shape/mu, n]];\n';
-      mma += '  Sum[Times @@ (x /@ Flatten[t]) * a^darkCells[t], {t, tabs}]];\n\n';
+      mma += 'aSchur[lam_, mu_, n_] := Module[{tabs = enumSSYT[lam, mu, n]},\n';
+      mma += '  Sum[Module[{cells = t[[1]], vals = t[[2]], wt = 1, ac = 0},\n';
+      mma += '    Do[wt *= x[vals[[i]]]; If[OddQ[vals[[i]]] && EvenQ[cells[[i,1]] + cells[[i,2]]], ac++],\n';
+      mma += '      {i, Length[vals]}]; wt * a^ac], {t, tabs}]];\n\n';
 
-      mma += '(* Alternative: direct polynomial from JS computation *)\n';
+      mma += '(* Standard Schur (a=1) *)\n';
+      mma += 'schur[lam_, n_] := aSchur[lam, n] /. a -> 1;\n\n';
+
+      mma += '(* === POLYNOMIAL FROM JS === *)\n';
       mma += 'saJS = ' + lastMmaString + ';\n\n';
 
       mma += '(* === CHECKS === *)\n\n';
 
-      mma += '(* 1. At a=1 should give standard Schur *)\n';
-      mma += 'Print["a=1 check: ", Simplify[(saJS /. a -> 1) - SchurS[' + lamStr + ', Array[x, ' + k + ']]]];\n\n';
+      mma += '(* 1. Verify JS matches Mathematica SSYT enumeration *)\n';
+      mma += 'saMma = aSchur[' + lamStr + ', ' + k + '];\n';
+      mma += 'Print["JS vs MMA: ", Simplify[saJS - saMma]];\n\n';
 
-      mma += '(* 2. Symmetry test: swap x[1] <-> x[2] *)\n';
-      mma += 'Print["Symmetric in x1,x2? ", Simplify[saJS - (saJS /. {x[1]->x[2], x[2]->x[1]})]];\n\n';
+      mma += '(* 2. At a=1: standard Schur *)\n';
+      mma += 'Print["a=1 check: ", Simplify[(saJS /. a -> 1) - schur[' + lamStr + ', ' + k + ']]];\n\n';
 
-      mma += '(* 3. Eigenoperator search: try D = Sum[x[i]^2 D[#,x[i]], {i,' + k + '}] *)\n';
-      mma += 'opResult = Sum[x[i]^2 D[saJS, x[i]], {i, ' + k + '}];\n';
-      mma += 'Print["x^2 dx eigenvalue? ", Simplify[opResult / saJS]];\n\n';
+      mma += '(* 3. Pairwise symmetry tests *)\n';
+      for (var i = 1; i < k; i++) {
+        mma += 'Print["Sym x[' + i + ']<->x[' + (i+1) + ']: ",\n';
+        mma += '  Simplify[saJS - (saJS /. {x[' + i + ']->x[' + (i+1) + '], x[' + (i+1) + ']->x[' + i + ']})]];\n';
+      }
 
-      mma += '(* 4. Try D = Sum[x[i] D[#,x[i]], {i,' + k + '}] (Euler = total degree) *)\n';
-      mma += 'Print["Euler eigenvalue: ", Simplify[Sum[x[i] D[saJS, x[i]], {i, ' + k + '}] / saJS]];\n\n';
+      mma += '\n(* 4. Operator tests *)\n';
+      mma += 'Print["Euler (total degree): ",\n';
+      mma += '  Simplify[Sum[x[i] D[saJS, x[i]], {i, ' + k + '}] / saJS]];\n';
+      mma += 'Print["Sum x_i^2 d/dx_i: ",\n';
+      mma += '  Simplify[Sum[x[i]^2 D[saJS, x[i]], {i, ' + k + '}] / saJS]];\n';
+      mma += '(* Calogero-Sutherland type: *)\n';
+      mma += 'csOp = Sum[x[i]^2 D[saJS, x[i], x[i]], {i, ' + k + '}] +\n';
+      mma += '  2 Sum[x[i]*x[j]/(x[i]-x[j]) (D[saJS, x[i]] - D[saJS, x[j]]),\n';
+      mma += '    {i, ' + k + '}, {j, i+1, ' + k + '}];\n';
+      mma += 'Print["CS eigenvalue? ", Simplify[csOp / saJS]];\n\n';
 
-      mma += '(* 5. Schur expansion: express saJS in Schur basis (may not be exact if not symmetric) *)\n';
-      mma += '(* For symmetric part: *)\n';
-      mma += 'symPart = 1/' + k + '! * Sum[saJS /. Thread[Array[x,' + k + '] -> Array[x,' + k + '][[perm]]], {perm, Permutations[Range[' + k + ']]}];\n';
-      mma += 'Print["Symmetrized: ", Expand[symPart]];\n\n';
+      mma += '(* 5. a=0: restricted tableaux *)\n';
+      mma += 'Print["At a=0: ", Expand[saJS /. a -> 0]];\n';
+      mma += 'Print["At a=-1: ", Expand[saJS /. a -> -1]];\n\n';
 
-      mma += '(* 6. Branching rule check *)\n';
-      mma += 'branchSum = Sum[\n';
-      mma += '  If[And @@ Thread[' + lamStr + ' - PadRight[mu, Length[' + lamStr + ']] >= 0] &&\n';
-      mma += '     (* horizontal strip check *) True,\n';
-      mma += '    aSchur[mu, ' + (k-1) + '] * x[' + k + ']^(Total[' + lamStr + '] - Total[mu]) *\n';
-      mma += '    a^Count[Table[{r, PadRight[mu,Length[' + lamStr + ']][[r]]}, {r, Length[' + lamStr + ']}],\n';
-      mma += '      {r_, c_} /; ' + lamStr + '[[r]] > PadRight[mu,Length[' + lamStr + ']][[r]] && EvenQ[r+c-2]],\n';
-      mma += '  0], {mu, IntegerPartitions[Total[' + lamStr + '], {0, Total[' + lamStr + ']}, Range[0, Max[' + lamStr + ']]]}];\n';
-      mma += 'Print["Branching check: ", Simplify[saJS - branchSum]];\n';
+      mma += '(* 6. Symmetrization *)\n';
+      mma += 'symPart = 1/' + k + '! * Sum[saJS /. Thread[Array[x,' + k + '] -> Array[x,' + k + '][[perm]]],\n';
+      mma += '  {perm, Permutations[Range[' + k + ']]}];\n';
+      mma += 'Print["Symmetrized: ", Expand[symPart]];\n';
+      mma += '(* Express in monomial symmetric basis: *)\n';
+      mma += 'Print["Sym at a=1: ", Expand[symPart /. a -> 1]];\n';
 
       document.getElementById('gt-mma-code').textContent = mma;
       mmaSection.style.display = 'block';
