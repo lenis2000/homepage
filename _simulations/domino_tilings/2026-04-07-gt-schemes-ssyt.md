@@ -945,6 +945,64 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
       mma += 'Print["--- d^2/da^2|_{a=1} as fraction of s: ---"];\n';
       mma += 'Print[Simplify[tang2 / (saJS /. a -> 1)]];\n';
 
+      mma += '\n(* ═══════════════════════════════════════ *)\n';
+      mma += '(* 16. a-DEFORMED SYMMETRIC FUNCTIONS *)\n';
+      mma += '(* ═══════════════════════════════════════ *)\n\n';
+
+      mma += '(* a-deformed elementary: e_k^(a) = Sum over k-subsets, *)\n';
+      mma += '(* weight a^(number of pairs (i,j) in subset with i odd, j even) *)\n';
+      mma += '(* Simpler: e_k^(a) where cross-parity pairs get weight a *)\n';
+      mma += 'eA[k_, n_] := Sum[Module[{sub = Subsets[Range[n], {k}][[s]],\n';
+      mma += '    wt = 1, ac = 0},\n';
+      mma += '  (* count cross-parity pairs *)\n';
+      mma += '  Do[If[OddQ[sub[[i]]] != OddQ[sub[[j]]], ac++],\n';
+      mma += '    {i, Length[sub]}, {j, i+1, Length[sub]}];\n';
+      mma += '  Times @@ (x /@ sub) * a^ac],\n';
+      mma += '  {s, Length[Subsets[Range[n], {k}]]}];\n\n';
+
+      mma += '(* a-deformed power sum: p_k^(a) = Sum x_i^k * a^[i odd] *)\n';
+      mma += 'pA[k_, n_] := Sum[x[i]^k * If[OddQ[i], a, 1], {i, n}];\n\n';
+
+      mma += '(* Alternative: weight by checkerboard position *)\n';
+      mma += '(* e_k where odd-indexed vars carry weight a *)\n';
+      mma += 'eB[k_, n_] := Sum[Module[{sub = Subsets[Range[n], {k}][[s]]},\n';
+      mma += '  Times @@ Table[x[sub[[i]]] * If[OddQ[sub[[i]]], a, 1], {i, Length[sub]}]],\n';
+      mma += '  {s, Length[Subsets[Range[n], {k}]]}];\n\n';
+
+      mma += 'Print["--- a-deformed elementary (cross-parity pairs): ---"];\n';
+      for (var ek = 1; ek <= k; ek++) {
+        mma += 'Print["  eA[' + ek + ']: ", Expand[eA[' + ek + ',' + k + ']]];\n';
+      }
+
+      mma += 'Print["--- a-deformed elementary (odd vars weighted): ---"];\n';
+      for (var ek = 1; ek <= k; ek++) {
+        mma += 'Print["  eB[' + ek + ']: ", Expand[eB[' + ek + ',' + k + ']]];\n';
+      }
+
+      mma += 'Print["--- a-deformed power sums: ---"];\n';
+      for (var pk = 1; pk <= Math.min(k, 3); pk++) {
+        mma += 'Print["  pA[' + pk + ']: ", Expand[pA[' + pk + ',' + k + ']]];\n';
+      }
+
+      mma += '\n(* Check: ratio saJS / product of eB *)\n';
+      mma += 'Print["--- saJS / eB[1]^' + partSize(lambda) + ': ---"];\n';
+      mma += 'Print[Simplify[saJS / eB[1,' + k + ']^' + partSize(lambda) + ']];\n\n';
+
+      mma += '(* Jacobi-Trudi type: det of a-deformed h or e? *)\n';
+      mma += '(* h_k^(a) = aSchur[{k}, n] *)\n';
+      mma += 'hA[k_, n_] := aSchur[{k}, n];\n';
+      mma += 'Print["--- a-deformed complete homogeneous: ---"];\n';
+      for (var hk = 1; hk <= Math.min(lambda[0] + 2, 5); hk++) {
+        mma += 'Print["  hA[' + hk + ']: ", Expand[hA[' + hk + ',' + k + ']]];\n';
+      }
+
+      mma += '\n(* Jacobi-Trudi check: s_lam^(a) = det(hA[lam_i - i + j])? *)\n';
+      var ll = lambda.length;
+      mma += 'jtMat = Table[hA[{' + lambda.join(',') + '}[[i]] - i + j, ' + k + '],\n';
+      mma += '  {i,' + ll + '}, {j,' + ll + '}];\n';
+      mma += 'Print["--- Jacobi-Trudi det: ---"];\n';
+      mma += 'Print[Simplify[Det[jtMat] - saJS]];\n';
+
       document.getElementById('gt-mma-code').textContent = mma;
       mmaSection.style.display = 'block';
     } else {
