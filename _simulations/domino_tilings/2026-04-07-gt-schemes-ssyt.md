@@ -893,7 +893,57 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
       mma += 'Print[Simplify[sumY / saJS]];\n';
       mma += 'sumY2 = Sum[chered[saJS, i, ' + k + ', 1]^2, {i, ' + k + '}] // Expand;\n';
       mma += 'Print["--- Sum Y_i^2 (t=1) eigenvalue? ---"];\n';
-      mma += 'Print[Simplify[sumY2 / saJS]];\n';
+      mma += 'Print[Simplify[sumY2 / saJS]];\n\n';
+
+      // Two-species operator section
+      var nOdd = Math.ceil(k/2), nEven = Math.floor(k/2);
+      mma += '(* ═══════════════════════════════════════ *)\n';
+      mma += '(* 11. TWO-SPECIES OPERATORS *)\n';
+      mma += '(* Odd vars: x[1],x[3],x[5],... Even vars: x[2],x[4],x[6],... *)\n';
+      mma += '(* ═══════════════════════════════════════ *)\n\n';
+
+      mma += '(* Species-Dunkl: D_i^A operates within species A, coupled to B via a *)\n';
+      mma += '(* Within same species: standard Dunkl exchange *)\n';
+      mma += '(* Cross-species: weighted exchange *)\n';
+      mma += 'specDunkl[f_, i_, n_, tSame_, tCross_] := x[i]*D[f, x[i]] +\n';
+      mma += '  tSame * Sum[If[j != i && Mod[j,2]==Mod[i,2],\n';
+      mma += '    x[i]*sij[f,i,j]/(x[i]-x[j]), 0], {j,n}] +\n';
+      mma += '  tCross * Sum[If[Mod[j,2]!=Mod[i,2],\n';
+      mma += '    x[i]*sij[f,i,j]/(x[i]-x[j]), 0], {j,n}];\n\n';
+
+      mma += 'Print["--- Species-Dunkl D_1 (tSame=1, tCross=a): ---"];\n';
+      mma += 'Print[Simplify[specDunkl[saJS, 1, ' + k + ', 1, a] / saJS]];\n';
+      mma += 'Print["--- Species-Dunkl D_1 (tSame=a, tCross=1): ---"];\n';
+      mma += 'Print[Simplify[specDunkl[saJS, 1, ' + k + ', a, 1] / saJS]];\n';
+      mma += 'Print["--- Species-Dunkl D_2 (tSame=1, tCross=a): ---"];\n';
+      mma += 'Print[Simplify[specDunkl[saJS, 2, ' + k + ', 1, a] / saJS]];\n\n';
+
+      mma += '(* 12. Diagonal operator: x_i * d/dx_i for each variable *)\n';
+      mma += '(* Check if there exists a LINEAR combination of x_i d/dx_i that gives eigenvalue *)\n';
+      mma += 'Print["--- Individual x_i d/dx_i ratios: ---"];\n';
+      for (var i = 1; i <= k; i++) {
+        mma += 'Print["  x[' + i + '] d/dx[' + i + ']: ", Simplify[x[' + i + ']*D[saJS,x[' + i + ']]/saJS]];\n';
+      }
+
+      mma += '\n(* 13. Shift operator: x_i -> a*x_i for odd i *)\n';
+      mma += 'shifted = saJS /. Table[x[i] -> If[OddQ[i], a*x[i], x[i]], {i,' + k + '}];\n';
+      mma += 'Print["--- s(a*x_odd, x_even) / s(x) = ---"];\n';
+      mma += 'Print[Simplify[shifted / saJS]];\n\n';
+
+      mma += '(* 14. Check: is s_lam^(a)(x) = s_lam(a^c1 x1, a^c2 x2, ...) for some constants c_i? *)\n';
+      mma += '(* If so, the function is just a rescaling *)\n';
+      mma += 'Print["--- Ratio saJS / schur with x[i]->a^(ci) x[i]: ---"];\n';
+      mma += 'Module[{c},\n';
+      mma += '  c = Table[ci[i], {i,' + k + '}];\n';
+      mma += '  Print[Simplify[(saJS /. a -> 1) / (saJS /. Table[x[i] -> a^ci[i]*x[i], {i,' + k + '}]) /. a -> 1]]];\n\n';
+
+      mma += '(* 15. Perturbative: write s^(a) = s + (a-1)*Q + (a-1)^2*R + ... *)\n';
+      mma += 'tang1 = D[saJS, a] /. a -> 1;\n';
+      mma += 'tang2 = D[saJS, {a, 2}] /. a -> 1;\n';
+      mma += 'Print["--- d/da|_{a=1} as fraction of s: ---"];\n';
+      mma += 'Print[Simplify[tang1 / (saJS /. a -> 1)]];\n';
+      mma += 'Print["--- d^2/da^2|_{a=1} as fraction of s: ---"];\n';
+      mma += 'Print[Simplify[tang2 / (saJS /. a -> 1)]];\n';
 
       document.getElementById('gt-mma-code').textContent = mma;
       mmaSection.style.display = 'block';
