@@ -848,7 +848,52 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
       mma += '  {perm, Permutations[Range[' + k + ']]}];\n';
       mma += 'Print["Symmetrized: ", Expand[symPart]];\n';
       mma += '(* Express in monomial symmetric basis: *)\n';
-      mma += 'Print["Sym at a=1: ", Expand[symPart /. a -> 1]];\n';
+      mma += 'Print["Sym at a=1: ", Expand[symPart /. a -> 1]];\n\n';
+
+      mma += '(* 7. Tangent at a=1: first-order perturbation *)\n';
+      mma += 'tang = D[saJS, a] /. a -> 1;\n';
+      mma += 'Print["d/da at a=1: ", Expand[tang]];\n';
+      mma += 'Print["d/da at a=1 / s_lam: ", Simplify[tang / (saJS /. a -> 1)]];\n\n';
+
+      mma += '(* 8. Cherednik-Dunkl type operators *)\n';
+      mma += '(* s_ij = transposition operator: (s_ij f)(x) = f(...,x_j,...,x_i,...) *)\n';
+      mma += 'sij[f_, i_, j_] := f /. {x[i] -> x[j], x[j] -> x[i]};\n\n';
+
+      mma += '(* Dunkl operator: D_i = d/dx_i + t * Sum_{j!=i} (1 - s_ij)/(x_i - x_j) *)\n';
+      mma += 'dunkl[f_, i_, n_, t_] := D[f, x[i]] +\n';
+      mma += '  t * Sum[If[j != i, (f - sij[f, i, j])/(x[i] - x[j]), 0], {j, n}];\n\n';
+
+      mma += '(* Cherednik operator: Y_i = t*x_i*d/dx_i + Sum_{j<i} x_i s_ij/(x_i-x_j) - Sum_{j>i} x_j s_ij/(x_i-x_j) + (i-1)*t - (n-i) *)\n';
+      mma += '(* Try: is Y_i saJS = eigenvalue * saJS? *)\n';
+      mma += 'chered[f_, i_, n_, t_] := t*x[i]*D[f, x[i]] +\n';
+      mma += '  Sum[If[j < i, x[i]*(sij[f,i,j])/(x[i]-x[j]), 0], {j, n}] -\n';
+      mma += '  Sum[If[j > i, x[j]*(sij[f,i,j])/(x[i]-x[j]), 0], {j, n}] +\n';
+      mma += '  ((i - 1)*t - (n - i))*f;\n\n';
+
+      mma += 'Print["--- Dunkl D_1 (t=1): ---"];\n';
+      mma += 'Print[Simplify[dunkl[saJS, 1, ' + k + ', 1] / saJS]];\n';
+      mma += 'Print["--- Dunkl D_1 (t=a): ---"];\n';
+      mma += 'Print[Simplify[dunkl[saJS, 1, ' + k + ', a] / saJS]];\n\n';
+
+      mma += 'Print["--- Cherednik Y_1 (t=1): ---"];\n';
+      mma += 'Print[Simplify[chered[saJS, 1, ' + k + ', 1] / saJS]];\n';
+      mma += 'Print["--- Cherednik Y_1 (t=a): ---"];\n';
+      mma += 'Print[Simplify[chered[saJS, 1, ' + k + ', a] / saJS]];\n\n';
+
+      mma += '(* 9. Modified operator: mix derivative + checkerboard-weighted permutation *)\n';
+      mma += '(* Try: T_i = x_i*d/dx_i + a * Sum_{j!=i, j same parity} s_ij*x_i/(x_i-x_j) *)\n';
+      mma += 'modOp[f_, i_, n_] := x[i]*D[f, x[i]] +\n';
+      mma += '  a * Sum[If[j != i && Mod[i, 2] == Mod[j, 2], x[i]*sij[f,i,j]/(x[i]-x[j]), 0], {j, n}];\n';
+      mma += 'Print["--- Modified T_1 (same-parity swaps): ---"];\n';
+      mma += 'Print[Simplify[modOp[saJS, 1, ' + k + '] / saJS]];\n\n';
+
+      mma += '(* 10. Try sum of Cherednik operators *)\n';
+      mma += 'sumY = Sum[chered[saJS, i, ' + k + ', 1], {i, ' + k + '}];\n';
+      mma += 'Print["--- Sum Y_i (t=1): ---"];\n';
+      mma += 'Print[Simplify[sumY / saJS]];\n';
+      mma += 'sumY2 = Sum[chered[saJS, i, ' + k + ', 1]^2, {i, ' + k + '}] // Expand;\n';
+      mma += 'Print["--- Sum Y_i^2 (t=1) eigenvalue? ---"];\n';
+      mma += 'Print[Simplify[sumY2 / saJS]];\n';
 
       document.getElementById('gt-mma-code').textContent = mma;
       mmaSection.style.display = 'block';
