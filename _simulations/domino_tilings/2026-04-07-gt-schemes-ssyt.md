@@ -95,6 +95,12 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
   <div id="gt-branching-result" class="gt-info"></div>
 </div>
 
+<div id="gt-mma-section" style="margin-top:12px;padding:10px;background:#f5f0e8;border:1px solid #ccc;border-radius:4px;display:none;">
+  <div style="font-weight:bold;font-size:13px;margin-bottom:6px;">Mathematica code</div>
+  <pre id="gt-mma-code" style="font-size:11px;background:#fff;padding:8px;border:1px solid #ddd;border-radius:3px;overflow-x:auto;max-height:300px;white-space:pre-wrap;"></pre>
+  <button id="gt-copy-mma-code" style="font-size:11px;padding:2px 8px;margin-top:4px;cursor:pointer;">Copy code</button>
+</div>
+
 <div style="margin-top:8px;">
   <button id="gt-mass-branch" style="font-size:12px;padding:4px 12px;cursor:pointer;">Mass test branching rule (a-weighted, all M)</button>
   <span id="gt-mass-branch-result" style="font-size:12px;margin-left:8px;"></span>
@@ -755,6 +761,70 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
     } else {
       branchEl.style.display = 'none';
     }
+
+    // ── Mathematica code generation ──
+    var mmaSection = document.getElementById('gt-mma-section');
+    if (nonZero > 0) {
+      var lamStr = '{' + lambda.join(',') + '}';
+      var muStrMma = mu.length > 0 ? '{' + mu.join(',') + '}' : '{}';
+      var isSkew = mu.length > 0;
+      var shapeDesc = isSkew ? lamStr + '/' + muStrMma : lamStr;
+
+      var mma = '';
+      mma += '(* a-weighted Schur function s_' + partStr(lambda) + (isSkew ? '/' + partStr(mu) : '') + '^(a) with N=' + k + ' *)\n\n';
+
+      mma += '(* Definition: checkerboard weight on SSYT *)\n';
+      mma += 'ClearAll[aSchur, darkCells, ssytWeight];\n';
+      mma += 'darkCells[tab_] := Count[\n';
+      mma += '  Flatten[Table[{r, c, tab[[r, c]]}, {r, Length[tab]}, {c, Length[tab[[r]]]}], 1],\n';
+      mma += '  {r_, c_, v_} /; EvenQ[r + c - 2] && OddQ[v]];\n\n';
+
+      mma += '(* Generate all SSYT of shape lam (or skew lam/mu) with entries in {1,...,n} *)\n';
+      mma += 'aSchur[lam_, n_] := aSchur[lam, {}, n];\n';
+      mma += 'aSchur[lam_, mu_, n_] := Module[{tabs, shape = lam},\n';
+      mma += '  tabs = If[mu === {}, \n';
+      mma += '    SemiStandardTableaux[shape, n],\n';
+      mma += '    SemiStandardTableaux[shape/mu, n]];\n';
+      mma += '  Sum[Times @@ (x /@ Flatten[t]) * a^darkCells[t], {t, tabs}]];\n\n';
+
+      mma += '(* Alternative: direct polynomial from JS computation *)\n';
+      mma += 'saJS = ' + lastMmaString + ';\n\n';
+
+      mma += '(* === CHECKS === *)\n\n';
+
+      mma += '(* 1. At a=1 should give standard Schur *)\n';
+      mma += 'Print["a=1 check: ", Simplify[(saJS /. a -> 1) - SchurS[' + lamStr + ', Array[x, ' + k + ']]]];\n\n';
+
+      mma += '(* 2. Symmetry test: swap x[1] <-> x[2] *)\n';
+      mma += 'Print["Symmetric in x1,x2? ", Simplify[saJS - (saJS /. {x[1]->x[2], x[2]->x[1]})]];\n\n';
+
+      mma += '(* 3. Eigenoperator search: try D = Sum[x[i]^2 D[#,x[i]], {i,' + k + '}] *)\n';
+      mma += 'opResult = Sum[x[i]^2 D[saJS, x[i]], {i, ' + k + '}];\n';
+      mma += 'Print["x^2 dx eigenvalue? ", Simplify[opResult / saJS]];\n\n';
+
+      mma += '(* 4. Try D = Sum[x[i] D[#,x[i]], {i,' + k + '}] (Euler = total degree) *)\n';
+      mma += 'Print["Euler eigenvalue: ", Simplify[Sum[x[i] D[saJS, x[i]], {i, ' + k + '}] / saJS]];\n\n';
+
+      mma += '(* 5. Schur expansion: express saJS in Schur basis (may not be exact if not symmetric) *)\n';
+      mma += '(* For symmetric part: *)\n';
+      mma += 'symPart = 1/' + k + '! * Sum[saJS /. Thread[Array[x,' + k + '] -> Array[x,' + k + '][[perm]]], {perm, Permutations[Range[' + k + ']]}];\n';
+      mma += 'Print["Symmetrized: ", Expand[symPart]];\n\n';
+
+      mma += '(* 6. Branching rule check *)\n';
+      mma += 'branchSum = Sum[\n';
+      mma += '  If[And @@ Thread[' + lamStr + ' - PadRight[mu, Length[' + lamStr + ']] >= 0] &&\n';
+      mma += '     (* horizontal strip check *) True,\n';
+      mma += '    aSchur[mu, ' + (k-1) + '] * x[' + k + ']^(Total[' + lamStr + '] - Total[mu]) *\n';
+      mma += '    a^Count[Table[{r, PadRight[mu,Length[' + lamStr + ']][[r]]}, {r, Length[' + lamStr + ']}],\n';
+      mma += '      {r_, c_} /; ' + lamStr + '[[r]] > PadRight[mu,Length[' + lamStr + ']][[r]] && EvenQ[r+c-2]],\n';
+      mma += '  0], {mu, IntegerPartitions[Total[' + lamStr + '], {0, Total[' + lamStr + ']}, Range[0, Max[' + lamStr + ']]]}];\n';
+      mma += 'Print["Branching check: ", Simplify[saJS - branchSum]];\n';
+
+      document.getElementById('gt-mma-code').textContent = mma;
+      mmaSection.style.display = 'block';
+    } else {
+      mmaSection.style.display = 'none';
+    }
   }
 
   // ═══════════════════════════════════════════════════
@@ -900,6 +970,14 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
     }, 50);
   }
 
+  document.getElementById('gt-copy-mma-code').addEventListener('click', function() {
+    var code = document.getElementById('gt-mma-code').textContent;
+    navigator.clipboard.writeText(code).then(function() {
+      var btn = document.getElementById('gt-copy-mma-code');
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = 'Copy code'; }, 1500);
+    });
+  });
   document.getElementById('gt-mass-branch').addEventListener('click', runMassBranchTest);
 
   document.getElementById('gt-copy-mma').addEventListener('click', function() {
