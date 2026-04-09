@@ -54,10 +54,18 @@ body{display:flex;flex-direction:column;align-items:center;
   padding:10px 28px;border-radius:6px;font-size:15px;font-weight:600;
   cursor:pointer;letter-spacing:1px;font-family:inherit}
 #overlay-btn:hover,#overlay-btn:active{background:#ff9100;color:#0d0d1a}
+#level-pick{display:flex;align-items:center;gap:12px;margin-bottom:14px;
+  -webkit-user-select:none;user-select:none}
+#level-pick span{font-family:'SF Mono',Monaco,'Courier New',monospace;
+  font-size:16px;color:#e0e0e0;min-width:100px;text-align:center}
+.lp-btn{background:none;border:2px solid rgba(255,255,255,0.25);color:#ccc;
+  width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-family:inherit}
+.lp-btn:hover,.lp-btn:active{border-color:#ff9100;color:#ff9100}
 
 #controls{display:none;width:100%;max-width:400px;padding:8px 12px;
   gap:8px;justify-content:center;flex-shrink:0}
-.ctrl-btn{width:56px;height:56px;border-radius:12px;border:none;
+.ctrl-btn{width:64px;height:64px;border-radius:14px;border:none;
   background:rgba(255,255,255,0.08);color:#ccc;font-size:22px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
   -webkit-user-select:none;user-select:none;flex-shrink:0}
@@ -73,7 +81,7 @@ body{display:flex;flex-direction:column;align-items:center;
   #top-bar{padding:2px 8px}
   #title{font-size:16px;letter-spacing:3px}
   #stats{gap:8px;font-size:10px}
-  .ctrl-btn{width:48px;height:48px;font-size:18px;border-radius:10px}
+  .ctrl-btn{width:52px;height:52px;font-size:20px;border-radius:11px}
   #controls{padding:4px 8px;gap:6px}
 }
 @media (max-width:360px){
@@ -81,7 +89,7 @@ body{display:flex;flex-direction:column;align-items:center;
   .stat-val{font-size:13px}
   .mini-label{font-size:8px}
   #ctrl-spacer{width:8px}
-  .ctrl-btn{width:46px;height:46px;font-size:18px}
+  .ctrl-btn{width:52px;height:52px;font-size:20px}
 }
 </style>
 </head>
@@ -114,6 +122,11 @@ body{display:flex;flex-direction:column;align-items:center;
     <div id="overlay">
       <div id="overlay-title">TETRIS</div>
       <div id="overlay-sub">Tap or press any key</div>
+      <div id="level-pick">
+        <button class="lp-btn" id="lp-down">&#9664;</button>
+        <span id="lp-val">Level 1</span>
+        <button class="lp-btn" id="lp-up">&#9654;</button>
+      </div>
       <button id="overlay-btn">START</button>
     </div>
   </div>
@@ -187,7 +200,9 @@ var clearing, clearStart;
 var state; // 'menu','playing','paused','clearing','dying','over'
 var deathRow, deathStart;
 var bag = [];
+var pieceGen = 0;
 var highScore = parseInt(localStorage.getItem('tetris-hi')) || 0;
+var startLevel = parseInt(localStorage.getItem('tetris-slv')) || 1;
 var cellSize = 30;
 var lastTime = 0;
 var rafId = 0;
@@ -267,6 +282,7 @@ function spawnPiece() {
     x: Math.floor((COLS - mat[0].length) / 2),
     y: 0
   };
+  pieceGen++;
   canHold = true;
   dropCounter = 0;
   lockTimer = -1;
@@ -543,14 +559,16 @@ function showOverlay(title, sub, btn) {
   overlayTitle.textContent = title;
   overlaySub.textContent = sub;
   overlayBtn.textContent = btn;
+  var lp = document.getElementById('level-pick');
+  if (lp) lp.style.display = (title === 'PAUSED') ? 'none' : 'flex';
 }
 function hideOverlay() { overlay.classList.add('hidden'); }
 
 // ── Game Flow ──
 function newGame() {
   board = createBoard();
-  score = 0; level = 1; linesCleared = 0;
-  dropInterval = 1000; dropCounter = 0;
+  score = 0; level = startLevel; linesCleared = (startLevel - 1) * 10;
+  dropInterval = getSpeed(level); dropCounter = 0;
   lockTimer = -1; lockResets = 0;
   clearing = null; clearStart = 0;
   heldType = null; nextType = null; piece = null;
@@ -723,13 +741,13 @@ document.addEventListener('keyup', function(e) {
     var t = e.changedTouches[0];
     var dy = t.clientY - startY;
     var elapsed = performance.now() - startTime;
-    // Swipe up = hard drop (check first to prevent rotate)
+    // Swipe up = hold piece
     if (dy < -60) {
-      hardDrop();
+      holdPiece();
       return;
     }
     // Tap = rotate (no movement, short duration)
-    if (movedCells === 0 && elapsed < 300 && Math.abs(dy) < 15) {
+    if (movedCells === 0 && elapsed < 400 && Math.abs(dy) < 25) {
       rotatePiece();
     }
   }, {passive: false});
@@ -769,9 +787,13 @@ document.addEventListener('keyup', function(e) {
         fn();
         if (repeatable[act]) {
           stopTimer(act);
+          var gen = pieceGen;
           timers[act] = {
             t: setTimeout(function() {
-              timers[act].i = setInterval(fn, 55);
+              timers[act].i = setInterval(function() {
+                if (pieceGen !== gen) { stopTimer(act); return; }
+                fn();
+              }, 55);
             }, 150)
           };
         }
@@ -801,6 +823,25 @@ overlayBtn.addEventListener('click', function() {
   if (state === 'menu' || state === 'over') newGame();
   else if (state === 'paused') togglePause();
 });
+
+// ── Level Picker ──
+(function() {
+  var lpVal = document.getElementById('lp-val');
+  var lpPick = document.getElementById('level-pick');
+  function updateLP() {
+    lpVal.textContent = 'Level ' + startLevel;
+    try { localStorage.setItem('tetris-slv', startLevel); } catch(e){}
+  }
+  document.getElementById('lp-down').addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (startLevel > 1) { startLevel--; updateLP(); }
+  });
+  document.getElementById('lp-up').addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (startLevel < 15) { startLevel++; updateLP(); }
+  });
+  updateLP();
+})();
 
 // ── Pause on tab hide ──
 document.addEventListener('visibilitychange', function() {

@@ -54,7 +54,7 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
 <div class="gt-row">
   <button id="gt-compute" class="gt-btn">Compute</button>
   <label style="margin-left:12px; font-size:13px;">
-    <input type="checkbox" id="gt-show-configs" checked> Show tableaux
+    <input type="checkbox" id="gt-show-configs"> Show tableaux
   </label>
   <label style="margin-left:12px; font-size:13px;">
     <input type="checkbox" id="gt-a-one"> Set a=1
@@ -82,6 +82,13 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
 </div>
 
 <div id="gt-error" class="gt-error"></div>
+
+<div id="gt-kostka" style="margin-top:12px;padding:10px;background:#f0f0f8;border:1px solid #ccc;border-radius:4px;display:none;">
+  <div style="font-weight:bold;font-size:13px;margin-bottom:6px;">a-Kostka polynomials K<sub>λ,μ</sub>(a)</div>
+  <div id="gt-kostka-info" class="gt-info"></div>
+  <div id="gt-kostka-table" style="font-size:12px;max-height:350px;overflow-y:auto;"></div>
+  <button id="gt-copy-kostka" style="font-size:11px;padding:2px 8px;margin-top:4px;cursor:pointer;">Copy as text</button>
+</div>
 
 <div id="gt-branching" style="margin-top:12px;padding:10px;background:#f0f8f0;border:1px solid #ccc;border-radius:4px;display:none;">
   <div style="font-weight:bold;font-size:13px;margin-bottom:6px;">Branching rule (M=1)</div>
@@ -404,6 +411,7 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
 
   var MAX_LATEX_TERMS = 60;
   var lastMmaString = '';
+  var lastKostkaText = '';
 
   function polyToMma(poly, varNames) {
     var entries = [];
@@ -565,6 +573,14 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
 
     var copyBtn = document.getElementById('gt-copy-mma');
     copyBtn.style.display = nonZero > 0 ? 'inline-block' : 'none';
+
+    // a-Kostka table (right after polynomial)
+    var kostkaEl = document.getElementById('gt-kostka');
+    if (nonZero > 0 && !aOne && result.configs.length > 0) {
+      computeKostkaA(polyA, k);
+    } else {
+      kostkaEl.style.display = 'none';
+    }
 
     // SSYT verification
     var verifyEl = document.getElementById('gt-verify');
@@ -883,11 +899,434 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
       mma += 'Print["--- Jacobi-Trudi det: ---"];\n';
       mma += 'Print[Simplify[Det[jtMat] - saJS]];\n';
 
+      // ── Section 3: Symmetry analysis ──
+      mma += '\n\n(* ═══════════════════════════════════════ *)\n';
+      mma += '(* 3. SYMMETRY ANALYSIS *)\n';
+      mma += '(* ═══════════════════════════════════════ *)\n\n';
+      mma += 'Print["--- Symmetry checks ---"];\n';
+      var odds = [], evens = [];
+      for (var si = 1; si <= k; si++) {
+        if (si % 2 === 1) odds.push(si); else evens.push(si);
+      }
+      for (var ai = 0; ai < odds.length; ai++)
+        for (var bi = ai + 1; bi < odds.length; bi++)
+          mma += 'Print["x' + odds[ai] + '<->x' + odds[bi] + ' (odd-odd): ", Simplify[sij[saJS,' + odds[ai] + ',' + odds[bi] + '] - saJS] === 0];\n';
+      for (var ai = 0; ai < evens.length; ai++)
+        for (var bi = ai + 1; bi < evens.length; bi++)
+          mma += 'Print["x' + evens[ai] + '<->x' + evens[bi] + ' (even-even): ", Simplify[sij[saJS,' + evens[ai] + ',' + evens[bi] + '] - saJS] === 0];\n';
+      if (odds.length > 0 && evens.length > 0)
+        mma += 'Print["x' + odds[0] + '<->x' + evens[0] + ' (odd-even): ", Simplify[sij[saJS,' + odds[0] + ',' + evens[0] + '] - saJS] === 0];\n';
+
+      // ── Section 4: Schur basis expansion ──
+      var totalWt = partSize(lambda) - partSize(mu);
+      mma += '\n\n(* ═══════════════════════════════════════ *)\n';
+      mma += '(* 4. SCHUR BASIS EXPANSION *)\n';
+      mma += '(* ═══════════════════════════════════════ *)\n\n';
+      if (k <= 6 && totalWt <= 15) {
+        mma += '(* Symmetrize saJS over S_' + k + ' *)\n';
+        mma += 'permsAll = Permutations[Range[' + k + ']];\n';
+        mma += 'saJSSym = Expand[Sum[\n';
+        mma += '  saJS /. Thread[Table[x[i], {i,' + k + '}] -> Table[x[perm[[i]]], {i,' + k + '}]],\n';
+        mma += '  {perm, permsAll}] / Length[permsAll]];\n';
+        mma += 'saJSAsym = Expand[saJS - saJSSym];\n';
+        mma += 'Print["Asymmetric part zero? ", saJSAsym === 0];\n';
+        mma += 'If[saJSAsym =!= 0,\n';
+        mma += '  Print["  # asymmetric terms: ",\n';
+        mma += '    Length[CoefficientRules[saJSAsym,\n';
+        mma += '      Flatten[{Table[x[i],{i,' + k + '}], a}]]]]];\n\n';
+        mma += '(* Expand symmetric part in Schur basis *)\n';
+        mma += 'allMu = Select[IntegerPartitions[' + totalWt + '], Length[#] <= ' + k + ' &];\n';
+        mma += 'numMu = Length[allMu];\n';
+        mma += 'Print["Schur basis size (partitions of ' + totalWt + ' with <=' + k + ' parts): ", numMu];\n';
+        mma += 'schurPolys = Table[schur[allMu[[j]], ' + k + '], {j, numMu}];\n';
+        mma += 'xRules = Table[Table[x[i] -> Prime[3 pt + i], {i, ' + k + '}], {pt, numMu}];\n';
+        mma += 'mat = Table[schurPolys[[j]] /. xRules[[pt]], {pt, numMu}, {j, numMu}];\n';
+        mma += 'rhsVec = Table[saJSSym /. xRules[[pt]], {pt, numMu}];\n';
+        mma += 'cSchur = Simplify[LinearSolve[mat, rhsVec]];\n';
+        mma += 'Print["--- Schur expansion of sym(s_lam^(a)): ---"];\n';
+        mma += 'Do[If[Simplify[cSchur[[j]]] =!= 0,\n';
+        mma += '  Print["  s_", allMu[[j]], " : ", Factor[cSchur[[j]]]]],\n';
+        mma += '  {j, numMu}];\n';
+        mma += 'Print["Reconstruction check: ",\n';
+        mma += '  Simplify[Sum[cSchur[[j]] * schurPolys[[j]], {j, numMu}] - saJSSym]];\n';
+      } else {
+        mma += '(* Schur expansion skipped: N=' + k + ', |shape|=' + totalWt + ' too large *)\n';
+      }
+
+      // ── Section 5: Dual Jacobi-Trudi ──
+      mma += '\n\n(* ═══════════════════════════════════════ *)\n';
+      mma += '(* 5. DUAL JACOBI-TRUDI *)\n';
+      mma += '(* ═══════════════════════════════════════ *)\n\n';
+      mma += 'conjugateP[lam_] := If[lam === {}, {},\n';
+      mma += '  Table[Length[Select[lam, # >= j &]], {j, Max[lam]}]];\n\n';
+      mma += '(* Safe wrappers: handle k<0, k=0, k>n *)\n';
+      mma += 'eASafe[k_, n_] := Which[k < 0, 0, k == 0, 1, k > n, 0, True, eA[k, n]];\n';
+      mma += 'eBSafe[k_, n_] := Which[k < 0, 0, k == 0, 1, k > n, 0, True, eB[k, n]];\n\n';
+      if (!isSkew && lambda.length > 0) {
+        var conjLam = conjugatePartition(lambda);
+        var ll2 = conjLam.length;
+        mma += 'lamConj = conjugateP[' + lamStr + '];\n';
+        mma += 'Print["Conjugate partition: ", lamConj];\n';
+        mma += 'llC = Length[lamConj];\n\n';
+        mma += '(* Dual JT with eA: det(eA[lamConj_i - i + j]) *)\n';
+        mma += 'jtMatEA = Table[eASafe[lamConj[[i]] - i + j, ' + k + '],\n';
+        mma += '  {i, llC}, {j, llC}];\n';
+        mma += 'Print["--- Dual JT (eA) remainder: ---"];\n';
+        mma += 'Print[Simplify[Det[jtMatEA] - saJS]];\n\n';
+        mma += '(* Dual JT with eB: det(eB[lamConj_i - i + j]) *)\n';
+        mma += 'jtMatEB = Table[eBSafe[lamConj[[i]] - i + j, ' + k + '],\n';
+        mma += '  {i, llC}, {j, llC}];\n';
+        mma += 'Print["--- Dual JT (eB) remainder: ---"];\n';
+        mma += 'Print[Simplify[Det[jtMatEB] - saJS]];\n';
+      } else if (isSkew) {
+        mma += '(* Dual JT skipped for skew shapes *)\n';
+      }
+
+      // ── Section 6: Wreath Macdonald operators (r=2) ──
+      mma += '\n\n(* ═══════════════════════════════════════ *)\n';
+      mma += '(* 6. WREATH MACDONALD OPERATORS (r=2) *)\n';
+      mma += '(* ═══════════════════════════════════════ *)\n\n';
+      mma += '(* Orr-Shimozono-Wen: D_{p,n} difference-permutation operators *)\n';
+      mma += '(* r=2 color classes: odd index=color 1, even index=color 0 *)\n';
+      mma += '(* Color weight: odd vars carry factor a *)\n\n';
+      mma += 'vars = Table[x[i], {i, ' + k + '}];\n\n';
+      mma += '(* Macdonald D_1 kernel at q=0 (sets x_i -> 0) *)\n';
+      mma += 'macKernel[i_, vars_, t_] := Module[{xi = vars[[i]],\n';
+      mma += '  others = Delete[vars, i]},\n';
+      mma += '  Product[(t xi - others[[j]])/(xi - others[[j]]),\n';
+      mma += '    {j, Length[others]}]];\n\n';
+      mma += '(* Standard Macdonald D_1 at q=0 *)\n';
+      mma += 'macD1q0[f_, t_] := Sum[\n';
+      mma += '  macKernel[i, vars, t] * (f /. vars[[i]] -> 0),\n';
+      mma += '  {i, ' + k + '}];\n\n';
+      mma += '(* Color-weighted D_1 at q=0: odd vars get extra factor alpha *)\n';
+      mma += 'macD1wr[f_, t_, alpha_] := Sum[\n';
+      mma += '  If[OddQ[i], alpha, 1] *\n';
+      mma += '  macKernel[i, vars, t] * (f /. vars[[i]] -> 0),\n';
+      mma += '  {i, ' + k + '}];\n\n';
+      mma += '(* Parity-split operators *)\n';
+      mma += 'macD1odd[f_, t_] := Sum[\n';
+      mma += '  macKernel[i, vars, t] * (f /. vars[[i]] -> 0),\n';
+      mma += '  {i, 1, ' + k + ', 2}];\n';
+      mma += 'macD1even[f_, t_] := Sum[\n';
+      mma += '  macKernel[i, vars, t] * (f /. vars[[i]] -> 0),\n';
+      mma += '  {i, 2, ' + k + ', 2}];\n\n';
+      mma += 'Print["--- Wreath Macdonald D_1 tests (q=0) ---"];\n';
+      mma += 'r1 = Simplify[macD1q0[saJS, t] / saJS];\n';
+      mma += 'Print["D1(q=0,t) / saJS: ", r1];\n';
+      mma += 'Print["  constant in x? ", FreeQ[r1, x]];\n\n';
+      mma += 'r2 = Simplify[macD1wr[saJS, t, a] / saJS];\n';
+      mma += 'Print["D1_wr(q=0,t,a) / saJS: ", r2];\n';
+      mma += 'Print["  constant in x? ", FreeQ[r2, x]];\n\n';
+      mma += '(* Try specific t values *)\n';
+      mma += 'Print["D1(q=0,t=a) / saJS: ", Simplify[(macD1q0[saJS, a] / saJS)]];\n';
+      mma += 'Print["D1(q=0,t=a^2) / saJS: ", Simplify[(macD1q0[saJS, a^2] / saJS)]];\n\n';
+      mma += '(* Parity-split tests *)\n';
+      mma += 'r3odd = Simplify[macD1odd[saJS, t] / saJS];\n';
+      mma += 'r3even = Simplify[macD1even[saJS, t] / saJS];\n';
+      mma += 'Print["D1_odd(t) / saJS: ", r3odd];\n';
+      mma += 'Print["  constant in x? ", FreeQ[r3odd, x]];\n';
+      mma += 'Print["D1_even(t) / saJS: ", r3even];\n';
+      mma += 'Print["  constant in x? ", FreeQ[r3even, x]];\n\n';
+      mma += '(* Wreath D_1 with cyclic color shift at q=0: *)\n';
+      mma += '(* After setting x_i->0, relabel remaining vars by swapping color of i *)\n';
+      mma += '(* This models the cyclic-shift operator omega for r=2 *)\n';
+      mma += 'macD1cyc[f_, t_] := Sum[Module[{\n';
+      mma += '  kern = macKernel[i, vars, t],\n';
+      mma += '  fshift = f /. vars[[i]] -> 0},\n';
+      mma += '  (* After x_i->0, swap role of a for this variable *)\n';
+      mma += '  kern * If[OddQ[i], fshift /. a -> 1/a, fshift] * If[OddQ[i], a, 1]\n';
+      mma += '  ], {i, ' + k + '}];\n';
+      mma += 'r4 = Simplify[macD1cyc[saJS, t] / saJS];\n';
+      mma += 'Print["D1_cyc(t) / saJS: ", r4];\n';
+      mma += 'Print["  constant in x? ", FreeQ[r4, x]];\n\n';
+
+      // ── Section 7: Full q-shift Macdonald operators ──
+      mma += '\n(* ═══════════════════════════════════════ *)\n';
+      mma += '(* 7. FULL q-SHIFT MACDONALD & WREATH OPERATORS *)\n';
+      mma += '(* ═══════════════════════════════════════ *)\n\n';
+      mma += '(* Standard Macdonald D_1(q,t): x_i -> q*x_i *)\n';
+      mma += 'macD1[f_, qq_, tt_] := Sum[Module[{xi = vars[[i]],\n';
+      mma += '  others = Delete[vars, i]},\n';
+      mma += '  Product[(tt xi - others[[j]])/(xi - others[[j]]),\n';
+      mma += '    {j, Length[others]}] *\n';
+      mma += '  (f /. xi -> qq xi)], {i, ' + k + '}];\n\n';
+      mma += '(* Color-weighted wreath D_1: odd vars get factor alpha *)\n';
+      mma += 'macD1wrQ[f_, qq_, tt_, alpha_] := Sum[Module[{xi = vars[[i]],\n';
+      mma += '  others = Delete[vars, i]},\n';
+      mma += '  If[OddQ[i], alpha, 1] *\n';
+      mma += '  Product[(tt xi - others[[j]])/(xi - others[[j]]),\n';
+      mma += '    {j, Length[others]}] *\n';
+      mma += '  (f /. xi -> qq xi)], {i, ' + k + '}];\n\n';
+      mma += '(* Wreath D_1 with cyclic color shift: *)\n';
+      mma += '(* For odd i: shift x_i->q*x_i AND swap a->1/a in the shifted poly *)\n';
+      mma += '(* Models the cyclic-shift operator omega for r=2 *)\n';
+      mma += 'macD1cycQ[f_, qq_, tt_] := Sum[Module[{xi = vars[[i]],\n';
+      mma += '  others = Delete[vars, i], fq},\n';
+      mma += '  fq = f /. xi -> qq xi;\n';
+      mma += '  Product[(tt xi - others[[j]])/(xi - others[[j]]),\n';
+      mma += '    {j, Length[others]}] *\n';
+      mma += '  If[OddQ[i], a * (fq /. a -> 1/a), fq]\n';
+      mma += '  ], {i, ' + k + '}];\n\n';
+      mma += '(* Bicolor kernel: t_odd for odd vars, t_even for even vars *)\n';
+      mma += 'macD1bi[f_, qq_, tOdd_, tEven_] := Sum[Module[{xi = vars[[i]],\n';
+      mma += '  others = Delete[vars, i], ti},\n';
+      mma += '  ti = If[OddQ[i], tOdd, tEven];\n';
+      mma += '  Product[(ti xi - others[[j]])/(xi - others[[j]]),\n';
+      mma += '    {j, Length[others]}] *\n';
+      mma += '  (f /. xi -> qq xi)], {i, ' + k + '}];\n\n';
+      mma += 'Print["--- Full q-shift Macdonald D_1 tests ---"];\n';
+      mma += 'Print["(Using symbolic q,t — check if ratio is free of x)"];\n\n';
+      mma += 'rFull1 = Simplify[macD1[saJS, q, t] / saJS];\n';
+      mma += 'Print["D1(q,t) / saJS constant in x? ", FreeQ[rFull1, x]];\n';
+      mma += 'If[FreeQ[rFull1, x], Print["  eigenvalue: ", rFull1]];\n\n';
+      mma += 'rFull2 = Simplify[macD1wrQ[saJS, q, t, a] / saJS];\n';
+      mma += 'Print["D1_wr(q,t,a) / saJS constant in x? ", FreeQ[rFull2, x]];\n';
+      mma += 'If[FreeQ[rFull2, x], Print["  eigenvalue: ", rFull2]];\n\n';
+      mma += 'rFull3 = Simplify[macD1cycQ[saJS, q, t] / saJS];\n';
+      mma += 'Print["D1_cyc(q,t) / saJS constant in x? ", FreeQ[rFull3, x]];\n';
+      mma += 'If[FreeQ[rFull3, x], Print["  eigenvalue: ", rFull3]];\n\n';
+      mma += 'rFull4 = Simplify[macD1bi[saJS, q, t, t2] / saJS];\n';
+      mma += 'Print["D1_bi(q,tOdd,tEven) / saJS constant in x? ", FreeQ[rFull4, x]];\n';
+      mma += 'If[FreeQ[rFull4, x], Print["  eigenvalue: ", rFull4]];\n\n';
+      mma += '(* Try specific parameter relations *)\n';
+      mma += 'Print["--- Specific parameter specializations ---"];\n';
+      mma += 'rSpec1 = Simplify[macD1[saJS, a, t] / saJS];\n';
+      mma += 'Print["D1(q=a,t) constant in x? ", FreeQ[rSpec1, x]];\n';
+      mma += 'rSpec2 = Simplify[macD1[saJS, q, a] / saJS];\n';
+      mma += 'Print["D1(q,t=a) constant in x? ", FreeQ[rSpec2, x]];\n';
+      mma += 'rSpec3 = Simplify[macD1cycQ[saJS, a, t] / saJS];\n';
+      mma += 'Print["D1_cyc(q=a,t) constant in x? ", FreeQ[rSpec3, x]];\n';
+      mma += 'rSpec4 = Simplify[macD1bi[saJS, q, a, 1] / saJS];\n';
+      mma += 'Print["D1_bi(q,tOdd=a,tEven=1) constant in x? ", FreeQ[rSpec4, x]];\n';
+      mma += 'rSpec5 = Simplify[macD1bi[saJS, q, a, a] / saJS];\n';
+      mma += 'Print["D1_bi(q,tOdd=a,tEven=a) = D1(q,t=a) constant? ", FreeQ[rSpec5, x]];\n';
+
+      // ── Section 8: Metaplectic Demazure-Lusztig operators (n=2) ──
+      mma += '\n\n(* ═══════════════════════════════════════ *)\n';
+      mma += '(* 8. METAPLECTIC DEMAZURE-LUSZTIG (n=2) *)\n';
+      mma += '(* Ref: Brubaker-Buciumas-Bump-Friedberg 2012.15778 *)\n';
+      mma += '(* Chinta-Gunnells action for Z/2Z metaplectic cover *)\n';
+      mma += '(* ═══════════════════════════════════════ *)\n\n';
+      mma += '(* n=2 Gauss sums: g(0)=-v, g(1)^2=v, so g(1)=g1 *)\n';
+      mma += '(* Parameter v = g1^2. At g1=1 (v=1): non-metaplectic limit *)\n\n';
+      mma += '(* Chinta-Gunnells action s_i^CG on polynomial f *)\n';
+      mma += '(* For monomial x^lam with m = lam_i - lam_{i+1}: *)\n';
+      mma += '(*   m odd:  s_i^CG(x^lam) = x^{s_i lam} * x_i/x_{i+1} *)\n';
+      mma += '(*   m even: s_i^CG(x^lam) = x^{s_i lam} * (-g1)*r*(r-1/g1)/(r-g1) *)\n';
+      mma += '(*   where r = x_i/x_{i+1} *)\n\n';
+      mma += 'cgAct[f_, i_, g1_] := Module[\n';
+      mma += '  {rules, result = 0, xi = vars[[i]], xj = vars[[i + 1]]},\n';
+      mma += '  rules = CoefficientRules[f, vars];\n';
+      mma += '  Do[Module[{exp = rule[[1]], c = rule[[2]], ei, ej, m, se, mono},\n';
+      mma += '    ei = exp[[i]]; ej = exp[[i + 1]];\n';
+      mma += '    m = ei - ej;\n';
+      mma += '    se = exp; se[[i]] = ej; se[[i + 1]] = ei;\n';
+      mma += '    mono = c * Product[vars[[k]]^se[[k]], {k, ' + k + '}];\n';
+      mma += '    If[OddQ[m],\n';
+      mma += '      result += mono * xi/xj,\n';
+      mma += '      result += mono * (-g1) * xi * (xi - xj/g1) / (xj * (xi - g1*xj))\n';
+      mma += '    ]], {rule, rules}];\n';
+      mma += '  result];\n\n';
+      mma += '(* Scalar metaplectic T_i: *)\n';
+      mma += '(* T_i f = (1-v)/(r^2-1) f - r^{-2}(r^2-v)/(r^2-1) (s_i^CG f) *)\n';
+      mma += 'metTi[f_, i_, g1_] := Module[\n';
+      mma += '  {v = g1^2, xi = vars[[i]], xj = vars[[i + 1]], cgf},\n';
+      mma += '  cgf = cgAct[f, i, g1];\n';
+      mma += '  Together[\n';
+      mma += '    (1 - v) * xj^2 / (xi^2 - xj^2) * f\n';
+      mma += '    - (xi^2 - v*xj^2) / (xi^2 - xj^2) * cgf]];\n\n';
+      mma += 'Print["--- Metaplectic T_i (n=2, scalar CG) ---"];\n';
+      mma += 'Print["Testing T_1 with symbolic g1..."];\n';
+      mma += 'met1 = Together[metTi[saJS, 1, g1]];\n';
+      mma += 'Print["T_1(g1)/saJS constant in x? ", FreeQ[Simplify[met1/saJS], x]];\n\n';
+      mma += '(* Try parameter identifications *)\n';
+      mma += 'Print["--- Parameter identifications ---"];\n';
+      for (var ti = 1; ti < k; ti++) {
+        mma += 'met' + ti + 'a = Together[metTi[saJS, ' + ti + ', a]];\n';
+        mma += 'Print["T_' + ti + '(g1=a) / saJS const? ", FreeQ[Simplify[met' + ti + 'a/saJS], x]];\n';
+      }
+      mma += '\n';
+      for (var ti = 1; ti < k; ti++) {
+        mma += 'met' + ti + 'sa = Together[metTi[saJS, ' + ti + ', Sqrt[a]]];\n';
+        mma += 'Print["T_' + ti + '(g1=Sqrt[a]) / saJS const? ", FreeQ[Simplify[met' + ti + 'sa/saJS], x]];\n';
+      }
+      mma += '\n(* If any T_i works, check all i and print eigenvalues *)\n';
+      mma += 'Do[Module[{res = Together[metTi[saJS, i, a]], ratio},\n';
+      mma += '  ratio = Simplify[res/saJS];\n';
+      mma += '  If[FreeQ[ratio, x],\n';
+      mma += '    Print["  T_", i, "(g1=a) eigenvalue: ", ratio]]],\n';
+      mma += '  {i, ' + (k - 1) + '}];\n';
+      mma += 'Do[Module[{res = Together[metTi[saJS, i, Sqrt[a]]], ratio},\n';
+      mma += '  ratio = Simplify[res/saJS];\n';
+      mma += '  If[FreeQ[ratio, x],\n';
+      mma += '    Print["  T_", i, "(g1=Sqrt[a]) eigenvalue: ", ratio]]],\n';
+      mma += '  {i, ' + (k - 1) + '}];\n';
+
+      // ── Section 9: Cherednik Y_i operators (metaplectic n=2) ──
+      mma += '\n\n(* ═══════════════════════════════════════ *)\n';
+      mma += '(* 9. CHEREDNIK Y_i OPERATORS (metaplectic n=2) *)\n';
+      mma += '(* Y_i = T_i ... T_{N-1} omega T_1^{-1} ... T_{i-1}^{-1} *)\n';
+      mma += '(* These COMMUTE and have SSV polys as eigenfunctions *)\n';
+      mma += '(* ═══════════════════════════════════════ *)\n\n';
+      mma += '(* T_i inverse: T_i^{-1} = (1/v)[T_i - (v-1)] *)\n';
+      mma += 'metTiInv[f_, i_, g1_] := Module[{v = g1^2},\n';
+      mma += '  Together[(metTi[f, i, g1] - (v - 1) * f) / v]];\n\n';
+      mma += '(* Affine element omega: (x1,...,xN) -> (q*xN, x1,...,x_{N-1}) *)\n';
+      mma += 'omega[f_, qq_] := f /. Join[\n';
+      mma += '  Table[vars[[i]] -> vars[[i + 1]], {i, ' + (k - 1) + '}],\n';
+      mma += '  {vars[[' + k + ']] -> qq * vars[[1]]}];\n\n';
+      mma += '(* Build Y_1 = T_1 T_2 ... T_{N-1} omega *)\n';
+      mma += '(* Applied right to left: omega first, then T_{N-1}, ..., T_1 *)\n';
+      mma += 'cherY1[f_, g1_, qq_] := Module[{h = omega[f, qq]},\n';
+      for (var ti = k - 1; ti >= 1; ti--) {
+        mma += '  h = metTi[h, ' + ti + ', g1];\n';
+      }
+      mma += '  Together[h]];\n\n';
+      mma += '(* Build Y_2 = T_2 ... T_{N-1} omega T_1^{-1} *)\n';
+      if (k >= 3) {
+        mma += 'cherY2[f_, g1_, qq_] := Module[{h = metTiInv[f, 1, g1]},\n';
+        mma += '  h = omega[h, qq];\n';
+        for (var ti = k - 1; ti >= 2; ti--) {
+          mma += '  h = metTi[h, ' + ti + ', g1];\n';
+        }
+        mma += '  Together[h]];\n\n';
+      }
+      mma += 'Print["--- Cherednik Y_1 tests ---"];\n';
+      mma += 'Print["(This may be slow for large polynomials)"];\n\n';
+      mma += '(* Test Y_1 with g1=a, various q *)\n';
+      mma += 'y1test = cherY1[saJS, a, q];\n';
+      mma += 'y1ratio = Simplify[y1test / saJS];\n';
+      mma += 'Print["Y_1(g1=a, q) / saJS constant in x? ", FreeQ[y1ratio, x]];\n';
+      mma += 'If[FreeQ[y1ratio, x], Print["  eigenvalue: ", y1ratio]];\n\n';
+      mma += 'y1testS = cherY1[saJS, Sqrt[a], q];\n';
+      mma += 'y1ratioS = Simplify[y1testS / saJS];\n';
+      mma += 'Print["Y_1(g1=Sqrt[a], q) / saJS constant in x? ", FreeQ[y1ratioS, x]];\n';
+      mma += 'If[FreeQ[y1ratioS, x], Print["  eigenvalue: ", y1ratioS]];\n\n';
+      if (k >= 3) {
+        mma += '(* Test Y_2 *)\n';
+        mma += 'y2test = cherY2[saJS, a, q];\n';
+        mma += 'y2ratio = Simplify[y2test / saJS];\n';
+        mma += 'Print["Y_2(g1=a, q) / saJS constant in x? ", FreeQ[y2ratio, x]];\n';
+        mma += 'If[FreeQ[y2ratio, x], Print["  eigenvalue: ", y2ratio]];\n';
+      }
+
       document.getElementById('gt-mma-code').textContent = mma;
       mmaSection.style.display = 'block';
     } else {
       mmaSection.style.display = 'none';
     }
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  a-KOSTKA POLYNOMIALS
+  // ═══════════════════════════════════════════════════
+
+  function computeKostkaA(polyA, k) {
+    var kostkaEl = document.getElementById('gt-kostka');
+    var infoEl = document.getElementById('gt-kostka-info');
+    var tableEl = document.getElementById('gt-kostka-table');
+    kostkaEl.style.display = 'block';
+
+    // Group by x-exponents (content μ), collect a-polynomial for each
+    // polyA keys are "e1,e2,...,eN,aPow"
+    var byContent = new Map(); // key: "e1,...,eN" → Map(aPow → coeff)
+    polyA.forEach(function(c, key) {
+      var exps = parseKey(key);
+      var aPow = exps[k];
+      var xKey = exps.slice(0, k).join(',');
+      if (!byContent.has(xKey)) byContent.set(xKey, new Map());
+      var aMap = byContent.get(xKey);
+      aMap.set(aPow, (aMap.get(aPow) || 0) + c);
+    });
+
+    // Sort contents: first by sorted composition (partition), then by content itself
+    var entries = [];
+    byContent.forEach(function(aMap, xKey) {
+      var xExps = xKey.split(',').map(Number);
+      var sorted = xExps.slice().sort(function(a, b) { return b - a; });
+      entries.push({ xExps: xExps, sorted: sorted, aMap: aMap });
+    });
+    entries.sort(function(a, b) {
+      // Sort by partition (sorted exps), then by composition
+      for (var i = 0; i < a.sorted.length; i++) {
+        if (a.sorted[i] !== b.sorted[i]) return b.sorted[i] - a.sorted[i];
+      }
+      for (var i = 0; i < a.xExps.length; i++) {
+        if (a.xExps[i] !== b.xExps[i]) return b.xExps[i] - a.xExps[i];
+      }
+      return 0;
+    });
+
+    // Build table
+    var html = '<table style="border-collapse:collapse;width:100%;">';
+    html += '<tr style="border-bottom:2px solid #999;font-weight:bold;font-size:11px;">';
+    html += '<td style="padding:2px 6px;">μ (content)</td>';
+    html += '<td style="padding:2px 6px;">K<sub>λ,μ</sub>(a)</td>';
+    html += '<td style="padding:2px 6px;text-align:center;">K(1)</td>';
+    html += '<td style="padding:2px 6px;text-align:center;">max a°</td>';
+    html += '</tr>';
+
+    var prevPartition = '';
+    var textLines = ['mu\tK(a)\tK(1)\tmax_a'];
+    for (var ei = 0; ei < entries.length; ei++) {
+      var e = entries[ei];
+      var partKey = e.sorted.join(',');
+      if (partKey !== prevPartition && ei > 0) {
+        html += '<tr><td colspan="4" style="border-top:1px solid #ccc;"></td></tr>';
+      }
+      prevPartition = partKey;
+
+      var muStr = '(' + e.xExps.join(',') + ')';
+      var isSorted = true;
+      for (var i = 1; i < e.xExps.length; i++) {
+        if (e.xExps[i] > e.xExps[i - 1]) { isSorted = false; break; }
+      }
+
+      var maxAPow = 0;
+      var kAt1 = 0;
+      e.aMap.forEach(function(c, ap) { if (ap > maxAPow) maxAPow = ap; kAt1 += c; });
+      var aParts = [], aPartsPlain = [];
+      for (var ap = maxAPow; ap >= 0; ap--) {
+        var c = e.aMap.get(ap) || 0;
+        if (c === 0) continue;
+        var cAbs = Math.abs(c);
+        var aStr = '', aStrP = '';
+        if (ap === 0) { aStr = String(cAbs); aStrP = String(cAbs); }
+        else if (ap === 1) {
+          aStr = (cAbs === 1 ? '' : String(cAbs)) + 'a';
+          aStrP = (cAbs === 1 ? '' : String(cAbs)) + 'a';
+        } else {
+          aStr = (cAbs === 1 ? '' : String(cAbs)) + 'a<sup>' + ap + '</sup>';
+          aStrP = (cAbs === 1 ? '' : String(cAbs)) + 'a^' + ap;
+        }
+        if (aStr === '') { aStr = '1'; aStrP = '1'; }
+        if (aParts.length === 0) {
+          aParts.push(c < 0 ? '-' + aStr : aStr);
+          aPartsPlain.push(c < 0 ? '-' + aStrP : aStrP);
+        } else {
+          aParts.push(c < 0 ? ' - ' + aStr : ' + ' + aStr);
+          aPartsPlain.push(c < 0 ? ' - ' + aStrP : ' + ' + aStrP);
+        }
+      }
+      var polyStr = aParts.join('');
+      var polyStrPlain = aPartsPlain.join('');
+
+      textLines.push(muStr + '\t' + polyStrPlain + '\t' + kAt1 + '\t' + maxAPow);
+
+      var rowStyle = isSorted ? 'font-weight:bold;' : 'color:#555;';
+      html += '<tr style="' + rowStyle + '">';
+      html += '<td style="padding:1px 6px;font-family:monospace;font-size:11px;">' + muStr + '</td>';
+      html += '<td style="padding:1px 6px;font-family:monospace;font-size:11px;">' + polyStr + '</td>';
+      html += '<td style="padding:1px 6px;text-align:center;font-size:11px;">' + kAt1 + '</td>';
+      html += '<td style="padding:1px 6px;text-align:center;font-size:11px;">' + maxAPow + '</td>';
+      html += '</tr>';
+    }
+    html += '</table>';
+
+    lastKostkaText = textLines.join('\n');
+    infoEl.textContent = entries.length + ' distinct contents';
+    tableEl.innerHTML = html;
   }
 
   // ═══════════════════════════════════════════════════
@@ -1033,6 +1472,13 @@ a11y-description: "Interactive tool for enumerating Gelfand-Tsetlin schemes and 
     }, 50);
   }
 
+  document.getElementById('gt-copy-kostka').addEventListener('click', function() {
+    navigator.clipboard.writeText(lastKostkaText).then(function() {
+      var btn = document.getElementById('gt-copy-kostka');
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = 'Copy as text'; }, 1500);
+    });
+  });
   document.getElementById('gt-copy-mma-code').addEventListener('click', function() {
     var code = document.getElementById('gt-mma-code').textContent;
     navigator.clipboard.writeText(code).then(function() {
