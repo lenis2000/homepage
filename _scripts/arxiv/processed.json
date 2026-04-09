@@ -53781,6 +53781,201 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2604.03051": {
+    "date": "2026-04-03",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.03206": {
+    "date": "2026-04-03",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.03358": {
+    "date": "2026-04-03",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.03548": {
+    "date": "2026-04-04",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.03584": {
+    "date": "2026-04-04",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.03663": {
+    "date": "2026-04-04",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.03736": {
+    "date": "2026-04-04",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.03777": {
+    "date": "2026-04-04",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.03913": {
+    "date": "2026-04-05",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.03934": {
+    "date": "2026-04-05",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.04146": {
+    "date": "2026-04-05",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.04148": {
+    "date": "2026-04-05",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.04163": {
+    "date": "2026-04-05",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.04219": {
+    "date": "2026-04-05",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.04366": {
+    "date": "2026-04-06",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.04396": {
+    "date": "2026-04-06",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.04607": {
+    "date": "2026-04-06",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.04638": {
+    "date": "2026-04-06",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.04824": {
+    "date": "2026-04-06",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.04907": {
+    "date": "2026-04-06",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.05218": {
+    "date": "2026-04-06",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.05280": {
+    "date": "2026-04-07",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.05293": {
+    "date": "2026-04-07",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.05315": {
+    "date": "2026-04-07",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.05401": {
+    "date": "2026-04-07",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.05441": {
+    "date": "2026-04-07",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.05451": {
+    "date": "2026-04-07",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.05804": {
+    "date": "2026-04-07",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.05850": {
+    "date": "2026-04-07",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.05895": {
+    "date": "2026-04-07",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.06012": {
+    "date": "2026-04-07",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.06362": {
+    "date": "2026-04-07",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.06431": {
+    "date": "2026-04-07",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.06486": {
+    "date": "2026-04-07",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.06503": {
+    "date": "2026-04-07",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.06532": {
+    "date": "2026-04-08",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.06774": {
+    "date": "2026-04-08",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.06801": {
+    "date": "2026-04-08",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.07207": {
+    "date": "2026-04-08",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
   "alg-geom/9712009": {
     "date": "1997-12-09",
     "decision": "ACCEPT",
