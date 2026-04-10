@@ -6,7 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tetris">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d0d1a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;overflow:hidden;background:#0d0d1a;color:#ccc;
@@ -76,6 +82,19 @@ body{display:flex;flex-direction:column;align-items:center;
 
 @media (pointer:coarse){
   #controls{display:flex}
+}
+/* iPhone 13 / 12 / 14 standard (≈390pt wide). Tightens side panels so the
+   board can use more horizontal space — width is the binding constraint here. */
+@media (min-width:361px) and (max-width:430px){
+  .side-panel{min-width:48px;gap:6px}
+  .mini-box{padding:3px}
+  .stat-box{padding:4px 6px}
+  .stat-val{font-size:14px}
+  .mini-label{font-size:8px;letter-spacing:0.5px}
+  #game-row{padding:2px;gap:6px}
+  #ctrl-spacer{width:12px}
+  .ctrl-btn{width:60px;height:60px;font-size:21px;border-radius:13px}
+  #controls{padding:6px 10px;gap:7px}
 }
 @media (max-height:580px){
   #top-bar{padding:2px 8px}
@@ -216,7 +235,7 @@ function resize() {
 
   var sideW = document.getElementById('panel-left').offsetWidth;
   var gapW = 8;
-  var availW = window.innerWidth - 2 * (sideW + gapW) - 24;
+  var availW = window.innerWidth - 2 * (sideW + gapW) - 16;
   var availH = window.innerHeight - topH - ctrlH - 24;
 
   var cW = Math.floor(availW / COLS);
@@ -226,8 +245,8 @@ function resize() {
   boardC.width = cellSize * COLS;
   boardC.height = cellSize * ROWS;
 
-  // Scale preview canvases
-  var ps = Math.max(48, Math.min(72, cellSize * 3));
+  // Scale preview canvases — clamp to actual panel width so they never overflow.
+  var ps = Math.max(36, Math.min(72, sideW - 8, cellSize * 3));
   holdC.width = holdC.height = ps;
   nextC.width = nextC.height = ps;
 

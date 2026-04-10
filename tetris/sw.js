@@ -1,9 +1,17 @@
-var CACHE = 'tetris-v1';
+var CACHE = 'tetris-v2';
+var ASSETS = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './icon-180.png',
+  './icon-192.png',
+  './icon-512.png'
+];
 
 self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE)
-      .then(function(cache) { return cache.addAll(['./']); })
+      .then(function(cache) { return cache.addAll(ASSETS); })
       .then(function() { return self.skipWaiting(); })
   );
 });
@@ -20,9 +28,15 @@ self.addEventListener('activate', function(e) {
 });
 
 self.addEventListener('fetch', function(e) {
+  if (e.request.method !== 'GET') return;
   e.respondWith(
     caches.match(e.request).then(function(cached) {
-      return cached || fetch(e.request);
+      return cached || fetch(e.request).then(function(resp) {
+        if (!resp || resp.status !== 200 || resp.type !== 'basic') return resp;
+        var copy = resp.clone();
+        caches.open(CACHE).then(function(c) { c.put(e.request, copy); });
+        return resp;
+      }).catch(function() { return cached; });
     })
   );
 });
