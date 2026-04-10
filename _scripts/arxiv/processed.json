@@ -53954,6 +53954,7 @@
   "2604.06503": {
     "date": "2026-04-07",
     "decision": "ACCEPT",
+    "deleted": true,
     "source": "fetch"
   },
   "2604.06532": {
