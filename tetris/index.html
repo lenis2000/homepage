@@ -442,6 +442,12 @@ function resetLock() {
 function lockPiece() {
   merge();
   var full = findFullLines();
+  // Highest (smallest-y) board row touched by the just-locked piece
+  var topRow = Infinity;
+  for (var py = 0; py < piece.mat.length; py++)
+    for (var px = 0; px < piece.mat[py].length; px++)
+      if (piece.mat[py][px] && piece.y + py < topRow) topRow = piece.y + py;
+
   if (full.length > 0) {
     clearing = full;
     clearStart = performance.now();
@@ -451,6 +457,10 @@ function lockPiece() {
     linesCleared += full.length;
     level = Math.floor(linesCleared / 10) + 1;
     dropInterval = getSpeed(level);
+  } else if (topRow <= 0) {
+    // Top out: a piece came to rest with a cell in the very top row and
+    // didn't clear any lines — the stack has reached the ceiling.
+    startDeath();
   } else {
     spawnPiece();
   }
