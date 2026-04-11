@@ -14,29 +14,45 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
+/* Lock fonts against iOS Dynamic Type / Larger Accessibility Text.
+   This is a fixed-layout game UI with no readable content, so we want
+   identical rendering regardless of the user's iOS text-size setting. */
+*{margin:0;padding:0;box-sizing:border-box;
+  -webkit-text-size-adjust:none;text-size-adjust:none;
+  font-size-adjust:none}
+html{-webkit-text-size-adjust:none;text-size-adjust:none}
 html,body{height:100%;overflow:hidden;background:#0d0d1a;color:#ccc;
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
-  -webkit-text-size-adjust:100%;touch-action:manipulation;
-  -webkit-tap-highlight-color:transparent}
+  font-size:14px;line-height:1.2;
+  -webkit-text-size-adjust:none;text-size-adjust:none;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 body{display:flex;flex-direction:column;align-items:center;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 
 #top-bar{width:100%;max-width:600px;display:flex;align-items:center;
-  justify-content:space-between;padding:6px 12px;flex-shrink:0}
-#back-link{color:#888;text-decoration:none;font-size:13px}
+  justify-content:space-between;padding:6px 12px;flex-shrink:0;gap:8px}
+#back-link{color:#888;text-decoration:none;font-size:13px;flex-shrink:0}
 #back-link:hover{color:#ff9100}
 #title{font-family:'Courier New',monospace;font-size:20px;font-weight:bold;
-  letter-spacing:6px;color:#e0e0e0}
-#stats{display:flex;gap:12px;font-size:11px;letter-spacing:0.5px;color:#888;text-transform:uppercase}
+  letter-spacing:6px;color:#e0e0e0;flex-shrink:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:clip}
+#stats{display:flex;gap:12px;font-size:11px;letter-spacing:0.5px;color:#888;
+  text-transform:uppercase;flex-shrink:0}
 #stats b{color:#e0e0e0;font-family:'SF Mono',Monaco,'Courier New',monospace;font-weight:600}
+/* Top-bar stats are redundant with the right side panel. Hide them on
+   anything narrower than a small tablet so the title has room to breathe
+   and nothing is forced off-screen. */
+@media (max-width:600px){
+  #stats{display:none}
+  #top-bar{justify-content:flex-start;gap:14px}
+}
 
 #game-row{display:flex;align-items:flex-start;gap:8px;flex:1;min-height:0;
   justify-content:center;padding:4px}
 
-.side-panel{display:flex;flex-direction:column;gap:8px;min-width:56px}
+.side-panel{display:flex;flex-direction:column;gap:8px;min-width:56px;overflow:hidden}
 .mini-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
-  border-radius:6px;padding:4px;text-align:center}
+  border-radius:6px;padding:4px;text-align:center;overflow:hidden}
 .mini-label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#666;
   margin-bottom:2px;font-weight:600}
 .mini-canvas{display:block;margin:0 auto}
@@ -69,46 +85,50 @@ body{display:flex;flex-direction:column;align-items:center;
   display:flex;align-items:center;justify-content:center;font-family:inherit}
 .lp-btn:hover,.lp-btn:active{border-color:#ff9100;color:#ff9100}
 
-#controls{display:none;width:100%;max-width:400px;padding:8px 12px;
-  gap:8px;justify-content:center;flex-shrink:0}
-.ctrl-btn{width:64px;height:64px;border-radius:14px;border:none;
+/* Controls fill the viewport width and let buttons flex-shrink so all 6
+   always fit, even on a 360-pt phone. Aspect-ratio keeps them square. */
+#controls{display:none;width:100%;max-width:480px;padding:8px 10px;
+  gap:6px;justify-content:center;align-items:center;flex-shrink:0}
+.ctrl-btn{flex:1 1 0;min-width:0;max-width:68px;aspect-ratio:1/1;
+  border-radius:14px;border:none;
   background:rgba(255,255,255,0.08);color:#ccc;font-size:22px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  -webkit-user-select:none;user-select:none;flex-shrink:0}
+  -webkit-user-select:none;user-select:none;padding:0;line-height:1}
 .ctrl-btn:active{background:rgba(255,255,255,0.18)}
 .ctrl-btn.accent{background:rgba(255,145,0,0.2);color:#ff9100}
 .ctrl-btn.accent:active{background:rgba(255,145,0,0.35)}
-#ctrl-spacer{width:16px;flex-shrink:0}
+#ctrl-spacer{flex:0 0 10px;min-width:0}
 
 @media (pointer:coarse){
   #controls{display:flex}
 }
 /* iPhone 13 / 12 / 14 standard (≈390pt wide). Tightens side panels so the
-   board can use more horizontal space — width is the binding constraint here. */
+   board can use more horizontal space — width is the binding constraint here.
+   Side panels are CAPPED so even with inflated text they cannot eat the board. */
 @media (min-width:361px) and (max-width:430px){
-  .side-panel{min-width:48px;gap:6px}
+  .side-panel{min-width:48px;max-width:60px;gap:6px}
   .mini-box{padding:3px}
   .stat-box{padding:4px 6px}
   .stat-val{font-size:14px}
   .mini-label{font-size:8px;letter-spacing:0.5px}
   #game-row{padding:2px;gap:6px}
-  #ctrl-spacer{width:12px}
-  .ctrl-btn{width:60px;height:60px;font-size:21px;border-radius:13px}
-  #controls{padding:6px 10px;gap:7px}
+  #ctrl-spacer{flex:0 0 8px}
+  #controls{padding:6px 8px;gap:6px}
 }
 @media (max-height:580px){
   #top-bar{padding:2px 8px}
   #title{font-size:16px;letter-spacing:3px}
   #stats{gap:8px;font-size:10px}
-  .ctrl-btn{width:52px;height:52px;font-size:20px;border-radius:11px}
-  #controls{padding:4px 8px;gap:6px}
+  #controls{padding:4px 8px;gap:5px}
+  .ctrl-btn{font-size:20px;border-radius:11px}
 }
 @media (max-width:360px){
-  .side-panel{min-width:44px;gap:4px}
+  .side-panel{min-width:44px;max-width:54px;gap:4px}
   .stat-val{font-size:13px}
   .mini-label{font-size:8px}
-  #ctrl-spacer{width:8px}
-  .ctrl-btn{width:52px;height:52px;font-size:20px}
+  #ctrl-spacer{flex:0 0 6px}
+  .ctrl-btn{font-size:20px}
+  #controls{padding:6px 6px;gap:5px}
 }
 </style>
 </head>
@@ -884,6 +904,9 @@ function init() {
   state = 'menu';
   document.getElementById('best').textContent = highScore;
   resize();
+  // Re-measure once layout has settled — preview canvases start at 72px
+  // wide, but capped side panels need a second pass to stabilize.
+  requestAnimationFrame(function(){ requestAnimationFrame(resize); });
   showOverlay('TETRIS', 'Tap or press any key', 'START');
   updateUI();
   draw();
