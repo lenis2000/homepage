@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Block Puzzle</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Block Puzzle">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d0d1a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<style>
+/* Lock fonts against iOS Dynamic Type / Larger Accessibility Text.
+   This is a fixed-layout game UI, so we want identical rendering regardless
+   of the user's iOS text-size setting. Same approach as /tetris/. */
+*{margin:0;padding:0;box-sizing:border-box;
+  -webkit-text-size-adjust:none;text-size-adjust:none;
+  font-size-adjust:none}
+html{-webkit-text-size-adjust:none;text-size-adjust:none}
+html,body{height:100%;overflow:hidden;background:#0d0d1a;color:#ccc;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+  font-size:14px;line-height:1.2;
+  -webkit-text-size-adjust:none;text-size-adjust:none;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+body{display:flex;flex-direction:column;align-items:center;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+
+#top-bar{width:100%;max-width:600px;display:flex;align-items:center;
+  justify-content:space-between;padding:6px 12px;flex-shrink:0;gap:8px}
+#back-link{color:#888;text-decoration:none;font-size:13px;flex-shrink:0}
+#back-link:hover{color:#ff9100}
+#title{font-family:'Courier New',monospace;font-size:19px;font-weight:bold;
+  letter-spacing:4px;color:#e0e0e0;flex-shrink:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:clip}
+#stats{display:flex;gap:12px;font-size:11px;letter-spacing:0.5px;color:#888;
+  text-transform:uppercase;flex-shrink:0;max-width:170px;overflow:hidden}
+#stats b{color:#e0e0e0;font-family:'SF Mono',Monaco,'Courier New',monospace;
+  font-weight:600}
+@media (max-width:600px){
+  #top-bar{padding:6px 10px;gap:10px}
+  #stats{gap:10px;max-width:140px}
+}
+@media (max-width:400px){
+  #title{font-size:17px;letter-spacing:3px}
+  #stats{gap:8px;font-size:10px;max-width:120px}
+}
+@media (max-width:340px){
+  #title{font-size:15px;letter-spacing:2px}
+  #stats{font-size:10px;max-width:100px}
+}
+
+#game-wrap{position:relative;flex:1;min-height:0;width:100%;
+  display:flex;align-items:center;justify-content:center;padding:4px 8px 8px}
+#boardC{display:block;touch-action:none;-webkit-user-select:none;user-select:none}
+
+#overlay{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;
+  flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(13,13,26,0.88);z-index:10;padding:16px;text-align:center}
+#overlay.hidden{display:none}
+#overlay-title{font-family:'Courier New',monospace;font-size:26px;font-weight:bold;
+  letter-spacing:4px;color:#e0e0e0;margin-bottom:10px}
+#overlay-sub{font-size:13px;color:#888;margin-bottom:18px;max-width:280px;
+  line-height:1.45}
+#overlay-sub b{color:#e0e0e0;font-family:'SF Mono',Monaco,'Courier New',monospace;
+  font-weight:600}
+#overlay-btn{background:none;border:2px solid #ff9100;color:#ff9100;
+  padding:10px 28px;border-radius:6px;font-size:15px;font-weight:600;
+  cursor:pointer;letter-spacing:1px;font-family:inherit;min-width:140px}
+#overlay-btn:hover,#overlay-btn:active{background:#ff9100;color:#0d0d1a}
+
+@media (max-height:580px){
+  #top-bar{padding:2px 8px}
+  #title{font-size:16px;letter-spacing:3px}
+  #stats{gap:8px;font-size:10px}
+  #overlay-title{font-size:22px;margin-bottom:6px}
+  #overlay-sub{font-size:12px;margin-bottom:12px}
+  #overlay-btn{padding:8px 22px;font-size:14px}
+}
+</style>
+</head>
+<body>
+
+<div id="top-bar">
+  <a id="back-link" href="/">← lpetrov.cc</a>
+  <span id="title">BLOCK</span>
+  <div id="stats">
+    <span>SC <b id="sc">0</b></span>
+    <span>BEST <b id="bs">0</b></span>
+  </div>
+</div>
+
+<div id="game-wrap">
+  <canvas id="boardC" role="application"
+    aria-label="Block puzzle, 10 by 10 grid. Drag pieces from the tray onto the grid to clear rows and columns."></canvas>
+  <div id="overlay">
+    <div id="overlay-title">BLOCK PUZZLE</div>
+    <div id="overlay-sub">Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.</div>
+    <button id="overlay-btn">START</button>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+// ── Constants ──────────────────────────────────────────────────────────────
+var COLS = 10, ROWS = 10;
+var PALETTE = ['#00e5ff','#ffe000','#cc44ff','#00e676','#ff1744','#448aff','#ff9100'];
+
+// All shapes pre-baked as 2D arrays (1 = filled). All rotations included as
+// distinct entries. 38 oriented shapes in total.
+var CATALOG = [
+  // Straights — 9
+  [[1]],
+  [[1,1]],
+  [[1],[1]],
+  [[1,1,1]],
+  [[1],[1],[1]],
+  [[1,1,1,1]],
+  [[1],[1],[1],[1]],
+  [[1,1,1,1,1]],
+  [[1],[1],[1],[1],[1]],
+  // Rectangles / squares — 4
+  [[1,1],[1,1]],
+  [[1,1,1],[1,1,1]],
+  [[1,1],[1,1],[1,1]],
+  [[1,1,1],[1,1,1],[1,1,1]],
+  // L-tromino (3 cells) — 4 rotations
+  [[1,1],[1,0]],
+  [[1,0],[1,1]],
+  [[0,1],[1,1]],
+  [[1,1],[0,1]],
+  // L-tetromino — 4 rotations
+  [[1,0,0],[1,1,1]],
+  [[1,1],[1,0],[1,0]],
+  [[1,1,1],[0,0,1]],
+  [[0,1],[0,1],[1,1]],
+  // J-tetromino — 4 rotations
+  [[0,0,1],[1,1,1]],
+  [[1,0],[1,0],[1,1]],
+  [[1,1,1],[1,0,0]],
+  [[1,1],[0,1],[0,1]],
+  // T-tetromino — 4 rotations
+  [[1,1,1],[0,1,0]],
+  [[1,0],[1,1],[1,0]],
+  [[0,1,0],[1,1,1]],
+  [[0,1],[1,1],[0,1]],
+  // S-tetromino — 2 rotations
+  [[0,1,1],[1,1,0]],
+  [[1,0],[1,1],[0,1]],
+  // Z-tetromino — 2 rotations
+  [[1,1,0],[0,1,1]],
+  [[0,1],[1,1],[1,0]],
+  // Plus sign — 1
+  [[0,1,0],[1,1,1],[0,1,0]],
+  // Big L (L-pentomino, 3+3 corner) — 4 rotations
+  [[1,0,0],[1,0,0],[1,1,1]],
+  [[1,1,1],[1,0,0],[1,0,0]],
+  [[1,1,1],[0,0,1],[0,0,1]],
+  [[0,0,1],[0,0,1],[1,1,1]]
+];
+
+// ── Game state ─────────────────────────────────────────────────────────────
+var board = makeBoard();
+var tray = [null, null, null];
+var score = 0;
+var best = parseInt(localStorage.getItem('block-hi') || '0', 10) || 0;
+var state = 'menu'; // 'menu' | 'playing' | 'animating' | 'over'
+var dragState = null;
+var flash = null;
+
+// Layout (computed by resize())
+var cellSize = 32;
+var trayCellSize = 24;
+var boardX = 0, boardY = 0;
+var trayX = 0, trayY = 0;
+var trayRowH = 0;
+
+// DOM refs
+var canvas, ctx, scEl, bsEl, overlay, overlayTitle, overlaySub, overlayBtn;
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function makeBoard() {
+  var b = [];
+  for (var r = 0; r < ROWS; r++) {
+    var row = [];
+    for (var c = 0; c < COLS; c++) row.push(null);
+    b.push(row);
+  }
+  return b;
+}
+
+function countCells(shape) {
+  var n = 0;
+  for (var r = 0; r < shape.length; r++)
+    for (var c = 0; c < shape[r].length; c++)
+      if (shape[r][c]) n++;
+  return n;
+}
+
+function randPiece() {
+  var shape = CATALOG[Math.floor(Math.random() * CATALOG.length)];
+  var color = Math.floor(Math.random() * PALETTE.length);
+  return { shape: shape, color: color };
+}
+
+function refillTray() {
+  tray[0] = randPiece();
+  tray[1] = randPiece();
+  tray[2] = randPiece();
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+// ── Layout / sizing ────────────────────────────────────────────────────────
+function resize() {
+  var dpr = Math.max(1, window.devicePixelRatio || 1);
+  var wrap = document.getElementById('game-wrap');
+  var rect = wrap.getBoundingClientRect();
+  var cssW = Math.max(200, Math.floor(rect.width));
+  var cssH = Math.max(200, Math.floor(rect.height));
+
+  // Board = 10x10 cells. Tray region below = ~3.6 cells tall.
+  // Pick cellSize that fits both horizontally and vertically.
+  var maxByW = cssW / COLS;
+  var maxByH = cssH / (ROWS + 3.8);
+  cellSize = Math.max(14, Math.floor(Math.min(maxByW, maxByH)));
+
+  var boardSize = cellSize * COLS;
+  trayRowH = Math.floor(cellSize * 3.4);
+
+  // Tray cell size must fit the worst-case piece (5-cell straights and 3x3
+  // square) inside one of three slots. slotW = boardSize / 3 ≈ 3.33*cellSize.
+  // Longest piece is 5 cells → trayCell * 5 ≤ slotW * 0.88 (padding). Also
+  // vertically: trayCell * 5 ≤ trayRowH * 0.88.
+  var slotW = boardSize / 3;
+  var maxTray = Math.floor(Math.min(slotW, trayRowH) * 0.88 / 5);
+  trayCellSize = Math.max(8, maxTray);
+  var canvasW = boardSize;
+  var canvasH = boardSize + trayRowH;
+
+  canvas.style.width = canvasW + 'px';
+  canvas.style.height = canvasH + 'px';
+  canvas.width = Math.round(canvasW * dpr);
+  canvas.height = Math.round(canvasH * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  boardX = 0;
+  boardY = 0;
+  trayX = 0;
+  trayY = boardSize;
+
+  draw();
+}
+
+// ── Rendering ──────────────────────────────────────────────────────────────
+function drawCell(x, y, size, colorIdx, fade) {
+  var color = PALETTE[colorIdx];
+  var pad = 1;
+  var inset = Math.max(2, Math.floor(size * 0.08));
+  ctx.save();
+  if (fade != null) ctx.globalAlpha = fade;
+  // Darker rim
+  ctx.fillStyle = shade(color, -0.25);
+  ctx.fillRect(x + pad, y + pad, size - 2 * pad, size - 2 * pad);
+  // Main face
+  ctx.fillStyle = color;
+  ctx.fillRect(x + pad + inset, y + pad + inset,
+               size - 2 * pad - 2 * inset, size - 2 * pad - 2 * inset);
+  // Top highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.fillRect(x + pad + inset, y + pad + inset,
+               size - 2 * pad - 2 * inset, Math.max(1, Math.floor(size * 0.08)));
+  ctx.restore();
+}
+
+function shade(hex, amt) {
+  // amt in [-1, 1]
+  var h = hex.replace('#','');
+  var r = parseInt(h.substring(0,2),16);
+  var g = parseInt(h.substring(2,4),16);
+  var b = parseInt(h.substring(4,6),16);
+  var f = amt < 0 ? 1 + amt : 1 - amt;
+  if (amt < 0) { r = Math.round(r * f); g = Math.round(g * f); b = Math.round(b * f); }
+  else { r = Math.round(r + (255 - r) * amt); g = Math.round(g + (255 - g) * amt); b = Math.round(b + (255 - b) * amt); }
+  return '#' + ('0' + r.toString(16)).slice(-2) + ('0' + g.toString(16)).slice(-2) + ('0' + b.toString(16)).slice(-2);
+}
+
+function drawBoardGrid() {
+  var bw = COLS * cellSize, bh = ROWS * cellSize;
+  // Background
+  ctx.fillStyle = '#0a0a14';
+  ctx.fillRect(boardX, boardY, bw, bh);
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (var i = 1; i < COLS; i++) {
+    var px = boardX + i * cellSize + 0.5;
+    ctx.moveTo(px, boardY);
+    ctx.lineTo(px, boardY + bh);
+  }
+  for (var j = 1; j < ROWS; j++) {
+    var py = boardY + j * cellSize + 0.5;
+    ctx.moveTo(boardX, py);
+    ctx.lineTo(boardX + bw, py);
+  }
+  ctx.stroke();
+  // Border
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(boardX + 1, boardY + 1, bw - 2, bh - 2);
+}
+
+function drawPlacedCells() {
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      var v = board[r][c];
+      if (v !== null) drawCell(boardX + c * cellSize, boardY + r * cellSize, cellSize, v);
+    }
+  }
+}
+
+function effectiveLift() {
+  if (!dragState) return 0;
+  // Clamp so a lifted piece can still reach the top rows: never shift so far
+  // up that the piece's top goes off the canvas above the board.
+  var maxLift = Math.max(0, dragState.pointerY - dragState.anchorY - boardY);
+  return Math.min(dragState.lift, maxLift);
+}
+
+function drawGhostPiece() {
+  if (!dragState) return;
+  var p = dragState.piece;
+  var lift = effectiveLift();
+  var topX = dragState.pointerX - dragState.anchorX;
+  var topY = dragState.pointerY - dragState.anchorY - lift;
+  var bc = Math.round((topX - boardX) / cellSize);
+  var br = Math.round((topY - boardY) / cellSize);
+  var ok = isValid(p, br, bc);
+  var shape = p.shape;
+  for (var rr = 0; rr < shape.length; rr++) {
+    for (var cc = 0; cc < shape[rr].length; cc++) {
+      if (!shape[rr][cc]) continue;
+      var gr = br + rr, gc = bc + cc;
+      if (gr < 0 || gr >= ROWS || gc < 0 || gc >= COLS) continue;
+      var gx = boardX + gc * cellSize;
+      var gy = boardY + gr * cellSize;
+      ctx.save();
+      ctx.globalAlpha = ok ? 0.45 : 0.35;
+      ctx.fillStyle = ok ? PALETTE[p.color] : '#ff1744';
+      ctx.fillRect(gx + 2, gy + 2, cellSize - 4, cellSize - 4);
+      ctx.restore();
+    }
+  }
+}
+
+function drawTraySlots() {
+  var w = COLS * cellSize;
+  var slotW = w / 3;
+  // Separator lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (var i = 1; i < 3; i++) {
+    var sx = trayX + slotW * i + 0.5;
+    ctx.beginPath();
+    ctx.moveTo(sx, trayY + 6);
+    ctx.lineTo(sx, trayY + trayRowH - 6);
+    ctx.stroke();
+  }
+  for (var s = 0; s < 3; s++) {
+    var p = tray[s];
+    if (!p) continue;
+    if (dragState && dragState.slot === s) continue;
+    drawPieceInSlot(s, p, trayCellSize, 1.0);
+  }
+}
+
+function drawPieceInSlot(slotIdx, piece, cellPx, alpha) {
+  var w = COLS * cellSize;
+  var slotW = w / 3;
+  var cx = trayX + slotW * slotIdx + slotW / 2;
+  var cy = trayY + trayRowH / 2;
+  var sw = piece.shape[0].length * cellPx;
+  var sh = piece.shape.length * cellPx;
+  var px = Math.round(cx - sw / 2);
+  var py = Math.round(cy - sh / 2);
+  for (var r = 0; r < piece.shape.length; r++) {
+    for (var c = 0; c < piece.shape[r].length; c++) {
+      if (piece.shape[r][c]) {
+        drawCell(px + c * cellPx, py + r * cellPx, cellPx, piece.color, alpha);
+      }
+    }
+  }
+}
+
+function drawDragged() {
+  if (!dragState) return;
+  var p = dragState.piece;
+  var lift = effectiveLift();
+  var topX = dragState.pointerX - dragState.anchorX;
+  var topY = dragState.pointerY - dragState.anchorY - lift;
+  for (var r = 0; r < p.shape.length; r++) {
+    for (var c = 0; c < p.shape[r].length; c++) {
+      if (p.shape[r][c]) {
+        drawCell(topX + c * cellSize, topY + r * cellSize, cellSize, p.color);
+      }
+    }
+  }
+}
+
+// Two-phase explosion: brief white pop on the stationary cells, then each
+// cell bursts into rotating colored + orange particles that fly outward with
+// gravity and fade.
+var FLASH_POP_SEC = 0.11;
+var FLASH_BURST_SEC = 0.55;
+var FLASH_TOTAL_SEC = FLASH_POP_SEC + FLASH_BURST_SEC;
+
+function drawFlash() {
+  if (!flash) return;
+  var elapsed = (performance.now() - flash.t0) / 1000;
+
+  if (elapsed < FLASH_POP_SEC) {
+    // Pop phase: redraw snapshot cells (they were cleared from the board
+    // already) with a white overlay that rises and falls.
+    var p = elapsed / FLASH_POP_SEC;
+    var pop = Math.sin(p * Math.PI); // 0 → 1 → 0
+    for (var i = 0; i < flash.cells.length; i++) {
+      var cell = flash.cells[i];
+      var x = boardX + cell.c * cellSize;
+      var y = boardY + cell.r * cellSize;
+      drawCell(x, y, cellSize, cell.color);
+      ctx.save();
+      ctx.globalAlpha = pop * 0.9;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
+      ctx.restore();
+    }
+    return;
+  }
+
+  // Burst phase: particle physics.
+  var bt = elapsed - FLASH_POP_SEC;             // seconds since burst start
+  var tNorm = Math.min(1, bt / FLASH_BURST_SEC); // 0 → 1
+  var g = cellSize * 14;                         // gravity, CSS-px/s²
+  for (var k = 0; k < flash.particles.length; k++) {
+    var pt = flash.particles[k];
+    var px = pt.x0 + pt.vx * bt;
+    var py = pt.y0 + pt.vy * bt + 0.5 * g * bt * bt;
+    var sz = pt.size * Math.max(0, 1 - tNorm * 0.65);
+    var alpha = Math.max(0, 1 - tNorm);
+    if (sz < 1 || alpha <= 0) continue;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = pt.color;
+    ctx.translate(px, py);
+    ctx.rotate(pt.rot + pt.rotV * bt);
+    ctx.fillRect(-sz / 2, -sz / 2, sz, sz);
+    ctx.restore();
+  }
+}
+
+function draw() {
+  if (!ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawBoardGrid();
+  drawPlacedCells();
+  drawGhostPiece();
+  drawTraySlots();
+  drawDragged();
+  if (state === 'animating' && flash) {
+    drawFlash();
+  }
+}
+
+// ── Validation / placement ────────────────────────────────────────────────
+function isValid(piece, r, c) {
+  var shape = piece.shape;
+  for (var rr = 0; rr < shape.length; rr++) {
+    for (var cc = 0; cc < shape[rr].length; cc++) {
+      if (!shape[rr][cc]) continue;
+      var br = r + rr, bc = c + cc;
+      if (br < 0 || br >= ROWS || bc < 0 || bc >= COLS) return false;
+      if (board[br][bc] !== null) return false;
+    }
+  }
+  return true;
+}
+
+function placePiece(piece, r, c) {
+  var shape = piece.shape;
+  for (var rr = 0; rr < shape.length; rr++) {
+    for (var cc = 0; cc < shape[rr].length; cc++) {
+      if (shape[rr][cc]) board[r + rr][c + cc] = piece.color;
+    }
+  }
+}
+
+function scanFull() {
+  var rows = [], cols = [];
+  for (var r = 0; r < ROWS; r++) {
+    var full = true;
+    for (var c = 0; c < COLS; c++) {
+      if (board[r][c] === null) { full = false; break; }
+    }
+    if (full) rows.push(r);
+  }
+  for (var cc = 0; cc < COLS; cc++) {
+    var fullc = true;
+    for (var rr = 0; rr < ROWS; rr++) {
+      if (board[rr][cc] === null) { fullc = false; break; }
+    }
+    if (fullc) cols.push(cc);
+  }
+  return { rows: rows, cols: cols };
+}
+
+function clearLines(rows, cols) {
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    for (var c = 0; c < COLS; c++) board[r][c] = null;
+  }
+  for (var j = 0; j < cols.length; j++) {
+    var cc = cols[j];
+    for (var rr = 0; rr < ROWS; rr++) board[rr][cc] = null;
+  }
+}
+
+function isGameOver() {
+  for (var s = 0; s < 3; s++) {
+    var p = tray[s];
+    if (!p) continue;
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        if (isValid(p, r, c)) return false;
+      }
+    }
+  }
+  return true;
+}
+
+// ── Commit pipeline ────────────────────────────────────────────────────────
+function dropPiece(slot, r, c) {
+  var p = tray[slot];
+  if (!p || !isValid(p, r, c)) return false;
+  placePiece(p, r, c);
+  tray[slot] = null;
+  score += countCells(p.shape);
+  updateScoreUI();
+
+  var full = scanFull();
+  if (full.rows.length + full.cols.length > 0) {
+    var lines = full.rows.length + full.cols.length;
+    score += lines * 10 + (lines >= 2 ? 10 * lines * (lines - 1) / 2 : 0);
+    updateScoreUI();
+    var cells = collectClearingCells(full.rows, full.cols);
+    clearLines(full.rows, full.cols);
+    if (prefersReducedMotion()) {
+      afterClear();
+    } else {
+      state = 'animating';
+      flash = buildExplosion(cells);
+      requestAnimationFrame(animateFlash);
+    }
+  } else {
+    afterClear();
+  }
+  return true;
+}
+
+function buildExplosion(cells) {
+  // Each clearing cell spawns N particles flying outward in all directions,
+  // with small random jitter. Some particles are the cell's own color; a
+  // fraction are accent orange for the "spark" look.
+  var particles = [];
+  var perCell = 10;
+  for (var i = 0; i < cells.length; i++) {
+    var cell = cells[i];
+    var cx = boardX + cell.c * cellSize + cellSize / 2;
+    var cy = boardY + cell.r * cellSize + cellSize / 2;
+    var baseColor = PALETTE[cell.color];
+    for (var k = 0; k < perCell; k++) {
+      var ang = (k / perCell) * Math.PI * 2 + (Math.random() - 0.5) * 0.8;
+      var spd = cellSize * (3.2 + Math.random() * 3.0); // CSS-px per second
+      particles.push({
+        x0: cx + (Math.random() - 0.5) * cellSize * 0.35,
+        y0: cy + (Math.random() - 0.5) * cellSize * 0.35,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd - cellSize * 1.2, // slight initial upward bias
+        size: cellSize * (0.22 + Math.random() * 0.22),
+        color: Math.random() < 0.35 ? '#ff9100' : baseColor,
+        rot: Math.random() * Math.PI * 2,
+        rotV: (Math.random() - 0.5) * 14
+      });
+    }
+  }
+  return { cells: cells, particles: particles, t0: performance.now() };
+}
+
+function collectClearingCells(rows, cols) {
+  var seen = {};
+  var cells = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    for (var c = 0; c < COLS; c++) {
+      var k = r * COLS + c;
+      if (!seen[k] && board[r][c] !== null) {
+        seen[k] = true;
+        cells.push({ r: r, c: c, color: board[r][c] });
+      }
+    }
+  }
+  for (var j = 0; j < cols.length; j++) {
+    var cc = cols[j];
+    for (var rr = 0; rr < ROWS; rr++) {
+      var k2 = rr * COLS + cc;
+      if (!seen[k2] && board[rr][cc] !== null) {
+        seen[k2] = true;
+        cells.push({ r: rr, c: cc, color: board[rr][cc] });
+      }
+    }
+  }
+  return cells;
+}
+
+function animateFlash(now) {
+  if (!flash) return;
+  var elapsed = (now - flash.t0) / 1000;
+  if (elapsed >= FLASH_TOTAL_SEC) {
+    flash = null;
+    afterClear();
+    return;
+  }
+  draw();
+  requestAnimationFrame(animateFlash);
+}
+
+function afterClear() {
+  // Refill if tray empty
+  if (tray[0] === null && tray[1] === null && tray[2] === null) {
+    refillTray();
+  }
+  // Update best
+  if (score > best) {
+    best = score;
+    try { localStorage.setItem('block-hi', String(best)); } catch (e) {}
+    updateScoreUI();
+  }
+  // Game over?
+  if (isGameOver()) {
+    state = 'over';
+    showGameOver();
+    draw();
+    return;
+  }
+  state = 'playing';
+  draw();
+}
+
+// ── Pointer handling ───────────────────────────────────────────────────────
+function canvasPos(e) {
+  var rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+function hitTestTray(x, y) {
+  if (y < trayY || y > trayY + trayRowH) return -1;
+  var w = COLS * cellSize;
+  var slotW = w / 3;
+  var idx = Math.floor(x / slotW);
+  if (idx < 0 || idx > 2) return -1;
+  return idx;
+}
+
+function onPointerDown(e) {
+  if (state !== 'playing') return;
+  var pos = canvasPos(e);
+  var slot = hitTestTray(pos.x, pos.y);
+  if (slot === -1) return;
+  var p = tray[slot];
+  if (!p) return;
+  e.preventDefault();
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+
+  // Compute the pointer's offset inside the piece's bbox in tray-render coords,
+  // then rescale to board cellSize so the rendered floating piece matches the
+  // board grid pitch.
+  var w = COLS * cellSize;
+  var slotW = w / 3;
+  var sw = p.shape[0].length, sh = p.shape.length;
+  var trayCX = trayX + slotW * slot + slotW / 2;
+  var trayCY = trayY + trayRowH / 2;
+  var trayPX = Math.round(trayCX - sw * trayCellSize / 2);
+  var trayPY = Math.round(trayCY - sh * trayCellSize / 2);
+  var normX = (pos.x - trayPX) / trayCellSize; // in piece-cell units
+  var normY = (pos.y - trayPY) / trayCellSize;
+  // Clamp into piece bbox
+  normX = Math.max(0, Math.min(sw, normX));
+  normY = Math.max(0, Math.min(sh, normY));
+  var anchorX = normX * cellSize;
+  var anchorY = normY * cellSize;
+  var lift = (e.pointerType === 'touch') ? cellSize * 1.6 : 0;
+
+  dragState = {
+    slot: slot,
+    piece: p,
+    pointerId: e.pointerId,
+    pointerX: pos.x,
+    pointerY: pos.y,
+    anchorX: anchorX,
+    anchorY: anchorY,
+    lift: lift
+  };
+  draw();
+}
+
+function onPointerMove(e) {
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  var pos = canvasPos(e);
+  dragState.pointerX = pos.x;
+  dragState.pointerY = pos.y;
+  draw();
+}
+
+function onPointerUp(e) {
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  // Refresh with the up event's own position; pointerup can carry a final
+  // delta that pointermove didn't see.
+  var pos = canvasPos(e);
+  dragState.pointerX = pos.x;
+  dragState.pointerY = pos.y;
+  var p = dragState.piece;
+  var slot = dragState.slot;
+  var lift = effectiveLift();
+  var topX = dragState.pointerX - dragState.anchorX;
+  var topY = dragState.pointerY - dragState.anchorY - lift;
+  var bc = Math.round((topX - boardX) / cellSize);
+  var br = Math.round((topY - boardY) / cellSize);
+  try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
+  // CRITICAL: clear dragState BEFORE committing. dropPiece may trigger draw()
+  // via afterClear, and if dragState is still set, the stale floating piece
+  // and ghost preview get painted over the just-placed cells.
+  dragState = null;
+  if (isValid(p, br, bc)) {
+    dropPiece(slot, br, bc);
+  } else {
+    draw();
+  }
+}
+
+function onPointerCancel(e) {
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  dragState = null;
+  draw();
+}
+
+// ── UI wiring ──────────────────────────────────────────────────────────────
+function updateScoreUI() {
+  scEl.textContent = String(score);
+  bsEl.textContent = String(best);
+}
+
+function showGameOver() {
+  overlayTitle.textContent = 'GAME OVER';
+  overlaySub.innerHTML = 'Final score <b>' + score + '</b>&nbsp;&nbsp;Best <b>' + best + '</b>';
+  overlayBtn.textContent = 'RESTART';
+  overlay.classList.remove('hidden');
+}
+
+function showMenu() {
+  overlayTitle.textContent = 'BLOCK PUZZLE';
+  overlaySub.innerHTML = 'Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.';
+  overlayBtn.textContent = 'START';
+  overlay.classList.remove('hidden');
+}
+
+function hideOverlay() {
+  overlay.classList.add('hidden');
+}
+
+function startGame() {
+  // Always start fresh, whether coming from the menu or from game-over.
+  board = makeBoard();
+  tray = [null, null, null];
+  score = 0;
+  refillTray();
+  state = 'playing';
+  updateScoreUI();
+  hideOverlay();
+  draw();
+}
+
+function init() {
+  canvas = document.getElementById('boardC');
+  ctx = canvas.getContext('2d');
+  scEl = document.getElementById('sc');
+  bsEl = document.getElementById('bs');
+  overlay = document.getElementById('overlay');
+  overlayTitle = document.getElementById('overlay-title');
+  overlaySub = document.getElementById('overlay-sub');
+  overlayBtn = document.getElementById('overlay-btn');
+
+  updateScoreUI();
+
+  canvas.addEventListener('pointerdown', onPointerDown, { passive: false });
+  canvas.addEventListener('pointermove', onPointerMove, { passive: false });
+  canvas.addEventListener('pointerup', onPointerUp, { passive: false });
+  canvas.addEventListener('pointercancel', onPointerCancel, { passive: false });
+  canvas.addEventListener('lostpointercapture', onPointerCancel, { passive: false });
+
+  overlayBtn.addEventListener('click', startGame);
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function() {
+    setTimeout(resize, 100);
+  });
+
+  // Initial sizing. Double RAF lets iOS lay out safe-area insets first.
+  resize();
+  requestAnimationFrame(function() { requestAnimationFrame(resize); });
+
+  showMenu();
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('./sw.js').catch(function(){});
+    });
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+})();
+</script>
+</body>
+</html>
