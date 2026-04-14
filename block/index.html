@@ -67,10 +67,14 @@ body{display:flex;flex-direction:column;align-items:center;
   line-height:1.45}
 #overlay-sub b{color:#e0e0e0;font-family:'SF Mono',Monaco,'Courier New',monospace;
   font-weight:600}
-#overlay-btn{background:none;border:2px solid #ff9100;color:#ff9100;
+#overlay-buttons{display:flex;flex-direction:column;gap:10px;align-items:center}
+.overlay-btn{background:none;border:2px solid #ff9100;color:#ff9100;
   padding:10px 28px;border-radius:6px;font-size:15px;font-weight:600;
-  cursor:pointer;letter-spacing:1px;font-family:inherit;min-width:140px}
-#overlay-btn:hover,#overlay-btn:active{background:#ff9100;color:#0d0d1a}
+  cursor:pointer;letter-spacing:1px;font-family:inherit;min-width:180px}
+.overlay-btn:hover,.overlay-btn:active{background:#ff9100;color:#0d0d1a}
+.overlay-btn-ghost{border-color:#888;color:#ccc}
+.overlay-btn-ghost:hover,.overlay-btn-ghost:active{background:#888;color:#0d0d1a}
+#solution-btn[hidden]{display:none}
 
 @media (max-height:580px){
   #top-bar{padding:2px 8px}
@@ -78,7 +82,7 @@ body{display:flex;flex-direction:column;align-items:center;
   #stats{gap:8px;font-size:10px}
   #overlay-title{font-size:22px;margin-bottom:6px}
   #overlay-sub{font-size:12px;margin-bottom:12px}
-  #overlay-btn{padding:8px 22px;font-size:14px}
+  .overlay-btn{padding:8px 22px;font-size:14px}
 }
 </style>
 </head>
@@ -99,7 +103,10 @@ body{display:flex;flex-direction:column;align-items:center;
   <div id="overlay">
     <div id="overlay-title">BLOCK PUZZLE</div>
     <div id="overlay-sub">Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.</div>
-    <button id="overlay-btn">START</button>
+    <div id="overlay-buttons">
+      <button id="overlay-btn" class="overlay-btn">START</button>
+      <button id="solution-btn" class="overlay-btn overlay-btn-ghost" hidden>SHOW SOLUTION</button>
+    </div>
   </div>
 </div>
 
@@ -169,9 +176,14 @@ var board = makeBoard();
 var tray = [null, null, null];
 var score = 0;
 var best = parseInt(localStorage.getItem('block-hi') || '0', 10) || 0;
-var state = 'menu'; // 'menu' | 'playing' | 'animating' | 'over'
+var state = 'menu'; // 'menu' | 'playing' | 'animating' | 'over' | 'solving'
 var dragState = null;
 var flash = null;
+// Snapshot of the board + the DFS-found placement sequence at the moment
+// the current tray was drawn. Used by the game-over "show solution" replay.
+var lastRefillBoardSnapshot = null;
+var lastRefillSolution = null;
+var solutionPlayback = null; // { moves, index, timer, placedCells, highlightT0 }
 
 // Layout (computed by resize())
 var cellSize = 32;
@@ -181,7 +193,7 @@ var trayX = 0, trayY = 0;
 var trayRowH = 0;
 
 // DOM refs
-var canvas, ctx, scEl, bsEl, overlay, overlayTitle, overlaySub, overlayBtn;
+var canvas, ctx, scEl, bsEl, overlay, overlayTitle, overlaySub, overlayBtn, solutionBtn;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function makeBoard() {
@@ -192,6 +204,16 @@ function makeBoard() {
     b.push(row);
   }
   return b;
+}
+
+function cloneBoard(b) {
+  var nb = [];
+  for (var r = 0; r < ROWS; r++) {
+    var row = [];
+    for (var c = 0; c < COLS; c++) row.push(b[r][c]);
+    nb.push(row);
+  }
+  return nb;
 }
 
 function countCells(shape) {
@@ -271,12 +293,14 @@ function clearLinesOcc(occ) {
   }
 }
 
-// DFS: can we place every piece in `pieces` (in some order) on `occ`, with
-// row/col clears simulated after each placement? `budget` is a shared node
-// counter so the refill check stays bounded even on pathological boards.
-function canPlaceAllOcc(occ, pieces, budget) {
-  if (pieces.length === 0) return true;
-  if (--budget.n < 0) return false;
+// DFS: find a placement sequence for every piece in `pieces`, in SOME order,
+// with row/col clears simulated after each placement. Returns an array of
+// {piece, r, c} moves, or null if none exists (or the search budget is hit).
+// `budget` is a shared node counter so the refill check stays bounded even on
+// pathological boards.
+function solveAllOcc(occ, pieces, budget) {
+  if (pieces.length === 0) return [];
+  if (--budget.n < 0) return null;
   for (var i = 0; i < pieces.length; i++) {
     var piece = pieces[i];
     var shape = piece.shape;
@@ -289,17 +313,24 @@ function canPlaceAllOcc(occ, pieces, budget) {
         var nocc = new Uint8Array(occ);
         placeOcc(nocc, shape, r, c);
         clearLinesOcc(nocc);
-        if (canPlaceAllOcc(nocc, rest, budget)) return true;
-        if (budget.n < 0) return false;
+        var restMoves = solveAllOcc(nocc, rest, budget);
+        if (restMoves !== null) {
+          var out = [{ piece: piece, r: r, c: c }];
+          for (var k = 0; k < restMoves.length; k++) out.push(restMoves[k]);
+          return out;
+        }
+        if (budget.n < 0) return null;
       }
     }
   }
-  return false;
+  return null;
 }
 
-// Draws random pieces and retries until the DFS says the whole tray is
-// placeable on the current board. Largest-first ordering in the solver prunes
-// aggressively, so most draws accept on the first attempt.
+// Draws random pieces and retries until the DFS finds a placement sequence
+// for the whole tray on the current board. Largest-first ordering prunes
+// aggressively, so most draws accept on the first attempt. We also stash a
+// deep copy of the board and the DFS-returned move list so "SHOW SOLUTION"
+// can replay it verbatim after a game over.
 function refillTray() {
   var occ = boardOccupancy();
   for (var attempt = 0; attempt < 80; attempt++) {
@@ -309,17 +340,23 @@ function refillTray() {
       return countCells(b.shape) - countCells(a.shape);
     });
     var budget = { n: 60000 };
-    if (canPlaceAllOcc(occ, trial, budget)) {
+    var moves = solveAllOcc(occ, trial, budget);
+    if (moves !== null) {
       tray[0] = p0; tray[1] = p1; tray[2] = p2;
+      lastRefillBoardSnapshot = cloneBoard(board);
+      lastRefillSolution = moves;
       return;
     }
   }
   // Fallback after many rejections: three 1×1 pieces always fit as long as
   // there are ≥3 empty cells on the board.
   var dot = [[1]];
-  tray[0] = { shape: dot, color: Math.floor(Math.random() * PALETTE.length) };
-  tray[1] = { shape: dot, color: Math.floor(Math.random() * PALETTE.length) };
-  tray[2] = { shape: dot, color: Math.floor(Math.random() * PALETTE.length) };
+  var f0 = { shape: dot, color: Math.floor(Math.random() * PALETTE.length) };
+  var f1 = { shape: dot, color: Math.floor(Math.random() * PALETTE.length) };
+  var f2 = { shape: dot, color: Math.floor(Math.random() * PALETTE.length) };
+  tray[0] = f0; tray[1] = f1; tray[2] = f2;
+  lastRefillBoardSnapshot = cloneBoard(board);
+  lastRefillSolution = solveAllOcc(occ, [f0, f1, f2], { n: 20000 });
 }
 
 function prefersReducedMotion() {
@@ -585,6 +622,9 @@ function draw() {
   if (state === 'animating' && flash) {
     drawFlash();
   }
+  if (state === 'solving') {
+    drawSolutionHighlight();
+  }
 }
 
 // ── Validation / placement ────────────────────────────────────────────────
@@ -771,6 +811,100 @@ function afterClear() {
   draw();
 }
 
+// ── Solution playback ─────────────────────────────────────────────────────
+// "SHOW SOLUTION" on the game-over overlay replays the DFS-found placement
+// sequence from the moment the current tray was dealt. The board is reset to
+// the snapshot taken at refill, the tray is repopulated with the three
+// solution pieces in order, then a rAF loop drops each piece with a short
+// fading white highlight on the just-placed cells.
+var PLAYBACK_STEP_MS = 850;
+var PLAYBACK_HIGHLIGHT_MS = 520;
+var PLAYBACK_FINISH_HOLD_MS = 900;
+var PLAYBACK_INITIAL_PAUSE_MS = 450;
+
+function startSolutionPlayback() {
+  if (!lastRefillBoardSnapshot || !lastRefillSolution) return;
+  if (lastRefillSolution.length === 0) return;
+  if (solutionPlayback) return;
+  dragState = null;
+  flash = null;
+  board = cloneBoard(lastRefillBoardSnapshot);
+  for (var s = 0; s < 3; s++) {
+    tray[s] = (s < lastRefillSolution.length) ? lastRefillSolution[s].piece : null;
+  }
+  solutionPlayback = {
+    moves: lastRefillSolution,
+    index: 0,
+    nextStepAt: performance.now() + PLAYBACK_INITIAL_PAUSE_MS,
+    highlightCells: null,
+    highlightT0: 0,
+    finishAt: 0
+  };
+  state = 'solving';
+  hideOverlay();
+  draw();
+  requestAnimationFrame(playbackFrame);
+}
+
+function stopSolutionPlayback() {
+  solutionPlayback = null;
+}
+
+function playbackFrame(now) {
+  if (!solutionPlayback || state !== 'solving') return;
+  var pb = solutionPlayback;
+  // Advance through as many moves as are due on this frame (usually 1).
+  while (pb.index < pb.moves.length && now >= pb.nextStepAt) {
+    var move = pb.moves[pb.index];
+    placePiece(move.piece, move.r, move.c);
+    tray[pb.index] = null;
+    // Snapshot the placed cells BEFORE line clears for the highlight overlay.
+    var placedCells = [];
+    var shape = move.piece.shape;
+    for (var rr = 0; rr < shape.length; rr++) {
+      for (var cc = 0; cc < shape[rr].length; cc++) {
+        if (shape[rr][cc]) placedCells.push({ r: move.r + rr, c: move.c + cc });
+      }
+    }
+    pb.highlightCells = placedCells;
+    pb.highlightT0 = now;
+    var full = scanFull();
+    if (full.rows.length + full.cols.length > 0) clearLines(full.rows, full.cols);
+    pb.index++;
+    pb.nextStepAt = now + PLAYBACK_STEP_MS;
+  }
+  draw();
+  if (pb.index >= pb.moves.length) {
+    if (!pb.finishAt) pb.finishAt = now + PLAYBACK_FINISH_HOLD_MS;
+    if (now >= pb.finishAt) {
+      solutionPlayback = null;
+      state = 'over';
+      showGameOver();
+      draw();
+      return;
+    }
+  }
+  requestAnimationFrame(playbackFrame);
+}
+
+function drawSolutionHighlight() {
+  if (!solutionPlayback || !solutionPlayback.highlightCells) return;
+  var elapsed = performance.now() - solutionPlayback.highlightT0;
+  if (elapsed >= PLAYBACK_HIGHLIGHT_MS) return;
+  var t = elapsed / PLAYBACK_HIGHLIGHT_MS; // 0 → 1
+  var alpha = (1 - t) * (1 - t) * 0.8;     // ease-out
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#ffffff';
+  for (var i = 0; i < solutionPlayback.highlightCells.length; i++) {
+    var cell = solutionPlayback.highlightCells[i];
+    var x = boardX + cell.c * cellSize;
+    var y = boardY + cell.r * cellSize;
+    ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
+  }
+  ctx.restore();
+}
+
 // ── Pointer handling ───────────────────────────────────────────────────────
 function canvasPos(e) {
   var rect = canvas.getBoundingClientRect();
@@ -878,6 +1012,8 @@ function showGameOver() {
   overlayTitle.textContent = 'GAME OVER';
   overlaySub.innerHTML = 'Final score <b>' + score + '</b>&nbsp;&nbsp;Best <b>' + best + '</b>';
   overlayBtn.textContent = 'RESTART';
+  var canShow = !!(lastRefillBoardSnapshot && lastRefillSolution && lastRefillSolution.length > 0);
+  solutionBtn.hidden = !canShow;
   overlay.classList.remove('hidden');
 }
 
@@ -885,6 +1021,7 @@ function showMenu() {
   overlayTitle.textContent = 'BLOCK PUZZLE';
   overlaySub.innerHTML = 'Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.';
   overlayBtn.textContent = 'START';
+  solutionBtn.hidden = true;
   overlay.classList.remove('hidden');
 }
 
@@ -894,9 +1031,12 @@ function hideOverlay() {
 
 function startGame() {
   // Always start fresh, whether coming from the menu or from game-over.
+  stopSolutionPlayback();
   board = makeBoard();
   tray = [null, null, null];
   score = 0;
+  lastRefillBoardSnapshot = null;
+  lastRefillSolution = null;
   refillTray();
   state = 'playing';
   updateScoreUI();
@@ -913,6 +1053,7 @@ function init() {
   overlayTitle = document.getElementById('overlay-title');
   overlaySub = document.getElementById('overlay-sub');
   overlayBtn = document.getElementById('overlay-btn');
+  solutionBtn = document.getElementById('solution-btn');
 
   updateScoreUI();
 
@@ -923,6 +1064,9 @@ function init() {
   canvas.addEventListener('lostpointercapture', onPointerCancel, { passive: false });
 
   overlayBtn.addEventListener('click', startGame);
+  solutionBtn.addEventListener('click', function() {
+    if (state === 'over') startSolutionPlayback();
+  });
 
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', function() {
