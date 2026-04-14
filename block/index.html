@@ -208,10 +208,118 @@ function randPiece() {
   return { shape: shape, color: color };
 }
 
+// ── Refill solvability check ───────────────────────────────────────────────
+// A newly drawn tray must be "solvable" on the current board: there has to
+// exist SOME order in which all three pieces can be placed, allowing row/col
+// clears between placements to free space. If a random draw fails, we redraw.
+function boardOccupancy() {
+  var occ = new Uint8Array(ROWS * COLS);
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c < COLS; c++) {
+      if (board[r][c] !== null) occ[r * COLS + c] = 1;
+    }
+  }
+  return occ;
+}
+
+function isValidOcc(occ, shape, r, c) {
+  for (var rr = 0; rr < shape.length; rr++) {
+    var row = shape[rr];
+    for (var cc = 0; cc < row.length; cc++) {
+      if (!row[cc]) continue;
+      var br = r + rr, bc = c + cc;
+      if (br < 0 || br >= ROWS || bc < 0 || bc >= COLS) return false;
+      if (occ[br * COLS + bc]) return false;
+    }
+  }
+  return true;
+}
+
+function placeOcc(occ, shape, r, c) {
+  for (var rr = 0; rr < shape.length; rr++) {
+    for (var cc = 0; cc < shape[rr].length; cc++) {
+      if (shape[rr][cc]) occ[(r + rr) * COLS + (c + cc)] = 1;
+    }
+  }
+}
+
+// Mirrors scanFull/clearLines: full rows and columns are detected on the
+// SAME pre-clear snapshot, then both are cleared together.
+function clearLinesOcc(occ) {
+  var fullRows = [], fullCols = [];
+  for (var r = 0; r < ROWS; r++) {
+    var rowFull = true;
+    for (var c = 0; c < COLS; c++) {
+      if (!occ[r * COLS + c]) { rowFull = false; break; }
+    }
+    if (rowFull) fullRows.push(r);
+  }
+  for (var c2 = 0; c2 < COLS; c2++) {
+    var colFull = true;
+    for (var r2 = 0; r2 < ROWS; r2++) {
+      if (!occ[r2 * COLS + c2]) { colFull = false; break; }
+    }
+    if (colFull) fullCols.push(c2);
+  }
+  for (var i = 0; i < fullRows.length; i++) {
+    var rr = fullRows[i];
+    for (var cc = 0; cc < COLS; cc++) occ[rr * COLS + cc] = 0;
+  }
+  for (var j = 0; j < fullCols.length; j++) {
+    var ccj = fullCols[j];
+    for (var rrj = 0; rrj < ROWS; rrj++) occ[rrj * COLS + ccj] = 0;
+  }
+}
+
+// DFS: can we place every piece in `pieces` (in some order) on `occ`, with
+// row/col clears simulated after each placement? `budget` is a shared node
+// counter so the refill check stays bounded even on pathological boards.
+function canPlaceAllOcc(occ, pieces, budget) {
+  if (pieces.length === 0) return true;
+  if (--budget.n < 0) return false;
+  for (var i = 0; i < pieces.length; i++) {
+    var piece = pieces[i];
+    var shape = piece.shape;
+    var sh = shape.length, sw = shape[0].length;
+    var rest = [];
+    for (var j = 0; j < pieces.length; j++) if (j !== i) rest.push(pieces[j]);
+    for (var r = 0; r + sh <= ROWS; r++) {
+      for (var c = 0; c + sw <= COLS; c++) {
+        if (!isValidOcc(occ, shape, r, c)) continue;
+        var nocc = new Uint8Array(occ);
+        placeOcc(nocc, shape, r, c);
+        clearLinesOcc(nocc);
+        if (canPlaceAllOcc(nocc, rest, budget)) return true;
+        if (budget.n < 0) return false;
+      }
+    }
+  }
+  return false;
+}
+
+// Draws random pieces and retries until the DFS says the whole tray is
+// placeable on the current board. Largest-first ordering in the solver prunes
+// aggressively, so most draws accept on the first attempt.
 function refillTray() {
-  tray[0] = randPiece();
-  tray[1] = randPiece();
-  tray[2] = randPiece();
+  var occ = boardOccupancy();
+  for (var attempt = 0; attempt < 80; attempt++) {
+    var p0 = randPiece(), p1 = randPiece(), p2 = randPiece();
+    var trial = [p0, p1, p2];
+    trial.sort(function(a, b) {
+      return countCells(b.shape) - countCells(a.shape);
+    });
+    var budget = { n: 60000 };
+    if (canPlaceAllOcc(occ, trial, budget)) {
+      tray[0] = p0; tray[1] = p1; tray[2] = p2;
+      return;
+    }
+  }
+  // Fallback after many rejections: three 1×1 pieces always fit as long as
+  // there are ≥3 empty cells on the board.
+  var dot = [[1]];
+  tray[0] = { shape: dot, color: Math.floor(Math.random() * PALETTE.length) };
+  tray[1] = { shape: dot, color: Math.floor(Math.random() * PALETTE.length) };
+  tray[2] = { shape: dot, color: Math.floor(Math.random() * PALETTE.length) };
 }
 
 function prefersReducedMotion() {
