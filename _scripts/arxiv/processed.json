@@ -54052,6 +54052,126 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "2604.09883": {
+    "date": "2026-04-10",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.10004": {
+    "date": "2026-04-11",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.10020": {
+    "date": "2026-04-11",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.10269": {
+    "date": "2026-04-11",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.10353": {
+    "date": "2026-04-11",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.10376": {
+    "date": "2026-04-11",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.10446": {
+    "date": "2026-04-12",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.10525": {
+    "date": "2026-04-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.10682": {
+    "date": "2026-04-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.10686": {
+    "date": "2026-04-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.10764": {
+    "date": "2026-04-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.10876": {
+    "date": "2026-04-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.10890": {
+    "date": "2026-04-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.11101": {
+    "date": "2026-04-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.11505": {
+    "date": "2026-04-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.11664": {
+    "date": "2026-04-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.11682": {
+    "date": "2026-04-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.11939": {
+    "date": "2026-04-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.11980": {
+    "date": "2026-04-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.12423": {
+    "date": "2026-04-14",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.12774": {
+    "date": "2026-04-14",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.12847": {
+    "date": "2026-04-14",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2604.12880": {
+    "date": "2026-04-14",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2604.12963": {
+    "date": "2026-04-14",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
   "alg-geom/9712009": {
     "date": "1997-12-09",
     "decision": "ACCEPT",
