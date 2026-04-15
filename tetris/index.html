@@ -488,7 +488,7 @@ function lockPiece() {
 }
 
 function getSpeed(lv) {
-  return Math.max(50, Math.floor(1000 * Math.pow(0.82, lv - 1)));
+  return Math.max(130, Math.floor(1000 * Math.pow(0.82, lv - 1)));
 }
 
 // ── Death Animation ──
@@ -696,12 +696,12 @@ function loop(now) {
 
 // ── Keyboard ──
 var held = {};
-function startRepeat(key, action) {
+function startRepeat(key, action, das, arr) {
   stopRepeat(key);
   held[key] = {
     timeout: setTimeout(function() {
-      held[key].interval = setInterval(action, 50);
-    }, 150)
+      held[key].interval = setInterval(action, arr || 20);
+    }, das || 60)
   };
 }
 function stopRepeat(key) {
@@ -723,10 +723,10 @@ document.addEventListener('keydown', function(e) {
   }
   if (state !== 'playing') return;
   switch (e.key) {
-    case 'ArrowLeft': case 'a': moveLeft(); startRepeat('l', moveLeft); break;
-    case 'ArrowRight': case 'd': moveRight(); startRepeat('r', moveRight); break;
-    case 'ArrowDown': case 's': softDrop(); startRepeat('d', softDrop); break;
-    case 'ArrowUp': case 'w': rotatePiece(); break;
+    case 'ArrowLeft': case 'a': moveLeft(); startRepeat('l', moveLeft, 60, 20); break;
+    case 'ArrowRight': case 'd': moveRight(); startRepeat('r', moveRight, 60, 20); break;
+    case 'ArrowDown': case 's': softDrop(); startRepeat('d', softDrop, 0, 15); break;
+    case 'ArrowUp': case 'w': rotatePiece(); startRepeat('u', rotatePiece, 180, 90); break;
     case ' ': hardDrop(); break;
     case 'c': case 'C': case 'Shift': holdPiece(); break;
     case 'p': case 'P': case 'Escape': togglePause(); break;
@@ -739,6 +739,7 @@ document.addEventListener('keyup', function(e) {
     case 'ArrowLeft': case 'a': stopRepeat('l'); break;
     case 'ArrowRight': case 'd': stopRepeat('r'); break;
     case 'ArrowDown': case 's': stopRepeat('d'); break;
+    case 'ArrowUp': case 'w': stopRepeat('u'); break;
   }
 });
 
