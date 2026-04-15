@@ -101,7 +101,7 @@ window.addEventListener('wasm-loaded', async function() {
     const colors = ['#E8E3D3', '#B8B1A0', '#8C867A'];
 
     // Hexagon parameters: tall, narrow obelisk
-    const HEX_A = 10, HEX_B = 10, HEX_C = 80;
+    const HEX_A = 10, HEX_B = 10, HEX_C = 60;
 
     let dimers = [];
     let isValid = false;
@@ -252,8 +252,8 @@ window.addEventListener('wasm-loaded', async function() {
     function glauberLoop() {
         if (!isValid || !isRunning) return;
 
-        // ~5 sweeps per update for this smaller hexagon
-        const ptr = performGlauberStepsWasm(3000);
+        // Slower Glauber: fewer steps per frame for a visible, deliberate melt
+        const ptr = performGlauberStepsWasm(1500);
         freeStringWasm(ptr);
 
         const dPtr = exportDimersWasm();
