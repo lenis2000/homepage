@@ -723,8 +723,8 @@ document.addEventListener('keydown', function(e) {
   }
   if (state !== 'playing') return;
   switch (e.key) {
-    case 'ArrowLeft': case 'a': moveLeft(); startRepeat('l', moveLeft, 60, 20); break;
-    case 'ArrowRight': case 'd': moveRight(); startRepeat('r', moveRight, 60, 20); break;
+    case 'ArrowLeft': case 'a': moveLeft(); startRepeat('l', moveLeft, 170, 33); break;
+    case 'ArrowRight': case 'd': moveRight(); startRepeat('r', moveRight, 170, 33); break;
     case 'ArrowDown': case 's': softDrop(); startRepeat('d', softDrop, 0, 15); break;
     case 'ArrowUp': case 'w': rotatePiece(); startRepeat('u', rotatePiece, 180, 90); break;
     case ' ': hardDrop(); break;
@@ -814,7 +814,11 @@ document.addEventListener('keyup', function(e) {
     drop: hardDrop,
     hold: holdPiece
   };
-  var repeatable = {left: true, right: true, down: true};
+  var repeatable = {
+    left:  {das: 220, arr: 40},
+    right: {das: 220, arr: 40},
+    down:  {das: 0,   arr: 50}
+  };
   var timers = {};
 
   function stopTimer(act) {
@@ -838,13 +842,14 @@ document.addEventListener('keyup', function(e) {
         if (repeatable[act]) {
           stopTimer(act);
           var gen = pieceGen;
+          var cfg = repeatable[act];
           timers[act] = {
             t: setTimeout(function() {
               timers[act].i = setInterval(function() {
                 if (pieceGen !== gen) { stopTimer(act); return; }
                 fn();
-              }, 55);
-            }, 150)
+              }, cfg.arr);
+            }, cfg.das)
           };
         }
       }, {passive: false});
