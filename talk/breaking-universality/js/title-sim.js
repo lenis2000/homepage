@@ -185,10 +185,9 @@ window.addEventListener('wasm-loaded', async function() {
     const FRAME_TOP = 0;
     const FRAME_BOTTOM = 45;
 
-    // Enlarged, fixed transform: column fills ~60% of inner frame width;
-    // hexagon apex sits just below the top of the frame, the bottom of the
-    // frame clips the lower c-units of the column.
-    const SCALE = 18;
+    // Fixed transform: hexagon apex sits just below the top of the frame,
+    // the bottom of the frame clips the lower c-units of the column.
+    const SCALE = 12.6;  // 30% smaller than the original 18 px/lattice
     const TOP_MARGIN = 6;
     const hexTopCartY = (HEX_B + 2 * HEX_C) * slope;   // apex y in lattice Cartesian
     const hexCenterCartX = (HEX_A + HEX_B) / 2;        // horizontal center
@@ -290,15 +289,24 @@ window.addEventListener('wasm-loaded', async function() {
     // Initial static draw
     draw();
 
-    // Register with slide engine
+    // Register with slide engine: Glauber starts on step 2 (second arrow press)
     function waitForSlideEngine() {
         if (window.slideEngine) {
             window.slideEngine.registerSimulation('title', {
                 start: startSim,
                 pause: pauseSim,
+                reset() { pauseSim(); loadEmptyState(); draw(); },
                 onSlideEnter() { draw(); },
-                onSlideLeave() { pauseSim(); }
-            }, 1);
+                onSlideLeave() { pauseSim(); },
+                onStepBack(step) {
+                    // Going back below step 2 restores the empty configuration
+                    if (step < 2) {
+                        pauseSim();
+                        loadEmptyState();
+                        draw();
+                    }
+                }
+            }, 2);
         } else {
             setTimeout(waitForSlideEngine, 50);
         }
