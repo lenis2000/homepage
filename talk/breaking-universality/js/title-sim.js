@@ -101,7 +101,7 @@ window.addEventListener('wasm-loaded', async function() {
     const colors = ['#E8E3D3', '#B8B1A0', '#8C867A'];
 
     // Hexagon parameters: tall, narrow obelisk
-    const HEX_A = 10, HEX_B = 10, HEX_C = 60;
+    const HEX_A = 10, HEX_B = 10, HEX_C = 50;
 
     let dimers = [];
     let isValid = false;
@@ -188,7 +188,7 @@ window.addEventListener('wasm-loaded', async function() {
     // Fixed transform: hexagon apex sits just below the top of the frame,
     // the bottom of the frame clips the lower c-units of the column.
     const SCALE = 12.6;  // 30% smaller than the original 18 px/lattice
-    const TOP_MARGIN = 6;
+    const TOP_MARGIN = 100;
     const hexTopCartY = (HEX_B + 2 * HEX_C) * slope;   // apex y in lattice Cartesian
     const hexCenterCartX = (HEX_A + HEX_B) / 2;        // horizontal center
     const centerX = displayWidth / 2 - hexCenterCartX * SCALE;
@@ -243,8 +243,8 @@ window.addEventListener('wasm-loaded', async function() {
         ctx.fillRect(0, 0, FRAME_SIDE, displayHeight);
         ctx.fillRect(displayWidth - FRAME_SIDE, 0, FRAME_SIDE, displayHeight);
         ctx.fillRect(0, displayHeight - FRAME_BOTTOM, displayWidth, FRAME_BOTTOM);
-        // Thin orange inner border line
-        ctx.strokeStyle = '#C0362C';
+        // Thin black inner border line
+        ctx.strokeStyle = '#000000';
         ctx.lineWidth = 4;
         ctx.strokeRect(FRAME_SIDE, FRAME_TOP, displayWidth - FRAME_SIDE * 2, displayHeight - FRAME_TOP - FRAME_BOTTOM);
     }
@@ -253,7 +253,7 @@ window.addEventListener('wasm-loaded', async function() {
         if (!isValid || !isRunning) return;
 
         // Slower Glauber: fewer steps per frame for a visible, deliberate melt
-        const ptr = performGlauberStepsWasm(1500);
+        const ptr = performGlauberStepsWasm(500);
         freeStringWasm(ptr);
 
         const dPtr = exportDimersWasm();
@@ -289,7 +289,7 @@ window.addEventListener('wasm-loaded', async function() {
     // Initial static draw
     draw();
 
-    // Register with slide engine: Glauber starts on step 2 (second arrow press)
+    // Register with slide engine: Glauber starts on the first arrow press
     function waitForSlideEngine() {
         if (window.slideEngine) {
             window.slideEngine.registerSimulation('title', {
@@ -299,14 +299,14 @@ window.addEventListener('wasm-loaded', async function() {
                 onSlideEnter() { draw(); },
                 onSlideLeave() { pauseSim(); },
                 onStepBack(step) {
-                    // Going back below step 2 restores the empty configuration
-                    if (step < 2) {
+                    // Going back below step 1 restores the empty configuration
+                    if (step < 1) {
                         pauseSim();
                         loadEmptyState();
                         draw();
                     }
                 }
-            }, 2);
+            }, 1);
         } else {
             setTimeout(waitForSlideEngine, 50);
         }
