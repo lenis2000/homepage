@@ -197,6 +197,7 @@ var trayCellSize = 24;
 var boardX = 0, boardY = 0;
 var trayX = 0, trayY = 0;
 var trayRowH = 0;
+var comboFloat = null; // floating "×N!" text state
 
 // DOM refs
 var canvas, ctx, scEl, bsEl, overlay, overlayTitle, overlaySub, easyBtn, hardBtn, solutionBtn;
@@ -622,6 +623,31 @@ function drawFlash() {
   }
 }
 
+function drawComboFloat() {
+  if (!comboFloat) return;
+  var elapsed = (performance.now() - comboFloat.t0) / 1000;
+  var dur = FLASH_TOTAL_SEC + 0.25;
+  if (elapsed >= dur) { comboFloat = null; return; }
+  var t = elapsed / dur;
+  var alpha = t < 0.15 ? t / 0.15 : Math.max(0, 1 - (t - 0.15) / 0.85);
+  var rise = t * cellSize * 3;
+  var sz = cellSize * (1.8 + t * 0.6);
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.font = 'bold ' + Math.round(sz) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  var x = comboFloat.x;
+  var y = comboFloat.y - rise;
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = Math.max(3, sz * 0.08);
+  ctx.lineJoin = 'round';
+  ctx.strokeText(comboFloat.label, x, y);
+  ctx.fillStyle = '#ff9100';
+  ctx.fillText(comboFloat.label, x, y);
+  ctx.restore();
+}
+
 function draw() {
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -633,6 +659,7 @@ function draw() {
   if (state === 'animating' && flash) {
     drawFlash();
   }
+  drawComboFloat();
   if (state === 'solving') {
     drawSolutionHighlight();
   }
@@ -725,9 +752,24 @@ function dropPiece(slot, r, c) {
   var full = scanFull();
   if (full.rows.length + full.cols.length > 0) {
     var lines = full.rows.length + full.cols.length;
-    score += lines * 10 + (lines >= 2 ? 10 * lines * (lines - 1) / 2 : 0);
+    var cross = full.rows.length > 0 && full.cols.length > 0;
+    var mult = lines * (cross ? 2 : 1);
+    score += mult * 10;
     updateScoreUI();
     var cells = collectClearingCells(full.rows, full.cols);
+    if (mult >= 2) {
+      var midR = 0, midC = 0;
+      for (var ci = 0; ci < cells.length; ci++) {
+        midR += cells[ci].r; midC += cells[ci].c;
+      }
+      midR /= cells.length; midC /= cells.length;
+      comboFloat = {
+        label: '\u00d7' + mult + '!',
+        x: boardX + (midC + 0.5) * cellSize,
+        y: boardY + (midR + 0.5) * cellSize,
+        t0: performance.now()
+      };
+    }
     clearLines(full.rows, full.cols);
     if (prefersReducedMotion()) {
       afterClear();
@@ -798,11 +840,15 @@ function collectClearingCells(rows, cols) {
 }
 
 function animateFlash(now) {
-  if (!flash) return;
+  if (!flash) {
+    if (comboFloat) { draw(); requestAnimationFrame(animateFlash); }
+    return;
+  }
   var elapsed = (now - flash.t0) / 1000;
   if (elapsed >= FLASH_TOTAL_SEC) {
     flash = null;
     afterClear();
+    if (comboFloat) requestAnimationFrame(animateFlash);
     return;
   }
   draw();
