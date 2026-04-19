@@ -96,12 +96,13 @@ window.addEventListener('wasm-loaded', async function() {
     const exportDimersWasm = wasm.cwrap('exportDimers', 'number', []);
     const freeStringWasm = wasm.cwrap('freeString', null, ['number']);
     const setUseRandomSweepsWasm = wasm.cwrap('setUseRandomSweeps', null, ['number']);
+    const setQBiasWasm = wasm.cwrap('setQBias', null, ['number']);
 
     // Marble-stone palette (top face, two side faces in shadow gradient)
     const colors = ['#E8E3D3', '#B8B1A0', '#8C867A'];
 
     // Hexagon parameters: tall, narrow obelisk
-    const HEX_A = 10, HEX_B = 10, HEX_C = 50;
+    const HEX_A = 10, HEX_B = 10, HEX_C = 45;
 
     let dimers = [];
     let isValid = false;
@@ -164,6 +165,7 @@ window.addEventListener('wasm-loaded', async function() {
 
             loadEmptyState();
             setUseRandomSweepsWasm(1);
+            setQBiasWasm(2);
         }
     } catch (e) {
         console.error('[Title] Failed to initialize hexagon:', e);
@@ -253,7 +255,7 @@ window.addEventListener('wasm-loaded', async function() {
         if (!isValid || !isRunning) return;
 
         // Slower Glauber: fewer steps per frame for a visible, deliberate melt
-        const ptr = performGlauberStepsWasm(500);
+        const ptr = performGlauberStepsWasm(125);
         freeStringWasm(ptr);
 
         const dPtr = exportDimersWasm();

@@ -15,10 +15,10 @@ function initThankYouSim() {
         const wasm = await LozengeModule();
 
         const letters = ['T', 'H', 'A', 'N', 'K', 'Y', 'O', 'U'];
-        // All Berkeley Blue/Gold
-        const berkeleyColors = ['#003262', '#FDB515', '#D4E4F2'];
+        // UMD College Park: Maryland Red & Gold
+        const umdColors = ['#E21833', '#FFD520', '#FFE680'];
         function colorsForLetter(letter) {
-            return berkeleyColors;
+            return umdColors;
         }
 
         const slope = 1 / Math.sqrt(3);
