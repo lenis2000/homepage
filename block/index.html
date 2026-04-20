@@ -25,7 +25,8 @@ html,body{height:100%;overflow:hidden;background:#0d0d1a;color:#ccc;
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
   font-size:14px;line-height:1.2;
   -webkit-text-size-adjust:none;text-size-adjust:none;
-  touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  touch-action:none;overscroll-behavior:none;
+  -webkit-tap-highlight-color:transparent}
 body{display:flex;flex-direction:column;align-items:center;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 
@@ -771,20 +772,20 @@ function dropPiece(slot, r, c) {
       };
     }
     clearLines(full.rows, full.cols);
-    if (prefersReducedMotion()) {
-      afterClear();
-    } else {
-      state = 'animating';
-      flash = buildExplosion(cells);
-      requestAnimationFrame(animateFlash);
-    }
+    state = 'animating';
+    flash = buildExplosion(cells, prefersReducedMotion());
+    requestAnimationFrame(animateFlash);
   } else {
     afterClear();
   }
   return true;
 }
 
-function buildExplosion(cells) {
+function buildExplosion(cells, reduced) {
+  // Under reduce-motion, emit the white pop phase only (no flying particles).
+  if (reduced) {
+    return { cells: cells, particles: [], t0: performance.now(), reduced: true };
+  }
   // Each clearing cell spawns N particles flying outward in all directions,
   // with small random jitter. Some particles are the cell's own color; a
   // fraction are accent orange for the "spark" look.
@@ -845,7 +846,8 @@ function animateFlash(now) {
     return;
   }
   var elapsed = (now - flash.t0) / 1000;
-  if (elapsed >= FLASH_TOTAL_SEC) {
+  var total = flash.reduced ? FLASH_POP_SEC : FLASH_TOTAL_SEC;
+  if (elapsed >= total) {
     flash = null;
     afterClear();
     if (comboFloat) requestAnimationFrame(animateFlash);
