@@ -10,12 +10,17 @@ code:
 a11y-description: "Side-by-side comparison of Plancherel growth process (Russian-notation Young diagram profile) and TASEP height function (step initial condition). Both produce piecewise-linear profiles with slopes plus or minus 1. Animated growth synchronized by box count, with limit shape overlays and accumulated histograms of height fluctuations at the center. Demonstrates that Plancherel fluctuations are O(1) while TASEP fluctuations are O(N to the 1/6)."
 ---
 
+<div class="misconception-callout">
+<div class="misconception-label">Common misconception</div>
+<p>Plancherel and TASEP height functions look alike, but their fluctuations at the center differ dramatically: Plancherel is $O(1)$, TASEP is $O(t^{1/3})$.</p>
+</div>
+
 <details class="math-description" id="mathDescription">
 <summary>Mathematical description</summary>
 <div style="padding: 8px 0;">
 <p>The <b>Plancherel growth process</b> adds boxes to a Young diagram via RSK insertion of i.i.d. uniform random variables. The resulting partition of $N$ is distributed according to the <b>Plancherel measure</b>. The <b>TASEP</b> (Totally Asymmetric Simple Exclusion Process) starts from step initial condition: particles at $\ldots, -2, -1, 0$, each jumping right at rate $1$ (i.e., $\mathrm{Exp}(1)$ waiting times), subject to the exclusion constraint.</p>
 <p>Both processes produce piecewise-linear <b>height functions</b> with slopes $\pm 1$: the Russian-notation profile $\omega(u)$ for Plancherel, and $h(x,t)$ for TASEP ($+1$ over holes, $-1$ over particles). Both height functions have the shape of the Young diagram (a partition) sitting on top of the $|u|$ or $|x|$ baseline. The two processes are synchronized so that the total number of boxes (area of the partition) equals $N$.</p>
-<p><b>Fluctuations at the center</b> ($u = x = 0$): the Plancherel height $\omega(0) \approx \frac{4}{\pi}\sqrt{N}$ has $O(1)$ fluctuations (Kerov's CLT), while the TASEP height $h(0,t) \approx t/2$ has $O(t^{1/3})$ fluctuations (KPZ universality class). <b>Plancherel is dramatically more rigid.</b></p>
+<p><b>Fluctuations at the center</b> ($u = x = 0$): the Plancherel height $\omega(0) \approx \frac{4}{\pi}\sqrt{N}$ has $O(1)$ fluctuations (Kerov's CLT), while the TASEP height $h(0,t) \approx t/2$ has $O(t^{1/3})$ fluctuations (KPZ universality class). <b>Plancherel is dramatically more rigid.</b> Note that although the Plancherel measure on partitions is a Schur measure, <b>the full TASEP height profile at fixed time is <em>not</em> a Schur process</b>. There is a coupling with a Schur process, but only at the <b>edge</b> (the rightmost particles / the endpoints of the curved region), which is what underlies the $t^{1/3}$ Tracy–Widom fluctuations there.</p>
 </div>
 </details>
 
@@ -27,6 +32,35 @@ a11y-description: "Side-by-side comparison of Plancherel growth process (Russian
 <style>
 details.math-description {
   margin-bottom: 12px;
+}
+.misconception-callout {
+  border: 2px solid #E57200;
+  border-radius: 8px;
+  background: rgba(229, 114, 0, 0.08);
+  padding: 14px 18px;
+  margin: 12px 0 16px 0;
+}
+.misconception-callout .misconception-label {
+  font-family: "franklingothic-demi", Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #E57200;
+  margin-bottom: 6px;
+}
+.misconception-callout p {
+  margin: 0;
+  font-size: 1.15em;
+  line-height: 1.45;
+  color: var(--text-primary, #333);
+}
+[data-theme="dark"] .misconception-callout {
+  background: rgba(255, 153, 51, 0.12);
+  border-color: #ff9933;
+}
+[data-theme="dark"] .misconception-callout .misconception-label {
+  color: #ff9933;
 }
 details.math-description summary {
   cursor: pointer;
