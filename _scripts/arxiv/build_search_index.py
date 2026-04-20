@@ -5,11 +5,14 @@ Build a compact JSON search index from _arxiv/ for fast client-side search.
 Usage:
     python3 _scripts/arxiv/build_search_index.py
 
-Output: assets/data/arxiv-index.json
+Outputs:
+    assets/data/arxiv-index.json
+    assets/data/arxiv-all.bib
 """
 
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -47,6 +50,7 @@ POSTS_DIR = REPO_ROOT / "_arxiv"
 OUTPUT_FILE = REPO_ROOT / "assets" / "data" / "arxiv-index.json"
 AUTHORS_FILE = SCRIPT_DIR / "authors.yml"
 AUTHORS_DATA_FILE = REPO_ROOT / "_data" / "arxiv_authors.yml"
+BIB_EXPORT_SCRIPT = SCRIPT_DIR / "export_bibtex.py"
 
 
 def parse_post(filepath):
@@ -155,6 +159,8 @@ def main():
             for n in names:
                 f.write(f'- "{n}"\n')
         print(f"Synced {len(names)} author names to {AUTHORS_DATA_FILE}")
+
+    subprocess.run([sys.executable, str(BIB_EXPORT_SCRIPT)], check=True)
 
     return 0
 

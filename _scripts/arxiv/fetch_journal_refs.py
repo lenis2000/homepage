@@ -23,6 +23,7 @@ import json
 import os
 import re
 import sqlite3
+import subprocess
 import sys
 import time
 import urllib.parse
@@ -37,6 +38,7 @@ REPO_ROOT = SCRIPT_DIR.parent.parent
 POSTS_DIR = REPO_ROOT / "_arxiv"
 CACHE_DB = SCRIPT_DIR / ".journal-refs-cache.db"
 INDEX_FILE = REPO_ROOT / "assets" / "data" / "arxiv-index.json"
+BIB_EXPORT_SCRIPT = SCRIPT_DIR / "export_bibtex.py"
 
 S2_API_KEY = os.environ.get("S2_API_KEY", "")
 S2_BATCH_URL = "https://api.semanticscholar.org/graph/v1/paper/batch"
@@ -426,6 +428,10 @@ def update_search_index(all_cached):
     return updated
 
 
+def update_bibtex_export():
+    subprocess.run([sys.executable, str(BIB_EXPORT_SCRIPT)], check=True)
+
+
 # ── Stats ──────────────────────────────────────────────────────────────
 
 def show_stats(db, all_ids):
@@ -654,6 +660,9 @@ def main():
 
     print("\n=== Updating search index ===")
     update_search_index(all_cached)
+
+    print("\n=== Exporting BibTeX ===")
+    update_bibtex_export()
 
     show_stats(db, all_ids)
     db.close()

@@ -19,6 +19,7 @@ Cleans up:
 
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -29,6 +30,7 @@ PROCESSED_FILE = SCRIPT_DIR / "processed.json"
 INDEX_FILE = REPO_ROOT / "assets" / "data" / "arxiv-index.json"
 VECTORS_FILE = REPO_ROOT / "assets" / "data" / "arxiv-vectors.npy"
 SOURCES_DIR = SCRIPT_DIR / "sources"
+BIB_EXPORT_SCRIPT = SCRIPT_DIR / "export_bibtex.py"
 
 
 def parse_arxiv_id(raw):
@@ -107,6 +109,10 @@ def remove_from_vectors(arxiv_id):
     return True
 
 
+def update_bibtex_export():
+    subprocess.run([sys.executable, str(BIB_EXPORT_SCRIPT)], check=True)
+
+
 def main():
     if len(sys.argv) < 2:
         print(f"Usage: {sys.argv[0]} <arxiv-id-or-url>")
@@ -132,6 +138,9 @@ def main():
     # 3. Remove from search index
     if remove_from_index(arxiv_id):
         print(f"  Removed from arxiv-index.json")
+
+    print("  Regenerating arxiv-all.bib")
+    update_bibtex_export()
 
     # 4. Remove related-paper references from other posts
     n = remove_related_references(arxiv_id)
