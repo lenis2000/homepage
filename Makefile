@@ -143,9 +143,16 @@ arxiv: arxiv-venv
 	python3 _scripts/arxiv/build_search_index.py
 
 arxiv-semantic: arxiv-venv
+	@if [ -f _scripts/arxiv/.last-semantic-run ]; then \
+		echo "Last arxiv-semantic run: $$(cat _scripts/arxiv/.last-semantic-run)"; \
+	else \
+		echo "Last arxiv-semantic run: (never)"; \
+	fi
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/fetch_arxiv.py \
 		--semantic --days $(or $(DAYS),30) --review $(ARGS)
 	python3 _scripts/arxiv/build_search_index.py
+	@date '+%Y-%m-%d %H:%M:%S %Z' > _scripts/arxiv/.last-semantic-run
+	@echo "Updated last-run timestamp: $$(cat _scripts/arxiv/.last-semantic-run)"
 
 arxiv-venv:
 	@test -d _scripts/arxiv/venv || python3 -m venv _scripts/arxiv/venv

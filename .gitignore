@@ -144,6 +144,7 @@ _scripts/arxiv/.embedding-cache-full.db-shm
 _scripts/arxiv/.embedding-cache-full.db-wal
 _scripts/arxiv/scan-review.json
 _scripts/arxiv/scan-review.json.bak
+_scripts/arxiv/.last-semantic-run
 _scripts/arxiv/sources/
 _scripts/arxiv/__pycache__/
 assets/data/arxiv-vectors.npy
