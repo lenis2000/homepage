@@ -11,44 +11,52 @@ a11y-description: "Simulation of Bernoulli TASEP with step initial condition. Pa
 ---
 
 <details class="math-description" id="defsBlock">
-<summary>Definitions, flux formulas, and references (known results — not conjectural)</summary>
-<div style="padding: 10px 4px 6px; line-height: 1.5;">
+<summary>Definitions, stationary currents, and limit shapes</summary>
+<div style="padding: 10px 4px 6px; line-height: 1.55;">
 
-<p><b>Setup.</b> Particles on $\mathbb{Z}$ with exclusion (at most one per site). Discrete time $t = 0, 1, 2, \ldots$. Step initial condition $\eta_0(x) = \mathbf{1}_{x \le 0}$ with $r$ particles at sites $\{-r+1, \ldots, 0\}$. Parameter $p \in (0, 1]$.</p>
+<p><b>Setup.</b> State space $\{0,1\}^{\mathbb{Z}}$; write $\eta_t(x) \in \{0,1\}$ for the occupancy of site $x \in \mathbb{Z}$ at time $t \in \mathbb{Z}_{\ge 0}$. Fix $r \in \mathbb{Z}_{\ge 1}$ and $p \in (0,1]$. Step initial condition: $\eta_0(x) = \mathbf{1}_{-r < x \le 0}$. Let $(\xi_{t,x})_{t \ge 0,\, x \in \mathbb{Z}}$ be i.i.d. $\mathrm{Bernoulli}(p)$.</p>
 
-<h4 style="margin: 14px 0 4px;">Rule 0 — Parallel (simultaneous snapshot)</h4>
-<p>Each step: every particle flips an independent Bernoulli$(p)$ coin. A particle at $x$ moves to $x+1$ iff (a) its coin is heads AND (b) $\eta_t(x+1) = 0$ (checked against the snapshot at time $t$, before any move this step). All moves are applied simultaneously.</p>
-<p>Stationary current on $\mathbb{Z}/N\mathbb{Z}$ at density $\rho$ (matrix-product ansatz, <a href="#ref-ers">[2]</a>):
-$$j_{\mathrm{par}}(\rho) = \tfrac{1}{2}\!\left(1 - \sqrt{1 - 4 p \rho (1-\rho)}\right).$$</p>
+<p><b>Definition 1</b> (parallel update). <em>$\eta_{t+1}$ is obtained from $\eta_t$ by moving, simultaneously, every particle at $x$ with $\xi_{t,x} = 1$ and $\eta_t(x+1) = 0$.</em></p>
 
-<h4 style="margin: 14px 0 4px;">Rule 1 — Sequential (right-to-left cascading)</h4>
-<p>Each step: every particle flips a coin, then sites are updated in strict decreasing order of position (rightmost first). A particle at $x$ moves iff its coin is heads AND $x+1$ is empty at the moment of its decision — potentially after its right neighbor has just vacated. Consecutive heads inside a cluster therefore cascade.</p>
-<p>Stationary current (see <a href="#ref-rajewsky">[1]</a>):
-$$j_{\mathrm{seq}}(\rho) = \frac{p \rho (1-\rho)}{1 - p \rho}.$$</p>
+<p><b>Definition 2</b> (right-to-left sequential update). <em>$\eta_{t+1}$ is obtained from $\eta_t$ by processing sites in strict decreasing order of $x$: apply $(\eta(x), \eta(x+1)) \mapsto (0,1)$ whenever the current configuration satisfies $\eta(x) = 1$, $\eta(x+1) = 0$, and $\xi_{t,x} = 1$.</em></p>
 
-<h4 style="margin: 14px 0 4px;">Rule 2 — Active-only (geometric clocks)</h4>
-<p>Each step: only <em>active</em> particles (those with $\eta_t(x+1) = 0$) flip a Bernoulli$(p)$ coin. Blocked particles skip the flip. If an active particle's coin is heads it moves to $x+1$; since its right neighbor is empty by definition, the move always succeeds. Inter-firing waiting times of each active particle are therefore $\mathrm{Geom}(p)$.</p>
-<p><b>Equivalence with Rule 0.</b> In the parallel rule the set of actual movers at step $t+1$ is
-$$\{x : \eta_t(x)=1,\ \eta_t(x+1)=0,\ \mathrm{coin}_x = \mathrm{heads}\},$$
-which is the set of <em>active</em> particles whose coin lands heads. The active-only rule draws exactly this set (blocked particles' coins are simply not flipped). Hence the two rules define the <em>same</em> Markov chain — only the amount of randomness consumed per step differs. So all stationary/asymptotic quantities (flux, limit shape, fluctuations) coincide with Rule 0.</p>
+<p><b>Definition 3</b> (active-only update). <em>Set $A_t = \{x : \eta_t(x) = 1,\ \eta_t(x+1) = 0\}$ and let $(\zeta_{t,x})_{x \in A_t}$ be i.i.d. $\mathrm{Bernoulli}(p)$. Then $\eta_{t+1}$ moves each $x \in A_t$ with $\zeta_{t,x} = 1$ to $x+1$ simultaneously.</em></p>
 
-<h4 style="margin: 14px 0 4px;">Hydrodynamic limit under step IC</h4>
-<p>With Eulerian scaling $\xi = x/T$, the empirical density $T^{-1}\sum_k \delta_{x_k(T)/T}$ converges in probability to the entropy solution of $\partial_t \rho + \partial_x j(\rho) = 0$ with step initial data (Kipnis–Landim <a href="#ref-kl">[4]</a>; discrete-time arguments adapt directly). For a concave flux this yields a rarefaction fan
-$$\rho_\infty(\xi) = \begin{cases} 1, & \xi \le j'(1),\\ (j')^{-1}(\xi), & j'(1) < \xi < j'(0),\\ 0, & \xi \ge j'(0). \end{cases}$$</p>
-<p><b>Parallel / Active.</b> $j_{\mathrm{par}}'(0) = p$, $j_{\mathrm{par}}'(1) = -p$; fan on $(-p, p)$:
-$$\rho_\infty^{\mathrm{par}}(\xi) = \tfrac{1}{2}\!\left(1 - \mathrm{sgn}(\xi)\sqrt{\tfrac{\xi^2(1-p)}{p\,(p - \xi^2)}}\right).$$</p>
-<p><b>Sequential.</b> $j_{\mathrm{seq}}'(0) = p$, $j_{\mathrm{seq}}'(1) = -p/(1-p)$; fan on $\bigl(-\tfrac{p}{1-p},\, p\bigr)$:
-$$\rho_\infty^{\mathrm{seq}}(\xi) = \tfrac{1}{p}\!\left(1 - \sqrt{\tfrac{1-p}{1-\xi}}\right).$$
-As $p \to 1$ this collapses to the deterministic shock at $\xi = 1$, consistent with every particle shifting by $1$ per step.</p>
-<p>Both curves are plotted by the "Show limit shape" checkbox.</p>
+<p><b>Proposition 1.</b> <em>Definitions 1 and 3 define the same Markov chain on $\{0,1\}^{\mathbb{Z}}$.</em></p>
+
+<p><em>Proof.</em> In Definition 1 the set of movers at step $t$ is $\{x : \eta_t(x) = 1,\ \eta_t(x+1) = 0,\ \xi_{t,x} = 1\} = \{x \in A_t : \xi_{t,x} = 1\}$. Coupling $\zeta_{t,x} := \xi_{t,x}$ for $x \in A_t$ gives the same set of movers in Definition 3. $\square$</p>
+
+<p><b>Proposition 2</b> (Evans–Rajewsky–Speer <a href="#ref-ers">[2]</a>). <em>The stationary current of Definition 1 on $\mathbb{Z}/N\mathbb{Z}$ at density $\rho \in [0,1]$ is</em>
+$$j_{\mathrm{par}}(\rho) = \tfrac{1}{2}\!\left(1 - \sqrt{1 - 4p\rho(1-\rho)}\,\right).$$
+</p>
+
+<p><b>Proposition 3</b> (Rajewsky–Santen–Schadschneider–Schreckenberg <a href="#ref-rajewsky">[1]</a>). <em>The stationary current of Definition 2 on $\mathbb{Z}/N\mathbb{Z}$ at density $\rho \in [0,1]$ is</em>
+$$j_{\mathrm{seq}}(\rho) = \frac{p\,\rho(1-\rho)}{1 - p\rho}.$$
+</p>
+
+<p>Both currents are strictly concave on $[0,1]$ for $p \in (0,1)$. At the deterministic boundary $p = 1$ one has $j_{\mathrm{par}}(\rho) = \min(\rho, 1-\rho)$ and $j_{\mathrm{seq}}(\rho) = \rho$.</p>
+
+<p><b>Scaling limit under step initial condition.</b> Under Eulerian scaling $\xi = x/T$, the empirical measure $T^{-1}\sum_k \delta_{x_k(T)/T}$ is expected to converge in probability to $\rho_\infty(\xi)\, d\xi$, where $\rho_\infty$ is the entropy solution of $\partial_t \rho + \partial_x j(\rho) = 0$ with initial data $\rho_0(\xi) = \mathbf{1}_{\xi \le 0}$; see Kipnis–Landim <a href="#ref-kl">[4]</a>. For a strictly concave flux this yields the rarefaction
+$$\rho_\infty(\xi) = \begin{cases} 1, & \xi \le j'(1), \\ (j')^{-1}(\xi), & j'(1) < \xi < j'(0), \\ 0, & \xi \ge j'(0). \end{cases}$$
+</p>
+
+<p><b>Corollary</b> (explicit fans).</p>
+
+<p><em>Parallel</em> (and, by Proposition 1, active-only). $j_{\mathrm{par}}'(0) = p$, $j_{\mathrm{par}}'(1) = -p$; on $\xi \in (-p, p)$,
+$$\rho_\infty^{\mathrm{par}}(\xi) = \tfrac{1}{2}\!\left(1 - \mathrm{sgn}(\xi)\sqrt{\tfrac{\xi^2(1-p)}{p\,(p - \xi^2)}}\right).$$
+</p>
+
+<p><em>Sequential.</em> $j_{\mathrm{seq}}'(0) = p$, $j_{\mathrm{seq}}'(1) = -p/(1-p)$; on $\xi \in \bigl(-\tfrac{p}{1-p},\, p\bigr)$,
+$$\rho_\infty^{\mathrm{seq}}(\xi) = \tfrac{1}{p}\!\left(1 - \sqrt{\tfrac{1-p}{1 - \xi}}\,\right).$$
+</p>
 
 <h4 style="margin: 14px 0 4px;">References</h4>
 <ol style="margin-top: 4px;">
-  <li id="ref-rajewsky">N. Rajewsky, L. Santen, A. Schadschneider, M. Schreckenberg, <em>The asymmetric exclusion process: Comparison of update procedures</em>, J. Stat. Phys. 92 (1998), 151–194. Explicit stationary fluxes for parallel, forward/backward/random-sequential, and sublattice-parallel updates.</li>
-  <li id="ref-ers">M. R. Evans, N. Rajewsky, E. R. Speer, <em>Exact solution of a cellular automaton for traffic</em>, J. Stat. Phys. 95 (1999), 45–96; <a href="https://arxiv.org/abs/cond-mat/9903287">cond-mat/9903287</a>. Matrix-product solution of the parallel-update TASEP.</li>
-  <li>A. M. Povolotsky, V. B. Priezzhev, <em>Determinant solution for the totally asymmetric exclusion process with parallel update</em>, J. Stat. Mech. (2006), P07002. Determinantal transition probabilities for parallel TASEP.</li>
-  <li id="ref-kl">C. Kipnis, C. Landim, <em>Scaling Limits of Interacting Particle Systems</em>, Springer, 1999. Standard reference for entropy-solution hydrodynamic limits.</li>
-  <li>A. Borodin, P. L. Ferrari, M. Prähofer, T. Sasamoto, <em>Fluctuation properties of the TASEP with periodic initial configuration</em>, J. Stat. Phys. 129 (2007), 1055–1080; <a href="https://arxiv.org/abs/math-ph/0608056">math-ph/0608056</a>. Fluctuation theory for discrete-time TASEP with parallel update and related initial conditions.</li>
+  <li id="ref-rajewsky">N. Rajewsky, L. Santen, A. Schadschneider, M. Schreckenberg. <em>The asymmetric exclusion process: Comparison of update procedures.</em> J. Stat. Phys. <b>92</b> (1998), 151–194.</li>
+  <li id="ref-ers">M. R. Evans, N. Rajewsky, E. R. Speer. <em>Exact solution of a cellular automaton for traffic.</em> J. Stat. Phys. <b>95</b> (1999), 45–96. <a href="https://arxiv.org/abs/cond-mat/9903287">arXiv:cond-mat/9903287</a>.</li>
+  <li>A. M. Povolotsky, V. B. Priezzhev. <em>Determinant solution for the totally asymmetric exclusion process with parallel update.</em> J. Stat. Mech. (2006), P07002.</li>
+  <li id="ref-kl">C. Kipnis, C. Landim. <em>Scaling Limits of Interacting Particle Systems.</em> Grundlehren der mathematischen Wissenschaften <b>320</b>, Springer, 1999.</li>
+  <li>A. Borodin, P. L. Ferrari, M. Prähofer, T. Sasamoto. <em>Fluctuation properties of the TASEP with periodic initial configuration.</em> J. Stat. Phys. <b>129</b> (2007), 1055–1080. <a href="https://arxiv.org/abs/math-ph/0608056">arXiv:math-ph/0608056</a>.</li>
 </ol>
 
 </div>
