@@ -33,6 +33,7 @@ details.math-description summary:hover { color: var(--accent-color, #E57200); }
   --accent-secondary: #232D4B;
   --curve-par: #E57200;
   --curve-seq: #2a7ab8;
+  --curve-limit: #1a7a3a;
 }
 [data-theme="dark"] {
   --bg-primary: #1a1a1a;
@@ -44,6 +45,7 @@ details.math-description summary:hover { color: var(--accent-color, #E57200); }
   --accent-secondary: #4a7ab8;
   --curve-par: #ff9933;
   --curve-seq: #5ba3e0;
+  --curve-limit: #4caf72;
 }
 
 .simulation-layout {
@@ -259,6 +261,9 @@ details.control-section {
             <label class="radio-label"><input type="radio" name="updateRule" id="ruleParallel" value="0" checked> Parallel</label>
             <label class="radio-label"><input type="radio" name="updateRule" id="ruleSeq" value="1"> Sequential</label>
           </div>
+          <div class="control-row" style="gap:8px;">
+            <label class="radio-label"><input type="checkbox" id="showLimitChk"> Show limit shape (conjectural)</label>
+          </div>
         </div>
       </details>
 
@@ -327,6 +332,7 @@ details.control-section {
   const progressText = document.getElementById('progressText');
   const statSamples  = document.getElementById('statSamples');
   const statMs       = document.getElementById('statMs');
+  const showLimitChk = document.getElementById('showLimitChk');
   const densityCanvas = document.getElementById('densityCanvas');
   const controlsPanel = document.getElementById('controlsPanel');
   const drawerHandle  = document.getElementById('drawerHandle');
@@ -358,6 +364,37 @@ details.control-section {
     return { ctx, w: rect.width, h: rect.height };
   }
 
+  // ─── Hydrodynamic limit (conjectural — checkbox-gated) ───────────────────
+  function hydroParallel(xi, p) {
+    if (p <= 0) return xi <= 0 ? 1 : 0;
+    if (xi <= -p) return 1;
+    if (xi >= p)  return 0;
+    if (xi === 0) return 0.5;
+    const sgn = xi < 0 ? -1 : 1;
+    const under = xi * xi * (1 - p) / (p * (p - xi * xi));
+    if (under < 0) return 0.5;
+    return 0.5 * (1 - sgn * Math.sqrt(under));
+  }
+  function hydroSequential(xi, p) {
+    if (p <= 0) return xi <= 0 ? 1 : 0;
+    const xiL = p >= 1 ? -1e9 : -p / (1 - p);
+    if (xi <= xiL) return 1;
+    if (xi >= p)   return 0;
+    if (xi >= 1)   return 0;
+    const under = (1 - p) / (1 - xi);
+    if (under < 0) return 0;
+    return (1 / p) * (1 - Math.sqrt(under));
+  }
+  function computeHydroArray(rule, p) {
+    const arr = new Float64Array(NUM_BINS);
+    const dxi = (XI_MAX - XI_MIN) / NUM_BINS;
+    for (let i = 0; i < NUM_BINS; i++) {
+      const xi = XI_MIN + (i + 0.5) * dxi;
+      arr[i] = rule === 0 ? hydroParallel(xi, p) : hydroSequential(xi, p);
+    }
+    return arr;
+  }
+
   // ─── Drawing ──────────────────────────────────────────────────────────────
   function drawDensity(forceHydroOnly) {
     const { ctx, w, h } = setupCanvas(densityCanvas);
@@ -372,7 +409,8 @@ details.control-section {
     function toY(rho) { return margin.top + ph - (rho - RHO_MIN) / (RHO_MAX - RHO_MIN) * ph; }
 
     const dxi = (XI_MAX - XI_MIN) / NUM_BINS;
-    const { rule } = getParams();
+    const { p, rule } = getParams();
+    const showLimit = showLimitChk && showLimitChk.checked;
 
     // Clear
     ctx.clearRect(0, 0, w, h);
@@ -460,17 +498,46 @@ details.control-section {
       ctx.stroke();
     }
 
+    // Conjectural hydrodynamic limit (dashed, checkbox-gated)
+    const limitColor = getColor('--curve-limit') || '#1a7a3a';
+    if (showLimit) {
+      const hydro = computeHydroArray(rule, p);
+      ctx.strokeStyle = limitColor;
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      for (let i = 0; i < NUM_BINS; i++) {
+        const xi = XI_MIN + (i + 0.5) * dxi;
+        const fn = i === 0 ? 'moveTo' : 'lineTo';
+        ctx[fn](toX(xi), toY(hydro[i]));
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
     // Legend
-    if (allSamples.length > 0) {
-      const legendX = margin.left + pw - 8, legendY = margin.top + 14;
-      const avgColor2 = rule === 0 ? getColor('--curve-par') : getColor('--curve-seq');
+    {
+      const legendX = margin.left + pw - 8;
+      let legendY = margin.top + 14;
       const ruleLabel = rule === 0 ? 'Parallel' : 'Sequential';
       ctx.font = '11px "franklingothic-book", Arial, sans-serif';
       ctx.textAlign = 'right';
-      ctx.strokeStyle = avgColor2; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(legendX - 28, legendY); ctx.lineTo(legendX, legendY); ctx.stroke();
-      ctx.fillStyle = getColor('--text-primary') || '#333';
-      ctx.fillText('avg (' + allSamples.length + ' samples, ' + ruleLabel + ')', legendX - 32, legendY + 4);
+      if (allSamples.length > 0) {
+        const avgColor2 = rule === 0 ? getColor('--curve-par') : getColor('--curve-seq');
+        ctx.strokeStyle = avgColor2; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(legendX - 28, legendY); ctx.lineTo(legendX, legendY); ctx.stroke();
+        ctx.fillStyle = getColor('--text-primary') || '#333';
+        ctx.fillText('avg (' + allSamples.length + ' samples, ' + ruleLabel + ')', legendX - 32, legendY + 4);
+        legendY += 18;
+      }
+      if (showLimit) {
+        ctx.strokeStyle = limitColor; ctx.lineWidth = 1.8;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath(); ctx.moveTo(legendX - 28, legendY); ctx.lineTo(legendX, legendY); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = getColor('--text-primary') || '#333';
+        ctx.fillText('conjectural limit (' + ruleLabel + ')', legendX - 32, legendY + 4);
+      }
     }
 
     // Empty state message
@@ -562,6 +629,8 @@ details.control-section {
   document.querySelectorAll('input[name="updateRule"]').forEach(radio => {
     radio.addEventListener('change', () => clearSamples());
   });
+
+  showLimitChk.addEventListener('change', () => drawDensity());
 
   runBtn.addEventListener('click', () => {
     if (running) {
