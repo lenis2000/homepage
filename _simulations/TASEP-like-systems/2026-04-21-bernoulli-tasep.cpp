@@ -59,6 +59,14 @@ static inline v128_t rand_v128() {
     return wasm_i64x2_make((int64_t)a, (int64_t)b);
 }
 
+// Scalar Bernoulli(p): one 64-bit RNG draw
+static inline bool bernoulli(double p) {
+    uint64_t u = xoshiro256ss_next();
+    // Map to [0, 1) via top 53 bits
+    double r = (double)(u >> 11) * (1.0 / 9007199254740992.0); // 2^53
+    return r < p;
+}
+
 // Shift a v128 left by 1 bit; insert `carry_in` at bit 0; return old bit 127 as new carry
 // (bit 0 = least-significant bit of the first 64-bit lane)
 // Used to propagate movers from lane i bit 127 to lane i+1 bit 0 (particle moving right across lane boundary)
@@ -305,6 +313,53 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
                 // Set the carry bit in the new lane
                 uint64_t *q = (uint64_t*)g_occ;
                 q[(lane_hi * 2)] |= 1ULL; // bit 0 of new lane
+            }
+        }
+    } else if (updateRule == 2) {
+        // ─── Active-only (geometric clocks) update ──────────────────────
+        // Each active particle (cluster end = particle with empty right neighbor)
+        // has an independent Bernoulli(p) coin. If heads, the particle moves right.
+        // Blocked particles don't flip (their clocks aren't ticking).
+        // Distributionally equivalent to parallel Bernoulli; implemented separately
+        // to let the user visually verify the equivalence.
+        static int *movers_buf = nullptr;
+        static int movers_cap = 0;
+        int needed = r + 16;
+        if (needed > movers_cap) {
+            free(movers_buf);
+            movers_buf = (int*)malloc(sizeof(int) * (size_t)needed);
+            movers_cap = needed;
+        }
+
+        for (int t = 0; t < T; t++) {
+            // Phase 1: compute cluster-ends bitmap into g_coin (scratch)
+            for (int i = lane_lo; i <= lane_hi; i++) {
+                v128_t occ_i = g_occ[i];
+                int nb0 = (i + 1 < W) ? (int)(wasm_i64x2_extract_lane(g_occ[i + 1], 0) & 1) : 0;
+                v128_t shifted_o = shr1_carry(occ_i, nb0);
+                g_coin[i] = wasm_v128_andnot(occ_i, shifted_o);
+            }
+            // Phase 2: for each cluster end, draw one Bernoulli(p); collect movers
+            int mc = 0;
+            const uint64_t *q_ends = (const uint64_t*)g_coin;
+            int max_qw = (lane_hi + 1) * 2;
+            for (int qi = 0; qi < max_qw; qi++) {
+                uint64_t ends = q_ends[qi];
+                while (ends) {
+                    int bit = __builtin_ctzll(ends);
+                    ends &= ends - 1;
+                    if (bernoulli(p)) {
+                        movers_buf[mc++] = qi * 64 + bit;
+                    }
+                }
+            }
+            // Phase 3: apply all moves (cluster ends are ≥ 2 apart so no collisions)
+            for (int k = 0; k < mc; k++) {
+                int b = movers_buf[k];
+                clear_bit(g_occ, b);
+                set_bit(g_occ, b + 1);
+                int new_lane = (b + 1) / 128;
+                if (new_lane > lane_hi && new_lane < W) lane_hi = new_lane;
             }
         }
     } else {

@@ -257,9 +257,10 @@ details.control-section {
           <div class="control-row" style="gap:16px;">
             <label style="font-family:'franklingothic-demi',Arial,sans-serif;font-size:13px;font-weight:600;color:var(--text-primary);">Update rule</label>
           </div>
-          <div class="control-row" style="gap:16px;">
+          <div class="control-row" style="gap:12px; flex-wrap:wrap;">
             <label class="radio-label"><input type="radio" name="updateRule" id="ruleParallel" value="0" checked> Parallel</label>
             <label class="radio-label"><input type="radio" name="updateRule" id="ruleSeq" value="1"> Sequential</label>
+            <label class="radio-label" title="Geometric waiting times on active (unblocked) particles; distributionally equivalent to parallel"><input type="radio" name="updateRule" id="ruleActive" value="2"> Active (geom.)</label>
           </div>
           <div class="control-row" style="gap:8px;">
             <label class="radio-label"><input type="checkbox" id="showLimitChk"> Show limit shape (conjectural)</label>
@@ -404,13 +405,26 @@ details.control-section {
           if (occ[i] && coin[i] && !occ[i + 1]) movers.push(i);
         }
         for (const i of movers) { newOcc[i] = 0; newOcc[i + 1] = 1; moves[i] = 1; }
-      } else {
+      } else if (rule === 1) {
         // Sequential right-to-left: decide on the CURRENT (cascading) state
         for (let i = width - 2; i >= 0; i--) {
           if (newOcc[i] && coin[i] && !newOcc[i + 1]) {
             newOcc[i] = 0; newOcc[i + 1] = 1; moves[i] = 1;
           }
         }
+      } else {
+        // Active-only (geometric): only unblocked particles flip; redraw coins sparsely.
+        // Overwrite `coin` so the diagram only marks flips for active particles.
+        for (let i = 0; i < width; i++) coin[i] = 0;
+        const movers = [];
+        for (let i = 0; i < width - 1; i++) {
+          if (occ[i] && !occ[i + 1]) {
+            // active — has a clock
+            coin[i] = Math.random() < p ? 1 : 0;
+            if (coin[i]) movers.push(i);
+          }
+        }
+        for (const i of movers) { newOcc[i] = 0; newOcc[i + 1] = 1; moves[i] = 1; }
       }
       occ = newOcc;
       frames.push({ occ: occ.slice(), coin, moves });
@@ -473,26 +487,39 @@ details.control-section {
     ctx.lineTo(margin.left + zeroIdx * cellW, margin.top + ph);
     ctx.stroke();
 
-    // Arrows: green for successful move, red dash for heads-but-blocked
+    // Trajectory lines: vertical light-gray for "stayed put" (waiting), diagonal green for "moved",
+    // red dashed stub for "heads but blocked" (parallel/sequential only — in active-only, blocked
+    // particles don't have ticking clocks)
+    const dotRprev = Math.max(2, Math.min(cellW, cellH) * 0.26);
     for (let t = 1; t < rows; t++) {
       const { coin, moves } = frames[t];
       const prevOcc = frames[t - 1].occ;
       for (let i = 0; i < width; i++) {
-        if (!prevOcc[i] || !coin[i]) continue;
+        if (!prevOcc[i]) continue;
         if (moves[i]) {
+          // Moved: green arrow (t-1, i) → (t, i+1)
           ctx.strokeStyle = '#1a7a3a';
           ctx.lineWidth = 2;
           drawArrow(ctx, cx(i), cy(t - 1), cx(i + 1), cy(t), 4);
         } else {
-          // heads but blocked — short red dashed stub pointing right at the particle's row
-          ctx.strokeStyle = '#c62828';
-          ctx.lineWidth = 1.5;
-          ctx.setLineDash([2, 2]);
+          // Didn't move — vertical "waiting" line connecting the same position across rows
+          ctx.strokeStyle = 'rgba(140,140,140,0.45)';
+          ctx.lineWidth = 1;
           ctx.beginPath();
-          ctx.moveTo(cx(i) + cellW * 0.22, cy(t - 1));
-          ctx.lineTo(cx(i) + cellW * 0.62, cy(t - 1));
+          ctx.moveTo(cx(i), cy(t - 1) + dotRprev);
+          ctx.lineTo(cx(i), cy(t) - dotRprev);
           ctx.stroke();
-          ctx.setLineDash([]);
+          // If it flipped heads but was blocked, add a short red dashed stub at the particle's row
+          if (coin && coin[i]) {
+            ctx.strokeStyle = '#c62828';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([2, 2]);
+            ctx.beginPath();
+            ctx.moveTo(cx(i) + cellW * 0.22, cy(t - 1));
+            ctx.lineTo(cx(i) + cellW * 0.62, cy(t - 1));
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
         }
       }
     }
@@ -535,8 +562,8 @@ details.control-section {
     ctx.textAlign = 'left';
     ctx.fillStyle = getColor('--text-primary') || '#333';
     ctx.font = '12px "franklingothic-demi", Arial, sans-serif';
-    const ruleLabel = rule === 0 ? 'Parallel' : 'Sequential';
-    ctx.fillText('Space-time diagram — rightmost ' + DIAG_R + ' particles, first ' + DIAG_T + ' steps (' + ruleLabel + ')',
+    const label = ruleLabel(rule);
+    ctx.fillText('Space-time diagram — rightmost ' + DIAG_R + ' particles, first ' + DIAG_T + ' steps (' + label + ')',
                  margin.left, margin.top - 14);
 
     // Legend — right-aligned near the right edge of the plot area
@@ -587,12 +614,17 @@ details.control-section {
   function computeHydroArray(rule, p) {
     const arr = new Float64Array(NUM_BINS);
     const dxi = (XI_MAX - XI_MIN) / NUM_BINS;
+    // rule 2 (active) is distributionally the same as rule 0 (parallel)
+    const fn = (rule === 1) ? hydroSequential : hydroParallel;
     for (let i = 0; i < NUM_BINS; i++) {
       const xi = XI_MIN + (i + 0.5) * dxi;
-      arr[i] = rule === 0 ? hydroParallel(xi, p) : hydroSequential(xi, p);
+      arr[i] = fn(xi, p);
     }
     return arr;
   }
+
+  function ruleLabel(rule) { return rule === 0 ? 'Parallel' : rule === 1 ? 'Sequential' : 'Active'; }
+  function ruleColorVar(rule) { return rule === 0 ? '--curve-par' : rule === 1 ? '--curve-seq' : '--curve-par'; }
 
   // ─── Drawing ──────────────────────────────────────────────────────────────
   function drawDensity(forceHydroOnly) {
@@ -667,9 +699,9 @@ details.control-section {
 
     // Individual samples (thin, low alpha)
     if (allSamples.length > 0) {
-      const sampleColor = rule === 0
-        ? 'rgba(229,114,0,0.10)'
-        : 'rgba(42,122,184,0.10)';
+      const sampleColor = rule === 1
+        ? 'rgba(42,122,184,0.10)'   // sequential: blue
+        : 'rgba(229,114,0,0.10)';   // parallel & active: orange
       ctx.strokeStyle = sampleColor;
       ctx.lineWidth = 0.8;
       for (const s of allSamples) {
@@ -683,7 +715,7 @@ details.control-section {
       }
 
       // Bold average
-      const avgColor = rule === 0 ? getColor('--curve-par') : getColor('--curve-seq');
+      const avgColor = getColor(ruleColorVar(rule));
       ctx.strokeStyle = avgColor;
       ctx.lineWidth = 2.5;
       const k = allSamples.length;
@@ -718,15 +750,15 @@ details.control-section {
     {
       const legendX = margin.left + pw - 8;
       let legendY = margin.top + 14;
-      const ruleLabel = rule === 0 ? 'Parallel' : 'Sequential';
+      const label = ruleLabel(rule);
       ctx.font = '11px "franklingothic-book", Arial, sans-serif';
       ctx.textAlign = 'right';
       if (allSamples.length > 0) {
-        const avgColor2 = rule === 0 ? getColor('--curve-par') : getColor('--curve-seq');
+        const avgColor2 = getColor(ruleColorVar(rule));
         ctx.strokeStyle = avgColor2; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(legendX - 28, legendY); ctx.lineTo(legendX, legendY); ctx.stroke();
         ctx.fillStyle = getColor('--text-primary') || '#333';
-        ctx.fillText('avg (' + allSamples.length + ' samples, ' + ruleLabel + ')', legendX - 32, legendY + 4);
+        ctx.fillText('avg (' + allSamples.length + ' samples, ' + label + ')', legendX - 32, legendY + 4);
         legendY += 18;
       }
       if (showLimit) {
@@ -735,7 +767,8 @@ details.control-section {
         ctx.beginPath(); ctx.moveTo(legendX - 28, legendY); ctx.lineTo(legendX, legendY); ctx.stroke();
         ctx.setLineDash([]);
         ctx.fillStyle = getColor('--text-primary') || '#333';
-        ctx.fillText('conjectural limit (' + ruleLabel + ')', legendX - 32, legendY + 4);
+        const limitLabel = rule === 1 ? 'Sequential' : 'Parallel/Active';
+        ctx.fillText('conjectural limit (' + limitLabel + ')', legendX - 32, legendY + 4);
       }
     }
 
