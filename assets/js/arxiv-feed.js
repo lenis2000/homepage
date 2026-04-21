@@ -500,6 +500,7 @@ document.addEventListener('DOMContentLoaded', function() {
             searchMap = {};
             data.forEach(function(e) { searchMap[e.id] = e; });
             initButtons();
+            listEl.classList.add('arxiv-related-ready');
         })
         .catch(function() {
             initButtons();

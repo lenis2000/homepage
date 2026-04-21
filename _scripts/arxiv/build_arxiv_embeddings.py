@@ -173,7 +173,11 @@ def compute_embeddings(ids, texts, cache):
 
 
 def compute_related(vectors, ids):
-    """Compute top-K related papers for each paper via cosine similarity."""
+    """Compute top-K related papers for each paper via cosine similarity.
+
+    Always keeps the top-1 nearest neighbor regardless of threshold, so every
+    paper has at least one related entry from the semantic search.
+    """
     log(f"Computing {len(ids)}x{len(ids)} similarity matrix...")
     sim = vectors @ vectors.T
     np.fill_diagonal(sim, 0.0)
@@ -183,12 +187,69 @@ def compute_related(vectors, ids):
         row = sim[i]
         top_indices = np.argsort(row)[::-1][:TOP_K]
         neighbors = []
-        for j in top_indices:
-            if row[j] >= SIMILARITY_THRESHOLD:
+        for rank, j in enumerate(top_indices):
+            if rank == 0 or row[j] >= SIMILARITY_THRESHOLD:
                 neighbors.append(ids[j])
         related[arxiv_id] = neighbors
 
     return related, sim
+
+
+ARXIV_REF_RE = re.compile(
+    r'arXiv:\s*(\d{4}\.\d{4,5}|[a-z][a-z\-]*(?:\.[A-Z]{2})?/\d{7})(?:v\d+)?',
+    re.IGNORECASE,
+)
+
+
+def extract_arxiv_refs(text):
+    """Extract arXiv IDs cited in text, deduped, preserving order."""
+    if not text:
+        return []
+    seen = set()
+    refs = []
+    for m in ARXIV_REF_RE.finditer(text):
+        rid = m.group(1)
+        if rid not in seen:
+            seen.add(rid)
+            refs.append(rid)
+    return refs
+
+
+def merge_citations(related, kaggle, ids):
+    """Merge explicit arXiv citations from abstracts into related-papers.
+
+    Citations go first (high-precision, explicit), then semantic neighbors fill
+    up to TOP_K. Only citations that are in our post set are kept.
+    """
+    id_set = set(ids)
+    citation_hits = 0
+    for arxiv_id in ids:
+        entry = kaggle.get(arxiv_id)
+        if not entry:
+            continue
+        text = (entry.get("title") or "") + "\n" + (entry.get("abstract") or "")
+        cites = [
+            c for c in extract_arxiv_refs(text)
+            if c in id_set and c != arxiv_id
+        ]
+        if not cites:
+            continue
+        seen = set()
+        merged = []
+        for cid in cites:
+            if cid not in seen:
+                merged.append(cid)
+                seen.add(cid)
+        for nid in related.get(arxiv_id, []):
+            if len(merged) >= TOP_K:
+                break
+            if nid not in seen:
+                merged.append(nid)
+                seen.add(nid)
+        related[arxiv_id] = merged[:TOP_K]
+        citation_hits += 1
+    log(f"Merged explicit arXiv citations into {citation_hits} posts.")
+    return related
 
 
 def find_post_file(arxiv_id):
@@ -280,6 +341,7 @@ def main():
     log(f"Saved vectors to {VECTORS_FILE}")
 
     related, sim = compute_related(vectors, ids)
+    related = merge_citations(related, kaggle, ids)
 
     # Write into post front matter
     modified = 0
