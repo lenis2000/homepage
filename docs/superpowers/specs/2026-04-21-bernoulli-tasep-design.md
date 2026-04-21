@@ -6,29 +6,35 @@
 
 ## 1. Goal
 
-Add a new interactive simulation at `_simulations/TASEP-like-systems/2026-04-21-bernoulli-tasep.md` that runs parallel Bernoulli TASEP with step initial condition and displays the **averaged empirical density profile** against its hydrodynamic limit.
+Add a new interactive simulation at `_simulations/TASEP-like-systems/2026-04-21-bernoulli-tasep.md` that runs **Bernoulli TASEP with step initial condition under either of two update rules** (parallel snapshot-based or right-to-left cascading sequential) and displays the **averaged empirical density profile** against its hydrodynamic limit. The user toggles between the two rules to visually compare them.
 
 ## 2. Model
 
-Particles on $\mathbb{Z}$, step IC: exactly one particle at each site in $\{-r+1, -r+2, \ldots, 0\}$, all other sites empty.
+Particles on $\mathbb{Z}$, step IC: exactly one particle at each site in $\{-r+1, -r+2, \ldots, 0\}$, all other sites empty. Discrete time $t = 0, 1, 2, \ldots, T$. Each step every particle first flips an independent coin with heads probability $p$; what happens next depends on the chosen **update rule**. Two rules are supported:
 
-Discrete time $t = 0, 1, 2, \ldots, T$. One parallel step $t \to t+1$:
+### 2a. Parallel (snapshot) update
 
-1. Each particle independently flips a coin with heads probability $p$.
-2. Snapshot-based parallel update: a particle currently at position $x$ moves to $x+1$ iff both (a) it flipped heads, and (b) site $x+1$ was unoccupied at time $t$ (the snapshot, *before* any move in this step).
+A particle at position $x$ moves to $x+1$ iff both (a) it flipped heads, and (b) site $x+1$ was unoccupied *at time $t$* — i.e., in the snapshot, before any move in this step. All moves then happen simultaneously. No particle ordering.
 
-All moves in a step are applied simultaneously from the snapshot, so there is no ordering between particles within a step.
+### 2b. Sequential (cascading) update
+
+Also known as *forward-sequential* or *right-to-left sequential*: particles are processed in decreasing order of position (rightmost first). A particle moves to $x+1$ iff (a) it flipped heads and (b) site $x+1$ is empty *at the moment of its decision* — which may mean it has just been vacated by its right neighbor moving earlier in the same step. This allows cascades. LP's motivating example: if $x_1 = 5$ and $x_2 = 4$ both flip heads, both jump in the sequential rule (only $x_1$ jumps in the parallel rule).
+
+### 2c. Consequence: two different hydrodynamic limits
+
+The two updates produce genuinely different large-scale behavior; see § 4 for the two flux formulas and corresponding rarefaction-fan density profiles.
 
 ## 3. User-facing parameters
 
-| Parameter | Meaning | Range | Default |
+| Parameter | Meaning | Range / values | Default |
 |-----------|---------|-------|---------|
 | $r$ | Number of particles | 100 – 30 000 | 3 000 |
 | $p$ | Jump probability | 0.01 – 1.00 | 0.50 |
 | $T$ | Time horizon (# steps) | 100 – 50 000 | 3 000 |
 | $K$ | Number of Monte Carlo samples | 1 – 200 | 20 |
+| update rule | Parallel / Sequential | radio buttons | Parallel |
 
-Input widgets: number input + slider (paired), following the pattern used in `2026-03-11-plancherel-vs-tasep.md`. Changing any parameter clears accumulated samples.
+Input widgets: number input + slider (paired) for the numeric params, radio buttons for the update rule. Changing any parameter (including the update rule) clears accumulated samples, because the empirical density distribution changes with the rule.
 
 ## 4. Output (single primary deliverable)
 
@@ -45,20 +51,25 @@ Canvas shows three layered curves:
 - **Bold colored line:** average of empirical densities over the $K$ samples accumulated so far.
 - **Dashed reference line:** the hydrodynamic limit density $\rho_\infty(\xi)$ for parallel Bernoulli TASEP with step IC.
 
-The hydrodynamic limit: the flux for parallel Bernoulli TASEP is
-$$j(\rho) = \tfrac{1}{2}\bigl(1 - \sqrt{1 - 4p\rho(1-\rho)}\bigr).$$
-For step IC the density solves $j'(\rho_\infty(\xi)) = \xi$ in the rarefaction region and is $1$ (resp. $0$) outside it. Explicit form (derived by writing $u = 1 - 2\rho$ and $\xi = j'(\rho)$):
+The hydrodynamic limit depends on which update rule is active. Both are piecewise: density 1 left of the fan, rarefaction curve inside, density 0 right of the fan.
 
+**Parallel update.** Flux:
+$$j_{\text{par}}(\rho) = \tfrac{1}{2}\bigl(1 - \sqrt{1 - 4p\rho(1-\rho)}\bigr).$$
+Fan endpoints: $\xi_\ell = -p$, $\xi_r = +p$. Rarefaction density:
 $$
-\rho_\infty(\xi) =
-\begin{cases}
-1 & \xi \le -p, \\[2pt]
-\tfrac{1}{2}\left(1 - \operatorname{sgn}(\xi) \sqrt{\dfrac{\xi^2(1-p)}{p(p - \xi^2)}}\right) & -p < \xi < p, \\[8pt]
-0 & \xi \ge p.
-\end{cases}
+\rho_\infty^{\text{par}}(\xi) = \tfrac{1}{2}\left(1 - \operatorname{sgn}(\xi)\sqrt{\tfrac{\xi^2(1-p)}{p(p - \xi^2)}}\right), \quad \xi \in (-p, p).
 $$
 
-(The simulation computes this in JS — pure arithmetic, ~200 points, no WASM needed.)
+**Sequential update (right-to-left cascading).** Flux:
+$$j_{\text{seq}}(\rho) = \frac{p\rho(1-\rho)}{1 - p\rho}.$$
+Fan endpoints (asymmetric): $\xi_\ell = -\dfrac{p}{1-p}$, $\xi_r = +p$. Rarefaction density:
+$$
+\rho_\infty^{\text{seq}}(\xi) = \frac{1}{p}\left(1 - \sqrt{\tfrac{1-p}{1-\xi}}\right), \quad \xi \in \left(-\tfrac{p}{1-p}, \, p\right).
+$$
+
+Both curves are computed in JS — pure arithmetic, ~200 evaluation points, no WASM needed. The active limit curve (matching the current update rule) is drawn as the dashed overlay.
+
+At $p = 1$ the sequential fan formally extends to $\xi \to -\infty$ (density 1 everywhere left of the front), while the parallel fan collapses to the flat $\rho \equiv \tfrac{1}{2}$ on $(-1, 1)$ — a useful sanity check that the two rules behave dramatically differently.
 
 ## 5. Architecture
 
@@ -98,7 +109,7 @@ The run loop yields to the browser via `requestAnimationFrame` every ~80 ms (mat
 - **Particle position array** is not maintained step-by-step; final positions are extracted from the occupancy bitmap once, by scanning set bits at sample end (§ 6.7).
 - All bitmaps plus scratch (`movers`, `shifted`, 8 RNG draw buffers) pre-allocated once at first call. Total workspace ~25 KB for $r = 30\,000$, fits in L1.
 
-### 6.2 Core step — single fused pass
+### 6.2 Core step — parallel update (single fused pass)
 
 Bit-to-site convention: bit index $i$ of the bitmap (with $0 \le i < L$) lives in bit `i % 128` of lane `i / 128`, using WASM SIMD `v128` as the storage unit (required, not optional). For $r = 30\,000$, $L$ fits in ~235 lanes ≈ 3.75 KB — comfortably in L1.
 
@@ -120,7 +131,36 @@ for (int i = 0; i < W; i++) {
 
 `shl1_with_carry(v, c)` is a 128-bit left shift by 1 with the incoming carry inserted at bit 0: implemented via `wasm_i64x2_shl(v, 1)`, merged with the top-bit-of-lane-0 routed into lane-1's bit 0, and the incoming `c` inserted into lane-0's bit 0. Correctness argument for fusing clear-and-set in one write: if `movers` has a bit at position $k$, then by construction site $k+1$ was unoccupied in the snapshot, so `occ_i ^ movers` clearing bit $k$ and `shifted_m` setting bit $k+1$ do not collide with any other mover.
 
-### 6.3 Coin generation — bit-sliced 8-bit precision
+### 6.2b Core step — sequential update (cluster-wise cascade)
+
+Sequential update has a data-dependent cascade: within a maximal run of consecutive 1s in `occ` (a *cluster*) of length $k$ ending at position $b$, the number of movers is $m = \min(k, G)$ where $G$ is the number of consecutive heads starting at the rightmost particle's coin and moving leftward until the first tails. After the step, the cluster's right edge shifts: bit at $b - m + 1$ is cleared, bit at $b + 1$ is set (unchanged if $m = 0$).
+
+Algorithm per step:
+
+1. **Find cluster ends** (SIMD): `cluster_ends = occ & ~shl1(occ)` — one SIMD pass over the active window.
+2. **Generate coin bitmap** (SIMD): same bit-sliced scheme as § 6.3; one bit per site.
+3. **Enumerate clusters** (scalar loop over set bits of `cluster_ends`). For each end bit $b$:
+   - Determine cluster length $k$ by scanning `occ` leftward from $b$ until hitting a 0 (fast: bitmap bit-scan within a lane, then step lane-by-lane for the rare long cluster).
+   - Determine $m$ by scanning `coin` leftward from $b$ until hitting a 0 (same bit-scan primitive), and cap at $k$.
+   - If $m > 0$: clear bit $b - m + 1$ of `occ`, set bit $b + 1$ of `occ`.
+4. Advance the sliding-window bounds (§ 6.4) to cover any new activity at the right edge.
+
+Cost per step: dominated by step 3, scaling as $O(\text{\#clusters} + \text{total } m)$. Initially (step IC, $t \lesssim r$) the bitmap has very few clusters — just one or a few at the right edge — so early steps are nearly free. In the fully-developed rarefaction regime (density around $\tfrac{1}{2}$), `#clusters` is $O(r)$ and total $m$ per step is $O(\sum 1/(1-p)) = O(r/(1-p))$, so per-step cost is $O(r)$ with small constants. Projected total: $K = 50$, $r = T = 30\,000$ in **~3–5 seconds**. Still firmly sub-interactive. Acceptable; revisit with a segmented-scan bitmap algorithm only if measured performance disappoints.
+
+Key primitive — "count consecutive 1s starting at bit $b$, going leftward, capped at the leftward cluster boundary":
+
+```
+int scanLeft(uint64_t* bm, int b, int lo_bound) {
+    // count consecutive 1s in bm[] at positions b, b-1, b-2, ..., stopping at a 0 or at lo_bound.
+    int qw = b / 64;
+    int bit = b % 64;
+    uint64_t w = bm[qw] & ((1ULL << (bit + 1)) - 1);  // mask out bits above b
+    // Top consecutive 1s ending at bit `bit` → count by inverting, then ctz from the masked region.
+    // Details in implementation.
+}
+```
+
+The inner scan typically terminates within one or two qwords for reasonable $p$, so this is fast in practice. Full details deferred to the implementation plan.
 
 Generating 128 independent Bernoulli($p$) bits per lane using 64 individual `u < threshold` comparisons would cost 1 RNG draw per coin (~9×10⁸ draws for a full $K=50$ batch — the bottleneck). Instead:
 
@@ -156,7 +196,7 @@ Minimal, task-focused surface:
 
 | Function | Signature | Purpose |
 |---|---|---|
-| `runSample` | `int runSample(int r, int T, double p, int numBins, double xiMin, double xiMax)` | Runs one full sample; returns actual $T$ used. Writes binned density into a pre-allocated buffer. |
+| `runSample` | `int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin, double xiMax)` | Runs one full sample; `updateRule` is `0` (parallel) or `1` (sequential). Returns actual $T$ used. Writes binned density into a pre-allocated buffer. |
 | `getDensityBuf` | `double* getDensityBuf()` | Returns pointer to the density bin buffer (length `numBins`). |
 | `freeWorkspace` | `void freeWorkspace()` | Releases any persistent buffers (called if sim is unmounted). |
 
@@ -176,16 +216,24 @@ One main canvas `#densityCanvas`, full width of the visualization panel, height 
 
 ### 7.2 Drawing `drawDensity()`
 
-- Clear canvas, draw axes (x: $\xi$ on $[-1.05, 1.05]$ with ticks at $\pm 1, \pm p, 0$; y: $\rho$ on $[-0.05, 1.05]$ with ticks at $0, 0.25, 0.5, 0.75, 1$).
-- Draw dashed limit curve $\rho_\infty(\xi)$ using the explicit formula in § 4.
+- Clear canvas, draw axes. X-range is fixed at $\xi \in [-1.1, 1.1]$ to accommodate the sequential fan's potentially-large left extent at $-p/(1-p)$ (which diverges as $p \to 1$; the left endpoint is clamped to $-1.1$ in the display). Y-range $\rho \in [-0.05, 1.05]$.
+- Tick marks at $\pm 1$, $0$, and the fan endpoints for the current rule (marking $\pm p$ for parallel, $-p/(1-p)$ and $+p$ for sequential).
+- Draw the dashed limit curve matching the **current** update rule (formulas in § 4). Update this whenever the rule changes.
 - Draw faint individual sample curves (alpha $\approx 0.15$).
 - Draw bold average curve.
-- Shade the rarefaction fan $[-p, p]$ very lightly to make the region visible.
-- All colors come from CSS custom properties (light/dark mode), matching conventions in other recent sims.
+- Shade the rarefaction fan region lightly.
+- All colors via CSS custom properties (light/dark mode).
 
 ### 7.3 Controls block
 
-Single `<details class="control-section" open>` group titled "Parameters" with four rows (r, p, T, K), plus a "Batch" row containing the Run / Stop / Clear buttons and progress area. Mobile drawer behavior copied from the Plancherel sim. No keyboard shortcuts unless explicitly requested later (per LP's preferences).
+Single `<details class="control-section" open>` group titled "Parameters" with five rows:
+1. $r$ — number input + slider
+2. $p$ — number input + slider
+3. $T$ — number input + slider
+4. $K$ — number input
+5. **Update rule** — two radio buttons: Parallel / Sequential
+
+Plus a "Batch" row containing the Run / Stop / Clear buttons and progress area. Mobile drawer behavior copied from the Plancherel sim. No keyboard shortcuts unless explicitly requested later.
 
 ### 7.4 Stats
 
@@ -197,8 +245,9 @@ Under the canvas, a stats-inline strip:
 
 ## 8. Edge cases and correctness checks
 
-- **$p = 0$:** no particle ever moves. Empirical density should be $\mathbf{1}_{\xi \le 0}$ (step profile) for all $T$. The limit formula gives $\rho_\infty(\xi) = 1$ for $\xi \le 0$ and $0$ for $\xi > 0$ (note $[-p, p] = \{0\}$ collapses). Implementation must handle $p = 0$ without divide-by-zero in the limit curve.
-- **$p = 1$:** deterministic dynamics. Every particle whose right neighbor is free moves. From step IC this produces, at time $T$, particles at positions $\{T, T-2, T-4, \ldots, -T+2, -T\}$ (same parity as $T$, spaced 2 apart). The coarse-grained density is $\rho = \tfrac{1}{2}$ on the full interval $\xi \in (-1, 1)$. The formula in § 4 correctly gives $\rho_\infty(\xi) = \tfrac{1}{2}$ on $(-p, p) = (-1, 1)$ when $p = 1$ (the square root's numerator $1-p$ vanishes). Good sanity check.
+- **$p = 0$:** no particle moves under either rule. Empirical density = $\mathbf{1}_{\xi \le 0}$. Both limit formulas must be guarded for $p = 0$ to avoid divide-by-zero.
+- **$p = 1$, parallel:** deterministic. After $T$ steps, particles occupy $\{T, T-2, T-4, \ldots, -T+2, -T\}$ (parity-matched, spaced 2 apart), coarse-grained density $\tfrac{1}{2}$ on $\xi \in (-1, 1)$. Parallel limit formula correctly yields $\rho_\infty^{\text{par}} \equiv \tfrac{1}{2}$ here (the $\sqrt{1-p}$ factor kills the deviation).
+- **$p = 1$, sequential:** deterministic and every free-OR-cascading particle moves every step, so at each step *all* $r$ particles shift right by 1. After $T$ steps, particles occupy $\{-r+1+T, \ldots, T\}$, fully packed. Empirical density = 1 on $\xi \in [-r/T + 1, 1]$, 0 elsewhere. Sequential limit formula gives $\rho_\infty^{\text{seq}} = 1$ for $\xi < 1$ (the fan degenerates to the single point $\xi = 1$ as $p \to 1$). ✓
 - **$T \gg r$:** rightmost particle has moved ~$pT$ steps; if $pT > r$ (always, in this regime) the fan is fully developed but then the finite-$r$ system thins out — the "empty region" behind the left edge grows. The bitmap size $L = r + T + O(1)$ remains valid.
 - **$T \ll r$:** fan hasn't fully developed. Empirical density is close to step profile near center, deviates only near the front. The sim still runs; the limit curve is the same regardless of whether $T$ is "big enough".
 - **$r = 1$:** single particle, no blocking. Sanity check: empirical density is a delta-like mass near $\xi = p$ (since the particle moves on average $pT$ times).
@@ -218,11 +267,14 @@ Under the canvas, a stats-inline strip:
 
 Manual acceptance checks to be performed after implementation:
 
-1. **$p = 1$ sanity:** running with $p = 1$, $r = T = 2000$, $K = 50$ should show the average density hugging the flat line $\rho_\infty(\xi) = \tfrac{1}{2}$ on $(-1, 1)$ within visible tolerance (and individual samples alternating around $\tfrac{1}{2}$ on a bin-by-bin basis due to the even/odd parity of particle positions at time $T$).
-2. **$p = 0.5$ sanity:** average density on $[-0.5, 0.5]$ should match the curved formula; fan endpoints visibly at $\pm p$; density hits $\approx 0.5$ at $\xi = 0$.
-3. **Speed:** $r = T = 30\,000$, $K = 50$ completes in **under 2 seconds** on LP's machine (target with all § 6 optimizations in place).
-4. **UI responsiveness:** progress bar updates smoothly during a long batch; Stop button halts the run within one sample.
-5. **No visual regressions:** dark mode renders correctly; mobile drawer works; no KaTeX errors.
+1. **Parallel, $p = 1$ sanity:** average density flat at $\tfrac{1}{2}$ on $(-1, 1)$; individual samples alternate around $\tfrac{1}{2}$ due to parity.
+2. **Parallel, $p = 0.5$ sanity:** fan endpoints at $\pm \tfrac{1}{2}$; density $\approx 0.5$ at $\xi = 0$; curved shape matches the explicit formula.
+3. **Sequential, $p = 0.5$ sanity:** fan endpoints asymmetric at $\xi_\ell = -1, \xi_r = 0.5$ (since $-p/(1-p) = -1$); density at $\xi = 0$ is $(1 - \sqrt{0.5})/0.5 \approx 0.586$, not $0.5$.
+4. **Sequential vs. parallel visible difference:** at $p = 0.5$, switching the radio button must visibly change the density curve — the fan's left endpoint moves from $-0.5$ to $-1$, and the $\xi = 0$ density shifts from $0.5$ to $\approx 0.586$.
+5. **Speed (parallel):** $r = T = 30\,000$, $K = 50$ completes in under 2 seconds.
+6. **Speed (sequential):** $r = T = 30\,000$, $K = 50$ completes in under 5 seconds.
+7. **UI responsiveness:** progress bar updates smoothly during a long batch; Stop button halts within one sample.
+8. **No visual regressions:** dark mode, mobile drawer, KaTeX all render correctly.
 
 ## 11. Open items deferred to implementation
 
