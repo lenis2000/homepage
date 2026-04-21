@@ -295,6 +295,12 @@ details.control-section {
     <div class="density-container">
       <canvas id="densityCanvas" width="900" height="440"></canvas>
     </div>
+    <div class="density-container" style="margin-top: 10px;">
+      <canvas id="diagramCanvas" width="900" height="360"></canvas>
+      <div style="display:flex; justify-content:flex-end; padding: 4px 10px 8px;">
+        <button class="btn-utility" id="shuffleDiagBtn" style="font-size:11px; padding:4px 12px;" title="Resample coin flips">Shuffle</button>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -334,6 +340,8 @@ details.control-section {
   const statMs       = document.getElementById('statMs');
   const showLimitChk = document.getElementById('showLimitChk');
   const densityCanvas = document.getElementById('densityCanvas');
+  const diagramCanvas = document.getElementById('diagramCanvas');
+  const shuffleDiagBtn = document.getElementById('shuffleDiagBtn');
   const controlsPanel = document.getElementById('controlsPanel');
   const drawerHandle  = document.getElementById('drawerHandle');
 
@@ -362,6 +370,197 @@ details.control-section {
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     return { ctx, w: rect.width, h: rect.height };
+  }
+
+  // ─── Space-time diagram (rightmost DIAG_R particles × DIAG_T steps, JS sim) ─
+  const DIAG_R = 10;
+  const DIAG_T = 20;
+  let diagramCache = null;
+
+  function runDiagram() {
+    const { p, rule } = getParams();
+    // Space range: show initial -(DIAG_R-1)..0 and room to the right
+    const xMin = -DIAG_R;
+    const xMax = DIAG_T + 2;
+    const width = xMax - xMin + 1;
+    const idx = x => x - xMin;
+
+    let occ = new Array(width).fill(0);
+    for (let k = 0; k < DIAG_R; k++) occ[idx(-(DIAG_R - 1) + k)] = 1;
+
+    const frames = [{ occ: occ.slice(), coin: null, moves: null }];
+
+    for (let t = 0; t < DIAG_T; t++) {
+      const coin = new Array(width).fill(0);
+      for (let i = 0; i < width; i++) if (occ[i]) coin[i] = Math.random() < p ? 1 : 0;
+
+      const newOcc = occ.slice();
+      const moves = new Array(width).fill(0);
+
+      if (rule === 0) {
+        // Parallel: decide movers from the SNAPSHOT
+        const movers = [];
+        for (let i = 0; i < width - 1; i++) {
+          if (occ[i] && coin[i] && !occ[i + 1]) movers.push(i);
+        }
+        for (const i of movers) { newOcc[i] = 0; newOcc[i + 1] = 1; moves[i] = 1; }
+      } else {
+        // Sequential right-to-left: decide on the CURRENT (cascading) state
+        for (let i = width - 2; i >= 0; i--) {
+          if (newOcc[i] && coin[i] && !newOcc[i + 1]) {
+            newOcc[i] = 0; newOcc[i + 1] = 1; moves[i] = 1;
+          }
+        }
+      }
+      occ = newOcc;
+      frames.push({ occ: occ.slice(), coin, moves });
+    }
+
+    diagramCache = { frames, xMin, xMax, width, p, rule };
+  }
+
+  function drawArrow(ctx, x1, y1, x2, y2, headSize) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    const ang = Math.atan2(y2 - y1, x2 - x1);
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - headSize * Math.cos(ang - Math.PI / 6), y2 - headSize * Math.sin(ang - Math.PI / 6));
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - headSize * Math.cos(ang + Math.PI / 6), y2 - headSize * Math.sin(ang + Math.PI / 6));
+    ctx.stroke();
+  }
+
+  function drawDiagram() {
+    const { ctx, w, h } = setupCanvas(diagramCanvas);
+    ctx.clearRect(0, 0, w, h);
+    if (!diagramCache) return;
+    const { frames, xMin, xMax, width, rule } = diagramCache;
+    const rows = frames.length;
+
+    const margin = { top: 34, right: 16, bottom: 38, left: 52 };
+    const pw = w - margin.left - margin.right;
+    const ph = h - margin.top - margin.bottom;
+    const cellW = pw / width;
+    const cellH = ph / rows;
+    const cx = i => margin.left + (i + 0.5) * cellW;
+    const cy = t => margin.top + (t + 0.5) * cellH;
+
+    // Faint grid
+    ctx.strokeStyle = getColor('--border-color') || '#e0e0e0';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i <= width; i++) {
+      ctx.beginPath();
+      ctx.moveTo(margin.left + i * cellW, margin.top);
+      ctx.lineTo(margin.left + i * cellW, margin.top + ph);
+      ctx.stroke();
+    }
+    for (let t = 0; t <= rows; t++) {
+      ctx.beginPath();
+      ctx.moveTo(margin.left, margin.top + t * cellH);
+      ctx.lineTo(margin.left + pw, margin.top + t * cellH);
+      ctx.stroke();
+    }
+
+    // x=0 emphasized
+    const zeroIdx = -xMin;
+    ctx.strokeStyle = getColor('--text-secondary') || '#888';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(margin.left + zeroIdx * cellW, margin.top);
+    ctx.lineTo(margin.left + zeroIdx * cellW, margin.top + ph);
+    ctx.stroke();
+
+    // Arrows: green for successful move, red dash for heads-but-blocked
+    for (let t = 1; t < rows; t++) {
+      const { coin, moves } = frames[t];
+      const prevOcc = frames[t - 1].occ;
+      for (let i = 0; i < width; i++) {
+        if (!prevOcc[i] || !coin[i]) continue;
+        if (moves[i]) {
+          ctx.strokeStyle = '#1a7a3a';
+          ctx.lineWidth = 2;
+          drawArrow(ctx, cx(i), cy(t - 1), cx(i + 1), cy(t), 4);
+        } else {
+          // heads but blocked — short red dashed stub pointing right at the particle's row
+          ctx.strokeStyle = '#c62828';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([2, 2]);
+          ctx.beginPath();
+          ctx.moveTo(cx(i) + cellW * 0.22, cy(t - 1));
+          ctx.lineTo(cx(i) + cellW * 0.62, cy(t - 1));
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+    }
+
+    // Particles
+    const dotR = Math.max(2, Math.min(cellW, cellH) * 0.26);
+    ctx.fillStyle = getColor('--text-primary') || '#333';
+    for (let t = 0; t < rows; t++) {
+      for (let i = 0; i < width; i++) {
+        if (frames[t].occ[i]) {
+          ctx.beginPath();
+          ctx.arc(cx(i), cy(t), dotR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    // X axis labels
+    ctx.fillStyle = getColor('--text-secondary') || '#888';
+    ctx.font = '10px "franklingothic-book", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    const xStep = width > 30 ? 5 : 2;
+    for (let i = 0; i < width; i++) {
+      const x = xMin + i;
+      if (x % xStep === 0) ctx.fillText(x.toString(), cx(i), margin.top + ph + 14);
+    }
+    ctx.fillStyle = getColor('--text-primary') || '#333';
+    ctx.font = '11px "franklingothic-book", Arial, sans-serif';
+    ctx.fillText('position x', margin.left + pw / 2, margin.top + ph + 30);
+
+    // Y axis labels (time)
+    ctx.textAlign = 'right';
+    ctx.fillStyle = getColor('--text-secondary') || '#888';
+    ctx.font = '10px "franklingothic-book", Arial, sans-serif';
+    for (let t = 0; t < rows; t++) {
+      if (t % 5 === 0 || t === rows - 1) ctx.fillText('t=' + t, margin.left - 6, cy(t) + 3);
+    }
+
+    // Title + legend
+    ctx.textAlign = 'left';
+    ctx.fillStyle = getColor('--text-primary') || '#333';
+    ctx.font = '12px "franklingothic-demi", Arial, sans-serif';
+    const ruleLabel = rule === 0 ? 'Parallel' : 'Sequential';
+    ctx.fillText('Space-time diagram — rightmost ' + DIAG_R + ' particles, first ' + DIAG_T + ' steps (' + ruleLabel + ')',
+                 margin.left, margin.top - 14);
+
+    // Legend — right-aligned near the right edge of the plot area
+    const legY = margin.top - 14;
+    ctx.font = '10px "franklingothic-book", Arial, sans-serif';
+    ctx.textAlign = 'left';
+    let legX = margin.left + pw - 230;
+    ctx.strokeStyle = '#1a7a3a';
+    ctx.lineWidth = 2;
+    drawArrow(ctx, legX, legY, legX + 18, legY - 6, 3);
+    ctx.fillStyle = getColor('--text-primary') || '#333';
+    ctx.fillText('heads → moved', legX + 24, legY + 3);
+    legX += 120;
+    ctx.strokeStyle = '#c62828';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 18, legY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillText('heads, blocked', legX + 24, legY + 3);
+  }
+
+  function refreshDiagram() {
+    runDiagram();
+    drawDiagram();
   }
 
   // ─── Hydrodynamic limit (conjectural — checkbox-gated) ───────────────────
@@ -607,30 +806,34 @@ details.control-section {
   }
 
   // ─── Controls wiring ──────────────────────────────────────────────────────
-  function syncSlider(input, slider, isFloat) {
+  function syncSlider(input, slider, isFloat, onChange) {
     input.addEventListener('input', () => {
       const v = isFloat ? parseFloat(input.value) : parseInt(input.value);
       if (!isNaN(v)) {
         slider.value = isFloat ? Math.round(v * 100) : v;
       }
       clearSamples();
+      if (onChange) onChange();
     });
     slider.addEventListener('input', () => {
       input.value = isFloat ? (parseInt(slider.value) / 100).toFixed(2) : slider.value;
       clearSamples();
+      if (onChange) onChange();
     });
   }
 
   syncSlider(rInput, rSlider, false);
-  syncSlider(pInput, pSlider, true);
+  syncSlider(pInput, pSlider, true, refreshDiagram);  // diagram depends on p
   syncSlider(tInput, tSlider, false);
   kInput.addEventListener('input', () => clearSamples());
 
   document.querySelectorAll('input[name="updateRule"]').forEach(radio => {
-    radio.addEventListener('change', () => clearSamples());
+    radio.addEventListener('change', () => { clearSamples(); refreshDiagram(); });
   });
 
   showLimitChk.addEventListener('change', () => drawDensity());
+
+  shuffleDiagBtn.addEventListener('click', () => refreshDiagram());
 
   runBtn.addEventListener('click', () => {
     if (running) {
@@ -656,7 +859,7 @@ details.control-section {
 
   window.addEventListener('resize', () => {
     clearTimeout(window._btResizeTimer);
-    window._btResizeTimer = setTimeout(() => drawDensity(), 200);
+    window._btResizeTimer = setTimeout(() => { drawDensity(); drawDiagram(); }, 200);
   });
 
   // Disable/enable controls
@@ -691,6 +894,7 @@ details.control-section {
 
   disableControls(false);
   drawDensity();
+  refreshDiagram();
 
 })();
 </script>
