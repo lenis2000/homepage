@@ -363,11 +363,11 @@ details.control-section {
       <div class="plot-controls">
         <label for="activeZoom">y-zoom:</label>
         <select id="activeZoom">
-          <option value="1">full</option>
           <option value="0.5">bottom 50%</option>
-          <option value="0.4">bottom 40%</option>
           <option value="0.25" selected>bottom 25%</option>
           <option value="0.1">bottom 10%</option>
+          <option value="0.05">bottom 5%</option>
+          <option value="0.02">bottom 2%</option>
         </select>
       </div>
     </div>
@@ -376,11 +376,11 @@ details.control-section {
       <div class="plot-controls">
         <label for="jumpsZoom">y-zoom:</label>
         <select id="jumpsZoom">
-          <option value="1">full</option>
           <option value="0.5">bottom 50%</option>
-          <option value="0.4">bottom 40%</option>
           <option value="0.25" selected>bottom 25%</option>
           <option value="0.1">bottom 10%</option>
+          <option value="0.05">bottom 5%</option>
+          <option value="0.02">bottom 2%</option>
         </select>
       </div>
     </div>
