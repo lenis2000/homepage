@@ -301,7 +301,7 @@ details.control-section {
           </div>
           <div class="control-row">
             <label for="pInput">p (jump prob)</label>
-            <input type="number" id="pInput" value="0.5" min="0.01" max="1.0" step="0.01">
+            <input type="number" id="pInput" value="0.5" min="0.0001" max="1.0" step="0.0001">
           </div>
           <div class="control-row">
             <input type="range" id="pSlider" min="1" max="100" step="1" value="50" aria-label="p slider">
@@ -449,7 +449,7 @@ details.control-section {
   function getParams() {
     return {
       r: Math.max(100, Math.min(30000, parseInt(rInput.value) || 3000)),
-      p: Math.max(0.01, Math.min(1.0, parseFloat(pInput.value) || 0.5)),
+      p: Math.max(0.0001, Math.min(1.0, parseFloat(pInput.value) || 0.5)),
       T: Math.max(100, Math.min(50000, parseInt(tInput.value) || 3000)),
       K: Math.max(1, Math.min(200, parseInt(kInput.value) || 20)),
       rule: parseInt(document.querySelector('input[name="updateRule"]:checked').value)

@@ -293,10 +293,11 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
     int lane_hi = (r + 127) / 128;
     if (lane_hi >= W) lane_hi = W - 1;
 
-    // Run T steps
+    // Run T productive steps (steps with zero jumps are redone without advancing t)
     if (updateRule == 0) {
         // ─── Parallel update ─────────────────────────────────────────────
-        for (int t = 0; t < T; t++) {
+        int t = 0;
+        while (t < T) {
             // Generate coins for active window
             for (int i = lane_lo; i <= lane_hi; i++) {
                 g_coin[i] = gen_coins(p);
@@ -337,6 +338,9 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
                 carry_mov = new_carry_mov;
             }
 
+            // If no particle jumped, redo the step without incrementing t
+            if (step_jumps == 0) continue;
+
             g_jumps[t] = (double)step_jumps;
 
             // Extend lane_hi if the front moved into a new lane
@@ -361,10 +365,13 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
                 }
                 g_active[t] = (double)active_count;
             }
+
+            t++;
         }
     } else {
         // ─── Sequential (right-to-left cascading) update ─────────────────
-        for (int t = 0; t < T; t++) {
+        int t = 0;
+        while (t < T) {
             // Generate coin bitmap for entire active window
             for (int i = lane_lo; i <= lane_hi; i++) {
                 g_coin[i] = gen_coins(p);
@@ -433,6 +440,9 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
                 }
             }
 
+            // If no particle jumped, redo the step without incrementing t
+            if (step_jumps == 0) continue;
+
             g_jumps[t] = (double)step_jumps;
 
             // Count active particles in the new state η_{t+1}
@@ -449,6 +459,8 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
                 }
                 g_active[t] = (double)active_count;
             }
+
+            t++;
         }
     }
 
