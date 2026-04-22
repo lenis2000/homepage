@@ -32417,6 +32417,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2002.10086": {
+    "date": "2020-02-24",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "2002.10526": {
     "date": "2020-02-24",
     "decision": "REJECT",

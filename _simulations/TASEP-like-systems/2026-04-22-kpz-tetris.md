@@ -12,10 +12,11 @@ a11y-description: "Random tetromino deposition simulation. Standard Tetris piece
 .kpz-wrap {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 10px;
   margin: 0 auto;
-  max-width: 700px;
+  width: 100%;
+  max-width: 100%;
 }
 .kpz-controls {
   display: flex;
@@ -46,16 +47,23 @@ a11y-description: "Random tetromino deposition simulation. Standard Tetris piece
   justify-content: center;
 }
 .kpz-stats b { color: #333; font-weight: 600; }
-.kpz-canvases { position: relative; line-height: 0; }
-#kpzGrid { border: 1px solid #ccc; display: block; }
-#kpzProfile { border: 1px solid #ddd; border-top: none; display: block; }
+.kpz-canvases { position: relative; line-height: 0; width: 100%; }
+#kpzGrid {
+  border: 1px solid #ccc;
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
 </style>
 
 <div class="kpz-wrap">
   <div class="kpz-controls">
     <button id="kpzReset">Reset</button>
-    <button id="kpzPause">&#9654; Run</button>
-    <label>Speed <input type="range" id="kpzSpeed" min="1" max="50" value="5"> <b id="kpzSpeedVal">5</b></label>
+    <button id="kpzPause">&#9646;&#9646; Pause</button>
+    <label>Speed <input type="range" id="kpzSpeed" min="1" max="50" value="1"> <b id="kpzSpeedVal">1</b></label>
+    <label><input type="checkbox" id="kpzCeil"> Show surface h(x)</label>
     <button id="kpzFF">+500</button>
   </div>
   <div class="kpz-stats">
@@ -66,21 +74,17 @@ a11y-description: "Random tetromino deposition simulation. Standard Tetris piece
   </div>
   <div class="kpz-canvases">
     <canvas id="kpzGrid"></canvas>
-    <canvas id="kpzProfile"></canvas>
   </div>
 </div>
 
 <script>
 (function() {
-  const W = 100, H = 500, CELL = 6, VISIBLE = 100;
+  const W = 200, H = 500, CELL = 6, VISIBLE = 100;
   const CW = W * CELL, CH = VISIBLE * CELL;
 
   const gc = document.getElementById('kpzGrid');
-  const pc = document.getElementById('kpzProfile');
   gc.width = CW; gc.height = CH;
-  pc.width = CW; pc.height = 140;
   const gx = gc.getContext('2d');
-  const px = pc.getContext('2d');
 
   const COL = [
     null,
@@ -134,17 +138,32 @@ a11y-description: "Random tetromino deposition simulation. Standard Tetris piece
   });
 
   let grid, heights, pieceCount, maxH, running, animId;
-  let falling = null; // {type, cells, x, targetY, y}
+  let falling = []; // array of {type, cells, x, targetY, y, mxd, myd}
+  let showSurface = false;
+  const CONCURRENT_MIN = 5, CONCURRENT_MAX = 8;
 
   function init() {
     grid = [];
     for (let i = 0; i < W; i++) grid[i] = new Uint8Array(H);
     heights = new Float64Array(W);
     pieceCount = 0; maxH = 0;
-    falling = null;
+    falling = [];
   }
 
-  function viewBot() { return Math.max(0, maxH - 70); }
+  function viewBot() { return Math.max(0, maxH - (VISIBLE - 20)); }
+
+  // Effective landing target considering already-falling pieces that will
+  // settle first (those with lower y or same y but earlier in array would
+  // land first — but we compute against committed heights only; collisions
+  // between falling pieces are resolved by staggering start Y).
+  function computeTarget(x, cells) {
+    let ly = 0;
+    for (let i = 0; i < cells.length; i++) {
+      const v = heights[x + cells[i][0]] - cells[i][1];
+      if (v > ly) ly = v;
+    }
+    return ly;
+  }
 
   function spawnPiece() {
     const ti = Math.random() * 7 | 0;
@@ -157,16 +176,22 @@ a11y-description: "Random tetromino deposition simulation. Standard Tetris piece
     }
     const x = Math.random() * (W - mxd) | 0;
 
-    let ly = 0;
-    for (let i = 0; i < cells.length; i++) {
-      const v = heights[x + cells[i][0]] - cells[i][1];
-      if (v > ly) ly = v;
-    }
+    const ly = computeTarget(x, cells);
     if (ly + myd >= H) return null;
 
-    const startY = viewBot() + VISIBLE + 2;
+    // Stagger start Y so pieces are spread vertically. Find the highest
+    // active falling piece over this x-range and start above it.
+    const vb = viewBot();
+    let startY = vb + VISIBLE + 2;
+    for (let k = 0; k < falling.length; k++) {
+      const f = falling[k];
+      // Check horizontal overlap
+      if (f.x + f.mxd < x || f.x > x + mxd) continue;
+      const topY = f.y + f.myd + 2 + ((Math.random() * 3) | 0);
+      if (topY > startY) startY = topY;
+    }
 
-    return { type: ti, cells: cells, x: x, targetY: ly, y: startY };
+    return { type: ti, cells: cells, x: x, targetY: ly, y: startY, mxd: mxd, myd: myd };
   }
 
   function placePiece(p) {
@@ -207,6 +232,23 @@ a11y-description: "Random tetromino deposition simulation. Standard Tetris piece
     return true;
   }
 
+  function drawBlock(sx, sy, c, highlight) {
+    const r = highlight ? Math.min(255, c[0] + 60) : c[0];
+    const g = highlight ? Math.min(255, c[1] + 60) : c[1];
+    const b = highlight ? Math.min(255, c[2] + 60) : c[2];
+    // main fill
+    gx.fillStyle = `rgb(${r},${g},${b})`;
+    gx.fillRect(sx, sy, CELL, CELL);
+    // top-left bevel
+    gx.fillStyle = `rgba(255,255,255,0.45)`;
+    gx.fillRect(sx, sy, CELL, 1);
+    gx.fillRect(sx, sy, 1, CELL);
+    // bottom-right bevel
+    gx.fillStyle = `rgba(0,0,0,0.30)`;
+    gx.fillRect(sx, sy + CELL - 1, CELL, 1);
+    gx.fillRect(sx + CELL - 1, sy, 1, CELL);
+  }
+
   function render() {
     const vb = viewBot();
 
@@ -220,49 +262,38 @@ a11y-description: "Random tetromino deposition simulation. Standard Tetris piece
       for (let xi = 0; xi < W; xi++) {
         const ci = grid[xi][gy];
         if (!ci) continue;
-        const c = COL[ci];
-        gx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
-        gx.fillRect(xi * CELL, sy, CELL, CELL);
+        drawBlock(xi * CELL, sy, COL[ci], false);
       }
     }
 
-    // draw falling piece
-    if (falling) {
-      const c = COL[falling.type + 1];
-      const fy = Math.round(falling.y);
-      gx.fillStyle = `rgb(${Math.min(255, c[0]+60)},${Math.min(255, c[1]+60)},${Math.min(255, c[2]+60)})`;
-      for (let i = 0; i < falling.cells.length; i++) {
-        const cx = falling.x + falling.cells[i][0];
-        const cy = fy + falling.cells[i][1];
+    // draw falling pieces
+    for (let fi = 0; fi < falling.length; fi++) {
+      const f = falling[fi];
+      const c = COL[f.type + 1];
+      const fy = Math.round(f.y);
+      for (let i = 0; i < f.cells.length; i++) {
+        const cx = f.x + f.cells[i][0];
+        const cy = fy + f.cells[i][1];
         const vy = cy - vb;
         if (vy < 0 || vy >= VISIBLE) continue;
         const sy = CH - (vy + 1) * CELL;
-        gx.fillRect(cx * CELL, sy, CELL, CELL);
+        drawBlock(cx * CELL, sy, c, true);
       }
 
-      // ghost at target
-      gx.strokeStyle = `rgba(${c[0]},${c[1]},${c[2]},0.35)`;
-      gx.lineWidth = 1;
-      for (let i = 0; i < falling.cells.length; i++) {
-        const cx = falling.x + falling.cells[i][0];
-        const cy = falling.targetY + falling.cells[i][1];
-        const vy = cy - vb;
-        if (vy < 0 || vy >= VISIBLE) continue;
-        const sy = CH - (vy + 1) * CELL;
-        gx.strokeRect(cx * CELL + 0.5, sy + 0.5, CELL - 1, CELL - 1);
-      }
     }
 
-    // surface line
-    gx.beginPath();
-    gx.strokeStyle = 'rgba(0,0,0,0.55)';
-    gx.lineWidth = 1.5;
-    for (let xi = 0; xi < W; xi++) {
-      const sy = CH - (heights[xi] - vb) * CELL;
-      if (xi === 0) gx.moveTo(xi * CELL + CELL / 2, sy);
-      else gx.lineTo(xi * CELL + CELL / 2, sy);
+    // surface line (toggleable)
+    if (showSurface) {
+      gx.beginPath();
+      gx.strokeStyle = 'rgba(0,0,0,0.55)';
+      gx.lineWidth = 1.5;
+      for (let xi = 0; xi < W; xi++) {
+        const sy = CH - (heights[xi] - vb) * CELL;
+        if (xi === 0) gx.moveTo(xi * CELL + CELL / 2, sy);
+        else gx.lineTo(xi * CELL + CELL / 2, sy);
+      }
+      gx.stroke();
     }
-    gx.stroke();
 
     if (vb === 0) {
       gx.strokeStyle = '#999';
@@ -271,52 +302,6 @@ a11y-description: "Random tetromino deposition simulation. Standard Tetris piece
       gx.moveTo(0, CH - 0.5);
       gx.lineTo(CW, CH - 0.5);
       gx.stroke();
-    }
-
-    // profile
-    const pw = pc.width, ph = pc.height;
-    px.fillStyle = '#fafaf6';
-    px.fillRect(0, 0, pw, ph);
-
-    if (maxH > 0) {
-      const mg = 18, plotH = ph - mg * 2, plotW = pw - 10;
-      let hMin = Infinity, hMax = -Infinity;
-      for (let xi = 0; xi < W; xi++) {
-        if (heights[xi] < hMin) hMin = heights[xi];
-        if (heights[xi] > hMax) hMax = heights[xi];
-      }
-      const range = hMax - hMin || 1;
-
-      px.beginPath();
-      px.moveTo(5, mg + plotH);
-      for (let xi = 0; xi < W; xi++) {
-        const xp = 5 + (xi / (W - 1)) * plotW;
-        const yp = mg + plotH - ((heights[xi] - hMin) / range) * plotH;
-        px.lineTo(xp, yp);
-      }
-      px.lineTo(5 + plotW, mg + plotH);
-      px.closePath();
-      const grad = px.createLinearGradient(0, mg, 0, mg + plotH);
-      grad.addColorStop(0, 'rgba(0,140,180,0.3)');
-      grad.addColorStop(1, 'rgba(0,140,180,0.02)');
-      px.fillStyle = grad;
-      px.fill();
-
-      px.beginPath();
-      px.strokeStyle = '#0090a0';
-      px.lineWidth = 1.5;
-      for (let xi = 0; xi < W; xi++) {
-        const xp = 5 + (xi / (W - 1)) * plotW;
-        const yp = mg + plotH - ((heights[xi] - hMin) / range) * plotH;
-        if (xi === 0) px.moveTo(xp, yp); else px.lineTo(xp, yp);
-      }
-      px.stroke();
-
-      px.fillStyle = '#999';
-      px.font = '10px monospace';
-      px.fillText(hMax.toFixed(0), 5, mg - 4);
-      px.fillText(hMin.toFixed(0), 5, mg + plotH + 12);
-      px.fillText('h(x) profile', pw / 2 - 30, ph - 2);
     }
 
     let sum = 0, sum2 = 0;
@@ -331,23 +316,44 @@ a11y-description: "Random tetromino deposition simulation. Standard Tetris piece
   }
 
   function frame() {
-    const speed = +document.getElementById('kpzSpeed').value;
-    let budget = speed;
+    const speed = +document.getElementById('kpzSpeed').value / 3;
 
-    while (budget > 0) {
-      if (!falling) {
-        falling = spawnPiece();
-        if (!falling) { running = false; break; }
+    // Maintain 5-8 concurrent falling pieces
+    const target = CONCURRENT_MIN + ((Math.random() * (CONCURRENT_MAX - CONCURRENT_MIN + 1)) | 0);
+    while (falling.length < target) {
+      const p = spawnPiece();
+      if (!p) break;
+      falling.push(p);
+    }
+
+    // Advance every falling piece by `speed` units per frame
+    for (let i = 0; i < falling.length; i++) {
+      const f = falling[i];
+      // Recompute target in case pieces below have landed since spawn
+      const t = computeTarget(f.x, f.cells);
+      if (t > f.targetY) f.targetY = t;
+      f.y -= speed;
+      if (f.y <= f.targetY) {
+        f.y = f.targetY;
+        placePiece(f);
+        f._done = true;
       }
-      const dist = falling.y - falling.targetY;
-      if (budget >= dist) {
-        placePiece(falling);
-        budget -= dist;
-        falling = null;
-      } else {
-        falling.y -= budget;
-        budget = 0;
+    }
+    // Remove landed pieces; update targets of remaining pieces since heights changed
+    if (falling.some(f => f._done)) {
+      falling = falling.filter(f => !f._done);
+      for (let i = 0; i < falling.length; i++) {
+        const f = falling[i];
+        const t = computeTarget(f.x, f.cells);
+        if (t > f.targetY) f.targetY = t;
       }
+    }
+
+    // If we've run out of space entirely, stop
+    if (falling.length === 0) {
+      const p = spawnPiece();
+      if (!p) { render(); running = false; return; }
+      falling.push(p);
     }
 
     render();
@@ -374,11 +380,16 @@ a11y-description: "Random tetromino deposition simulation. Standard Tetris piece
   });
   document.getElementById('kpzFF').addEventListener('click', () => {
     for (let i = 0; i < 500; i++) { if (!dropInstant()) break; }
-    falling = null;
+    falling = [];
+    render();
+  });
+  document.getElementById('kpzCeil').addEventListener('change', e => {
+    showSurface = e.target.checked;
     render();
   });
 
   init();
   render();
+  start();
 })();
 </script>

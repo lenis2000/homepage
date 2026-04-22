@@ -293,7 +293,7 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
     int lane_hi = (r + 127) / 128;
     if (lane_hi >= W) lane_hi = W - 1;
 
-    // Run T productive steps (steps with zero jumps are redone without advancing t)
+    // Run T attempted steps (empty steps — where every coin is tails — count toward t)
     if (updateRule == 0) {
         // ─── Parallel update ─────────────────────────────────────────────
         int t = 0;
@@ -337,9 +337,6 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
 
                 carry_mov = new_carry_mov;
             }
-
-            // If no particle jumped, redo the step without incrementing t
-            if (step_jumps == 0) continue;
 
             g_jumps[t] = (double)step_jumps;
 
@@ -439,9 +436,6 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
                     }
                 }
             }
-
-            // If no particle jumped, redo the step without incrementing t
-            if (step_jumps == 0) continue;
 
             g_jumps[t] = (double)step_jumps;
 

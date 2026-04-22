@@ -7,7 +7,7 @@ code:
     txt: 'Interactive simulation — see source'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/TASEP-like-systems/2026-04-21-bernoulli-tasep.cpp'
     txt: 'C++ source for WASM (128-bit SIMD Bernoulli sampler)'
-a11y-description: "Simulation of Bernoulli TASEP with step initial condition. Particles at sites {-r+1,...,0} each flip a biased coin and (if heads) attempt to jump right by one site; exclusion prevents two particles from occupying the same site. Two update rules: parallel (snapshot-based, simultaneous) and sequential (right-to-left cascading, allowing chains of jumps). Outputs are the averaged empirical density profile as a function of xi = x/T, and the fraction of active particles a_n/n vs time."
+a11y-description: "Simulation of Bernoulli TASEP with step initial condition. Particles at sites {-r+1,...,0} each flip a biased coin and (if heads) attempt to jump right by one site; exclusion prevents two particles from occupying the same site. Two update rules: parallel (snapshot-based, simultaneous) and sequential (right-to-left cascading, allowing chains of jumps). Outputs are the averaged empirical density profile as a function of xi = x/T, and the fraction of active particles A_n/n vs time."
 ---
 
 <details class="math-description" id="defsBlock">
@@ -863,7 +863,7 @@ details.control-section {
     }
   }
 
-  // ─── a_n/n plot (active particles over time) ─────────────────────────────
+  // ─── A_n/n plot (active particles over time) ─────────────────────────────
   function drawActive() {
     const { ctx, w, h } = setupCanvas(activeCanvas);
     const margin = { top: 32, right: 24, bottom: 44, left: 52 };
@@ -878,7 +878,7 @@ details.control-section {
       ctx.fillStyle = getColor('--text-secondary') || '#888';
       ctx.font = '14px "franklingothic-book", Arial, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('a_n / n — press Run to generate samples', w / 2, h / 2);
+      ctx.fillText('A_n / n — press Run to generate samples', w / 2, h / 2);
       return;
     }
 
@@ -957,7 +957,7 @@ details.control-section {
     ctx.save();
     ctx.translate(14, margin.top + ph / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText('aₙ / n', 0, 0);
+    ctx.fillText('Aₙ / n', 0, 0);
     ctx.restore();
 
     // Clip to plot area so zoomed-in curves don't paint above the axes
@@ -998,11 +998,11 @@ details.control-section {
     ctx.textAlign = 'left';
     ctx.fillStyle = getColor('--text-primary') || '#333';
     ctx.font = '12px "franklingothic-demi", Arial, sans-serif';
-    ctx.fillText('Active particles — aₙ/n, n=1..T  (' + ruleLabel(rule) + ', ' + k + ' sample' + (k === 1 ? '' : 's') + ')',
+    ctx.fillText('Active particles — Aₙ/n, n=1..T  (' + ruleLabel(rule) + ', ' + k + ' sample' + (k === 1 ? '' : 's') + ')',
                  margin.left, margin.top - 14);
   }
 
-  // ─── A_n/n^2 plot (cumulative total jumps over time, rescaled) ───────────
+  // ─── a_n/n^2 plot (cumulative total jumps over time, rescaled) ───────────
   function drawJumps() {
     const { ctx, w, h } = setupCanvas(jumpsCanvas);
     const margin = { top: 32, right: 24, bottom: 44, left: 62 };
@@ -1017,7 +1017,7 @@ details.control-section {
       ctx.fillStyle = getColor('--text-secondary') || '#888';
       ctx.font = '14px "franklingothic-book", Arial, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('A_n / n² — press Run to generate samples', w / 2, h / 2);
+      ctx.fillText('a_n / n² — press Run to generate samples', w / 2, h / 2);
       return;
     }
 
@@ -1091,7 +1091,7 @@ details.control-section {
     ctx.save();
     ctx.translate(14, margin.top + ph / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText('Aₙ / n²', 0, 0);
+    ctx.fillText('aₙ / n²', 0, 0);
     ctx.restore();
 
     // Clip to plot area so zoomed-in curves don't paint above the axes
@@ -1132,7 +1132,7 @@ details.control-section {
     ctx.textAlign = 'left';
     ctx.fillStyle = getColor('--text-primary') || '#333';
     ctx.font = '12px "franklingothic-demi", Arial, sans-serif';
-    ctx.fillText('Total jumps — Aₙ/n², n=1..T  (' + ruleLabel(rule) + ', ' + k + ' sample' + (k === 1 ? '' : 's') + ')',
+    ctx.fillText('Total jumps — aₙ/n², n=1..T  (' + ruleLabel(rule) + ', ' + k + ' sample' + (k === 1 ? '' : 's') + ')',
                  margin.left, margin.top - 14);
   }
 
