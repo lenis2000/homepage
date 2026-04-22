@@ -7,7 +7,7 @@ code:
     txt: 'Interactive simulation — see source'
   - link: 'https://github.com/lenis2000/homepage/blob/master/_simulations/TASEP-like-systems/2026-04-21-bernoulli-tasep.cpp'
     txt: 'C++ source for WASM (128-bit SIMD Bernoulli sampler)'
-a11y-description: "Simulation of Bernoulli TASEP with step initial condition. Particles at sites {-r+1,...,0} each flip a biased coin and (if heads) attempt to jump right by one site; exclusion prevents two particles from occupying the same site. Two update rules: parallel (snapshot-based, simultaneous) and sequential (right-to-left cascading, allowing chains of jumps). Output is the averaged empirical density profile as a function of xi = x/T."
+a11y-description: "Simulation of Bernoulli TASEP with step initial condition. Particles at sites {-r+1,...,0} each flip a biased coin and (if heads) attempt to jump right by one site; exclusion prevents two particles from occupying the same site. Two update rules: parallel (snapshot-based, simultaneous) and sequential (right-to-left cascading, allowing chains of jumps). Outputs are the averaged empirical density profile as a function of xi = x/T, and the fraction of active particles a_n/n vs time."
 ---
 
 <details class="math-description" id="defsBlock">
@@ -20,17 +20,11 @@ a11y-description: "Simulation of Bernoulli TASEP with step initial condition. Pa
 
 <p><b>Definition 2</b> (right-to-left sequential update). <em>$\eta_{t+1}$ is obtained from $\eta_t$ by processing sites in strict decreasing order of $x$: apply $(\eta(x), \eta(x+1)) \mapsto (0,1)$ whenever the current configuration satisfies $\eta(x) = 1$, $\eta(x+1) = 0$, and $\xi_{t,x} = 1$.</em></p>
 
-<p><b>Definition 3</b> (active-only update). <em>Set $A_t = \{x : \eta_t(x) = 1,\ \eta_t(x+1) = 0\}$ and let $(\zeta_{t,x})_{x \in A_t}$ be i.i.d. $\mathrm{Bernoulli}(p)$. Then $\eta_{t+1}$ moves each $x \in A_t$ with $\zeta_{t,x} = 1$ to $x+1$ simultaneously.</em></p>
-
-<p><b>Proposition 1.</b> <em>Definitions 1 and 3 define the same Markov chain on $\{0,1\}^{\mathbb{Z}}$.</em></p>
-
-<p><em>Proof.</em> In Definition 1 the set of movers at step $t$ is $\{x : \eta_t(x) = 1,\ \eta_t(x+1) = 0,\ \xi_{t,x} = 1\} = \{x \in A_t : \xi_{t,x} = 1\}$. Coupling $\zeta_{t,x} := \xi_{t,x}$ for $x \in A_t$ gives the same set of movers in Definition 3. $\square$</p>
-
-<p><b>Proposition 2</b> (Evans–Rajewsky–Speer <a href="#ref-ers">[2]</a>). <em>The stationary current of Definition 1 on $\mathbb{Z}/N\mathbb{Z}$ at density $\rho \in [0,1]$ is</em>
+<p><b>Proposition 1</b> (Evans–Rajewsky–Speer <a href="#ref-ers">[2]</a>). <em>The stationary current of Definition 1 on $\mathbb{Z}/N\mathbb{Z}$ at density $\rho \in [0,1]$ is</em>
 $$j_{\mathrm{par}}(\rho) = \tfrac{1}{2}\!\left(1 - \sqrt{1 - 4p\rho(1-\rho)}\,\right).$$
 </p>
 
-<p><b>Proposition 3</b> (Rajewsky–Santen–Schadschneider–Schreckenberg <a href="#ref-rajewsky">[1]</a>). <em>The stationary current of Definition 2 on $\mathbb{Z}/N\mathbb{Z}$ at density $\rho \in [0,1]$ is</em>
+<p><b>Proposition 2</b> (Rajewsky–Santen–Schadschneider–Schreckenberg <a href="#ref-rajewsky">[1]</a>). <em>The stationary current of Definition 2 on $\mathbb{Z}/N\mathbb{Z}$ at density $\rho \in [0,1]$ is</em>
 $$j_{\mathrm{seq}}(\rho) = \frac{p\,\rho(1-\rho)}{1 - p\rho}.$$
 </p>
 
@@ -42,7 +36,7 @@ $$\rho_\infty(\xi) = \begin{cases} 1, & \xi \le j'(1), \\ (j')^{-1}(\xi), & j'(1
 
 <p><b>Corollary</b> (explicit fans).</p>
 
-<p><em>Parallel</em> (and, by Proposition 1, active-only). $j_{\mathrm{par}}'(0) = p$, $j_{\mathrm{par}}'(1) = -p$; on $\xi \in (-p, p)$,
+<p><em>Parallel.</em> $j_{\mathrm{par}}'(0) = p$, $j_{\mathrm{par}}'(1) = -p$; on $\xi \in (-p, p)$,
 $$\rho_\infty^{\mathrm{par}}(\xi) = \tfrac{1}{2}\!\left(1 - \mathrm{sgn}(\xi)\sqrt{\tfrac{\xi^2(1-p)}{p\,(p - \xi^2)}}\right).$$
 </p>
 
@@ -210,6 +204,21 @@ details.control-section {
   background: #222; box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
 }
 .density-container canvas { display: block; width: 100%; }
+.plot-controls {
+  display: flex; justify-content: flex-end; align-items: center;
+  gap: 8px; padding: 4px 12px 8px;
+  font-size: 11px; color: var(--text-secondary);
+}
+.plot-controls label {
+  font-family: "franklingothic-book", Arial, sans-serif;
+  margin: 0;
+}
+.plot-controls select {
+  font-size: 11px; padding: 2px 6px;
+  background: var(--bg-primary); color: var(--text-primary);
+  border: 1px solid var(--border-color); border-radius: 3px;
+  font-family: 'SF Mono', Monaco, monospace;
+}
 
 .progress-bar-container { display: none; margin-top: 6px; }
 .progress-bar {
@@ -314,10 +323,9 @@ details.control-section {
           <div class="control-row" style="gap:12px; flex-wrap:wrap;">
             <label class="radio-label"><input type="radio" name="updateRule" id="ruleParallel" value="0" checked> Parallel</label>
             <label class="radio-label"><input type="radio" name="updateRule" id="ruleSeq" value="1"> Sequential</label>
-            <label class="radio-label" title="Geometric waiting times on active (unblocked) particles; distributionally equivalent to parallel"><input type="radio" name="updateRule" id="ruleActive" value="2"> Active (geom.)</label>
           </div>
           <div class="control-row" style="gap:8px;">
-            <label class="radio-label"><input type="checkbox" id="showLimitChk"> Show limit shape (conjectural)</label>
+            <label class="radio-label"><input type="checkbox" id="showLimitChk"> Show limit shape</label>
           </div>
         </div>
       </details>
@@ -351,6 +359,32 @@ details.control-section {
       <canvas id="densityCanvas" width="900" height="440"></canvas>
     </div>
     <div class="density-container" style="margin-top: 10px;">
+      <canvas id="activeCanvas" width="900" height="500"></canvas>
+      <div class="plot-controls">
+        <label for="activeZoom">y-zoom:</label>
+        <select id="activeZoom">
+          <option value="1">full</option>
+          <option value="0.5">bottom 50%</option>
+          <option value="0.4">bottom 40%</option>
+          <option value="0.25" selected>bottom 25%</option>
+          <option value="0.1">bottom 10%</option>
+        </select>
+      </div>
+    </div>
+    <div class="density-container" style="margin-top: 10px;">
+      <canvas id="jumpsCanvas" width="900" height="500"></canvas>
+      <div class="plot-controls">
+        <label for="jumpsZoom">y-zoom:</label>
+        <select id="jumpsZoom">
+          <option value="1">full</option>
+          <option value="0.5">bottom 50%</option>
+          <option value="0.4">bottom 40%</option>
+          <option value="0.25" selected>bottom 25%</option>
+          <option value="0.1">bottom 10%</option>
+        </select>
+      </div>
+    </div>
+    <div class="density-container" style="margin-top: 10px;">
       <canvas id="diagramCanvas" width="900" height="360"></canvas>
       <div style="display:flex; justify-content:flex-end; padding: 4px 10px 8px;">
         <button class="btn-utility" id="shuffleDiagBtn" style="font-size:11px; padding:4px 12px;" title="Resample coin flips">Shuffle</button>
@@ -373,6 +407,11 @@ details.control-section {
   const XI_MIN = -1.1, XI_MAX = 1.1;
   let allSamples = [];     // each entry: Float64Array(NUM_BINS)
   let sumDensity = new Float64Array(NUM_BINS);
+  let activeSamples = [];  // each entry: Float64Array(T) — a_n for n=1..T
+  let sumActive = null;    // Float64Array(T)
+  let activeT = 0;
+  let jumpsSamples = [];   // each entry: Float64Array(T) — cumulative A_n for n=1..T
+  let sumJumps = null;     // Float64Array(T)
   let running = false;
   let stopReq = false;
   let lastSampleMs = 0;
@@ -395,7 +434,11 @@ details.control-section {
   const statMs       = document.getElementById('statMs');
   const showLimitChk = document.getElementById('showLimitChk');
   const densityCanvas = document.getElementById('densityCanvas');
+  const activeCanvas  = document.getElementById('activeCanvas');
+  const jumpsCanvas   = document.getElementById('jumpsCanvas');
   const diagramCanvas = document.getElementById('diagramCanvas');
+  const activeZoomSel = document.getElementById('activeZoom');
+  const jumpsZoomSel  = document.getElementById('jumpsZoom');
   const shuffleDiagBtn = document.getElementById('shuffleDiagBtn');
   const controlsPanel = document.getElementById('controlsPanel');
   const drawerHandle  = document.getElementById('drawerHandle');
@@ -459,26 +502,13 @@ details.control-section {
           if (occ[i] && coin[i] && !occ[i + 1]) movers.push(i);
         }
         for (const i of movers) { newOcc[i] = 0; newOcc[i + 1] = 1; moves[i] = 1; }
-      } else if (rule === 1) {
+      } else {
         // Sequential right-to-left: decide on the CURRENT (cascading) state
         for (let i = width - 2; i >= 0; i--) {
           if (newOcc[i] && coin[i] && !newOcc[i + 1]) {
             newOcc[i] = 0; newOcc[i + 1] = 1; moves[i] = 1;
           }
         }
-      } else {
-        // Active-only (geometric): only unblocked particles flip; redraw coins sparsely.
-        // Overwrite `coin` so the diagram only marks flips for active particles.
-        for (let i = 0; i < width; i++) coin[i] = 0;
-        const movers = [];
-        for (let i = 0; i < width - 1; i++) {
-          if (occ[i] && !occ[i + 1]) {
-            // active — has a clock
-            coin[i] = Math.random() < p ? 1 : 0;
-            if (coin[i]) movers.push(i);
-          }
-        }
-        for (const i of movers) { newOcc[i] = 0; newOcc[i + 1] = 1; moves[i] = 1; }
       }
       occ = newOcc;
       frames.push({ occ: occ.slice(), coin, moves });
@@ -542,8 +572,7 @@ details.control-section {
     ctx.stroke();
 
     // Trajectory lines: vertical light-gray for "stayed put" (waiting), diagonal green for "moved",
-    // red dashed stub for "heads but blocked" (parallel/sequential only — in active-only, blocked
-    // particles don't have ticking clocks)
+    // red dashed stub for "heads but blocked"
     const dotRprev = Math.max(2, Math.min(cellW, cellH) * 0.26);
     for (let t = 1; t < rows; t++) {
       const { coin, moves } = frames[t];
@@ -644,7 +673,7 @@ details.control-section {
     drawDiagram();
   }
 
-  // ─── Hydrodynamic limit (conjectural — checkbox-gated) ───────────────────
+  // ─── Hydrodynamic limit (checkbox-gated) ─────────────────────────────────
   function hydroParallel(xi, p) {
     if (p <= 0) return xi <= 0 ? 1 : 0;
     if (xi <= -p) return 1;
@@ -668,7 +697,6 @@ details.control-section {
   function computeHydroArray(rule, p) {
     const arr = new Float64Array(NUM_BINS);
     const dxi = (XI_MAX - XI_MIN) / NUM_BINS;
-    // rule 2 (active) is distributionally the same as rule 0 (parallel)
     const fn = (rule === 1) ? hydroSequential : hydroParallel;
     for (let i = 0; i < NUM_BINS; i++) {
       const xi = XI_MIN + (i + 0.5) * dxi;
@@ -677,8 +705,8 @@ details.control-section {
     return arr;
   }
 
-  function ruleLabel(rule) { return rule === 0 ? 'Parallel' : rule === 1 ? 'Sequential' : 'Active'; }
-  function ruleColorVar(rule) { return rule === 0 ? '--curve-par' : rule === 1 ? '--curve-seq' : '--curve-par'; }
+  function ruleLabel(rule) { return rule === 0 ? 'Parallel' : 'Sequential'; }
+  function ruleColorVar(rule) { return rule === 0 ? '--curve-par' : '--curve-seq'; }
 
   // ─── Drawing ──────────────────────────────────────────────────────────────
   function drawDensity(forceHydroOnly) {
@@ -783,7 +811,7 @@ details.control-section {
       ctx.stroke();
     }
 
-    // Conjectural hydrodynamic limit (dashed, checkbox-gated)
+    // Hydrodynamic limit (dashed, checkbox-gated)
     const limitColor = getColor('--curve-limit') || '#1a7a3a';
     if (showLimit) {
       const hydro = computeHydroArray(rule, p);
@@ -821,8 +849,8 @@ details.control-section {
         ctx.beginPath(); ctx.moveTo(legendX - 28, legendY); ctx.lineTo(legendX, legendY); ctx.stroke();
         ctx.setLineDash([]);
         ctx.fillStyle = getColor('--text-primary') || '#333';
-        const limitLabel = rule === 1 ? 'Sequential' : 'Parallel/Active';
-        ctx.fillText('conjectural limit (' + limitLabel + ')', legendX - 32, legendY + 4);
+        const limitLabel = rule === 1 ? 'Sequential' : 'Parallel';
+        ctx.fillText('limit shape (' + limitLabel + ')', legendX - 32, legendY + 4);
       }
     }
 
@@ -835,13 +863,293 @@ details.control-section {
     }
   }
 
+  // ─── a_n/n plot (active particles over time) ─────────────────────────────
+  function drawActive() {
+    const { ctx, w, h } = setupCanvas(activeCanvas);
+    const margin = { top: 32, right: 24, bottom: 44, left: 52 };
+    const pw = w - margin.left - margin.right;
+    const ph = h - margin.top - margin.bottom;
+
+    ctx.clearRect(0, 0, w, h);
+
+    const { rule } = getParams();
+
+    if (!sumActive || activeSamples.length === 0 || activeT < 2) {
+      ctx.fillStyle = getColor('--text-secondary') || '#888';
+      ctx.font = '14px "franklingothic-book", Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('a_n / n — press Run to generate samples', w / 2, h / 2);
+      return;
+    }
+
+    const T_s = activeT;
+    const k   = activeSamples.length;
+
+    // y range from data
+    let ymax = 0;
+    for (const s of activeSamples) {
+      for (let n = 1; n <= T_s; n++) {
+        const v = s[n - 1] / n;
+        if (v > ymax) ymax = v;
+      }
+    }
+    const zoom = Math.max(0.01, parseFloat(activeZoomSel.value) || 1);
+    const Y_MAX = Math.max(ymax * 1.1 * zoom, 0.1);
+    const Y_MIN = 0;
+
+    function toX(n) { return margin.left + (n - 1) / Math.max(T_s - 1, 1) * pw; }
+    function toY(v) { return margin.top + ph - (v - Y_MIN) / (Y_MAX - Y_MIN) * ph; }
+
+    // y-ticks
+    const yTickVals = [0, 0.25, 0.5, 0.75, 1.0].map(f => Y_MIN + f * (Y_MAX - Y_MIN));
+
+    // x-ticks
+    const xTickVals = [1, Math.max(1, Math.round(T_s * 0.25)),
+                       Math.max(1, Math.round(T_s * 0.5)),
+                       Math.max(1, Math.round(T_s * 0.75)),
+                       T_s];
+
+    // Grid
+    ctx.strokeStyle = getColor('--border-color') || '#e0e0e0';
+    ctx.lineWidth = 0.5;
+    for (const yv of yTickVals) {
+      ctx.beginPath();
+      ctx.moveTo(margin.left, toY(yv));
+      ctx.lineTo(margin.left + pw, toY(yv));
+      ctx.stroke();
+    }
+    for (const xv of xTickVals) {
+      ctx.beginPath();
+      ctx.moveTo(toX(xv), margin.top);
+      ctx.lineTo(toX(xv), margin.top + ph);
+      ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = getColor('--text-primary') || '#333';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(margin.left, margin.top);
+    ctx.lineTo(margin.left, margin.top + ph);
+    ctx.lineTo(margin.left + pw, margin.top + ph);
+    ctx.stroke();
+
+    // Axis tick labels
+    ctx.fillStyle = getColor('--text-secondary') || '#888';
+    ctx.font = '12px "franklingothic-book", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    for (const xv of xTickVals) {
+      ctx.fillText(xv.toString(), toX(xv), margin.top + ph + 18);
+    }
+    ctx.fillStyle = getColor('--text-primary') || '#333';
+    ctx.font = '13px "franklingothic-book", Arial, sans-serif';
+    ctx.fillText('n', margin.left + pw / 2, margin.top + ph + 36);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = getColor('--text-secondary') || '#888';
+    ctx.font = '12px "franklingothic-book", Arial, sans-serif';
+    for (const yv of yTickVals) {
+      ctx.fillText(yv.toFixed(2), margin.left - 6, toY(yv) + 4);
+    }
+    ctx.textAlign = 'center';
+    ctx.fillStyle = getColor('--text-primary') || '#333';
+    ctx.font = '13px "franklingothic-book", Arial, sans-serif';
+    ctx.save();
+    ctx.translate(14, margin.top + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('aₙ / n', 0, 0);
+    ctx.restore();
+
+    // Clip to plot area so zoomed-in curves don't paint above the axes
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(margin.left, margin.top, pw, ph);
+    ctx.clip();
+
+    // Individual samples (thin, low alpha)
+    const sampleColor = rule === 1
+      ? 'rgba(42,122,184,0.10)'
+      : 'rgba(229,114,0,0.10)';
+    ctx.strokeStyle = sampleColor;
+    ctx.lineWidth = 0.8;
+    for (const s of activeSamples) {
+      ctx.beginPath();
+      for (let n = 1; n <= T_s; n++) {
+        const v = s[n - 1] / n;
+        const fn = n === 1 ? 'moveTo' : 'lineTo';
+        ctx[fn](toX(n), toY(v));
+      }
+      ctx.stroke();
+    }
+
+    // Bold average
+    ctx.strokeStyle = getColor(ruleColorVar(rule));
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let n = 1; n <= T_s; n++) {
+      const v = (sumActive[n - 1] / n) / k;
+      const fn = n === 1 ? 'moveTo' : 'lineTo';
+      ctx[fn](toX(n), toY(v));
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // Title
+    ctx.textAlign = 'left';
+    ctx.fillStyle = getColor('--text-primary') || '#333';
+    ctx.font = '12px "franklingothic-demi", Arial, sans-serif';
+    ctx.fillText('Active particles — aₙ/n, n=1..T  (' + ruleLabel(rule) + ', ' + k + ' sample' + (k === 1 ? '' : 's') + ')',
+                 margin.left, margin.top - 14);
+  }
+
+  // ─── A_n/n^2 plot (cumulative total jumps over time, rescaled) ───────────
+  function drawJumps() {
+    const { ctx, w, h } = setupCanvas(jumpsCanvas);
+    const margin = { top: 32, right: 24, bottom: 44, left: 62 };
+    const pw = w - margin.left - margin.right;
+    const ph = h - margin.top - margin.bottom;
+
+    ctx.clearRect(0, 0, w, h);
+
+    const { rule } = getParams();
+
+    if (!sumJumps || jumpsSamples.length === 0 || activeT < 2) {
+      ctx.fillStyle = getColor('--text-secondary') || '#888';
+      ctx.font = '14px "franklingothic-book", Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('A_n / n² — press Run to generate samples', w / 2, h / 2);
+      return;
+    }
+
+    const T_s = activeT;
+    const k   = jumpsSamples.length;
+
+    let ymax = 0;
+    for (const s of jumpsSamples) {
+      for (let n = 1; n <= T_s; n++) {
+        const v = s[n - 1] / (n * n);
+        if (v > ymax) ymax = v;
+      }
+    }
+    const zoom = Math.max(0.01, parseFloat(jumpsZoomSel.value) || 1);
+    const Y_MAX = Math.max(ymax * 1.1 * zoom, 0.01);
+    const Y_MIN = 0;
+
+    function toX(n) { return margin.left + (n - 1) / Math.max(T_s - 1, 1) * pw; }
+    function toY(v) { return margin.top + ph - (v - Y_MIN) / (Y_MAX - Y_MIN) * ph; }
+
+    const yTickVals = [0, 0.25, 0.5, 0.75, 1.0].map(f => Y_MIN + f * (Y_MAX - Y_MIN));
+    const xTickVals = [1, Math.max(1, Math.round(T_s * 0.25)),
+                       Math.max(1, Math.round(T_s * 0.5)),
+                       Math.max(1, Math.round(T_s * 0.75)),
+                       T_s];
+
+    // Grid
+    ctx.strokeStyle = getColor('--border-color') || '#e0e0e0';
+    ctx.lineWidth = 0.5;
+    for (const yv of yTickVals) {
+      ctx.beginPath();
+      ctx.moveTo(margin.left, toY(yv));
+      ctx.lineTo(margin.left + pw, toY(yv));
+      ctx.stroke();
+    }
+    for (const xv of xTickVals) {
+      ctx.beginPath();
+      ctx.moveTo(toX(xv), margin.top);
+      ctx.lineTo(toX(xv), margin.top + ph);
+      ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = getColor('--text-primary') || '#333';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(margin.left, margin.top);
+    ctx.lineTo(margin.left, margin.top + ph);
+    ctx.lineTo(margin.left + pw, margin.top + ph);
+    ctx.stroke();
+
+    ctx.fillStyle = getColor('--text-secondary') || '#888';
+    ctx.font = '12px "franklingothic-book", Arial, sans-serif';
+    ctx.textAlign = 'center';
+    for (const xv of xTickVals) {
+      ctx.fillText(xv.toString(), toX(xv), margin.top + ph + 18);
+    }
+    ctx.fillStyle = getColor('--text-primary') || '#333';
+    ctx.font = '13px "franklingothic-book", Arial, sans-serif';
+    ctx.fillText('n', margin.left + pw / 2, margin.top + ph + 36);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = getColor('--text-secondary') || '#888';
+    ctx.font = '12px "franklingothic-book", Arial, sans-serif';
+    for (const yv of yTickVals) {
+      ctx.fillText(yv.toFixed(3), margin.left - 6, toY(yv) + 4);
+    }
+    ctx.textAlign = 'center';
+    ctx.fillStyle = getColor('--text-primary') || '#333';
+    ctx.font = '13px "franklingothic-book", Arial, sans-serif';
+    ctx.save();
+    ctx.translate(14, margin.top + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('Aₙ / n²', 0, 0);
+    ctx.restore();
+
+    // Clip to plot area so zoomed-in curves don't paint above the axes
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(margin.left, margin.top, pw, ph);
+    ctx.clip();
+
+    // Individual samples
+    const sampleColor = rule === 1
+      ? 'rgba(42,122,184,0.10)'
+      : 'rgba(229,114,0,0.10)';
+    ctx.strokeStyle = sampleColor;
+    ctx.lineWidth = 0.8;
+    for (const s of jumpsSamples) {
+      ctx.beginPath();
+      for (let n = 1; n <= T_s; n++) {
+        const v = s[n - 1] / (n * n);
+        const fn = n === 1 ? 'moveTo' : 'lineTo';
+        ctx[fn](toX(n), toY(v));
+      }
+      ctx.stroke();
+    }
+
+    // Bold average
+    ctx.strokeStyle = getColor(ruleColorVar(rule));
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let n = 1; n <= T_s; n++) {
+      const v = (sumJumps[n - 1] / (n * n)) / k;
+      const fn = n === 1 ? 'moveTo' : 'lineTo';
+      ctx[fn](toX(n), toY(v));
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // Title
+    ctx.textAlign = 'left';
+    ctx.fillStyle = getColor('--text-primary') || '#333';
+    ctx.font = '12px "franklingothic-demi", Arial, sans-serif';
+    ctx.fillText('Total jumps — Aₙ/n², n=1..T  (' + ruleLabel(rule) + ', ' + k + ' sample' + (k === 1 ? '' : 's') + ')',
+                 margin.left, margin.top - 14);
+  }
+
   // ─── Clear ────────────────────────────────────────────────────────────────
   function clearSamples() {
     allSamples = [];
     sumDensity.fill(0);
+    activeSamples = [];
+    sumActive = null;
+    activeT = 0;
+    jumpsSamples = [];
+    sumJumps = null;
     statSamples.textContent = '0';
     statMs.textContent = '—';
     drawDensity();
+    drawActive();
+    drawJumps();
   }
 
   // ─── Run loop ─────────────────────────────────────────────────────────────
@@ -857,6 +1165,15 @@ details.control-section {
     let t0 = performance.now();
     let lastYield = t0;
 
+    // Reset active/jumps accumulators if T changed since last batch
+    if (activeT !== T) {
+      activeSamples = [];
+      sumActive = new Float64Array(T);
+      jumpsSamples = [];
+      sumJumps = new Float64Array(T);
+      activeT = T;
+    }
+
     for (let k = 0; k < K && !stopReq; k++) {
       const sampleStart = performance.now();
       W._runSample(r, T, p, rule, NUM_BINS, XI_MIN, XI_MAX);
@@ -866,6 +1183,24 @@ details.control-section {
       const densityCopy = new Float64Array(raw);
       allSamples.push(densityCopy);
       for (let i = 0; i < NUM_BINS; i++) sumDensity[i] += densityCopy[i];
+
+      // Copy active-count trajectory a_n for n=1..T
+      const aPtr = W._getActiveBuf();
+      const rawA = new Float64Array(W.HEAPF64.buffer, aPtr, T);
+      const activeCopy = new Float64Array(rawA);
+      activeSamples.push(activeCopy);
+      for (let i = 0; i < T; i++) sumActive[i] += activeCopy[i];
+
+      // Copy per-step jumps m_n, then convert to cumulative A_n = sum_{i=1..n} m_i
+      const jPtr = W._getJumpsBuf();
+      const rawJ = new Float64Array(W.HEAPF64.buffer, jPtr, T);
+      const cumJumps = new Float64Array(T);
+      {
+        let acc = 0;
+        for (let i = 0; i < T; i++) { acc += rawJ[i]; cumJumps[i] = acc; }
+      }
+      jumpsSamples.push(cumJumps);
+      for (let i = 0; i < T; i++) sumJumps[i] += cumJumps[i];
 
       lastSampleMs = performance.now() - sampleStart;
 
@@ -879,12 +1214,16 @@ details.control-section {
 
       if (now - lastYield > 80) {
         drawDensity();
+        drawActive();
+        drawJumps();
         await yieldFrame();
         lastYield = performance.now();
       }
     }
 
     drawDensity();
+    drawActive();
+    drawJumps();
     running = false;
     stopReq = false;
     runBtn.textContent = 'Run';
@@ -920,6 +1259,9 @@ details.control-section {
 
   showLimitChk.addEventListener('change', () => drawDensity());
 
+  activeZoomSel.addEventListener('change', () => drawActive());
+  jumpsZoomSel.addEventListener('change', () => drawJumps());
+
   shuffleDiagBtn.addEventListener('click', () => refreshDiagram());
 
   runBtn.addEventListener('click', () => {
@@ -946,7 +1288,7 @@ details.control-section {
 
   window.addEventListener('resize', () => {
     clearTimeout(window._btResizeTimer);
-    window._btResizeTimer = setTimeout(() => { drawDensity(); drawDiagram(); }, 200);
+    window._btResizeTimer = setTimeout(() => { drawDensity(); drawActive(); drawJumps(); drawDiagram(); }, 200);
   });
 
   // Disable/enable controls
@@ -981,6 +1323,8 @@ details.control-section {
 
   disableControls(false);
   drawDensity();
+  drawActive();
+  drawJumps();
   refreshDiagram();
 
 })();

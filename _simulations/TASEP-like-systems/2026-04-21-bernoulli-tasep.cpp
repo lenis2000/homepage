@@ -1,7 +1,7 @@
 // !!!AI AGENT: run the build command in one line for auto-approval!!!
 
 /*
-cd /Users/leo/Homepage/_simulations/TASEP-like-systems && emcc 2026-04-21-bernoulli-tasep.cpp -o 2026-04-21-bernoulli-tasep.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_runSample','_getDensityBuf','_freeWorkspace']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPF64"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s STACK_SIZE=2MB -s ENVIRONMENT=web -s MODULARIZE=1 -s EXPORT_NAME='createBernoulliTASEP' -s SINGLE_FILE=1 -O3 -flto -ffast-math -msimd128 && mv 2026-04-21-bernoulli-tasep.js ../../js/
+cd /Users/leo/Homepage/_simulations/TASEP-like-systems && emcc 2026-04-21-bernoulli-tasep.cpp -o 2026-04-21-bernoulli-tasep.js -s WASM=1 -s "EXPORTED_FUNCTIONS=['_runSample','_getDensityBuf','_getActiveBuf','_getJumpsBuf','_freeWorkspace']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPF64"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s STACK_SIZE=2MB -s ENVIRONMENT=web -s MODULARIZE=1 -s EXPORT_NAME='createBernoulliTASEP' -s SINGLE_FILE=1 -O3 -flto -ffast-math -msimd128 && mv 2026-04-21-bernoulli-tasep.js ../../js/
 
 Features:
 - Parallel Bernoulli TASEP: snapshot-based fused single-pass SIMD update
@@ -135,7 +135,11 @@ static v128_t gen_coins(double p) {
 static v128_t *g_occ = nullptr;    // occupancy bitmap
 static v128_t *g_coin = nullptr;   // coin bitmap (one lane per bitmap lane)
 static double *g_density = nullptr;
+static double *g_active = nullptr; // a_n = # active particles in state η_n, n=1..T
+static double *g_jumps  = nullptr; // m_n = # movers in step n (n=1..T)
 static int g_numBins = 0;
+static int g_activeCap = 0;
+static int g_jumpsCap = 0;
 static int g_W = 0;   // number of v128 lanes currently allocated
 
 // Ensure workspace is large enough for W lanes and numBins bins
@@ -151,6 +155,22 @@ static void ensure_workspace(int W, int numBins) {
         free(g_density);
         g_density = (double*)malloc((size_t)numBins * sizeof(double));
         g_numBins = numBins;
+    }
+}
+
+static void ensure_active(int T) {
+    if (T > g_activeCap) {
+        free(g_active);
+        g_active = (double*)malloc((size_t)T * sizeof(double));
+        g_activeCap = T;
+    }
+}
+
+static void ensure_jumps(int T) {
+    if (T > g_jumpsCap) {
+        free(g_jumps);
+        g_jumps = (double*)malloc((size_t)T * sizeof(double));
+        g_jumpsCap = T;
     }
 }
 
@@ -246,6 +266,11 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
     int W = (L + 127) / 128;
 
     ensure_workspace(W, numBins);
+    ensure_active(T);
+    ensure_jumps(T);
+
+    // Helper: count cluster-ends (= active particles) in η at current lane_lo..lane_hi
+    // inlined below after each update step.
 
     // Clear occupancy
     memset(g_occ, 0, (size_t)W * 16);
@@ -282,6 +307,7 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
             // Check "right neighbor empty" via right-shift of occ (bit k of shr1(occ) = occ[k+1]).
             // The carry for shr1 comes from bit 0 of the NEXT lane.
             int carry_mov = 0;
+            int step_jumps = 0;
 
             for (int i = lane_lo; i <= lane_hi; i++) {
                 v128_t occ_i = g_occ[i];
@@ -298,6 +324,10 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
                 // movers = occ & coin & ~shifted_o
                 v128_t movers = wasm_v128_andnot(wasm_v128_and(occ_i, coin_i), shifted_o);
 
+                // Count jumps in this lane
+                step_jumps += __builtin_popcountll((uint64_t)wasm_i64x2_extract_lane(movers, 0));
+                step_jumps += __builtin_popcountll((uint64_t)wasm_i64x2_extract_lane(movers, 1));
+
                 int new_carry_mov;
                 v128_t shifted_m = shl1_carry(movers, carry_mov, &new_carry_mov);
 
@@ -307,6 +337,8 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
                 carry_mov = new_carry_mov;
             }
 
+            g_jumps[t] = (double)step_jumps;
+
             // Extend lane_hi if the front moved into a new lane
             if (carry_mov && lane_hi + 1 < W) {
                 lane_hi++;
@@ -314,52 +346,20 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
                 uint64_t *q = (uint64_t*)g_occ;
                 q[(lane_hi * 2)] |= 1ULL; // bit 0 of new lane
             }
-        }
-    } else if (updateRule == 2) {
-        // ─── Active-only (geometric clocks) update ──────────────────────
-        // Each active particle (cluster end = particle with empty right neighbor)
-        // has an independent Bernoulli(p) coin. If heads, the particle moves right.
-        // Blocked particles don't flip (their clocks aren't ticking).
-        // Distributionally equivalent to parallel Bernoulli; implemented separately
-        // to let the user visually verify the equivalence.
-        static int *movers_buf = nullptr;
-        static int movers_cap = 0;
-        int needed = r + 16;
-        if (needed > movers_cap) {
-            free(movers_buf);
-            movers_buf = (int*)malloc(sizeof(int) * (size_t)needed);
-            movers_cap = needed;
-        }
 
-        for (int t = 0; t < T; t++) {
-            // Phase 1: compute cluster-ends bitmap into g_coin (scratch)
-            for (int i = lane_lo; i <= lane_hi; i++) {
-                v128_t occ_i = g_occ[i];
-                int nb0 = (i + 1 < W) ? (int)(wasm_i64x2_extract_lane(g_occ[i + 1], 0) & 1) : 0;
-                v128_t shifted_o = shr1_carry(occ_i, nb0);
-                g_coin[i] = wasm_v128_andnot(occ_i, shifted_o);
-            }
-            // Phase 2: for each cluster end, draw one Bernoulli(p); collect movers
-            int mc = 0;
-            const uint64_t *q_ends = (const uint64_t*)g_coin;
-            int max_qw = (lane_hi + 1) * 2;
-            for (int qi = 0; qi < max_qw; qi++) {
-                uint64_t ends = q_ends[qi];
-                while (ends) {
-                    int bit = __builtin_ctzll(ends);
-                    ends &= ends - 1;
-                    if (bernoulli(p)) {
-                        movers_buf[mc++] = qi * 64 + bit;
-                    }
+            // Count active particles in the new state η_{t+1}
+            {
+                int active_count = 0;
+                const uint64_t *q_occ_c = (const uint64_t*)g_occ;
+                int max_qw_c = (lane_hi + 1) * 2;
+                int Wqw = W * 2;
+                for (int qi = lane_lo * 2; qi < max_qw_c; qi++) {
+                    uint64_t o = q_occ_c[qi];
+                    uint64_t nb0 = (qi + 1 < Wqw) ? (q_occ_c[qi + 1] & 1ULL) : 0ULL;
+                    uint64_t oshr = (o >> 1) | (nb0 << 63);
+                    active_count += __builtin_popcountll(o & ~oshr);
                 }
-            }
-            // Phase 3: apply all moves (cluster ends are ≥ 2 apart so no collisions)
-            for (int k = 0; k < mc; k++) {
-                int b = movers_buf[k];
-                clear_bit(g_occ, b);
-                set_bit(g_occ, b + 1);
-                int new_lane = (b + 1) / 128;
-                if (new_lane > lane_hi && new_lane < W) lane_hi = new_lane;
+                g_active[t] = (double)active_count;
             }
         }
     } else {
@@ -391,6 +391,7 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
             int num_qw = (lane_hi + 1) * 2;
             int lo_qw  = lane_lo * 2;
 
+            int step_jumps = 0;
             for (int qi = num_qw - 1; qi >= lo_qw; qi--) {
                 uint64_t occ_qw = q_occ[qi];
                 if (occ_qw == 0) continue;
@@ -422,11 +423,31 @@ int runSample(int r, int T, double p, int updateRule, int numBins, double xiMin,
                         // Set bit b+1 (rightmost particle moves to b+1)
                         set_bit(g_occ, b + 1);
 
+                        // Cascade: m particles each advance by one position.
+                        step_jumps += m;
+
                         // Extend lane_hi if needed
                         int new_lane = (b + 1) / 128;
                         if (new_lane > lane_hi && new_lane < W) lane_hi = new_lane;
                     }
                 }
+            }
+
+            g_jumps[t] = (double)step_jumps;
+
+            // Count active particles in the new state η_{t+1}
+            {
+                int active_count = 0;
+                const uint64_t *q_occ_c = (const uint64_t*)g_occ;
+                int max_qw_c = (lane_hi + 1) * 2;
+                int Wqw = W * 2;
+                for (int qi = lane_lo * 2; qi < max_qw_c; qi++) {
+                    uint64_t o = q_occ_c[qi];
+                    uint64_t nb0 = (qi + 1 < Wqw) ? (q_occ_c[qi + 1] & 1ULL) : 0ULL;
+                    uint64_t oshr = (o >> 1) | (nb0 << 63);
+                    active_count += __builtin_popcountll(o & ~oshr);
+                }
+                g_active[t] = (double)active_count;
             }
         }
     }
@@ -470,11 +491,19 @@ EMSCRIPTEN_KEEPALIVE
 double* getDensityBuf() { return g_density; }
 
 EMSCRIPTEN_KEEPALIVE
+double* getActiveBuf() { return g_active; }
+
+EMSCRIPTEN_KEEPALIVE
+double* getJumpsBuf() { return g_jumps; }
+
+EMSCRIPTEN_KEEPALIVE
 void freeWorkspace() {
     free(g_occ); g_occ = nullptr;
     free(g_coin); g_coin = nullptr;
     free(g_density); g_density = nullptr;
-    g_W = 0; g_numBins = 0;
+    free(g_active); g_active = nullptr;
+    free(g_jumps); g_jumps = nullptr;
+    g_W = 0; g_numBins = 0; g_activeCap = 0; g_jumpsCap = 0;
 }
 
 } // extern "C"
