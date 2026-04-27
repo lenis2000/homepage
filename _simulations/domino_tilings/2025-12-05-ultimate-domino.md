@@ -1293,6 +1293,7 @@ a11y-description: "Full-featured interactive domino tiling generator. Draw arbit
           <button id="exportJsonBtn" aria-label="Export region shape as JSON">Export Shape</button>
           <button id="importJsonBtn" aria-label="Import region shape from JSON file">Import Shape</button>
           <input type="file" id="importJsonInput" accept=".json" style="display: none;" aria-label="JSON file input">
+          <button id="exportTilingBtn" aria-label="Export tiling and heights as JSON for 3D reconstruction">Tiling (JSON)</button>
         </div>
         <div class="export-divider"></div>
         <div class="export-group">
@@ -1558,6 +1559,7 @@ Cmd-click: complete lasso</div>
         exportJsonBtn: document.getElementById('exportJsonBtn'),
         importJsonBtn: document.getElementById('importJsonBtn'),
         importJsonInput: document.getElementById('importJsonInput'),
+        exportTilingBtn: document.getElementById('exportTilingBtn'),
         copyLinkBtn: document.getElementById('copyLinkBtn'),
         linkCopied: document.getElementById('linkCopied'),
         helpBtn: document.getElementById('helpBtn'),
@@ -4123,6 +4125,31 @@ Cmd-click: complete lasso</div>
         link.click();
     }
 
+    function exportTiling() {
+        if (!dominoes || dominoes.length === 0) {
+            alert('No tiling to export. Sample a tiling first.');
+            return;
+        }
+        const heights = computeHeightFunction(dominoes);
+        const heightsArr = [];
+        for (const [key, h] of heights) {
+            const [x, y] = key.split(',').map(Number);
+            heightsArr.push({ x, y, h });
+        }
+        const data = {
+            vertices: Array.from(activeCells.values()),
+            dominoes: dominoes.map(d => ({
+                x1: d.x1, y1: d.y1, x2: d.x2, y2: d.y2, type: d.type
+            })),
+            heights: heightsArr
+        };
+        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+        const link = document.createElement('a');
+        link.download = 'domino-tiling.json';
+        link.href = URL.createObjectURL(blob);
+        link.click();
+    }
+
     function importJson(file) {
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -4845,6 +4872,7 @@ Cmd-click: complete lasso</div>
         // Export
         el.exportPngBtn.addEventListener('click', exportPng);
         el.exportJsonBtn.addEventListener('click', exportJson);
+        el.exportTilingBtn.addEventListener('click', exportTiling);
         el.importJsonBtn.addEventListener('click', () => el.importJsonInput.click());
         el.importJsonInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
