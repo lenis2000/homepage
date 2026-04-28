@@ -60208,6 +60208,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "math/0012200": {
+    "date": "2000-12-20",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "math/0012247": {
     "date": "2000-12-26",
     "decision": "ACCEPT",
