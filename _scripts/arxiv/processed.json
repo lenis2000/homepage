@@ -8017,6 +8017,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "1102.4405": {
+    "date": "2011-02-22",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "1102.4406": {
     "date": "2011-02-22",
     "decision": "ACCEPT",
