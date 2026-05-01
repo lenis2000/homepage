@@ -1109,6 +1109,38 @@ function onPointerCancel(e) {
   draw();
 }
 
+function clearDragState() {
+  if (!dragState) return;
+  try { canvas.releasePointerCapture(dragState.pointerId); } catch (e) {}
+  dragState = null;
+}
+
+function onVisibilityChange() {
+  if (document.hidden) {
+    // About to suspend — drop any captured pointer so it doesn't dangle.
+    clearDragState();
+    return;
+  }
+  // Coming back from background. Belt and braces: iOS may have killed the
+  // pointer session and/or paused the rAF chain.
+  clearDragState();
+  if (state === 'animating') {
+    // The rAF that would normally finish the line-clear burst may never
+    // fire. Skip to the post-clear state so the player isn't stuck.
+    flash = null;
+    comboFloat = null;
+    afterClear();
+  } else if (state === 'solving') {
+    // Playback rAF chain may be broken — return cleanly to game over.
+    stopSolutionPlayback();
+    state = 'over';
+    showGameOver();
+    refreshUndoBtn();
+  }
+  resize();
+  draw();
+}
+
 // ── UI wiring ──────────────────────────────────────────────────────────────
 function updateScoreUI() {
   // Award an undo charge each time score crosses a 500-point threshold.
@@ -1241,6 +1273,16 @@ function init() {
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', function() {
     setTimeout(resize, 100);
+  });
+
+  // iOS suspend/resume recovery. When the app is backgrounded mid-drag,
+  // iOS may not deliver pointercancel and the captured pointer is left
+  // dangling — on return the canvas appears frozen because no events
+  // reach it. We also fast-forward any animation/playback that the
+  // requestAnimationFrame queue may have abandoned during suspension.
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  window.addEventListener('pageshow', function(e) {
+    if (e.persisted) onVisibilityChange();
   });
 
   // Initial sizing. Double RAF lets iOS lay out safe-area insets first.
