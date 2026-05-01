@@ -37,21 +37,33 @@ body{display:flex;flex-direction:column;align-items:center;
 #title{font-family:'Courier New',monospace;font-size:19px;font-weight:bold;
   letter-spacing:4px;color:#e0e0e0;flex-shrink:1;min-width:0;
   white-space:nowrap;overflow:hidden;text-overflow:clip}
-#stats{display:flex;gap:12px;font-size:11px;letter-spacing:0.5px;color:#888;
-  text-transform:uppercase;flex-shrink:0;max-width:170px;overflow:hidden}
+#stats{display:flex;gap:12px;align-items:center;font-size:11px;letter-spacing:0.5px;
+  color:#888;text-transform:uppercase;flex-shrink:0;max-width:230px;overflow:hidden}
 #stats b{color:#e0e0e0;font-family:'SF Mono',Monaco,'Courier New',monospace;
   font-weight:600}
+#undo-btn{background:none;border:1px solid #444;color:#888;padding:3px 7px;
+  border-radius:4px;font-size:13px;letter-spacing:0.5px;font-family:inherit;
+  cursor:pointer;display:inline-flex;align-items:center;gap:4px;line-height:1;
+  -webkit-tap-highlight-color:transparent}
+#undo-btn b{font-size:11px;color:#888}
+#undo-btn[disabled]{opacity:0.4;cursor:not-allowed}
+#undo-btn:not([disabled]){border-color:#ff9100;color:#ff9100}
+#undo-btn:not([disabled]) b{color:#ff9100}
+#undo-btn:not([disabled]):hover,#undo-btn:not([disabled]):active{background:#ff9100;color:#0d0d1a}
+#undo-btn:not([disabled]):hover b,#undo-btn:not([disabled]):active b{color:#0d0d1a}
 @media (max-width:600px){
   #top-bar{padding:6px 10px;gap:10px}
-  #stats{gap:10px;max-width:140px}
+  #stats{gap:10px;max-width:200px}
 }
 @media (max-width:400px){
   #title{font-size:17px;letter-spacing:3px}
-  #stats{gap:8px;font-size:10px;max-width:120px}
+  #stats{gap:8px;font-size:10px;max-width:170px}
+  #undo-btn{font-size:12px;padding:2px 6px}
+  #undo-btn b{font-size:10px}
 }
 @media (max-width:340px){
   #title{font-size:15px;letter-spacing:2px}
-  #stats{font-size:10px;max-width:100px}
+  #stats{font-size:10px;max-width:150px}
 }
 
 #game-wrap{position:relative;flex:1;min-height:0;width:100%;
@@ -69,12 +81,10 @@ body{display:flex;flex-direction:column;align-items:center;
 #overlay-sub b{color:#e0e0e0;font-family:'SF Mono',Monaco,'Courier New',monospace;
   font-weight:600}
 #overlay-buttons{display:flex;flex-direction:column;gap:10px;align-items:center}
-#difficulty-row{display:flex;gap:10px}
 .overlay-btn{background:none;border:2px solid #ff9100;color:#ff9100;
   padding:10px 28px;border-radius:6px;font-size:15px;font-weight:600;
   cursor:pointer;letter-spacing:1px;font-family:inherit;min-width:180px}
 .overlay-btn:hover,.overlay-btn:active{background:#ff9100;color:#0d0d1a}
-.overlay-btn-half{min-width:85px;padding:10px 18px}
 .overlay-btn-ghost{border-color:#888;color:#ccc}
 .overlay-btn-ghost:hover,.overlay-btn-ghost:active{background:#888;color:#0d0d1a}
 #solution-btn[hidden]{display:none}
@@ -95,6 +105,7 @@ body{display:flex;flex-direction:column;align-items:center;
   <a id="back-link" href="/">← lpetrov.cc</a>
   <span id="title">BLOCK</span>
   <div id="stats">
+    <button id="undo-btn" disabled aria-label="Undo last move">&#8634;<b id="undo-count">0</b></button>
     <span>SC <b id="sc">0</b></span>
     <span>BEST <b id="bs">0</b></span>
   </div>
@@ -107,10 +118,7 @@ body{display:flex;flex-direction:column;align-items:center;
     <div id="overlay-title">BLOCK PUZZLE</div>
     <div id="overlay-sub">Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.</div>
     <div id="overlay-buttons">
-      <div id="difficulty-row">
-        <button id="easy-btn" class="overlay-btn overlay-btn-half">EASY</button>
-        <button id="hard-btn" class="overlay-btn overlay-btn-half">HARD</button>
-      </div>
+      <button id="start-btn" class="overlay-btn">START</button>
       <button id="solution-btn" class="overlay-btn overlay-btn-ghost" hidden>SHOW SOLUTION</button>
     </div>
   </div>
@@ -183,9 +191,17 @@ var tray = [null, null, null];
 var score = 0;
 var best = parseInt(localStorage.getItem('block-hi') || '0', 10) || 0;
 var state = 'menu'; // 'menu' | 'playing' | 'animating' | 'over' | 'solving'
-var difficulty = 'easy'; // 'easy' | 'hard' — chosen per game from the overlay
 var dragState = null;
 var flash = null;
+// Undo perk: 1 charge max, awarded each time score crosses a 500-point mark.
+// nextUndoAt is monotonic — burning an undo does NOT roll it back, so the
+// player must reach the next 500 mark to recharge.
+var UNDO_INTERVAL = 500;
+var undoCount = 0;
+var nextUndoAt = UNDO_INTERVAL;
+// Snapshot of game state captured before each placement, used by the undo
+// button. Excludes nextUndoAt by design (it's monotonic, see above).
+var lastSnapshot = null;
 // Snapshot of the board + the DFS-found placement sequence at the moment
 // the current tray was drawn. Used by the game-over "show solution" replay.
 var lastRefillBoardSnapshot = null;
@@ -201,7 +217,8 @@ var trayRowH = 0;
 var comboFloat = null; // floating "×N!" text state
 
 // DOM refs
-var canvas, ctx, scEl, bsEl, overlay, overlayTitle, overlaySub, easyBtn, hardBtn, solutionBtn;
+var canvas, ctx, scEl, bsEl, overlay, overlayTitle, overlaySub, startBtn, solutionBtn,
+    undoBtn, undoCountEl;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function makeBoard() {
@@ -532,10 +549,9 @@ function drawTraySlots() {
     var p = tray[s];
     if (!p) continue;
     if (dragState && dragState.slot === s) continue;
-    // On easy, pieces that can't be placed anywhere on the current board are
-    // grayed out, signaling the player needs to clear lines first. Hard mode
-    // renders every piece in full color regardless of fit.
-    var gray = (difficulty === 'easy') && !canPieceFitAnywhere(p);
+    // Pieces that can't be placed anywhere on the current board are grayed
+    // out, signaling the player needs to clear lines first.
+    var gray = !canPieceFitAnywhere(p);
     drawPieceInSlot(s, p, trayCellSize, 1.0, gray);
   }
 }
@@ -745,6 +761,16 @@ function canPieceFitAnywhere(piece) {
 function dropPiece(slot, r, c) {
   var p = tray[slot];
   if (!p || !isValid(p, r, c)) return false;
+  // Snapshot pre-placement state for the undo perk. We capture the SHOW
+  // SOLUTION refill data too so undoing across a tray refill stays
+  // consistent.
+  lastSnapshot = {
+    board: cloneBoard(board),
+    tray: tray.slice(),
+    score: score,
+    refillBoard: lastRefillBoardSnapshot ? cloneBoard(lastRefillBoardSnapshot) : null,
+    refillSolution: lastRefillSolution
+  };
   placePiece(p, r, c);
   tray[slot] = null;
   score += countCells(p.shape);
@@ -773,6 +799,7 @@ function dropPiece(slot, r, c) {
     }
     clearLines(full.rows, full.cols);
     state = 'animating';
+    refreshUndoBtn();
     flash = buildExplosion(cells, prefersReducedMotion());
     requestAnimationFrame(animateFlash);
   } else {
@@ -872,10 +899,12 @@ function afterClear() {
   if (isGameOver()) {
     state = 'over';
     showGameOver();
+    refreshUndoBtn();
     draw();
     return;
   }
   state = 'playing';
+  refreshUndoBtn();
   draw();
 }
 
@@ -909,6 +938,7 @@ function startSolutionPlayback() {
     finishAt: 0
   };
   state = 'solving';
+  refreshUndoBtn();
   hideOverlay();
   draw();
   requestAnimationFrame(playbackFrame);
@@ -948,6 +978,7 @@ function playbackFrame(now) {
       solutionPlayback = null;
       state = 'over';
       showGameOver();
+      refreshUndoBtn();
       draw();
       return;
     }
@@ -1072,8 +1103,45 @@ function onPointerCancel(e) {
 
 // ── UI wiring ──────────────────────────────────────────────────────────────
 function updateScoreUI() {
+  // Award an undo charge each time score crosses a 500-point threshold.
+  // Capped at 1; the threshold itself is monotonic, so once burned the
+  // player must reach the next mark to recharge.
+  while (score >= nextUndoAt) {
+    if (undoCount < 1) undoCount = 1;
+    nextUndoAt += UNDO_INTERVAL;
+  }
   scEl.textContent = String(score);
   bsEl.textContent = String(best);
+  refreshUndoBtn();
+}
+
+function refreshUndoBtn() {
+  if (!undoBtn) return;
+  undoCountEl.textContent = String(undoCount);
+  var canUndo = undoCount > 0 && lastSnapshot !== null
+                && (state === 'playing' || state === 'over');
+  undoBtn.disabled = !canUndo;
+}
+
+function undoMove() {
+  if (undoCount <= 0 || !lastSnapshot) return;
+  if (state !== 'playing' && state !== 'over') return;
+  // Cancel any in-flight visuals so a clean board renders.
+  flash = null;
+  comboFloat = null;
+  dragState = null;
+  board = cloneBoard(lastSnapshot.board);
+  tray = lastSnapshot.tray.slice();
+  score = lastSnapshot.score;
+  lastRefillBoardSnapshot = lastSnapshot.refillBoard
+    ? cloneBoard(lastSnapshot.refillBoard) : null;
+  lastRefillSolution = lastSnapshot.refillSolution;
+  lastSnapshot = null;
+  undoCount--;
+  state = 'playing';
+  hideOverlay();
+  updateScoreUI();
+  draw();
 }
 
 function showGameOver() {
@@ -1086,7 +1154,7 @@ function showGameOver() {
 
 function showMenu() {
   overlayTitle.textContent = 'BLOCK PUZZLE';
-  overlaySub.innerHTML = 'Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>EASY grays out pieces that cannot fit yet.';
+  overlaySub.innerHTML = 'Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Earn 1 undo every <b>500</b> points.';
   solutionBtn.hidden = true;
   overlay.classList.remove('hidden');
 }
@@ -1095,15 +1163,17 @@ function hideOverlay() {
   overlay.classList.add('hidden');
 }
 
-function startGame(mode) {
+function startGame() {
   // Always start fresh, whether coming from the menu or from game-over.
-  difficulty = (mode === 'hard') ? 'hard' : 'easy';
   stopSolutionPlayback();
   board = makeBoard();
   tray = [null, null, null];
   score = 0;
   lastRefillBoardSnapshot = null;
   lastRefillSolution = null;
+  undoCount = 0;
+  nextUndoAt = UNDO_INTERVAL;
+  lastSnapshot = null;
   refillTray();
   state = 'playing';
   updateScoreUI();
@@ -1119,9 +1189,10 @@ function init() {
   overlay = document.getElementById('overlay');
   overlayTitle = document.getElementById('overlay-title');
   overlaySub = document.getElementById('overlay-sub');
-  easyBtn = document.getElementById('easy-btn');
-  hardBtn = document.getElementById('hard-btn');
+  startBtn = document.getElementById('start-btn');
   solutionBtn = document.getElementById('solution-btn');
+  undoBtn = document.getElementById('undo-btn');
+  undoCountEl = document.getElementById('undo-count');
 
   updateScoreUI();
 
@@ -1131,11 +1202,11 @@ function init() {
   canvas.addEventListener('pointercancel', onPointerCancel, { passive: false });
   canvas.addEventListener('lostpointercapture', onPointerCancel, { passive: false });
 
-  easyBtn.addEventListener('click', function() { startGame('easy'); });
-  hardBtn.addEventListener('click', function() { startGame('hard'); });
+  startBtn.addEventListener('click', function() { startGame(); });
   solutionBtn.addEventListener('click', function() {
     if (state === 'over') startSolutionPlayback();
   });
+  undoBtn.addEventListener('click', undoMove);
 
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', function() {

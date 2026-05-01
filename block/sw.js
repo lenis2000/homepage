@@ -1,4 +1,4 @@
-var CACHE = 'block-v7';
+var CACHE = 'block-v8';
 var ASSETS = [
   './',
   './index.html',
