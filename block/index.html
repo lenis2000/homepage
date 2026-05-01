@@ -206,6 +206,8 @@ var lastSnapshot = null;
 // the current tray was drawn. Used by the game-over "show solution" replay.
 var lastRefillBoardSnapshot = null;
 var lastRefillSolution = null;
+var lastRefillTray = null;
+var lastRefillScore = 0;
 var solutionPlayback = null; // { moves, index, timer, placedCells, highlightT0 }
 
 // Layout (computed by resize())
@@ -370,6 +372,8 @@ function refillTray() {
       tray[0] = p0; tray[1] = p1; tray[2] = p2;
       lastRefillBoardSnapshot = cloneBoard(board);
       lastRefillSolution = moves;
+      lastRefillTray = [p0, p1, p2];
+      lastRefillScore = score;
       return;
     }
   }
@@ -382,6 +386,8 @@ function refillTray() {
   tray[0] = f0; tray[1] = f1; tray[2] = f2;
   lastRefillBoardSnapshot = cloneBoard(board);
   lastRefillSolution = solveAllOcc(occ, [f0, f1, f2], { n: 20000 });
+  lastRefillTray = [f0, f1, f2];
+  lastRefillScore = score;
 }
 
 function prefersReducedMotion() {
@@ -769,7 +775,9 @@ function dropPiece(slot, r, c) {
     tray: tray.slice(),
     score: score,
     refillBoard: lastRefillBoardSnapshot ? cloneBoard(lastRefillBoardSnapshot) : null,
-    refillSolution: lastRefillSolution
+    refillSolution: lastRefillSolution,
+    refillTray: lastRefillTray ? lastRefillTray.slice() : null,
+    refillScore: lastRefillScore
   };
   placePiece(p, r, c);
   tray[slot] = null;
@@ -1118,24 +1126,41 @@ function updateScoreUI() {
 function refreshUndoBtn() {
   if (!undoBtn) return;
   undoCountEl.textContent = String(undoCount);
-  var canUndo = undoCount > 0 && lastSnapshot !== null
-                && (state === 'playing' || state === 'over');
+  var canUndo = undoCount > 0 && (
+    (state === 'playing' && lastSnapshot !== null) ||
+    (state === 'over' && lastRefillBoardSnapshot !== null && lastRefillTray !== null)
+  );
   undoBtn.disabled = !canUndo;
 }
 
 function undoMove() {
-  if (undoCount <= 0 || !lastSnapshot) return;
+  if (undoCount <= 0) return;
   if (state !== 'playing' && state !== 'over') return;
   // Cancel any in-flight visuals so a clean board renders.
   flash = null;
   comboFloat = null;
   dragState = null;
-  board = cloneBoard(lastSnapshot.board);
-  tray = lastSnapshot.tray.slice();
-  score = lastSnapshot.score;
-  lastRefillBoardSnapshot = lastSnapshot.refillBoard
-    ? cloneBoard(lastSnapshot.refillBoard) : null;
-  lastRefillSolution = lastSnapshot.refillSolution;
+  if (state === 'over') {
+    // After game over, undo rewinds the entire 3-piece turn to the moment
+    // the tray was dealt — gives the player a fresh shot at the same hand.
+    if (!lastRefillBoardSnapshot || !lastRefillTray) return;
+    board = cloneBoard(lastRefillBoardSnapshot);
+    tray = lastRefillTray.slice();
+    score = lastRefillScore;
+    // Refill globals already correspond to the restored moment — leave them.
+  } else {
+    // Mid-game: rewind only the last placement.
+    if (!lastSnapshot) return;
+    board = cloneBoard(lastSnapshot.board);
+    tray = lastSnapshot.tray.slice();
+    score = lastSnapshot.score;
+    lastRefillBoardSnapshot = lastSnapshot.refillBoard
+      ? cloneBoard(lastSnapshot.refillBoard) : null;
+    lastRefillSolution = lastSnapshot.refillSolution;
+    lastRefillTray = lastSnapshot.refillTray
+      ? lastSnapshot.refillTray.slice() : null;
+    lastRefillScore = lastSnapshot.refillScore;
+  }
   lastSnapshot = null;
   undoCount--;
   state = 'playing';
@@ -1145,8 +1170,11 @@ function undoMove() {
 }
 
 function showGameOver() {
-  overlayTitle.textContent = 'GAME OVER';
-  overlaySub.innerHTML = 'Final score <b>' + score + '</b>&nbsp;&nbsp;Best <b>' + best + '</b>';
+  var hasUndo = undoCount > 0 && lastRefillBoardSnapshot && lastRefillTray;
+  overlayTitle.textContent = hasUndo ? 'OOPS!' : 'GAME OVER';
+  var sub = 'Final score <b>' + score + '</b>&nbsp;&nbsp;Best <b>' + best + '</b>';
+  if (hasUndo) sub += '<br><br>Tap <b>&#8634;</b> to retry this whole turn.';
+  overlaySub.innerHTML = sub;
   var canShow = !!(lastRefillBoardSnapshot && lastRefillSolution && lastRefillSolution.length > 0);
   solutionBtn.hidden = !canShow;
   overlay.classList.remove('hidden');
@@ -1171,6 +1199,8 @@ function startGame() {
   score = 0;
   lastRefillBoardSnapshot = null;
   lastRefillSolution = null;
+  lastRefillTray = null;
+  lastRefillScore = 0;
   undoCount = 0;
   nextUndoAt = UNDO_INTERVAL;
   lastSnapshot = null;
