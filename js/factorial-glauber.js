@@ -278,32 +278,34 @@
   }
 
   // ---- Rendering ----
+  function getDesiredCellSize() {
+    // Read from slider; if the slider is in "fit" mode (cellSize===0) use auto.
+    const slider = $('fs-scale');
+    const v = slider ? parseInt(slider.value, 10) : 20;
+    if (!isFinite(v) || v <= 0) return 20;
+    return v;
+  }
   function draw() {
-    const dpr = window.devicePixelRatio || 1;
-    const cssW = canvas.clientWidth;
-    const cssH = canvas.clientHeight;
-    if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
-      canvas.width = Math.round(cssW * dpr);
-      canvas.height = Math.round(cssH * dpr);
-    }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, cssW, cssH);
-
     const maxPos = Math.max(N + 2, maxPositionSeen() + 2);
     const totalLevels = M + N;
 
-    // Margins
-    const mlMin = 38, mr = 18, mtMin = 18, mb = 28;
-    const availW = cssW - mlMin - mr;
-    const availH = cssH - mtMin - mb;
+    // Layout: margins + cellSize * (cells)
+    const ml = 38, mr = 18, mt = 14, mb = 28;
+    const cellSize = getDesiredCellSize();
 
-    // SQUARE cells: same pixel size for one column-step and one level-step
-    const cellSize = Math.max(2, Math.min(availW / maxPos, availH / totalLevels));
     const plotW = cellSize * maxPos;
     const plotH = cellSize * totalLevels;
-    // Center horizontally; pin vertically to the BOTTOM (origin / mu^0 sits at bottom)
-    const ml = mlMin + Math.max(0, (availW - plotW) / 2);
-    const mt = mtMin + Math.max(0, availH - plotH);
+    const cssW = ml + plotW + mr;
+    const cssH = mt + plotH + mb;
+
+    // Set canvas size to fit content exactly
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.style.width !== cssW + 'px') canvas.style.width = cssW + 'px';
+    if (canvas.style.height !== cssH + 'px') canvas.style.height = cssH + 'px';
+    if (canvas.width !== Math.round(cssW * dpr)) canvas.width = Math.round(cssW * dpr);
+    if (canvas.height !== Math.round(cssH * dpr)) canvas.height = Math.round(cssH * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
 
     const xOf = (col) => ml + col * cellSize;
     const yOf = (lvl) => mt + plotH - lvl * cellSize;
@@ -516,6 +518,36 @@
       initState();
       draw(); refreshStats();
     });
+
+    const scaleEl = $('fs-scale');
+    const scaleValEl = $('fs-scale-val');
+    if (scaleEl && scaleValEl) {
+      const onScaleChange = () => {
+        scaleValEl.textContent = scaleEl.value + 'px';
+        draw();
+      };
+      scaleEl.addEventListener('input', onScaleChange);
+      onScaleChange();
+    }
+    const fitBtn = $('fs-scale-fit');
+    if (fitBtn) {
+      fitBtn.addEventListener('click', () => {
+        // Pick the largest cell that fits in current canvas-wrap
+        const wrap = document.getElementById('fs-canvas-wrap');
+        if (!wrap) return;
+        const wrapW = wrap.clientWidth - 16;          // minus padding
+        const wrapH = Math.max(280, window.innerHeight * 0.7);
+        const maxPos = Math.max(N + 2, maxPositionSeen() + 2);
+        const totalLevels = M + N;
+        const fitCell = Math.floor(Math.max(3, Math.min(
+          (wrapW - 38 - 18) / maxPos,
+          (wrapH - 14 - 28) / totalLevels
+        )));
+        scaleEl.value = String(Math.min(parseInt(scaleEl.max,10), Math.max(parseInt(scaleEl.min,10), fitCell)));
+        scaleValEl.textContent = scaleEl.value + 'px';
+        draw();
+      });
+    }
 
     window.addEventListener('resize', () => draw());
   }

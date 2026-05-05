@@ -67,23 +67,20 @@ sitemap: false
   .fs-paramline label { width: 22px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; font-size: 13px; }
   .fs-paramline input[type="text"] { flex: 1; }
   .fs-note { font-size: 11px; color: #777; margin: 2px 0 4px 28px; }
-  /* Square canvas: takes the smaller of column and row available size,
-     so the entire drawing region is a square (with square cells inside). */
+  /* Canvas size is set programmatically (cellSize × maxPos by cellSize × totalLevels)
+     so the drawing fills the box exactly — no large empty bands. */
   #fs-canvas-wrap {
-    display: flex;
-    justify-content: center;
-    margin: 0 auto;
+    overflow: auto;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fafafa;
+    margin: 6px 0;
+    padding: 4px;
   }
   #fs-canvas {
-    width: min(85vh, 100%);
-    aspect-ratio: 1 / 1;
-    border: 1px solid #ccc;
     background: #ffffff;
     display: block;
-    border-radius: 4px;
-  }
-  @media (max-width: 700px) {
-    #fs-canvas { width: 100%; }
+    border-radius: 2px;
   }
   .fs-stats {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -215,6 +212,12 @@ single-flip Markov chain with Gibbs ratios from Theorem 1.12 of Yizhen Li's note
       <span style="font-size:11px;color:#666;">single-site flips</span>
     </span>
     <span class="fs-field"><label for="fs-speed">speed (sweeps/frame):</label><input id="fs-speed" type="number" value="2" min="0" max="100" step="1" style="width:64px;"></span>
+    <span class="fs-field">
+      <label for="fs-scale">cell size:</label>
+      <input id="fs-scale" type="range" min="3" max="60" step="1" value="20" style="width:120px;vertical-align:middle;">
+      <span id="fs-scale-val" style="font-size:11px;color:#1976d2;width:30px;display:inline-block;text-align:right;">20px</span>
+      <button id="fs-scale-fit" class="fs-btn" title="Auto-fit cell size to canvas" style="padding:2px 8px;font-size:11px;">fit</button>
+    </span>
     <button id="fs-reset-btn" class="fs-btn danger">Reset state</button>
   </div>
   <div class="fs-stats" id="fs-stats">
