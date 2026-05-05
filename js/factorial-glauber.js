@@ -1212,14 +1212,29 @@
       getStatsJson:  Module.cwrap('fs_get_stats_json','number', []),
       getRatiosJson: Module.cwrap('fs_get_ratios_json','number',['number','number','number']),
       free:          Module.cwrap('fs_free',          null,   ['number']),
-      // Exact-rational dynamics (BigInt rationals, all in C++)
-      ratSetX:       Module.cwrap('fs_rat_set_x',     null,   ['string']),
-      ratSetW:       Module.cwrap('fs_rat_set_w',     null,   ['string']),
-      ratSetY:       Module.cwrap('fs_rat_set_y',     null,   ['string']),
+      // Exact-rational dynamics (BigInt rationals, all in C++).
+      // Strings are passed as HEAP pointers, NOT cwrap('string') — the latter
+      // copies into the WASM stack which overflows for the multi-megabyte
+      // CSVs we send for the y array.
+      ratSetXRaw:    Module.cwrap('fs_rat_set_x',     null,   ['number']),
+      ratSetWRaw:    Module.cwrap('fs_rat_set_w',     null,   ['number']),
+      ratSetYRaw:    Module.cwrap('fs_rat_set_y',     null,   ['number']),
       ratSweep:      Module.cwrap('fs_rat_sweep',     null,   ['number']),
       ratResetStats: Module.cwrap('fs_rat_reset_stats', null, []),
       ratGetStatsJson: Module.cwrap('fs_rat_get_stats_json','number', []),
     };
+    // Helpers that copy long strings via _malloc/_free (heap, not stack).
+    api.ratSetX = (csv) => sendStringToWasm(csv, api.ratSetXRaw);
+    api.ratSetW = (csv) => sendStringToWasm(csv, api.ratSetWRaw);
+    api.ratSetY = (csv) => sendStringToWasm(csv, api.ratSetYRaw);
+  }
+  function sendStringToWasm(str, fn) {
+    str = String(str || '');
+    const lenBytes = Module.lengthBytesUTF8(str) + 1;
+    const ptr = Module._malloc(lenBytes);
+    if (!ptr) return;
+    Module.stringToUTF8(str, ptr, lenBytes);
+    try { fn(ptr); } finally { Module._free(ptr); }
   }
 
   function bootInit() {
