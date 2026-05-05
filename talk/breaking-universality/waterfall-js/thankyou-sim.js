@@ -15,10 +15,10 @@ function initThankYouSim() {
         const wasm = await LozengeModule();
 
         const letters = ['T', 'H', 'A', 'N', 'K', 'Y', 'O', 'U'];
-        // UMD College Park: Maryland Red & Gold
-        const umdColors = ['#E21833', '#FFD520', '#FFE680'];
+        // UVA: Jefferson Blue, Cavalier Orange, Cream
+        const uvaColors = ['#F9DCBF', '#E57200', '#232D4B'];
         function colorsForLetter(letter) {
-            return umdColors;
+            return uvaColors;
         }
 
         const slope = 1 / Math.sqrt(3);
