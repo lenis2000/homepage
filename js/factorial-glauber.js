@@ -44,27 +44,48 @@
     static zero() { return new Rat(0n, 1n); }
     static one()  { return new Rat(1n, 1n); }
     static fromString(s) {
-      s = String(s).trim();
-      if (!s) return Rat.zero();
-      if (s.includes('/')) {
-        const parts = s.split('/'); return new Rat(BigInt(parts[0].trim()), BigInt(parts[1].trim()));
+      try {
+        s = String(s).trim();
+        if (!s) return Rat.zero();
+        // Fraction "p/q"
+        if (s.includes('/')) {
+          const parts = s.split('/');
+          if (parts.length !== 2) return Rat.zero();
+          const a = parts[0].trim(), b = parts[1].trim();
+          if (!/^-?\d+$/.test(a) || !/^-?\d+$/.test(b)) return Rat.zero();
+          const q = BigInt(b); if (q === 0n) return Rat.zero();
+          return new Rat(BigInt(a), q);
+        }
+        // Scientific:  -?digits(.digits)?[eE]±?digits   → exact rational.
+        // (Important: "1e-200" must NOT round to 0.)
+        const sci = s.match(/^(-?)(\d+)(?:\.(\d+))?[eE]([+-]?\d+)$/);
+        if (sci) {
+          const sign = sci[1] === '-' ? -1n : 1n;
+          const whole = sci[2], frac = sci[3] || '';
+          const e = parseInt(sci[4], 10);
+          // mantissa = (whole+frac)  with denominator 10^frac.length
+          let p = BigInt(whole + frac);
+          let q = 10n ** BigInt(frac.length);
+          if (e >= 0) p *= 10n ** BigInt(e);
+          else        q *= 10n ** BigInt(-e);
+          return new Rat(sign * p, q);
+        }
+        // Decimal "-?digits.digits"
+        if (/^-?\d+\.\d+$/.test(s)) {
+          const neg = s.startsWith('-'); if (neg) s = s.slice(1);
+          const [whole, frac] = s.split('.');
+          const denom = 10n ** BigInt(frac.length);
+          let num = BigInt(whole) * denom + BigInt(frac);
+          if (neg) num = -num;
+          return new Rat(num, denom);
+        }
+        // Integer
+        if (/^-?\d+$/.test(s)) return new Rat(BigInt(s), 1n);
+        // Anything else → 0  (don't crash)
+        return Rat.zero();
+      } catch (e) {
+        return Rat.zero();
       }
-      // Parse decimal: "0.1" -> 1/10, "0.95" -> 95/100
-      if (/^-?\d+\.\d+$/.test(s)) {
-        const neg = s.startsWith('-');
-        if (neg) s = s.slice(1);
-        const [whole, frac] = s.split('.');
-        const denom = 10n ** BigInt(frac.length);
-        let num = BigInt(whole) * denom + BigInt(frac);
-        if (neg) num = -num;
-        return new Rat(num, denom);
-      }
-      // Integer
-      if (/^-?\d+$/.test(s)) return new Rat(BigInt(s), 1n);
-      // Fallback: decimal -> approximate via 1e15 denominator
-      const f = parseFloat(s);
-      const D = 10n ** 15n;
-      return new Rat(BigInt(Math.round(f * 1e15)), D);
     }
     add(o) { return new Rat(this.p * o.q + o.p * this.q, this.q * o.q); }
     sub(o) { return new Rat(this.p * o.q - o.p * this.q, this.q * o.q); }
@@ -292,6 +313,7 @@
 
   // Build rational parameters from current input fields, preferring exact
   // expression evaluation when the input looks like an expression (e.g. q^i).
+  // Also pushes the rationals across to WASM as CSV of "p/q" strings.
   function refreshRationalParams() {
     const yLen = Math.max(yRat.length || 0, 200, 4 * Math.max(N, M) + 200, (stats.maxPos || 0) + 50);
     const xExpr = tryExpressionRat($('fs-x').value, N);
@@ -300,6 +322,20 @@
     xRat = xExpr || parseRationalCSV($('fs-x').value);
     wRat = wExpr || parseRationalCSV($('fs-w').value);
     yRat = yExpr || parseRationalCSV($('fs-y').value);
+    if (wasmReady && api && api.ratSetX) {
+      api.ratSetX(ratArrayToCSV(xRat));
+      api.ratSetW(ratArrayToCSV(wRat));
+      api.ratSetY(ratArrayToCSV(yRat));
+    }
+  }
+  function ratArrayToCSV(arr) {
+    // Each element a Rat with BigInt p/q -> "p/q" string.
+    const parts = new Array(arr.length);
+    for (let i = 0; i < arr.length; i++) {
+      const r = arr[i];
+      parts[i] = r.p.toString() + '/' + r.q.toString();
+    }
+    return parts.join(',');
   }
 
   function jsRefreshStats() {
@@ -609,7 +645,11 @@
   // ---- Stats ----
   function refreshStats() {
     if (isRationalMode()) {
-      jsRefreshStats();
+      if (wasmReady && api.ratGetStatsJson) {
+        stats = readJsonFromWasm(api.ratGetStatsJson);
+      } else {
+        jsRefreshStats();
+      }
     } else if (wasmReady) {
       stats = readJsonFromWasm(api.getStatsJson);
     }
@@ -992,16 +1032,21 @@
       const sitesPerSweep = Math.max(1, Math.max(0, M - 1) * N + Math.max(0, N * (N - 1) / 2) + N);
       const target = sitesPerSweep * sweepsPerFrame;
       const t0 = performance.now();
-      // Chunk size: do as much work as possible in ~60ms, then yield.
       const CHUNK_MS = 60;
       if (isRationalMode()) {
-        let done = 0;
-        while (done < target && (performance.now() - t0) < CHUNK_MS) {
-          jsGlauberStep();
-          done++;
+        // Run rational dynamics in WASM (BigInt + Rat in C++) — ~10× faster
+        // than the JS BigInt path it replaced.  Sync state/stats afterwards.
+        if (wasmReady && api.ratSweep) {
+          api.ratSweep(target);
+          syncStateFromWasm();
+        } else {
+          // Fallback: JS BigInt heat-bath if WASM didn't load
+          let done = 0;
+          while (done < target && (performance.now() - t0) < CHUNK_MS) {
+            jsGlauberStep(); done++;
+          }
         }
       } else if (wasmReady) {
-        // WASM is fast enough to do the full target in one go.
         if (target > 0) api.sweep(target);
       }
       dynamicsTimerId = setTimeout(loop, 0);
@@ -1055,36 +1100,39 @@
     $('fs-step-btn').addEventListener('click', () => {
       const n = parseInt($('fs-step-count').value, 10) || 1;
       if (isRationalMode()) {
-        // Run in chunks so 10000 steps doesn't block the tab.
-        const STEP_BUDGET_MS = 25;
-        let remaining = n;
-        const runChunk = () => {
-          const t0 = performance.now();
-          while (remaining > 0) {
-            jsGlauberStep();
-            remaining--;
-            if (performance.now() - t0 > STEP_BUDGET_MS) break;
-          }
-          jsRefreshStats();
-          draw(); refreshStats();
-          if (remaining > 0) setTimeout(runChunk, 0);
-        };
-        runChunk();
+        if (wasmReady && api.ratSweep) {
+          api.ratSweep(n);
+          syncStateFromWasm();
+        } else {
+          // Fallback chunked JS BigInt
+          let remaining = n;
+          const runChunk = () => {
+            const t0 = performance.now();
+            while (remaining > 0) { jsGlauberStep(); remaining--;
+              if (performance.now() - t0 > 25) break; }
+            jsRefreshStats(); draw(); refreshStats();
+            if (remaining > 0) setTimeout(runChunk, 0);
+          };
+          runChunk();
+          return;
+        }
       } else if (wasmReady) {
         api.sweep(n); syncStateFromWasm();
-        draw(); refreshStats();
       }
+      draw(); refreshStats();
     });
     $('fs-reset-btn').addEventListener('click', () => {
       setRunning(false);
-      if (isRationalMode()) {
+      if (wasmReady) {
+        const seed = (Math.random() * 0xFFFFFFFF) >>> 0;
+        api.init(N, M, seed);          // re-zeros mu/lam in C++
+        pushParamsToWasm();             // double-mode params
+        if (api.ratResetStats) api.ratResetStats();
+        refreshRationalParams();        // also pushes rational params to C++
+        syncStateFromWasm();
+      } else {
         jsInitState();
         refreshRationalParams();
-      } else if (wasmReady) {
-        const seed = (Math.random() * 0xFFFFFFFF) >>> 0;
-        api.init(N, M, seed);
-        pushParamsToWasm();
-        syncStateFromWasm();
       }
       selected = null;
       draw(); refreshStats(); refreshDetailPanel();
@@ -1164,6 +1212,13 @@
       getStatsJson:  Module.cwrap('fs_get_stats_json','number', []),
       getRatiosJson: Module.cwrap('fs_get_ratios_json','number',['number','number','number']),
       free:          Module.cwrap('fs_free',          null,   ['number']),
+      // Exact-rational dynamics (BigInt rationals, all in C++)
+      ratSetX:       Module.cwrap('fs_rat_set_x',     null,   ['string']),
+      ratSetW:       Module.cwrap('fs_rat_set_w',     null,   ['string']),
+      ratSetY:       Module.cwrap('fs_rat_set_y',     null,   ['string']),
+      ratSweep:      Module.cwrap('fs_rat_sweep',     null,   ['number']),
+      ratResetStats: Module.cwrap('fs_rat_reset_stats', null, []),
+      ratGetStatsJson: Module.cwrap('fs_rat_get_stats_json','number', []),
     };
   }
 
