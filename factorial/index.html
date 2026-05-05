@@ -67,20 +67,37 @@ sitemap: false
   .fs-paramline label { width: 22px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; font-size: 13px; }
   .fs-paramline input[type="text"] { flex: 1; }
   .fs-note { font-size: 11px; color: #777; margin: 2px 0 4px 28px; }
-  /* Canvas size is set programmatically (cellSize × maxPos by cellSize × totalLevels)
-     so the drawing fills the box exactly — no large empty bands. */
+  /* Pan/zoom canvas: fixed size, drawing transformed via translate/scale.
+     Drag with the mouse to pan; mouse wheel to zoom; double-click to reset. */
   #fs-canvas-wrap {
-    overflow: auto;
+    overflow: hidden;
     border: 1px solid #ccc;
     border-radius: 4px;
     background: #fafafa;
     margin: 6px 0;
-    padding: 4px;
+    padding: 0;
+    width: 100%;
+    height: min(72vh, 80vw);
+    position: relative;
   }
   #fs-canvas {
     background: #ffffff;
     display: block;
     border-radius: 2px;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+  }
+  #fs-canvas.dragging { cursor: grabbing; }
+  .fs-viewbar {
+    position: absolute; top: 6px; right: 8px;
+    background: rgba(255,255,255,0.85);
+    border: 1px solid #ccc; border-radius: 4px;
+    font-size: 11px; padding: 3px 6px;
+    font-family: ui-monospace, monospace; color: #444;
+    pointer-events: none;
+    user-select: none;
   }
   .fs-stats {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -163,8 +180,8 @@ single-flip Markov chain with Gibbs ratios from Theorem 1.12 of Yizhen Li's note
 <div class="fs-controls">
   <h3>Sizes &amp; q-specialization</h3>
   <div class="fs-row">
-    <span class="fs-field"><label for="fs-N">N (paths) =</label><input id="fs-N" type="number" value="6" min="1" max="40"></span>
-    <span class="fs-field"><label for="fs-M">M (w-rows) =</label><input id="fs-M" type="number" value="6" min="1" max="40"></span>
+    <span class="fs-field"><label for="fs-N">N (paths) =</label><input id="fs-N" type="number" value="6" min="1" max="200"></span>
+    <span class="fs-field"><label for="fs-M">M (w-rows) =</label><input id="fs-M" type="number" value="6" min="1" max="200"></span>
     <span class="fs-field"><label for="fs-q">q =</label><input id="fs-q" type="number" value="0.95" min="0" max="0.999" step="0.001"></span>
     <span class="fs-field"><label for="fs-alpha">α =</label><input id="fs-alpha" type="number" value="1.0" step="0.05"></span>
     <span class="fs-field"><label for="fs-beta">β =</label><input id="fs-beta" type="number" value="1.0" step="0.05"></span>
@@ -211,14 +228,30 @@ single-flip Markov chain with Gibbs ratios from Theorem 1.12 of Yizhen Li's note
       </select>
       <span style="font-size:11px;color:#666;">single-site flips</span>
     </span>
-    <span class="fs-field"><label for="fs-speed">speed (sweeps/frame):</label><input id="fs-speed" type="number" value="2" min="0" max="100" step="1" style="width:64px;"></span>
+    <span class="fs-field"><label for="fs-speed">speed (sweeps/frame):</label><input id="fs-speed" type="number" value="10" min="0" max="2000" step="1" style="width:72px;"></span>
     <span class="fs-field">
       <label for="fs-scale">cell size:</label>
       <input id="fs-scale" type="range" min="3" max="60" step="1" value="20" style="width:120px;vertical-align:middle;">
       <span id="fs-scale-val" style="font-size:11px;color:#1976d2;width:30px;display:inline-block;text-align:right;">20px</span>
       <button id="fs-scale-fit" class="fs-btn" title="Auto-fit cell size to canvas" style="padding:2px 8px;font-size:11px;">fit</button>
+      <label style="margin-left:8px;font-size:12px;">
+        <input type="checkbox" id="fs-square-cells" checked>
+        square cells
+      </label>
     </span>
     <button id="fs-reset-btn" class="fs-btn danger">Reset state</button>
+  </div>
+  <div class="fs-row" style="margin-top:6px;">
+    <label class="fs-field">
+      <input type="checkbox" id="fs-detail-mode">
+      <span style="font-weight:600;">Detailed mode</span>
+      <span style="font-size:11px;color:#666;">(click a particle to inspect flip probabilities)</span>
+    </label>
+    <label class="fs-field" style="margin-left:18px;">
+      <input type="checkbox" id="fs-rat-mode" checked>
+      <span style="font-weight:600;">Exact rationals (BigInt)</span>
+      <span style="font-size:11px;color:#666;">(default; uncheck to use WASM/double for speed)</span>
+    </label>
   </div>
   <div class="fs-stats" id="fs-stats">
     <span>step: <span class="v" id="fs-stat-step">0</span></span>
@@ -229,9 +262,19 @@ single-flip Markov chain with Gibbs ratios from Theorem 1.12 of Yizhen Li's note
   </div>
 </div>
 
+<div id="fs-detail-panel" style="display:none; background:#fff8e7; border:2px solid #f0c067; border-radius:8px; padding:12px 14px; margin: 8px 0; font-size:13px; line-height:1.55;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+    <b style="color:#7a4a00;">Selected 2×2 block</b>
+    <span><button id="fs-flip-up-btn" class="fs-btn" style="font-size:12px; padding:2px 10px; margin-right:4px;">flip ↑</button>
+          <button id="fs-flip-dn-btn" class="fs-btn" style="font-size:12px; padding:2px 10px;">flip ↓</button></span>
+  </div>
+  <div id="fs-detail-info" style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12.5px;"></div>
+</div>
+
 <div id="fs-canvas-wrap">
   <canvas id="fs-canvas" role="img"
           aria-label="Visualization of two-sided Gelfand–Tsetlin pattern as nonintersecting up-right paths"></canvas>
+  <div class="fs-viewbar" id="fs-viewbar">drag to pan · wheel to zoom · double-click to reset</div>
 </div>
 
 <div class="fs-legend" style="margin: 6px 0;">
@@ -242,4 +285,5 @@ single-flip Markov chain with Gibbs ratios from Theorem 1.12 of Yizhen Li's note
 
 </div><!-- /fs-wrap -->
 
+<script src="/js/factorial-wasm.js"></script>
 <script src="/js/factorial-glauber.js"></script>
