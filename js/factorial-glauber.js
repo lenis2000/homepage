@@ -290,11 +290,16 @@
     jsStepCount = 0; jsAcceptCount = 0; jsTryCount = 0;
   }
 
-  // Build rational parameters from current input fields.
+  // Build rational parameters from current input fields, preferring exact
+  // expression evaluation when the input looks like an expression (e.g. q^i).
   function refreshRationalParams() {
-    xRat = parseRationalCSV($('fs-x').value);
-    wRat = parseRationalCSV($('fs-w').value);
-    yRat = parseRationalCSV($('fs-y').value);
+    const yLen = Math.max(yRat.length || 0, 200, 4 * Math.max(N, M) + 200, (stats.maxPos || 0) + 50);
+    const xExpr = tryExpressionRat($('fs-x').value, N);
+    const wExpr = tryExpressionRat($('fs-w').value, M);
+    const yExpr = tryExpressionRat($('fs-y').value, yLen);
+    xRat = xExpr || parseRationalCSV($('fs-x').value);
+    wRat = wExpr || parseRationalCSV($('fs-w').value);
+    yRat = yExpr || parseRationalCSV($('fs-y').value);
   }
 
   function jsRefreshStats() {
@@ -310,8 +315,154 @@
   }
 
   // ---- Parameter parsing ----
-  function parseCSV(str) {
+  // Expression parser/evaluator for inputs like  q^i,  10*q^i,  q^(-i)/2.
+  // Variables available: i, k, j, n (1..len), q, alpha, beta, gamma (and a,b,g
+  // shorthands), N, M.  Operators: + - * / ^.  ^ is right-associative.
+  function exprTokenize(s) {
+    const tokens = [];
+    let i = 0;
+    while (i < s.length) {
+      const c = s[i];
+      if (/\s/.test(c)) { i++; continue; }
+      if (/[0-9]/.test(c) || (c === '.' && /[0-9]/.test(s[i + 1] || ''))) {
+        let j = i, dot = false;
+        while (j < s.length && (/[0-9]/.test(s[j]) || (s[j] === '.' && !dot))) {
+          if (s[j] === '.') dot = true; j++;
+        }
+        tokens.push({ type: 'num', value: s.slice(i, j) }); i = j;
+      } else if (/[a-zA-Z_]/.test(c)) {
+        let j = i; while (j < s.length && /[a-zA-Z_0-9]/.test(s[j])) j++;
+        tokens.push({ type: 'id', value: s.slice(i, j) }); i = j;
+      } else if ('+-*/^()'.includes(c)) { tokens.push({ type: c }); i++; }
+      else throw new Error('Unexpected char: ' + c);
+    }
+    return tokens;
+  }
+  function exprParse(tokens) {
+    let pos = 0;
+    const peek = () => tokens[pos];
+    const eat  = () => tokens[pos++];
+    function E() {
+      let l = T();
+      while (peek() && (peek().type === '+' || peek().type === '-')) {
+        const op = eat().type, r = T(); l = { type: 'binop', op, left: l, right: r };
+      }
+      return l;
+    }
+    function T() {
+      let l = P();
+      while (peek() && (peek().type === '*' || peek().type === '/')) {
+        const op = eat().type, r = P(); l = { type: 'binop', op, left: l, right: r };
+      }
+      return l;
+    }
+    function P() {
+      const b = U();
+      if (peek() && peek().type === '^') { eat(); return { type: 'pow', base: b, exp: P() }; }
+      return b;
+    }
+    function U() {
+      if (peek() && peek().type === '-') { eat(); return { type: 'neg', child: U() }; }
+      if (peek() && peek().type === '+') { eat(); return U(); }
+      return A();
+    }
+    function A() {
+      const t = eat();
+      if (!t) throw new Error('Unexpected end');
+      if (t.type === 'num') return { type: 'num', value: parseFloat(t.value) };
+      if (t.type === 'id')  return { type: 'id',  name: t.value };
+      if (t.type === '(') {
+        const e = E(); const c = eat();
+        if (!c || c.type !== ')') throw new Error('Expected )');
+        return e;
+      }
+      throw new Error('Unexpected token ' + t.type);
+    }
+    const ast = E();
+    if (pos < tokens.length) throw new Error('Trailing tokens');
+    return ast;
+  }
+  function exprEvalFloat(ast, env) {
+    switch (ast.type) {
+      case 'num': return ast.value;
+      case 'id':  { const v = env[ast.name]; if (v === undefined) throw new Error('Unknown variable: ' + ast.name); return v; }
+      case 'neg': return -exprEvalFloat(ast.child, env);
+      case 'binop': {
+        const a = exprEvalFloat(ast.left, env), b = exprEvalFloat(ast.right, env);
+        if (ast.op === '+') return a + b; if (ast.op === '-') return a - b;
+        if (ast.op === '*') return a * b; if (ast.op === '/') return a / b;
+      }
+      case 'pow': return Math.pow(exprEvalFloat(ast.base, env), exprEvalFloat(ast.exp, env));
+    }
+    throw new Error('Bad AST');
+  }
+  function exprEvalRat(ast, env) {
+    switch (ast.type) {
+      case 'num': return Rat.fromString(String(ast.value));
+      case 'id': { const v = env[ast.name]; if (v === undefined) throw new Error('Unknown variable: ' + ast.name);
+                   return (v instanceof Rat) ? v : Rat.fromString(String(v)); }
+      case 'neg': { const c = exprEvalRat(ast.child, env); return new Rat(-c.p, c.q); }
+      case 'binop': {
+        const a = exprEvalRat(ast.left, env), b = exprEvalRat(ast.right, env);
+        if (ast.op === '+') return a.add(b); if (ast.op === '-') return a.sub(b);
+        if (ast.op === '*') return a.mul(b); if (ast.op === '/') return a.div(b);
+      }
+      case 'pow': {
+        const base = exprEvalRat(ast.base, env), exp = exprEvalRat(ast.exp, env);
+        if (exp.q !== 1n) throw new Error('Non-integer exponent in rational expression');
+        return base.pow(Number(exp.p));
+      }
+    }
+    throw new Error('Bad AST');
+  }
+  function exprEnvFloat(i) {
+    const q = parseFloat($('fs-q')?.value || '0.5');
+    const alpha = parseFloat($('fs-alpha')?.value || '1');
+    const beta  = parseFloat($('fs-beta')?.value  || '1');
+    const gamma = parseFloat($('fs-gamma')?.value || '1');
+    return { i, k: i, j: i, n: i, q, alpha, beta, gamma, a: alpha, b: beta, g: gamma, N, M };
+  }
+  function exprEnvRat(i) {
+    const qR = Rat.fromString($('fs-q')?.value || '0.5');
+    const aR = Rat.fromString($('fs-alpha')?.value || '1');
+    const bR = Rat.fromString($('fs-beta')?.value || '1');
+    const gR = Rat.fromString($('fs-gamma')?.value || '1');
+    const iR = new Rat(BigInt(i), 1n);
+    return { i: iR, k: iR, j: iR, n: iR, q: qR, alpha: aR, beta: bR, gamma: gR,
+             a: aR, b: bR, g: gR, N: new Rat(BigInt(N), 1n), M: new Rat(BigInt(M), 1n) };
+  }
+  function looksLikeExpression(str) {
+    const s = String(str || '').trim();
+    if (!s) return false;
+    if (s.includes(',')) return false;
+    if (!/[a-zA-Z]/.test(s)) return false;
+    return true;
+  }
+  function tryExpressionFloat(str, len) {
+    if (!looksLikeExpression(str)) return null;
+    try {
+      const ast = exprParse(exprTokenize(String(str).trim()));
+      const out = [];
+      for (let i = 1; i <= len; i++) out.push(exprEvalFloat(ast, exprEnvFloat(i)));
+      return out;
+    } catch (e) { return null; }
+  }
+  function tryExpressionRat(str, len) {
+    if (!looksLikeExpression(str)) return null;
+    try {
+      const ast = exprParse(exprTokenize(String(str).trim()));
+      const out = [];
+      for (let i = 1; i <= len; i++) out.push(exprEvalRat(ast, exprEnvRat(i)));
+      return out;
+    } catch (e) { return null; }
+  }
+
+  function parseCSV(str, indexedLen) {
     if (!str) return [];
+    if (indexedLen != null) {
+      const ex = tryExpressionFloat(str, indexedLen);
+      if (ex) return ex;
+    }
     let s = String(str);
     s = s.replace(/\(([^)]+)\)\^(\d+)/g, (m, p, c) => {
       const n = parseInt(c, 10);
@@ -377,14 +528,14 @@
 
   // ---- UI -> WASM ----
   function applyParamsFromInputs() {
-    xArr = parseCSV($('fs-x').value);
-    wArr = parseCSV($('fs-w').value);
-    yArr = parseCSV($('fs-y').value);
+    const yLen = Math.max(yArr.length || 0, 200, 4 * Math.max(N, M) + 200, stats.maxPos + 50);
+    xArr = parseCSV($('fs-x').value, N);
+    wArr = parseCSV($('fs-w').value, M);
+    yArr = parseCSV($('fs-y').value, yLen);
     $('fs-x-note').textContent = `x: [${summarize(xArr)}]  (need length ${N})`;
     $('fs-w-note').textContent = `w: [${summarize(wArr)}]  (need length ${M})`;
-    $('fs-y-note').textContent = `y: [${summarize(yArr)}]  (need length ≥ ${stats.maxPos})`;
+    $('fs-y-note').textContent = `y: [${summarize(yArr)}]  (length ${yArr.length}; need ≥ ${stats.maxPos})`;
     if (wasmReady) pushParamsToWasm();
-    // Always also refresh rational params so toggling the mode is instant.
     refreshRationalParams();
   }
   function applyQSpecToInputs() {
