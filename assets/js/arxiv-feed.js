@@ -455,7 +455,27 @@ document.addEventListener('DOMContentLoaded', function() {
         return false;
     }
 
+    // Pull bare arXiv IDs out of full URLs (and arXiv:NNNN.NNNNN citations) so a
+    // pasted link like https://arxiv.org/pdf/math-ph/0507007 matches the paper.
+    function normalizeArxivIds(raw) {
+        if (!raw) return raw;
+        var s = raw;
+        // arxiv.org/{abs,pdf,html,format,src,e-print,ps}/<id>[v#][.pdf]
+        // <id> is either NEW: 2401.12345 / 2401.12345v2  or OLD: math-ph/0507007
+        s = s.replace(
+            /(?:https?:\/\/)?(?:www\.)?(?:export\.)?arxiv\.org\/(?:abs|pdf|html|format|src|e-print|ps)\/((?:[a-z][\w\-\.]*\/\d{7}|\d{4}\.\d{4,5}))(?:v\d+)?(?:\.pdf)?/gi,
+            function(_, id) { return id; }
+        );
+        // arXiv:1234.5678 or arXiv:math-ph/0507007 (with optional v#)
+        s = s.replace(
+            /\barxiv:((?:[a-z][\w\-\.]*\/\d{7}|\d{4}\.\d{4,5}))(?:v\d+)?\b/gi,
+            function(_, id) { return id; }
+        );
+        return s;
+    }
+
     function parseSearchOperators(raw) {
+        raw = normalizeArxivIds(raw || '');
         var ops = { journal: null, cat: null, yearFrom: null, yearTo: null, author: null };
         // Extract in:"..." or in:word
         var rest = raw.replace(/\bin:"([^"]+)"/gi, function(_, v) { ops.journal = v; return ''; });
