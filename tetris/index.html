@@ -488,7 +488,8 @@ function lockPiece() {
 }
 
 function getSpeed(lv) {
-  return Math.max(130, Math.floor(1000 * Math.pow(0.82, lv - 1)));
+  // Keep speeding up past level 15 instead of plateauing.
+  return Math.max(8, Math.floor(1000 * Math.pow(0.82, lv - 1)));
 }
 
 // ── Death Animation ──
@@ -648,18 +649,20 @@ function loop(now) {
   if (dt > 1000) dt = 0; // Tab was backgrounded
 
   if (state === 'playing' && piece) {
-    // Gravity
+    // Gravity — at very high levels dropInterval can be < frame time,
+    // so allow multiple cells per frame.
     dropCounter += dt;
-    if (dropCounter >= dropInterval) {
-      dropCounter = 0;
+    var safety = 32;
+    while (dropCounter >= dropInterval && safety-- > 0) {
+      dropCounter -= dropInterval;
       if (!collides(piece.mat, piece.x, piece.y + 1)) {
         piece.y++;
         if (collides(piece.mat, piece.x, piece.y + 1)) {
           lockTimer = 0;
         }
       } else {
-        // On ground
         if (lockTimer < 0) lockTimer = 0;
+        break;
       }
     }
     // Lock delay
