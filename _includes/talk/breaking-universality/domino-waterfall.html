@@ -1,0 +1,25 @@
+<section class="slide slide-top" id="domino-waterfall" data-title="Waterfall in Dominoes (open)">
+    <h2 class="slide-title">Waterfall in dominoes?</h2>
+
+    <div style="display: grid; grid-template-columns: 36vw 58vw; gap: 2vw; margin-top: 2vh; padding: 0 1vw; align-items: start;">
+        <!-- Left: text -->
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.44rem, 2.64vw, 2.16rem); text-align: left;">
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Setup:</strong>
+                Aztec diamond of order \(N=200\), Schur measure with specializations
+                \(x_i = y_i = r^i\), \(r = 0.95\).
+                <div style="margin-top: 0.6vh; color: var(--slide-muted);">
+                    First conjectured by <strong>Dan Betea</strong>
+                    (<a href="https://math.mit.edu/~borodin/aztec_phenomena.html" target="_blank" style="color: #0066cc;">math.mit.edu/~borodin/aztec_phenomena.html</a>).
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: q-RSK sampled tiling rendered to canvas -->
+        <div style="display: flex; align-items: center; justify-content: center; position: relative;">
+            <canvas id="dwf-canvas" width="1400" height="1400" style="height: 78vh; max-width: 100%; image-rendering: pixelated; background: #fafafa;"></canvas>
+            <div id="dwf-status" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255,255,255,0.92); padding: 0.8vh 1.5vw; border-radius: 4px; font-size: clamp(1rem, 1.6vw, 1.4rem); color: #444; pointer-events: none;">loading sampler…</div>
+        </div>
+    </div>
+</section>

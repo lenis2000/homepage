@@ -3,7 +3,7 @@
 
     const SLIDE_ID = 'domino-gff';
     const CANVAS_ID = 'dgff-canvas';
-    const N = 100;
+    const N = 160;
 
     let shufflingModule = null;
     let wasmReady = false;
@@ -143,14 +143,122 @@
         return finalHeights;
     }
 
+    // --- Pan/zoom state ---
+    const view = { scale: 1, offsetX: 0, offsetY: 0 };
+    let cachedRender = null;  // { offscreen, gridW, gridH }
+    let panZoomBound = false;
+
+    function resetView() {
+        view.scale = 1;
+        view.offsetX = 0;
+        view.offsetY = 0;
+    }
+
+    function redraw() {
+        const canvas = document.getElementById(CANVAS_ID);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (!cachedRender) return;
+
+        const { offscreen, gridW, gridH } = cachedRender;
+        ctx.imageSmoothingEnabled = false;
+        const padding = 20;
+        const baseScale = Math.min(
+            (canvas.width - 2*padding) / gridW,
+            (canvas.height - 2*padding) / gridH
+        );
+        const drawScale = baseScale * view.scale;
+        const drawW = gridW * drawScale, drawH = gridH * drawScale;
+        const cx = (canvas.width - drawW) / 2 + view.offsetX;
+        const cy = (canvas.height - drawH) / 2 + view.offsetY;
+        ctx.drawImage(offscreen, cx, cy, drawW, drawH);
+    }
+
+    // Smooth view animation
+    let viewAnimId = null;
+    function animateView(targetScale, targetOffsetX, targetOffsetY, duration = 1200) {
+        if (viewAnimId) { cancelAnimationFrame(viewAnimId); viewAnimId = null; }
+        const startScale = view.scale;
+        const startOX = view.offsetX;
+        const startOY = view.offsetY;
+        const t0 = performance.now();
+        function ease(t) { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2; }
+        function step() {
+            const elapsed = performance.now() - t0;
+            const t = Math.min(1, elapsed / duration);
+            const e = ease(t);
+            view.scale = startScale + (targetScale - startScale) * e;
+            view.offsetX = startOX + (targetOffsetX - startOX) * e;
+            view.offsetY = startOY + (targetOffsetY - startOY) * e;
+            redraw();
+            if (t < 1) viewAnimId = requestAnimationFrame(step);
+            else viewAnimId = null;
+        }
+        viewAnimId = requestAnimationFrame(step);
+    }
+
+    function bindPanZoom() {
+        if (panZoomBound) return;
+        const canvas = document.getElementById(CANVAS_ID);
+        if (!canvas) return;
+        panZoomBound = true;
+
+        let dragging = false, lastX = 0, lastY = 0;
+
+        canvas.addEventListener('wheel', (e) => {
+            if (!cachedRender) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+            const factor = Math.exp(-e.deltaY * 0.001);
+            const newScale = Math.max(0.2, Math.min(20, view.scale * factor));
+            const k = newScale / view.scale;
+            // Zoom around cursor: keep mx,my fixed in image space
+            view.offsetX = mx - k * (mx - view.offsetX);
+            view.offsetY = my - k * (my - view.offsetY);
+            view.scale = newScale;
+            redraw();
+        }, { passive: false });
+
+        canvas.addEventListener('mousedown', (e) => {
+            dragging = true;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            canvas.style.cursor = 'grabbing';
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (!dragging || !cachedRender) return;
+            const rect = canvas.getBoundingClientRect();
+            const sx = canvas.width / rect.width;
+            const sy = canvas.height / rect.height;
+            view.offsetX += (e.clientX - lastX) * sx;
+            view.offsetY += (e.clientY - lastY) * sy;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            redraw();
+        });
+        window.addEventListener('mouseup', () => {
+            if (dragging) { dragging = false; canvas.style.cursor = ''; }
+        });
+        canvas.addEventListener('dblclick', () => {
+            resetView();
+            redraw();
+        });
+        canvas.style.cursor = 'grab';
+    }
+
     // --- 2D domino drawing (no borders) ---
 
     function drawDominoes(dominoes) {
         const canvas = document.getElementById(CANVAS_ID);
         if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (!dominoes || dominoes.length === 0) return;
+        if (!dominoes || dominoes.length === 0) {
+            cachedRender = null;
+            redraw();
+            return;
+        }
 
         // Find unit cell size and bounding box
         const unit = Math.min(...dominoes.map(d => Math.min(d.w, d.h)));
@@ -183,17 +291,9 @@
             octx.fillRect(gx, gy, gw, gh);
         }
 
-        // Scale to main canvas with nearest-neighbor (no gaps, no moiré)
-        ctx.imageSmoothingEnabled = false;
-        const padding = 20;
-        const scale = Math.min(
-            (canvas.width - 2*padding) / gridW,
-            (canvas.height - 2*padding) / gridH
-        );
-        const drawW = gridW * scale, drawH = gridH * scale;
-        ctx.drawImage(offscreen,
-            (canvas.width - drawW) / 2, (canvas.height - drawH) / 2,
-            drawW, drawH);
+        cachedRender = { offscreen, gridW, gridH };
+        bindPanZoom();
+        redraw();
     }
 
     // --- GFF colormap: discrete shades for ±2 height differences ---
@@ -222,9 +322,11 @@
 
     function drawGFFHeatmap(gff) {
         const canvas = document.getElementById(CANVAS_ID);
-        if (!canvas || !gff || gff.size === 0) return;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (!canvas || !gff || gff.size === 0) {
+            cachedRender = null;
+            redraw();
+            return;
+        }
 
         // Find grid extents and step
         let minGX = Infinity, maxGX = -Infinity;
@@ -264,17 +366,9 @@
         }
         octx.putImageData(imgData, 0, 0);
 
-        // Scale to main canvas with nearest-neighbor
-        ctx.imageSmoothingEnabled = false;
-        const padding = 20;
-        const scale = Math.min(
-            (canvas.width - 2*padding) / gridW,
-            (canvas.height - 2*padding) / gridH
-        );
-        const drawW = gridW * scale, drawH = gridH * scale;
-        ctx.drawImage(offscreen,
-            (canvas.width - drawW) / 2, (canvas.height - drawH) / 2,
-            drawW, drawH);
+        cachedRender = { offscreen, gridW, gridH };
+        bindPanZoom();
+        redraw();
     }
 
     // --- Step handling ---
@@ -321,6 +415,8 @@
     function reset() {
         lastDominoes = null;
         lastGFF = null;
+        cachedRender = null;
+        resetView();
         const canvas = document.getElementById(CANVAS_ID);
         if (canvas) {
             const ctx = canvas.getContext('2d');
@@ -334,21 +430,33 @@
     function tryInit() {
         if (!window.slideEngine) { setTimeout(tryInit, 100); return; }
 
+        // Locked-in zoom for the final GFF view
+        const FINAL_VIEW = { scale: 3.829, offsetX: -476.8, offsetY: 110.8 };
+
         window.slideEngine.registerSimulation(SLIDE_ID, {
-            steps: 1,
+            steps: 2,
 
             async onStep(step) {
                 if (step === 1) {
                     await showGFF();
                 }
+                if (step === 2) {
+                    animateView(FINAL_VIEW.scale, FINAL_VIEW.offsetX, FINAL_VIEW.offsetY);
+                }
             },
 
             onStepBack(step) {
                 if (step === 0) {
+                    if (viewAnimId) { cancelAnimationFrame(viewAnimId); viewAnimId = null; }
+                    resetView();
                     if (lastDominoes) {
                         drawDominoes(lastDominoes);
                         setStatus(`Aztec diamond, N = ${N}`);
                     }
+                }
+                if (step === 1) {
+                    // Animate back to default view
+                    animateView(1, 0, 0);
                 }
             },
 

@@ -119,6 +119,7 @@ function initLozengeGFFSim() {
         const slope = 1 / Math.sqrt(3);
         const deltaC = 2 / Math.sqrt(3);
         const Z_SCALE = 20.0;
+        const ZERO_PLANE_Z = 0;  // shared between boundary outline and surface mean
         const frustumSize = 30;
 
         // ---- State ----
@@ -558,7 +559,7 @@ function initLozengeGFFSim() {
             const edgeMat = new THREE.LineBasicMaterial({ color: 0x444466, opacity: 0.4, transparent: true });
             meshGroup.add(new THREE.LineSegments(edgeGeo, edgeMat));
 
-            drawBoundary(new Set(gff.keys()), 0);
+            drawBoundary(new Set(gff.keys()), ZERO_PLANE_Z);
         }
 
         // ---- GPU CFTP (same pattern as limit-shape-sim) ----
@@ -631,7 +632,7 @@ function initLozengeGFFSim() {
             for (const d of initDimers) {
                 for (const [n, j] of getVertexKeys(d)) verts.add(n + ',' + j);
             }
-            drawBoundary(verts, 0);
+            drawBoundary(verts, ZERO_PLANE_Z);
             centerCameraFlat(verts);
             if (renderer) renderer.render(scene, camera);
 
@@ -740,7 +741,7 @@ function initLozengeGFFSim() {
                             for (const d of initDimers) {
                                 for (const [n, j] of getVertexKeys(d)) verts.add(n + ',' + j);
                             }
-                            drawBoundary(verts, 0);
+                            drawBoundary(verts, ZERO_PLANE_Z);
                             centerCameraFlat(verts);
                             if (renderer) renderer.render(scene, camera);
                         }, 100);
