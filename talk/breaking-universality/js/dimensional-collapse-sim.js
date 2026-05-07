@@ -18,21 +18,28 @@
     const N_param = 80;
     const T_param = 160;
     const S_target = 80;
-    const Q_VALUE = 0.8;
+    const Q_WATERFALL = 0.8;     // fixed q (waterfall regime)
+    const Q_CLASSICAL = 0.985;   // q close to 1 (classical regime, matches spectral-projection)
     const KAPPA = 3.0;
+
+    // Cached sampled paths for each q-value
+    let waterfallPaths = null;
+    let classicalPaths = null;
+    let classicalSampling = false;
+    let intendedDisplay = 'waterfall';  // 'waterfall' or 'classical' — guards async race
 
     // Animation: 80 steps, show every 5, total 4s = 250ms per visible step
     const STEP_INCREMENT = 5;
     const STEP_DELAY = 250;  // 4000ms / 16 visible steps
 
-    // Camera animation positions
+    // Camera animation positions (waterfall = classical, same angle for both views)
     const CAMERA_START = {
-        pos: { x: 85.6, y: -104.4, z: 167.3 },
-        target: { x: 28.2, y: 48.6, z: 34.9 }
+        pos: { x: 110.6, y: -23.3, z: 133.1 },
+        target: { x: 27.5, y: 52.1, z: 38.3 }
     };
     const CAMERA_END = {
-        pos: { x: 79.2, y: 0.6, z: 103.0 },
-        target: { x: 24.1, y: 50.6, z: 40.1 }
+        pos: { x: 110.6, y: -23.3, z: 133.1 },
+        target: { x: 27.5, y: 52.1, z: 38.3 }
     };
 
     function lerp(a, b, t) {
@@ -99,10 +106,10 @@
             } catch (e) { console.error('Init failed:', e); }
         },
 
-        async stepForward() {
+        async stepForward(q) {
             if (!this.ready || this.S_param >= T_param) return false;
             try {
-                this.setImaginaryQ(Q_VALUE);
+                this.setImaginaryQ(q);
                 const ptr = await this.performSOperator();
                 if (ptr) {
                     const jsonStr = Module.UTF8ToString(ptr);
@@ -518,7 +525,7 @@
         isAnimating = true;
 
         // Initialize at S=0
-        await wasmInterface.initTilingQRacah(Q_VALUE, KAPPA);
+        await wasmInterface.initTilingQRacah(Q_WATERFALL, KAPPA);
         pathsTo3D(wasmInterface.paths, N_param, T_param, wasmInterface.S_param);
         setCameraPosition(0);  // Start camera position
         if (renderer) renderer.render(scene, camera);
@@ -533,7 +540,7 @@
 
             // Do STEP_INCREMENT steps at once
             for (let i = 0; i < STEP_INCREMENT && wasmInterface.S_param < S_target; i++) {
-                await wasmInterface.stepForward();
+                await wasmInterface.stepForward(Q_WATERFALL);
             }
 
             // Update visualization
@@ -562,18 +569,67 @@
         isAnimating = false;
     }
 
+    // Sample tiling at a given q-value, return path array
+    async function sampleAtQ(q) {
+        if (!wasmReady) return null;
+        await wasmInterface.initTilingQRacah(q, KAPPA);
+        while (wasmInterface.S_param < S_target) {
+            await wasmInterface.stepForward(q);
+        }
+        return wasmInterface.paths.map(p => [...p]);
+    }
+
+    function displayPaths(paths) {
+        if (!paths || !meshGroup) return;
+        pathsTo3D(paths, N_param, T_param, S_target);
+        if (renderer) renderer.render(scene, camera);
+    }
+
     async function resetToFinal() {
         // Grow directly to target without animation
         if (!wasmReady) return;
         stopAnimation();
 
-        await wasmInterface.initTilingQRacah(Q_VALUE, KAPPA);
-        while (wasmInterface.S_param < S_target) {
-            await wasmInterface.stepForward();
+        // Sample (or reuse cached) waterfall configuration and display it
+        if (!waterfallPaths) {
+            waterfallPaths = await sampleAtQ(Q_WATERFALL);
         }
-        const pathsCopy = wasmInterface.paths.map(p => [...p]);
-        pathsTo3D(pathsCopy, N_param, T_param, wasmInterface.S_param);
+        displayPaths(waterfallPaths);
         setCameraPosition(1);  // Final camera position
+
+        // Pre-sample classical regime in background so it's ready on click
+        if (!classicalPaths && !classicalSampling) {
+            classicalSampling = true;
+            sampleAtQ(Q_CLASSICAL).then(p => {
+                classicalPaths = p;
+                classicalSampling = false;
+            });
+        }
+    }
+
+    // Display classical regime; if not yet sampled, wait for it.
+    // Guarded against rapid step navigation by checking intendedDisplay.
+    async function showClassical() {
+        intendedDisplay = 'classical';
+        if (!classicalPaths) {
+            if (!classicalSampling) {
+                classicalSampling = true;
+                classicalPaths = await sampleAtQ(Q_CLASSICAL);
+                classicalSampling = false;
+            } else {
+                while (classicalSampling) {
+                    await new Promise(r => setTimeout(r, 100));
+                }
+            }
+        }
+        if (intendedDisplay === 'classical' && classicalPaths) {
+            displayPaths(classicalPaths);
+        }
+    }
+
+    function showWaterfall() {
+        intendedDisplay = 'waterfall';
+        if (waterfallPaths) displayPaths(waterfallPaths);
     }
 
     function showElement(id) {
@@ -605,14 +661,20 @@
         },
         reset() {
             hideElement('dc-collapse');
-            hideElement('dc-new-regime');
+            showWaterfall();  // Default: waterfall (fixed q)
         },
         steps: 1,
         onStep(step) {
-            if (step === 1) { showElement('dc-collapse'); showElement('dc-new-regime'); }
+            if (step === 1) {
+                showElement('dc-collapse');
+                showClassical();  // Swap waterfall -> classical regime (q close to 1)
+            }
         },
         onStepBack(step) {
-            if (step === 0) { hideElement('dc-collapse'); hideElement('dc-new-regime'); }
+            if (step === 0) {
+                hideElement('dc-collapse');
+                showWaterfall();
+            }
         }
     }, 0);
 
