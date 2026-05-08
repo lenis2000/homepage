@@ -44,6 +44,11 @@ KAGGLE_DB = Path(os.environ.get(
 
 ARXIV_API = "https://export.arxiv.org/api/query"
 RATE_LIMIT_SECONDS = 4
+USER_AGENT = "lpetrov-arxiv-scan/1.0 (mailto:lenia.petrov@gmail.com)"
+
+
+def _arxiv_request(url):
+    return urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
 
 
 def load_config():
@@ -123,7 +128,7 @@ def fetch_category(category, days, config, before_date=None):
             url = f"{ARXIV_API}?{params}"
             for attempt in range(5):
                 try:
-                    response = urllib.request.urlopen(url).read()
+                    response = urllib.request.urlopen(_arxiv_request(url)).read()
                     break
                 except urllib.error.HTTPError as e:
                     if e.code in (503, 429) and attempt < 4:
@@ -227,7 +232,7 @@ def fetch_category_day(category, day_date):
         url = f"{ARXIV_API}?{params}"
         for attempt in range(5):
             try:
-                response = urllib.request.urlopen(url).read()
+                response = urllib.request.urlopen(_arxiv_request(url)).read()
                 break
             except urllib.error.HTTPError as e:
                 if e.code in (503, 429) and attempt < 4:
