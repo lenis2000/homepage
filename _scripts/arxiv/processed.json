@@ -14177,6 +14177,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "1305.3030": {
+    "date": "2013-05-14",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "1305.3035": {
     "date": "2013-05-14",
     "decision": "ACCEPT",
