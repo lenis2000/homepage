@@ -43,7 +43,7 @@ KAGGLE_DB = Path(os.environ.get(
 ))
 
 ARXIV_API = "https://export.arxiv.org/api/query"
-RATE_LIMIT_SECONDS = 4
+RATE_LIMIT_SECONDS = 8
 USER_AGENT = "lpetrov-arxiv-scan/1.0 (mailto:lenia.petrov@gmail.com)"
 
 
