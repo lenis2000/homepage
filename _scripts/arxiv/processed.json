@@ -15192,6 +15192,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "1310.2584": {
+    "date": "2013-10-09",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "1310.2603": {
     "date": "2013-10-09",
     "decision": "ACCEPT",
@@ -25316,6 +25321,11 @@
     "date": "2017-05-22",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "1705.08067": {
+    "date": "2017-05-23",
+    "decision": "ACCEPT",
+    "source": "manual"
   },
   "1705.08114": {
     "date": "2017-05-23",
