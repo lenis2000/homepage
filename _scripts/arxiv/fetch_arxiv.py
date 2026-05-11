@@ -209,14 +209,16 @@ SEMANTIC_CATEGORIES = {
 SKIP_RECENT_CATEGORIES = {"q-alg", "solv-int", "cond-mat"}
 
 
-def fetch_category_day(category, day_date):
-    """Fetch ALL papers from a category for a single day (no author constraint).
+def fetch_category_range(category, start_date, end_date):
+    """Fetch ALL papers from a category over an inclusive date range.
 
-    Uses submittedDate range filter so the API only returns that day's papers,
-    keeping each request small and avoiding redundant pagination.
+    One paginated query per category covers the whole window, replacing
+    the previous per-day loop and cutting API calls (and rate-limit risk)
+    by a factor of (# days in range).
     """
-    day_str = day_date.strftime("%Y%m%d")
-    search_query = f"cat:{category}+AND+submittedDate:[{day_str}0000+TO+{day_str}2359]"
+    start_str = start_date.strftime("%Y%m%d")
+    end_str = end_date.strftime("%Y%m%d")
+    search_query = f"cat:{category}+AND+submittedDate:[{start_str}0000+TO+{end_str}2359]"
 
     all_papers = {}
     start = 0
@@ -970,9 +972,8 @@ def main():
             print(f"  Discarded stale cache (different run parameters)")
     if not cache_valid:
         if args.semantic:
-            # Semantic mode: fetch ALL papers day-by-day from each category
-            # Uses submittedDate range filter so each API call is small
-            from datetime import date as _date
+            # Semantic mode: one paginated range query per category covers
+            # the full window, instead of one call per (day, category).
             start_d = (datetime.now() - timedelta(days=args.days)).date()
             if after_date:
                 start_d = datetime.strptime(after_date, "%Y-%m-%d").date()
@@ -980,38 +981,16 @@ def main():
             if before_date:
                 end_d = datetime.strptime(before_date, "%Y-%m-%d").date()
 
-            # Put probe categories first to detect weekends/holidays early
-            probe_cats = ["math.CO", "math.PR"]
-            remaining_cats = [c for c in categories if c not in probe_cats]
-            ordered_categories = [c for c in probe_cats if c in set(categories)] + remaining_cats
-
-            current_d = start_d
-            total_days = (end_d - start_d).days + 1
-            day_num = 0
-            while current_d <= end_d:
-                day_num += 1
-                day_count_before = len(all_papers)
-                print(f"  [{day_num}/{total_days}] {current_d}")
-                probe_total = 0
-                for ci, cat in enumerate(ordered_categories):
-                    cat_before = len(all_papers)
-                    papers = fetch_category_day(cat, current_d)
-                    for p in papers:
-                        if p["arxiv_id"] not in all_papers:
-                            all_papers[p["arxiv_id"]] = p
-                    cat_new = len(all_papers) - cat_before
-                    print(f"    {ci+1}/{len(ordered_categories)} {cat}: {len(papers)} found, +{cat_new} new", flush=True)
-                    time.sleep(RATE_LIMIT_SECONDS)
-                    # Track probe categories to detect no-paper days
-                    if cat in probe_cats:
-                        probe_total += len(papers)
-                    # After probing math.CO + math.PR, skip rest if both empty
-                    if ci + 1 == len(probe_cats) and probe_total == 0:
-                        print(f"    No papers in {' or '.join(probe_cats)} — skipping day (weekend/holiday)")
-                        break
-                day_new = len(all_papers) - day_count_before
-                print(f"    day total: +{day_new} new ({len(all_papers)} cumulative)")
-                current_d += timedelta(days=1)
+            print(f"  Range: {start_d} to {end_d}")
+            for ci, cat in enumerate(categories):
+                cat_before = len(all_papers)
+                papers = fetch_category_range(cat, start_d, end_d)
+                for p in papers:
+                    if p["arxiv_id"] not in all_papers:
+                        all_papers[p["arxiv_id"]] = p
+                cat_new = len(all_papers) - cat_before
+                print(f"    {ci+1}/{len(categories)} {cat}: {len(papers)} found, +{cat_new} new ({len(all_papers)} cumulative)", flush=True)
+                time.sleep(RATE_LIMIT_SECONDS)
         else:
             # Normal mode: fetch by author surname queries
             for cat in categories:
