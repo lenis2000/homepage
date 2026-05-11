@@ -43,7 +43,7 @@ KAGGLE_DB = Path(os.environ.get(
 ))
 
 ARXIV_API = "https://export.arxiv.org/api/query"
-RATE_LIMIT_SECONDS = 8
+RATE_LIMIT_SECONDS = 0.5
 USER_AGENT = "lpetrov-arxiv-scan/1.0 (mailto:lenia.petrov@gmail.com)"
 
 
@@ -126,14 +126,14 @@ def fetch_category(category, days, config, before_date=None):
             )
 
             url = f"{ARXIV_API}?{params}"
-            for attempt in range(5):
+            for attempt in range(10):
                 try:
                     response = urllib.request.urlopen(_arxiv_request(url)).read()
                     break
                 except urllib.error.HTTPError as e:
-                    if e.code in (503, 429) and attempt < 4:
-                        wait = RATE_LIMIT_SECONDS * (2 ** (attempt + 1))
-                        print(f"      {e.code} — retrying in {wait}s (attempt {attempt + 1}/5)...")
+                    if e.code in (503, 429) and attempt < 9:
+                        wait = min(60, RATE_LIMIT_SECONDS * (2 ** (attempt + 1)))
+                        print(f"      {e.code} — retrying in {wait}s (attempt {attempt + 1}/10)...")
                         time.sleep(wait)
                     else:
                         raise
@@ -232,14 +232,14 @@ def fetch_category_range(category, start_date, end_date):
         )
 
         url = f"{ARXIV_API}?{params}"
-        for attempt in range(5):
+        for attempt in range(10):
             try:
                 response = urllib.request.urlopen(_arxiv_request(url)).read()
                 break
             except urllib.error.HTTPError as e:
-                if e.code in (503, 429) and attempt < 4:
-                    wait = RATE_LIMIT_SECONDS * (2 ** (attempt + 1))
-                    print(f"      {e.code} — retrying in {wait}s (attempt {attempt + 1}/5)...")
+                if e.code in (503, 429) and attempt < 9:
+                    wait = min(60, RATE_LIMIT_SECONDS * (2 ** (attempt + 1)))
+                    print(f"      {e.code} — retrying in {wait}s (attempt {attempt + 1}/10)...")
                     time.sleep(wait)
                 else:
                     raise
@@ -957,20 +957,36 @@ def main():
         print(f"Mode: SEMANTIC (name + embedding similarity, threshold={args.threshold})")
 
     # Step 1: Fetch papers (with cache for resumability)
-    # Cache is keyed to run parameters — stale cache from different run is ignored
+    # Cache is keyed to run parameters — stale cache from different run is ignored.
+    # Cache also tracks completed categories so a crash mid-fetch can resume.
     all_papers = {}
+    completed_cats = set()
     cache_key = f"{'semantic' if args.semantic else 'name'}|{args.days}|{args.authors}|{after_date}|{before_date}"
-    cache_valid = False
+    fully_cached = False
     if FETCH_CACHE.exists():
         cached_data = json.loads(FETCH_CACHE.read_text())
         if isinstance(cached_data, dict) and cached_data.get("_cache_key") == cache_key:
             all_papers = {p["arxiv_id"]: p for p in cached_data["papers"]}
-            cache_valid = True
-            print(f"  Resumed from cache ({len(all_papers)} papers)")
+            completed_cats = set(cached_data.get("_completed_categories", []))
+            if completed_cats >= set(categories):
+                fully_cached = True
+                print(f"  Resumed from cache ({len(all_papers)} papers, all categories complete)")
+            else:
+                remaining = [c for c in categories if c not in completed_cats]
+                print(f"  Resuming partial cache: {len(all_papers)} papers, {len(completed_cats)}/{len(categories)} categories done, {len(remaining)} remaining")
         else:
             FETCH_CACHE.unlink()
             print(f"  Discarded stale cache (different run parameters)")
-    if not cache_valid:
+
+    def _save_cache():
+        cache_data = {
+            "_cache_key": cache_key,
+            "_completed_categories": sorted(completed_cats),
+            "papers": list(all_papers.values()),
+        }
+        FETCH_CACHE.write_text(json.dumps(cache_data, ensure_ascii=False))
+
+    if not fully_cached:
         if args.semantic:
             # Semantic mode: one paginated range query per category covers
             # the full window, instead of one call per (day, category).
@@ -983,26 +999,33 @@ def main():
 
             print(f"  Range: {start_d} to {end_d}")
             for ci, cat in enumerate(categories):
+                if cat in completed_cats:
+                    print(f"    {ci+1}/{len(categories)} {cat}: skipped (cached)", flush=True)
+                    continue
                 cat_before = len(all_papers)
                 papers = fetch_category_range(cat, start_d, end_d)
                 for p in papers:
                     if p["arxiv_id"] not in all_papers:
                         all_papers[p["arxiv_id"]] = p
                 cat_new = len(all_papers) - cat_before
+                completed_cats.add(cat)
+                _save_cache()
                 print(f"    {ci+1}/{len(categories)} {cat}: {len(papers)} found, +{cat_new} new ({len(all_papers)} cumulative)", flush=True)
                 time.sleep(RATE_LIMIT_SECONDS)
         else:
             # Normal mode: fetch by author surname queries
             for cat in categories:
+                if cat in completed_cats:
+                    print(f"  {cat}: skipped (cached)")
+                    continue
                 print(f"  Querying {cat} ({len(config['authors'])} authors in batches of 20)...")
                 papers = fetch_category(cat, args.days, config, before_date=before_date)
                 for p in papers:
                     if p["arxiv_id"] not in all_papers:
                         all_papers[p["arxiv_id"]] = p
+                completed_cats.add(cat)
+                _save_cache()
                 time.sleep(RATE_LIMIT_SECONDS)
-        # Save cache (keyed to run parameters so different runs don't collide)
-        cache_data = {"_cache_key": cache_key, "papers": list(all_papers.values())}
-        FETCH_CACHE.write_text(json.dumps(cache_data, ensure_ascii=False))
         print(f"  Saved fetch cache ({len(all_papers)} papers)")
 
     print(f"  Fetched {len(all_papers)} unique papers")
