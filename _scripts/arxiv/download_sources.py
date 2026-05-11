@@ -2,7 +2,7 @@
 """
 Download arXiv paper sources for all papers in the feed.
 
-Downloads from https://export.arxiv.org/e-print/{id}, unpacks locally,
+Downloads from https://arxiv.org/e-print/{id}, unpacks locally,
 and uploads to s3://lpetrov.cc.storage/arxiv-sources/{id}/.
 
 Resumable: checks actual folders on disk. Safe to Ctrl-C and re-run —
@@ -41,7 +41,7 @@ OUR_S3_BUCKET = "lpetrov.cc.storage"
 OUR_S3_PREFIX = "arxiv-sources"
 
 RATE_LIMIT_SECONDS = 3
-EPRINT_URL = "https://export.arxiv.org/e-print/{}"
+EPRINT_URL = "https://arxiv.org/e-print/{}"
 PDF_URL = "https://arxiv.org/pdf/{}"
 
 
@@ -127,14 +127,31 @@ def is_uploaded(arxiv_id: str, manifest: dict) -> bool:
     return manifest.get(arxiv_id, {}).get("uploaded", False)
 
 
+USER_AGENT = "lpetrov-arxiv-sources/1.0 (mailto:petrov@virginia.edu)"
+
+
+def _fetch_with_retry(url: str, timeout: int = 60) -> bytes:
+    """GET url with exponential backoff on 429/503. Other HTTPErrors raised."""
+    req = urllib.request.Request(url)
+    req.add_header("User-Agent", USER_AGENT)
+    for attempt in range(10):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as e:
+            if e.code in (503, 429) and attempt < 9:
+                wait = min(60, 2 ** (attempt + 1))
+                print(f" {e.code} — retrying in {wait}s (attempt {attempt + 1}/10)...", end="", flush=True)
+                time.sleep(wait)
+                continue
+            raise
+    raise RuntimeError(f"unreachable: retries exhausted for {url}")
+
+
 def download_pdf(arxiv_id: str, dest_dir: Path) -> bool:
     """Download PDF when source is not public."""
-    url = PDF_URL.format(arxiv_id)
-    req = urllib.request.Request(url)
-    req.add_header("User-Agent", "lpetrov-arxiv-sources/1.0 (academic research)")
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            data = resp.read()
+        data = _fetch_with_retry(PDF_URL.format(arxiv_id))
     except urllib.error.HTTPError:
         return False
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -145,13 +162,8 @@ def download_pdf(arxiv_id: str, dest_dir: Path) -> bool:
 
 def download_and_unpack(arxiv_id: str, dest_dir: Path) -> bool:
     """Download source from arXiv and unpack into dest_dir."""
-    url = EPRINT_URL.format(arxiv_id)
-    req = urllib.request.Request(url)
-    req.add_header("User-Agent", "lpetrov-arxiv-sources/1.0 (academic research)")
-
     try:
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            data = resp.read()
+        data = _fetch_with_retry(EPRINT_URL.format(arxiv_id))
     except urllib.error.HTTPError as e:
         if e.code == 404:
             return False
