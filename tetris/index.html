@@ -488,8 +488,10 @@ function lockPiece() {
 }
 
 function getSpeed(lv) {
-  // Keep speeding up past level 15 instead of plateauing.
-  return Math.max(8, Math.floor(1000 * Math.pow(0.82, lv - 1)));
+  // Gentle ramp up to L15, then steeper drop-off.
+  var base = 1000 * Math.pow(0.82, Math.min(lv, 15) - 1);
+  if (lv > 15) base *= Math.pow(0.65, lv - 15);
+  return Math.max(4, Math.floor(base));
 }
 
 // ── Death Animation ──
