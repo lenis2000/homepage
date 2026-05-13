@@ -45137,6 +45137,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2404.02483": {
+    "date": "2024-04-03",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "2404.03026": {
     "date": "2024-04-03",
     "decision": "ACCEPT",
