@@ -84,15 +84,15 @@ which is the variable controlling the KPZ-edge asymptotics of the AZTEC paper.</
 $$
 \xi_j(t) \;=\; V_j(t) \;\;\lor\;\; \mathbf{1}_{\{\xi_{j-1}(t)=1\}}\cdot \mathrm{Bernoulli}\!\left(q^{\,R_j(t-1) - R_{j-1}(t-1)}\right),
 $$
-with the push probability evaluated at the <em>old</em> gap (positions at time $t-1$, before any update of the current sweep). Then $R_j(t) = R_j(t-1) + \xi_j(t)$. By Matveev–Petrov, this is the projection of the $\widehat\beta$-row dynamics on the $q$-Whittaker process onto the rightmost particles. The boundary curve is the space-time anti-diagonal of one trajectory:
-$$\boxed{\,B_m^{\mathrm{qpush}} \;=\; R_m(n+1-m), \qquad m=1,\ldots,n.\,}$$</p>
+with the push probability evaluated at the <em>old</em> gap (positions at time $t-1$, before any update of the current sweep). Then $R_j(t) = R_j(t-1) + \xi_j(t)$. By Matveev–Petrov, this is the projection of the $\hat\beta$-row dynamics on the $q$-Whittaker process onto the rightmost particles. The boundary curve is the space-time anti-diagonal of one trajectory:
+$$B_m^{\mathrm{qpush}} \;=\; R_m(n+1-m), \qquad m=1,\ldots,n.$$</p>
 
 <p><b>Sampler B — $q$-RSK Aztec shuffler</b> (Matveev–Petrov §5). Growth-diagram cascade on the $n \times n$ staircase, Bernoulli inputs of intensity $\alpha\beta/(1+\alpha\beta)$, $q$-Whittaker VH bijection. The cascade returns partitions $\mathtt{parts}[d]$ at anti-diagonals $d=0,1,\ldots,2n$. In Matveev–Petrov's convention, the partition stored at $d=2m-1$ is the $q$-Whittaker level-$m$ partition $\eta^{(m)}$; Macdonald duality identifies this with the <em>conjugate</em> of the AZTEC paper's section partition,
 $$\mathtt{parts}[2m-1] \;=\; \eta^{(m)} \;=\; \lambda(m)'.$$
 (Note: $\mathtt{parts}[d]$ is the $q$-RSK / $q$-Whittaker output, not the AZTEC draft's physical $(\lambda^k, \mu^k)$ chain. In the draft's notation, the corresponding section is the transposed/reindexed one whose marginal carries $m$ of the $b$-parameters and $n+1-m$ of the $a$-parameters.)</p>
 
 <p>Consequently the AZTEC observable $\lambda(m)'_1$ equals the <em>largest part</em> $\eta^{(m)}_1$ of the stored partition, not its number of parts:
-$$\boxed{\,B_m^{\mathrm{shuf}} \;=\; \eta^{(m)}_1 \;=\; \lambda(m)'_1.\,}$$
+$$B_m^{\mathrm{shuf}} \;=\; \eta^{(m)}_1 \;=\; \lambda(m)'_1.$$
 At $q=0$, the slip is hard to see because Schur transposition symmetries in the homogeneous symmetric setup partially mask it (the Schur measure is invariant under $\lambda \leftrightarrow \lambda'$ jointly with the swap of the two rectangle directions). For $q&gt;0$, $\#\eta^{(m)}$ and $\eta^{(m)}_1$ are genuinely different observables of the $q$-Whittaker measure and respond to $q$ in opposite directions.</p>
 
 <p><b>Equality of distributions.</b> Both $B_m^{\mathrm{qpush}}$ and $B_m^{\mathrm{shuf}}$ are functionals of the Macdonald measure at parameters $(q, t=0)$ with $(n+1-m)$ $\alpha$-variables on the $P$-side and $m$ $\beta$-variables on the $Q$-side; they have identical one-point distributions for every $(n, m, q, \alpha, \beta)$.</p>
