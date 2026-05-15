@@ -351,20 +351,21 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings sample
 <details id="frozen-curve-formulas" style="margin-top: 8px; border: 1px solid #ccc; border-radius: 5px;">
   <summary style="cursor: pointer; font-weight: bold; font-size: 0.95em; color: #b91c1c; padding: 8px;">Frozen-curve formulas (black = q&rarr;1 triangle, red = finite-q arc)</summary>
   <div style="padding: 8px 12px; font-size: 0.92em; line-height: 1.5;">
-    <p style="margin: 0 0 6px 0;"><strong>Coordinates.</strong> In the rotated unit-square chart $(u,v) = \left(\frac{hx+hy+R}{2R}, \frac{hx-hy+R}{2R}\right)$ of the Aztec diamond $|hx|+|hy|\le R$, with $R = N + \tfrac12$, set $\kappa = \mathbf m$ and $c = -\mathbf x$. The finite-q arc is plotted directly in this chart; the q&rarr;1 triangle is drawn after the antipodal flip $(\kappa, c)\mapsto (1-\kappa, 1-c)$ to land on the same half of the diamond as the visible frozen lobe.</p>
+    <p style="margin: 0 0 6px 0;"><strong>Coordinates.</strong> In the rotated unit-square chart $(u,v) = \left(\frac{hx+hy+R}{2R}, \frac{hx-hy+R}{2R}\right)$ of the Aztec diamond $|hx|+|hy|\le R$, with $R = N + \tfrac12$, set $\kappa = \mathbf m$ and $c = -\mathbf x$. The finite-q arc is plotted after the $x = y$ reflection $(\kappa, c)\mapsto (\kappa, 1-c)$ (equivalently $hx\leftrightarrow hy$) so that it hugs the south (yellow) frozen lobe; the q&rarr;1 triangle is drawn after the antipodal flip $(\kappa, c)\mapsto (1-\kappa, 1-c)$ so it lands on the same half as the visible frozen lobe.</p>
 
     <p style="margin: 6px 0 0 0;"><strong>q&rarr;1 triangle</strong> (eq.&nbsp;(x9) of <code>Aztec_sym_Vadim.tex</code>): in the $t\to 1$ limit, particles at section $\kappa$ fill the interval
       $$ c \in \bigl[\,p(1-\kappa),\; p(1-\kappa) + \kappa\,\bigr], \qquad p = \frac{\alpha\beta}{1+\alpha\beta}. $$
       Two edges $u_L(\kappa) = p(1-\kappa)$ and $u_R(\kappa) = p(1-\kappa)+\kappa$ sweep the triangle.</p>
 
-    <p style="margin: 6px 0 0 0;"><strong>Finite-q arc</strong> (q-Whittaker arctic curve, double saddle of
-      $f(w) = \kappa \log (w;q)_\infty + (1-\kappa)\log(1+w) - c\log w$):
-      $$\kappa(w) = \frac{1}{1 + \bigl(S_1(w) + w\,S_2(w)\bigr)(1+w)^2},\qquad
-        c(w) = (1-\kappa)\,\frac{w}{1+w} - \kappa\, w\, S_1(w),$$
-      $$S_1(w) = \sum_{k\ge 0} \frac{q^k}{1 - w q^k},\qquad
-        S_2(w) = \sum_{k\ge 0} \frac{q^{2k}}{(1 - w q^k)^2}.$$
-      The curve is traced by sweeping $w$ over the real line; poles at $w = q^{-k}$ partition the sweep into branches.
-      At $q=0$ this degenerates to the standard inscribed arctic circle $(\kappa - \tfrac12)^2 + (c-\tfrac12)^2 = \tfrac14$.</p>
+    <p style="margin: 6px 0 0 0;"><strong>Finite-q arc</strong> (q-Whittaker arctic curve, double saddle of the exponent in section&nbsp;5 of <code>Aztec_sym_Vadim.tex</code>, specialised to $a_i=\alpha$, $b_j=\beta$):
+      $$f(w) = \kappa \log (w/\alpha;\,q)_\infty + (1-\kappa)\log(1+w\beta) - c\log w.$$
+      Solving $f'(w)=f''(w)=0$ for $(\kappa, c)$:
+      $$\kappa(w) = \frac{\alpha\beta}{\alpha\beta + \bigl(S_1 + \tfrac{w}{\alpha}\,S_2\bigr)(1+w\beta)^2},\qquad
+        c(w) = (1-\kappa)\,\frac{w\beta}{1+w\beta} - \kappa\,\frac{w}{\alpha}\, S_1,$$
+      $$S_1 = \sum_{k\ge 0} \frac{q^k}{1 - (w/\alpha) q^k},\qquad
+        S_2 = \sum_{k\ge 0} \frac{q^{2k}}{\bigl(1 - (w/\alpha) q^k\bigr)^2}.$$
+      The curve is traced by sweeping $w$ over the real line; poles of $S_1, S_2$ at $w = \alpha\, q^{-k}$ partition the sweep into branches, and the parametrization singularity at $w = -1/\beta$ pins the curve to $\kappa=1$.
+      At $\alpha=\beta=1$, $q=0$ this degenerates to the standard inscribed arctic circle $(\kappa - \tfrac12)^2 + (c-\tfrac12)^2 = \tfrac14$.</p>
   </div>
 </details>
 
@@ -1843,10 +1844,11 @@ async function initializeApp() {
   // ===== Frozen-curve overlay =====
   // Aztec_sym_Vadim notes, south quadrant of the diamond.
   //   q->1 triangle (eq_x9): left line u_L(m) = p(1-m),
-  //                          right line u_R(m) = p(1-m) + m, m in [0,1].
-  //   finite-q arc (eq_x17): parametric in w_c in (0, 1/beta),
-  //     m(w_c) = alpha(1-beta*w_c) / (beta*(w_c+alpha)^2),
-  //     -x(w_c) = -m(w_c)*ln(1-beta*w_c) + alpha/(w_c+alpha).
+  //                          right line u_R(m) = p(1-m) + m, m in [0,1],
+  //                          p = alpha*beta/(1 + alpha*beta).
+  //   finite-q arc (Aztec_sym_Vadim section 5, a_i=alpha, b_j=beta): double saddle of
+  //     f(w) = kappa*log((w/alpha; q)_inf) + (1-kappa)*log(1+w*beta) - c*log w
+  //   solved below in processW().
   // Geometric placement: treat (m, negX) as unit-square coords (u, v) of the
   // rotated diamond, where (u, v) = ((hx+hy+R)/(2R), (hx-hy+R)/(2R)) maps the
   // diamond |hx|+|hy|<=R onto [0,1]^2. Inverting:
@@ -1864,8 +1866,13 @@ async function initializeApp() {
     if (!showQto1.checked && !showFiniteq.checked) return null;
     const xArr = parseCSV(document.getElementById("x-params").value);
     const yArr = parseCSV(document.getElementById("y-params").value);
-    const alpha = (xArr && xArr.length > 0 && xArr[0] > 0) ? xArr[0] : 1;
-    const beta = (yArr && yArr.length > 0 && yArr[0] > 0) ? yArr[0] : 1;
+    // Formulas only valid when all x_i are equal and all y_j are equal.
+    // Otherwise skip the overlay entirely.
+    if (!xArr || xArr.length === 0 || !yArr || yArr.length === 0) return null;
+    const allEqual = (arr) => arr.every((v) => v === arr[0]);
+    if (!allEqual(xArr) || !allEqual(yArr)) return null;
+    const alpha = xArr[0] > 0 ? xArr[0] : 1;
+    const beta = yArr[0] > 0 ? yArr[0] : 1;
     const qRaw = parseFloat(document.getElementById("q-input").value);
     const q = (isFinite(qRaw) && qRaw >= 0 && qRaw < 1) ? qRaw : 0;
     return {
@@ -1892,6 +1899,13 @@ async function initializeApp() {
       hx: halfDiag * (1 - m - negX),
       hy: halfDiag * (negX - m)
     });
+    // x=y reflection of the diamond (hx <-> hy), equivalently negX -> 1 - negX
+    // in the (m, negX) chart. Used so that the finite-q arc hugs the yellow
+    // (south) frozen lobe instead of the green (west) one.
+    const mapToLatticeXYFlipped = (m, negX) => ({
+      hx: halfDiag * (m - negX),
+      hy: halfDiag * (m + negX - 1)
+    });
     const pts = [];
     if (curve === 'qto1-left') {
       for (let i = 0; i <= STEPS; i++) {
@@ -1906,14 +1920,17 @@ async function initializeApp() {
         pts.push(mapToLatticeFlipped(m, negX));
       }
     } else if (curve === 'finiteq' || curve === 'finiteq-main' || curve === 'finiteq-rest') {
-      // q-Whittaker arctic curve saddle, from the Mathematica notes in
-      //   2026-03-21-fredholm-determinants-from-vertex-models/mathematica_experiments.md
-      //   f(w) = kappa * log((w; q)_inf) + (1 - kappa) * log(1 + w) - c * log w
+      // q-Whittaker arctic curve saddle (section 5 of Aztec_sym_Vadim,
+      // a_i = alpha, b_j = beta):
+      //   f(w) = kappa * log((w/alpha; q)_inf) + (1 - kappa) * log(1 + w*beta) - c * log w.
       // Solving f'(w) = f''(w) = 0 for (kappa, c) gives:
-      //   kappa(w) = 1 / (1 + (S1 + w S2)(1+w)^2)
-      //   c(w)     = (1 - kappa) * w/(1+w) - kappa * w * S1
-      // where S1 = sum_k q^k/(1 - w q^k),  S2 = sum_k q^{2k}/(1 - w q^k)^2.
-      // (alpha, beta drop out under this normalization, w is real, range [-large, +large].)
+      //   kappa(w) = alpha*beta / [ alpha*beta + (S1 + (w/alpha) S2)(1 + w*beta)^2 ]
+      //   c(w)     = (1 - kappa) * w*beta/(1 + w*beta) - kappa * (w/alpha) * S1
+      // where, with u = w/alpha,
+      //   S1 = sum_k q^k / (1 - u q^k),   S2 = sum_k q^{2k} / (1 - u q^k)^2.
+      // w sweeps the real line; S1,S2 poles are at w = alpha * q^{-k},
+      // and (1 + w*beta) has a parametrization singularity at w = -1/beta
+      // (where kappa hits 1).
       const truncK = (qVal) => {
         if (qVal <= 0) return 1;
         // Tail bound q^K < 1e-15 keeps both sums accurate to ~1e-13.
@@ -1921,12 +1938,13 @@ async function initializeApp() {
         return Math.min(Math.max(k, 4), 50000);
       };
       const K = truncK(q);
-      const compS = (w) => {
-        // S1 = sum_k q^k/(1-wq^k), S2 = sum_k q^{2k}/(1-wq^k)^2.
+      const compS = (u) => {
+        // S1(u) = sum_k q^k/(1 - u q^k), S2(u) = sum_k q^{2k}/(1 - u q^k)^2.
+        // Caller passes u = w/alpha.
         // Kahan summation keeps precision when many terms accumulate.
         let s1 = 0, s1c = 0, s2 = 0, s2c = 0, qk = 1;
         for (let k = 0; k <= K; k++) {
-          const denom = 1 - w * qk;
+          const denom = 1 - u * qk;
           if (Math.abs(denom) < 1e-13) return null;
           const inv = qk / denom;
           // Kahan-add inv to s1
@@ -1939,30 +1957,33 @@ async function initializeApp() {
         return [s1, s2];
       };
       // Sample w over a real range that covers the full closed arctic curve.
-      // Poles at w = q^{-k}: k=0 -> w=1, k=1 -> w=1/q, etc. For q < 1 these go
-      // off to infinity, so we sweep in three slabs: w < 0, 0 < w < 1, 1 < w.
+      // Poles of S1,S2 at w = alpha * q^{-k}: k=0 -> w=alpha, k=1 -> w=alpha/q, ...
+      // For q < 1 these go off to infinity, so we sweep in three slabs:
+      // w < 0, 0 < w < alpha, alpha < w < alpha/q (and beyond if reachable).
+      const ab = alpha * beta;
       const samples = [];
       const processW = (w) => {
-        // Skip near poles w = q^{-k}.
+        // Skip near S1/S2 poles w = alpha * q^{-k}.
         let qk = 1;
         for (let k = 0; k <= 6; k++) {
           if (qk < 1e-18) break;
-          const pole = 1 / qk;
-          if (Math.abs(w - pole) < 0.003) return;
+          const pole = alpha / qk;
+          if (Math.abs(w - pole) < 0.003 * alpha) return;
           qk *= q;
         }
-        const S = compS(w);
+        const u = w / alpha;
+        const S = compS(u);
         if (!S) return;
         const [s1, s2] = S;
         if (!isFinite(s1) || !isFinite(s2)) return;
-        const onePlusW = 1 + w;
-        if (Math.abs(onePlusW) < 1e-12) return;
-        const onePlusW2 = onePlusW * onePlusW;
-        const denom = 1 + (s1 + w * s2) * onePlusW2;
+        const onePlusWB = 1 + w * beta;
+        if (Math.abs(onePlusWB) < 1e-12) return;
+        const onePlusWB2 = onePlusWB * onePlusWB;
+        const denom = ab + (s1 + u * s2) * onePlusWB2;
         if (Math.abs(denom) < 1e-14) return;
-        const kappa = 1 / denom;
+        const kappa = ab / denom;
         if (!isFinite(kappa) || kappa < -0.01 || kappa > 1.01) return;
-        const c = (1 - kappa) * w / onePlusW - kappa * w * s1;
+        const c = (1 - kappa) * w * beta / onePlusWB - kappa * u * s1;
         if (!isFinite(c) || c < -0.01 || c > 1.01) return;
         samples.push({
           w, kappa: Math.max(0, Math.min(1, kappa)),
@@ -1986,21 +2007,25 @@ async function initializeApp() {
           processW(wLo + (wHi - wLo) * t);
         }
       };
-      // Sweep w in the slab(s) the caller wants:
-      //   finiteq-main = w in (0, 1), the arc between the two tangent points.
-      //   finiteq-rest = w in (-large, 0) U (1, 1/q-), the remainder of the closed curve.
+      // Sweep w in the slab(s) the caller wants. With alpha-scaling the
+      // slabs are sized in units of alpha (so the natural-frequency arc is
+      // captured even for non-unit alpha):
+      //   finiteq-main = w in (0, alpha), the arc between the two tangent points.
+      //   finiteq-rest = w in (-large, 0) U (alpha, alpha/q-), the rest of the closed curve.
       //   finiteq      = both (legacy).
       const wantMain = (curve === 'finiteq' || curve === 'finiteq-main');
       const wantRest = (curve === 'finiteq' || curve === 'finiteq-rest');
+      const buf = 0.0005 * alpha;
+      const far = 50 * alpha;
       if (wantRest) {
-        cosineSlab(-50, -0.0005, denseSteps);
+        cosineSlab(-far, -buf, denseSteps);
       }
       if (wantMain) {
-        cosineSlab(0.0005, 0.9995, denseSteps);
+        cosineSlab(buf, alpha - buf, denseSteps);
       }
       if (wantRest) {
-        const upper = q > 0 ? Math.min(1 / q - 0.0005, 50) : 50;
-        if (upper > 1.01) cosineSlab(1.0005, upper, denseSteps);
+        const upper = q > 0 ? Math.min(alpha / q - buf, far) : far;
+        if (upper > alpha * 1.01) cosineSlab(alpha + buf, upper, denseSteps);
       }
       // The samples trace a closed curve; sort by w to get a coherent polyline.
       samples.sort((a, b) => a.w - b.w);
@@ -2015,7 +2040,7 @@ async function initializeApp() {
             pts.push(null);  // sentinel: break polyline
           }
         }
-        pts.push(mapToLattice(s.kappa, s.c));
+        pts.push(mapToLatticeXYFlipped(s.kappa, s.c));
         prev = s;
       }
     }
@@ -2065,10 +2090,14 @@ async function initializeApp() {
       drawPolyline(rightPts, "rgba(0, 0, 0, 0.85)");
     }
     if (params.showFiniteq) {
-      // Two layers: pale "rest" of closed curve, then bold "main arc" (w in (0,1))
-      // between the two tangent points (NW and SW borders).
-      const restPts = computeFrozenCurveLattice('finiteq-rest', params.alpha, params.beta, params.q, currentN);
-      const mainPts = computeFrozenCurveLattice('finiteq-main', params.alpha, params.beta, params.q, currentN);
+      // Variable inversion: pass 1/alpha, 1/beta to the saddle formula.
+      // This is the x -> 1/x duality of Aztec_sym_Vadim section 5.5 — the
+      // measure under inversion matches the original via the involution
+      // lambda -> N + tau - lambda, which puts the curve on the correct lobe.
+      const invA = 1 / params.alpha;
+      const invB = 1 / params.beta;
+      const restPts = computeFrozenCurveLattice('finiteq-rest', invA, invB, params.q, currentN);
+      const mainPts = computeFrozenCurveLattice('finiteq-main', invA, invB, params.q, currentN);
       const prevWidth = tctx.lineWidth;
       tctx.lineWidth = prevWidth * 0.6;
       drawPolyline(restPts, "rgba(0, 0, 0, 0.25)");
@@ -4263,9 +4292,13 @@ async function initializeApp() {
       this.q = q;
       this.seed = seed;
 
-      // Ensure x and y have length n
-      while (this.x.length < n) this.x.push(1.0);
-      while (this.y.length < n) this.y.push(1.0);
+      // Ensure x and y have length n.
+      // A single value is broadcast to all n entries;
+      // any longer (but still < n) sequence is padded with 1.0.
+      if (this.x.length === 1) this.x = new Array(n).fill(this.x[0]);
+      else while (this.x.length < n) this.x.push(1.0);
+      if (this.y.length === 1) this.y = new Array(n).fill(this.y[0]);
+      else while (this.y.length < n) this.y.push(1.0);
 
       // Initialize seeded RNG
       this.rng = mulberry32(seed);
