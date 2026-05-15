@@ -206,7 +206,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings sample
   <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
     <span>
       <label for="n-input">n = </label>
-      <input id="n-input" type="number" value="4" min="1" max="1000" style="width: 60px;">
+      <input id="n-input" type="number" value="100" min="1" max="1000" style="width: 60px;">
       <button id="sample-btn" style="margin-left: 8px;">Sample</button>
       <span id="progress-indicator" style="margin-left: 8px; color: #666;" role="status" aria-live="polite"></span>
       <span id="timing-display" style="margin-left: 8px; color: #666; font-size: 0.9em;" role="status" aria-live="polite"></span>
@@ -235,12 +235,12 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings sample
   </div>
   <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px;">
     <label for="x-params" style="width: 16px;">x:</label>
-    <input id="x-params" type="text" class="param-input" value="1^4" style="flex: 1;">
+    <input id="x-params" type="text" class="param-input" value="1^100" style="flex: 1;">
   </div>
   <div id="x-params-note" style="font-size: 0.78em; color: #888; margin: -2px 0 4px 24px; display: none;"></div>
   <div style="display: flex; gap: 8px; align-items: center;">
     <label for="y-params" style="width: 16px;">y:</label>
-    <input id="y-params" type="text" class="param-input" value="1^4" style="flex: 1;">
+    <input id="y-params" type="text" class="param-input" value="1^100" style="flex: 1;">
   </div>
   <div id="y-params-note" style="font-size: 0.78em; color: #888; margin: -2px 0 0 24px; display: none;"></div>
 </div>
@@ -315,6 +315,14 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings sample
     <span id="border-value">1</span>
   </span>
   <span style="border-left: 1px solid #ccc; padding-left: 10px;">
+    <strong style="font-size: 0.85em;">Frozen curves:</strong>
+    <input type="checkbox" id="show-curve-qto1-cb" style="margin-left: 4px;">
+    <label for="show-curve-qto1-cb" style="font-size: 0.85em;">q&rarr;1 triangle</label>
+    <input type="checkbox" id="show-curve-finiteq-cb" style="margin-left: 6px;">
+    <label for="show-curve-finiteq-cb" style="font-size: 0.85em;">finite-q arc</label>
+    <a href="#frozen-curve-formulas" style="margin-left: 4px; font-size: 0.85em;">[?]</a>
+  </span>
+  <span style="border-left: 1px solid #ccc; padding-left: 10px;">
     <button id="prev-palette" style="padding: 0 6px; font-size: 12px;" aria-label="Previous color palette">&#9664;</button>
     <select id="palette-select" style="width: 110px; font-size: 12px;" aria-label="Color palette"></select>
     <button id="next-palette" style="padding: 0 6px; font-size: 12px;" aria-label="Next color palette">&#9654;</button>
@@ -338,6 +346,27 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings sample
   <span>H↑</span>
   <input type="color" id="custom-color-4" value="#FFCD00" style="width: 28px; height: 22px; padding: 0; border: 1px solid #999; border-radius: 3px; cursor: pointer;" aria-label="Custom color for domino type H-up">
 </div>
+
+<!-- Frozen-curve formula reference -->
+<details id="frozen-curve-formulas" style="margin-top: 8px; border: 1px solid #ccc; border-radius: 5px;">
+  <summary style="cursor: pointer; font-weight: bold; font-size: 0.95em; color: #b91c1c; padding: 8px;">Frozen-curve formulas (black = q&rarr;1 triangle, red = finite-q arc)</summary>
+  <div style="padding: 8px 12px; font-size: 0.92em; line-height: 1.5;">
+    <p style="margin: 0 0 6px 0;"><strong>Coordinates.</strong> In the rotated unit-square chart $(u,v) = \left(\frac{hx+hy+R}{2R}, \frac{hx-hy+R}{2R}\right)$ of the Aztec diamond $|hx|+|hy|\le R$, with $R = N + \tfrac12$, set $\kappa = \mathbf m$ and $c = -\mathbf x$. The finite-q arc is plotted directly in this chart; the q&rarr;1 triangle is drawn after the antipodal flip $(\kappa, c)\mapsto (1-\kappa, 1-c)$ to land on the same half of the diamond as the visible frozen lobe.</p>
+
+    <p style="margin: 6px 0 0 0;"><strong>q&rarr;1 triangle</strong> (eq.&nbsp;(x9) of <code>Aztec_sym_Vadim.tex</code>): in the $t\to 1$ limit, particles at section $\kappa$ fill the interval
+      $$ c \in \bigl[\,p(1-\kappa),\; p(1-\kappa) + \kappa\,\bigr], \qquad p = \frac{\alpha\beta}{1+\alpha\beta}. $$
+      Two edges $u_L(\kappa) = p(1-\kappa)$ and $u_R(\kappa) = p(1-\kappa)+\kappa$ sweep the triangle.</p>
+
+    <p style="margin: 6px 0 0 0;"><strong>Finite-q arc</strong> (q-Whittaker arctic curve, double saddle of
+      $f(w) = \kappa \log (w;q)_\infty + (1-\kappa)\log(1+w) - c\log w$):
+      $$\kappa(w) = \frac{1}{1 + \bigl(S_1(w) + w\,S_2(w)\bigr)(1+w)^2},\qquad
+        c(w) = (1-\kappa)\,\frac{w}{1+w} - \kappa\, w\, S_1(w),$$
+      $$S_1(w) = \sum_{k\ge 0} \frac{q^k}{1 - w q^k},\qquad
+        S_2(w) = \sum_{k\ge 0} \frac{q^{2k}}{(1 - w q^k)^2}.$$
+      The curve is traced by sweeping $w$ over the real line; poles at $w = q^{-k}$ partition the sweep into branches.
+      At $q=0$ this degenerates to the standard inscribed arctic circle $(\kappa - \tfrac12)^2 + (c-\tfrac12)^2 = \tfrac14$.</p>
+  </div>
+</details>
 
 <!-- Detailed Mode Toggle -->
 <button id="toggle-detailed-mode-btn">Enable Detailed Mode</button>
@@ -562,7 +591,7 @@ async function initializeApp() {
   // Create initial WASM module
   await recreateWasm();
 
-  let currentN = 4;
+  let currentN = 100;
   const svg = d3.select("#aztec-svg");
   const canvas = document.getElementById("aztec-canvas");
   const ctx = canvas.getContext("2d");
@@ -1811,6 +1840,244 @@ async function initializeApp() {
     }
   }
 
+  // ===== Frozen-curve overlay =====
+  // Aztec_sym_Vadim notes, south quadrant of the diamond.
+  //   q->1 triangle (eq_x9): left line u_L(m) = p(1-m),
+  //                          right line u_R(m) = p(1-m) + m, m in [0,1].
+  //   finite-q arc (eq_x17): parametric in w_c in (0, 1/beta),
+  //     m(w_c) = alpha(1-beta*w_c) / (beta*(w_c+alpha)^2),
+  //     -x(w_c) = -m(w_c)*ln(1-beta*w_c) + alpha/(w_c+alpha).
+  // Geometric placement: treat (m, negX) as unit-square coords (u, v) of the
+  // rotated diamond, where (u, v) = ((hx+hy+R)/(2R), (hx-hy+R)/(2R)) maps the
+  // diamond |hx|+|hy|<=R onto [0,1]^2. Inverting:
+  //   hx = R * (m + negX - 1),
+  //   hy = R * (m - negX),
+  // where R = N + 1/2. Corners: W=(0,0), S=(0,1), E=(1,1), N=(1,0).
+  // The paper's boundary checks land at:
+  //   (m=0, negX=p) -> (-R/2, -R/2), the SW midpoint.
+  //   (m=1/(alpha*beta), negX=1) -> ((R/(alpha*beta), R(1/(alpha*beta)-1)),
+  //   = East corner when alpha*beta=1.
+  function getFrozenCurveParams() {
+    const showQto1 = document.getElementById("show-curve-qto1-cb");
+    const showFiniteq = document.getElementById("show-curve-finiteq-cb");
+    if (!showQto1 || !showFiniteq) return null;
+    if (!showQto1.checked && !showFiniteq.checked) return null;
+    const xArr = parseCSV(document.getElementById("x-params").value);
+    const yArr = parseCSV(document.getElementById("y-params").value);
+    const alpha = (xArr && xArr.length > 0 && xArr[0] > 0) ? xArr[0] : 1;
+    const beta = (yArr && yArr.length > 0 && yArr[0] > 0) ? yArr[0] : 1;
+    const qRaw = parseFloat(document.getElementById("q-input").value);
+    const q = (isFinite(qRaw) && qRaw >= 0 && qRaw < 1) ? qRaw : 0;
+    return {
+      showQto1: showQto1.checked,
+      showFiniteq: showFiniteq.checked,
+      alpha, beta, q
+    };
+  }
+
+  function computeFrozenCurveLattice(curve, alpha, beta, q, N) {
+    const halfDiag = N + 0.5;
+    const p = (alpha * beta) / (1 + alpha * beta);
+    const STEPS = 240;
+    // Treat (m, negX) as rotated unit-square coords of the diamond:
+    //   (u, v) = ((hx+hy+R)/(2R), (hx-hy+R)/(2R)) with R = N + 1/2.
+    // Default placement: hx = R(m + negX - 1), hy = R(m - negX).
+    const mapToLattice = (m, negX) => ({
+      hx: halfDiag * (m + negX - 1),
+      hy: halfDiag * (m - negX)
+    });
+    // Antipodal flip: used only for the q->1 triangle so it lands on the south
+    // half (where particles concentrate) instead of the north half.
+    const mapToLatticeFlipped = (m, negX) => ({
+      hx: halfDiag * (1 - m - negX),
+      hy: halfDiag * (negX - m)
+    });
+    const pts = [];
+    if (curve === 'qto1-left') {
+      for (let i = 0; i <= STEPS; i++) {
+        const m = i / STEPS;
+        const negX = p * (1 - m);
+        pts.push(mapToLatticeFlipped(m, negX));
+      }
+    } else if (curve === 'qto1-right') {
+      for (let i = 0; i <= STEPS; i++) {
+        const m = i / STEPS;
+        const negX = p * (1 - m) + m;
+        pts.push(mapToLatticeFlipped(m, negX));
+      }
+    } else if (curve === 'finiteq' || curve === 'finiteq-main' || curve === 'finiteq-rest') {
+      // q-Whittaker arctic curve saddle, from the Mathematica notes in
+      //   2026-03-21-fredholm-determinants-from-vertex-models/mathematica_experiments.md
+      //   f(w) = kappa * log((w; q)_inf) + (1 - kappa) * log(1 + w) - c * log w
+      // Solving f'(w) = f''(w) = 0 for (kappa, c) gives:
+      //   kappa(w) = 1 / (1 + (S1 + w S2)(1+w)^2)
+      //   c(w)     = (1 - kappa) * w/(1+w) - kappa * w * S1
+      // where S1 = sum_k q^k/(1 - w q^k),  S2 = sum_k q^{2k}/(1 - w q^k)^2.
+      // (alpha, beta drop out under this normalization, w is real, range [-large, +large].)
+      const truncK = (qVal) => {
+        if (qVal <= 0) return 1;
+        // Tail bound q^K < 1e-15 keeps both sums accurate to ~1e-13.
+        const k = Math.ceil(Math.log(1e-15) / Math.log(qVal));
+        return Math.min(Math.max(k, 4), 50000);
+      };
+      const K = truncK(q);
+      const compS = (w) => {
+        // S1 = sum_k q^k/(1-wq^k), S2 = sum_k q^{2k}/(1-wq^k)^2.
+        // Kahan summation keeps precision when many terms accumulate.
+        let s1 = 0, s1c = 0, s2 = 0, s2c = 0, qk = 1;
+        for (let k = 0; k <= K; k++) {
+          const denom = 1 - w * qk;
+          if (Math.abs(denom) < 1e-13) return null;
+          const inv = qk / denom;
+          // Kahan-add inv to s1
+          const y1 = inv - s1c; const t1 = s1 + y1; s1c = (t1 - s1) - y1; s1 = t1;
+          const inv2 = inv * inv;
+          const y2 = inv2 - s2c; const t2 = s2 + y2; s2c = (t2 - s2) - y2; s2 = t2;
+          qk *= q;
+          if (qk < 1e-20) break;
+        }
+        return [s1, s2];
+      };
+      // Sample w over a real range that covers the full closed arctic curve.
+      // Poles at w = q^{-k}: k=0 -> w=1, k=1 -> w=1/q, etc. For q < 1 these go
+      // off to infinity, so we sweep in three slabs: w < 0, 0 < w < 1, 1 < w.
+      const samples = [];
+      const processW = (w) => {
+        // Skip near poles w = q^{-k}.
+        let qk = 1;
+        for (let k = 0; k <= 6; k++) {
+          if (qk < 1e-18) break;
+          const pole = 1 / qk;
+          if (Math.abs(w - pole) < 0.003) return;
+          qk *= q;
+        }
+        const S = compS(w);
+        if (!S) return;
+        const [s1, s2] = S;
+        if (!isFinite(s1) || !isFinite(s2)) return;
+        const onePlusW = 1 + w;
+        if (Math.abs(onePlusW) < 1e-12) return;
+        const onePlusW2 = onePlusW * onePlusW;
+        const denom = 1 + (s1 + w * s2) * onePlusW2;
+        if (Math.abs(denom) < 1e-14) return;
+        const kappa = 1 / denom;
+        if (!isFinite(kappa) || kappa < -0.01 || kappa > 1.01) return;
+        const c = (1 - kappa) * w / onePlusW - kappa * w * s1;
+        if (!isFinite(c) || c < -0.01 || c > 1.01) return;
+        samples.push({
+          w, kappa: Math.max(0, Math.min(1, kappa)),
+          c: Math.max(0, Math.min(1, c))
+        });
+      };
+      const sampleW = (wLo, wHi, nSteps) => {
+        for (let i = 1; i < nSteps; i++) {
+          const w = wLo + (wHi - wLo) * (i / nSteps);
+          processW(w);
+        }
+      };
+      // Many more samples than the q->1 lines so the arc is smooth at any q.
+      // Cosine-spaced sweep inside each slab so endpoints near w=0 and near
+      // the poles get the densest sampling.
+      const denseSteps = 4000;
+      const cosineSlab = (wLo, wHi, n) => {
+        for (let i = 1; i < n; i++) {
+          // cosine spacing on [0,1] - dense near both ends
+          const t = (1 - Math.cos((i / n) * Math.PI)) / 2;
+          processW(wLo + (wHi - wLo) * t);
+        }
+      };
+      // Sweep w in the slab(s) the caller wants:
+      //   finiteq-main = w in (0, 1), the arc between the two tangent points.
+      //   finiteq-rest = w in (-large, 0) U (1, 1/q-), the remainder of the closed curve.
+      //   finiteq      = both (legacy).
+      const wantMain = (curve === 'finiteq' || curve === 'finiteq-main');
+      const wantRest = (curve === 'finiteq' || curve === 'finiteq-rest');
+      if (wantRest) {
+        cosineSlab(-50, -0.0005, denseSteps);
+      }
+      if (wantMain) {
+        cosineSlab(0.0005, 0.9995, denseSteps);
+      }
+      if (wantRest) {
+        const upper = q > 0 ? Math.min(1 / q - 0.0005, 50) : 50;
+        if (upper > 1.01) cosineSlab(1.0005, upper, denseSteps);
+      }
+      // The samples trace a closed curve; sort by w to get a coherent polyline.
+      samples.sort((a, b) => a.w - b.w);
+      // Drop transitions across poles to avoid spurious line segments.
+      let prev = null;
+      for (const s of samples) {
+        if (prev) {
+          // If kappa,c jump a lot between consecutive w (likely across a pole), break the line.
+          const jumpThresh = 0.15;
+          if (Math.abs(s.kappa - prev.kappa) > jumpThresh ||
+              Math.abs(s.c - prev.c) > jumpThresh) {
+            pts.push(null);  // sentinel: break polyline
+          }
+        }
+        pts.push(mapToLattice(s.kappa, s.c));
+        prev = s;
+      }
+    }
+    return pts;
+  }
+
+  function drawFrozenCurves(tctx) {
+    const params = getFrozenCurveParams();
+    if (!params) return;
+    const scale = 20;
+    tctx.save();
+    // Compute current transform scale so lineWidth stays ~constant in device px
+    // regardless of n. getTransform() may fail on some headless contexts; fall
+    // back to a fixed value.
+    let pxPerUnit = 1;
+    try {
+      const tr = tctx.getTransform();
+      pxPerUnit = Math.hypot(tr.a, tr.b) || 1;
+    } catch (e) {
+      pxPerUnit = 1;
+    }
+    const targetPx = 8;  // stroke width in device pixels
+    tctx.lineWidth = targetPx / pxPerUnit;
+    tctx.lineJoin = "round";
+    tctx.lineCap = "round";
+    const drawPolyline = (pts, color) => {
+      if (!pts || pts.length < 2) return;
+      tctx.strokeStyle = color;
+      tctx.beginPath();
+      let needMove = true;
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
+        if (p === null) { needMove = true; continue; }
+        if (needMove) {
+          tctx.moveTo(p.hx * scale, -p.hy * scale);
+          needMove = false;
+        } else {
+          tctx.lineTo(p.hx * scale, -p.hy * scale);
+        }
+      }
+      tctx.stroke();
+    };
+    if (params.showQto1) {
+      const leftPts = computeFrozenCurveLattice('qto1-left', params.alpha, params.beta, params.q, currentN);
+      const rightPts = computeFrozenCurveLattice('qto1-right', params.alpha, params.beta, params.q, currentN);
+      drawPolyline(leftPts, "rgba(0, 0, 0, 0.85)");
+      drawPolyline(rightPts, "rgba(0, 0, 0, 0.85)");
+    }
+    if (params.showFiniteq) {
+      // Two layers: pale "rest" of closed curve, then bold "main arc" (w in (0,1))
+      // between the two tangent points (NW and SW borders).
+      const restPts = computeFrozenCurveLattice('finiteq-rest', params.alpha, params.beta, params.q, currentN);
+      const mainPts = computeFrozenCurveLattice('finiteq-main', params.alpha, params.beta, params.q, currentN);
+      const prevWidth = tctx.lineWidth;
+      tctx.lineWidth = prevWidth * 0.6;
+      drawPolyline(restPts, "rgba(0, 0, 0, 0.25)");
+      tctx.lineWidth = prevWidth;
+      drawPolyline(mainPts, "rgba(0, 0, 0, 0.85)");
+    }
+    tctx.restore();
+  }
+
   // Render tiling content to a target canvas context (used by both cache and export)
   // seamPad: expand fills to cover anti-aliasing seams (use for cache/export, skip for direct render)
   function renderCanvasContent(tctx, dominoes, latticePoints, showParticles, borderWidth, rotation, seamPad) {
@@ -1902,6 +2169,9 @@ async function initializeApp() {
       }
       tctx.stroke();
     }
+
+    // (Frozen curves are drawn on the main canvas in renderCanvas, not here,
+    // so their stroke width does not get downsampled by the hi-res cache.)
   }
 
   // Canvas rendering function with OffscreenCanvas caching for fast zoom/pan
@@ -1927,7 +2197,11 @@ async function initializeApp() {
     const smallN = currentN <= 50;
     const hiresMultiplier = smallN ? 1 : 3;
     const hiresCacheScale = dpr * hiresMultiplier;
-    const currentParams = `${showParticles}|${borderWidth}|${rotation}|${showDiagonalHighlights}|${getCurrentColors().join(',')}`;
+    const curveP = getFrozenCurveParams();
+    const curveKey = curveP
+      ? `${curveP.showQto1}:${curveP.showFiniteq}:${curveP.alpha}:${curveP.beta}:${curveP.q}`
+      : "off";
+    const currentParams = `${showParticles}|${borderWidth}|${rotation}|${showDiagonalHighlights}|${getCurrentColors().join(',')}|c:${curveKey}`;
     const targetW = Math.round(w * hiresCacheScale);
     const targetH = Math.round(h * hiresCacheScale);
     const needsCacheUpdate = canvasCacheRenderedVersion !== canvasCacheVersion ||
@@ -1993,6 +2267,20 @@ async function initializeApp() {
     ctx.translate(canvasTransform.x, canvasTransform.y);
     ctx.scale(canvasTransform.scale, canvasTransform.scale);
     ctx.drawImage(canvasCacheCanvas, 0, 0, canvasCacheWidth, canvasCacheHeight, 0, 0, w, h);
+    ctx.restore();
+
+    // Frozen-curve overlay: drawn on the main canvas (not in the hi-res cache)
+    // so the stroke width is honest and survives at large n. We re-apply the
+    // same affine transform the cache uses: zoom/pan + baseScale + rotation.
+    ctx.save();
+    ctx.translate(canvasTransform.x, canvasTransform.y);
+    ctx.scale(canvasTransform.scale, canvasTransform.scale);
+    ctx.translate(baseX, baseY);
+    ctx.scale(baseScale, baseScale);
+    if (rotation !== 0) {
+      ctx.rotate(rotation * Math.PI / 180);
+    }
+    drawFrozenCurves(ctx);
     ctx.restore();
   }
 
@@ -2169,6 +2457,8 @@ async function initializeApp() {
       ctx.arc(x2, y2, 3.5, 0, 2 * Math.PI);
       ctx.fill();
     }
+
+    drawFrozenCurves(ctx);
 
     ctx.restore();
   }
@@ -2405,6 +2695,8 @@ async function initializeApp() {
       ctx.arc(x2, y2, 3.5, 0, 2 * Math.PI);
       ctx.fill();
     });
+
+    drawFrozenCurves(ctx);
 
     ctx.restore();
   }
@@ -3034,6 +3326,14 @@ async function initializeApp() {
     redrawOnly();
   });
 
+  // Frozen-curve toggles - fast redraw
+  document.getElementById("show-curve-qto1-cb").addEventListener("change", function() {
+    redrawOnly();
+  });
+  document.getElementById("show-curve-finiteq-cb").addEventListener("change", function() {
+    redrawOnly();
+  });
+
   // High precision checkbox handler - toggle between Boost (50 digits) and fast (log1p/expm1) modes
   document.getElementById("high-precision-cb").addEventListener("change", function() {
     setHighPrecision(this.checked ? 1 : 0);
@@ -3472,6 +3772,8 @@ async function initializeApp() {
         exportCtx.stroke();
       }
     }
+
+    drawFrozenCurves(exportCtx);
 
     exportCtx.restore();
     return exportCanvas;
