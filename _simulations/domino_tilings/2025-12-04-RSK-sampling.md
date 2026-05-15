@@ -3342,11 +3342,10 @@ async function initializeApp() {
     }
   });
 
-  // Uniform button handler - set all parameters to 1
+  // Uniform button handler - single "1" broadcasts to all n entries
   document.getElementById("uniform-btn").addEventListener("click", function() {
-    const ones = Array(currentN).fill(1);
-    document.getElementById("x-params").value = arrayToCSV(ones);
-    document.getElementById("y-params").value = arrayToCSV(ones);
+    document.getElementById("x-params").value = "1";
+    document.getElementById("y-params").value = "1";
     updateParamNotes();
   });
 
