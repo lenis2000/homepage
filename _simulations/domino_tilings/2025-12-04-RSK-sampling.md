@@ -235,12 +235,12 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings sample
   </div>
   <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 4px;">
     <label for="x-params" style="width: 16px;">x:</label>
-    <input id="x-params" type="text" class="param-input" value="1^100" style="flex: 1;">
+    <input id="x-params" type="text" class="param-input" value="1" style="flex: 1;">
   </div>
   <div id="x-params-note" style="font-size: 0.78em; color: #888; margin: -2px 0 4px 24px; display: none;"></div>
   <div style="display: flex; gap: 8px; align-items: center;">
     <label for="y-params" style="width: 16px;">y:</label>
-    <input id="y-params" type="text" class="param-input" value="1^100" style="flex: 1;">
+    <input id="y-params" type="text" class="param-input" value="1" style="flex: 1;">
   </div>
   <div id="y-params-note" style="font-size: 0.78em; color: #888; margin: -2px 0 0 24px; display: none;"></div>
 </div>
@@ -1489,23 +1489,23 @@ async function initializeApp() {
     yNote.textContent = ySummary;
   }
 
-  // Update parameters display based on n
+  // Update parameters display based on n.
+  // Single-value fields are left alone (they broadcast at sample time);
+  // multi-value fields get truncated to newN if too long.
   function updateParamsForN(newN) {
     const xParamsField = document.getElementById("x-params");
     const yParamsField = document.getElementById("y-params");
     const currentX = parseCSV(xParamsField.value);
     const currentY = parseCSV(yParamsField.value);
 
-    // Extend or truncate to match n
-    const newX = [];
-    const newY = [];
-    for (let i = 0; i < newN; i++) {
-      newX.push(i < currentX.length ? currentX[i] : 1.0);
-      newY.push(i < currentY.length ? currentY[i] : 1.0);
-    }
+    const adjust = (arr) => {
+      if (arr.length <= 1) return arr;              // single value: broadcast at sample
+      if (arr.length <= newN) return arr;           // shorter than newN: padded with 1's at sample
+      return arr.slice(0, newN);                     // longer than newN: truncate
+    };
 
-    xParamsField.value = arrayToCSV(newX);
-    yParamsField.value = arrayToCSV(newY);
+    xParamsField.value = arrayToCSV(adjust(currentX));
+    yParamsField.value = arrayToCSV(adjust(currentY));
     updateParamNotes();
   }
 
@@ -3342,10 +3342,11 @@ async function initializeApp() {
     }
   });
 
-  // Uniform button handler - single "1" broadcasts to all n entries
+  // Uniform button handler - fill with n copies of 1
   document.getElementById("uniform-btn").addEventListener("click", function() {
-    document.getElementById("x-params").value = "1";
-    document.getElementById("y-params").value = "1";
+    const ones = arrayToCSV(new Array(currentN).fill(1));
+    document.getElementById("x-params").value = ones;
+    document.getElementById("y-params").value = ones;
     updateParamNotes();
   });
 
@@ -3606,6 +3607,26 @@ async function initializeApp() {
   // Update param notes on manual edits
   document.getElementById("x-params").addEventListener("input", updateParamNotes);
   document.getElementById("y-params").addEventListener("input", updateParamNotes);
+
+  // Expand single-value entry to N copies on blur (i.e., when user exits the
+  // field, including by clicking Sample). "5" -> "5,5,5,...,5". Sequences
+  // with two or more entries are left alone (they'll be padded with 1's at
+  // sample time).
+  function expandSingleValueField(fieldId) {
+    const field = document.getElementById(fieldId);
+    const arr = parseCSV(field.value);
+    if (arr.length === 1) {
+      const filled = new Array(currentN).fill(arr[0]);
+      field.value = arrayToCSV(filled);
+      updateParamNotes();
+    }
+  }
+  document.getElementById("x-params").addEventListener("blur", () => expandSingleValueField("x-params"));
+  document.getElementById("y-params").addEventListener("blur", () => expandSingleValueField("y-params"));
+  // Fill the default "1" -> "1,1,...,1" on page load so the field shows the
+  // full vector immediately (consistent with what the sampler will see).
+  expandSingleValueField("x-params");
+  expandSingleValueField("y-params");
 
   // ========== Color Scheme Controls ==========
 
@@ -4291,13 +4312,9 @@ async function initializeApp() {
       this.q = q;
       this.seed = seed;
 
-      // Ensure x and y have length n.
-      // A single value is broadcast to all n entries;
-      // any longer (but still < n) sequence is padded with 1.0.
-      if (this.x.length === 1) this.x = new Array(n).fill(this.x[0]);
-      else while (this.x.length < n) this.x.push(1.0);
-      if (this.y.length === 1) this.y = new Array(n).fill(this.y[0]);
-      else while (this.y.length < n) this.y.push(1.0);
+      // Ensure x and y have length n
+      while (this.x.length < n) this.x.push(1.0);
+      while (this.y.length < n) this.y.push(1.0);
 
       // Initialize seeded RNG
       this.rng = mulberry32(seed);

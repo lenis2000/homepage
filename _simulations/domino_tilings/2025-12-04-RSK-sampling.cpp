@@ -255,15 +255,11 @@ vector<Partition> aztecDiamondSample(int n, const vector<double>& x_in, const ve
         return {Partition()};
     }
 
-    // Copy and extend x and y to length n.
-    // Convention: a single value is broadcast to all n entries;
-    // any longer (but still < n) sequence is padded with 1.0.
+    // Copy and extend x and y to length n
     vector<double> x = x_in;
     vector<double> y = y_in;
-    if (x.size() == 1) x.assign(n, x[0]);
-    else while ((int)x.size() < n) x.push_back(1.0);
-    if (y.size() == 1) y.assign(n, y[0]);
-    else while ((int)y.size() < n) y.push_back(1.0);
+    while ((int)x.size() < n) x.push_back(1.0);
+    while ((int)y.size() < n) y.push_back(1.0);
 
     // Rolling buffer: only keep two rows instead of full (n+1)x(n+1) grid
     // Reduces memory from O(n^2 * partition_size) to O(n * partition_size)
