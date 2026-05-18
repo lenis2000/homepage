@@ -76,7 +76,7 @@ The arXiv feed is a multi-stage pipeline for discovering, filtering, reviewing, 
 | File | Location | Purpose |
 |------|----------|---------|
 | `authors.yml` | `_scripts/arxiv/` | Tracked authors config: names, affiliations, topics, disambiguation hints |
-| `ai_prompt.txt` | `_scripts/arxiv/` | Prompt template for Claude AI filtering |
+| `ai_prompt.txt` | `_scripts/arxiv/` | Prompt template for pi AI filtering |
 | `processed.json` | `_scripts/arxiv/` | Dedup tracker: `{arxiv_id: {source, decision, date}}` |
 | `review.json` | `_scripts/arxiv/` | Papers pending interactive TUI review |
 | `scan-review.json` | `_scripts/arxiv/` | Candidates from full scan pending TUI review |
@@ -113,7 +113,7 @@ This runs two scripts in sequence:
 1. **`fetch_arxiv.py --days 30 --review`** — Queries the arXiv API for papers in tracked categories (`math.PR`, `math-ph`, `math.RT`, etc.), batching by author surnames (20 per query). For each paper:
    - Deduplicates against `processed.json`
    - Matches authors deterministically against `authors.yml`
-   - Sends unmatched/ambiguous papers to Claude AI for `ACCEPT`/`REJECT_PERSON`/`REJECT_TOPIC` decisions
+   - Sends unmatched/ambiguous papers to pi for `ACCEPT`/`REJECT_PERSON`/`REJECT_TOPIC` decisions
    - Auto-accepts high-confidence AI accepts and generates Jekyll posts
    - Exports medium-confidence papers to `review.json`
    - Launches the **arxiv-review TUI** for interactive decisions
@@ -164,7 +164,7 @@ make arxiv-semantic ARGS="--threshold 0.70"      # stricter similarity
 1. **Fetch**: queries arXiv API day-by-day across 20 categories (`math.PR`, `math-ph`, `math.CO`, etc.) using `submittedDate` range filters — each request returns only one day's papers, keeping API load manageable (4s between requests)
 2. **Name matching**: same as Pipeline 1 — matches author surnames against `authors.yml`
 3. **Embedding similarity**: embeds all fetched papers via bge-m3, computes max cosine similarity against the reference set (`arxiv-vectors.npy`). Papers above threshold (default 0.72) become semantic candidates
-4. **AI triage**: name-matched papers go through Claude AI filtering as usual. Semantic-only papers (above threshold but no author match) **skip AI** and go directly to TUI review with their similarity score displayed
+4. **AI triage**: name-matched papers go through pi AI filtering as usual. Semantic-only papers (above threshold but no author match) **skip AI** and go directly to TUI review with their similarity score displayed
 5. **TUI review**: union of name-matched and semantic candidates, all shown in the TUI for final accept/reject
 6. **Output**: accepted papers get Jekyll posts + insertion into both SQLite DB and JSON-lines Kaggle file
 

@@ -46,6 +46,32 @@ ARXIV_API = "https://export.arxiv.org/api/query"
 RATE_LIMIT_SECONDS = 0.5
 USER_AGENT = "lpetrov-arxiv-scan/1.0 (mailto:petrov@virginia.edu)"
 
+# Use pi print mode for arXiv AI classification. Keep it ephemeral and
+# tool-free so the classifier only returns text for the prompt we pass in.
+PI_PRINT_CMD = ["pi", "--no-session", "--no-tools", "--no-context-files", "-p"]
+
+
+def run_ai_prompt(prompt: str, timeout: int):
+    """Run an AI classification prompt through pi and return (stdout, error)."""
+    try:
+        result = subprocess.run(
+            PI_PRINT_CMD + [prompt],
+            capture_output=True, text=True, timeout=timeout,
+        )
+    except FileNotFoundError:
+        return "", "no pi CLI"
+    except subprocess.TimeoutExpired:
+        return "", "pi CLI timed out"
+
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip()
+        if detail:
+            detail = detail.splitlines()[-1][:200]
+            return "", f"pi CLI failed: {detail}"
+        return "", f"pi CLI failed with exit code {result.returncode}"
+
+    return result.stdout.strip(), None
+
 
 def _arxiv_request(url):
     return urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
@@ -442,20 +468,13 @@ def _format_paper_desc(p):
 
 
 def _ai_filter_batch(batch, prompt_template):
-    """Send one batch to Claude, return dict of {arxiv_id: decision}."""
+    """Send one batch to pi, return dict of {arxiv_id: decision}."""
     paper_descs = [_format_paper_desc(p) for p in batch]
     full_prompt = prompt_template + "\n".join(paper_descs)
 
-    try:
-        result = subprocess.run(
-            ["claude", "-p", full_prompt],
-            capture_output=True, text=True, timeout=180,
-        )
-        output = result.stdout.strip()
-    except FileNotFoundError:
-        return {p["arxiv_id"]: "ACCEPT" for p in batch}, "no claude CLI"
-    except subprocess.TimeoutExpired:
-        return {p["arxiv_id"]: "ACCEPT" for p in batch}, "timeout"
+    output, err = run_ai_prompt(full_prompt, timeout=180)
+    if err:
+        return {p["arxiv_id"]: "ACCEPT" for p in batch}, err
 
     try:
         json_match = re.search(r"\[.*\]", output, re.DOTALL)
@@ -476,7 +495,7 @@ def _ai_filter_batch(batch, prompt_template):
 
 
 def ai_filter(papers_to_review, config):
-    """Send papers to Claude for filtering, in parallel batches."""
+    """Send papers to pi for filtering, in parallel batches."""
     if not papers_to_review:
         return {}
 

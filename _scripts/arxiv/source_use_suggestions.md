@@ -2,7 +2,7 @@
 
 The curated corpus (~5,200 papers, 3.1 GB of LaTeX source) is uniquely valuable because LaTeX is the semantic source code of mathematical thought — PDFs destroy subscripts, mangle fractions, and lose the boundaries between a passing remark and a rigorous proof.
 
-**Architecture note:** Standard RAG is terrible for mathematics (chunking destroys proof logic, embeddings blur notation). Pure agentic search on 37,000 raw files is too slow. The optimal approach: use scripts **offline** to parse LaTeX into structured databases, then let Claude Code query those. Also, citation graphs are redundant with Google Scholar, and notation harmonization is unnecessary for domain experts.
+**Architecture note:** Standard RAG is terrible for mathematics (chunking destroys proof logic, embeddings blur notation). Pure agentic search on 37,000 raw files is too slow. The optimal approach: use scripts **offline** to parse LaTeX into structured databases, then let pi query those. Also, citation graphs are redundant with Google Scholar, and notation harmonization is unnecessary for domain experts.
 
 ---
 

@@ -40,6 +40,7 @@ from fetch_arxiv import (
     generate_post,
     append_to_kaggle,
     load_processed,
+    run_ai_prompt,
     save_processed,
 )
 
@@ -148,10 +149,10 @@ def fetch_paper(arxiv_id: str) -> dict:
 
 
 def relevance_check(paper: dict) -> tuple[str, str]:
-    """Ask Claude whether this paper belongs in the integrable probability feed.
+    """Ask pi whether this paper belongs in the integrable probability feed.
 
     Returns (decision, reason) where decision is 'ACCEPT' or 'REJECT'.
-    Falls back to ('ACCEPT', '') if claude CLI is unavailable.
+    Falls back to ('ACCEPT', '') if pi CLI is unavailable.
     """
     prompt = (
         "You are reviewing an arXiv paper for inclusion in an integrable probability "
@@ -176,26 +177,19 @@ def relevance_check(paper: dict) -> tuple[str, str]:
         "Example: ACCEPT — paper studies TASEP with step initial condition\n"
         "Example: REJECT — paper is about computer vision, unrelated to integrable probability"
     )
-    try:
-        result = subprocess.run(
-            ["claude", "-p", prompt],
-            capture_output=True, text=True, timeout=60,
-        )
-        output = result.stdout.strip()
-        if output.startswith("ACCEPT"):
-            reason = output[len("ACCEPT"):].strip().lstrip("—-: ")
-            return "ACCEPT", reason
-        elif output.startswith("REJECT"):
-            reason = output[len("REJECT"):].strip().lstrip("—-: ")
-            return "REJECT", reason
-        # Couldn't parse — treat as uncertain
-        return "UNCERTAIN", output[:200]
-    except FileNotFoundError:
-        print("  WARN: claude CLI not found, skipping relevance check")
+    output, err = run_ai_prompt(prompt, timeout=60)
+    if err:
+        print(f"  WARN: {err}, skipping relevance check")
         return "ACCEPT", ""
-    except subprocess.TimeoutExpired:
-        print("  WARN: claude CLI timed out, skipping relevance check")
-        return "ACCEPT", ""
+
+    if output.startswith("ACCEPT"):
+        reason = output[len("ACCEPT"):].strip().lstrip("—-: ")
+        return "ACCEPT", reason
+    elif output.startswith("REJECT"):
+        reason = output[len("REJECT"):].strip().lstrip("—-: ")
+        return "REJECT", reason
+    # Couldn't parse — treat as uncertain
+    return "UNCERTAIN", output[:200]
 
 
 def main():
