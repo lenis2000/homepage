@@ -69,6 +69,8 @@ body{display:flex;flex-direction:column;align-items:center;
 #game-wrap{position:relative;flex:1;min-height:0;width:100%;
   display:flex;align-items:center;justify-content:center;padding:4px 8px 8px}
 #boardC{display:block;touch-action:none;-webkit-user-select:none;user-select:none}
+#boardC:focus{outline:none}
+#boardC:focus-visible{outline:2px solid #ff9100;outline-offset:2px}
 
 #overlay{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;
   flex-direction:column;align-items:center;justify-content:center;
@@ -112,11 +114,12 @@ body{display:flex;flex-direction:column;align-items:center;
 </div>
 
 <div id="game-wrap">
-  <canvas id="boardC" role="application"
-    aria-label="Block puzzle, 10 by 10 grid. Drag pieces from the tray onto the grid to clear rows and columns."></canvas>
+  <canvas id="boardC" role="application" tabindex="0"
+    aria-keyshortcuts="1 2 3 ArrowUp ArrowDown ArrowLeft ArrowRight Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight Enter Space Escape"
+    aria-label="Block puzzle, 10 by 10 grid. Drag pieces from the tray onto the grid to clear rows and columns. Keyboard: press 1, 2, or 3 to select a tray piece; use arrow keys to move it; Shift plus arrows jumps to the farthest valid place; Enter or Space places it."></canvas>
   <div id="overlay">
     <div id="overlay-title">BLOCK PUZZLE</div>
-    <div id="overlay-sub">Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.</div>
+    <div id="overlay-sub">Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Keyboard: <b>1</b>–<b>3</b> select, arrows move, <b>Enter</b> places.</div>
     <div id="overlay-buttons">
       <button id="start-btn" class="overlay-btn">START</button>
       <button id="solution-btn" class="overlay-btn overlay-btn-ghost" hidden>SHOW SOLUTION</button>
@@ -192,6 +195,10 @@ var score = 0;
 var best = parseInt(localStorage.getItem('block-hi') || '0', 10) || 0;
 var state = 'menu'; // 'menu' | 'playing' | 'animating' | 'over' | 'solving'
 var dragState = null;
+// Keyboard placement cursor. Press 1/2/3 to select a tray slot, arrows to
+// move the piece on the board, Shift+arrows to jump to the farthest valid
+// placement in that direction, and Enter/Space to commit.
+var keyboardSelection = null; // { slot, r, c }
 var flash = null;
 // Undo perk: 1 charge max, awarded each time score crosses a 500-point mark.
 // nextUndoAt is monotonic — burning an undo does NOT roll it back, so the
@@ -538,9 +545,62 @@ function drawGhostPiece() {
   }
 }
 
+function drawKeyboardSelection() {
+  if (!keyboardSelection || state !== 'playing' || dragState) return;
+  var p = tray[keyboardSelection.slot];
+  if (!p) return;
+  var r0 = keyboardSelection.r;
+  var c0 = keyboardSelection.c;
+  var ok = isValid(p, r0, c0);
+  var shape = p.shape;
+
+  for (var rr = 0; rr < shape.length; rr++) {
+    for (var cc = 0; cc < shape[rr].length; cc++) {
+      if (!shape[rr][cc]) continue;
+      var br = r0 + rr, bc = c0 + cc;
+      if (br < 0 || br >= ROWS || bc < 0 || bc >= COLS) continue;
+      var gx = boardX + bc * cellSize;
+      var gy = boardY + br * cellSize;
+      ctx.save();
+      ctx.globalAlpha = ok ? 0.62 : 0.38;
+      if (ok) {
+        drawCell(gx, gy, cellSize, p.color);
+      } else {
+        ctx.fillStyle = '#ff1744';
+        ctx.fillRect(gx + 2, gy + 2, cellSize - 4, cellSize - 4);
+      }
+      ctx.restore();
+    }
+  }
+
+  ctx.save();
+  ctx.strokeStyle = ok ? '#ff9100' : '#ff1744';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([Math.max(4, Math.floor(cellSize * 0.18)), Math.max(3, Math.floor(cellSize * 0.12))]);
+  ctx.strokeRect(boardX + c0 * cellSize + 2, boardY + r0 * cellSize + 2,
+                 shape[0].length * cellSize - 4, shape.length * cellSize - 4);
+  ctx.restore();
+}
+
 function drawTraySlots() {
   var w = COLS * cellSize;
   var slotW = w / 3;
+
+  // Keyboard slot focus, if any. This is purely additive; touch dragging
+  // still uses the same tray hit testing and pointer path as before.
+  for (var h = 0; h < 3; h++) {
+    if (!keyboardSelection || keyboardSelection.slot !== h || state !== 'playing' || !tray[h]) continue;
+    var hx = trayX + slotW * h;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,145,0,0.08)';
+    ctx.fillRect(hx + 4, trayY + 6, slotW - 8, trayRowH - 12);
+    ctx.strokeStyle = '#ff9100';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 4]);
+    ctx.strokeRect(hx + 5, trayY + 7, slotW - 10, trayRowH - 14);
+    ctx.restore();
+  }
+
   // Separator lines
   ctx.strokeStyle = 'rgba(255,255,255,0.05)';
   ctx.lineWidth = 1;
@@ -560,6 +620,17 @@ function drawTraySlots() {
     var gray = !canPieceFitAnywhere(p);
     drawPieceInSlot(s, p, trayCellSize, 1.0, gray);
   }
+
+  // Small keyboard labels: 1, 2, 3 select the corresponding tray piece.
+  ctx.save();
+  ctx.font = 'bold ' + Math.max(10, Math.floor(cellSize * 0.34)) + 'px SF Mono, Monaco, Courier New, monospace';
+  ctx.textBaseline = 'top';
+  for (var n = 0; n < 3; n++) {
+    var selected = keyboardSelection && keyboardSelection.slot === n && state === 'playing' && tray[n];
+    ctx.fillStyle = selected ? '#ff9100' : 'rgba(255,255,255,0.28)';
+    ctx.fillText(String(n + 1), trayX + slotW * n + 8, trayY + 8);
+  }
+  ctx.restore();
 }
 
 function drawPieceInSlot(slotIdx, piece, cellPx, alpha, gray) {
@@ -676,6 +747,7 @@ function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawBoardGrid();
   drawPlacedCells();
+  drawKeyboardSelection();
   drawGhostPiece();
   drawTraySlots();
   drawDragged();
@@ -761,6 +833,218 @@ function canPieceFitAnywhere(piece) {
     }
   }
   return false;
+}
+
+// ── Keyboard placement ────────────────────────────────────────────────────
+function clampValue(v, lo, hi) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+function maxTopLeftForPiece(piece) {
+  return {
+    r: Math.max(0, ROWS - piece.shape.length),
+    c: Math.max(0, COLS - piece.shape[0].length)
+  };
+}
+
+function focusCanvas() {
+  if (!canvas || typeof canvas.focus !== 'function') return;
+  try { canvas.focus({ preventScroll: true }); }
+  catch (e) { canvas.focus(); }
+}
+
+function firstAvailableSlot() {
+  for (var s = 0; s < 3; s++) if (tray[s]) return s;
+  return -1;
+}
+
+function findNearestFit(piece, targetR, targetC) {
+  var best = null;
+  var bestScore = Infinity;
+  var limits = maxTopLeftForPiece(piece);
+  for (var r = 0; r <= limits.r; r++) {
+    for (var c = 0; c <= limits.c; c++) {
+      if (!isValid(piece, r, c)) continue;
+      var manhattan = Math.abs(r - targetR) + Math.abs(c - targetC);
+      var euclid = (r - targetR) * (r - targetR) + (c - targetC) * (c - targetC);
+      var scoreHere = manhattan * 1000 + euclid;
+      if (scoreHere < bestScore) {
+        bestScore = scoreHere;
+        best = { r: r, c: c };
+      }
+    }
+  }
+  return best;
+}
+
+function normalizeKeyboardSelection() {
+  if (!keyboardSelection) return false;
+  var p = tray[keyboardSelection.slot];
+  if (!p) {
+    keyboardSelection = null;
+    return false;
+  }
+  var limits = maxTopLeftForPiece(p);
+  keyboardSelection.r = clampValue(keyboardSelection.r, 0, limits.r);
+  keyboardSelection.c = clampValue(keyboardSelection.c, 0, limits.c);
+  return true;
+}
+
+function selectKeyboardSlot(slot) {
+  if (state !== 'playing') return false;
+  if (slot < 0 || slot > 2 || !tray[slot]) return false;
+  clearDragState();
+  var p = tray[slot];
+  var limits = maxTopLeftForPiece(p);
+  var targetR = Math.floor(limits.r / 2);
+  var targetC = Math.floor(limits.c / 2);
+  if (keyboardSelection) {
+    targetR = keyboardSelection.r;
+    targetC = keyboardSelection.c;
+  }
+  var fit = findNearestFit(p, targetR, targetC);
+  if (!fit) {
+    fit = {
+      r: clampValue(targetR, 0, limits.r),
+      c: clampValue(targetC, 0, limits.c)
+    };
+  }
+  keyboardSelection = { slot: slot, r: fit.r, c: fit.c };
+  focusCanvas();
+  draw();
+  return true;
+}
+
+function ensureKeyboardSelection() {
+  if (normalizeKeyboardSelection()) return true;
+  var slot = firstAvailableSlot();
+  if (slot === -1) return false;
+  return selectKeyboardSlot(slot);
+}
+
+function moveKeyboardSelection(dr, dc, jump) {
+  if (state !== 'playing') return;
+  if (!ensureKeyboardSelection()) return;
+  var p = tray[keyboardSelection.slot];
+  var limits = maxTopLeftForPiece(p);
+
+  if (jump) {
+    var startR = keyboardSelection.r;
+    var startC = keyboardSelection.c;
+    var edgeR = startR;
+    var edgeC = startC;
+    var best = isValid(p, startR, startC) ? { r: startR, c: startC } : null;
+    while (true) {
+      var nr = edgeR + dr;
+      var nc = edgeC + dc;
+      if (nr < 0 || nr > limits.r || nc < 0 || nc > limits.c) break;
+      edgeR = nr;
+      edgeC = nc;
+      if (isValid(p, edgeR, edgeC)) best = { r: edgeR, c: edgeC };
+    }
+    if (best) {
+      keyboardSelection.r = best.r;
+      keyboardSelection.c = best.c;
+    } else {
+      // If this particular ray has no legal landing spot, still move the
+      // cursor to the board edge so keyboard exploration remains predictable.
+      keyboardSelection.r = edgeR;
+      keyboardSelection.c = edgeC;
+    }
+  } else {
+    keyboardSelection.r = clampValue(keyboardSelection.r + dr, 0, limits.r);
+    keyboardSelection.c = clampValue(keyboardSelection.c + dc, 0, limits.c);
+  }
+  draw();
+}
+
+function commitKeyboardSelection() {
+  if (state !== 'playing') return false;
+  if (!normalizeKeyboardSelection()) return false;
+  var sel = keyboardSelection;
+  var p = tray[sel.slot];
+  if (!p || !isValid(p, sel.r, sel.c)) {
+    draw();
+    return false;
+  }
+  keyboardSelection = null;
+  return dropPiece(sel.slot, sel.r, sel.c);
+}
+
+function cancelKeyboardSelection() {
+  if (!keyboardSelection) return;
+  keyboardSelection = null;
+  draw();
+}
+
+function isEditableTarget(t) {
+  if (!t) return false;
+  var tag = (t.tagName || '').toUpperCase();
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || t.isContentEditable;
+}
+
+function isNativeActionTarget(t) {
+  if (!t) return false;
+  var tag = (t.tagName || '').toUpperCase();
+  return tag === 'BUTTON' || tag === 'A';
+}
+
+function onKeyDown(e) {
+  if (e.defaultPrevented || e.altKey || e.metaKey || e.ctrlKey) return;
+  if (isEditableTarget(e.target)) return;
+
+  var key = e.key;
+  if (key === 'Spacebar') key = ' ';
+  // Preserve normal keyboard activation for the existing iOS-style buttons
+  // (START, SHOW SOLUTION, undo, back link). Game shortcuts live alongside
+  // them, not instead of them.
+  if (isNativeActionTarget(e.target) && (key === 'Enter' || key === ' ')) return;
+
+  if (state === 'menu') {
+    if (key === 'Enter' || key === ' ') {
+      e.preventDefault();
+      startGame();
+    }
+    return;
+  }
+
+  if (state === 'over') {
+    if (key === 'Enter' || key === ' ') {
+      e.preventDefault();
+      startGame();
+    }
+    return;
+  }
+
+  if (state !== 'playing') return;
+
+  if (key === '1' || key === '2' || key === '3') {
+    e.preventDefault();
+    selectKeyboardSlot(parseInt(key, 10) - 1);
+    return;
+  }
+
+  if (key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight') {
+    e.preventDefault();
+    var dr = 0, dc = 0;
+    if (key === 'ArrowUp') dr = -1;
+    else if (key === 'ArrowDown') dr = 1;
+    else if (key === 'ArrowLeft') dc = -1;
+    else if (key === 'ArrowRight') dc = 1;
+    moveKeyboardSelection(dr, dc, e.shiftKey);
+    return;
+  }
+
+  if (key === 'Enter' || key === ' ') {
+    e.preventDefault();
+    commitKeyboardSelection();
+    return;
+  }
+
+  if (key === 'Escape') {
+    e.preventDefault();
+    cancelKeyboardSelection();
+  }
 }
 
 // ── Commit pipeline ────────────────────────────────────────────────────────
@@ -905,6 +1189,7 @@ function afterClear() {
   }
   // Game over?
   if (isGameOver()) {
+    keyboardSelection = null;
     state = 'over';
     showGameOver();
     refreshUndoBtn();
@@ -912,6 +1197,7 @@ function afterClear() {
     return;
   }
   state = 'playing';
+  normalizeKeyboardSelection();
   refreshUndoBtn();
   draw();
 }
@@ -932,6 +1218,7 @@ function startSolutionPlayback() {
   if (lastRefillSolution.length === 0) return;
   if (solutionPlayback) return;
   dragState = null;
+  keyboardSelection = null;
   flash = null;
   board = cloneBoard(lastRefillBoardSnapshot);
   for (var s = 0; s < 3; s++) {
@@ -1035,6 +1322,7 @@ function onPointerDown(e) {
   var p = tray[slot];
   if (!p) return;
   e.preventDefault();
+  keyboardSelection = null;
   try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
 
   // Compute the pointer's offset inside the piece's bbox in tray-render coords,
@@ -1172,6 +1460,7 @@ function undoMove() {
   flash = null;
   comboFloat = null;
   dragState = null;
+  keyboardSelection = null;
   if (state === 'over') {
     // After game over, undo rewinds the entire 3-piece turn to the moment
     // the tray was dealt — gives the player a fresh shot at the same hand.
@@ -1202,6 +1491,7 @@ function undoMove() {
 }
 
 function showGameOver() {
+  keyboardSelection = null;
   var hasUndo = undoCount > 0 && lastRefillBoardSnapshot && lastRefillTray;
   overlayTitle.textContent = hasUndo ? 'OOPS!' : 'GAME OVER';
   var sub = 'Final score <b>' + score + '</b>&nbsp;&nbsp;Best <b>' + best + '</b>';
@@ -1213,8 +1503,9 @@ function showGameOver() {
 }
 
 function showMenu() {
+  keyboardSelection = null;
   overlayTitle.textContent = 'BLOCK PUZZLE';
-  overlaySub.innerHTML = 'Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Earn 1 undo every <b>500</b> points.';
+  overlaySub.innerHTML = 'Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Keyboard: <b>1</b>–<b>3</b> select, arrows move, <b>Shift</b>+arrows jump.<br>Earn 1 undo every <b>500</b> points.';
   solutionBtn.hidden = true;
   overlay.classList.remove('hidden');
 }
@@ -1236,10 +1527,12 @@ function startGame() {
   undoCount = 0;
   nextUndoAt = UNDO_INTERVAL;
   lastSnapshot = null;
+  keyboardSelection = null;
   refillTray();
   state = 'playing';
   updateScoreUI();
   hideOverlay();
+  focusCanvas();
   draw();
 }
 
@@ -1269,6 +1562,7 @@ function init() {
     if (state === 'over') startSolutionPlayback();
   });
   undoBtn.addEventListener('click', undoMove);
+  document.addEventListener('keydown', onKeyDown);
 
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', function() {
