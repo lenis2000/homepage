@@ -55282,6 +55282,106 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2605.17018": {
+    "date": "2026-05-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.17167": {
+    "date": "2026-05-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.17177": {
+    "date": "2026-05-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.17223": {
+    "date": "2026-05-17",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.17496": {
+    "date": "2026-05-17",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.17680": {
+    "date": "2026-05-17",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.17696": {
+    "date": "2026-05-17",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2605.17725": {
+    "date": "2026-05-18",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.17781": {
+    "date": "2026-05-18",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2605.18286": {
+    "date": "2026-05-18",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.18448": {
+    "date": "2026-05-18",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.18676": {
+    "date": "2026-05-18",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.19011": {
+    "date": "2026-05-18",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.19084": {
+    "date": "2026-05-18",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2605.19292": {
+    "date": "2026-05-19",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.19904": {
+    "date": "2026-05-19",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.19906": {
+    "date": "2026-05-19",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.19934": {
+    "date": "2026-05-19",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.19979": {
+    "date": "2026-05-19",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2605.20116": {
+    "date": "2026-05-19",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
   "alg-geom/9712009": {
     "date": "1997-12-09",
     "decision": "ACCEPT",
