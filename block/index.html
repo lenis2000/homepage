@@ -198,7 +198,6 @@ var dragState = null;
 var TARGET_SCORE_4TRAY = 5000;
 var TARGET_SCORE_5TRAY = 10000;
 var TRAY_SIZES = { three: 3, four: 4, five: 5 };
-var CURRENT_TRAY_SIZE = TRAY_SIZES.three;
 // Keyboard placement cursor. Press 1..N to select a tray slot, arrows to
 // move the piece on the board, Shift+arrows to jump to the farthest valid
 // placement in that direction, and Enter/Space to commit.
@@ -283,24 +282,10 @@ function traySizeForScore(scoreValue) {
   return TRAY_SIZES.three;
 }
 
-function trayDifficultyTier(scoreValue) {
-  if (scoreValue >= TARGET_SCORE_5TRAY) return 2;
-  if (scoreValue >= TARGET_SCORE_4TRAY) return 1;
-  return 0;
-}
-
 function trayBonusDurationForScore(scoreValue) {
   if (scoreValue >= TARGET_SCORE_5TRAY) return 15000;
   if (scoreValue >= TARGET_SCORE_4TRAY) return 20000;
   return 28000;
-}
-
-function currentTraySize() {
-  return tray.length;
-}
-
-function refreshCurrentTraySize() {
-  CURRENT_TRAY_SIZE = traySizeForScore(score);
 }
 
 // ── Refill solvability check ───────────────────────────────────────────────
@@ -444,22 +429,16 @@ function scoreCandidate(moves, occ) {
   };
 }
 
-function pickTrayCandidate(candidates, difficulty) {
+function pickTrayCandidate(candidates) {
   if (candidates.length <= 1) return candidates[0];
-  candidates.sort(function(a, b) { return a.ease - b.ease; }); // low ease -> tight
+  candidates.sort(function(a, b) { return a.ease - b.ease; }); // low ease -> tighter
+
+  // Single tray profile (no early/late mode switch): pick from the
+  // middle band for a consistent challenge.
   var n = candidates.length;
-  var lo = 0;
-  var hi = 0;
-  if (difficulty <= 0) {
-    lo = Math.floor(n * 0.55);
-    hi = n;
-  } else if (difficulty === 1) {
-    lo = Math.floor(n * 0.30);
-    hi = Math.floor(n * 0.80);
-  } else {
-    hi = Math.max(1, Math.floor(n * 0.45));
-    lo = 0;
-  }
+  var lo = Math.floor(n * 0.35);
+  var hi = Math.floor(n * 0.75);
+
   if (hi <= lo) {
     lo = 0;
     hi = n;
@@ -475,11 +454,9 @@ function pickTrayCandidate(candidates, difficulty) {
 // can replay it verbatim after a game over.
 function refillTray() {
   var size = traySizeForScore(score);
-  CURRENT_TRAY_SIZE = size;
   tray = new Array(size).fill(null);
 
   var occ = boardOccupancy();
-  var difficulty = trayDifficultyTier(score);
   var maxAttempts = size >= 5 ? 160 : 120;
   var budgetBase = solveBudgetForTraySize(size);
   var candidates = [];
@@ -507,7 +484,7 @@ function refillTray() {
 
   var chosen;
   if (candidates.length > 0) {
-    chosen = pickTrayCandidate(candidates, difficulty);
+    chosen = pickTrayCandidate(candidates);
     for (var i2 = 0; i2 < size; i2++) tray[i2] = chosen.tray[i2];
     lastRefillSolution = chosen.moves;
   } else {
@@ -1766,8 +1743,7 @@ function startGame() {
   // Always start fresh, whether coming from the menu or from game-over.
   stopSolutionPlayback();
   board = makeBoard();
-  CURRENT_TRAY_SIZE = traySizeForScore(0);
-  tray = new Array(CURRENT_TRAY_SIZE).fill(null);
+  tray = new Array(traySizeForScore(0)).fill(null);
   score = 0;
   lastRefillBoardSnapshot = null;
   lastRefillSolution = null;
@@ -1781,7 +1757,6 @@ function startGame() {
   nextUndoAt = UNDO_INTERVAL;
   lastSnapshot = null;
   keyboardSelection = null;
-  refreshCurrentTraySize();
   refillTray();
   state = 'playing';
   updateScoreUI();
