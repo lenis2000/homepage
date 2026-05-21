@@ -115,11 +115,11 @@ body{display:flex;flex-direction:column;align-items:center;
 
 <div id="game-wrap">
   <canvas id="boardC" role="application" tabindex="0"
-    aria-keyshortcuts="1 2 3 ArrowUp ArrowDown ArrowLeft ArrowRight Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight Enter Space Escape"
-    aria-label="Block puzzle, 10 by 10 grid. Drag pieces from the tray onto the grid to clear rows and columns. Keyboard: press 1, 2, or 3 to select a tray piece; use arrow keys to move it; Shift plus arrows jumps to the farthest valid place; Enter or Space places it."></canvas>
+    aria-keyshortcuts="1 2 3 4 5 ArrowUp ArrowDown ArrowLeft ArrowRight Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight Enter Space Escape"
+    aria-label="Block puzzle, 10 by 10 grid. Drag pieces from the tray onto the grid to clear rows and columns. Keyboard: press number keys to select tray pieces; use arrow keys to move it; Shift plus arrows jumps to the farthest valid place; Enter or Space places it."></canvas>
   <div id="overlay">
     <div id="overlay-title">BLOCK PUZZLE</div>
-    <div id="overlay-sub">Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Keyboard: <b>1</b>–<b>3</b> select, arrows move, <b>Enter</b> places.</div>
+    <div id="overlay-sub">Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Keyboard: <b>1</b>–<b>5</b> select, arrows move, <b>Enter</b> places.</div>
     <div id="overlay-buttons">
       <button id="start-btn" class="overlay-btn">START</button>
       <button id="solution-btn" class="overlay-btn overlay-btn-ghost" hidden>SHOW SOLUTION</button>
@@ -190,12 +190,16 @@ var CATALOG = [
 
 // ── Game state ─────────────────────────────────────────────────────────────
 var board = makeBoard();
-var tray = [null, null, null];
+var tray = [];
 var score = 0;
 var best = parseInt(localStorage.getItem('block-hi') || '0', 10) || 0;
 var state = 'menu'; // 'menu' | 'playing' | 'animating' | 'over' | 'solving'
 var dragState = null;
-// Keyboard placement cursor. Press 1/2/3 to select a tray slot, arrows to
+var TARGET_SCORE_4TRAY = 5000;
+var TARGET_SCORE_5TRAY = 10000;
+var TRAY_SIZES = { three: 3, four: 4, five: 5 };
+var CURRENT_TRAY_SIZE = TRAY_SIZES.three;
+// Keyboard placement cursor. Press 1..N to select a tray slot, arrows to
 // move the piece on the board, Shift+arrows to jump to the farthest valid
 // placement in that direction, and Enter/Space to commit.
 var keyboardSelection = null; // { slot, r, c }
@@ -206,6 +210,13 @@ var flash = null;
 var UNDO_INTERVAL = 500;
 var undoCount = 1;
 var nextUndoAt = UNDO_INTERVAL;
+// Whole-tray tempo bonus: every freshly dealt tray gets a decaying score
+// bonus. Running out of time only drops the bonus to zero; it never kills the
+// player or forces a move.
+var TRAY_BONUS_MAX = 60;
+var trayBonusStartedAt = 0;
+var trayBonusDurationMs = 0;
+var bonusRaf = 0;
 // Snapshot of game state captured before each placement, used by the undo
 // button. Excludes nextUndoAt by design (it's monotonic, see above).
 var lastSnapshot = null;
@@ -215,6 +226,8 @@ var lastRefillBoardSnapshot = null;
 var lastRefillSolution = null;
 var lastRefillTray = null;
 var lastRefillScore = 0;
+var lastRefillBonusStartedAt = 0;
+var lastRefillBonusDurationMs = 0;
 var solutionPlayback = null; // { moves, index, timer, placedCells, highlightT0 }
 
 // Layout (computed by resize())
@@ -264,9 +277,35 @@ function randPiece() {
   return { shape: shape, color: color };
 }
 
+function traySizeForScore(scoreValue) {
+  if (scoreValue >= TARGET_SCORE_5TRAY) return TRAY_SIZES.five;
+  if (scoreValue >= TARGET_SCORE_4TRAY) return TRAY_SIZES.four;
+  return TRAY_SIZES.three;
+}
+
+function trayDifficultyTier(scoreValue) {
+  if (scoreValue >= TARGET_SCORE_5TRAY) return 2;
+  if (scoreValue >= TARGET_SCORE_4TRAY) return 1;
+  return 0;
+}
+
+function trayBonusDurationForScore(scoreValue) {
+  if (scoreValue >= TARGET_SCORE_5TRAY) return 15000;
+  if (scoreValue >= TARGET_SCORE_4TRAY) return 20000;
+  return 28000;
+}
+
+function currentTraySize() {
+  return tray.length;
+}
+
+function refreshCurrentTraySize() {
+  CURRENT_TRAY_SIZE = traySizeForScore(score);
+}
+
 // ── Refill solvability check ───────────────────────────────────────────────
 // A newly drawn tray must be "solvable" on the current board: there has to
-// exist SOME order in which all three pieces can be placed, allowing row/col
+// exist SOME order in which all tray pieces can be placed, allowing row/col
 // clears between placements to free space. If a random draw fails, we redraw.
 function boardOccupancy() {
   var occ = new Uint8Array(ROWS * COLS);
@@ -360,47 +399,142 @@ function solveAllOcc(occ, pieces, budget) {
   return null;
 }
 
+function buildRandomTray(size) {
+  var parts = [];
+  for (var i = 0; i < size; i++) parts.push(randPiece());
+  return parts;
+}
+
+function solveBudgetForTraySize(size) {
+  if (size >= 5) return 140000;
+  if (size >= 4) return 100000;
+  return 60000;
+}
+
+function countPlacementsForPieceOcc(occ, piece) {
+  var shape = piece.shape;
+  var sh = shape.length, sw = shape[0].length;
+  var count = 0;
+  for (var r = 0; r + sh <= ROWS; r++) {
+    for (var c = 0; c + sw <= COLS; c++) if (isValidOcc(occ, shape, r, c)) count++;
+  }
+  return count;
+}
+
+function scoreCandidate(moves, occ) {
+  var nocc = new Uint8Array(occ);
+  var total = 0;
+  var minFit = Infinity;
+  var forced = 0;
+  for (var i = 0; i < moves.length; i++) {
+    var move = moves[i];
+    var fit = countPlacementsForPieceOcc(nocc, move.piece);
+    if (fit <= 0) return { ease: 0, minFit: 0, forced: 0, mean: 0 };
+    total += fit;
+    if (fit < minFit) minFit = fit;
+    if (fit <= 2) forced++;
+    placeOcc(nocc, move.piece.shape, move.r, move.c);
+    clearLinesOcc(nocc);
+  }
+  return {
+    ease: total,
+    minFit: minFit,
+    forced: forced,
+    mean: total / moves.length
+  };
+}
+
+function pickTrayCandidate(candidates, difficulty) {
+  if (candidates.length <= 1) return candidates[0];
+  candidates.sort(function(a, b) { return a.ease - b.ease; }); // low ease -> tight
+  var n = candidates.length;
+  var lo = 0;
+  var hi = 0;
+  if (difficulty <= 0) {
+    lo = Math.floor(n * 0.55);
+    hi = n;
+  } else if (difficulty === 1) {
+    lo = Math.floor(n * 0.30);
+    hi = Math.floor(n * 0.80);
+  } else {
+    hi = Math.max(1, Math.floor(n * 0.45));
+    lo = 0;
+  }
+  if (hi <= lo) {
+    lo = 0;
+    hi = n;
+  }
+  var idx = lo + Math.floor(Math.random() * (hi - lo));
+  return candidates[idx];
+}
+
 // Draws random pieces and retries until the DFS finds a placement sequence
 // for the whole tray on the current board. Largest-first ordering prunes
 // aggressively, so most draws accept on the first attempt. We also stash a
 // deep copy of the board and the DFS-returned move list so "SHOW SOLUTION"
 // can replay it verbatim after a game over.
 function refillTray() {
+  var size = traySizeForScore(score);
+  CURRENT_TRAY_SIZE = size;
+  tray = new Array(size).fill(null);
+
   var occ = boardOccupancy();
-  for (var attempt = 0; attempt < 80; attempt++) {
-    var p0 = randPiece(), p1 = randPiece(), p2 = randPiece();
-    var trial = [p0, p1, p2];
-    trial.sort(function(a, b) {
+  var difficulty = trayDifficultyTier(score);
+  var maxAttempts = size >= 5 ? 160 : 120;
+  var budgetBase = solveBudgetForTraySize(size);
+  var candidates = [];
+
+  for (var attempt = 0; attempt < maxAttempts; attempt++) {
+    var parts = buildRandomTray(size);
+    var trial = parts.slice().sort(function(a, b) {
       return countCells(b.shape) - countCells(a.shape);
     });
-    var budget = { n: 60000 };
+    var budget = { n: budgetBase };
     var moves = solveAllOcc(occ, trial, budget);
-    if (moves !== null) {
-      tray[0] = p0; tray[1] = p1; tray[2] = p2;
-      lastRefillBoardSnapshot = cloneBoard(board);
-      lastRefillSolution = moves;
-      lastRefillTray = [p0, p1, p2];
-      lastRefillScore = score;
-      return;
-    }
+    if (moves === null) continue;
+    var scoreStats = scoreCandidate(moves, occ);
+    if (!scoreStats || scoreStats.ease <= 0) continue;
+    candidates.push({
+      tray: parts,
+      moves: moves,
+      ease: scoreStats.ease,
+      minFit: scoreStats.minFit,
+      forced: scoreStats.forced,
+      mean: scoreStats.mean
+    });
+    if (candidates.length >= 12) break;
   }
-  // Fallback after many rejections: three 1×1 pieces always fit as long as
-  // there are ≥3 empty cells on the board.
-  var dot = [[1]];
-  var f0 = { shape: dot, color: Math.floor(Math.random() * PALETTE.length) };
-  var f1 = { shape: dot, color: Math.floor(Math.random() * PALETTE.length) };
-  var f2 = { shape: dot, color: Math.floor(Math.random() * PALETTE.length) };
-  tray[0] = f0; tray[1] = f1; tray[2] = f2;
+
+  var chosen;
+  if (candidates.length > 0) {
+    chosen = pickTrayCandidate(candidates, difficulty);
+    for (var i2 = 0; i2 < size; i2++) tray[i2] = chosen.tray[i2];
+    lastRefillSolution = chosen.moves;
+  } else {
+    // Fallback after many rejections: use 1×1 dots and still keep the game moving.
+    // This is guaranteed solvable if at least `size` cells remain.
+    var dot = [[1]];
+    var fallback = [];
+    for (var f = 0; f < size; f++) {
+      fallback.push({ shape: dot, color: Math.floor(Math.random() * PALETTE.length) });
+    }
+    for (var f2 = 0; f2 < size; f2++) tray[f2] = fallback[f2];
+    lastRefillSolution = solveAllOcc(occ, fallback.slice(), { n: 20000 + size * 10000 });
+  }
+
   lastRefillBoardSnapshot = cloneBoard(board);
-  lastRefillSolution = solveAllOcc(occ, [f0, f1, f2], { n: 20000 });
-  lastRefillTray = [f0, f1, f2];
+  lastRefillTray = tray.slice();
   lastRefillScore = score;
+  lastRefillBonusStartedAt = trayBonusStartedAt;
+  lastRefillBonusDurationMs = trayBonusDurationMs;
+  trayBonusStartedAt = performance.now();
+  trayBonusDurationMs = trayBonusDurationForScore(score);
+  startBonusTicker();
 }
 
 function prefersReducedMotion() {
   return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
-
 // ── Layout / sizing ────────────────────────────────────────────────────────
 function resize() {
   var dpr = Math.max(1, window.devicePixelRatio || 1);
@@ -409,20 +543,22 @@ function resize() {
   var cssW = Math.max(200, Math.floor(rect.width));
   var cssH = Math.max(200, Math.floor(rect.height));
 
-  // Board = 10x10 cells. Tray region below = ~3.6 cells tall.
+  // Board = 10x10 cells, tray region below with height depending on tray width.
   // Pick cellSize that fits both horizontally and vertically.
+  var trayLen = Math.max(1, tray.length);
+  var trayRowUnits = trayLen >= 5 ? 4.55 : (trayLen >= 4 ? 4.2 : 3.8);
   var maxByW = cssW / COLS;
-  var maxByH = cssH / (ROWS + 3.8);
+  var maxByH = cssH / (ROWS + trayRowUnits);
   cellSize = Math.max(14, Math.floor(Math.min(maxByW, maxByH)));
 
   var boardSize = cellSize * COLS;
-  trayRowH = Math.floor(cellSize * 3.4);
+  trayRowH = Math.floor(cellSize * trayRowUnits);
 
   // Tray cell size must fit the worst-case piece (5-cell straights and 3x3
-  // square) inside one of three slots. slotW = boardSize / 3 ≈ 3.33*cellSize.
+  // square) inside one tray slot. slotW = boardSize / trayLen.
   // Longest piece is 5 cells → trayCell * 5 ≤ slotW * 0.88 (padding). Also
   // vertically: trayCell * 5 ≤ trayRowH * 0.88.
-  var slotW = boardSize / 3;
+  var slotW = boardSize / trayLen;
   var maxTray = Math.floor(Math.min(slotW, trayRowH) * 0.88 / 5);
   trayCellSize = Math.max(8, maxTray);
   var canvasW = boardSize;
@@ -584,11 +720,12 @@ function drawKeyboardSelection() {
 
 function drawTraySlots() {
   var w = COLS * cellSize;
-  var slotW = w / 3;
+  var slotCount = Math.max(1, tray.length);
+  var slotW = w / slotCount;
 
   // Keyboard slot focus, if any. This is purely additive; touch dragging
   // still uses the same tray hit testing and pointer path as before.
-  for (var h = 0; h < 3; h++) {
+  for (var h = 0; h < slotCount; h++) {
     if (!keyboardSelection || keyboardSelection.slot !== h || state !== 'playing' || !tray[h]) continue;
     var hx = trayX + slotW * h;
     ctx.save();
@@ -604,14 +741,14 @@ function drawTraySlots() {
   // Separator lines
   ctx.strokeStyle = 'rgba(255,255,255,0.05)';
   ctx.lineWidth = 1;
-  for (var i = 1; i < 3; i++) {
+  for (var i = 1; i < slotCount; i++) {
     var sx = trayX + slotW * i + 0.5;
     ctx.beginPath();
     ctx.moveTo(sx, trayY + 6);
     ctx.lineTo(sx, trayY + trayRowH - 6);
     ctx.stroke();
   }
-  for (var s = 0; s < 3; s++) {
+  for (var s = 0; s < slotCount; s++) {
     var p = tray[s];
     if (!p) continue;
     if (dragState && dragState.slot === s) continue;
@@ -621,21 +758,57 @@ function drawTraySlots() {
     drawPieceInSlot(s, p, trayCellSize, 1.0, gray);
   }
 
-  // Small keyboard labels: 1, 2, 3 select the corresponding tray piece.
+  // Small keyboard labels: 1, 2, ... select the corresponding tray piece.
   ctx.save();
   ctx.font = 'bold ' + Math.max(10, Math.floor(cellSize * 0.34)) + 'px SF Mono, Monaco, Courier New, monospace';
   ctx.textBaseline = 'top';
-  for (var n = 0; n < 3; n++) {
+  for (var n = 0; n < slotCount; n++) {
     var selected = keyboardSelection && keyboardSelection.slot === n && state === 'playing' && tray[n];
     ctx.fillStyle = selected ? '#ff9100' : 'rgba(255,255,255,0.28)';
     ctx.fillText(String(n + 1), trayX + slotW * n + 8, trayY + 8);
   }
   ctx.restore();
+  drawTrayBonus();
+}
+
+function drawTrayBonus() {
+  if (!tray.length) return;
+  var w = COLS * cellSize;
+  var rem = trayBonusRemaining();
+  var bonusText = 'BONUS ' + rem;
+  var maxW = w - 8;
+  var barH = Math.max(3, Math.floor(cellSize * 0.16));
+  var barY = trayY + trayRowH - barH - 4;
+  var barX = trayX + 4;
+  var barW = maxW;
+  var fillFrac = rem / TRAY_BONUS_MAX;
+  if (fillFrac < 0) fillFrac = 0;
+  if (fillFrac > 1) fillFrac = 1;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,0.09)';
+  ctx.fillRect(barX, barY, barW, barH);
+  if (fillFrac > 0) {
+    var grad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    grad.addColorStop(0, '#ffb74d');
+    grad.addColorStop(1, '#ff9100');
+    ctx.fillStyle = grad;
+    ctx.fillRect(barX + 1, barY + 1, Math.max(0, Math.floor((barW - 2) * fillFrac), 0), barH - 2);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctx.strokeRect(barX, barY, barW, barH);
+
+  ctx.fillStyle = '#ff9100';
+  ctx.font = 'bold ' + Math.max(9, Math.floor(cellSize * 0.28)) + 'px SF Mono, Monaco, Courier New, monospace';
+  ctx.textBaseline = 'top';
+  ctx.fillText(bonusText, barX + 3, barY - Math.max(8, Math.floor(cellSize * 0.28)));
+  ctx.restore();
 }
 
 function drawPieceInSlot(slotIdx, piece, cellPx, alpha, gray) {
   var w = COLS * cellSize;
-  var slotW = w / 3;
+  var slotCount = Math.max(1, tray.length);
+  var slotW = w / slotCount;
   var cx = trayX + slotW * slotIdx + slotW / 2;
   var cy = trayY + trayRowH / 2;
   var sw = piece.shape[0].length * cellPx;
@@ -814,7 +987,7 @@ function clearLines(rows, cols) {
 }
 
 function isGameOver() {
-  for (var s = 0; s < 3; s++) {
+  for (var s = 0; s < tray.length; s++) {
     var p = tray[s];
     if (!p) continue;
     for (var r = 0; r < ROWS; r++) {
@@ -822,6 +995,13 @@ function isGameOver() {
         if (isValid(p, r, c)) return false;
       }
     }
+  }
+  return true;
+}
+
+function isTrayEmpty() {
+  for (var i = 0; i < tray.length; i++) {
+    if (tray[i] !== null) return false;
   }
   return true;
 }
@@ -854,7 +1034,7 @@ function focusCanvas() {
 }
 
 function firstAvailableSlot() {
-  for (var s = 0; s < 3; s++) if (tray[s]) return s;
+  for (var s = 0; s < tray.length; s++) if (tray[s]) return s;
   return -1;
 }
 
@@ -892,7 +1072,7 @@ function normalizeKeyboardSelection() {
 
 function selectKeyboardSlot(slot) {
   if (state !== 'playing') return false;
-  if (slot < 0 || slot > 2 || !tray[slot]) return false;
+  if (slot < 0 || slot >= tray.length || !tray[slot]) return false;
   clearDragState();
   var p = tray[slot];
   var limits = maxTopLeftForPiece(p);
@@ -1018,10 +1198,13 @@ function onKeyDown(e) {
 
   if (state !== 'playing') return;
 
-  if (key === '1' || key === '2' || key === '3') {
-    e.preventDefault();
-    selectKeyboardSlot(parseInt(key, 10) - 1);
-    return;
+  if (key.length === 1 && key >= '1' && key <= '9') {
+    var slotIdx = parseInt(key, 10) - 1;
+    if (slotIdx >= 0 && slotIdx < tray.length) {
+      e.preventDefault();
+      selectKeyboardSlot(slotIdx);
+      return;
+    }
   }
 
   if (key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight') {
@@ -1058,10 +1241,14 @@ function dropPiece(slot, r, c) {
     board: cloneBoard(board),
     tray: tray.slice(),
     score: score,
+    trayBonusStartedAt: trayBonusStartedAt,
+    trayBonusDurationMs: trayBonusDurationMs,
     refillBoard: lastRefillBoardSnapshot ? cloneBoard(lastRefillBoardSnapshot) : null,
     refillSolution: lastRefillSolution,
     refillTray: lastRefillTray ? lastRefillTray.slice() : null,
-    refillScore: lastRefillScore
+    refillScore: lastRefillScore,
+    refillBonusStartedAt: lastRefillBonusStartedAt,
+    refillBonusDurationMs: lastRefillBonusDurationMs
   };
   placePiece(p, r, c);
   tray[slot] = null;
@@ -1177,8 +1364,8 @@ function animateFlash(now) {
 }
 
 function afterClear() {
-  // Refill if tray empty
-  if (tray[0] === null && tray[1] === null && tray[2] === null) {
+  if (isTrayEmpty()) {
+    awardTrayBonus();
     refillTray();
   }
   // Update best
@@ -1189,6 +1376,7 @@ function afterClear() {
   }
   // Game over?
   if (isGameOver()) {
+    stopBonusTicker();
     keyboardSelection = null;
     state = 'over';
     showGameOver();
@@ -1205,8 +1393,8 @@ function afterClear() {
 // ── Solution playback ─────────────────────────────────────────────────────
 // "SHOW SOLUTION" on the game-over overlay replays the DFS-found placement
 // sequence from the moment the current tray was dealt. The board is reset to
-// the snapshot taken at refill, the tray is repopulated with the three
-// solution pieces in order, then a rAF loop drops each piece with a short
+// the snapshot taken at refill, the tray is repopulated with the tray solution
+// pieces in order, then a rAF loop drops each piece with a short
 // fading white highlight on the just-placed cells.
 var PLAYBACK_STEP_MS = 850;
 var PLAYBACK_HIGHLIGHT_MS = 520;
@@ -1220,10 +1408,10 @@ function startSolutionPlayback() {
   dragState = null;
   keyboardSelection = null;
   flash = null;
+  stopBonusTicker();
   board = cloneBoard(lastRefillBoardSnapshot);
-  for (var s = 0; s < 3; s++) {
-    tray[s] = (s < lastRefillSolution.length) ? lastRefillSolution[s].piece : null;
-  }
+  tray = [];
+  for (var s = 0; s < lastRefillSolution.length; s++) tray[s] = lastRefillSolution[s].piece;
   solutionPlayback = {
     moves: lastRefillSolution,
     index: 0,
@@ -1307,10 +1495,11 @@ function canvasPos(e) {
 
 function hitTestTray(x, y) {
   if (y < trayY || y > trayY + trayRowH) return -1;
+  var slotCount = Math.max(1, tray.length);
   var w = COLS * cellSize;
-  var slotW = w / 3;
+  var slotW = w / slotCount;
   var idx = Math.floor(x / slotW);
-  if (idx < 0 || idx > 2) return -1;
+  if (idx < 0 || idx >= slotCount) return -1;
   return idx;
 }
 
@@ -1329,7 +1518,8 @@ function onPointerDown(e) {
   // then rescale to board cellSize so the rendered floating piece matches the
   // board grid pitch.
   var w = COLS * cellSize;
-  var slotW = w / 3;
+  var slotCount = Math.max(1, tray.length);
+  var slotW = w / slotCount;
   var sw = p.shape[0].length, sh = p.shape.length;
   var trayCX = trayX + slotW * slot + slotW / 2;
   var trayCY = trayY + trayRowH / 2;
@@ -1412,6 +1602,7 @@ function onVisibilityChange() {
   // Coming back from background. Belt and braces: iOS may have killed the
   // pointer session and/or paused the rAF chain.
   clearDragState();
+  stopBonusTicker();
   if (state === 'animating') {
     // The rAF that would normally finish the line-clear burst may never
     // fire. Skip to the post-clear state so the player isn't stuck.
@@ -1426,7 +1617,52 @@ function onVisibilityChange() {
     refreshUndoBtn();
   }
   resize();
+  if (state === 'playing' || state === 'animating') startBonusTicker();
   draw();
+}
+
+function trayBonusRemaining() {
+  if (!trayBonusStartedAt || trayBonusDurationMs <= 0) return 0;
+  var elapsed = performance.now() - trayBonusStartedAt;
+  if (elapsed <= 0) return TRAY_BONUS_MAX;
+  if (elapsed >= trayBonusDurationMs) return 0;
+  var frac = 1 - elapsed / trayBonusDurationMs;
+  return Math.max(0, Math.round(TRAY_BONUS_MAX * frac));
+}
+
+function stopBonusTicker() {
+  if (!bonusRaf) return;
+  cancelAnimationFrame(bonusRaf);
+  bonusRaf = 0;
+}
+
+function startBonusTicker() {
+  if (bonusRaf || trayBonusDurationMs <= 0 || trayBonusStartedAt <= 0) return;
+  var tick = function() {
+    if (!trayBonusStartedAt || state === 'menu' || state === 'over' || state === 'solving') {
+      bonusRaf = 0;
+      return;
+    }
+    draw();
+    if (trayBonusRemaining() > 0) {
+      bonusRaf = requestAnimationFrame(tick);
+    } else {
+      bonusRaf = 0;
+      updateScoreUI();
+    }
+  };
+  bonusRaf = requestAnimationFrame(tick);
+}
+
+function awardTrayBonus() {
+  if (!trayBonusStartedAt || trayBonusDurationMs <= 0) return;
+  var bonus = trayBonusRemaining();
+  if (bonus > 0) {
+    score += bonus;
+    updateScoreUI();
+  }
+  trayBonusStartedAt = 0;
+  trayBonusDurationMs = 0;
 }
 
 // ── UI wiring ──────────────────────────────────────────────────────────────
@@ -1462,35 +1698,44 @@ function undoMove() {
   dragState = null;
   keyboardSelection = null;
   if (state === 'over') {
-    // After game over, undo rewinds the entire 3-piece turn to the moment
-    // the tray was dealt — gives the player a fresh shot at the same hand.
+    // After game over, undo rewinds the entire tray turn to the moment it was
+    // dealt — gives the player a fresh shot at the same hand.
     if (!lastRefillBoardSnapshot || !lastRefillTray) return;
     board = cloneBoard(lastRefillBoardSnapshot);
     tray = lastRefillTray.slice();
     score = lastRefillScore;
-    // Refill globals already correspond to the restored moment — leave them.
+    trayBonusStartedAt = lastRefillBonusStartedAt;
+    trayBonusDurationMs = lastRefillBonusDurationMs;
+    // Refill globals already correspond to the restored moment.
   } else {
     // Mid-game: rewind only the last placement.
     if (!lastSnapshot) return;
     board = cloneBoard(lastSnapshot.board);
     tray = lastSnapshot.tray.slice();
     score = lastSnapshot.score;
+    trayBonusStartedAt = lastSnapshot.trayBonusStartedAt;
+    trayBonusDurationMs = lastSnapshot.trayBonusDurationMs;
     lastRefillBoardSnapshot = lastSnapshot.refillBoard
       ? cloneBoard(lastSnapshot.refillBoard) : null;
     lastRefillSolution = lastSnapshot.refillSolution;
     lastRefillTray = lastSnapshot.refillTray
       ? lastSnapshot.refillTray.slice() : null;
     lastRefillScore = lastSnapshot.refillScore;
+    lastRefillBonusStartedAt = lastSnapshot.refillBonusStartedAt;
+    lastRefillBonusDurationMs = lastSnapshot.refillBonusDurationMs;
   }
   lastSnapshot = null;
   undoCount--;
   state = 'playing';
+  stopBonusTicker();
+  startBonusTicker();
   hideOverlay();
   updateScoreUI();
   draw();
 }
 
 function showGameOver() {
+  stopBonusTicker();
   keyboardSelection = null;
   var hasUndo = undoCount > 0 && lastRefillBoardSnapshot && lastRefillTray;
   overlayTitle.textContent = hasUndo ? 'OOPS!' : 'GAME OVER';
@@ -1503,9 +1748,12 @@ function showGameOver() {
 }
 
 function showMenu() {
+  stopBonusTicker();
   keyboardSelection = null;
+  trayBonusStartedAt = 0;
+  trayBonusDurationMs = 0;
   overlayTitle.textContent = 'BLOCK PUZZLE';
-  overlaySub.innerHTML = 'Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Keyboard: <b>1</b>–<b>3</b> select, arrows move, <b>Shift</b>+arrows jump.<br>Start with <b>1</b> undo; recharge every <b>500</b> points.';
+  overlaySub.innerHTML = 'Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Keyboard: <b>1</b>–<b>5</b> select, arrows move, <b>Shift</b>+arrows jump.<br>Start with <b>1</b> undo; recharge every <b>500</b> points.<br>Finish each tray before time ends for bonus.';
   solutionBtn.hidden = true;
   overlay.classList.remove('hidden');
 }
@@ -1518,16 +1766,22 @@ function startGame() {
   // Always start fresh, whether coming from the menu or from game-over.
   stopSolutionPlayback();
   board = makeBoard();
-  tray = [null, null, null];
+  CURRENT_TRAY_SIZE = traySizeForScore(0);
+  tray = new Array(CURRENT_TRAY_SIZE).fill(null);
   score = 0;
   lastRefillBoardSnapshot = null;
   lastRefillSolution = null;
   lastRefillTray = null;
   lastRefillScore = 0;
+  lastRefillBonusStartedAt = 0;
+  lastRefillBonusDurationMs = 0;
+  trayBonusStartedAt = 0;
+  trayBonusDurationMs = 0;
   undoCount = 1;
   nextUndoAt = UNDO_INTERVAL;
   lastSnapshot = null;
   keyboardSelection = null;
+  refreshCurrentTraySize();
   refillTray();
   state = 'playing';
   updateScoreUI();
