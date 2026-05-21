@@ -200,11 +200,11 @@ var dragState = null;
 // placement in that direction, and Enter/Space to commit.
 var keyboardSelection = null; // { slot, r, c }
 var flash = null;
-// Undo perk: 1 charge max, awarded each time score crosses a 500-point mark.
-// nextUndoAt is monotonic — burning an undo does NOT roll it back, so the
-// player must reach the next 500 mark to recharge.
+// Undo perk: start each game with 1 charge, then recharge at each 500-point
+// mark. Capped at 1; nextUndoAt is monotonic — burning an undo does NOT roll
+// it back, so the player must reach the next 500 mark to recharge.
 var UNDO_INTERVAL = 500;
-var undoCount = 0;
+var undoCount = 1;
 var nextUndoAt = UNDO_INTERVAL;
 // Snapshot of game state captured before each placement, used by the undo
 // button. Excludes nextUndoAt by design (it's monotonic, see above).
@@ -1505,7 +1505,7 @@ function showGameOver() {
 function showMenu() {
   keyboardSelection = null;
   overlayTitle.textContent = 'BLOCK PUZZLE';
-  overlaySub.innerHTML = 'Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Keyboard: <b>1</b>–<b>3</b> select, arrows move, <b>Shift</b>+arrows jump.<br>Earn 1 undo every <b>500</b> points.';
+  overlaySub.innerHTML = 'Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Keyboard: <b>1</b>–<b>3</b> select, arrows move, <b>Shift</b>+arrows jump.<br>Start with <b>1</b> undo; recharge every <b>500</b> points.';
   solutionBtn.hidden = true;
   overlay.classList.remove('hidden');
 }
@@ -1524,7 +1524,7 @@ function startGame() {
   lastRefillSolution = null;
   lastRefillTray = null;
   lastRefillScore = 0;
-  undoCount = 0;
+  undoCount = 1;
   nextUndoAt = UNDO_INTERVAL;
   lastSnapshot = null;
   keyboardSelection = null;
