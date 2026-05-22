@@ -34,6 +34,7 @@ a11y-description: "Interactive visualization of t-embeddings of the Aztec diamon
       <li><em>Bernoulli (p, v₁, v₂)</em>: Weight = v₁ with probability p, otherwise v₂.</li>
       <li><em>Exponential (λ)</em>: Exponential distribution with rate λ.</li>
       <li><em>Pareto (α, x_min)</em>: Pareto distribution with shape α and scale x_min.</li>
+      <li><em>Heavy tails</em>: Pareto power-law regime with α &lt; 1 (infinite mean; rare very large weights).</li>
       <li><em>Geometric (p)</em>: Geometric distribution with success probability p (integer-valued).</li>
     </ul>
   </li>
@@ -282,6 +283,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
   <li><em>Bernoulli</em>: $w = v_1$ with prob. $p$, else $w = v_2$.</li>
   <li><em>Exponential</em>: $w \sim \mathrm{Exp}(1)$. (Other rates only scale weights, which doesn't affect T-embeddings.)</li>
   <li><em>Pareto (α, x_min)</em>: $w = x_{\min} \cdot U^{-1/\alpha}$ where $U \sim \mathrm{Uniform}(0,1)$. Heavy-tailed distribution.</li>
+  <li><em>Heavy tails</em>: Pareto regime with tail index α &lt; 1 (default α = 0.5), infinite mean, and rare dominant edge weights.</li>
   <li><em>Geometric (p)</em>: $w \sim \mathrm{Geom}(p)$ with support $\{1, 2, 3, \ldots\}$. Mean = $1/p$.</li>
 </ul>
 
@@ -388,6 +390,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         <option value="bernoulli">Bernoulli (p, v₁, v₂)</option>
         <option value="exponential">Exponential (1)</option>
         <option value="pareto">Pareto (α, x_min)</option>
+        <option value="heavy-tails">Heavy tails (Pareto α&lt;1)</option>
         <option value="geometric">Geometric (p), X≥1</option>
       </select>
     </label>
@@ -429,6 +432,21 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       <label style="display: flex; align-items: center; gap: 4px;">
         <span>x_min:</span>
         <input type="number" id="iid-pareto-xmin" value="1.0" step="0.1" min="0.01" style="width: 70px;" aria-label="Pareto scale parameter">
+      </label>
+    </div>
+  </div>
+
+  <!-- Heavy tails distribution params -->
+  <div id="iid-heavy-tails-params" style="display: none; padding: 8px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+    <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Pareto heavy-tail regime (α &lt; 1). Default α = 0.5 gives infinite mean and rare very large weights.</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span>α:</span>
+        <input type="number" id="iid-heavy-alpha" value="0.5" step="0.05" min="0.05" max="0.99" style="width: 70px;" aria-label="Heavy tails Pareto shape parameter">
+      </label>
+      <label style="display: flex; align-items: center; gap: 4px;">
+        <span>x_min:</span>
+        <input type="number" id="iid-heavy-xmin" value="1.0" step="0.1" min="0.01" style="width: 70px;" aria-label="Heavy tails Pareto scale parameter">
       </label>
     </div>
   </div>
@@ -1340,6 +1358,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 [data-theme="dark"] #iid-bernoulli-params,
 [data-theme="dark"] #iid-exponential-params,
 [data-theme="dark"] #iid-pareto-params,
+[data-theme="dark"] #iid-heavy-tails-params,
 [data-theme="dark"] #iid-geometric-params,
 [data-theme="dark"] #weights-tables,
 [data-theme="dark"] #aztec-vertex-info,
@@ -2659,6 +2678,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
       const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
       params = `${alpha},${xmin}`;
+    } else if (distType === 'heavy-tails') {
+      const alpha = parseFloat(document.getElementById('iid-heavy-alpha').value) || 0.5;
+      const xmin = parseFloat(document.getElementById('iid-heavy-xmin').value) || 1.0;
+      params = `${alpha},${xmin}`;
     } else if (distType === 'geometric') {
       const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
       params = `${p}`;
@@ -2694,6 +2717,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       } else if (distType === 'pareto') {
         const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
         const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
+        edgeWeights[i] = xmin / Math.pow(1 - rng(), 1 / alpha);
+      } else if (distType === 'heavy-tails') {
+        const alpha = parseFloat(document.getElementById('iid-heavy-alpha').value) || 0.5;
+        const xmin = parseFloat(document.getElementById('iid-heavy-xmin').value) || 1.0;
         edgeWeights[i] = xmin / Math.pow(1 - rng(), 1 / alpha);
       } else if (distType === 'geometric') {
         const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
@@ -3671,6 +3698,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     } else if (distType === 'pareto') {
       const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
       const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
+      return xmin / Math.pow(1 - rng(), 1 / alpha);
+    } else if (distType === 'heavy-tails') {
+      const alpha = parseFloat(document.getElementById('iid-heavy-alpha').value) || 0.5;
+      const xmin = parseFloat(document.getElementById('iid-heavy-xmin').value) || 1.0;
       return xmin / Math.pow(1 - rng(), 1 / alpha);
     } else if (distType === 'geometric') {
       const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
@@ -8370,6 +8401,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     document.getElementById('iid-bernoulli-params').style.display = (dist === 'bernoulli') ? 'block' : 'none';
     document.getElementById('iid-exponential-params').style.display = (dist === 'exponential') ? 'block' : 'none';
     document.getElementById('iid-pareto-params').style.display = (dist === 'pareto') ? 'block' : 'none';
+    document.getElementById('iid-heavy-tails-params').style.display = (dist === 'heavy-tails') ? 'block' : 'none';
     document.getElementById('iid-geometric-params').style.display = (dist === 'geometric') ? 'block' : 'none';
   }
   iidDistributionSelect.addEventListener('change', updateIIDDistributionParams);
@@ -8681,7 +8713,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     'n-input',
     'periodic-k', 'periodic-l',
     'random-seed',
-    'iid-min', 'iid-max', 'iid-pareto-alpha', 'iid-pareto-xmin', 'iid-geom-p',
+    'iid-min', 'iid-max', 'iid-pareto-alpha', 'iid-pareto-xmin', 'iid-heavy-alpha', 'iid-heavy-xmin', 'iid-geom-p',
     'gamma-alpha', 'gamma-beta', 'gamma-seed',
     'layered-seed',
     'layered1-val1', 'layered1-val2', 'layered1-prob1', 'layered1-prob2',
@@ -9719,6 +9751,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         const alpha = document.getElementById('iid-pareto-alpha').value;
         const xmin = document.getElementById('iid-pareto-xmin').value;
         weightStr = `iid-pareto-${alpha}-${xmin}`;
+      } else if (distType === 'heavy-tails') {
+        const alpha = document.getElementById('iid-heavy-alpha').value;
+        const xmin = document.getElementById('iid-heavy-xmin').value;
+        weightStr = `iid-heavy-tails-${alpha}-${xmin}`;
       } else if (distType === 'geometric') {
         const p = document.getElementById('iid-geom-p').value;
         weightStr = `iid-geom-${p}`;
@@ -11010,6 +11046,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
             weightStr = `iid-exp1`;
           } else if (distType === 'pareto') {
             weightStr = `iid-pareto-${document.getElementById('iid-pareto-alpha').value}-${document.getElementById('iid-pareto-xmin').value}`;
+          } else if (distType === 'heavy-tails') {
+            weightStr = `iid-heavy-tails-${document.getElementById('iid-heavy-alpha').value}-${document.getElementById('iid-heavy-xmin').value}`;
           } else if (distType === 'geometric') {
             weightStr = `iid-geom-${document.getElementById('iid-geom-p').value}`;
           }
