@@ -34,21 +34,21 @@ a11y-description: "Interactive visualization of t-embeddings of the Aztec diamon
       <li><em>Bernoulli (p, v₁, v₂)</em>: Weight = v₁ with probability p, otherwise v₂.</li>
       <li><em>Exponential (λ)</em>: Exponential distribution with rate λ.</li>
       <li><em>Pareto (α, x_min)</em>: Pareto distribution with shape α and scale x_min.</li>
-      <li><em>Heavy tails</em>: Pareto power-law regime with α &lt; 1 (infinite mean; rare very large weights).</li>
       <li><em>Geometric (p)</em>: Geometric distribution with success probability p (integer-valued).</li>
     </ul>
   </li>
   <li><strong>Gamma i.i.d.</strong>: Edge weights drawn from Gamma(α, β) distribution.</li>
-  <li><strong>Layered (diagonal)</strong>: Diagonally layered weights where each diagonal (i + j = const) shares the same weight. Offers 5 regimes:
+  <li><strong>Layered (diagonal)</strong>: Diagonally layered weights where each diagonal (i + j = const) shares the same weight. Offers 6 regimes:
     <ul>
       <li><em>Regime 1 (Critical Scaling)</em>: Weights vary as Val1 + 2/√n or Val2 − 1/√n with given probabilities.</li>
       <li><em>Regime 2 (Rare Event Scaling)</em>: Weight = Val1 with probability 1/√n, otherwise Val2.</li>
       <li><em>Regime 3 (Bernoulli)</em>: Weight = Val1 (prob p₁) or Val2 (prob p₂). Default regime.</li>
       <li><em>Regime 4 (Deterministic Periodic)</em>: Alternates between w₁ and w₂ by diagonal.</li>
       <li><em>Regime 5 (Continuous Uniform)</em>: Weights uniform on [a, b], varying by diagonal.</li>
+      <li><em>Regime 6 (Heavy Tails)</em>: Layer weights are Pareto-distributed; smaller α gives heavier tails.</li>
     </ul>
   </li>
-  <li><strong>Layered (straight)</strong>: Horizontally layered weights where each row (y = const) shares the same weight. Same 5 regimes as diagonal layered, but layers run horizontally instead of along diagonals.</li>
+  <li><strong>Layered (straight)</strong>: Horizontally layered weights where each row (y = const) shares the same weight. Same 6 regimes as diagonal layered, but layers run horizontally instead of along diagonals.</li>
   <li><strong>Periodic (k×l)</strong>: k-by-l periodic pattern of face weights. Opens an editor to set individual weights.</li>
 </ol>
 
@@ -283,7 +283,6 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
   <li><em>Bernoulli</em>: $w = v_1$ with prob. $p$, else $w = v_2$.</li>
   <li><em>Exponential</em>: $w \sim \mathrm{Exp}(1)$. (Other rates only scale weights, which doesn't affect T-embeddings.)</li>
   <li><em>Pareto (α, x_min)</em>: $w = x_{\min} \cdot U^{-1/\alpha}$ where $U \sim \mathrm{Uniform}(0,1)$. Heavy-tailed distribution.</li>
-  <li><em>Heavy tails</em>: Pareto regime with tail index α &lt; 1 (default α = 0.5), infinite mean, and rare dominant edge weights.</li>
   <li><em>Geometric (p)</em>: $w \sim \mathrm{Geom}(p)$ with support $\{1, 2, 3, \ldots\}$. Mean = $1/p$.</li>
 </ul>
 
@@ -291,13 +290,14 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 Edges on the bottom of each face have weight $\sim \Gamma(\alpha, 1)$; edges on the right of each face have weight $\sim \Gamma(\beta, 1)$.</p>
 
 <p><strong>Layered Weights</strong> (diagonal: <a href="https://arxiv.org/abs/2507.08560">[Bufetov–Petrov–Zografos]</a>; straight: <a href="https://arxiv.org/abs/2507.11964">[Moulard–Toninelli]</a>):
-Weight depends on layer index (diagonal $i+j$ or row $y$). Five regimes:</p>
+Weight depends on layer index (diagonal $i+j$ or row $y$). Six regimes:</p>
 <ul>
   <li><em>Regime 1 (Critical Scaling)</em>: $w = v_1 + 2/\sqrt{n}$ with prob. $p_1$, else $w = v_2 - 1/\sqrt{n}$.</li>
   <li><em>Regime 2 (Rare Event)</em>: $w = v_1$ with prob. $1/\sqrt{n}$, else $w = v_2$.</li>
   <li><em>Regime 3 (Bernoulli)</em>: $w = v_1$ with prob. $p_1$, else $w = v_2$.</li>
   <li><em>Regime 4 (Deterministic)</em>: $w = w_1, w_2, w_1, w_2, \ldots$ alternating by layer.</li>
   <li><em>Regime 5 (Uniform)</em>: $w \sim \mathrm{Uniform}(a, b)$ drawn independently for each layer.</li>
+  <li><em>Regime 6 (Heavy Tails)</em>: $w = x_{\min} U^{-1/\alpha}$ independently for each layer; smaller α gives heavier tails.</li>
 </ul>
 
 <p><strong>Periodic (k×l)</strong>: Face weights follow a spatially periodic $k \times l$ pattern, specified via an interactive editor.</p>
@@ -390,7 +390,6 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         <option value="bernoulli">Bernoulli (p, v₁, v₂)</option>
         <option value="exponential">Exponential (1)</option>
         <option value="pareto">Pareto (α, x_min)</option>
-        <option value="heavy-tails">Heavy tails (Pareto α&lt;1)</option>
         <option value="geometric">Geometric (p), X≥1</option>
       </select>
     </label>
@@ -432,21 +431,6 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       <label style="display: flex; align-items: center; gap: 4px;">
         <span>x_min:</span>
         <input type="number" id="iid-pareto-xmin" value="1.0" step="0.1" min="0.01" style="width: 70px;" aria-label="Pareto scale parameter">
-      </label>
-    </div>
-  </div>
-
-  <!-- Heavy tails distribution params -->
-  <div id="iid-heavy-tails-params" style="display: none; padding: 8px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
-    <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Pareto heavy-tail regime (α &lt; 1). Default α = 0.5 gives infinite mean and rare very large weights.</div>
-    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
-      <label style="display: flex; align-items: center; gap: 4px;">
-        <span>α:</span>
-        <input type="number" id="iid-heavy-alpha" value="0.5" step="0.05" min="0.05" max="0.99" style="width: 70px;" aria-label="Heavy tails Pareto shape parameter">
-      </label>
-      <label style="display: flex; align-items: center; gap: 4px;">
-        <span>x_min:</span>
-        <input type="number" id="iid-heavy-xmin" value="1.0" step="0.1" min="0.01" style="width: 70px;" aria-label="Heavy tails Pareto scale parameter">
       </label>
     </div>
   </div>
@@ -588,7 +572,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
     </div>
 
     <!-- Regime 5 -->
-    <div>
+    <div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
       <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
         <input type="radio" id="layered-regime5" name="layered-regime" value="5" aria-label="Select Regime 5">
         <strong>Regime 5: Continuous Uniform [a,b]</strong>
@@ -598,6 +582,21 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
           <label style="display: flex; align-items: center; gap: 4px;">a: <input type="number" id="layered5-min" value="0.5" step="0.1" style="width: 60px;" aria-label="Minimum value"></label>
           <label style="display: flex; align-items: center; gap: 4px;">b: <input type="number" id="layered5-max" value="2.0" step="0.1" style="width: 60px;" aria-label="Maximum value"></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Regime 6 -->
+    <div>
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="radio" id="layered-regime6" name="layered-regime" value="6" aria-label="Select Regime 6">
+        <strong>Regime 6: Heavy Tails (Pareto)</strong>
+      </label>
+      <div id="layered-regime6-params" style="display: none; margin-top: 8px; margin-left: 24px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Layer weight ~ Pareto(α, x_min), drawn independently for each diagonal. Smaller α gives heavier tails.</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 4px;">α: <input type="number" id="layered6-alpha" value="0.5" step="0.05" min="0.01" style="width: 60px;" aria-label="Heavy-tail alpha"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">x_min: <input type="number" id="layered6-xmin" value="1.0" step="0.1" min="0.01" style="width: 60px;" aria-label="Heavy-tail x min"></label>
         </div>
       </div>
     </div>
@@ -684,7 +683,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
     </div>
 
     <!-- Regime 5 -->
-    <div>
+    <div style="margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
       <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
         <input type="radio" id="straight-layered-regime5" name="straight-layered-regime" value="5" aria-label="Select Regime 5">
         <strong>Regime 5: Continuous Uniform [a,b]</strong>
@@ -694,6 +693,21 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
           <label style="display: flex; align-items: center; gap: 4px;">a: <input type="number" id="straight-layered5-min" value="0.5" step="0.1" style="width: 60px;" aria-label="Minimum value"></label>
           <label style="display: flex; align-items: center; gap: 4px;">b: <input type="number" id="straight-layered5-max" value="2.0" step="0.1" style="width: 60px;" aria-label="Maximum value"></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Regime 6 -->
+    <div>
+      <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <input type="radio" id="straight-layered-regime6" name="straight-layered-regime" value="6" aria-label="Select Regime 6">
+        <strong>Regime 6: Heavy Tails (Pareto)</strong>
+      </label>
+      <div id="straight-layered-regime6-params" style="display: none; margin-top: 8px; margin-left: 24px; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+        <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Layer weight ~ Pareto(α, x_min), drawn independently for each row. Smaller α gives heavier tails.</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 4px;">α: <input type="number" id="straight-layered6-alpha" value="0.5" step="0.05" min="0.01" style="width: 60px;" aria-label="Straight heavy-tail alpha"></label>
+          <label style="display: flex; align-items: center; gap: 4px;">x_min: <input type="number" id="straight-layered6-xmin" value="1.0" step="0.1" min="0.01" style="width: 60px;" aria-label="Straight heavy-tail x min"></label>
         </div>
       </div>
     </div>
@@ -1358,7 +1372,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 [data-theme="dark"] #iid-bernoulli-params,
 [data-theme="dark"] #iid-exponential-params,
 [data-theme="dark"] #iid-pareto-params,
-[data-theme="dark"] #iid-heavy-tails-params,
 [data-theme="dark"] #iid-geometric-params,
 [data-theme="dark"] #weights-tables,
 [data-theme="dark"] #aztec-vertex-info,
@@ -2678,10 +2691,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
       const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
       params = `${alpha},${xmin}`;
-    } else if (distType === 'heavy-tails') {
-      const alpha = parseFloat(document.getElementById('iid-heavy-alpha').value) || 0.5;
-      const xmin = parseFloat(document.getElementById('iid-heavy-xmin').value) || 1.0;
-      params = `${alpha},${xmin}`;
     } else if (distType === 'geometric') {
       const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
       params = `${p}`;
@@ -2717,10 +2726,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       } else if (distType === 'pareto') {
         const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
         const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
-        edgeWeights[i] = xmin / Math.pow(1 - rng(), 1 / alpha);
-      } else if (distType === 'heavy-tails') {
-        const alpha = parseFloat(document.getElementById('iid-heavy-alpha').value) || 0.5;
-        const xmin = parseFloat(document.getElementById('iid-heavy-xmin').value) || 1.0;
         edgeWeights[i] = xmin / Math.pow(1 - rng(), 1 / alpha);
       } else if (distType === 'geometric') {
         const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
@@ -3699,10 +3704,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
       const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
       return xmin / Math.pow(1 - rng(), 1 / alpha);
-    } else if (distType === 'heavy-tails') {
-      const alpha = parseFloat(document.getElementById('iid-heavy-alpha').value) || 0.5;
-      const xmin = parseFloat(document.getElementById('iid-heavy-xmin').value) || 1.0;
-      return xmin / Math.pow(1 - rng(), 1 / alpha);
     } else if (distType === 'geometric') {
       const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
       return Math.floor(Math.log(1 - rng()) / Math.log(1 - p)) + 1;
@@ -3742,6 +3743,12 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         const b = parseFloat(document.getElementById('layered5-max').value) || 2.0;
         return a + rng() * (b - a);
       }
+      case 6: {
+        const alphaRaw = parseFloat(document.getElementById('layered6-alpha').value) || 0.5;
+        const alpha = Math.max(0.01, alphaRaw);
+        const xmin = Math.max(0.01, parseFloat(document.getElementById('layered6-xmin').value) || 1.0);
+        return xmin / Math.pow(1 - rng(), 1 / alpha);
+      }
     }
     return 1.0;
   }
@@ -3776,6 +3783,12 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         const a = parseFloat(document.getElementById('straight-layered5-min').value) || 0.5;
         const b = parseFloat(document.getElementById('straight-layered5-max').value) || 2.0;
         return a + rng() * (b - a);
+      }
+      case 6: {
+        const alphaRaw = parseFloat(document.getElementById('straight-layered6-alpha').value) || 0.5;
+        const alpha = Math.max(0.01, alphaRaw);
+        const xmin = Math.max(0.01, parseFloat(document.getElementById('straight-layered6-xmin').value) || 1.0);
+        return xmin / Math.pow(1 - rng(), 1 / alpha);
       }
     }
     return 1.0;
@@ -4130,7 +4143,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     } else if (preset === 'random-layered') {
       const seed = parseInt(document.getElementById('layered-seed')?.value) || 42;
       const lp = typeof getLayeredParams === 'function' ? getLayeredParams() : { regime: 3 };
-      return { mode: 'layered', params: { seed, regime: lp.regime } };
+      return { mode: 'layered', params: { seed, ...lp } };
 
     } else if (preset === 'random-gamma') {
       const seed = parseInt(document.getElementById('gamma-seed')?.value) || 42;
@@ -4158,7 +4171,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     } else if (preset === 'random-straight-layered') {
       const seed = parseInt(document.getElementById('straight-layered-seed')?.value) || 42;
       const slp = typeof getStraightLayeredParams === 'function' ? getStraightLayeredParams() : { regime: 3 };
-      return { mode: 'straight-layered', params: { seed, regime: slp.regime } };
+      return { mode: 'straight-layered', params: { seed, ...slp } };
     }
 
     return { mode: 'uniform', params: {} };
@@ -8369,7 +8382,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   document.querySelectorAll('input[name="layered-regime"]').forEach(radio => {
     radio.addEventListener('change', function() {
       // Hide all layered regime param divs
-      for (let i = 1; i <= 5; i++) {
+      for (let i = 1; i <= 6; i++) {
         const paramDiv = document.getElementById(`layered-regime${i}-params`);
         if (paramDiv) paramDiv.style.display = 'none';
       }
@@ -8383,7 +8396,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   document.querySelectorAll('input[name="straight-layered-regime"]').forEach(radio => {
     radio.addEventListener('change', function() {
       // Hide all straight-layered regime param divs
-      for (let i = 1; i <= 5; i++) {
+      for (let i = 1; i <= 6; i++) {
         const paramDiv = document.getElementById(`straight-layered-regime${i}-params`);
         if (paramDiv) paramDiv.style.display = 'none';
       }
@@ -8401,7 +8414,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     document.getElementById('iid-bernoulli-params').style.display = (dist === 'bernoulli') ? 'block' : 'none';
     document.getElementById('iid-exponential-params').style.display = (dist === 'exponential') ? 'block' : 'none';
     document.getElementById('iid-pareto-params').style.display = (dist === 'pareto') ? 'block' : 'none';
-    document.getElementById('iid-heavy-tails-params').style.display = (dist === 'heavy-tails') ? 'block' : 'none';
     document.getElementById('iid-geometric-params').style.display = (dist === 'geometric') ? 'block' : 'none';
   }
   iidDistributionSelect.addEventListener('change', updateIIDDistributionParams);
@@ -8624,6 +8636,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         p1 = parseFloat(document.getElementById('layered5-min').value) || 0.5;
         p2 = parseFloat(document.getElementById('layered5-max').value) || 2.0;
         break;
+      case 6:
+        p1 = parseFloat(document.getElementById('layered6-alpha').value) || 0.5;
+        p2 = parseFloat(document.getElementById('layered6-xmin').value) || 1.0;
+        break;
     }
 
     return { regime, p1, p2, prob1, prob2 };
@@ -8660,6 +8676,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       case 5:
         p1 = parseFloat(document.getElementById('straight-layered5-min').value) || 0.5;
         p2 = parseFloat(document.getElementById('straight-layered5-max').value) || 2.0;
+        break;
+      case 6:
+        p1 = parseFloat(document.getElementById('straight-layered6-alpha').value) || 0.5;
+        p2 = parseFloat(document.getElementById('straight-layered6-xmin').value) || 1.0;
         break;
     }
 
@@ -8713,14 +8733,22 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     'n-input',
     'periodic-k', 'periodic-l',
     'random-seed',
-    'iid-min', 'iid-max', 'iid-pareto-alpha', 'iid-pareto-xmin', 'iid-heavy-alpha', 'iid-heavy-xmin', 'iid-geom-p',
+    'iid-min', 'iid-max', 'iid-pareto-alpha', 'iid-pareto-xmin', 'iid-geom-p',
     'gamma-alpha', 'gamma-beta', 'gamma-seed',
     'layered-seed',
     'layered1-val1', 'layered1-val2', 'layered1-prob1', 'layered1-prob2',
     'layered2-val1', 'layered2-val2',
     'layered3-val1', 'layered3-val2', 'layered3-prob1', 'layered3-prob2',
     'layered4-w1', 'layered4-w2',
-    'layered5-min', 'layered5-max'
+    'layered5-min', 'layered5-max',
+    'layered6-alpha', 'layered6-xmin',
+    'straight-layered-seed',
+    'straight-layered1-val1', 'straight-layered1-val2', 'straight-layered1-prob1', 'straight-layered1-prob2',
+    'straight-layered2-val1', 'straight-layered2-val2',
+    'straight-layered3-val1', 'straight-layered3-val2', 'straight-layered3-prob1', 'straight-layered3-prob2',
+    'straight-layered4-w1', 'straight-layered4-w2',
+    'straight-layered5-min', 'straight-layered5-max',
+    'straight-layered6-alpha', 'straight-layered6-xmin'
   ];
   paramInputIds.forEach(id => {
     const el = document.getElementById(id);
@@ -9751,10 +9779,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         const alpha = document.getElementById('iid-pareto-alpha').value;
         const xmin = document.getElementById('iid-pareto-xmin').value;
         weightStr = `iid-pareto-${alpha}-${xmin}`;
-      } else if (distType === 'heavy-tails') {
-        const alpha = document.getElementById('iid-heavy-alpha').value;
-        const xmin = document.getElementById('iid-heavy-xmin').value;
-        weightStr = `iid-heavy-tails-${alpha}-${xmin}`;
       } else if (distType === 'geometric') {
         const p = document.getElementById('iid-geom-p').value;
         weightStr = `iid-geom-${p}`;
@@ -11046,8 +11070,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
             weightStr = `iid-exp1`;
           } else if (distType === 'pareto') {
             weightStr = `iid-pareto-${document.getElementById('iid-pareto-alpha').value}-${document.getElementById('iid-pareto-xmin').value}`;
-          } else if (distType === 'heavy-tails') {
-            weightStr = `iid-heavy-tails-${document.getElementById('iid-heavy-alpha').value}-${document.getElementById('iid-heavy-xmin').value}`;
           } else if (distType === 'geometric') {
             weightStr = `iid-geom-${document.getElementById('iid-geom-p').value}`;
           }
