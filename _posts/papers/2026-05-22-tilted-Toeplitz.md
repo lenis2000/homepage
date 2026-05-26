@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "A Borodin--Okounkov--Geronimo--Case identity for tilted Toeplitz minors"
-arXiv: 2605.????? [math.FA]
+arXiv: 2605.24976 [math.FA]
 coauthors:
   - name: Leonid Petrov
 comments: false
