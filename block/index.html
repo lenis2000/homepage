@@ -116,10 +116,10 @@ body{display:flex;flex-direction:column;align-items:center;
 <div id="game-wrap">
   <canvas id="boardC" role="application" tabindex="0"
     aria-keyshortcuts="1 2 3 4 5 ArrowUp ArrowDown ArrowLeft ArrowRight Shift+ArrowUp Shift+ArrowDown Shift+ArrowLeft Shift+ArrowRight Enter Space Escape"
-    aria-label="Block puzzle, 10 by 10 grid. Drag pieces from the tray onto the grid to clear rows and columns. Keyboard: press number keys to select tray pieces; use arrow keys to move it; Shift plus arrows jumps to the farthest valid place; Enter or Space places it."></canvas>
+    aria-label="Block puzzle, 10 by 10 grid. Drag pieces from the tray onto the grid to clear rows and columns. Keyboard: press number keys to select tray pieces; arrow keys move to the next valid place, skipping blocked positions; Shift plus arrows jumps to the farthest valid place; Enter or Space places it."></canvas>
   <div id="overlay">
     <div id="overlay-title">BLOCK PUZZLE</div>
-    <div id="overlay-sub">Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Keyboard: <b>1</b>–<b>5</b> select, arrows move, <b>Enter</b> places.</div>
+    <div id="overlay-sub">Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Keyboard: <b>1</b>–<b>5</b> select, arrows skip blocked spots, <b>Enter</b> places.</div>
     <div id="overlay-buttons">
       <button id="start-btn" class="overlay-btn">START</button>
       <button id="solution-btn" class="overlay-btn overlay-btn-ghost" hidden>SHOW SOLUTION</button>
@@ -199,8 +199,9 @@ var TARGET_SCORE_4TRAY = 5000;
 var TARGET_SCORE_5TRAY = 10000;
 var TRAY_SIZES = { three: 3, four: 4, five: 5 };
 // Keyboard placement cursor. Press 1..N to select a tray slot, arrows to
-// move the piece on the board, Shift+arrows to jump to the farthest valid
-// placement in that direction, and Enter/Space to commit.
+// move the piece to the next valid board position in that direction, skipping
+// blocked positions; Shift+arrows jump to the farthest valid placement in that
+// direction, and Enter/Space commits.
 var keyboardSelection = null; // { slot, r, c }
 var flash = null;
 // Undo perk: start each game with 1 charge, then recharge at each 500-point
@@ -1084,33 +1085,31 @@ function moveKeyboardSelection(dr, dc, jump) {
   if (!ensureKeyboardSelection()) return;
   var p = tray[keyboardSelection.slot];
   var limits = maxTopLeftForPiece(p);
+  var startR = keyboardSelection.r;
+  var startC = keyboardSelection.c;
+  var edgeR = startR;
+  var edgeC = startC;
+  var best = jump && isValid(p, startR, startC) ? { r: startR, c: startC } : null;
 
-  if (jump) {
-    var startR = keyboardSelection.r;
-    var startC = keyboardSelection.c;
-    var edgeR = startR;
-    var edgeC = startC;
-    var best = isValid(p, startR, startC) ? { r: startR, c: startC } : null;
-    while (true) {
-      var nr = edgeR + dr;
-      var nc = edgeC + dc;
-      if (nr < 0 || nr > limits.r || nc < 0 || nc > limits.c) break;
-      edgeR = nr;
-      edgeC = nc;
-      if (isValid(p, edgeR, edgeC)) best = { r: edgeR, c: edgeC };
-    }
-    if (best) {
-      keyboardSelection.r = best.r;
-      keyboardSelection.c = best.c;
-    } else {
-      // If this particular ray has no legal landing spot, still move the
-      // cursor to the board edge so keyboard exploration remains predictable.
-      keyboardSelection.r = edgeR;
-      keyboardSelection.c = edgeC;
-    }
-  } else {
-    keyboardSelection.r = clampValue(keyboardSelection.r + dr, 0, limits.r);
-    keyboardSelection.c = clampValue(keyboardSelection.c + dc, 0, limits.c);
+  while (true) {
+    var nr = edgeR + dr;
+    var nc = edgeC + dc;
+    if (nr < 0 || nr > limits.r || nc < 0 || nc > limits.c) break;
+    edgeR = nr;
+    edgeC = nc;
+    if (!isValid(p, edgeR, edgeC)) continue;
+    best = { r: edgeR, c: edgeC };
+    if (!jump) break;
+  }
+
+  if (best) {
+    keyboardSelection.r = best.r;
+    keyboardSelection.c = best.c;
+  } else if (jump) {
+    // If this particular ray has no legal landing spot, still move the
+    // cursor to the board edge so keyboard exploration remains predictable.
+    keyboardSelection.r = edgeR;
+    keyboardSelection.c = edgeC;
   }
   draw();
 }
@@ -1730,7 +1729,7 @@ function showMenu() {
   trayBonusStartedAt = 0;
   trayBonusDurationMs = 0;
   overlayTitle.textContent = 'BLOCK PUZZLE';
-  overlaySub.innerHTML = 'Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Keyboard: <b>1</b>–<b>5</b> select, arrows move, <b>Shift</b>+arrows jump.<br>Start with <b>1</b> undo; recharge every <b>500</b> points.<br>Finish each tray before time ends for bonus.';
+  overlaySub.innerHTML = 'Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Keyboard: <b>1</b>–<b>5</b> select, arrows skip blocked spots, <b>Shift</b>+arrows jump.<br>Start with <b>1</b> undo; recharge every <b>500</b> points.<br>Finish each tray before time ends for bonus.';
   solutionBtn.hidden = true;
   overlay.classList.remove('hidden');
 }
