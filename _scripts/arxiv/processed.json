@@ -37287,6 +37287,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2109.14052": {
+    "date": "2021-09-28",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "2109.14232": {
     "date": "2021-09-29",
     "decision": "ACCEPT",
@@ -51131,6 +51136,11 @@
     "date": "2025-10-10",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "2510.10370": {
+    "date": "2025-10-11",
+    "decision": "ACCEPT",
+    "source": "manual"
   },
   "2510.10875": {
     "date": "2025-10-13",
