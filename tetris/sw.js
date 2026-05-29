@@ -1,4 +1,4 @@
-var CACHE = 'tetris-v5';
+var CACHE = 'tetris-v6';
 var ASSETS = [
   './',
   './index.html',
