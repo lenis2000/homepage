@@ -15,10 +15,10 @@ function initThankYouSim() {
         const wasm = await LozengeModule();
 
         const letters = ['T', 'H', 'A', 'N', 'K', 'Y', 'O', 'U'];
-        // UVA: Jefferson Blue, Cavalier Orange, Cream
-        const uvaColors = ['#F9DCBF', '#E57200', '#232D4B'];
+        // Scotland: Saltire blue and white, with a darker blue face for depth
+        const scotlandColors = ['#0065BD', '#003F87', '#FFFFFF'];
         function colorsForLetter(letter) {
-            return uvaColors;
+            return scotlandColors;
         }
 
         const slope = 1 / Math.sqrt(3);

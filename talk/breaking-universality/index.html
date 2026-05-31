@@ -1,7 +1,7 @@
 ---
 layout: slides
 title: "Breaking Universality in Dimer Models"
-description: "One World Probability Seminar — analysis of the q-Racah waterfall (Knizel-P.) and random edge weights (Bufetov-P.-Zografos)"
+description: "Interactive talk on two mechanisms that break universality in random tilings while preserving exact solvability"
 ---
 
 <!-- PWA: Service Worker Registration & Asset Preloader -->
@@ -43,7 +43,6 @@ description: "One World Probability Seminar — analysis of the q-Racah waterfal
     '/talk/visual/sim/visual-lozenge-threaded.js',
     '/talk/visual/sim/q-partition-cftp.js',
     '/js/2025-12-11-t-embedding-shuffling.js',
-    '/letters/golden_gate.json',
     '/letters/T.json', '/letters/H.json', '/letters/A.json', '/letters/N.json',
     '/letters/K.json', '/letters/Y.json', '/letters/O.json', '/letters/U.json',
     '/letters/big_snoflake.json',
@@ -129,19 +128,39 @@ Promise.all([
 });
 </script>
 
-<!-- ==================== SLIDES (One World Probability Seminar variant) ==================== -->
-<!-- Alisa Knizel speaks first (q-Racah waterfall, concentration theorem, conjectured kernel, -->
-<!-- proof strategy at high level). This talk picks up from there: -->
-<!--   (A) the analysis behind the conjecture (spectral projection, 2-periodicity), and -->
-<!--   (B) a parallel universality-breaking mechanism: random edge weights [BPZ 2025]. -->
+<!-- ==================== SLIDES ==================== -->
+
+<!-- ===== Part I: Universality in Random Tilings ===== -->
 
 {% include talk/breaking-universality/title-owps.html %}
 
-{% include talk/breaking-universality/bridge-owps.html %}
+{% include talk/breaking-universality/part1-intro.html %}
 
-<!-- ===== Part (A): Analysis of the q-Racah waterfall ===== -->
+{% include talk/breaking-universality/2to3d.html %}
 
-{% include talk/breaking-universality/q-racah-measure-owps.html %}
+{% include talk/breaking-universality/domino-intro.html %}
+
+{% include talk/breaking-universality/limit-shape.html %}
+
+{% include talk/breaking-universality/local-patches.html %}
+
+{% include talk/breaking-universality/universality-zoom.html %}
+
+{% include talk/breaking-universality/gff-fluctuations.html %}
+
+{% include talk/breaking-universality/domino-gff.html %}
+
+{% include talk/breaking-universality/summary-part1.html %}
+
+<!-- ===== Part II: Breaking Universality I — The Waterfall ===== -->
+
+{% include talk/breaking-universality/part2-intro.html %}
+
+{% include talk/breaking-universality/q-volume.html %}
+
+{% include talk/breaking-universality/q-racah-measure.html %}
+
+{% include talk/breaking-universality/q-racah-large-hexagons.html %}
 
 {% include talk/breaking-universality/dimensional-collapse.html %}
 
@@ -159,22 +178,11 @@ Promise.all([
 
 {% include talk/breaking-universality/barcode-conjecture.html %}
 
-<!-- ===== Pivot: Aztec diamond + dominoes (Alisa stayed on hexagons) ===== -->
+<!-- ===== Part III: Breaking Universality II — Random Edge Weights ===== -->
 
-{% include talk/breaking-universality/dimers-title.html %}
-
-{% include talk/breaking-universality/lozenge-gff.html %}
-
-{% include talk/breaking-universality/domino-intro.html %}
-
-{% include talk/breaking-universality/domino-gff.html %}
-
-<!-- ===== Part (B): Random edge weights ===== -->
-
+{% include talk/breaking-universality/part3-intro.html %}
 
 {% include talk/breaking-universality/random-weights-setup.html %}
-
-{% include talk/breaking-universality/domino-waterfall.html %}
 
 {% include talk/breaking-universality/schur-generating.html %}
 
@@ -193,13 +201,19 @@ Promise.all([
 {% include talk/breaking-universality/thankyou.html %}
 
 <!-- ==================== SIMULATION SCRIPTS ==================== -->
+<!-- Part I simulations -->
+<script src="js/2to3d-sim.js" defer></script>
+<script src="js/limit-shape-sim.js" defer></script>
+<script src="js/universality-zoom-sim.js" defer></script>
+<script src="js/gff-fluctuations-sim.js" defer></script>
 
-<!-- Title slide: text-only for OWPS, no canvas (title-sim.js intentionally omitted) -->
+<!-- Domino intro -->
+<script src="js/domino-intro-sim.js" defer></script>
 
-<!-- Bridge slide -->
-<script src="js/bridge-owps-sim.js" defer></script>
-
-<!-- Part (A): q-Racah waterfall analysis -->
+<!-- Part II simulations -->
+<script src="js/q-volume-sim.js" defer></script>
+<script src="js/q-racah-measure-sim.js" defer></script>
+<script src="js/q-racah-large-hexagons-sim.js" defer></script>
 <script src="js/dimensional-collapse-sim.js" defer></script>
 <script src="js/qracah-ope-sim.js" defer></script>
 <script src="js/spectral-projection-sim.js" defer></script>
@@ -209,21 +223,23 @@ Promise.all([
 <script src="js/why-2-periodic-sim.js" defer></script>
 <script src="js/barcode-conjecture-sim.js" defer></script>
 
-<!-- Pivot: Aztec / dominoes -->
-<script src="js/lozenge-gff-sim.js" defer></script>
-<script src="js/domino-intro-sim.js" defer></script>
-<script src="js/domino-gff-sim.js" defer></script>
+<!-- Local patches simulation -->
+<script src="js/local-patches-sim.js" defer></script>
 
-<!-- Part (B): random edge weights -->
-<script src="js/domino-waterfall-sim.js" defer></script>
-<script src="js/random-weights-sim.js" defer></script>
-<script src="js/limit-shape-deformation-sim.js" defer></script>
-<script src="js/other-disorder-models-sim.js" defer></script>
-<script src="js/straight-disorder-sim.js" defer></script>
-<script src="js/gamma-disorder-sim.js" defer></script>
+<!-- GFF simulations -->
+<script src="js/domino-gff-sim.js" defer></script>
 
 <!-- Thank You slide: dancing lozenge letters -->
 <script src="waterfall-js/thankyou-sim.js" defer></script>
+
+<!-- Part III: new simulations (stubs — to be created) -->
+<!-- <script src="js/aztec-intro-sim.js" defer></script> -->
+<script src="js/random-weights-sim.js" defer></script>
+<script src="js/limit-shape-deformation-sim.js" defer></script>
+<!-- <script src="js/fluctuation-regimes-sim.js" defer></script> -->
+<script src="js/other-disorder-models-sim.js" defer></script>
+<script src="js/straight-disorder-sim.js" defer></script>
+<script src="js/gamma-disorder-sim.js" defer></script>
 
 <!-- Global: Escape/Enter key blurs input fields for slide navigation -->
 <script>
