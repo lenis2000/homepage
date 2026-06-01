@@ -6,7 +6,7 @@ coauthors:
   - name: Leonid Petrov
 comments: false
 categories: blog math preprint
-# journal-ref:
+# journal-ref: IMRN submitted 2026-06-01
 # journal-web:
 # journal-year:
 show-date: true
