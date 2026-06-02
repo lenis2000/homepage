@@ -123,6 +123,7 @@ def parse_post(filepath):
     doi = fm.get("doi", "")
     if doi:
         entry["doi"] = doi
+        entry["d2"] = doi  # legacy key kept for consistency with fetch_journal_refs.py
 
     return entry
 

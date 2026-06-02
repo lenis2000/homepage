@@ -29,6 +29,7 @@ import time
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from difflib import SequenceMatcher
 from pathlib import Path
 
 from journal_names import normalize_journal_name
@@ -42,7 +43,7 @@ BIB_EXPORT_SCRIPT = SCRIPT_DIR / "export_bibtex.py"
 
 S2_API_KEY = os.environ.get("S2_API_KEY", "")
 S2_BATCH_URL = "https://api.semanticscholar.org/graph/v1/paper/batch"
-S2_FIELDS = "externalIds,journal,venue,publicationVenue,year"
+S2_FIELDS = "title,externalIds,journal,venue,publicationVenue,year"
 S2_BATCH_SIZE = 500
 S2_RATE_LIMIT = 1.1  # seconds between requests
 
@@ -58,6 +59,9 @@ CROSSREF_API = "https://api.crossref.org/works"
 CROSSREF_RATE_LIMIT = 0.05  # 20 req/s with polite pool (mailto in User-Agent)
 CROSSREF_MAILTO = "petrov@virginia.edu"
 CROSSREF_BATCH_SIZE = 40  # DOIs per batch filter request
+TITLE_SIMILARITY_MIN = 0.65  # guard against S2 conflating similarly named papers
+_DASH_RE = re.compile(r"[\u2010-\u2015\u2212]")
+_MULTI_SPACE_RE = re.compile(r"\s+")
 
 
 # ── Cache ──────────────────────────────────────────────────────────────
@@ -154,9 +158,79 @@ def s2_fetch_batch(arxiv_ids):
     return list(zip(arxiv_ids, data))
 
 
-def parse_s2_entry(entry):
+def normalize_arxiv_id(arxiv_id):
+    """Normalize arXiv IDs from S2/arXiv/URLs for equality checks."""
+    value = (arxiv_id or "").strip()
+    if not value:
+        return ""
+    value = re.sub(r"^arxiv:\s*", "", value, flags=re.IGNORECASE)
+    m = re.search(
+        r"arxiv\.org/(?:abs|pdf|html|format|src|e-print|ps)/(.+?)(?:\.pdf)?$",
+        value,
+        flags=re.IGNORECASE,
+    )
+    if m:
+        value = m.group(1)
+    value = re.sub(r"(?:\.pdf)?[?#].*$", "", value)
+    value = re.sub(r"v\d+$", "", value, flags=re.IGNORECASE)
+    return value.lower()
+
+
+def normalize_title_for_match(title):
+    """Normalize titles enough to catch false publication matches."""
+    text = (title or "").replace("\u00a0", " ").lower()
+    text = re.sub(r"\\[a-zA-Z]+", " ", text)  # TeX commands
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def title_similarity(expected, actual):
+    expected_norm = normalize_title_for_match(expected)
+    actual_norm = normalize_title_for_match(actual)
+    if not expected_norm or not actual_norm:
+        return 1.0
+    return SequenceMatcher(None, expected_norm, actual_norm).ratio()
+
+
+def s2_entry_is_plausible(entry, requested_arxiv_id="", expected_title=""):
+    """Reject S2 records that are probably a different paper.
+
+    Semantic Scholar occasionally conflates an arXiv record with a published
+    paper whose title contains a prominent shared phrase.  Trust S2 metadata
+    only when the returned arXiv external id matches and/or the title is close
+    to the arXiv title we already have in the post.
+    """
+    if not entry:
+        return False
+
+    external_ids = entry.get("externalIds") or {}
+    s2_arxiv_id = external_ids.get("ArXiv") or external_ids.get("arXiv") or ""
+    if s2_arxiv_id and requested_arxiv_id:
+        if normalize_arxiv_id(s2_arxiv_id) != normalize_arxiv_id(requested_arxiv_id):
+            print(
+                f"  S2 mismatch for {requested_arxiv_id}: "
+                f"returned ArXiv:{s2_arxiv_id}"
+            )
+            return False
+
+    s2_title = (entry.get("title") or "").strip()
+    if expected_title and s2_title:
+        sim = title_similarity(expected_title, s2_title)
+        if sim < TITLE_SIMILARITY_MIN:
+            print(
+                f"  S2 mismatch for {requested_arxiv_id}: title similarity {sim:.2f}; "
+                f"got {s2_title!r}"
+            )
+            return False
+
+    return True
+
+
+def parse_s2_entry(entry, requested_arxiv_id="", expected_title=""):
     """Extract journal info from S2 response. Returns dict or None."""
     if entry is None:
+        return None
+    if not s2_entry_is_plausible(entry, requested_arxiv_id, expected_title):
         return None
 
     journal = entry.get("journal") or {}
@@ -287,8 +361,71 @@ def crossref_fetch_batch(dois):
 
 # ── Merge logic ────────────────────────────────────────────────────────
 
+_JOURNAL_YEAR_RE = re.compile(r"\b((?:19|20)\d{2})\b")
+_JOURNAL_PAGES_RE = re.compile(r"\bpp\.\s*([^,()]+)", re.IGNORECASE)
+
+
+def normalize_pages(pages):
+    if not pages:
+        return ""
+    normalized = _DASH_RE.sub("-", pages.strip())
+    normalized = re.sub(r"\s*-\s*", "-", normalized)
+    return _MULTI_SPACE_RE.sub(" ", normalized).strip()
+
+
+def parse_arxiv_journal_ref(journal_ref):
+    """Parse common arXiv journal_ref strings without mixing in S2 fields."""
+    raw = re.sub(r"\s+", " ", (journal_ref or "").strip())
+    parsed = {
+        "journal_name": raw,
+        "journal_volume": "",
+        "journal_pages": "",
+        "pub_year": None,
+    }
+    if not raw:
+        return parsed
+
+    years = _JOURNAL_YEAR_RE.findall(raw)
+    if years:
+        parsed["pub_year"] = int(years[-1])
+
+    # Remove trailing parenthetical year/month chunks before extracting pages/name.
+    work = re.sub(r",?\s*\([^)]*(?:19|20)\d{2}[^)]*\)\s*$", "", raw).strip(" ,")
+
+    pages_match = _JOURNAL_PAGES_RE.search(work)
+    if pages_match:
+        parsed["journal_pages"] = normalize_pages(pages_match.group(1))
+        work = (work[:pages_match.start()] + work[pages_match.end():]).strip(" ,")
+    else:
+        # Common forms: "Ann. Probab. 52 (4), 1225-1252" or
+        # "Journal of Applied Probability 42, 4 (2005) 1145-1167".
+        page_matches = list(re.finditer(r"\b\d+\s*[-–—]\s*\d+\b", work))
+        if page_matches:
+            m = page_matches[-1]
+            parsed["journal_pages"] = normalize_pages(m.group(0))
+            work = (work[:m.start()] + work[m.end():]).strip(" ,")
+
+    # Remove issue number and remaining year-like parentheticals.
+    work = re.sub(r"\([^)]*\)", "", work).strip(" ,")
+
+    # Split off the last standalone volume number, preserving numbers in names.
+    vol_match = re.search(r"^(.*?)(?:,?\s+|,)(\d+[A-Za-z]?)\s*$", work)
+    if vol_match:
+        parsed["journal_name"] = vol_match.group(1).strip(" ,") or raw
+        parsed["journal_volume"] = vol_match.group(2).strip()
+    else:
+        parsed["journal_name"] = work or raw
+
+    return parsed
+
+
 def merge_sources(s2_info, arxiv_info):
-    """Merge S2 and arXiv data, preferring S2 structured data but filling gaps."""
+    """Merge S2 and arXiv data without creating hybrid false refs.
+
+    If S2 lacks a journal name, its volume/pages/venue often describe a
+    conference record or another publication.  Do not combine those fields with
+    a journal_ref obtained from arXiv.
+    """
     result = {
         "journal_name": "",
         "journal_volume": "",
@@ -298,30 +435,69 @@ def merge_sources(s2_info, arxiv_info):
         "pub_year": None,
     }
 
-    if s2_info:
+    s2_has_journal = bool(s2_info and s2_info.get("journal_name"))
+    arxiv_ref = arxiv_info.get("journal_ref_raw") if arxiv_info else ""
+
+    if s2_has_journal:
         result.update({k: v for k, v in s2_info.items() if v})
+    elif arxiv_ref:
+        result.update({k: v for k, v in parse_arxiv_journal_ref(arxiv_ref).items() if v})
+        if arxiv_info.get("doi"):
+            result["doi"] = arxiv_info["doi"]
+    elif s2_info:
+        # S2 DOI-only data can still be useful for preprints, but avoid volume/pages.
+        result["doi"] = s2_info.get("doi", "")
+        result["venue"] = s2_info.get("venue", "")
+        result["pub_year"] = s2_info.get("pub_year")
 
     if arxiv_info:
-        # Fill in DOI from arXiv if S2 didn't have it
-        if not result["doi"] and arxiv_info.get("doi"):
+        # arXiv author-supplied DOI is more directly tied to the arXiv record.
+        if arxiv_info.get("doi"):
             result["doi"] = arxiv_info["doi"]
-        # If S2 had no journal name, try to parse arXiv journal_ref
-        if not result["journal_name"] and arxiv_info.get("journal_ref_raw"):
-            result["journal_name"] = arxiv_info["journal_ref_raw"]
+        elif not result["doi"] and s2_has_journal and s2_info.get("doi"):
+            result["doi"] = s2_info["doi"]
 
     return result
 
 
 # ── Post I/O ───────────────────────────────────────────────────────────
 
-def get_all_arxiv_ids():
-    ids = []
+def get_post_metadata():
+    posts = {}
     for f in sorted(POSTS_DIR.glob("*.md")):
         text = f.read_text(encoding="utf-8")
-        m = re.search(r'^arxiv-id:\s*"?([^"\s]+)"?', text, re.MULTILINE)
-        if m:
-            ids.append(m.group(1))
-    return ids
+        parts = text.split("---", 2)
+        front = parts[1] if len(parts) >= 3 else text
+        m = re.search(r'^arxiv-id:\s*"?([^"\s]+)"?', front, re.MULTILINE)
+        if not m:
+            continue
+        aid = m.group(1)
+        title_m = re.search(r'^title:\s*(.+)$', front, re.MULTILINE)
+        title = (title_m.group(1).strip() if title_m else "").strip('"')
+        posts[aid] = {
+            "path": f,
+            "title": title,
+            "journal_locked": bool(re.search(r'^journal-locked:\s*true\s*$', front, re.MULTILINE)),
+            "journal_name": _frontmatter_scalar(front, "journal-name"),
+            "journal_ref": _frontmatter_scalar(front, "journal-ref"),
+            "doi": _frontmatter_scalar(front, "doi"),
+        }
+    return posts
+
+
+def _frontmatter_scalar(front, key):
+    m = re.search(rf'^{re.escape(key)}:\s*(.+)$', front, re.MULTILINE)
+    if not m:
+        return ""
+    value = m.group(1).strip()
+    if ((value.startswith('"') and value.endswith('"')) or
+            (value.startswith("'") and value.endswith("'"))):
+        value = value[1:-1]
+    return value
+
+
+def get_all_arxiv_ids():
+    return list(get_post_metadata().keys())
 
 
 def format_journal_ref(info):
@@ -395,16 +571,34 @@ def update_post_frontmatter(filepath, journal_name, journal_ref, doi):
     return True
 
 
-def update_search_index(all_cached):
-    """Add journal-ref (jr) and doi (d2) fields to arxiv-index.json."""
+def update_search_index(all_cached, post_meta=None):
+    """Add journal-ref (jr) and DOI fields to arxiv-index.json."""
     if not INDEX_FILE.exists():
         print("Warning: arxiv-index.json not found, skipping index update")
         return 0
 
+    post_meta = post_meta or {}
     index = json.loads(INDEX_FILE.read_text(encoding="utf-8"))
     updated = 0
     for entry in index:
         aid = entry.get("id", "")
+        meta = post_meta.get(aid, {})
+
+        # Manual journal data must win over the API cache.
+        if meta.get("journal_locked") and meta.get("journal_name"):
+            entry["jn"] = meta["journal_name"]
+            if meta.get("journal_ref"):
+                entry["jr"] = meta["journal_ref"]
+            doi = meta.get("doi", "")
+            if doi:
+                entry["doi"] = doi
+                entry["d2"] = doi  # legacy key used by older generated indexes
+            else:
+                entry.pop("doi", None)
+                entry.pop("d2", None)
+            updated += 1
+            continue
+
         info = all_cached.get(aid)
         if info and info["journal_name"]:
             badge, jr = format_journal_ref(info)
@@ -415,7 +609,11 @@ def update_search_index(all_cached):
                 entry["jr"] = jr  # full journal ref (tooltip)
                 updated += 1
             if doi:
-                entry["d2"] = doi  # DOI
+                entry["doi"] = doi
+                entry["d2"] = doi  # legacy key used by older generated indexes
+            else:
+                entry.pop("doi", None)
+                entry.pop("d2", None)
         else:
             # No API data — preserve existing fields (API may be temporarily empty)
             pass
@@ -477,8 +675,13 @@ def main():
         sys.exit(1)
 
     db = init_cache()
-    all_ids = get_all_arxiv_ids()
+    post_meta = get_post_metadata()
+    all_ids = list(post_meta.keys())
+    fetchable_ids = [aid for aid in all_ids if not post_meta[aid].get("journal_locked")]
     print(f"Found {len(all_ids)} papers in {POSTS_DIR}")
+    locked_count = len(all_ids) - len(fetchable_ids)
+    if locked_count:
+        print(f"Skipping API refresh for {locked_count} journal-locked posts")
 
     if args.stats:
         show_stats(db, all_ids)
@@ -487,16 +690,16 @@ def main():
 
     # Determine which IDs need fetching
     if args.refresh:
-        to_fetch = all_ids
+        to_fetch = fetchable_ids
     elif args.refresh_empty:
-        cached = get_cached(db, all_ids)
-        to_fetch = [aid for aid in all_ids
+        cached = get_cached(db, fetchable_ids)
+        to_fetch = [aid for aid in fetchable_ids
                     if aid not in cached or not cached[aid]["journal_name"]]
     else:
-        cached = get_cached(db, all_ids)
-        to_fetch = [aid for aid in all_ids if aid not in cached]
+        cached = get_cached(db, fetchable_ids)
+        to_fetch = [aid for aid in fetchable_ids if aid not in cached]
 
-    print(f"Need to fetch: {len(to_fetch)} (cached: {len(all_ids) - len(to_fetch)})")
+    print(f"Need to fetch: {len(to_fetch)} (cached: {len(fetchable_ids) - len(to_fetch)})")
 
     if to_fetch and not args.dry_run:
         # ── Phase 1: Semantic Scholar ──
@@ -510,7 +713,11 @@ def main():
 
             results = s2_fetch_batch(batch)
             for aid, entry in results:
-                info = parse_s2_entry(entry)
+                info = parse_s2_entry(
+                    entry,
+                    requested_arxiv_id=aid,
+                    expected_title=post_meta.get(aid, {}).get("title", ""),
+                )
                 if info:
                     s2_data[aid] = info
 
@@ -659,7 +866,7 @@ def main():
     print(f"Updated {updated} posts")
 
     print("\n=== Updating search index ===")
-    update_search_index(all_cached)
+    update_search_index(all_cached, post_meta)
 
     print("\n=== Exporting BibTeX ===")
     update_bibtex_export()

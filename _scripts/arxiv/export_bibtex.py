@@ -176,10 +176,13 @@ def load_post(filepath):
         "journal_name": str(front_matter.get("journal-name", "")).strip(),
         "journal_ref": str(front_matter.get("journal-ref", "")).strip(),
         "doi": clean_doi(front_matter.get("doi", "")),
+        "journal_locked": bool(front_matter.get("journal-locked")),
     }
 
 
 def build_entry(post, cache_entry):
+    if post.get("journal_locked"):
+        cache_entry = {}
     journal_name = escape_field(post["journal_name"])
     journal_ref = post["journal_ref"]
     parsed_ref = parse_journal_ref(journal_ref)
