@@ -424,6 +424,7 @@
         if (samp) samp.style.display = 'none';
     }
 
+
     // --- Slide engine ---
 
     function tryInit() {

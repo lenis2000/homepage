@@ -1,6 +1,15 @@
 <section class="slide slide-top" id="limit-shape-deformation" data-title="Limit Shapes Under Random Weights">
     <h2 class="slide-title">Limit Shapes Under Random Weights</h2>
 
+    <div id="lsd-resample-buttons" style="position: absolute; top: 2vh; right: 2vw; display: flex; gap: 0.6vw; z-index: 5;">
+        <button id="lsd-resample-all" type="button" style="border: 2px solid var(--slide-accent); border-radius: 5px; background: var(--slide-accent); color: #fff; padding: 0.55vh 0.8vw; font-family: franklingothic-demi, Arial, sans-serif; font-size: clamp(0.75rem, 1vw, 1rem); letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; box-shadow: 0 3px 10px rgba(35,45,75,0.18);">
+            Resample weights and tiling
+        </button>
+        <button id="lsd-resample-tiling" type="button" style="border: 2px solid var(--slide-navy); border-radius: 5px; background: #fff; color: var(--slide-navy); padding: 0.55vh 0.8vw; font-family: franklingothic-demi, Arial, sans-serif; font-size: clamp(0.75rem, 1vw, 1rem); letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; box-shadow: 0 3px 10px rgba(35,45,75,0.14);">
+            Resample only tiling
+        </button>
+    </div>
+
     <div style="display: grid; grid-template-columns: 38vw 55vw; gap: 2vw; margin-top: 1vh; padding: 0 1vw;">
         <!-- Left: equations + arctic curves -->
         <div style="display: flex; flex-direction: column; gap: 1vh;">

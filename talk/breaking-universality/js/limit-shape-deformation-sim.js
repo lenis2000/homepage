@@ -3,12 +3,13 @@
 
     const SLIDE_ID = 'limit-shape-deformation';
     const CANVAS_ID = 'lsd-sample-canvas';
-    const N = 200;
+    const N = 100;
 
     let shufflingModule = null;
     let wasmReady = false;
     let sampling = false;
     let cachedDominoes = null;
+    let currentDiagWeights = null;
 
     // --- WASM ---
 
@@ -25,20 +26,35 @@
         }
     }
 
-    async function sampleTiling() {
+    function setResampleButtonsDisabled(disabled) {
+        ['lsd-resample-all', 'lsd-resample-tiling'].forEach(id => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.disabled = disabled;
+            btn.style.opacity = disabled ? '0.55' : '1';
+            btn.style.cursor = disabled ? 'wait' : 'pointer';
+        });
+    }
+
+    async function sampleTiling({ resampleWeights = false } = {}) {
         if (sampling) return null;
         if (!wasmReady && !(await initWasm())) return null;
         sampling = true;
+        setResampleButtonsDisabled(true);
         try {
             const dim = 2 * N;
             const numWeights = dim * dim;
             const weightsPtr = shufflingModule._malloc(numWeights * 8);
 
-            // Diagonal-layered Uniform[0,2] weights
-            const diagWeights = new Float64Array(N);
-            for (let k = 0; k < N; k++) {
-                diagWeights[k] = Math.random() * 2.0;
+            // Diagonal-layered Uniform[0,2] weights.
+            // Keep them fixed when resampling only the tiling.
+            if (resampleWeights || !currentDiagWeights) {
+                currentDiagWeights = new Float64Array(N);
+                for (let k = 0; k < N; k++) {
+                    currentDiagWeights[k] = Math.random() * 2.0;
+                }
             }
+            const diagWeights = currentDiagWeights;
 
             // Beta edges (even row, even col) get diagonal-layered weight.
             // Alpha, gamma, delta = 1.0.
@@ -67,6 +83,7 @@
             return null;
         } finally {
             sampling = false;
+            setResampleButtonsDisabled(false);
         }
     }
 
@@ -141,6 +158,59 @@
         if (el) el.textContent = text;
     }
 
+    function showSampling() {
+        const samplingEl = document.getElementById('lsd-sampling');
+        const canvasEl = document.getElementById(CANVAS_ID);
+        if (samplingEl) samplingEl.style.display = 'flex';
+        if (canvasEl) canvasEl.style.display = 'none';
+    }
+
+    function showCanvas() {
+        const samplingEl = document.getElementById('lsd-sampling');
+        const canvasEl = document.getElementById(CANVAS_ID);
+        if (samplingEl) samplingEl.style.display = 'none';
+        if (canvasEl) canvasEl.style.display = '';
+    }
+
+    async function resampleAndRender(resampleWeights) {
+        if (sampling) return;
+        await initWasm();
+
+        // On button-triggered resampling, keep the old tiling visible.
+        // Only show "Sampling..." on the initial load when there is no tiling yet.
+        if (!cachedDominoes) showSampling();
+        else showCanvas();
+
+        const dominoes = await sampleTiling({ resampleWeights });
+        if (dominoes) {
+            cachedDominoes = dominoes;
+            showCanvas();
+            drawDominoes(cachedDominoes);
+        } else if (cachedDominoes) {
+            showCanvas();
+            drawDominoes(cachedDominoes);
+        }
+    }
+
+    let resampleButtonsInitialized = false;
+    function setupResampleButtons() {
+        if (resampleButtonsInitialized) return;
+        resampleButtonsInitialized = true;
+
+        const btnAll = document.getElementById('lsd-resample-all');
+        const btnTiling = document.getElementById('lsd-resample-tiling');
+        if (btnAll) btnAll.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            resampleAndRender(true);
+        });
+        if (btnTiling) btnTiling.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            resampleAndRender(false);
+        });
+    }
+
     // --- Slide engine ---
 
     function tryInit() {
@@ -152,22 +222,12 @@
             pause() {},
 
             async onSlideEnter() {
-                const samplingEl = document.getElementById('lsd-sampling');
-                const canvasEl = document.getElementById(CANVAS_ID);
+                setupResampleButtons();
                 await initWasm();
                 if (!cachedDominoes) {
-                    if (samplingEl) samplingEl.style.display = 'flex';
-                    if (canvasEl) canvasEl.style.display = 'none';
-                    const dominoes = await sampleTiling();
-                    if (dominoes) {
-                        cachedDominoes = dominoes;
-                        if (samplingEl) samplingEl.style.display = 'none';
-                        if (canvasEl) canvasEl.style.display = '';
-                        drawDominoes(dominoes);
-                    }
+                    await resampleAndRender(false);
                 } else {
-                    if (samplingEl) samplingEl.style.display = 'none';
-                    if (canvasEl) canvasEl.style.display = '';
+                    showCanvas();
                     drawDominoes(cachedDominoes);
                 }
             },
