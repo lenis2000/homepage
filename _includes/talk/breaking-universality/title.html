@@ -1,22 +1,131 @@
-<!-- APPROVED: Do not modify without explicit user request -->
-<section class="slide slide-center" id="title" data-title="Title" style="display: flex; flex-direction: row; align-items: center; padding: 3vh 3vw;">
-    <!-- Left: text -->
-    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center;">
-        <h1 style="font-size: clamp(2.5rem, 3.5vw, 4rem); line-height: 1.2;">Breaking Universality<br> in Dimer Models</h1>
+<section class="slide slide-center" id="title" data-title="Title" style="display: grid; grid-template-columns: minmax(10rem, 18vw) minmax(0, 1fr) minmax(10rem, 18vw); gap: 2.2vw; align-items: center; padding: 3vh 2.5vw 17vh; text-align: center; overflow: hidden;">
+    <style>
+        #title .collaborator-column {
+            display: grid;
+            grid-template-rows: repeat(2, auto);
+            gap: 2vh;
+            justify-items: center;
+            align-content: center;
+            height: 100%;
+        }
 
-        <p class="author" style="margin-top: 2vh; font-size: clamp(1.5rem, 2.5vw, 2.2rem);">Leonid Petrov</p>
-        <p style="font-size: clamp(1.2rem, 2vw, 1.8rem); color: var(--slide-muted);">University of Virginia</p>
-        <br><br><br>
-        <p style="font-size: clamp(1.1rem, 1.8vw, 1.5rem); margin-top: 0.5vh;">Joint work with
-            <strong>Alisa Knizel</strong> (Columbia)<br>
-            and <strong>Alexey Bufetov</strong>,
-            <strong>Panagiotis Zografos</strong> (Leipzig)
-        </p>
+        #title .person-card {
+            position: relative;
+            width: min(17vw, 25vh, 260px);
+            aspect-ratio: 1 / 1;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #f5f5f5;
+            border: 3px solid rgba(35, 45, 75, 0.16);
+            box-shadow: 0 10px 24px rgba(35, 45, 75, 0.16);
+        }
+
+        #title .person-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        #title .person-card .person-label {
+            position: absolute;
+            left: 0.65vw;
+            right: 0.65vw;
+            bottom: 0.75vh;
+            padding: 0.45vh 0.55vw 0.38vh;
+            background: rgba(255, 255, 255, 0.94);
+            border-left: 5px solid var(--slide-accent);
+            border-radius: 4px;
+            color: var(--slide-navy);
+            font-family: "franklingothic-demi", Arial, sans-serif;
+            font-style: normal;
+            font-size: clamp(0.72rem, 0.9vw, 0.98rem);
+            letter-spacing: 0.08em;
+            line-height: 1.1;
+            text-transform: uppercase;
+            box-shadow: 0 3px 10px rgba(35, 45, 75, 0.22);
+        }
+
+        #title .title-main {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #title .title-main h1 {
+            font-size: clamp(2.25rem, 4.1vw, 4.6rem);
+            line-height: 1.08;
+            margin: 0 0 2.4vh;
+        }
+
+        #title .title-main p {
+            margin-bottom: 0;
+        }
+
+        #title .joint-work {
+            margin-top: 4vh;
+            font-size: clamp(1.02rem, 1.55vw, 1.45rem);
+            line-height: 1.38;
+        }
+
+        #title .rotunda-wrap {
+            margin-top: 1.8vh;
+            width: min(72vw, 122vh, 1300px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #title #title-canvas {
+            cursor: pointer;
+            height: clamp(19rem, 54vh, 40rem);
+            width: auto;
+            max-width: 100%;
+            display: block;
+        }
+    </style>
+
+    <div class="collaborator-column" aria-label="Waterfall collaborators">
+        <figure class="person-card">
+            <img src="https://math.barnard.edu/sites/default/files/styles/3_4_600x800_m/public/2023-08/DSC_2786%20-%20Alisa%20Knizel.jpeg.jpg?itok=sqL5Z55c" alt="Alisa Knizel" style="object-position: center 38%;">
+            <figcaption class="person-label">Alisa Knizel</figcaption>
+        </figure>
+        <figure class="person-card">
+            <img src="https://math.virginia.edu/img/people-since-2024/2024/smb2tp.jpg" alt="Yizhen Li" style="object-position: center 35%;">
+            <figcaption class="person-label">Yizhen Li</figcaption>
+        </figure>
     </div>
 
-    <!-- Right: Washington Monument column — (10, 10, 80) hexagonal lozenge tiling, cropped to the top portion (frame drawn in JS on top of lozenges) -->
-    <div style="display: flex; align-items: center; justify-content: center; padding-left: 2vw;">
-        <canvas id="title-canvas" width="1200" height="1600" style="cursor: pointer; height: 78vh; width: auto; display: block;"></canvas>
+    <div class="title-main">
+        <h1>Breaking Universality<br>in Dimer Models</h1>
+
+        <p class="author" style="font-size: clamp(1.45rem, 2.5vw, 2.25rem);">Leonid Petrov</p>
+        <p style="font-size: clamp(1.05rem, 1.8vw, 1.55rem); color: var(--slide-muted);">University of Virginia</p>
+
+        <p class="joint-work">
+            Joint work with
+            <strong>Alisa Knizel</strong> (Barnard / Columbia)
+            <a href="https://arxiv.org/abs/2507.22011" target="_blank" rel="noopener" style="color: #0066cc; text-decoration: underline; margin-left: 0.35em;">arXiv:2507.22011<span class="sr-only"> (opens in new tab)</span></a><br>
+            and <strong>Alexey Bufetov</strong>, <strong>Panagiotis Zografos</strong> (Leipzig)
+            <a href="https://arxiv.org/abs/2507.08560" target="_blank" rel="noopener" style="color: #0066cc; text-decoration: underline; margin-left: 0.35em;">arXiv:2507.08560<span class="sr-only"> (opens in new tab)</span></a>
+        </p>
+
+        <div class="rotunda-wrap" aria-label="Animated UVA Rotunda lozenge tiling">
+            <canvas id="title-canvas" width="1600" height="1200"></canvas>
+        </div>
+    </div>
+
+    <div class="collaborator-column" aria-label="Random edge weight collaborators">
+        <figure class="person-card">
+            <img src="https://www.l-iz.de/wp-content/uploads/2022/01/1-52.jpg" alt="Alexey Bufetov" style="object-position: center 38%;">
+            <figcaption class="person-label">Alexey Bufetov</figcaption>
+        </figure>
+        <figure class="person-card">
+            <img src="https://www.statistical-physics-mathematics.psl.eu/medias/photo/photo-rev1_1772447903828" alt="Panagiotis Zografos" style="object-position: center 35%;">
+            <figcaption class="person-label">Panagiotis Zografos</figcaption>
+        </figure>
     </div>
 
     <!-- Funding acknowledgment logos -->
@@ -25,8 +134,17 @@
         <img src="images/simons-logo.svg" alt="Simons Foundation" style="height: 6vh;">
     </div>
 
+    <!-- QR code for online audiences -->
+    <div style="position: absolute; bottom: 3vh; right: 3vw; display: flex; align-items: center; gap: 1.2vw;">
+        <div style="font-size: clamp(0.95rem, 1.5vw, 1.3rem); text-align: right;">
+            <a href="https://lpetrov.cc/lozenge-draw/" style="color: var(--slide-navy); font-weight: bold;">lpetrov.cc/lozenge-draw/</a>
+            <div style="color: var(--slide-muted); font-size: 0.85em;">Draw a shape and tile by lozenges</div>
+        </div>
+        <img src="images/qr-lozenge-draw.svg" alt="QR code for lpetrov.cc/lozenge-draw/" style="height: 16vh; width: auto;">
+    </div>
+
     <!-- Loading progress bar (disappears when loaded) -->
-    <div id="asset-loader" style="position: absolute; bottom: 10vh; left: 50%; transform: translateX(-50%); text-align: center; transition: opacity 0.5s;">
+    <div id="asset-loader" style="position: absolute; bottom: 6vh; left: 50%; transform: translateX(-50%); text-align: center; transition: opacity 0.5s;">
         <div style="width: 200px; height: 4px; background: rgba(0,0,0,0.1); border-radius: 2px; overflow: hidden;">
             <div id="asset-loader-bar" style="height: 100%; width: 0%; background: var(--slide-accent); transition: width 0.2s;"></div>
         </div>
