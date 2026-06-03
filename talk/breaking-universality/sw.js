@@ -83,6 +83,7 @@ const PRECACHE_ASSETS = [
   '/talk/breaking-universality/js/inter-slice-sim.js',
   '/talk/breaking-universality/js/why-2-periodic-sim.js',
   '/talk/breaking-universality/js/barcode-conjecture-sim.js',
+  '/talk/breaking-universality/js/title-rotunda-sim.js',
 
   // Simulation JS files — Part III
   '/talk/breaking-universality/js/random-weights-sim.js',
@@ -95,6 +96,7 @@ const PRECACHE_ASSETS = [
   '/talk/breaking-universality/waterfall-js/thankyou-sim.js',
 
   // Letter data (for title + thank you slides)
+  '/letters/Rotunda.json',
   '/letters/golden_gate.json',
   '/letters/T.json',
   '/letters/H.json',

@@ -1,17 +1,127 @@
-<section class="slide slide-center" id="title" data-title="Title" style="text-align: center;">
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; text-align: center;">
-        <h1 style="font-size: clamp(2.8rem, 4.5vw, 5rem); line-height: 1.2; margin-bottom: 4vh; text-align: center;">Breaking Universality<br>in Dimer Models</h1>
+<section class="slide slide-center" id="title" data-title="Title" style="display: grid; grid-template-columns: minmax(10rem, 18vw) minmax(0, 1fr) minmax(10rem, 18vw); gap: 2.2vw; align-items: center; padding: 3vh 2.5vw 17vh; text-align: center; overflow: hidden;">
+    <style>
+        #title .collaborator-column {
+            display: grid;
+            grid-template-rows: repeat(2, auto);
+            gap: 2vh;
+            justify-items: center;
+            align-content: center;
+            height: 100%;
+        }
 
-        <p class="author" style="margin-top: 2vh; font-size: clamp(1.6rem, 2.8vw, 2.4rem); text-align: center;">Leonid Petrov</p>
-        <p style="font-size: clamp(1.2rem, 2vw, 1.8rem); color: var(--slide-muted); text-align: center;">University of Virginia</p>
+        #title .person-card {
+            position: relative;
+            width: min(17vw, 25vh, 260px);
+            aspect-ratio: 1 / 1;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #f5f5f5;
+            border: 3px solid rgba(35, 45, 75, 0.16);
+            box-shadow: 0 10px 24px rgba(35, 45, 75, 0.16);
+        }
 
-        <p style="margin-top: 6vh; font-size: clamp(1.2rem, 2vw, 1.7rem); text-align: center; line-height: 1.5;">
+        #title .person-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        #title .person-card .person-label {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 0.55vh 0.7vw;
+            background: linear-gradient(180deg, rgba(35, 45, 75, 0), rgba(35, 45, 75, 0.94) 35%);
+            color: #ffffff;
+            font-family: "franklingothic-demi", Arial, sans-serif;
+            font-size: clamp(0.78rem, 1.05vw, 1.08rem);
+            letter-spacing: 0.02em;
+            line-height: 1.15;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+        }
+
+        #title .title-main {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #title .title-main h1 {
+            font-size: clamp(2.25rem, 4.1vw, 4.6rem);
+            line-height: 1.08;
+            margin: 0 0 2.4vh;
+        }
+
+        #title .title-main p {
+            margin-bottom: 0;
+        }
+
+        #title .joint-work {
+            margin-top: 4vh;
+            font-size: clamp(1.02rem, 1.55vw, 1.45rem);
+            line-height: 1.38;
+        }
+
+        #title .rotunda-wrap {
+            margin-top: 1.8vh;
+            width: min(72vw, 122vh, 1300px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #title #title-canvas {
+            cursor: pointer;
+            height: clamp(19rem, 54vh, 40rem);
+            width: auto;
+            max-width: 100%;
+            display: block;
+        }
+    </style>
+
+    <div class="collaborator-column" aria-label="Waterfall collaborators">
+        <figure class="person-card">
+            <img src="https://math.barnard.edu/sites/default/files/styles/3_4_600x800_m/public/2023-08/DSC_2786%20-%20Alisa%20Knizel.jpeg.jpg?itok=sqL5Z55c" alt="Alisa Knizel" style="object-position: center 38%;">
+            <figcaption class="person-label">Alisa Knizel</figcaption>
+        </figure>
+        <figure class="person-card">
+            <img src="https://math.virginia.edu/img/people-since-2024/2024/smb2tp.jpg" alt="Yizhen Li" style="object-position: center 35%;">
+            <figcaption class="person-label">Yizhen Li</figcaption>
+        </figure>
+    </div>
+
+    <div class="title-main">
+        <h1>Breaking Universality<br>in Dimer Models</h1>
+
+        <p class="author" style="font-size: clamp(1.45rem, 2.5vw, 2.25rem);">Leonid Petrov</p>
+        <p style="font-size: clamp(1.05rem, 1.8vw, 1.55rem); color: var(--slide-muted);">University of Virginia</p>
+
+        <p class="joint-work">
             Joint work with
             <strong>Alisa Knizel</strong> (Barnard / Columbia)
-            <a href="https://arxiv.org/abs/2507.22011" target="_blank" style="color: #0066cc; text-decoration: underline; margin-left: 0.4em;">arXiv:2507.22011<span class="sr-only"> (opens in new tab)</span></a><br>
+            <a href="https://arxiv.org/abs/2507.22011" target="_blank" rel="noopener" style="color: #0066cc; text-decoration: underline; margin-left: 0.35em;">arXiv:2507.22011<span class="sr-only"> (opens in new tab)</span></a><br>
             and <strong>Alexey Bufetov</strong>, <strong>Panagiotis Zografos</strong> (Leipzig)
-            <a href="https://arxiv.org/abs/2507.08560" target="_blank" style="color: #0066cc; text-decoration: underline; margin-left: 0.4em;">arXiv:2507.08560<span class="sr-only"> (opens in new tab)</span></a>
+            <a href="https://arxiv.org/abs/2507.08560" target="_blank" rel="noopener" style="color: #0066cc; text-decoration: underline; margin-left: 0.35em;">arXiv:2507.08560<span class="sr-only"> (opens in new tab)</span></a>
         </p>
+
+        <div class="rotunda-wrap" aria-label="Animated UVA Rotunda lozenge tiling">
+            <canvas id="title-canvas" width="1600" height="1200"></canvas>
+        </div>
+    </div>
+
+    <div class="collaborator-column" aria-label="Random edge weight collaborators">
+        <figure class="person-card">
+            <img src="https://www.l-iz.de/wp-content/uploads/2022/01/1-52.jpg" alt="Alexey Bufetov" style="object-position: center 38%;">
+            <figcaption class="person-label">Alexey Bufetov</figcaption>
+        </figure>
+        <figure class="person-card">
+            <img src="https://www.statistical-physics-mathematics.psl.eu/medias/photo/photo-rev1_1772447903828" alt="Panagiotis Zografos" style="object-position: center 35%;">
+            <figcaption class="person-label">Panagiotis Zografos</figcaption>
+        </figure>
     </div>
 
     <!-- Funding acknowledgment logos -->
