@@ -72,10 +72,10 @@ Do **not** change mathematical T-embedding computation or its primary rendering 
 **Files:**
 - Read only: `s/domino.cpp`, `s/domino.md`, `tools/test-domino.mjs`, `_simulations/domino_tilings/2025-12-04-RSK-sampling.md`
 
-- [ ] Inspect the `awesome-domino-sampler` changes in git history and copy the proven core/error/test patterns rather than inventing a parallel architecture.
-- [ ] Inspect `_simulations/domino_tilings/2025-12-04-RSK-sampling.md` and copy its elapsed-seconds display and pixelated/progressive canvas cache behavior for the sample canvas.
-- [ ] Identify the exact functions in the T-embedding page that correspond to `/domino/`'s sampling/parsing phases and the RSK sampler's canvas rendering/status phases.
-- [ ] Confirm the starting working tree is clean before ralphex begins code edits.
+- [x] Inspect the `awesome-domino-sampler` changes in git history and copy the proven core/error/test patterns rather than inventing a parallel architecture.
+- [x] Inspect `_simulations/domino_tilings/2025-12-04-RSK-sampling.md` and copy its elapsed-seconds display and pixelated/progressive canvas cache behavior for the sample canvas.
+- [x] Identify the exact functions in the T-embedding page that correspond to `/domino/`'s sampling/parsing phases and the RSK sampler's canvas rendering/status phases.
+- [x] Confirm the starting working tree is clean before ralphex begins code edits.
 
 ### Task 1: Add random-sampler-only profiling, visible seconds, and baselines
 
