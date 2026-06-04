@@ -46727,6 +46727,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2409.05803": {
+    "date": "2024-09-09",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "2409.06418": {
     "date": "2024-09-10",
     "decision": "REJECT",
@@ -62974,6 +62979,11 @@
     "date": "2004-02-25",
     "decision": "REJECT",
     "source": "fetch"
+  },
+  "math/0402452": {
+    "date": "2004-02-27",
+    "decision": "ACCEPT",
+    "source": "manual"
   },
   "math/0403016": {
     "date": "2004-02-29",
