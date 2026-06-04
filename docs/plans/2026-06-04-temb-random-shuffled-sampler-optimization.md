@@ -85,11 +85,11 @@ Do **not** change mathematical T-embedding computation or its primary rendering 
 
 Instrument the sampler before changing it.
 
-- [ ] Add a timing span next to the sampler progress/status text, following the RSK page exactly: `(<seconds>.toFixed(2)s)`. Clear it when a new sample starts or sampling fails.
-- [ ] Add timing around `generateRandomSample()` phases: control read, weight generation/conversion, heap copy, WASM shuffling, UTF8 conversion, JSON parse, 2D render, double-dimer loop processing, height-function pane render, and sample 3D render.
-- [ ] Expose a dev-only `window.tembShuffledSamplerBenchmark(options)` helper for N=100, N=200, and N=330 in single and double-dimer modes. It should restore controls after running.
-- [ ] Record representative baseline numbers in a benchmark markdown file or a clearly marked comment block.
-- [ ] Verify the page still loads, computes the initial T-embedding, and generates the initial random sample.
+- [x] Add a timing span next to the sampler progress/status text, following the RSK page exactly: `(<seconds>.toFixed(2)s)`. Clear it when a new sample starts or sampling fails.
+- [x] Add timing around `generateRandomSample()` phases: control read, weight generation/conversion, heap copy, WASM shuffling, UTF8 conversion, JSON parse, 2D render, double-dimer loop processing, height-function pane render, and sample 3D render.
+- [x] Expose a dev-only `window.tembShuffledSamplerBenchmark(options)` helper for N=100, N=200, and N=330 in single and double-dimer modes. It should restore controls after running.
+- [x] Record representative baseline numbers in a benchmark markdown file or a clearly marked comment block.
+- [x] Verify the page still loads, computes the initial T-embedding, and generates the initial random sample.
 
 ### Task 2: Optimize the T-embedding shuffling WASM core
 

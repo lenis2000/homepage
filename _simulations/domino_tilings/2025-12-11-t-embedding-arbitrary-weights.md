@@ -1058,6 +1058,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           🎲 Sample
         </button>
         <span id="sample-time" style="color: #232D4B; font-weight: 500;" role="status" aria-live="polite"></span>
+        <span id="sample-timing-display" style="margin-left: 8px; color: #666; font-size: 0.9em;" role="status" aria-live="polite"></span>
       </div>
     </div>
     <!-- Canvas with floating controls -->
@@ -2716,6 +2717,238 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let cachedIIDWeights = null;
   let cachedIIDKey = null;  // Key to check if cache is valid
 
+  const TEMB_SHUFFLED_DEFAULT_BENCHMARK_CASES = [
+    { n: 100, doubleDimer: false, label: 'N=100 single' },
+    { n: 100, doubleDimer: true, label: 'N=100 double dimer' },
+    { n: 200, doubleDimer: false, label: 'N=200 single' },
+    { n: 200, doubleDimer: true, label: 'N=200 double dimer' },
+    { n: 330, doubleDimer: false, label: 'N=330 single' },
+    { n: 330, doubleDimer: true, label: 'N=330 double dimer' }
+  ];
+
+  let lastShuffledSamplerProfile = null;
+
+  function roundSampleTiming(elapsedMs) {
+    return Math.round(elapsedMs * 10) / 10;
+  }
+
+  function createShuffledSamplerProfile(options = {}) {
+    return {
+      source: options.source || 'ui',
+      label: options.label || '',
+      status: 'running',
+      n: null,
+      requestedN: null,
+      doubleDimer: null,
+      dominoCount: 0,
+      dominoCount2: 0,
+      startedAt: performance.now(),
+      totalMs: null,
+      timings: {
+        controlReadMs: null,
+        weightGenerationConversionMs: null,
+        heapCopyMs: null,
+        wasmShufflingMs: null,
+        utf8ConversionMs: null,
+        jsonParseMs: null,
+        twoDRenderMs: null,
+        doubleDimerLoopProcessingMs: null,
+        heightFunctionPaneRenderMs: null,
+        sample3DRenderMs: null
+      },
+      error: null
+    };
+  }
+
+  function setSamplePhaseTiming(profile, key, elapsedMs) {
+    if (!profile || !profile.timings || !(key in profile.timings)) return;
+    profile.timings[key] = roundSampleTiming(elapsedMs);
+  }
+
+  function measureSamplePhase(profile, key, fn) {
+    const started = performance.now();
+    try {
+      return fn();
+    } finally {
+      setSamplePhaseTiming(profile, key, performance.now() - started);
+    }
+  }
+
+  async function measureSampleAsyncPhase(profile, key, fn) {
+    const started = performance.now();
+    try {
+      return await fn();
+    } finally {
+      setSamplePhaseTiming(profile, key, performance.now() - started);
+    }
+  }
+
+  function setSampleStatus(message) {
+    const statusElem = document.getElementById('sample-time');
+    if (statusElem) statusElem.textContent = message || '';
+  }
+
+  function clearSampleTimingDisplay() {
+    const timingDisplay = document.getElementById('sample-timing-display');
+    if (timingDisplay) timingDisplay.textContent = '';
+  }
+
+  function setSampleTimingDisplay(profile) {
+    const timingDisplay = document.getElementById('sample-timing-display');
+    if (!timingDisplay || !profile || profile.source === 'benchmark') return;
+    if (profile.status === 'ok' && Number.isFinite(profile.totalMs)) {
+      timingDisplay.textContent = `(${(profile.totalMs / 1000).toFixed(2)}s)`;
+    } else if (profile.status === 'error') {
+      timingDisplay.textContent = '';
+    }
+  }
+
+  function finishShuffledSamplerProfile(profile, status, error = null) {
+    if (!profile) return profile;
+    profile.status = status;
+    profile.totalMs = roundSampleTiming(performance.now() - profile.startedAt);
+    profile.error = error ? String(error.message || error) : null;
+    lastShuffledSamplerProfile = profile;
+    window.tembLastShuffledSamplerProfile = profile;
+    setSampleTimingDisplay(profile);
+    return profile;
+  }
+
+  function readRandomSampleControls() {
+    const input = document.getElementById('sample-N-input');
+    const doubleDimerChk = document.getElementById('sample-double-dimer-chk');
+    const minLoopInput = document.getElementById('sample-min-loop-length');
+    const requestedN = parseInt(input?.value) || 6;
+    let N = requestedN;
+    let statusMessage = 'Sampling...';
+
+    if (N > 330) {
+      N = 330;
+      if (input) input.value = 330;
+      statusMessage = 'N capped to 330 (memory limit). Sampling...';
+    } else if (N > 300) {
+      statusMessage = 'Sampling (large N, may be slow)...';
+    }
+
+    doubleDimerMode = !!doubleDimerChk?.checked;
+    minLoopLength = parseInt(minLoopInput?.value) || 2;
+    return { N, requestedN, doubleDimer: doubleDimerMode, minLoopLength, statusMessage };
+  }
+
+  function snapshotSampleBenchmarkControls() {
+    return {
+      n: document.getElementById('sample-N-input')?.value,
+      border: document.getElementById('sample-border-input')?.value,
+      minLoopLength: document.getElementById('sample-min-loop-length')?.value,
+      doubleDimer: !!document.getElementById('sample-double-dimer-chk')?.checked,
+      sampleWas3D: sampleIs3DView,
+      heightFunctionWasActive: heightFunctionActive
+    };
+  }
+
+  function setSampleDoubleDimerControl(enabled) {
+    const doubleDimerChk = document.getElementById('sample-double-dimer-chk');
+    const doubleDimerOptions = document.getElementById('double-dimer-options');
+    if (doubleDimerChk) doubleDimerChk.checked = !!enabled;
+    doubleDimerMode = !!enabled;
+    if (doubleDimerOptions) {
+      doubleDimerOptions.style.display = enabled ? 'inline' : 'none';
+    }
+  }
+
+  function restoreSampleBenchmarkControls(snapshot) {
+    if (!snapshot) return;
+    const nInput = document.getElementById('sample-N-input');
+    const borderInput = document.getElementById('sample-border-input');
+    const minLoopInput = document.getElementById('sample-min-loop-length');
+    if (nInput && snapshot.n !== undefined) nInput.value = snapshot.n;
+    if (borderInput && snapshot.border !== undefined) borderInput.value = snapshot.border;
+    if (minLoopInput && snapshot.minLoopLength !== undefined) minLoopInput.value = snapshot.minLoopLength;
+    setSampleDoubleDimerControl(snapshot.doubleDimer);
+    minLoopLength = parseInt(minLoopInput?.value) || 2;
+
+    if (snapshot.heightFunctionWasActive) {
+      showHeightFunctionPane();
+    } else {
+      hideHeightFunctionPane();
+    }
+
+    if (snapshot.sampleWas3D !== sampleIs3DView) {
+      setSampleViewMode(snapshot.sampleWas3D);
+    } else if (sampleIs3DView) {
+      updateSample3DView();
+    } else {
+      renderSample();
+    }
+  }
+
+  function nextSampleBenchmarkFrame() {
+    return new Promise(resolve => requestAnimationFrame(() => resolve()));
+  }
+
+  async function runTembShuffledSamplerBenchmark(options = {}) {
+    const cases = Array.isArray(options.cases) ? options.cases : TEMB_SHUFFLED_DEFAULT_BENCHMARK_CASES;
+    const stopOnError = options.stopOnError === true;
+    const shouldRestore = options.restore !== false;
+    const snapshot = snapshotSampleBenchmarkControls();
+    const results = [];
+
+    try {
+      if (!options.include3D && sampleIs3DView) {
+        setSampleViewMode(false);
+        await new Promise(resolve => setTimeout(resolve, 60));
+      }
+      if (!options.includeHeightFunction && heightFunctionActive) {
+        hideHeightFunctionPane();
+      }
+
+      for (let i = 0; i < cases.length; i++) {
+        const benchmarkCase = cases[i];
+        const nInput = document.getElementById('sample-N-input');
+        if (nInput) nInput.value = benchmarkCase.n;
+        setSampleDoubleDimerControl(!!benchmarkCase.doubleDimer);
+        setSampleStatus(`Benchmark ${i + 1}/${cases.length}: ${benchmarkCase.label || `N=${benchmarkCase.n}`}`);
+        clearSampleTimingDisplay();
+        await nextSampleBenchmarkFrame();
+
+        const profile = await generateRandomSample({
+          source: 'benchmark',
+          label: benchmarkCase.label || `N=${benchmarkCase.n}`,
+          throwOnError: false
+        });
+        results.push({
+          case: benchmarkCase,
+          status: profile.status,
+          n: profile.n,
+          doubleDimer: profile.doubleDimer,
+          dominoCount: profile.dominoCount,
+          dominoCount2: profile.dominoCount2,
+          timings: { ...profile.timings, totalMs: profile.totalMs },
+          error: profile.error
+        });
+
+        if (profile.status === 'error' && stopOnError) {
+          throw new Error(profile.error || `Benchmark case failed: ${benchmarkCase.label}`);
+        }
+      }
+    } finally {
+      if (shouldRestore) {
+        restoreSampleBenchmarkControls(snapshot);
+        clearSampleTimingDisplay();
+        setSampleStatus('');
+      }
+    }
+
+    const summary = {
+      generatedAt: new Date().toISOString(),
+      cases: results
+    };
+    console.info('[temb] shuffled sampler benchmark summary', summary);
+    return summary;
+  }
+
+  window.tembShuffledSamplerBenchmark = runTembShuffledSamplerBenchmark;
+
   function getIIDWeightsCacheKey(N) {
     const seed = parseInt(document.getElementById('random-seed').value) || 42;
     const distType = document.getElementById('iid-distribution-select').value;
@@ -4294,17 +4527,23 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   // Helper: Send weights to shuffling WASM and run simulation
   // Returns resultPtr (caller must free with shufflingFreeString)
-  async function runShufflingWithWeights(N, eklpWeights, doubleDimer = true) {
+  async function runShufflingWithWeights(N, eklpWeights, doubleDimer = true, profile = null) {
     const numWeights = eklpWeights.length;
     const weightsPtr = shufflingModule._malloc(numWeights * 8);
-    for (let i = 0; i < numWeights; i++) {
-      shufflingModule.setValue(weightsPtr + i * 8, eklpWeights[i], 'double');
+    try {
+      measureSamplePhase(profile, 'heapCopyMs', () => {
+        for (let i = 0; i < numWeights; i++) {
+          shufflingModule.setValue(weightsPtr + i * 8, eklpWeights[i], 'double');
+        }
+      });
+      return await measureSampleAsyncPhase(profile, 'wasmShufflingMs', async () => (
+        doubleDimer
+          ? await simulateAztecDoubleDimer(N, weightsPtr)
+          : await simulateAztecIIDDirect(N, weightsPtr)
+      ));
+    } finally {
+      shufflingModule._free(weightsPtr);
     }
-    const resultPtr = doubleDimer
-      ? await simulateAztecDoubleDimer(N, weightsPtr)
-      : await simulateAztecIIDDirect(N, weightsPtr);
-    shufflingModule._free(weightsPtr);
-    return resultPtr;
   }
 
   // Helper: Apply master weights to geometry engine (Engine A)
@@ -4397,69 +4636,93 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
   }
 
-  async function generateRandomSample() {
-    if (!wasmReady) return;
+  async function generateRandomSample(options = {}) {
+    const profile = createShuffledSamplerProfile(options);
+    let resultPtr = 0;
 
-    let N = parseInt(document.getElementById('sample-N-input').value) || 6;
-    const timeSpan = document.getElementById('sample-time');
-
-    // Hard limit (memory constraint: algorithm uses O(N³) memory)
-    if (N > 330) {
-      N = 330;
-      document.getElementById('sample-N-input').value = 330;
-      timeSpan.textContent = 'N capped to 330 (memory limit). Sampling...';
-    } else if (N > 300) {
-      // Warning for large N
-      timeSpan.textContent = 'Sampling (large N, may be slow)...';
-    } else {
-      timeSpan.textContent = 'Sampling...';
+    clearSampleTimingDisplay();
+    if (!wasmReady) {
+      const error = new Error('WASM modules not ready');
+      finishShuffledSamplerProfile(profile, 'error', error);
+      setSampleStatus('Sampling failed: ' + error.message);
+      if (options.throwOnError) throw error;
+      return profile;
     }
 
-    const startTime = performance.now();
-
     try {
+      const controls = measureSamplePhase(profile, 'controlReadMs', readRandomSampleControls);
+      profile.n = controls.N;
+      profile.requestedN = controls.requestedN;
+      profile.doubleDimer = controls.doubleDimer;
+      setSampleStatus(options.source === 'benchmark'
+        ? `${options.label || 'Benchmark'}: sampling...`
+        : controls.statusMessage);
+
       // ALL modes use single source of truth: generateEdgeWeights() → toEKLPMatrix()
       // This ensures same weights for single and double dimer sampling
-      const { mode, params } = getCurrentWeightParams();
-      const edges = generateEdgeWeights(N, mode, params);
-      const eklpWeights = toEKLPMatrix(edges, N);
-      const resultPtr = await runShufflingWithWeights(N, eklpWeights, doubleDimerMode);
+      const sampleWeights = measureSamplePhase(profile, 'weightGenerationConversionMs', () => {
+        const { mode, params } = getCurrentWeightParams();
+        const edges = generateEdgeWeights(controls.N, mode, params);
+        return toEKLPMatrix(edges, controls.N);
+      });
 
-      // Parse result
-      const jsonStr = shufflingModule.UTF8ToString(resultPtr);
-      shufflingFreeString(resultPtr);
+      resultPtr = await runShufflingWithWeights(controls.N, sampleWeights, controls.doubleDimer, profile);
+      if (!resultPtr) {
+        throw new Error('Shuffling WASM returned a null result pointer');
+      }
 
-      const result = JSON.parse(jsonStr);
+      const jsonStr = measureSamplePhase(profile, 'utf8ConversionMs', () => (
+        shufflingModule.UTF8ToString(resultPtr)
+      ));
+      const result = measureSamplePhase(profile, 'jsonParseMs', () => JSON.parse(jsonStr));
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
 
       // Handle double dimer mode: result has config1 and config2
-      if (doubleDimerMode && result.config1) {
+      if (controls.doubleDimer && result.config1) {
         sampleDominoes = result.config1;
-        sampleDominoes2 = result.config2;
+        sampleDominoes2 = result.config2 || [];
       } else {
         sampleDominoes = Array.isArray(result) ? result : [];
         sampleDominoes2 = [];
       }
-
-      const elapsed = performance.now() - startTime;
-      timeSpan.textContent = `${elapsed.toFixed(0)} ms`;
+      profile.dominoCount = sampleDominoes.length;
+      profile.dominoCount2 = sampleDominoes2.length;
 
       // Reset view and render
       resetSampleView();
-      renderSample();
-      updateSample3DView();
+      measureSamplePhase(profile, 'twoDRenderMs', () => renderSample(profile));
+      measureSamplePhase(profile, 'sample3DRenderMs', updateSample3DView);
 
       // Update height function button visibility
       updateHeightFunctionButtonVisibility();
 
       // Update height function pane if visible
-      if (heightFunctionActive && doubleDimerMode) {
-        const heightDiff = computeDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
-        renderHeightFunctionSurface(heightDiff);
+      if (heightFunctionActive && controls.doubleDimer) {
+        measureSamplePhase(profile, 'heightFunctionPaneRenderMs', () => {
+          const heightDiff = computeDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
+          renderHeightFunctionSurface(heightDiff);
+        });
       }
+
+      finishShuffledSamplerProfile(profile, 'ok');
+      if (profile.source !== 'benchmark') {
+        setSampleStatus('');
+      }
+      return profile;
 
     } catch (e) {
       console.error('Shuffling error:', e);
-      timeSpan.textContent = 'Error';
+      finishShuffledSamplerProfile(profile, 'error', e);
+      clearSampleTimingDisplay();
+      setSampleStatus('Sampling failed: ' + (e.message || e));
+      if (options.throwOnError) throw e;
+      return profile;
+    } finally {
+      if (resultPtr && shufflingFreeString) {
+        shufflingFreeString(resultPtr);
+      }
     }
   }
 
@@ -4495,7 +4758,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     samplePanY = -centerY;
   }
 
-  function renderSample() {
+  function renderSample(profile = null) {
     if (!sampleCanvas || !sampleCtx) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -4534,7 +4797,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     // Double dimer mode: render loops
     if (doubleDimerMode && sampleDominoes2.length > 0) {
-      renderDoubleDimerLoops(sampleCtx, centerX, centerY, sampleZoom, samplePanX, samplePanY, borderWidth);
+      renderDoubleDimerLoops(sampleCtx, centerX, centerY, sampleZoom, samplePanX, samplePanY, borderWidth, profile);
       return;
     }
 
@@ -4559,7 +4822,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   }
 
   // Render double dimer configuration as loops
-  function renderDoubleDimerLoops(ctx, centerX, centerY, zoom, panX, panY, borderWidth = 1) {
+  function renderDoubleDimerLoops(ctx, centerX, centerY, zoom, panX, panY, borderWidth = 1, profile = null) {
+    const loopProcessingStart = performance.now();
+
     // Create edge key from domino
     const edgeKey = (d) => {
       const cx = d.x + d.w / 2;
@@ -4661,6 +4926,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       loopSizes.set(loopId, loopSize);
       loopId++;
     }
+
+    setSamplePhaseTiming(profile, 'doubleDimerLoopProcessingMs', performance.now() - loopProcessingStart);
 
     // Draw edges
     const baseLineWidth = Math.max(1.5, 3.5 * zoom / 10);
@@ -5594,6 +5861,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     // Clear status message when N input changes
     document.getElementById('sample-N-input').addEventListener('input', () => {
       document.getElementById('sample-time').textContent = '';
+      clearSampleTimingDisplay();
     });
 
     // Pan with mouse drag
