@@ -75,14 +75,14 @@ Add lightweight instrumentation before optimizing so later tasks can prove real 
 
 Port the allocation and RNG improvements from `double-dimer-cli.cpp` and the RSK optimization work into the master sampler.
 
-- [ ] Replace nested `vector<vector<...>>` matrices used in the shuffling/probability pipeline with flat row-major matrix classes, keeping a small compatibility layer where Glauber code needs current state access.
-- [ ] Replace `std::mt19937` in the hot shuffling path with compact Xoshiro256++ RNG and fast `next_double()`, while keeping deterministic/frozen paths unchanged.
-- [ ] Replace `d3p()` plus `probs2()` full intermediate storage with a rolling `computeProbabilityPyramid()` routine: keep only current/next square-move value/exponent matrices and write probability matrices directly in creation order.
-- [ ] Replace `delslide()` and `create()` returning fresh matrices with in-place `delslideInPlace()` and `createStepInPlace()` using preallocated ping-pong `MatrixInt` buffers.
-- [ ] Pre-reserve probability pyramid matrices and domino JSON output capacity; use a shared `appendDominoJSON()` helper for `simulateAztec`, `simulateAztec6x2`, frozen horizontal/vertical output, and Glauber output where practical.
-- [ ] Preserve `g_conf`, `g_W`, `g_N`, and all exported function names so Glauber dynamics and JS bindings remain compatible.
-- [ ] Recompile using the preamble command in `s/domino.cpp` and confirm `s/domino.js` is updated.
-- [ ] Smoke-test uniform n=50, 2x2 n=50, 3x3 n=50, 6x2 n=50, frozenH/frozenV n=50.
+- [x] Replace nested `vector<vector<...>>` matrices used in the shuffling/probability pipeline with flat row-major matrix classes, keeping a small compatibility layer where Glauber code needs current state access.
+- [x] Replace `std::mt19937` in the hot shuffling path with compact Xoshiro256++ RNG and fast `next_double()`, while keeping deterministic/frozen paths unchanged.
+- [x] Replace `d3p()` plus `probs2()` full intermediate storage with a rolling `computeProbabilityPyramid()` routine: keep only current/next square-move value/exponent matrices and write probability matrices directly in creation order.
+- [x] Replace `delslide()` and `create()` returning fresh matrices with in-place `delslideInPlace()` and `createStepInPlace()` using preallocated ping-pong `MatrixInt` buffers.
+- [x] Pre-reserve probability pyramid matrices and domino JSON output capacity; use a shared `appendDominoJSON()` helper for `simulateAztec`, `simulateAztec6x2`, frozen horizontal/vertical output, and Glauber output where practical.
+- [x] Preserve `g_conf`, `g_W`, `g_N`, and all exported function names so Glauber dynamics and JS bindings remain compatible.
+- [x] Recompile using the preamble command in `s/domino.cpp` and confirm `s/domino.js` is updated.
+- [x] Smoke-test uniform n=50, 2x2 n=50, 3x3 n=50, 6x2 n=50, frozenH/frozenV n=50.
 
 ### Task 3: Tighten `/domino/` JS sampling orchestration and error handling
 

@@ -36,10 +36,69 @@ Features:
 #include <queue>
 #include <utility>
 #include <array>
+#include <algorithm>
+#include <cstdint>
+#include <cstdio>
+#include <stdexcept>
 
 using namespace std;
 
-static std::mt19937 rng(std::random_device{}()); // Global RNG for speed
+struct Xoshiro256pp {
+    uint64_t s[4];
+
+    explicit Xoshiro256pp(uint64_t seed = 0) {
+        seedState(seed);
+    }
+
+    static inline uint64_t rotl(const uint64_t x, int k) {
+        return (x << k) | (x >> (64 - k));
+    }
+
+    static inline uint64_t splitmix64(uint64_t& x) {
+        uint64_t z = (x += 0x9e3779b97f4a7c15ULL);
+        z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
+        z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
+        return z ^ (z >> 31);
+    }
+
+    void seedState(uint64_t seed) {
+        uint64_t x = seed;
+        for (int i = 0; i < 4; ++i) {
+            s[i] = splitmix64(x);
+        }
+    }
+
+    inline uint64_t next() {
+        const uint64_t result = rotl(s[0] + s[3], 23) + s[0];
+        const uint64_t t = s[1] << 17;
+        s[2] ^= s[0];
+        s[3] ^= s[1];
+        s[1] ^= s[2];
+        s[0] ^= s[3];
+        s[2] ^= t;
+        s[3] = rotl(s[3], 45);
+        return result;
+    }
+
+    inline double next_double() {
+        const uint64_t v = (next() >> 12) | 0x3FF0000000000000ULL;
+        double d;
+        memcpy(&d, &v, sizeof(d));
+        return d - 1.0;
+    }
+};
+
+static uint64_t makeSamplerSeed() {
+    std::random_device rd;
+    uint64_t seed = static_cast<uint64_t>(
+        std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    seed ^= static_cast<uint64_t>(rd()) << 32;
+    seed ^= static_cast<uint64_t>(rd());
+    return seed;
+}
+
+static Xoshiro256pp shuffleRng(makeSamplerSeed());
+static std::mt19937 glauberRng(std::random_device{}());
 
 // Global progress counter (0 to 100)
 volatile int progressCounter = 0;
@@ -49,14 +108,81 @@ struct Cell {
     int flag;
 };
 
-using Matrix = vector<vector<Cell>>;
-using MatrixDouble = vector<vector<double>>;
-using MatrixInt = vector<vector<int>>;
+template <typename T>
+class FlatMatrix {
+private:
+    vector<T> data_;
+    int rows_ = 0;
+    int cols_ = 0;
+
+public:
+    FlatMatrix() = default;
+
+    FlatMatrix(int rows, int cols, const T& value = T()) {
+        reset(rows, cols, value);
+    }
+
+    FlatMatrix(int rows, const vector<T>& row) {
+        rows_ = rows;
+        cols_ = static_cast<int>(row.size());
+        data_.reserve(static_cast<size_t>(rows_) * cols_);
+        for (int i = 0; i < rows_; ++i) {
+            data_.insert(data_.end(), row.begin(), row.end());
+        }
+    }
+
+    FlatMatrix(std::initializer_list<std::initializer_list<T>> rows) {
+        rows_ = static_cast<int>(rows.size());
+        cols_ = rows_ ? static_cast<int>(rows.begin()->size()) : 0;
+        data_.reserve(static_cast<size_t>(rows_) * cols_);
+        for (const auto& row : rows) {
+            if (static_cast<int>(row.size()) != cols_) {
+                throw std::runtime_error("FlatMatrix initializer rows have inconsistent lengths");
+            }
+            data_.insert(data_.end(), row.begin(), row.end());
+        }
+    }
+
+    void reset(int rows, int cols, const T& value = T()) {
+        const size_t needed = static_cast<size_t>(rows) * static_cast<size_t>(cols);
+        if (data_.size() < needed) {
+            data_.resize(needed);
+        }
+        rows_ = rows;
+        cols_ = cols;
+        std::fill(data_.begin(), data_.begin() + needed, value);
+    }
+
+    T* operator[](int row) {
+        return data_.data() + static_cast<size_t>(row) * cols_;
+    }
+
+    const T* operator[](int row) const {
+        return data_.data() + static_cast<size_t>(row) * cols_;
+    }
+
+    T& at(int row, int col) {
+        return data_[static_cast<size_t>(row) * cols_ + col];
+    }
+
+    const T& at(int row, int col) const {
+        return data_[static_cast<size_t>(row) * cols_ + col];
+    }
+
+    int size() const { return rows_; }
+    int rows() const { return rows_; }
+    int cols() const { return cols_; }
+    bool empty() const { return rows_ == 0 || cols_ == 0; }
+};
+
+using Matrix = FlatMatrix<Cell>;
+using MatrixDouble = FlatMatrix<double>;
+using MatrixInt = FlatMatrix<int>;
 using Vertex = pair<int, int>;
 
 /* ---------- Global state for incremental Glauber dynamics ---------- */
-static MatrixInt      g_conf;        // current domino configuration (vector<vector<int>>)
-static MatrixDouble   g_W;           // current weight matrix (vector<vector<double>>)
+static MatrixInt      g_conf;        // current domino configuration
+static MatrixDouble   g_W;           // current weight matrix
 static int            g_N    = 0;    // linear size of g_conf (2n)
 static string         g_periodicity = "uniform"; // "uniform", "2x2", or "3x3"
 // Store weights based on periodicity
@@ -105,8 +231,8 @@ void glauberStep(std::uniform_real_distribution<> &u) {
     // Use global RNG
     std::uniform_int_distribution<> duRow(0, g_N - 2);
     std::uniform_int_distribution<> duCol(0, g_N - 2);
-    int i = duRow(rng); // Random row for top-left corner (0 to N-2)
-    int j = duCol(rng); // Random col for top-left corner (0 to N-2)
+    int i = duRow(glauberRng); // Random row for top-left corner (0 to N-2)
+    int j = duCol(glauberRng); // Random col for top-left corner (0 to N-2)
 
     // Check current state of the 2x2 plaquette at (i, j)
     bool isHH = (g_conf[i][j] == 1 && g_conf[i + 1][j + 1] == 1 &&
@@ -127,7 +253,7 @@ void glauberStep(std::uniform_real_distribution<> &u) {
     double pHH = (std::abs(wHH + wVV) < 1e-15) ? 0.5 : (wHH / (wHH + wVV));
 
     // Decide whether to flip based on the probability
-    bool chooseHH = (u(rng) < pHH);
+    bool chooseHH = (u(glauberRng) < pHH);
 
     // If the chosen state matches the current state, do nothing
     if ((chooseHH && isHH) || (!chooseHH && isVV)) {
@@ -153,185 +279,340 @@ void glauberStep(std::uniform_real_distribution<> &u) {
      g_glauber_active = true; // Mark that Glauber has modified the state
 }
 
-vector<Matrix> d3p(const MatrixDouble &x1) {
-    // d3p: builds a vector of matrices from x1.
-    int n = (int)x1.size();
-    Matrix A(n, vector<Cell>(n));
-    for (int i = 0; i < n; i++){
-        for (int j = 0; j < n; j++){
-            // Use bitwise & for mod 2 replacement when applicable
-            A[i][j] = (fabs(x1[i][j]) < 1e-9) ? Cell{1.0, 1} : Cell{x1[i][j], 0};
-        }
+vector<MatrixDouble> computeProbabilityPyramid(const MatrixDouble& weights) {
+    const int dim = weights.size();
+    if (dim <= 0 || (dim & 1)) {
+        throw std::runtime_error("Weight matrix dimension must be positive and even");
     }
-    vector<Matrix> AA;
-    AA.push_back(A);
 
-    int iterations = n / 2 - 1; // Assumes n is even.
-    for (int k = 0; k < iterations; k++){
-        int nk = n - 2 * k - 2;
-        Matrix C(nk, vector<Cell>(nk));
-        Matrix &prev = AA[k];
-        for (int i = 0; i < nk; i++){
-            for (int j = 0; j < nk; j++){
-                int ii = i + 2 * (i & 1);  // instead of i % 2
-                int jj = j + 2 * (j & 1);  // instead of j % 2
-                const Cell &current = prev[ii][jj];
-                const Cell &diag    = prev[i + 1][j + 1];
-                const Cell &right   = prev[ii][j + 1];
-                const Cell &down    = prev[i + 1][jj];
-                double sum1 = current.flag + diag.flag;
-                double sum2 = right.flag + down.flag;
-                double a2, a2_second;
-                if (fabs(sum1 - sum2) < 1e-9) {
-                    a2 = current.value * diag.value + right.value * down.value;
-                    a2_second = sum1;
-                } else if (sum1 < sum2) {
-                    a2 = current.value * diag.value;
-                    a2_second = sum1;
-                } else {
-                    a2 = right.value * down.value;
-                    a2_second = sum2;
-                }
-                if (fabs(a2) < 1e-9) a2 = 1e-9;
-                C[i][j] = { current.value / a2, current.flag - static_cast<int>(a2_second) };
+    const int levels = dim / 2;
+    vector<MatrixDouble> probabilities;
+    probabilities.reserve(levels);
+    probabilities.resize(levels);
+
+    MatrixDouble currentValue(dim, dim, 0.0);
+    MatrixInt currentExp(dim, dim, 0);
+    MatrixDouble nextValue;
+    MatrixInt nextExp;
+
+    for (int i = 0; i < dim; ++i) {
+        for (int j = 0; j < dim; ++j) {
+            if (fabs(weights[i][j]) < 1e-9) {
+                currentValue[i][j] = 1.0;
+                currentExp[i][j] = 1;
+            } else {
+                currentValue[i][j] = weights[i][j];
+                currentExp[i][j] = 0;
             }
         }
-        AA.push_back(C);
     }
-    return AA;
-}
 
-vector<MatrixDouble> probs2(const MatrixDouble &x1) {
-    // probs2: compute probability matrices from the d3p output.
-    vector<Matrix> a0 = d3p(x1);
-    int n = (int)a0.size();
-    vector<MatrixDouble> A;
-    for (int k = 0; k < n; k++){
-        Matrix &mat = a0[n - k - 1];
-        int nk = (int)mat.size();
-        int rows = nk / 2;
-        MatrixDouble C(rows, vector<double>(rows, 0.0));
-        for (int i = 0; i < rows; i++){
-            for (int j = 0; j < rows; j++){
-                int i0 = i << 1;  // 2*i
-                int j0 = j << 1;  // 2*j
-                int sum1 = mat[i0][j0].flag + mat[i0 + 1][j0 + 1].flag;
-                int sum2 = mat[i0 + 1][j0].flag + mat[i0][j0 + 1].flag;
+    for (int size = dim; size >= 2; size -= 2) {
+        const int rows = size / 2;
+        MatrixDouble& probs = probabilities[rows - 1];
+        probs.reset(rows, rows, 0.0);
+
+        for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < rows; ++j) {
+                const int i0 = i << 1;
+                const int j0 = j << 1;
+                const int sum1 = currentExp[i0][j0] + currentExp[i0 + 1][j0 + 1];
+                const int sum2 = currentExp[i0 + 1][j0] + currentExp[i0][j0 + 1];
+
                 if (sum1 > sum2) {
-                    C[i][j] = 0.0;
+                    probs[i][j] = 0.0;
                 } else if (sum1 < sum2) {
-                    C[i][j] = 1.0;
+                    probs[i][j] = 1.0;
                 } else {
-                    double prod_main  = mat[i0 + 1][j0 + 1].value * mat[i0][j0].value;
-                    double prod_other = mat[i0 + 1][j0].value * mat[i0][j0 + 1].value;
-                    double denom = prod_main + prod_other;
+                    const double prodMain = currentValue[i0 + 1][j0 + 1] * currentValue[i0][j0];
+                    const double prodOther = currentValue[i0 + 1][j0] * currentValue[i0][j0 + 1];
+                    double denom = prodMain + prodOther;
                     if (fabs(denom) < 1e-9) denom = 1e-9;
-                    C[i][j] = prod_main / denom;
+                    probs[i][j] = prodMain / denom;
                 }
             }
         }
-        A.push_back(C);
+
+        const int nextSize = size - 2;
+        if (nextSize == 0) {
+            break;
+        }
+
+        nextValue.reset(nextSize, nextSize, 0.0);
+        nextExp.reset(nextSize, nextSize, 0);
+
+        for (int i = 0; i < nextSize; ++i) {
+            for (int j = 0; j < nextSize; ++j) {
+                const int ii = i + 2 * (i & 1);
+                const int jj = j + 2 * (j & 1);
+
+                const double current = currentValue[ii][jj];
+                const double diag = currentValue[i + 1][j + 1];
+                const double right = currentValue[ii][j + 1];
+                const double down = currentValue[i + 1][jj];
+
+                const int currentFlag = currentExp[ii][jj];
+                const int diagFlag = currentExp[i + 1][j + 1];
+                const int rightFlag = currentExp[ii][j + 1];
+                const int downFlag = currentExp[i + 1][jj];
+
+                const int sum1 = currentFlag + diagFlag;
+                const int sum2 = rightFlag + downFlag;
+                double a2;
+                int a2Exp;
+
+                if (sum1 == sum2) {
+                    a2 = current * diag + right * down;
+                    a2Exp = sum1;
+                } else if (sum1 < sum2) {
+                    a2 = current * diag;
+                    a2Exp = sum1;
+                } else {
+                    a2 = right * down;
+                    a2Exp = sum2;
+                }
+
+                if (fabs(a2) < 1e-9) a2 = 1e-9;
+                nextValue[i][j] = current / a2;
+                nextExp[i][j] = currentFlag - a2Exp;
+            }
+        }
+
+        std::swap(currentValue, nextValue);
+        std::swap(currentExp, nextExp);
     }
-    return A;
+
+    return probabilities;
 }
 
-MatrixInt delslide(const MatrixInt &x1) {
-    // delslide: deletion-slide procedure.
-    int n = (int)x1.size();
-    MatrixInt a0(n + 2, vector<int>(n + 2, 0));
-    for (int i = 0; i < n; i++){
-        for (int j = 0; j < n; j++){
-            a0[i + 1][j + 1] = x1[i][j];
+void delslideInPlace(MatrixInt& out, const MatrixInt& in) {
+    const int n = in.size();
+    out.reset(n + 2, n + 2, 0);
+
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            out[i + 1][j + 1] = in[i][j];
         }
     }
-    int half = n / 2;
-    for (int i = 0; i < half; i++){
-        for (int j = 0; j < half; j++){
-            int i2 = i << 1, j2 = j << 1;
-            if (a0[i2][j2] == 1 && a0[i2 + 1][j2 + 1] == 1) {
-                a0[i2][j2] = 0;
-                a0[i2 + 1][j2 + 1] = 0;
-            } else if (a0[i2][j2 + 1] == 1 && a0[i2 + 1][j2] == 1) {
-                a0[i2 + 1][j2] = 0;
-                a0[i2][j2 + 1] = 0;
+
+    const int half = n / 2;
+    for (int i = 0; i < half; ++i) {
+        for (int j = 0; j < half; ++j) {
+            const int i2 = i << 1;
+            const int j2 = j << 1;
+            if (out[i2][j2] == 1 && out[i2 + 1][j2 + 1] == 1) {
+                out[i2][j2] = 0;
+                out[i2 + 1][j2 + 1] = 0;
+            } else if (out[i2][j2 + 1] == 1 && out[i2 + 1][j2] == 1) {
+                out[i2 + 1][j2] = 0;
+                out[i2][j2 + 1] = 0;
             }
         }
     }
-    for (int i = 0; i < half + 1; i++){
-        for (int j = 0; j < half + 1; j++){
-            int i2 = i << 1, j2 = j << 1;
-            if (a0[i2 + 1][j2 + 1] == 1) {
-                a0[i2][j2] = 1;
-                a0[i2 + 1][j2 + 1] = 0;
-            } else if (a0[i2][j2] == 1) {
-                a0[i2][j2] = 0;
-                a0[i2 + 1][j2 + 1] = 1;
-            } else if (a0[i2 + 1][j2] == 1) {
-                a0[i2][j2 + 1] = 1;
-                a0[i2 + 1][j2] = 0;
-            } else if (a0[i2][j2 + 1] == 1) {
-                a0[i2 + 1][j2] = 1;
-                a0[i2][j2 + 1] = 0;
+
+    for (int i = 0; i < half + 1; ++i) {
+        for (int j = 0; j < half + 1; ++j) {
+            const int i2 = i << 1;
+            const int j2 = j << 1;
+            if (out[i2 + 1][j2 + 1] == 1) {
+                out[i2][j2] = 1;
+                out[i2 + 1][j2 + 1] = 0;
+            } else if (out[i2][j2] == 1) {
+                out[i2][j2] = 0;
+                out[i2 + 1][j2 + 1] = 1;
+            } else if (out[i2 + 1][j2] == 1) {
+                out[i2][j2 + 1] = 1;
+                out[i2 + 1][j2] = 0;
+            } else if (out[i2][j2 + 1] == 1) {
+                out[i2 + 1][j2] = 1;
+                out[i2][j2 + 1] = 0;
             }
         }
     }
-    return a0;
 }
 
-MatrixInt create(MatrixInt x0, const MatrixDouble &p) {
-    // create: decide domino orientation in each 2x2 block using probabilities.
-    int n = (int)x0.size();
-    int half = n / 2;
-    for (int i = 0; i < half; i++){
-        for (int j = 0; j < half; j++){
-            int i2 = i << 1, j2 = j << 1;
-            if (x0[i2][j2] == 0 && x0[i2 + 1][j2] == 0 &&
-                x0[i2][j2 + 1] == 0 && x0[i2 + 1][j2 + 1] == 0) {
+void createStepInPlace(MatrixInt& config, const MatrixDouble& probs) {
+    const int n = config.size();
+    const int half = n / 2;
+    for (int i = 0; i < half; ++i) {
+        for (int j = 0; j < half; ++j) {
+            const int i2 = i << 1;
+            const int j2 = j << 1;
+            if (config[i2][j2] == 0 && config[i2 + 1][j2] == 0 &&
+                config[i2][j2 + 1] == 0 && config[i2 + 1][j2 + 1] == 0) {
                 bool a1 = true, a2 = true, a3 = true, a4 = true;
                 if (j > 0)
-                    a1 = (x0[i2][j2 - 1] == 0) && (x0[i2 + 1][j2 - 1] == 0);
+                    a1 = (config[i2][j2 - 1] == 0) && (config[i2 + 1][j2 - 1] == 0);
                 if (j < half - 1)
-                    a2 = (x0[i2][j2 + 2] == 0) && (x0[i2 + 1][j2 + 2] == 0);
+                    a2 = (config[i2][j2 + 2] == 0) && (config[i2 + 1][j2 + 2] == 0);
                 if (i > 0)
-                    a3 = (x0[i2 - 1][j2] == 0) && (x0[i2 - 1][j2 + 1] == 0);
+                    a3 = (config[i2 - 1][j2] == 0) && (config[i2 - 1][j2 + 1] == 0);
                 if (i < half - 1)
-                    a4 = (x0[i2 + 2][j2] == 0) && (x0[i2 + 2][j2 + 1] == 0);
+                    a4 = (config[i2 + 2][j2] == 0) && (config[i2 + 2][j2 + 1] == 0);
                 if (a1 && a2 && a3 && a4) {
-                    std::uniform_real_distribution<> dis(0.0, 1.0);
-                    double r = dis(rng);
-                    if (r < p[i][j]) {
-                        x0[i2][j2] = 1;
-                        x0[i2 + 1][j2 + 1] = 1;
+                    if (shuffleRng.next_double() < probs[i][j]) {
+                        config[i2][j2] = 1;
+                        config[i2 + 1][j2 + 1] = 1;
                     } else {
-                        x0[i2 + 1][j2] = 1;
-                        x0[i2][j2 + 1] = 1;
+                        config[i2 + 1][j2] = 1;
+                        config[i2][j2 + 1] = 1;
                     }
                 }
             }
         }
     }
-    return x0;
 }
 
-MatrixInt aztecgen(const vector<MatrixDouble> &x0) {
-    // aztecgen: iterate deletion-slide and creation steps.
-    int n = (int)x0.size();
-    std::uniform_real_distribution<> dis(0.0, 1.0);
-    MatrixInt a1;
-    // Initialize with a 2x2 configuration using the first probability.
-    if (dis(rng) < x0[0][0][0])
-        a1 = { {1, 0}, {0, 1} };
-    else
-        a1 = { {0, 1}, {1, 0} };
-    int totalIterations = n - 1;
-    for (int i = 0; i < totalIterations; i++){
-        a1 = delslide(a1);
-        a1 = create(a1, x0[i + 1]);
-        // Update progress: scale from 10 to 90 over these iterations.
-        progressCounter = 10 + (int)(((double)(i + 1) / totalIterations) * 80);
-        emscripten_sleep(0); // Yield control so that progress updates are visible.
+MatrixInt aztecgen(const vector<MatrixDouble>& probabilities) {
+    const int levels = static_cast<int>(probabilities.size());
+    if (levels <= 0) {
+        return MatrixInt();
     }
-    return a1;
+
+    MatrixInt bufferA((levels << 1) + 2, (levels << 1) + 2, 0);
+    MatrixInt bufferB((levels << 1) + 2, (levels << 1) + 2, 0);
+
+    bufferA.reset(2, 2, 0);
+    if (shuffleRng.next_double() < probabilities[0][0][0]) {
+        bufferA[0][0] = 1;
+        bufferA[1][1] = 1;
+    } else {
+        bufferA[0][1] = 1;
+        bufferA[1][0] = 1;
+    }
+
+    MatrixInt* current = &bufferA;
+    MatrixInt* next = &bufferB;
+    const int totalIterations = levels - 1;
+
+    for (int i = 0; i < totalIterations; ++i) {
+        delslideInPlace(*next, *current);
+        createStepInPlace(*next, probabilities[i + 1]);
+        std::swap(current, next);
+
+        progressCounter = 10 + static_cast<int>(((i + 1) / static_cast<double>(totalIterations)) * 80);
+        emscripten_sleep(0);
+    }
+
+    return std::move(*current);
+}
+
+void appendJsonNumber(string& json, double value) {
+    char buf[32];
+    const int len = std::snprintf(buf, sizeof(buf), "%.15g", value);
+    if (len > 0) {
+        json.append(buf, static_cast<size_t>(len));
+    }
+}
+
+void appendDominoJSON(string& json, bool& first, double x, double y, double w, double h, const char* color) {
+    if (!first) {
+        json.push_back(',');
+    } else {
+        first = false;
+    }
+
+    json += "{\"x\":";
+    appendJsonNumber(json, x);
+    json += ",\"y\":";
+    appendJsonNumber(json, y);
+    json += ",\"w\":";
+    appendJsonNumber(json, w);
+    json += ",\"h\":";
+    appendJsonNumber(json, h);
+    json += ",\"color\":\"";
+    json += color;
+    json += "\"}";
+}
+
+bool appendStandardDominoFromMarker(string& json, bool& first, int i, int j, int size) {
+    const bool oddI = i & 1;
+    const bool oddJ = j & 1;
+    double x, y, w, h;
+    const char* color;
+
+    if (oddI && oddJ) {
+        color = "blue";
+        x = j - i - 2;
+        y = size + 1 - (i + j) - 1;
+        w = 4;
+        h = 2;
+    } else if (oddI && !oddJ) {
+        color = "yellow";
+        x = j - i - 1;
+        y = size + 1 - (i + j) - 2;
+        w = 2;
+        h = 4;
+    } else if (!oddI && !oddJ) {
+        color = "green";
+        x = j - i - 2;
+        y = size + 1 - (i + j) - 1;
+        w = 4;
+        h = 2;
+    } else if (!oddI && oddJ) {
+        color = "red";
+        x = j - i - 1;
+        y = size + 1 - (i + j) - 2;
+        w = 2;
+        h = 4;
+    } else {
+        return false;
+    }
+
+    appendDominoJSON(json, first, x, y, w, h, color);
+    return true;
+}
+
+string serializeDominoConfig(const MatrixInt& config) {
+    const int size = config.size();
+    string json;
+    json.reserve(std::max<size_t>(2, static_cast<size_t>(size) * static_cast<size_t>(size) * 24));
+    json.push_back('[');
+
+    bool first = true;
+    for (int i = 0; i < size; ++i) {
+        for (int j = 0; j < size; ++j) {
+            if (config[i][j] == 1) {
+                appendStandardDominoFromMarker(json, first, i, j, size);
+            }
+        }
+    }
+
+    json.push_back(']');
+    return json;
+}
+
+char* makeCString(const string& value) {
+    char* out = static_cast<char*>(std::malloc(value.size() + 1));
+    if (!out) {
+        return nullptr;
+    }
+    std::memcpy(out, value.c_str(), value.size() + 1);
+    return out;
+}
+
+string escapeJsonString(const string& value) {
+    string escaped;
+    escaped.reserve(value.size());
+    for (char c : value) {
+        if (c == '"' || c == '\\') {
+            escaped.push_back('\\');
+        }
+        escaped.push_back(c);
+    }
+    return escaped;
+}
+
+char* makeErrorCString(const string& message) {
+    string error = string("{\"error\":\"") + escapeJsonString(message) + "\"}";
+    char* out = makeCString(error);
+    if (!out) {
+        out = static_cast<char*>(std::malloc(3));
+        if (out) {
+            std::strcpy(out, "[]");
+        }
+    }
+    return out;
 }
 
 // ---------------------------------------------------------------------
@@ -361,7 +642,7 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
             throw std::runtime_error("Input size too large, would exceed memory limits");
         }
 
-        MatrixDouble A1a(dim, vector<double>(dim, 0.0));
+        MatrixDouble A1a(dim, dim, 0.0);
 
         // Check if the weights match the pattern for a 2x2 periodic configuration
         // In a 2x2 pattern, w2 and w8 are 'a', w4 and w6 are 'b', and the rest are 1.0
@@ -402,10 +683,9 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
 
         emscripten_sleep(0); // Yield to update UI
 
-        // Compute probability matrices.
         vector<MatrixDouble> prob;
         try {
-            prob = probs2(A1a);
+            prob = computeProbabilityPyramid(A1a);
         } catch (const std::exception& e) {
             throw std::runtime_error("Error computing probability matrices");
         }
@@ -443,104 +723,19 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
         progressCounter = 90; // Simulation steps complete.
         emscripten_sleep(0);  // Yield to update UI
 
-        // Build JSON output with dominoes data
-        ostringstream oss;
-        oss << "[";  // Simple array of domino objects
-
-        int size = (int)dominoConfig.size();
-        bool first = true;
-
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (dominoConfig[i][j] == 1) {
-                    double x, y, w, h;
-                    string color;
-
-                    bool oddI = (i & 1), oddJ = (j & 1);
-
-                    if (oddI && oddJ) { // i odd, j odd: Blue
-                        color = "blue";
-                        x = j - i - 2;
-                        y = size + 1 - (i + j) - 1;
-                        w = 4;
-                        h = 2;
-                    } else if (oddI && !oddJ) { // i odd, j even: Yellow
-                        color = "yellow";
-                        x = j - i - 1;
-                        y = size + 1 - (i + j) - 2;
-                        w = 2;
-                        h = 4;
-                    } else if (!oddI && !oddJ) { // i even, j even: Green
-                        color = "green";
-                        x = j - i - 2;
-                        y = size + 1 - (i + j) - 1;
-                        w = 4;
-                        h = 2;
-                    } else if (!oddI && oddJ) { // i even, j odd: Red
-                        color = "red";
-                        x = j - i - 1;
-                        y = size + 1 - (i + j) - 2;
-                        w = 2;
-                        h = 4;
-                    } else {
-                        continue;
-                    }
-
-                    if (!first) oss << ",";
-                    else first = false;
-
-                    oss << "{\"x\":" << x << ",\"y\":" << y
-                        << ",\"w\":" << w << ",\"h\":" << h
-                        << ",\"color\":\"" << color << "\"}";
-                }
-            }
-        }
-
-        oss << "]";
+        string json = serializeDominoConfig(dominoConfig);
         progressCounter = 100; // Finished.
         emscripten_sleep(0); // Yield to update UI
 
-        // Allocate memory for the output string
-        string json = oss.str();
-        char* out = nullptr;
-
-        try {
-            out = (char*)malloc(json.size() + 1);
-            if (!out) {
-                throw std::runtime_error("Failed to allocate memory for output");
-            }
-            strcpy(out, json.c_str());
-        } catch (const std::exception& e) {
-            // If memory allocation fails, return a simple error message
-            const char* errorMsg = "{\"error\":\"Memory allocation failed\"}";
-            out = (char*)malloc(strlen(errorMsg) + 1);
-            if (out) {
-                strcpy(out, errorMsg);
-            } else {
-                // If we can't even allocate the error message, return a minimal response
-                out = (char*)malloc(13); // size for []
-                if (out) {
-                    strcpy(out, "[]");
-                }
-            }
+        char* out = makeCString(json);
+        if (!out) {
+            throw std::runtime_error("Failed to allocate memory for output");
         }
 
         return out;
     } catch (const std::exception& e) {
-        // Return error as JSON
-        std::string errorMsg = std::string("{\"error\":\"") + e.what() + "\"}";
-        char* out = (char*)malloc(errorMsg.size() + 1);
-        if (out) {
-            strcpy(out, errorMsg.c_str());
-        } else {
-            // Fallback if memory allocation fails
-            out = (char*)malloc(3); // size for []
-            if (out) {
-                strcpy(out, "[]");
-            }
-        }
         progressCounter = 100; // Mark as complete to stop progress indicator
-        return out;
+        return makeErrorCString(e.what());
     }
 }
 
@@ -564,7 +759,7 @@ char* simulateAztec6x2(int n, double v1, double v2, double v3, double v4, double
         g_w6x2[6] = v7; g_w6x2[7] = v8; g_w6x2[8] = v9;
         g_w6x2[9] = v10; g_w6x2[10] = v11; g_w6x2[11] = v12;
 
-        MatrixDouble A1a(dim, vector<double>(dim, 0.0));
+        MatrixDouble A1a(dim, dim, 0.0);
         const double W[2][6] = {
             {v1, v2, v3, v4, v5, v6},
             {v7, v8, v9, v10, v11, v12}
@@ -579,7 +774,7 @@ char* simulateAztec6x2(int n, double v1, double v2, double v3, double v4, double
         }
         emscripten_sleep(0);
 
-        vector<MatrixDouble> prob = probs2(A1a);
+        vector<MatrixDouble> prob = computeProbabilityPyramid(A1a);
         progressCounter = 10;
         emscripten_sleep(0);
 
@@ -595,44 +790,16 @@ char* simulateAztec6x2(int n, double v1, double v2, double v3, double v4, double
         progressCounter = 90;
         emscripten_sleep(0);
 
-        ostringstream oss;
-        oss << "[";
-        int size = (int)dominoConfig.size();
-        bool first = true;
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (dominoConfig[i][j] == 1) {
-                    double x, y, w, h;
-                    string color;
-                    bool oddI = (i & 1), oddJ = (j & 1);
-                    if (oddI && oddJ) { color = "blue";   x = j-i-2; y = size+1-(i+j)-1; w = 4; h = 2; }
-                    else if (oddI && !oddJ){ color = "yellow"; x = j-i-1; y = size+1-(i+j)-2; w = 2; h = 4; }
-                    else if (!oddI && !oddJ){ color = "green";  x = j-i-2; y = size+1-(i+j)-1; w = 4; h = 2; }
-                    else if (!oddI && oddJ) { color = "red";    x = j-i-1; y = size+1-(i+j)-2; w = 2; h = 4; }
-                    else continue;
-
-                    if (!first) oss << ","; else first = false;
-                    oss << "{\"x\":" << x << ",\"y\":" << y
-                        << ",\"w\":" << w << ",\"h\":" << h
-                        << ",\"color\":\"" << color << "\"}";
-                }
-            }
-        }
-        oss << "]";
+        string json = serializeDominoConfig(dominoConfig);
         progressCounter = 100;
         emscripten_sleep(0);
 
-        string json = oss.str();
-        char* out = (char*)malloc(json.size() + 1);
+        char* out = makeCString(json);
         if (!out) { throw std::runtime_error("Failed to allocate memory for output"); }
-        strcpy(out, json.c_str());
         return out;
     } catch (const std::exception& e) {
-        string errorMsg = string("{\"error\":\"") + e.what() + "\"}";
-        char* out = (char*)malloc(errorMsg.size() + 1);
-        strcpy(out, errorMsg.c_str());
         progressCounter = 100;
-        return out;
+        return makeErrorCString(e.what());
     }
 }
 
@@ -649,10 +816,10 @@ char* simulateAztecHorizontal(int n,
     try {
         const int N = 2 * n;                     // lattice size
 
-        MatrixInt conf(N, std::vector<int>(N, 0));
+        MatrixInt conf(N, N, 0);
 
-        for (int i = 0; i <= N; ++i) {
-            for (int j = 0; j <= N; ++j) {
+        for (int i = 0; i < N; ++i) {
+            for (int j = 0; j < N; ++j) {
                 const bool oddI = i & 1;
                 const bool oddJ = j & 1;
 
@@ -673,13 +840,15 @@ char* simulateAztecHorizontal(int n,
 
         /* ---- stash in globals so renderers & Glauber can use it ---- */
         g_conf           = conf;
-        g_W              = MatrixDouble(N, std::vector<double>(N, 1.0));
+        g_W              = MatrixDouble(N, N, 1.0);
         g_N              = N;
         g_periodicity    = "uniform";
         g_glauber_active = false;
 
-        /* ------------ serialise exactly like simulateAztec ---------- */
-        std::ostringstream oss;  oss << '[';  bool first = true;
+        string json;
+        json.reserve(std::max<size_t>(2, static_cast<size_t>(N) * static_cast<size_t>(N) * 16));
+        json.push_back('[');
+        bool first = true;
 
         for (int i = 0; i < N; ++i) {
             for (int j = 0; j < N; ++j) {
@@ -689,22 +858,17 @@ char* simulateAztecHorizontal(int n,
                 double yy = N + 1 - (i + j) - 1;
                 const char* col = ((i & 1) && (j & 1)) ? "blue" : "green";
 
-                if (!first) oss << ','; else first = false;
-                oss << "{\"x\":" << x  << ",\"y\":" << yy
-                    << ",\"w\":4,\"h\":2,\"color\":\"" << col << "\"}";
+                appendDominoJSON(json, first, x, yy, 4, 2, col);
             }
         }
-        oss << ']';
+        json.push_back(']');
 
-        char* out = (char*)std::malloc(oss.str().size() + 1);
-        std::strcpy(out, oss.str().c_str());
+        char* out = makeCString(json);
+        if (!out) throw std::runtime_error("Failed to allocate memory for output");
         return out;
     }
     catch (const std::exception& e) {
-        std::string err = std::string("{\"error\":\"") + e.what() + "\"}";
-        char* out = (char*)std::malloc(err.size() + 1);
-        std::strcpy(out, err.c_str());
-        return out;
+        return makeErrorCString(e.what());
     }
 }
 
@@ -723,10 +887,10 @@ char* simulateAztecVertical(int n,
         const int N = 2 * n;                       /* lattice size */
 
 
-        MatrixInt conf(N, std::vector<int>(N,0));
+        MatrixInt conf(N, N, 0);
 
-        for (int i = 0; i <= N; ++i){
-            for (int j = 0; j <= N; ++j){
+        for (int i = 0; i < N; ++i){
+            for (int j = 0; j < N; ++j){
 
                 const bool oddI = i & 1;
                 const bool oddJ = j & 1;
@@ -746,13 +910,15 @@ char* simulateAztecVertical(int n,
 
         /* --- stash in globals so downstream renderers / Glauber work --- */
         g_conf           = conf;
-        g_W              = MatrixDouble(N, std::vector<double>(N,1.0));
+        g_W              = MatrixDouble(N, N, 1.0);
         g_N              = N;
         g_periodicity    = "uniform";
         g_glauber_active = false;
 
-        /* ----------- serialise exactly like simulateAztec -------------- */
-        std::ostringstream oss;  oss << '[';  bool first = true;
+        string json;
+        json.reserve(std::max<size_t>(2, static_cast<size_t>(N) * static_cast<size_t>(N) * 16));
+        json.push_back('[');
+        bool first = true;
 
         for (int i = 0; i < N; ++i){
             for (int j = 0; j < N; ++j){
@@ -762,23 +928,17 @@ char* simulateAztecVertical(int n,
                 double y = N + 1 - (i + j) - 2;
                 const char* col = (x <= 0) ? "yellow" : "red";
 
-                if (!first) oss << ','; else first = false;
-
-                    oss << "{\"x\":"<<x<<",\"y\":"<<y
-                        <<",\"w\":2,\"h\":4,\"color\":\""<<col<<"\"}";
+                appendDominoJSON(json, first, x, y, 2, 4, col);
             }
         }
-        oss << ']';
+        json.push_back(']');
 
-        char* out = (char*)std::malloc(oss.str().size()+1);
-        std::strcpy(out, oss.str().c_str());
+        char* out = makeCString(json);
+        if (!out) throw std::runtime_error("Failed to allocate memory for output");
         return out;
     }
     catch (const std::exception& e){
-        std::string err = std::string("{\"error\":\"")+e.what()+"\"}";
-        char* out = (char*)std::malloc(err.size()+1);
-        std::strcpy(out, err.c_str());
-        return out;
+        return makeErrorCString(e.what());
     }
 }
 
@@ -851,7 +1011,7 @@ char* performGlauberSteps(
 
         // Rebuild global weight matrix g_W if necessary
         if (weights_changed) {
-             g_W = MatrixDouble(g_N, vector<double>(g_N, 0.0)); // Reinitialize
+             g_W = MatrixDouble(g_N, g_N, 0.0); // Reinitialize
              if (g_periodicity == "2x2") {
                  for (int i = 0; i < g_N; ++i) {
                      for (int j = 0; j < g_N; ++j) {
@@ -908,51 +1068,13 @@ char* performGlauberSteps(
 
          g_glauber_active = true; // Mark that Glauber has run
 
-        // Serialize the current configuration g_conf to JSON
-        // (This part is identical to the JSON generation in simulateAztec)
-        ostringstream oss;
-        oss << "[";
-        int size = g_N;
-        bool first = true;
-
-         for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (g_conf[i][j] == 1) {
-                    double x, y, w, h;
-                    string color;
-                    bool oddI = (i & 1), oddJ = (j & 1);
-                    if (oddI && oddJ) { color = "blue";   x = j-i-2; y = size+1-(i+j)-1; w = 4; h = 2; }
-                    else if (oddI && !oddJ){ color = "yellow"; x = j-i-1; y = size+1-(i+j)-2; w = 2; h = 4; }
-                    else if (!oddI && !oddJ){ color = "green";  x = j-i-2; y = size+1-(i+j)-1; w = 4; h = 2; }
-                    else if (!oddI && oddJ) { color = "red";    x = j-i-1; y = size+1-(i+j)-2; w = 2; h = 4; }
-                    else continue;
-
-                    if (!first) oss << ","; else first = false;
-                    oss << "{\"x\":" << x << ",\"y\":" << y
-                        << ",\"w\":" << w << ",\"h\":" << h
-                        << ",\"color\":\"" << color << "\"}";
-                }
-            }
-        }
-        oss << "]";
-
-        // Allocate memory for the output string and return
-        string json = oss.str();
-        char* out = (char*)malloc(json.size() + 1);
+        string json = serializeDominoConfig(g_conf);
+        char* out = makeCString(json);
         if (!out) throw std::runtime_error("Memory allocation failed for Glauber result");
-        strcpy(out, json.c_str());
         return out;
 
     } catch (const std::exception& e) {
-        // Return error as JSON
-        std::string errorMsg = std::string("{\"error\":\"Glauber step error: ") + e.what() + "\"}";
-        char* out = (char*)malloc(errorMsg.size() + 1);
-        if (out) strcpy(out, errorMsg.c_str());
-        else { // Fallback if error allocation fails
-            out = (char*)malloc(13); // size for "[]" + null
-            if (out) strcpy(out, "[]");
-        }
-        return out;
+        return makeErrorCString(std::string("Glauber step error: ") + e.what());
     }
 }
 
