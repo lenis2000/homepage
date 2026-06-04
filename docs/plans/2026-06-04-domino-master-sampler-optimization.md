@@ -2,7 +2,9 @@
 
 ## Overview
 
-Make `/domino/` the fast, polished master Aztec diamond sampler. Use the best ideas already present in the q-RSK sampler and the optimized double-dimer CLI: lower-allocation shuffling, better frontend orchestration, cached 2D drawing, and batched 3D geometry.
+Make `/domino/` the fast, polished master Aztec diamond sampler. Use the best ideas already present in the q-RSK sampler and the optimized double-dimer CLI: lower-allocation shuffling, better frontend orchestration, and cached 2D drawing.
+
+Hot update: make the first/default view 2D, not 3D, and have the `No 3D (faster)` flag checked by default on page load. The automated checks, smoke tests, and default benchmark helper should exercise the fast 2D path first and must not spend time in the current heavy 3D renderer. Do not optimize 3D in this plan; keep it available only as an explicit opt-in legacy view.
 
 This plan is intentionally scoped only to `/domino/`. Do not touch the T-embedding arbitrary-weights page in this plan.
 
@@ -38,10 +40,11 @@ As of 2026-06-04, `ralphex-homepage:latest` includes Ruby/Bundler/Jekyll, Emscri
 
 ## Success Criteria
 
-- `/domino/` sampling and display have opt-in timings for sampling, JSON parse, 2D render, height computation, and 3D render.
+- `/domino/` opens in 2D by default, and the `No 3D (faster)` checkbox is checked by default.
+- `/domino/` sampling and display have opt-in timings for sampling, JSON parse, 2D render, height computation, and 3D render, but automated/default checks prefer 2D and skip 3D unless explicitly requested.
 - `/domino/` WASM shuffling is substantially faster than baseline, with fewer allocations and no regressions up to existing UI caps.
 - `/domino/` 2D view defaults to a fast, crisp HiDPI canvas path for large tilings; pan and zoom use cached rendering rather than full per-domino redraws.
-- `/domino/` 3D view uses batched geometry or vertex colors rather than one Three.js mesh/material per domino.
+- The existing 3D view remains a manually enabled legacy option; no 3D renderer optimization is required in this plan.
 - Existing controls, IDs, exports, palette behavior, Glauber controls, URL behavior, and keyboard shortcuts continue to work.
 
 ## Validation Commands
@@ -60,9 +63,9 @@ As of 2026-06-04, `ralphex-homepage:latest` includes Ruby/Bundler/Jekyll, Emscri
 Add lightweight instrumentation before optimizing so later tasks can prove real improvements.
 
 - [ ] Add timing around WASM call, UTF8 conversion, JSON parse, 2D render, height-function computation, and 3D render. Keep it console/status only; do not add new keyboard shortcuts.
-- [ ] Expose a dev-only `window.dominoSamplerBenchmark(options)` helper that samples n=100, n=200, n=300 in 3D and n=300, n=500 in 2D, returning structured timings.
-- [ ] Record representative baseline numbers in a small benchmark markdown file or a clearly marked comment block.
-- [ ] Verify `/domino/` still loads and samples once after instrumentation.
+- [ ] Expose a dev-only `window.dominoSamplerBenchmark(options)` helper whose default cases are 2D-first, e.g. n=100, n=200, n=300, n=500 in 2D, returning structured timings. The helper should leave `No 3D` checked by default. Allow explicit opt-in 3D cases through `options.cases`, but do not include current heavy 3D cases in the default benchmark.
+- [ ] Record representative 2D baseline numbers in a small benchmark markdown file or a clearly marked comment block; do not collect 3D baselines for this plan unless explicitly requested.
+- [ ] Verify `/domino/` still loads into 2D by default with `No 3D (faster)` checked and samples once after instrumentation.
 
 ### Task 2: Optimize `/domino/` C++ shuffling core
 
@@ -89,6 +92,7 @@ Port the allocation and RNG improvements from `double-dimer-cli.cpp` and the RSK
 Make the frontend avoid unnecessary work and fail descriptively.
 
 - [ ] In `updateVisualization()`, check for null WASM pointers before `UTF8ToString`, parse C++ `{error: ...}` responses explicitly, and clear stale status/timing on failure.
+- [ ] Switch the initial active pane/buttons/CSS state so the page opens in 2D by default, and set the `No 3D (faster)` checkbox checked by default.
 - [ ] Split sampling, parsing, 2D rendering, height computation, and 3D rendering into clearly named functions so visible-view decisions happen before expensive work.
 - [ ] If the active view is 2D or `No 3D` is checked, skip height-map computation and all Three.js geometry work entirely.
 - [ ] If the active view is 3D and `n > 300`, show the existing large-tiling message without creating/discarding WebGL objects.
@@ -112,20 +116,18 @@ Keep SVG/TikZ/PDF export capability, but make the interactive 2D display canvas-
 - [ ] Keep PNG export working from the canvas; keep PDF/TikZ export by generating from cached domino data or the preserved SVG path.
 - [ ] Verify n=500 pan/zoom is fluid and that switching 3D -> 2D reuses cached domino data without resampling.
 
-### Task 5: Batch `/domino/` 3D height-surface rendering
+### Task 5: Keep `/domino/` 3D out of the default path
 
 **Files:**
 - Modify: `s/domino.md`
 
-Remove the object-per-domino Three.js bottleneck.
+Do not optimize the 3D renderer in this plan. It is too slow to draw and should not be part of default loading, default checks, or default benchmarks.
 
-- [ ] Replace per-domino `BufferGeometry`, `MeshStandardMaterial`, and `Mesh` creation with one or a few merged `BufferGeometry` objects using typed arrays for positions, indices, normals, and vertex colors.
-- [ ] Use vertex colors for height gradients so gradient coloring does not require one material per domino.
-- [ ] Use shared materials for colored, grayscale, and monochrome modes; update material/vertex-color data on palette changes rather than rebuilding the whole scene unless necessary.
-- [ ] Use `Uint32Array` indices when needed and keep `OES_element_index_uint` support for WebGL1 fallback.
-- [ ] Dispose old merged geometries/materials correctly before replacing them; preserve the user's camera/controls target on resample unless a first render or explicit reset requires recentering.
-- [ ] Keep abort/cancel behavior responsive by checking the existing abort signal between major phases, not inside per-domino mesh creation.
-- [ ] Verify n=200 and n=300 3D views rotate smoothly and object count is nearly constant rather than proportional to the number of dominoes.
+- [ ] Keep `No 3D (faster)` checked by default on page load and after benchmark cleanup unless the user explicitly changed it.
+- [ ] Keep the page in the 2D pane by default; do not initialize WebGL/Three.js during initial load or default sampling.
+- [ ] If the user clicks the 3D pane while `No 3D` is checked, show the existing disabled/no-3D message instead of rendering.
+- [ ] If the user explicitly unchecks `No 3D` and chooses 3D, the existing 3D renderer may run unchanged; do not implement batched 3D geometry or other 3D rendering optimization here.
+- [ ] Ensure automated smoke tests only verify that the opt-in 3D path is still reachable or properly disabled; do not benchmark 3D performance.
 
 ### Task 6: Final `/domino/` verification and cleanup
 
@@ -136,7 +138,7 @@ Remove the object-per-domino Three.js bottleneck.
 Validate correctness, performance, and visual quality after all optimizations.
 
 - [ ] Run `bundle exec jekyll build` and fix any warnings/errors caused by these edits.
-- [ ] Use a local server and browser to test `/domino/`: uniform, 2x2, 3x3, 6x2, frozen horizontal, frozen vertical, 2D/3D switching, palette changes, grayscale, checkerboard, paths, dimers, height labels, PNG/PDF/TikZ/CSV/JSON/export buttons, and Glauber start/stop.
-- [ ] Run the benchmark helper from Task 1 and record before/after numbers for the main cases.
+- [ ] Use a local server and browser to test `/domino/` in the default 2D view first, with `No 3D (faster)` checked: uniform, 2x2, 3x3, 6x2, frozen horizontal, frozen vertical, palette changes, grayscale, checkerboard, paths, dimers, height labels, PNG/PDF/TikZ/CSV/JSON/export buttons, and Glauber start/stop. Then do a short explicit 2D/3D switching smoke test that does not benchmark or optimize 3D.
+- [ ] Run the benchmark helper from Task 1 with its default 2D cases and record before/after numbers for the main cases. Do not run 3D benchmark cases for this plan unless explicitly requested.
 - [ ] Remove noisy debug logging while keeping the useful opt-in benchmark helper.
 - [ ] Confirm generated bundle `s/domino.js` is committed with `s/domino.cpp`.
