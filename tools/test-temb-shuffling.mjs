@@ -58,6 +58,7 @@ function checkShufflingSourceAndBundle() {
     "Error generating domino configuration",
     "Input size too large, would exceed memory limits",
     "Hard limit: N <= 500",
+    "N exceeds supported maximum 330",
     "probsslim",
     "d3pslim"
   ]) {
@@ -72,6 +73,9 @@ function checkPageSource() {
   const source = fs.readFileSync(pageSourcePath, "utf8");
   assert(source.includes('id="sample-timing-display"'), "sample timing span should be present");
   assert(source.includes("toFixed(2)}s"), "sample timing should display elapsed seconds with two decimals");
+  assert(source.includes("startSampleProgressPolling"), "sample UI should poll WASM progress while sampling");
+  assert(source.includes("shufflingGetProgress ? shufflingGetProgress()"), "sample progress display should read the shuffling WASM progress percentage");
+  assert(source.includes("formatSampleElapsed"), "sample progress display should include elapsed time while sampling");
   assert(source.includes("createShuffledSamplerProfile"), "sample profile helper should be present");
   assert(source.includes("window.tembShuffledSamplerBenchmark"), "benchmark helper should be exposed on window");
   assert(source.includes("TEMB_SHUFFLED_DEFAULT_BENCHMARK_CASES"), "default benchmark cases should be declared");
@@ -110,6 +114,9 @@ function checkPageSource() {
   assert(source.includes("stopSample3DAnimation();"), "sample 3D animation should stop when returning to 2D mode");
   assert(source.includes("getCachedDoubleDimerHeightDifference"), "height-function differences should be cached by sampled configurations");
   assert(source.includes("invalidateSampleHeightFunctionCache"), "height-function cache should be invalidated on new samples");
+  assert(source.includes("SAMPLE_HEIGHT_FUNCTION_MAX_DOMINOES"), "large optional height-function renders should be capped independently of sampling");
+  assert(source.includes("let queueHead = 0"), "height-function BFS should avoid Array.shift on large queues");
+  assert(!source.includes("Math.min(...dominoes.map"), "height-function calculation should avoid spreading huge domino arrays");
   assert(source.includes("window.tembSample3DDebugState"), "sample 3D debug state should be exposed for smoke tests");
   assert(source.includes("window.tembSampleHeightFunctionDebugState"), "height-function cache debug state should be exposed for smoke tests");
   assert(!source.includes("colorValue"), "sample 3D should not allocate per-domino colored materials");
@@ -264,6 +271,12 @@ async function runStandaloneWasmSmoke() {
   await expectWasmError(
     module,
     simulateAztecWithWeightMatrix(2, 0),
+    "Weight pointer is null"
+  );
+
+  await expectWasmError(
+    module,
+    simulateAztecWithWeightMatrix(331, 0),
     "Weight pointer is null"
   );
 

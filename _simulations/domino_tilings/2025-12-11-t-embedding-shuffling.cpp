@@ -36,7 +36,7 @@
 
 using namespace std;
 
-static constexpr int kMaxSupportedN = 330;
+static constexpr int kMaxSupportedN = 1500;
 volatile int progressCounter = 0;
 
 struct Xoshiro256pp {
@@ -221,7 +221,7 @@ static int checkedN(int n) {
         throw std::runtime_error("N must be at least 1");
     }
     if (n > kMaxSupportedN) {
-        throw std::runtime_error("N exceeds supported maximum 330");
+        throw std::runtime_error("N exceeds supported maximum " + std::to_string(kMaxSupportedN));
     }
     return n;
 }

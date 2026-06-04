@@ -2706,7 +2706,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let sample2DRenderer = null;
   let activeRandomSampleRequestId = 0;
   let activeUserVisibleSampleRequestId = 0;
+  let sampleProgressInterval = null;
+  let sampleProgressLabel = 'Sampling';
   const SAMPLE_MAX_N = 1500;
+  const SAMPLE_HEIGHT_FUNCTION_MAX_DOMINOES = 130000;
   const SAMPLE_2D_EXACT_RENDER_LIMIT = 50;
   const SAMPLE_2D_CACHE_MAX_PX = 4096;
   const SAMPLE_2D_CACHE_PADDING = 4;
@@ -2838,6 +2841,54 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       timingDisplay.textContent = `(${(profile.totalMs / 1000).toFixed(2)}s)`;
     } else if (profile.status === 'error') {
       timingDisplay.textContent = '';
+    }
+  }
+
+  function formatSampleElapsed(profile) {
+    const startedAt = profile?.startedAt || performance.now();
+    return ((performance.now() - startedAt) / 1000).toFixed(2);
+  }
+
+  function updateSampleProgressDisplay(profile, progressOverride = null) {
+    if (!profile || profile.source === 'benchmark') return;
+    let progress = progressOverride;
+    if (progress === null) {
+      try {
+        progress = shufflingGetProgress ? shufflingGetProgress() : 0;
+      } catch (_) {
+        progress = 0;
+      }
+    }
+    progress = Math.max(0, Math.min(100, Math.round(Number(progress) || 0)));
+    setSampleStatus(`${sampleProgressLabel}... (${progress}%)`);
+    const timingDisplay = document.getElementById('sample-timing-display');
+    if (timingDisplay) timingDisplay.textContent = `(${formatSampleElapsed(profile)}s)`;
+  }
+
+  function startSampleProgressPolling(profile, requestId, label = 'Sampling') {
+    if (!profile || profile.source === 'benchmark') return;
+    stopSampleProgressPolling();
+    sampleProgressLabel = label;
+    updateSampleProgressDisplay(profile, 0);
+    sampleProgressInterval = setInterval(() => {
+      if (!isActiveRandomSampleRequest(requestId) || profile.status !== 'running') {
+        stopSampleProgressPolling();
+        return;
+      }
+      updateSampleProgressDisplay(profile);
+    }, 50);
+  }
+
+  function setSampleProgressStage(profile, label, progress = null) {
+    if (!profile || profile.source === 'benchmark') return;
+    sampleProgressLabel = label;
+    updateSampleProgressDisplay(profile, progress);
+  }
+
+  function stopSampleProgressPolling() {
+    if (sampleProgressInterval) {
+      clearInterval(sampleProgressInterval);
+      sampleProgressInterval = null;
     }
   }
 
@@ -3323,20 +3374,12 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   function calculateSampleHeightFunction(dominoes) {
     if (!dominoes || dominoes.length === 0) return new Map();
 
-    const minSidePx = Math.min(...dominoes.map(d => Math.min(d.w, d.h)));
+    let minSidePx = Infinity;
+    for (const d of dominoes) {
+      minSidePx = Math.min(minSidePx, d.w, d.h);
+    }
     const unit = minSidePx / 2;
-    if (unit <= 0) return new Map();
-
-    const dominoData = dominoes.map(d => {
-      const horiz = d.w > d.h;
-      const orient = horiz ? 0 : 1;
-      const sign = horiz
-        ? (d.color === "green" ? -1 : 1)
-        : (d.color === "yellow" ? -1 : 1);
-      const gx = Math.round(d.x / unit);
-      const gy = Math.round(d.y / unit);
-      return [orient, sign, gx, gy];
-    });
+    if (!Number.isFinite(unit) || unit <= 0) return new Map();
 
     const adj = new Map();
     function addEdge(v1, v2, dh) {
@@ -3348,7 +3391,14 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       adj.get(v2Key).push([v1Key, -dh]);
     }
 
-    dominoData.forEach(([o, s, x, y]) => {
+    for (const d of dominoes) {
+      const horiz = d.w > d.h;
+      const o = horiz ? 0 : 1;
+      const s = horiz
+        ? (d.color === "green" ? -1 : 1)
+        : (d.color === "yellow" ? -1 : 1);
+      const x = Math.round(d.x / unit);
+      const y = Math.round(d.y / unit);
       if (o === 0) {
         const TL = [x, y+2], TM = [x+2, y+2], TR = [x+4, y+2];
         const BL = [x, y], BM = [x+2, y], BR = [x+4, y];
@@ -3364,7 +3414,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         addEdge(TL, ML, s); addEdge(ML, BL, -s);
         addEdge(TR, MR, -s); addEdge(MR, BR, s);
       }
-    });
+    }
 
     const verts = Array.from(adj.keys()).map(k => {
       const [gx, gy] = k.split(',').map(Number);
@@ -3378,8 +3428,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     const heights = new Map([[root, 0]]);
     const queue = [root];
-    while (queue.length > 0) {
-      const v = queue.shift();
+    let queueHead = 0;
+    while (queueHead < queue.length) {
+      const v = queue[queueHead++];
       for (const [w, dh] of adj.get(v) || []) {
         if (!heights.has(w)) {
           heights.set(w, heights.get(v) + dh);
@@ -3390,19 +3441,21 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return heights;
   }
 
+  function canRenderSampleHeightFunction(config1 = sampleDominoes, config2 = sampleDominoes2) {
+    return Math.max(config1?.length || 0, config2?.length || 0) <= SAMPLE_HEIGHT_FUNCTION_MAX_DOMINOES;
+  }
+
   // Compute height function difference for double dimer
   function computeDoubleDimerHeightDifference(config1, config2) {
     const h1 = calculateSampleHeightFunction(config1);
     const h2 = calculateSampleHeightFunction(config2);
     const diff = new Map();
 
-    // Get all vertex keys from both maps
-    const allKeys = new Set([...h1.keys(), ...h2.keys()]);
-
-    for (const key of allKeys) {
-      const v1 = h1.get(key) || 0;
-      const v2 = h2.get(key) || 0;
-      diff.set(key, v1 - v2);
+    for (const [key, v1] of h1) {
+      diff.set(key, v1 - (h2.get(key) || 0));
+    }
+    for (const [key, v2] of h2) {
+      if (!h1.has(key)) diff.set(key, -v2);
     }
 
     return diff;
@@ -3680,8 +3733,17 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
       // Compute and render height function difference
       if (sampleDominoes.length > 0 && sampleDominoes2.length > 0) {
-        const heightDiff = getCachedDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
-        renderHeightFunctionSurface(heightDiff);
+        try {
+          if (!canRenderSampleHeightFunction()) {
+            throw new Error(`sample too large for browser height-function rendering (>${SAMPLE_HEIGHT_FUNCTION_MAX_DOMINOES} dominoes per configuration)`);
+          }
+          const heightDiff = getCachedDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
+          renderHeightFunctionSurface(heightDiff);
+        } catch (error) {
+          console.warn('Height function rendering skipped:', error);
+          setSampleStatus('Sample ready; height function skipped for this large N.');
+          hideHeightFunctionPane();
+        }
       }
     }, 50);
   }
@@ -3706,7 +3768,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     if (!btn) return;
 
     // Show button only when double dimer mode is active and we have both configs
-    if (doubleDimerMode && sampleDominoes.length > 0 && sampleDominoes2.length > 0) {
+    if (doubleDimerMode && sampleDominoes.length > 0 && sampleDominoes2.length > 0 && canRenderSampleHeightFunction()) {
       btn.style.display = 'inline-block';
     } else {
       btn.style.display = 'none';
@@ -5056,10 +5118,18 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     updateHeightFunctionButtonVisibility();
 
     if (isHeightFunctionPaneVisible() && controls.doubleDimer && sampleDominoes2.length > 0) {
-      measureSamplePhase(profile, 'heightFunctionPaneRenderMs', () => {
-        const heightDiff = getCachedDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
-        renderHeightFunctionSurface(heightDiff);
-      });
+      try {
+        if (!canRenderSampleHeightFunction()) {
+          throw new Error(`sample too large for browser height-function rendering (>${SAMPLE_HEIGHT_FUNCTION_MAX_DOMINOES} dominoes per configuration)`);
+        }
+        measureSamplePhase(profile, 'heightFunctionPaneRenderMs', () => {
+          const heightDiff = getCachedDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
+          renderHeightFunctionSurface(heightDiff);
+        });
+      } catch (error) {
+        console.warn('Height function rendering skipped:', error);
+        hideHeightFunctionPane();
+      }
     }
   }
 
@@ -5089,17 +5159,24 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         : controls.statusMessage);
 
       const sampleWeights = getOrGenerateSampleWeights(controls, profile);
+      if (isUserVisibleRequest) {
+        startSampleProgressPolling(profile, requestId, controls.doubleDimer ? 'Sampling double dimer' : 'Sampling');
+      }
       const resultPtr = await runShufflingWithWeights(controls.N, sampleWeights, controls.doubleDimer, profile);
+      setSampleProgressStage(profile, 'Decoding', 100);
       const result = decodeAndFreeShufflingResult(resultPtr, profile);
 
       if (!isActiveRandomSampleRequest(requestId)) {
+        stopSampleProgressPolling();
         return finishStaleShuffledSamplerProfile(profile);
       }
 
       updateRandomSampleState(result, controls, profile);
+      setSampleProgressStage(profile, 'Rendering', 100);
       renderVisibleSampleViews(controls, profile);
 
       finishShuffledSamplerProfile(profile, 'ok');
+      stopSampleProgressPolling();
       if (profile.source !== 'benchmark') {
         setSampleStatus('');
       }
@@ -5107,9 +5184,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     } catch (e) {
       if (!isActiveRandomSampleRequest(requestId)) {
+        stopSampleProgressPolling();
         return finishStaleShuffledSamplerProfile(profile);
       }
       console.error('Shuffling error:', e);
+      stopSampleProgressPolling();
       finishShuffledSamplerProfile(profile, 'error', e);
       clearSampleTimingDisplay();
       setSampleStatus('Sampling failed: ' + (e.message || e));
@@ -5118,6 +5197,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     } finally {
       if (isUserVisibleRequest && activeUserVisibleSampleRequestId === requestId) {
         activeUserVisibleSampleRequestId = 0;
+        stopSampleProgressPolling();
         setSampleButtonBusy(false);
       }
     }
