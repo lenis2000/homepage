@@ -943,7 +943,7 @@ permalink: /domino/
       <div class="control-section-content">
         <div class="control-row">
           <label for="n-input">Aztec Diamond Order:</label>
-          <input id="n-input" type="number" value="12" min="2" step="2" max="300" size="3" class="mobile-input" style="width: 70px;">
+          <input id="n-input" type="number" value="12" min="2" step="2" max="500" size="3" class="mobile-input" style="width: 70px;">
         </div>
         <div class="control-row">
           <button id="sample-btn" class="btn-action">Sample</button>
@@ -1147,7 +1147,7 @@ permalink: /domino/
           </div>
           <div class="control-row">
             <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px;">
-              <input type="checkbox" id="no-3d-checkbox">
+              <input type="checkbox" id="no-3d-checkbox" checked>
               No 3D (faster)
             </label>
           </div>
@@ -1206,9 +1206,9 @@ permalink: /domino/
         <div class="export-divider"></div>
         <div class="export-group">
           <span class="export-group-label">Images</span>
-          <button id="download-png-btn" class="btn-utility" style="font-size: 11px; display: none;">PNG</button>
-          <button id="download-pdf-btn" class="btn-utility" style="font-size: 11px; display: none;">PDF</button>
-          <button id="download-3d-btn" class="btn-utility" style="font-size: 11px;">3D Screenshot</button>
+          <button id="download-png-btn" class="btn-utility" style="font-size: 11px;">PNG</button>
+          <button id="download-pdf-btn" class="btn-utility" style="font-size: 11px;">PDF</button>
+          <button id="download-3d-btn" class="btn-utility" style="font-size: 11px; display: none;">3D Screenshot</button>
         </div>
         <div class="export-divider"></div>
         <div class="export-group">
@@ -1262,17 +1262,17 @@ permalink: /domino/
     <!-- View Toggle overlay -->
     <div class="view-overlay">
       <div class="view-toggle-pills">
-        <button id="view-3d-btn" class="active" title="3D height function view">3D</button>
-        <button id="view-2d-btn" title="2D domino view">2D</button>
+        <button id="view-3d-btn" title="3D height function view">3D</button>
+        <button id="view-2d-btn" class="active" title="2D domino view">2D</button>
       </div>
       <button id="help-btn" title="Keyboard shortcuts" style="width: 28px; height: 28px; border: 1px solid var(--border-color, #888); border-radius: 50%; background: var(--bg-primary, white); color: #666; font-size: 14px; cursor: pointer; padding: 0; margin-left: 8px;">?</button>
     </div>
 
-    <!-- 3D Visualization Pane (default) -->
-    <div id="aztec-canvas"></div>
+    <!-- 3D Visualization Pane (opt-in) -->
+    <div id="aztec-canvas" style="display: none;"></div>
 
-    <!-- 2D Visualization Pane (hidden by default) -->
-    <div id="aztec-2d-canvas" style="display: none; position: relative; overflow: hidden; height: 70vh;">
+    <!-- 2D Visualization Pane (default) -->
+    <div id="aztec-2d-canvas" style="display: block; position: relative; overflow: hidden; height: 70vh;">
       <!-- 2D controls moved to sidebar -->
       <svg id="aztec-svg-2d" style="width: 100%; height: 100%; border: 1px solid var(--border-color, #ccc);"></svg>
     </div>
@@ -1350,6 +1350,101 @@ Module.onRuntimeInitialized = async function() {
   window.glauberRunning = glauberRunning;
   let glauberTimer = null;
   let lastSampleWasGlauber = false; // Track if the *last* visualization update came from Glauber
+
+  const DOMINO_DEFAULT_BENCHMARK_CASES = [
+    { n: 100, view: "2d", no3D: true, periodicity: "uniform" },
+    { n: 200, view: "2d", no3D: true, periodicity: "uniform" },
+    { n: 300, view: "2d", no3D: true, periodicity: "uniform" },
+    { n: 500, view: "2d", no3D: true, periodicity: "uniform" }
+  ];
+
+  function dominoNow() {
+    return (window.performance && performance.now) ? performance.now() : Date.now();
+  }
+
+  function roundTiming(ms) {
+    return Math.round(ms * 10) / 10;
+  }
+
+  function currentPeriodicity() {
+    return document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
+  }
+
+  function createDominoProfile(n, options = {}) {
+    return {
+      n,
+      source: options.source || "sample",
+      label: options.label || null,
+      periodicity: currentPeriodicity(),
+      view: document.getElementById("view-2d-btn")?.classList.contains("active") ? "2d" : "3d",
+      no3D: Boolean(document.getElementById("no-3d-checkbox")?.checked),
+      startedAt: new Date().toISOString(),
+      startedAtMs: dominoNow(),
+      status: "running",
+      timings: {
+        wasmCallMs: null,
+        utf8ConversionMs: null,
+        jsonParseMs: null,
+        render2DMs: null,
+        heightFunctionMs: null,
+        render3DMs: null,
+        totalMs: null
+      },
+      skipped: []
+    };
+  }
+
+  function setDominoTiming(profile, key, elapsedMs) {
+    if (!profile) return;
+    profile.timings[key] = roundTiming(elapsedMs);
+  }
+
+  function skipDominoTiming(profile, key, reason) {
+    if (!profile || profile.skipped.some(item => item.key === key)) return;
+    profile.skipped.push({ key, reason });
+  }
+
+  function finishDominoProfile(profile, status = "ok") {
+    if (!profile || profile.status !== "running") return profile;
+    profile.status = status;
+    profile.finishedAt = new Date().toISOString();
+    profile.timings.totalMs = roundTiming(dominoNow() - profile.startedAtMs);
+
+    window.dominoSamplerLastTiming = profile;
+    window.dominoSamplerTimings = window.dominoSamplerTimings || [];
+    window.dominoSamplerTimings.push(profile);
+    if (window.dominoSamplerTimings.length > 50) {
+      window.dominoSamplerTimings.shift();
+    }
+
+    console.info("[domino] sampler profile", profile);
+    if (console.table) console.table(profile.timings);
+    return profile;
+  }
+
+  function profileSummary(profile) {
+    if (!profile || profile.status !== "ok") return "";
+    const t = profile.timings;
+    const parts = [
+      `total ${t.totalMs}ms`,
+      t.wasmCallMs !== null ? `wasm ${t.wasmCallMs}ms` : null,
+      t.utf8ConversionMs !== null ? `utf8 ${t.utf8ConversionMs}ms` : null,
+      t.jsonParseMs !== null ? `parse ${t.jsonParseMs}ms` : null,
+      t.render2DMs !== null ? `2D ${t.render2DMs}ms` : null,
+      t.heightFunctionMs !== null ? `height ${t.heightFunctionMs}ms` : null,
+      t.render3DMs !== null ? `3D ${t.render3DMs}ms` : null
+    ].filter(Boolean);
+    return `Profile: ${parts.join(", ")}`;
+  }
+
+  function showDominoProfileStatus(profile) {
+    const message = profileSummary(profile);
+    if (!message || !progressElem || profile.source === "benchmark") return;
+    progressElem.innerText = message;
+    setTimeout(() => {
+      if (progressElem.innerText === message) progressElem.innerText = "";
+    }, 6000);
+  }
 
   // Demo mode state
   let isDemoMode = false;
@@ -1523,8 +1618,13 @@ Module.onRuntimeInitialized = async function() {
     }
   }
 
-  // Initialize Three.js when the module is loaded
-  initThreeJS();
+  // Initialize Three.js only when the opt-in 3D path is active.
+  if (!document.getElementById("no-3d-checkbox")?.checked &&
+      document.getElementById("view-3d-btn")?.classList.contains("active")) {
+    initThreeJS();
+  } else {
+    animationActive = false;
+  }
 
   // Add a global function to easily reset Three.js if needed
   window.resetThreeJS = function() {
@@ -1962,12 +2062,26 @@ Module.onRuntimeInitialized = async function() {
     };
   }
 
-  async function updateVisualization(n) {
+  async function updateVisualization(n, profileOptions = {}) {
+    const profile = createDominoProfile(n, profileOptions);
+    let profileCompleted = false;
+    function completeProfile(status) {
+      if (profileCompleted) return profile;
+      profileCompleted = true;
+      finishDominoProfile(profile, status);
+      showDominoProfileStatus(profile);
+      return profile;
+    }
+
     // If Glauber is running, stop it
     if (glauberRunning) {
         toggleGlauberDynamics(); // Stop the dynamics
     }
     lastSampleWasGlauber = false; // Reset flag when generating a fresh sample
+
+    const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
+    const no3DAtStart = document.getElementById("no-3d-checkbox").checked;
+    const shouldPrepare3D = is3DView && n <= 300 && !no3DAtStart;
 
     /* ------------------------------------------------------------------ */
      /* 1. wipe previous geometry *and* transforms                          */
@@ -1977,7 +2091,7 @@ Module.onRuntimeInitialized = async function() {
        dominoGroup.position.set(0, 0, 0);
        dominoGroup.rotation.set(0, 0, 0);
        dominoGroup.scale.set(1, 1, 1);         // <‑‑ the crucial line
-     } else {
+     } else if (shouldPrepare3D) {
        // Something went wrong with the 3D scene - reinitialize
 
        initThreeJS();
@@ -1986,7 +2100,6 @@ Module.onRuntimeInitialized = async function() {
 
 
     // Check if we're in 3D view with n > 300
-    const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
     const skip3DRendering = is3DView && n > 300;
 
     // Get the current periodicity setting
@@ -2069,10 +2182,11 @@ Module.onRuntimeInitialized = async function() {
     try {
       // Allow UI to update before starting heavy computation
       await sleep(50);
-      if (signal.aborted) return;
+      if (signal.aborted) return completeProfile("aborted");
 
       // Get domino configuration from C++ code
       let ptrPromise;
+      const wasmStart = dominoNow();
       if (isFrozenH) {
         ptrPromise = simulateAztecHorizontal(n, 0,0,0,0,0,0,0,0,0,0);
       } else if (isFrozenV) {
@@ -2090,19 +2204,24 @@ Module.onRuntimeInitialized = async function() {
 
       // Wait for simulation to complete
       const ptr = await ptrPromise;
+      setDominoTiming(profile, "wasmCallMs", dominoNow() - wasmStart);
       if (signal.aborted) {
         if (ptr) freeString(ptr);
-        return;
+        return completeProfile("aborted");
       }
 
+      const utf8Start = dominoNow();
       let raw = Module.UTF8ToString(ptr);
+      setDominoTiming(profile, "utf8ConversionMs", dominoNow() - utf8Start);
       freeString(ptr);
-      if (signal.aborted) return;
+      if (signal.aborted) return completeProfile("aborted");
 
       // Parse the results
+      const parseStart = dominoNow();
       const dominoes = JSON.parse(raw);
+      setDominoTiming(profile, "jsonParseMs", dominoNow() - parseStart);
       if (dominoes.error) throw new Error(dominoes.error);
-      if (signal.aborted) return;
+      if (signal.aborted) return completeProfile("aborted");
 
       // Cache the dominoes for 2D view
       cachedDominoes = dominoes;
@@ -2116,7 +2235,13 @@ Module.onRuntimeInitialized = async function() {
       const need2D = document.getElementById("view-2d-btn")
                          .classList.contains("active")        // user is in 2‑D view
                    || n > 300;                                // 3‑D disabled anyway
-      if (need2D) await render2D(dominoes);                   // otherwise defer
+      if (need2D) {
+        const render2DStart = dominoNow();
+        await render2D(dominoes);
+        setDominoTiming(profile, "render2DMs", dominoNow() - render2DStart);
+      } else {
+        skipDominoTiming(profile, "render2DMs", "2D pane inactive");
+      }
 
       // For large tilings (n > 300), prepare a message for 3D view
       if (isLargeTiling) {
@@ -2142,7 +2267,9 @@ Module.onRuntimeInitialized = async function() {
 
         progressElem.innerText = "";
         stopSimulation();
-        return;
+        skipDominoTiming(profile, "heightFunctionMs", "3D unavailable for n > 300");
+        skipDominoTiming(profile, "render3DMs", "3D unavailable for n > 300");
+        return completeProfile("ok");
       }
 
       // For n ≤ 300, check if 3D rendering is disabled
@@ -2151,16 +2278,20 @@ Module.onRuntimeInitialized = async function() {
         // Skip 3D processing entirely when no 3D is checked
         progressElem.innerText = "";
         stopSimulation();
-        return;
+        skipDominoTiming(profile, "heightFunctionMs", "No 3D enabled");
+        skipDominoTiming(profile, "render3DMs", "No 3D enabled");
+        return completeProfile("ok");
       }
 
       progressElem.innerText = "Calculating height function...";
       await sleep(10);
-      if (signal.aborted) return;
+      if (signal.aborted) return completeProfile("aborted");
 
       // Calculate the height function (in chunks if large)
+      const heightStart = dominoNow();
       const heightMap = calculateHeightFunction(dominoes);
-      if (signal.aborted) return;
+      setDominoTiming(profile, "heightFunctionMs", dominoNow() - heightStart);
+      if (signal.aborted) return completeProfile("aborted");
 
       // Scale factor based on n
       const scale = 60/(2*n);
@@ -2176,9 +2307,10 @@ Module.onRuntimeInitialized = async function() {
       // Create the 3D faces with proper heights
       progressElem.innerText = "Processing domino data...";
       await sleep(10);
-      if (signal.aborted) return;
+      if (signal.aborted) return completeProfile("aborted");
 
       // Process faces in chunks to keep UI responsive
+      const render3DStart = dominoNow();
       const facesPromise = (async () => {
         const faces = [];
         const CHUNK_SIZE = 200;
@@ -2202,10 +2334,10 @@ Module.onRuntimeInitialized = async function() {
       })();
 
       const faces = await facesPromise;
-      if (!faces || signal.aborted) return;
+      if (!faces || signal.aborted) return completeProfile("aborted");
 
       const total = faces.length;
-      if (total === 0 || signal.aborted) return;
+      if (total === 0 || signal.aborted) return completeProfile("aborted");
 
       // Calculate height range for gradient coloring
       let minHeight = Infinity, maxHeight = -Infinity;
@@ -2317,7 +2449,7 @@ Module.onRuntimeInitialized = async function() {
         hasMore = await processBatch(idx);
       }
 
-      if (signal.aborted) return;
+      if (signal.aborted) return completeProfile("aborted");
 
       // Only finish if we completed all batches
       if (idx >= total) {
@@ -2352,19 +2484,145 @@ Module.onRuntimeInitialized = async function() {
         if (wasInDemoMode) {
           setDemoViewCamera();
         }
+
+        setDominoTiming(profile, "render3DMs", dominoNow() - render3DStart);
       }
 
       // Cleanup - reuse the stopSimulation function since it handles everything properly
       stopSimulation();
       if (progressElem) progressElem.innerText = "";
+      return completeProfile("ok");
 
     } catch(err) {
 
+      profile.error = err.message;
       if (progressElem) progressElem.innerText = `Error: ${err.message}`;
       // Also use stopSimulation for cleanup on error
       stopSimulation();
+      return completeProfile("error");
     }
   }
+
+  function snapshotBenchmarkControls() {
+    return {
+      n: document.getElementById("n-input")?.value,
+      no3D: document.getElementById("no-3d-checkbox")?.checked,
+      view: document.getElementById("view-2d-btn")?.classList.contains("active") ? "2d" : "3d",
+      periodicity: currentPeriodicity()
+    };
+  }
+
+  function setBenchmarkView(view, no3D) {
+    const no3DCheckbox = document.getElementById("no-3d-checkbox");
+    if (no3DCheckbox) no3DCheckbox.checked = no3D;
+
+    if (view === "3d") {
+      document.getElementById("view-3d-btn")?.click();
+    } else {
+      document.getElementById("view-2d-btn")?.click();
+    }
+  }
+
+  function setBenchmarkPeriodicity(periodicity) {
+    const radio = document.querySelector(`input[name="periodicity"][value="${periodicity}"]`);
+    if (!radio) return;
+    radio.checked = true;
+    radio.dispatchEvent(new Event("change"));
+    updatePeriodicityParams();
+  }
+
+  function restoreBenchmarkControls(snapshot) {
+    if (!snapshot) return;
+    setBenchmarkView(snapshot.view, snapshot.no3D);
+    if (snapshot.n !== undefined) {
+      document.getElementById("n-input").value = snapshot.n;
+      updateHeightFunctionVisibility(parseInt(snapshot.n, 10) || 12);
+    }
+    setBenchmarkPeriodicity(snapshot.periodicity);
+  }
+
+  function normalizeBenchmarkCase(testCase) {
+    const n = Math.max(2, parseInt(testCase.n, 10) || 100);
+    const view = testCase.view === "3d" ? "3d" : "2d";
+    const no3D = testCase.no3D !== undefined ? Boolean(testCase.no3D) : view !== "3d";
+    return {
+      n,
+      view,
+      no3D,
+      periodicity: testCase.periodicity || "uniform",
+      label: testCase.label || `${view} n=${n}`
+    };
+  }
+
+  window.dominoSamplerBenchmark = async function(options = {}) {
+    const rawCases = Array.isArray(options.cases) && options.cases.length
+      ? options.cases
+      : DOMINO_DEFAULT_BENCHMARK_CASES;
+    const cases = rawCases.map(normalizeBenchmarkCase);
+    const snapshot = snapshotBenchmarkControls();
+    const results = [];
+    const startedAt = new Date().toISOString();
+
+    try {
+      for (let i = 0; i < cases.length; i++) {
+        const benchmarkCase = cases[i];
+        setBenchmarkView(benchmarkCase.view, benchmarkCase.no3D);
+        setBenchmarkPeriodicity(benchmarkCase.periodicity);
+        document.getElementById("n-input").value = benchmarkCase.n;
+        updateHeightFunctionVisibility(benchmarkCase.n);
+
+        if (progressElem) {
+          progressElem.innerText =
+            `Benchmark ${i + 1}/${cases.length}: ${benchmarkCase.label}`;
+        }
+
+        await sleep(options.caseDelayMs ?? 25);
+        const profile = await updateVisualization(benchmarkCase.n, {
+          source: "benchmark",
+          label: benchmarkCase.label
+        });
+
+        results.push({
+          case: benchmarkCase,
+          status: profile.status,
+          timings: { ...profile.timings },
+          skipped: [...profile.skipped],
+          error: profile.error || null
+        });
+
+        if (profile.status === "error" && options.stopOnError !== false) break;
+      }
+    } finally {
+      if (options.restore === true) {
+        restoreBenchmarkControls(snapshot);
+      }
+
+      if (options.leaveNo3D !== false) {
+        document.getElementById("no-3d-checkbox").checked = true;
+      }
+      if (options.leaveView !== "current") {
+        setBenchmarkView("2d", true);
+      }
+
+      if (progressElem) {
+        progressElem.innerText = "Benchmark complete";
+        setTimeout(() => {
+          if (progressElem.innerText === "Benchmark complete") progressElem.innerText = "";
+        }, 4000);
+      }
+    }
+
+    const summary = {
+      startedAt,
+      finishedAt: new Date().toISOString(),
+      defaultCases: !(Array.isArray(options.cases) && options.cases.length),
+      results
+    };
+
+    window.dominoSamplerLastBenchmark = summary;
+    console.info("[domino] benchmark summary", summary);
+    return summary;
+  };
 
   // Add Glauber button event listener with iOS touch fix
   let glauberTouchFired = false;
@@ -2999,7 +3257,7 @@ Module.onRuntimeInitialized = async function() {
 
     // Check if the renderer is properly initialized/restored
     const container = document.getElementById('aztec-canvas');
-    if (!container.querySelector('canvas')) {
+    if (!no3D && !container.querySelector('canvas')) {
 
       initThreeJS();
 
@@ -4207,8 +4465,9 @@ Module.onRuntimeInitialized = async function() {
     if (firstSampleDone) return;
     firstSampleAttempts++;
 
-    // 1. container for 3‑D view
-    const container = document.getElementById('aztec-canvas');
+    // 1. container for the active default view
+    const activeViewIs2D = document.getElementById("view-2d-btn")?.classList.contains("active");
+    const container = document.getElementById(activeViewIs2D ? 'aztec-2d-canvas' : 'aztec-canvas');
 
     // 2. if it is still collapsed (0×0), try again (with limit)
     if (!container || !container.clientWidth || !container.clientHeight) {

@@ -62,10 +62,10 @@ As of 2026-06-04, `ralphex-homepage:latest` includes Ruby/Bundler/Jekyll, Emscri
 
 Add lightweight instrumentation before optimizing so later tasks can prove real improvements.
 
-- [ ] Add timing around WASM call, UTF8 conversion, JSON parse, 2D render, height-function computation, and 3D render. Keep it console/status only; do not add new keyboard shortcuts.
-- [ ] Expose a dev-only `window.dominoSamplerBenchmark(options)` helper whose default cases are 2D-first, e.g. n=100, n=200, n=300, n=500 in 2D, returning structured timings. The helper should leave `No 3D` checked by default. Allow explicit opt-in 3D cases through `options.cases`, but do not include current heavy 3D cases in the default benchmark.
-- [ ] Record representative 2D baseline numbers in a small benchmark markdown file or a clearly marked comment block; do not collect 3D baselines for this plan unless explicitly requested.
-- [ ] Verify `/domino/` still loads into 2D by default with `No 3D (faster)` checked and samples once after instrumentation.
+- [x] Add timing around WASM call, UTF8 conversion, JSON parse, 2D render, height-function computation, and 3D render. Keep it console/status only; do not add new keyboard shortcuts.
+- [x] Expose a dev-only `window.dominoSamplerBenchmark(options)` helper whose default cases are 2D-first, e.g. n=100, n=200, n=300, n=500 in 2D, returning structured timings. The helper should leave `No 3D` checked by default. Allow explicit opt-in 3D cases through `options.cases`, but do not include current heavy 3D cases in the default benchmark.
+- [x] Record representative 2D baseline numbers in a small benchmark markdown file or a clearly marked comment block; do not collect 3D baselines for this plan unless explicitly requested.
+- [x] Verify `/domino/` still loads into 2D by default with `No 3D (faster)` checked and samples once after instrumentation.
 
 ### Task 2: Optimize `/domino/` C++ shuffling core
 
