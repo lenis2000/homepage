@@ -37,7 +37,8 @@ a11y-description: "Interactive visualization of t-embeddings of the Aztec diamon
       <li><em>Geometric (p)</em>: Geometric distribution with success probability p (integer-valued).</li>
     </ul>
   </li>
-  <li><strong>Gamma i.i.d.</strong>: Edge weights drawn from Gamma(α, β) distribution.</li>
+  <li><strong>Gamma i.i.d.</strong>: Edge weights drawn from the Gamma domino tiling model with constant shape parameters α and β.</li>
+  <li><strong>Gamma 2×2 periodic</strong>: Same Gamma model, but the α and β shape parameters repeat with a 2×2 period in the black-face diagonal coordinates.</li>
   <li><strong>Layered (diagonal)</strong>: Diagonally layered weights where each diagonal (i + j = const) shares the same weight. Offers 6 regimes:
     <ul>
       <li><em>Regime 1 (Critical Scaling)</em>: Weights vary as Val1 + 2/√n or Val2 − 1/√n with given probabilities.</li>
@@ -287,7 +288,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 </ul>
 
 <p><strong>Gamma Distribution</strong> <a href="https://arxiv.org/abs/2512.03033">[Duits–Van Peski]</a>:
-Edges on the bottom of each face have weight $\sim \Gamma(\alpha, 1)$; edges on the right of each face have weight $\sim \Gamma(\beta, 1)$.</p>
+Edges on the bottom of each face have weight $\sim \Gamma(\alpha, 1)$; edges on the right of each face have weight $\sim \Gamma(\beta, 1)$. The 2×2 periodic preset replaces the constants $\alpha,\beta$ by shape matrices $\alpha_{ij},\beta_{ij}$ repeated periodically in the black-face diagonal coordinates.</p>
 
 <p><strong>Layered Weights</strong> (diagonal: <a href="https://arxiv.org/abs/2507.08560">[Bufetov–Petrov–Zografos]</a>; straight: <a href="https://arxiv.org/abs/2507.11964">[Moulard–Toninelli]</a>):
 Weight depends on layer index (diagonal $i+j$ or row $y$). Six regimes:</p>
@@ -344,6 +345,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         <option value="random-layered">Random Layered (diagonal)</option>
         <option value="random-straight-layered">Random Layered (straight)</option>
         <option value="random-gamma">Random Gamma</option>
+        <option value="gamma-periodic-2x2">Gamma 2×2 Periodic</option>
         <option value="periodic">k × l Periodic</option>
       </select>
     </label>
@@ -488,6 +490,46 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
         <strong>Seed:</strong>
         <input id="gamma-seed" type="number" value="42" style="width: 70px;" aria-label="Random seed for Gamma weights">
       </label>
+    </div>
+  </div>
+</div>
+
+<!-- Random Gamma 2x2 Periodic params panel -->
+<div id="gamma-periodic-params" style="display: none; margin-bottom: 12px; padding: 12px; border: 1px solid #E57200; border-left-width: 4px; background: #f8f9fa; border-radius: 4px;">
+  <div style="margin-bottom: 10px; font-weight: bold; font-size: 14px;">
+    📈 Gamma 2×2 Periodic
+    <span style="font-weight: normal; font-size: 0.85em; color: #666;">shape parameters for the Gamma domino tiling model</span>
+  </div>
+
+  <div style="padding: 8px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
+    <div style="font-size: 12px; color: #666; margin-bottom: 8px;">α edges use Γ(α<sub>ij</sub>, 1), β edges use Γ(β<sub>ij</sub>, 1), with (i,j) repeated periodically modulo 2 in diagonal coordinates.</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 10px;">
+      <label style="display: flex; align-items: center; gap: 6px;">
+        <strong>Seed:</strong>
+        <input id="gamma-periodic-seed" type="number" value="42" style="width: 70px;" aria-label="Random seed for periodic Gamma weights">
+      </label>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start;">
+      <div style="padding: 8px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;">
+        <div style="font-weight: bold; margin-bottom: 6px; font-size: 12px;">α shape matrix</div>
+        <div style="display: grid; grid-template-columns: repeat(2, 62px); gap: 4px;">
+          <input id="gamma-periodic-alpha-0-0" type="number" value="0.20" min="0.01" max="50" step="0.01" style="width: 58px;" aria-label="Periodic Gamma alpha 0 0">
+          <input id="gamma-periodic-alpha-0-1" type="number" value="0.60" min="0.01" max="50" step="0.01" style="width: 58px;" aria-label="Periodic Gamma alpha 0 1">
+          <input id="gamma-periodic-alpha-1-0" type="number" value="1.20" min="0.01" max="50" step="0.01" style="width: 58px;" aria-label="Periodic Gamma alpha 1 0">
+          <input id="gamma-periodic-alpha-1-1" type="number" value="0.35" min="0.01" max="50" step="0.01" style="width: 58px;" aria-label="Periodic Gamma alpha 1 1">
+        </div>
+      </div>
+
+      <div style="padding: 8px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px;">
+        <div style="font-weight: bold; margin-bottom: 6px; font-size: 12px;">β shape matrix</div>
+        <div style="display: grid; grid-template-columns: repeat(2, 62px); gap: 4px;">
+          <input id="gamma-periodic-beta-0-0" type="number" value="0.25" min="0.01" max="50" step="0.01" style="width: 58px;" aria-label="Periodic Gamma beta 0 0">
+          <input id="gamma-periodic-beta-0-1" type="number" value="1.00" min="0.01" max="50" step="0.01" style="width: 58px;" aria-label="Periodic Gamma beta 0 1">
+          <input id="gamma-periodic-beta-1-0" type="number" value="0.50" min="0.01" max="50" step="0.01" style="width: 58px;" aria-label="Periodic Gamma beta 1 0">
+          <input id="gamma-periodic-beta-1-1" type="number" value="1.50" min="0.01" max="50" step="0.01" style="width: 58px;" aria-label="Periodic Gamma beta 1 1">
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -3667,6 +3709,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       return parseInt(document.getElementById('layered-seed').value) || 42;
     } else if (preset === 'random-gamma') {
       return parseInt(document.getElementById('gamma-seed').value) || 42;
+    } else if (preset === 'gamma-periodic-2x2') {
+      return parseInt(document.getElementById('gamma-periodic-seed').value) || 42;
     }
     return 42;
   }
@@ -3959,6 +4003,44 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       return 1.0;
     }
 
+    if (mode === 'gamma-periodic-2x2') {
+      const k = params.k || 2;
+      const l = params.l || 2;
+      const alphaShapes = params.alphaShapes || [[0.20, 0.60], [1.20, 0.35]];
+      const betaShapes = params.betaShapes || [[0.25, 1.00], [0.50, 1.50]];
+
+      const periodicShape = (matrix, faceX, faceY) => {
+        const d1 = faceX + faceY;
+        const d2 = faceX - faceY;
+        const pi = ((Math.floor(d1 / 2) % k) + k) % k;
+        const pj = ((Math.floor(d2 / 2) % l) + l) % l;
+        const rawShape = matrix[pi] && matrix[pi][pj];
+        const shape = Number.isFinite(rawShape) ? rawShape : (parseFloat(rawShape) || 1.0);
+        return Math.max(0.01, shape);
+      };
+
+      if (isHorizontal) {
+        // α edge = TOP of black face → black face is BELOW the edge
+        const faceX = Math.round(midX);
+        const faceY = Math.floor(midY);
+        const isBlack = ((faceX + faceY) % 2) !== 0;
+        const isInterior = Math.abs(faceX) + Math.abs(faceY) < N;
+        if (isBlack && isInterior) {
+          return gammaRandom(periodicShape(alphaShapes, faceX, faceY), 1.0, rng);
+        }
+      } else {
+        // β edge = right of black face → black face is to LEFT of edge
+        const faceX = Math.floor(midX);
+        const faceY = Math.round(midY);
+        const isBlack = ((faceX + faceY) % 2) !== 0;
+        const isInterior = Math.abs(faceX) + Math.abs(faceY) < N;
+        if (isBlack && isInterior) {
+          return gammaRandom(periodicShape(betaShapes, faceX, faceY), 1.0, rng);
+        }
+      }
+      return 1.0;
+    }
+
     if (mode === 'periodic') {
       const k = params.k || 2;
       const l = params.l || 2;
@@ -4128,6 +4210,20 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return weights;
   }
 
+  // Helper: Read the 2×2 Gamma shape matrices from the UI
+  function getGammaPeriodicShapeMatrix(prefix) {
+    const matrix = [];
+    for (let j = 0; j < 2; j++) {
+      matrix[j] = [];
+      for (let i = 0; i < 2; i++) {
+        const el = document.getElementById(`gamma-periodic-${prefix}-${j}-${i}`);
+        const value = el ? parseFloat(el.value) : 1.0;
+        matrix[j][i] = Number.isFinite(value) && value > 0 ? value : 1.0;
+      }
+    }
+    return matrix;
+  }
+
   // Helper: Get current weight mode and params from UI
   function getCurrentWeightParams() {
     const preset = document.getElementById('weight-preset-select').value;
@@ -4150,6 +4246,12 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const alpha = parseFloat(document.getElementById('gamma-alpha')?.value) || 0.2;
       const beta = parseFloat(document.getElementById('gamma-beta')?.value) || 0.25;
       return { mode: 'gamma', params: { seed, alpha, beta } };
+
+    } else if (preset === 'gamma-periodic-2x2') {
+      const seed = parseInt(document.getElementById('gamma-periodic-seed')?.value) || 42;
+      const alphaShapes = getGammaPeriodicShapeMatrix('alpha');
+      const betaShapes = getGammaPeriodicShapeMatrix('beta');
+      return { mode: 'gamma-periodic-2x2', params: { seed, k: 2, l: 2, alphaShapes, betaShapes } };
 
     } else if (preset === 'periodic') {
       const k = parseInt(document.getElementById('periodic-k')?.value) || 2;
@@ -8352,6 +8454,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   const layeredParams = document.getElementById('layered-params');
   const straightLayeredParams = document.getElementById('straight-layered-params');
   const gammaParams = document.getElementById('gamma-params');
+  const gammaPeriodicParams = document.getElementById('gamma-periodic-params');
   const periodicParams = document.getElementById('periodic-params');
   const weightsEditor = document.getElementById('weights-editor');
   const weightsTables = document.getElementById('weights-tables');
@@ -8362,6 +8465,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     layeredParams.style.display = (preset === 'random-layered') ? 'block' : 'none';
     straightLayeredParams.style.display = (preset === 'random-straight-layered') ? 'block' : 'none';
     gammaParams.style.display = (preset === 'random-gamma') ? 'block' : 'none';
+    gammaPeriodicParams.style.display = (preset === 'gamma-periodic-2x2') ? 'block' : 'none';
     periodicParams.style.display = (preset === 'periodic') ? 'inline' : 'none';
     if (preset === 'periodic') {
       buildWeightsEditor();
@@ -8735,6 +8839,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     'random-seed',
     'iid-min', 'iid-max', 'iid-pareto-alpha', 'iid-pareto-xmin', 'iid-geom-p',
     'gamma-alpha', 'gamma-beta', 'gamma-seed',
+    'gamma-periodic-seed',
+    'gamma-periodic-alpha-0-0', 'gamma-periodic-alpha-0-1', 'gamma-periodic-alpha-1-0', 'gamma-periodic-alpha-1-1',
+    'gamma-periodic-beta-0-0', 'gamma-periodic-beta-0-1', 'gamma-periodic-beta-1-0', 'gamma-periodic-beta-1-1',
     'layered-seed',
     'layered1-val1', 'layered1-val2', 'layered1-prob1', 'layered1-prob2',
     'layered2-val1', 'layered2-val2',
@@ -9787,6 +9894,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const alpha = document.getElementById('gamma-alpha').value;
       const beta = document.getElementById('gamma-beta').value;
       weightStr = `gamma-${alpha}-${beta}`;
+    } else if (weightPreset === 'gamma-periodic-2x2') {
+      const seed = document.getElementById('gamma-periodic-seed').value;
+      weightStr = `gamma-periodic-2x2-seed-${seed}`;
     } else if (weightPreset === 'random-layered') {
       const regime = document.querySelector('input[name="layered-regime"]:checked');
       const regimeNum = regime ? regime.value : '?';
@@ -11075,6 +11185,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
           }
         } else if (weightPreset === 'random-gamma') {
           weightStr = `gamma-${document.getElementById('gamma-alpha').value}-${document.getElementById('gamma-beta').value}`;
+        } else if (weightPreset === 'gamma-periodic-2x2') {
+          weightStr = `gamma-periodic-2x2-seed-${document.getElementById('gamma-periodic-seed').value}`;
         } else if (weightPreset === 'random-layered') {
           const regime = document.querySelector('input[name="layered-regime"]:checked');
           weightStr = `layered-${regime ? regime.value : '?'}`;

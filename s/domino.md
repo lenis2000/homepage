@@ -962,7 +962,7 @@ permalink: /domino/
       <div class="control-section-content">
         <div class="control-row">
           <label for="n-input">Aztec Diamond Order:</label>
-          <input id="n-input" type="number" value="12" min="2" step="2" max="500" size="3" class="mobile-input" style="width: 70px;">
+          <input id="n-input" type="number" value="12" min="2" step="2" max="2000" size="3" class="mobile-input" style="width: 70px;">
         </div>
         <div class="control-row">
           <button id="sample-btn" class="btn-action">Sample</button>
@@ -1421,16 +1421,16 @@ async function initializeDominoRuntime() {
     document.getElementById("download-png-btn").style.display = "inline-block";
     document.getElementById("download-pdf-btn").style.display = "inline-block";
     document.getElementById("download-3d-btn").style.display = "none";
-    document.getElementById("n-input").setAttribute("max", "500");
+    document.getElementById("n-input").setAttribute("max", "2000");
   }
 
   initializeDefaultPaneState();
 
   const DOMINO_DEFAULT_BENCHMARK_CASES = [
     { n: 100, view: "2d", no3D: true, periodicity: "uniform" },
-    { n: 200, view: "2d", no3D: true, periodicity: "uniform" },
-    { n: 300, view: "2d", no3D: true, periodicity: "uniform" },
-    { n: 500, view: "2d", no3D: true, periodicity: "uniform" }
+    { n: 500, view: "2d", no3D: true, periodicity: "uniform" },
+    { n: 1000, view: "2d", no3D: true, periodicity: "uniform" },
+    { n: 2000, view: "2d", no3D: true, periodicity: "uniform" }
   ];
 
   function dominoNow() {
@@ -2791,7 +2791,7 @@ async function initializeDominoRuntime() {
     updateHeightFunctionVisibility(n);
 
     // Absolute maximum n value for the sampler.
-    const max2DN = 500;
+    const max2DN = 2000;
 
     // Check if n is within allowed range
     if (n > max2DN) {
@@ -3578,6 +3578,7 @@ async function initializeDominoRuntime() {
   });
 
   const DOMINO_2D_OVERLAY_LIMIT = 220;
+  const DOMINO_2D_EXACT_RENDER_LIMIT = 100;
   const DOMINO_2D_SVG_COMPAT_LIMIT = 5000;
   const DOMINO_2D_CACHE_MAX_PX = 4096;
   const DOMINO_2D_CACHE_PADDING = 4;
@@ -3838,7 +3839,7 @@ async function initializeDominoRuntime() {
 
     renderNow() {
       this.resize();
-      this.renderCache();
+      if (get2DOrder() > DOMINO_2D_EXACT_RENDER_LIMIT) this.renderCache();
       this.drawFrame();
     }
 
@@ -4044,6 +4045,19 @@ async function initializeDominoRuntime() {
       ctx.restore();
     }
 
+    drawExactFrame(ctx, settings) {
+      ctx.save();
+      ctx.translate(this.viewport.translateX, this.viewport.translateY);
+      ctx.scale(this.viewport.scale, this.viewport.scale);
+      this.drawDominoFillBatches(ctx, settings);
+      this.drawCheckerboardOverlay(ctx, settings);
+      this.drawBorderStrokePass(ctx, settings, Math.max(1, this.viewport.scale));
+      this.drawPathOverlay(ctx, settings);
+      this.drawDimerOverlay(ctx, settings);
+      this.drawHeightLabels(ctx, settings);
+      ctx.restore();
+    }
+
     drawFrame() {
       const ctx = this.ctx;
       ctx.save();
@@ -4053,17 +4067,22 @@ async function initializeDominoRuntime() {
       ctx.fillRect(0, 0, this.cssWidth, this.cssHeight);
 
       if (this.dominoes.length && this.modelBounds) {
-        this.renderCache();
-        if (this.cacheCanvas && this.cacheBounds) {
-          ctx.imageSmoothingEnabled = true;
-          if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
-          ctx.drawImage(
-            this.cacheCanvas,
-            this.viewport.translateX + this.cacheBounds.minX * this.viewport.scale,
-            this.viewport.translateY + this.cacheBounds.minY * this.viewport.scale,
-            this.cacheBounds.width * this.viewport.scale,
-            this.cacheBounds.height * this.viewport.scale
-          );
+        const settings = get2DDisplaySettings();
+        if (settings.n <= DOMINO_2D_EXACT_RENDER_LIMIT) {
+          this.drawExactFrame(ctx, settings);
+        } else {
+          this.renderCache();
+          if (this.cacheCanvas && this.cacheBounds) {
+            ctx.imageSmoothingEnabled = true;
+            if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(
+              this.cacheCanvas,
+              this.viewport.translateX + this.cacheBounds.minX * this.viewport.scale,
+              this.viewport.translateY + this.cacheBounds.minY * this.viewport.scale,
+              this.cacheBounds.width * this.viewport.scale,
+              this.cacheBounds.height * this.viewport.scale
+            );
+          }
         }
       }
       ctx.restore();
@@ -4163,7 +4182,7 @@ async function initializeDominoRuntime() {
     document.getElementById("download-3d-btn").style.display = "none";
 
     // Set the max n for 2D view
-    document.getElementById("n-input").setAttribute("max", "500");
+    document.getElementById("n-input").setAttribute("max", "2000");
 
     // Always reuse the cached dominoes if we have them
     if (cachedDominoes && cachedDominoes.length > 0) {

@@ -16,6 +16,9 @@ function findBrowser() {
     process.env.CHROMIUM_BIN,
     process.env.CHROME_BIN,
     process.env.AGENT_BROWSER_EXECUTABLE_PATH,
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
     "/usr/bin/chromium-browser",
     "/usr/bin/chromium",
     "/usr/bin/google-chrome",
@@ -38,6 +41,9 @@ function checkPageSource() {
   assert(source.includes('id="no-3d-checkbox" checked'), "No 3D should be checked by default");
   assert(source.includes('<button id="view-2d-btn" class="active"'), "2D view should be active by default");
   assert(source.includes('<canvas id="aztec-canvas-2d"'), "2D view should include the canvas renderer");
+  assert(source.includes('max="2000"'), "2D sampler input should allow n up to 2000");
+  assert(source.includes('const max2DN = 2000'), "2D sampler guard should allow n up to 2000");
+  assert(source.includes('const DOMINO_2D_EXACT_RENDER_LIMIT = 100'), "Small 2D tilings should use exact canvas rendering");
   assert(!source.includes("periodicity-select"), "Share links should not reference the removed periodicity select");
   assert(!source.includes("weight-a"), "Share links should not reference removed 2x2 weight IDs");
   assert(source.includes("setPeriodicityFromUrl"), "URL load should restore radio-based periodicity");
@@ -268,6 +274,7 @@ async function waitForPageCondition(client, expression, description, timeoutMs =
 async function evaluateDominoWasm(client) {
   const expression = String.raw`
     new Promise(resolve => {
+      const fail = error => resolve({ error: String(error?.message ?? error) });
       const ready = async () => {
         const samplerArgs = [
           "number", "number", "number", "number", "number",
@@ -319,7 +326,6 @@ async function evaluateDominoWasm(client) {
           }
         };
 
-        const fail = error => resolve({ error: String(error?.message ?? error) });
         for (const n of [2, 4, 12, 50]) {
           checkDominoes("frozen horizontal n=" + n, await callNineWeightSampler("simulateAztecHorizontal", n), n, "horizontal");
           checkDominoes("frozen vertical n=" + n, await callNineWeightSampler("simulateAztecVertical", n), n, "vertical");
