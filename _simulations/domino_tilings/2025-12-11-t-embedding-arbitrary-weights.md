@@ -1058,6 +1058,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
           🎲 Sample
         </button>
         <span id="sample-time" style="color: #232D4B; font-weight: 500;" role="status" aria-live="polite"></span>
+        <span id="sample-timing-display" style="margin-left: 8px; color: #666; font-size: 0.9em;" role="status" aria-live="polite"></span>
       </div>
     </div>
     <!-- Canvas with floating controls -->
@@ -1317,6 +1318,13 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
 /* Canvas containers */
 #stepwise-temb-canvas.panning, #aztec-graph-canvas.panning { cursor: grabbing; }
+#sample-canvas {
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+#sample-canvas.dragging {
+  cursor: grabbing !important;
+}
 #sample-3d-container {
   width: 100%;
   height: 50vh;
@@ -2664,13 +2672,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       applyMasterWeightsToGeometry(n);
       computeAndDisplay();
 
-      // Precompute IID weights if needed
-      const preset = document.getElementById('weight-preset-select').value;
-      if (preset === 'random-iid') {
-        const N = parseInt(document.getElementById('sample-N-input').value) || 6;
-        getOrComputeIIDWeights(N);
-      }
-
       // Generate initial sample
       generateRandomSample();
 
@@ -2702,6 +2703,25 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let sampleZoom = 1.0;
   let samplePanX = 0, samplePanY = 0;
   let samplePaletteIndex = 0;  // Default to first palette
+  let sample2DRenderer = null;
+  let activeRandomSampleRequestId = 0;
+  let activeUserVisibleSampleRequestId = 0;
+  const SAMPLE_2D_EXACT_RENDER_LIMIT = 50;
+  const SAMPLE_2D_CACHE_MAX_PX = 4096;
+  const SAMPLE_2D_CACHE_PADDING = 4;
+  const SAMPLE_2D_HIRES_MULTIPLIER = 2;
+  const sampleDoubleDimerLoopCache = {
+    config1: null,
+    config2: null,
+    base: null,
+    drawableMinLoopLength: null,
+    drawableEdges: null
+  };
+  const sampleDoubleDimerHeightDiffCache = {
+    config1: null,
+    config2: null,
+    diff: null
+  };
 
   // Height function visualization for double dimer
   let heightFunctionScene = null;
@@ -2711,75 +2731,292 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let heightFunctionGroup = null;
   let heightFunctionActive = false;
   let heightFunctionAnimating = false;
+  let heightFunctionInitTimer = null;
 
-  // Cached IID weights - precomputed to avoid regenerating on each render
-  let cachedIIDWeights = null;
-  let cachedIIDKey = null;  // Key to check if cache is valid
-
-  function getIIDWeightsCacheKey(N) {
-    const seed = parseInt(document.getElementById('random-seed').value) || 42;
-    const distType = document.getElementById('iid-distribution-select').value;
-    let params = '';
-    if (distType === 'uniform') {
-      const a = parseFloat(document.getElementById('iid-min').value) || 0.5;
-      const b = parseFloat(document.getElementById('iid-max').value) || 2.0;
-      params = `${a},${b}`;
-    } else if (distType === 'bernoulli') {
-      const p = parseFloat(document.getElementById('iid-bernoulli-p').value) || 0.5;
-      const v1 = parseFloat(document.getElementById('iid-bernoulli-v1').value) || 0.5;
-      const v2 = parseFloat(document.getElementById('iid-bernoulli-v2').value) || 2.0;
-      params = `${p},${v1},${v2}`;
-    } else if (distType === 'pareto') {
-      const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
-      const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
-      params = `${alpha},${xmin}`;
-    } else if (distType === 'geometric') {
-      const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
-      params = `${p}`;
-    }
-    return `${N}:${seed}:${distType}:${params}`;
+  function invalidateSampleHeightFunctionCache() {
+    sampleDoubleDimerHeightDiffCache.config1 = null;
+    sampleDoubleDimerHeightDiffCache.config2 = null;
+    sampleDoubleDimerHeightDiffCache.diff = null;
   }
 
-  function getOrComputeIIDWeights(N) {
-    const key = getIIDWeightsCacheKey(N);
-    if (cachedIIDWeights && cachedIIDKey === key) {
-      return cachedIIDWeights;
-    }
-    // Compute new weights
-    const dim = 2 * N;
-    const seed = parseInt(document.getElementById('random-seed').value) || 42;
-    const rng = createSeededRNG(seed);
-    const numWeights = dim * dim;
-    const edgeWeights = new Float64Array(numWeights);
-    const distType = document.getElementById('iid-distribution-select').value;
+  const sampleWeightCache = new Map();
+  const SAMPLE_WEIGHT_CACHE_MAX_ENTRIES = 8;
+  const SAMPLE_WEIGHT_CACHEABLE_PRESETS = new Set([
+    'all-ones',
+    'uniform',
+    'random-iid',
+    'random-layered',
+    'random-straight-layered',
+    'random-gamma',
+    'gamma-periodic-2x2',
+    'periodic'
+  ]);
 
-    for (let i = 0; i < numWeights; i++) {
-      if (distType === 'uniform') {
-        const a = parseFloat(document.getElementById('iid-min').value) || 0.5;
-        const b = parseFloat(document.getElementById('iid-max').value) || 2.0;
-        edgeWeights[i] = a + rng() * (b - a);
-      } else if (distType === 'bernoulli') {
-        const p = parseFloat(document.getElementById('iid-bernoulli-p').value) || 0.5;
-        const v1 = parseFloat(document.getElementById('iid-bernoulli-v1').value) || 0.5;
-        const v2 = parseFloat(document.getElementById('iid-bernoulli-v2').value) || 2.0;
-        edgeWeights[i] = rng() < p ? v1 : v2;
-      } else if (distType === 'exponential') {
-        edgeWeights[i] = -Math.log(1 - rng());
-      } else if (distType === 'pareto') {
-        const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
-        const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
-        edgeWeights[i] = xmin / Math.pow(1 - rng(), 1 / alpha);
-      } else if (distType === 'geometric') {
-        const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
-        edgeWeights[i] = Math.floor(Math.log(1 - rng()) / Math.log(1 - p)) + 1;
-      } else {
-        edgeWeights[i] = 0.5 + rng() * 1.5;
+  const TEMB_SHUFFLED_DEFAULT_BENCHMARK_CASES = [
+    { n: 100, doubleDimer: false, label: 'N=100 single' },
+    { n: 100, doubleDimer: true, label: 'N=100 double dimer' },
+    { n: 200, doubleDimer: false, label: 'N=200 single' },
+    { n: 200, doubleDimer: true, label: 'N=200 double dimer' },
+    { n: 330, doubleDimer: false, label: 'N=330 single' },
+    { n: 330, doubleDimer: true, label: 'N=330 double dimer' }
+  ];
+
+  let lastShuffledSamplerProfile = null;
+
+  function roundSampleTiming(elapsedMs) {
+    return Math.round(elapsedMs * 10) / 10;
+  }
+
+  function createShuffledSamplerProfile(options = {}) {
+    return {
+      source: options.source || 'ui',
+      label: options.label || '',
+      status: 'running',
+      n: null,
+      requestedN: null,
+      doubleDimer: null,
+      dominoCount: 0,
+      dominoCount2: 0,
+      startedAt: performance.now(),
+      totalMs: null,
+      timings: {
+        controlReadMs: null,
+        weightGenerationConversionMs: null,
+        heapCopyMs: null,
+        wasmShufflingMs: null,
+        utf8ConversionMs: null,
+        jsonParseMs: null,
+        twoDRenderMs: null,
+        doubleDimerLoopProcessingMs: null,
+        heightFunctionPaneRenderMs: null,
+        sample3DRenderMs: null
+      },
+      weightCacheHit: false,
+      weightCacheKey: null,
+      error: null
+    };
+  }
+
+  function setSamplePhaseTiming(profile, key, elapsedMs) {
+    if (!profile || !profile.timings || !(key in profile.timings)) return;
+    profile.timings[key] = roundSampleTiming(elapsedMs);
+  }
+
+  function measureSamplePhase(profile, key, fn) {
+    const started = performance.now();
+    try {
+      return fn();
+    } finally {
+      setSamplePhaseTiming(profile, key, performance.now() - started);
+    }
+  }
+
+  async function measureSampleAsyncPhase(profile, key, fn) {
+    const started = performance.now();
+    try {
+      return await fn();
+    } finally {
+      setSamplePhaseTiming(profile, key, performance.now() - started);
+    }
+  }
+
+  function setSampleStatus(message) {
+    const statusElem = document.getElementById('sample-time');
+    if (statusElem) statusElem.textContent = message || '';
+  }
+
+  function clearSampleTimingDisplay() {
+    const timingDisplay = document.getElementById('sample-timing-display');
+    if (timingDisplay) timingDisplay.textContent = '';
+  }
+
+  function setSampleTimingDisplay(profile) {
+    const timingDisplay = document.getElementById('sample-timing-display');
+    if (!timingDisplay || !profile || profile.source === 'benchmark') return;
+    if (profile.status === 'ok' && Number.isFinite(profile.totalMs)) {
+      timingDisplay.textContent = `(${(profile.totalMs / 1000).toFixed(2)}s)`;
+    } else if (profile.status === 'error') {
+      timingDisplay.textContent = '';
+    }
+  }
+
+  function finishShuffledSamplerProfile(profile, status, error = null) {
+    if (!profile) return profile;
+    profile.status = status;
+    profile.totalMs = roundSampleTiming(performance.now() - profile.startedAt);
+    profile.error = error ? String(error.message || error) : null;
+    lastShuffledSamplerProfile = profile;
+    window.tembLastShuffledSamplerProfile = profile;
+    setSampleTimingDisplay(profile);
+    return profile;
+  }
+
+  function finishStaleShuffledSamplerProfile(profile) {
+    if (!profile) return profile;
+    profile.status = 'stale';
+    profile.totalMs = roundSampleTiming(performance.now() - profile.startedAt);
+    profile.error = 'Superseded by a newer sample request';
+    return profile;
+  }
+
+  function nextRandomSampleRequestId() {
+    activeRandomSampleRequestId += 1;
+    return activeRandomSampleRequestId;
+  }
+
+  function isActiveRandomSampleRequest(requestId) {
+    return requestId === activeRandomSampleRequestId;
+  }
+
+  function setSampleButtonBusy(isBusy) {
+    const sampleBtn = document.getElementById('sample-btn');
+    if (sampleBtn) sampleBtn.disabled = !!isBusy;
+  }
+
+  function readSampleMinLoopLength() {
+    const minLoopInput = document.getElementById('sample-min-loop-length');
+    const parsed = parseInt(minLoopInput?.value, 10);
+    return Number.isFinite(parsed) ? Math.max(0, parsed) : 2;
+  }
+
+  function readRandomSampleControls() {
+    const input = document.getElementById('sample-N-input');
+    const doubleDimerChk = document.getElementById('sample-double-dimer-chk');
+    const requestedN = parseInt(input?.value) || 6;
+    let N = requestedN;
+    let statusMessage = 'Sampling...';
+
+    if (N > 330) {
+      N = 330;
+      if (input) input.value = 330;
+      statusMessage = 'N capped to 330 (memory limit). Sampling...';
+    } else if (N > 300) {
+      statusMessage = 'Sampling (large N, may be slow)...';
+    }
+
+    doubleDimerMode = !!doubleDimerChk?.checked;
+    minLoopLength = readSampleMinLoopLength();
+    return { N, requestedN, doubleDimer: doubleDimerMode, minLoopLength, statusMessage };
+  }
+
+  function snapshotSampleBenchmarkControls() {
+    return {
+      n: document.getElementById('sample-N-input')?.value,
+      border: document.getElementById('sample-border-input')?.value,
+      minLoopLength: document.getElementById('sample-min-loop-length')?.value,
+      doubleDimer: !!document.getElementById('sample-double-dimer-chk')?.checked,
+      sampleWas3D: sampleIs3DView,
+      heightFunctionWasActive: heightFunctionActive
+    };
+  }
+
+  function setSampleDoubleDimerControl(enabled) {
+    const doubleDimerChk = document.getElementById('sample-double-dimer-chk');
+    const doubleDimerOptions = document.getElementById('double-dimer-options');
+    if (doubleDimerChk) doubleDimerChk.checked = !!enabled;
+    doubleDimerMode = !!enabled;
+    if (doubleDimerOptions) {
+      doubleDimerOptions.style.display = enabled ? 'inline' : 'none';
+    }
+  }
+
+  async function restoreSampleBenchmarkControls(snapshot) {
+    if (!snapshot) return;
+    const nInput = document.getElementById('sample-N-input');
+    const borderInput = document.getElementById('sample-border-input');
+    const minLoopInput = document.getElementById('sample-min-loop-length');
+    if (nInput && snapshot.n !== undefined) nInput.value = snapshot.n;
+    if (borderInput && snapshot.border !== undefined) borderInput.value = snapshot.border;
+    if (minLoopInput && snapshot.minLoopLength !== undefined) minLoopInput.value = snapshot.minLoopLength;
+    setSampleDoubleDimerControl(snapshot.doubleDimer);
+    minLoopLength = readSampleMinLoopLength();
+    invalidateSampleDoubleDimerLoopFilter();
+
+    if (snapshot.heightFunctionWasActive) {
+      showHeightFunctionPane();
+    } else {
+      hideHeightFunctionPane();
+    }
+
+    if (snapshot.sampleWas3D !== sampleIs3DView) {
+      setSampleViewMode(snapshot.sampleWas3D);
+    } else if (sampleIs3DView) {
+      updateSample3DView();
+    }
+
+    await generateRandomSample({
+      source: 'benchmark',
+      label: 'Restoring sampler',
+      throwOnError: false
+    });
+  }
+
+  function nextSampleBenchmarkFrame() {
+    return new Promise(resolve => requestAnimationFrame(() => resolve()));
+  }
+
+  async function runTembShuffledSamplerBenchmark(options = {}) {
+    const cases = Array.isArray(options.cases) ? options.cases : TEMB_SHUFFLED_DEFAULT_BENCHMARK_CASES;
+    const stopOnError = options.stopOnError === true;
+    const shouldRestore = options.restore !== false;
+    const snapshot = snapshotSampleBenchmarkControls();
+    const results = [];
+
+    try {
+      if (!options.include3D && sampleIs3DView) {
+        setSampleViewMode(false);
+        await new Promise(resolve => setTimeout(resolve, 60));
+      }
+      if (!options.includeHeightFunction && heightFunctionActive) {
+        hideHeightFunctionPane();
+      }
+
+      for (let i = 0; i < cases.length; i++) {
+        const benchmarkCase = cases[i];
+        const nInput = document.getElementById('sample-N-input');
+        if (nInput) nInput.value = benchmarkCase.n;
+        setSampleDoubleDimerControl(!!benchmarkCase.doubleDimer);
+        setSampleStatus(`Benchmark ${i + 1}/${cases.length}: ${benchmarkCase.label || `N=${benchmarkCase.n}`}`);
+        clearSampleTimingDisplay();
+        await nextSampleBenchmarkFrame();
+
+        const profile = await generateRandomSample({
+          source: 'benchmark',
+          label: benchmarkCase.label || `N=${benchmarkCase.n}`,
+          throwOnError: false
+        });
+        results.push({
+          case: benchmarkCase,
+          status: profile.status,
+          n: profile.n,
+          doubleDimer: profile.doubleDimer,
+          dominoCount: profile.dominoCount,
+          dominoCount2: profile.dominoCount2,
+          weightCacheHit: profile.weightCacheHit,
+          timings: { ...profile.timings, totalMs: profile.totalMs },
+          error: profile.error
+        });
+
+        if (profile.status === 'error' && stopOnError) {
+          throw new Error(profile.error || `Benchmark case failed: ${benchmarkCase.label}`);
+        }
+      }
+    } finally {
+      if (shouldRestore) {
+        await restoreSampleBenchmarkControls(snapshot);
+        clearSampleTimingDisplay();
+        setSampleStatus('');
       }
     }
-    cachedIIDWeights = edgeWeights;
-    cachedIIDKey = key;
-    return edgeWeights;
+
+    const summary = {
+      generatedAt: new Date().toISOString(),
+      cases: results
+    };
+    return summary;
   }
+
+  window.tembShuffledSamplerBenchmark = runTembShuffledSamplerBenchmark;
 
   // 8-tone grayscale helper functions (for gas phase visualization)
   // Each color gets 2 shades based on coordinate parity (8 total shades)
@@ -2891,12 +3128,86 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   // Simple 3D renderer for sample dominoes (based on domino.md approach)
   let sample3DScene, sample3DCamera, sample3DRenderer, sample3DControls, sample3DDominoGroup;
+  let sample3DMesh = null;
+  let sample3DMaterial = null;
+  let sample3DMaterialPresetIndex = null;
+  let sample3DRenderedDominoes = null;
+  let sample3DRenderedPaletteIndex = null;
+  let sample3DRenderedGrayscale = null;
   let sample3DAnimating = false;
+  let sample3DInitTimer = null;
   let sample3DAutoRotate = false;
   let sample3DPresetIndex = 0;
   let sample3DAmbientLight, sample3DHemisphereLight, sample3DDirectionalLight, sample3DFillLight;
   let sample3DPerspective = false;  // false = orthographic, true = perspective
   let sample3DOrthoCamera, sample3DPerspCamera;  // Both camera types
+
+  function disposeSample3DGeometry() {
+    if (sample3DMesh) {
+      if (sample3DDominoGroup) sample3DDominoGroup.remove(sample3DMesh);
+      if (sample3DMesh.geometry) sample3DMesh.geometry.dispose();
+      sample3DMesh = null;
+    }
+    sample3DRenderedDominoes = null;
+    sample3DRenderedPaletteIndex = null;
+    sample3DRenderedGrayscale = null;
+  }
+
+  function disposeSample3DMaterial() {
+    if (sample3DMaterial) {
+      sample3DMaterial.dispose();
+      sample3DMaterial = null;
+      sample3DMaterialPresetIndex = null;
+    }
+  }
+
+  function createSample3DSharedMaterial() {
+    const preset = SAMPLE_3D_PRESETS[sample3DPresetIndex] || SAMPLE_3D_PRESETS[0];
+    const materialConfig = preset.material || {};
+    const params = {
+      vertexColors: true,
+      side: THREE.DoubleSide,
+      flatShading: materialConfig.flatShading !== false
+    };
+
+    if (materialConfig.type === 'phong') {
+      return new THREE.MeshPhongMaterial({
+        ...params,
+        shininess: materialConfig.shininess ?? 60
+      });
+    }
+    if (materialConfig.type === 'lambert') {
+      return new THREE.MeshLambertMaterial(params);
+    }
+    return new THREE.MeshStandardMaterial({
+      ...params,
+      roughness: materialConfig.roughness ?? 0.5,
+      metalness: materialConfig.metalness ?? 0.15
+    });
+  }
+
+  function ensureSample3DSharedMaterial() {
+    if (sample3DMaterial && sample3DMaterialPresetIndex === sample3DPresetIndex) {
+      return sample3DMaterial;
+    }
+
+    const oldMaterial = sample3DMaterial;
+    sample3DMaterial = createSample3DSharedMaterial();
+    sample3DMaterialPresetIndex = sample3DPresetIndex;
+    if (sample3DMesh) sample3DMesh.material = sample3DMaterial;
+    if (oldMaterial) oldMaterial.dispose();
+    return sample3DMaterial;
+  }
+
+  function startSample3DAnimation() {
+    if (sample3DAnimating) return;
+    sample3DAnimating = true;
+    requestAnimationFrame(animateSample3D);
+  }
+
+  function stopSample3DAnimation() {
+    sample3DAnimating = false;
+  }
 
   function applySample3DPreset(presetIndex) {
     if (!sample3DScene) return;
@@ -2916,6 +3227,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       sample3DFillLight.intensity = preset.fill.intensity;
       sample3DFillLight.position.set(...preset.fill.position);
     }
+    ensureSample3DSharedMaterial();
   }
 
   function initSample3D(container) {
@@ -2968,15 +3280,13 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     sample3DDominoGroup = new THREE.Group();
     sample3DScene.add(sample3DDominoGroup);
 
-    if (!sample3DAnimating) {
-      sample3DAnimating = true;
-      animateSample3D();
-    }
+    startSample3DAnimation();
   }
 
   function animateSample3D() {
     if (!sample3DAnimating) return;
     requestAnimationFrame(animateSample3D);
+    if (!isSample3DPaneVisible()) return;
     if (sample3DControls) sample3DControls.update();
     if (sample3DAutoRotate && sample3DDominoGroup) {
       sample3DDominoGroup.rotation.y += 0.005;
@@ -2990,6 +3300,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     const container = document.getElementById('sample-3d-container');
     if (!container || !sample3DRenderer) return;
     const w = container.clientWidth, h = container.clientHeight;
+    if (w <= 0 || h <= 0) return;
     const frustum = 100, aspect = w / h;
     // Update orthographic camera
     if (sample3DOrthoCamera) {
@@ -3096,6 +3407,20 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return diff;
   }
 
+  function getCachedDoubleDimerHeightDifference(config1, config2) {
+    if (sampleDoubleDimerHeightDiffCache.config1 === config1 &&
+        sampleDoubleDimerHeightDiffCache.config2 === config2 &&
+        sampleDoubleDimerHeightDiffCache.diff) {
+      return sampleDoubleDimerHeightDiffCache.diff;
+    }
+
+    const diff = computeDoubleDimerHeightDifference(config1, config2);
+    sampleDoubleDimerHeightDiffCache.config1 = config1;
+    sampleDoubleDimerHeightDiffCache.config2 = config2;
+    sampleDoubleDimerHeightDiffCache.diff = diff;
+    return diff;
+  }
+
   // Initialize height function 3D visualization
   function initHeightFunction3D(container) {
     if (!container || heightFunctionRenderer) return;
@@ -3166,6 +3491,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   function animateHeightFunction() {
     if (!heightFunctionAnimating) return;
+    if (!isHeightFunctionPaneVisible()) {
+      heightFunctionAnimating = false;
+      return;
+    }
     requestAnimationFrame(animateHeightFunction);
     if (heightFunctionControls) heightFunctionControls.update();
     if (heightFunctionRenderer && heightFunctionScene && heightFunctionCamera) {
@@ -3336,15 +3665,21 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     heightFunctionActive = true;
 
     // Wait for layout to be computed before initializing Three.js
-    setTimeout(() => {
+    if (heightFunctionInitTimer) clearTimeout(heightFunctionInitTimer);
+    heightFunctionInitTimer = setTimeout(() => {
+      heightFunctionInitTimer = null;
+      if (!isHeightFunctionPaneVisible()) return;
       // Initialize Three.js if needed
       if (!heightFunctionRenderer) {
         initHeightFunction3D(threeContainer);
+      } else if (!heightFunctionAnimating) {
+        heightFunctionAnimating = true;
+        animateHeightFunction();
       }
 
       // Compute and render height function difference
       if (sampleDominoes.length > 0 && sampleDominoes2.length > 0) {
-        const heightDiff = computeDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
+        const heightDiff = getCachedDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
         renderHeightFunctionSurface(heightDiff);
       }
     }, 50);
@@ -3352,11 +3687,16 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   // Hide height function pane
   function hideHeightFunctionPane() {
+    if (heightFunctionInitTimer) {
+      clearTimeout(heightFunctionInitTimer);
+      heightFunctionInitTimer = null;
+    }
     const container = document.getElementById('height-function-container');
     if (container) {
       container.style.display = 'none';
     }
     heightFunctionActive = false;
+    heightFunctionAnimating = false;
   }
 
   // Update height function button visibility
@@ -3406,82 +3746,150 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return { color: domino.color, vertices };
   }
 
-  function hexToThreeColor(hex) {
-    return new THREE.Color(hex).getHex();
+  function sample3DHexToRgb(hex) {
+    const normalized = (hex || '#808080').replace('#', '');
+    const full = normalized.length === 3
+      ? normalized.split('').map(ch => ch + ch).join('')
+      : normalized.padEnd(6, '0').slice(0, 6);
+    const value = parseInt(full, 16);
+    if (!Number.isFinite(value)) return [0.5, 0.5, 0.5];
+    return [
+      ((value >> 16) & 255) / 255,
+      ((value >> 8) & 255) / 255,
+      (value & 255) / 255
+    ];
   }
 
-  function renderSample3DDominoes(dominoes) {
-    if (!sample3DDominoGroup) return;
-
-    while (sample3DDominoGroup.children.length > 0) {
-      const m = sample3DDominoGroup.children[0];
-      sample3DDominoGroup.remove(m);
-      if (m.geometry) m.geometry.dispose();
-      if (m.material) m.material.dispose();
-    }
-
-    if (!dominoes || dominoes.length === 0) return;
-
-    const heightMap = calculateSampleHeightFunction(dominoes);
+  function getSample3DColorContext() {
     const palettes = window.ColorSchemes || [{ colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
     const paletteColors = palettes[samplePaletteIndex] ? palettes[samplePaletteIndex].colors : palettes[0].colors;
-    const colors = {
-      yellow: hexToThreeColor(paletteColors[0]),
-      green: hexToThreeColor(paletteColors[1]),
-      blue: hexToThreeColor(paletteColors[2]),
-      red: hexToThreeColor(paletteColors[3])
+    return {
+      colorMap: {
+        yellow: paletteColors[0],
+        green: paletteColors[1],
+        blue: paletteColors[2],
+        red: paletteColors[3]
+      },
+      colorCache: new Map(),
+      useGrayscale: document.getElementById('sample-grayscale-checkbox')?.checked || false
     };
+  }
 
-    // Check grayscale mode
-    const useGrayscale = document.getElementById('sample-grayscale-checkbox')?.checked || false;
+  function getSample3DDominoRgb(domino, colorContext) {
+    const hex = colorContext.useGrayscale
+      ? getGrayscaleColor(domino.color, domino)
+      : (colorContext.colorMap[domino.color] || '#808080');
+    if (!colorContext.colorCache.has(hex)) {
+      colorContext.colorCache.set(hex, sample3DHexToRgb(hex));
+    }
+    return colorContext.colorCache.get(hex);
+  }
 
-    // Find N for scaling
+  function fillSample3DColorAttribute(dominoes, colorAttribute) {
+    if (!colorAttribute || !dominoes) return false;
+    const colors = colorAttribute.array;
+    const colorContext = getSample3DColorContext();
+    let offset = 0;
+    for (const domino of dominoes) {
+      const rgb = getSample3DDominoRgb(domino, colorContext);
+      for (let i = 0; i < 6; i++) {
+        colors[offset++] = rgb[0];
+        colors[offset++] = rgb[1];
+        colors[offset++] = rgb[2];
+      }
+    }
+    colorAttribute.needsUpdate = true;
+    sample3DRenderedPaletteIndex = samplePaletteIndex;
+    sample3DRenderedGrayscale = colorContext.useGrayscale;
+    return true;
+  }
+
+  function buildSample3DMergedGeometry(dominoes) {
+    const heightMap = calculateSampleHeightFunction(dominoes);
+    const colorContext = getSample3DColorContext();
     let maxCoord = 0;
     for (const d of dominoes) {
       maxCoord = Math.max(maxCoord, Math.abs(d.x + d.w), Math.abs(d.y + d.h));
     }
     const scale = 60 / Math.max(maxCoord, 1);
+    const verticesPerDomino = 6;
+    const indicesPerDomino = 12;
+    const vertexCount = dominoes.length * verticesPerDomino;
+    const positions = new Float32Array(vertexCount * 3);
+    const colors = new Float32Array(vertexCount * 3);
+    const IndexArray = vertexCount > 65535 ? Uint32Array : Uint16Array;
+    const indices = new IndexArray(dominoes.length * indicesPerDomino);
+    const localIndices = [0, 1, 3, 3, 2, 1, 0, 1, 4, 3, 2, 5];
+    let vertexOffset = 0;
+    let indexOffset = 0;
 
     for (const domino of dominoes) {
       const faceData = createSampleDominoFace(domino, heightMap);
       if (!faceData || !faceData.vertices) continue;
 
-      try {
-        const geom = new THREE.BufferGeometry();
-        const pos = [];
-        faceData.vertices.forEach(v => pos.push(v[0] * scale, v[1] * scale, v[2] * scale));
-        geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-
-        const isH = (faceData.color === 'blue' || faceData.color === 'green');
-        const indices = [0,1,3, 3,2,1, 0,1,4, 3,2,5];
-        geom.setIndex(indices);
-        geom.computeVertexNormals();
-
-        // Use grayscale or palette colors
-        let colorValue;
-        if (useGrayscale) {
-          const grayHexColor = getGrayscaleColor(faceData.color, domino);
-          colorValue = hexToThreeColor(grayHexColor);
-        } else {
-          colorValue = colors[faceData.color] || 0x808080;
-        }
-
-        const mat = new THREE.MeshStandardMaterial({
-          color: colorValue,
-          side: THREE.DoubleSide,
-          flatShading: true
-        });
-        const mesh = new THREE.Mesh(geom, mat);
-        sample3DDominoGroup.add(mesh);
-      } catch (e) {
-        console.error("Error creating 3D mesh:", e);
+      const baseVertex = vertexOffset / 3;
+      const rgb = getSample3DDominoRgb(domino, colorContext);
+      for (const v of faceData.vertices) {
+        positions[vertexOffset] = v[0] * scale;
+        colors[vertexOffset++] = rgb[0];
+        positions[vertexOffset] = v[1] * scale;
+        colors[vertexOffset++] = rgb[1];
+        positions[vertexOffset] = v[2] * scale;
+        colors[vertexOffset++] = rgb[2];
+      }
+      for (const localIndex of localIndices) {
+        indices[indexOffset++] = baseVertex + localIndex;
       }
     }
 
-    if (sample3DDominoGroup.children.length > 0) {
-      const box = new THREE.Box3().setFromObject(sample3DDominoGroup);
-      const center = box.getCenter(new THREE.Vector3());
-      sample3DDominoGroup.position.sub(center);
+    if (vertexOffset === 0 || indexOffset === 0) return null;
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions.subarray(0, vertexOffset), 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors.subarray(0, vertexOffset), 3));
+    geometry.setIndex(new THREE.BufferAttribute(indices.subarray(0, indexOffset), 1));
+    geometry.computeVertexNormals();
+    geometry.computeBoundingBox();
+    return geometry;
+  }
+
+  function renderSample3DDominoes(dominoes) {
+    if (!sample3DDominoGroup) return;
+    if (!dominoes || dominoes.length === 0) {
+      disposeSample3DGeometry();
+      return;
+    }
+
+    ensureSample3DSharedMaterial();
+    const useGrayscale = document.getElementById('sample-grayscale-checkbox')?.checked || false;
+    if (sample3DMesh && sample3DRenderedDominoes === dominoes) {
+      if (sample3DRenderedPaletteIndex !== samplePaletteIndex || sample3DRenderedGrayscale !== useGrayscale) {
+        fillSample3DColorAttribute(dominoes, sample3DMesh.geometry.getAttribute('color'));
+      }
+      return;
+    }
+
+    disposeSample3DGeometry();
+
+    try {
+      const geometry = buildSample3DMergedGeometry(dominoes);
+      if (!geometry) return;
+
+      sample3DMesh = new THREE.Mesh(geometry, sample3DMaterial);
+      sample3DDominoGroup.add(sample3DMesh);
+      sample3DRenderedDominoes = dominoes;
+      sample3DRenderedPaletteIndex = samplePaletteIndex;
+      sample3DRenderedGrayscale = useGrayscale;
+
+      if (geometry.boundingBox) {
+        const center = geometry.boundingBox.getCenter(new THREE.Vector3());
+        sample3DDominoGroup.position.set(-center.x, -center.y, -center.z);
+      } else {
+        sample3DDominoGroup.position.set(0, 0, 0);
+      }
+    } catch (e) {
+      console.error('Error creating merged 3D domino geometry:', e);
+      disposeSample3DGeometry();
     }
   }
 
@@ -3490,6 +3898,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     constructor(container) {
       initSample3D(container);
       window.addEventListener('resize', sample3DHandleResize);
+      window.tembSample3DRenderer = this;
     }
     handleResize() { sample3DHandleResize(); }
     zoomIn() {
@@ -3546,10 +3955,53 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     set autoRotate(val) { sample3DAutoRotate = val; }
     get autoRotate() { return sample3DAutoRotate; }
     renderDominoes(dominoes) { renderSample3DDominoes(dominoes); }
+    debugState() {
+      const geometry = sample3DMesh?.geometry || null;
+      const positionAttribute = geometry?.getAttribute('position') || null;
+      const colorAttribute = geometry?.getAttribute('color') || null;
+      return {
+        initialized: !!sample3DRenderer,
+        visible: isSample3DPaneVisible(),
+        animating: sample3DAnimating,
+        childCount: sample3DDominoGroup?.children.length || 0,
+        hasMergedMesh: !!sample3DMesh,
+        materialType: sample3DMaterial?.type || null,
+        materialUsesVertexColors: !!sample3DMaterial?.vertexColors,
+        vertexCount: positionAttribute?.count || 0,
+        colorCount: colorAttribute?.count || 0,
+        indexCount: geometry?.index?.count || 0,
+        renderedDominoCount: sample3DRenderedDominoes?.length || 0,
+        paletteIndex: sample3DRenderedPaletteIndex,
+        grayscale: sample3DRenderedGrayscale
+      };
+    }
   }
+
+  window.tembSample3DDebugState = () => sampleRenderer3D
+    ? sampleRenderer3D.debugState()
+    : { initialized: false, visible: false, animating: sample3DAnimating };
+
+  window.tembSampleHeightFunctionDebugState = () => {
+    if (!sampleDominoes.length || !sampleDominoes2.length) {
+      return { hasDoubleDimerSample: false, diffSize: 0, sameReference: true, cacheMatchesSamples: false };
+    }
+    const first = getCachedDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
+    const second = getCachedDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
+    return {
+      hasDoubleDimerSample: true,
+      diffSize: first?.size || 0,
+      sameReference: first === second,
+      cacheMatchesSamples: sampleDoubleDimerHeightDiffCache.config1 === sampleDominoes &&
+        sampleDoubleDimerHeightDiffCache.config2 === sampleDominoes2
+    };
+  };
 
   // 3D View Management Functions
   function setSampleViewMode(use3D) {
+    if (sample3DInitTimer) {
+      clearTimeout(sample3DInitTimer);
+      sample3DInitTimer = null;
+    }
     sampleIs3DView = use3D;
     const canvas2D = document.getElementById('sample-canvas');
     const container3D = document.getElementById('sample-3d-container');
@@ -3568,15 +4020,20 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       rotateBtn.style.display = 'inline-block';
 
       // Create 3D renderer if not exists, with slight delay to ensure container has dimensions
-      setTimeout(() => {
+      sample3DInitTimer = setTimeout(() => {
+        sample3DInitTimer = null;
+        if (!sampleIs3DView || !container3D || container3D.style.display === 'none') return;
         if (!sampleRenderer3D) {
           sampleRenderer3D = new SampleDomino3DRenderer(container3D);
+          window.tembSample3DRenderer = sampleRenderer3D;
         } else {
           sampleRenderer3D.handleResize();
+          startSample3DAnimation();
         }
         updateSample3DView();
       }, 50);
     } else {
+      stopSample3DAnimation();
       canvas2D.style.display = 'block';
       container3D.style.display = 'none';
       toggle3DBtn.textContent = '3D';
@@ -3584,6 +4041,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       perspectiveBtn.style.display = 'none';
       presetBtn.style.display = 'none';
       rotateBtn.style.display = 'none';
+      resetSampleView();
       renderSample();
     }
   }
@@ -3636,8 +4094,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       updateSample3DView();
     });
   }
-
-  const sampleCtx = sampleCanvas ? sampleCanvas.getContext('2d') : null;
 
   // Initialize shuffling module function bindings (called from loadAllWasmModules)
   function initShufflingFunctions() {
@@ -3732,24 +4188,34 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     };
   }
 
-  function generateIIDWeight(distType, rng) {
+  function getNumericControlValue(id, fallback) {
+    const value = parseFloat(document.getElementById(id)?.value);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  function getParamNumber(params, key, fallback) {
+    const value = params && Number(params[key]);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  function generateIIDWeight(distType, rng, params = {}) {
     if (distType === 'uniform') {
-      const a = parseFloat(document.getElementById('iid-min').value) || 0.5;
-      const b = parseFloat(document.getElementById('iid-max').value) || 2.0;
+      const a = getParamNumber(params, 'min', getNumericControlValue('iid-min', 0.5));
+      const b = getParamNumber(params, 'max', getNumericControlValue('iid-max', 2.0));
       return a + rng() * (b - a);
     } else if (distType === 'bernoulli') {
-      const p = parseFloat(document.getElementById('iid-bernoulli-p').value) || 0.5;
-      const v1 = parseFloat(document.getElementById('iid-bernoulli-v1').value) || 0.5;
-      const v2 = parseFloat(document.getElementById('iid-bernoulli-v2').value) || 2.0;
+      const p = getParamNumber(params, 'bernoulliP', getNumericControlValue('iid-bernoulli-p', 0.5));
+      const v1 = getParamNumber(params, 'bernoulliV1', getNumericControlValue('iid-bernoulli-v1', 0.5));
+      const v2 = getParamNumber(params, 'bernoulliV2', getNumericControlValue('iid-bernoulli-v2', 2.0));
       return rng() < p ? v1 : v2;
     } else if (distType === 'exponential') {
       return -Math.log(1 - rng());
     } else if (distType === 'pareto') {
-      const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
-      const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
+      const alpha = getParamNumber(params, 'paretoAlpha', getNumericControlValue('iid-pareto-alpha', 2.0));
+      const xmin = getParamNumber(params, 'paretoXmin', getNumericControlValue('iid-pareto-xmin', 1.0));
       return xmin / Math.pow(1 - rng(), 1 / alpha);
     } else if (distType === 'geometric') {
-      const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
+      const p = getParamNumber(params, 'geometricP', getNumericControlValue('iid-geom-p', 0.5));
       return Math.floor(Math.log(1 - rng()) / Math.log(1 - p)) + 1;
     }
     return 1.0;
@@ -3959,7 +4425,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     if (mode === 'iid') {
       const distType = params.distType || 'uniform';
-      return generateIIDWeight(distType, rng);
+      return generateIIDWeight(distType, rng, params);
     }
 
     if (mode === 'layered') {
@@ -4234,7 +4700,21 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     } else if (preset === 'random-iid') {
       const seed = parseInt(document.getElementById('random-seed')?.value) || 42;
       const distType = document.getElementById('iid-distribution-select')?.value || 'uniform';
-      return { mode: 'iid', params: { seed, distType } };
+      return {
+        mode: 'iid',
+        params: {
+          seed,
+          distType,
+          min: getNumericControlValue('iid-min', 0.5),
+          max: getNumericControlValue('iid-max', 2.0),
+          bernoulliP: getNumericControlValue('iid-bernoulli-p', 0.5),
+          bernoulliV1: getNumericControlValue('iid-bernoulli-v1', 0.5),
+          bernoulliV2: getNumericControlValue('iid-bernoulli-v2', 2.0),
+          paretoAlpha: getNumericControlValue('iid-pareto-alpha', 2.0),
+          paretoXmin: getNumericControlValue('iid-pareto-xmin', 1.0),
+          geometricP: getNumericControlValue('iid-geom-p', 0.5)
+        }
+      };
 
     } else if (preset === 'random-layered') {
       const seed = parseInt(document.getElementById('layered-seed')?.value) || 42;
@@ -4292,19 +4772,153 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return arr;
   }
 
+  function normalizeSampleWeightCacheValue(value) {
+    if (ArrayBuffer.isView(value)) {
+      return Array.from(value, normalizeSampleWeightCacheValue);
+    }
+    if (Array.isArray(value)) {
+      return value.map(normalizeSampleWeightCacheValue);
+    }
+    if (value && typeof value === 'object') {
+      return Object.keys(value).sort().reduce((acc, key) => {
+        acc[key] = normalizeSampleWeightCacheValue(value[key]);
+        return acc;
+      }, {});
+    }
+    return value;
+  }
+
+  function createSampleWeightRequest(N) {
+    const preset = document.getElementById('weight-preset-select')?.value || 'all-ones';
+    const { mode, params } = getCurrentWeightParams();
+    return {
+      N,
+      preset,
+      mode,
+      params
+    };
+  }
+
+  function getSampleWeightCacheKey(request) {
+    return JSON.stringify(normalizeSampleWeightCacheValue(request));
+  }
+
+  function getCachedSampleWeights(cacheKey) {
+    if (!sampleWeightCache.has(cacheKey)) return null;
+    const cached = sampleWeightCache.get(cacheKey);
+    sampleWeightCache.delete(cacheKey);
+    sampleWeightCache.set(cacheKey, cached);
+    return cached;
+  }
+
+  function cacheSampleWeights(cacheKey, weights) {
+    sampleWeightCache.set(cacheKey, weights);
+    while (sampleWeightCache.size > SAMPLE_WEIGHT_CACHE_MAX_ENTRIES) {
+      const oldestKey = sampleWeightCache.keys().next().value;
+      sampleWeightCache.delete(oldestKey);
+    }
+  }
+
+  function getOrGenerateSampleWeights(controls, profile = null) {
+    return measureSamplePhase(profile, 'weightGenerationConversionMs', () => {
+      const request = createSampleWeightRequest(controls.N);
+      const cacheable = SAMPLE_WEIGHT_CACHEABLE_PRESETS.has(request.preset);
+      const cacheKey = cacheable ? getSampleWeightCacheKey(request) : null;
+
+      if (profile) {
+        profile.weightCacheKey = cacheKey;
+        profile.weightCacheHit = false;
+      }
+
+      if (cacheable) {
+        const cached = getCachedSampleWeights(cacheKey);
+        if (cached) {
+          if (profile) profile.weightCacheHit = true;
+          return cached;
+        }
+      }
+
+      const edges = generateEdgeWeights(controls.N, request.mode, request.params);
+      const weights = toEKLPMatrix(edges, controls.N);
+      if (cacheable) {
+        cacheSampleWeights(cacheKey, weights);
+      }
+      return weights;
+    });
+  }
+
+  function copyWeightsToShufflingHeap(weightsPtr, eklpWeights) {
+    if (eklpWeights instanceof Float64Array) {
+      shufflingModule.HEAPF64.set(eklpWeights, weightsPtr >> 3);
+      return;
+    }
+
+    const heapOffset = weightsPtr >> 3;
+    if (Array.isArray(eklpWeights)) {
+      for (let i = 0; i < eklpWeights.length; i++) {
+        shufflingModule.HEAPF64[heapOffset + i] = Number(eklpWeights[i]);
+      }
+      return;
+    }
+
+    if (ArrayBuffer.isView(eklpWeights)) {
+      shufflingModule.HEAPF64.set(Float64Array.from(eklpWeights), heapOffset);
+      return;
+    }
+
+    throw new Error('Invalid EKLP weights buffer');
+  }
+
+  function parseShufflingJsonResponse(jsonStr) {
+    let result;
+    try {
+      result = JSON.parse(jsonStr);
+    } catch (error) {
+      throw new Error(`Could not parse shuffling WASM response: ${error.message || error}`);
+    }
+    if (result && typeof result === 'object' && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  }
+
+  function decodeAndFreeShufflingResult(resultPtr, profile = null) {
+    if (!resultPtr) {
+      throw new Error('Shuffling WASM returned no result pointer.');
+    }
+
+    let jsonStr = '';
+    try {
+      jsonStr = measureSamplePhase(profile, 'utf8ConversionMs', () => (
+        shufflingModule.UTF8ToString(resultPtr)
+      ));
+    } finally {
+      shufflingFreeString(resultPtr);
+    }
+
+    return measureSamplePhase(profile, 'jsonParseMs', () => parseShufflingJsonResponse(jsonStr));
+  }
+
   // Helper: Send weights to shuffling WASM and run simulation
   // Returns resultPtr (caller must free with shufflingFreeString)
-  async function runShufflingWithWeights(N, eklpWeights, doubleDimer = true) {
+  async function runShufflingWithWeights(N, eklpWeights, doubleDimer = true, profile = null) {
     const numWeights = eklpWeights.length;
     const weightsPtr = shufflingModule._malloc(numWeights * 8);
-    for (let i = 0; i < numWeights; i++) {
-      shufflingModule.setValue(weightsPtr + i * 8, eklpWeights[i], 'double');
+    try {
+      if (!weightsPtr) {
+        throw new Error('Could not allocate WASM heap space for EKLP weights.');
+      }
+      measureSamplePhase(profile, 'heapCopyMs', () => {
+        copyWeightsToShufflingHeap(weightsPtr, eklpWeights);
+      });
+      return await measureSampleAsyncPhase(profile, 'wasmShufflingMs', async () => (
+        doubleDimer
+          ? await simulateAztecDoubleDimer(N, weightsPtr)
+          : await simulateAztecIIDDirect(N, weightsPtr)
+      ));
+    } finally {
+      shufflingModule._free(weightsPtr);
     }
-    const resultPtr = doubleDimer
-      ? await simulateAztecDoubleDimer(N, weightsPtr)
-      : await simulateAztecIIDDirect(N, weightsPtr);
-    shufflingModule._free(weightsPtr);
-    return resultPtr;
   }
 
   // Helper: Apply master weights to geometry engine (Engine A)
@@ -4359,9 +4973,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const resultPtr = await runShufflingWithWeights(N, eklpWeights, true);
 
       // Parse result
-      const jsonStr = shufflingModule.UTF8ToString(resultPtr);
-      shufflingFreeString(resultPtr);
-      const result = JSON.parse(jsonStr);
+      const result = decodeAndFreeShufflingResult(resultPtr);
 
       if (result.config1) {
         tembDoubleDimerConfig1 = result.config1;
@@ -4397,73 +5009,129 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
   }
 
-  async function generateRandomSample() {
-    if (!wasmReady) return;
+  function readRandomSampleControlPhase(profile) {
+    const controls = measureSamplePhase(profile, 'controlReadMs', readRandomSampleControls);
+    profile.n = controls.N;
+    profile.requestedN = controls.requestedN;
+    profile.doubleDimer = controls.doubleDimer;
+    return controls;
+  }
 
-    let N = parseInt(document.getElementById('sample-N-input').value) || 6;
-    const timeSpan = document.getElementById('sample-time');
-
-    // Hard limit (memory constraint: algorithm uses O(N³) memory)
-    if (N > 330) {
-      N = 330;
-      document.getElementById('sample-N-input').value = 330;
-      timeSpan.textContent = 'N capped to 330 (memory limit). Sampling...';
-    } else if (N > 300) {
-      // Warning for large N
-      timeSpan.textContent = 'Sampling (large N, may be slow)...';
+  function updateRandomSampleState(result, controls, profile) {
+    if (controls.doubleDimer && result.config1) {
+      sampleDominoes = result.config1;
+      sampleDominoes2 = result.config2 || [];
     } else {
-      timeSpan.textContent = 'Sampling...';
+      sampleDominoes = Array.isArray(result) ? result : [];
+      sampleDominoes2 = [];
+    }
+    invalidateSampleDoubleDimerLoopCache();
+    invalidateSampleHeightFunctionCache();
+    if (sample3DRenderedDominoes && sample3DRenderedDominoes !== sampleDominoes) {
+      disposeSample3DGeometry();
+    }
+    sample2DRenderer?.invalidateCache();
+    profile.dominoCount = sampleDominoes.length;
+    profile.dominoCount2 = sampleDominoes2.length;
+  }
+
+  function isSample3DPaneVisible() {
+    return !!(sampleIs3DView && sample3DContainer && sample3DContainer.style.display !== 'none');
+  }
+
+  function isHeightFunctionPaneVisible() {
+    const container = document.getElementById('height-function-container');
+    return !!(heightFunctionActive && container && container.style.display !== 'none');
+  }
+
+  function renderVisibleSampleViews(controls, profile) {
+    resetSampleView();
+    measureSamplePhase(profile, 'twoDRenderMs', () => renderSample(profile));
+
+    if (isSample3DPaneVisible()) {
+      measureSamplePhase(profile, 'sample3DRenderMs', updateSample3DView);
     }
 
-    const startTime = performance.now();
+    updateHeightFunctionButtonVisibility();
+
+    if (isHeightFunctionPaneVisible() && controls.doubleDimer && sampleDominoes2.length > 0) {
+      measureSamplePhase(profile, 'heightFunctionPaneRenderMs', () => {
+        const heightDiff = getCachedDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
+        renderHeightFunctionSurface(heightDiff);
+      });
+    }
+  }
+
+  async function generateRandomSample(options = {}) {
+    const requestId = nextRandomSampleRequestId();
+    const profile = createShuffledSamplerProfile(options);
+    const isUserVisibleRequest = profile.source !== 'benchmark';
+
+    clearSampleTimingDisplay();
+    if (!wasmReady) {
+      const error = new Error('WASM modules not ready');
+      finishShuffledSamplerProfile(profile, 'error', error);
+      setSampleStatus('Sampling failed: ' + error.message);
+      if (options.throwOnError) throw error;
+      return profile;
+    }
+
+    if (isUserVisibleRequest) {
+      activeUserVisibleSampleRequestId = requestId;
+      setSampleButtonBusy(true);
+    }
 
     try {
-      // ALL modes use single source of truth: generateEdgeWeights() → toEKLPMatrix()
-      // This ensures same weights for single and double dimer sampling
-      const { mode, params } = getCurrentWeightParams();
-      const edges = generateEdgeWeights(N, mode, params);
-      const eklpWeights = toEKLPMatrix(edges, N);
-      const resultPtr = await runShufflingWithWeights(N, eklpWeights, doubleDimerMode);
+      const controls = readRandomSampleControlPhase(profile);
+      setSampleStatus(options.source === 'benchmark'
+        ? `${options.label || 'Benchmark'}: sampling...`
+        : controls.statusMessage);
 
-      // Parse result
-      const jsonStr = shufflingModule.UTF8ToString(resultPtr);
-      shufflingFreeString(resultPtr);
+      const sampleWeights = getOrGenerateSampleWeights(controls, profile);
+      const resultPtr = await runShufflingWithWeights(controls.N, sampleWeights, controls.doubleDimer, profile);
+      const result = decodeAndFreeShufflingResult(resultPtr, profile);
 
-      const result = JSON.parse(jsonStr);
-
-      // Handle double dimer mode: result has config1 and config2
-      if (doubleDimerMode && result.config1) {
-        sampleDominoes = result.config1;
-        sampleDominoes2 = result.config2;
-      } else {
-        sampleDominoes = Array.isArray(result) ? result : [];
-        sampleDominoes2 = [];
+      if (!isActiveRandomSampleRequest(requestId)) {
+        return finishStaleShuffledSamplerProfile(profile);
       }
 
-      const elapsed = performance.now() - startTime;
-      timeSpan.textContent = `${elapsed.toFixed(0)} ms`;
+      updateRandomSampleState(result, controls, profile);
+      renderVisibleSampleViews(controls, profile);
 
-      // Reset view and render
-      resetSampleView();
-      renderSample();
-      updateSample3DView();
-
-      // Update height function button visibility
-      updateHeightFunctionButtonVisibility();
-
-      // Update height function pane if visible
-      if (heightFunctionActive && doubleDimerMode) {
-        const heightDiff = computeDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
-        renderHeightFunctionSurface(heightDiff);
+      finishShuffledSamplerProfile(profile, 'ok');
+      if (profile.source !== 'benchmark') {
+        setSampleStatus('');
       }
+      return profile;
 
     } catch (e) {
+      if (!isActiveRandomSampleRequest(requestId)) {
+        return finishStaleShuffledSamplerProfile(profile);
+      }
       console.error('Shuffling error:', e);
-      timeSpan.textContent = 'Error';
+      finishShuffledSamplerProfile(profile, 'error', e);
+      clearSampleTimingDisplay();
+      setSampleStatus('Sampling failed: ' + (e.message || e));
+      if (options.throwOnError) throw e;
+      return profile;
+    } finally {
+      if (isUserVisibleRequest && activeUserVisibleSampleRequestId === requestId) {
+        activeUserVisibleSampleRequestId = 0;
+        setSampleButtonBusy(false);
+      }
     }
   }
 
   function resetSampleView() {
+    const renderer = getSample2DRenderer();
+    if (renderer) {
+      renderer.setSampleData(sampleDominoes, sampleDominoes2, {
+        doubleDimer: doubleDimerMode,
+        resetView: true
+      });
+      return;
+    }
+
     if (sampleDominoes.length === 0) {
       sampleZoom = 1.0;
       samplePanX = 0;
@@ -4495,161 +5163,141 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     samplePanY = -centerY;
   }
 
-  function renderSample() {
-    if (!sampleCanvas || !sampleCtx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const rect = sampleCanvas.getBoundingClientRect();
-    sampleCanvas.width = rect.width * dpr;
-    sampleCanvas.height = rect.height * dpr;
-    sampleCtx.scale(dpr, dpr);
-
-    // Clear
-    sampleCtx.fillStyle = '#fafafa';
-    sampleCtx.fillRect(0, 0, rect.width, rect.height);
-
-    if (sampleDominoes.length === 0) return;
-
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-
-    // Get colors from ColorSchemes using selected palette
-    const palettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
-    const colors = palettes[samplePaletteIndex] ? palettes[samplePaletteIndex].colors : palettes[0].colors;
-
-    // Color mapping: yellow=0, green=1, blue=2, red=3
-    const colorMap = {
-      'yellow': colors[0],
-      'green': colors[1],
-      'blue': colors[2],
-      'red': colors[3]
-    };
-
-    // Get border width from input
-    const borderWidthVal = parseFloat(document.getElementById('sample-border-input').value);
-    const borderWidth = isNaN(borderWidthVal) ? 1 : borderWidthVal;
-
-    // Check grayscale mode
-    const useGrayscale = document.getElementById('sample-grayscale-checkbox')?.checked || false;
-
-    // Double dimer mode: render loops
-    if (doubleDimerMode && sampleDominoes2.length > 0) {
-      renderDoubleDimerLoops(sampleCtx, centerX, centerY, sampleZoom, samplePanX, samplePanY, borderWidth);
-      return;
-    }
-
-    // Standard domino rendering
-    for (const d of sampleDominoes) {
-      const sx = centerX + (d.x + samplePanX) * sampleZoom;
-      const sy = centerY - (d.y + d.h + samplePanY) * sampleZoom;  // Flip Y
-      const sw = d.w * sampleZoom;
-      const sh = d.h * sampleZoom;
-
-      // Use grayscale or palette colors
-      sampleCtx.fillStyle = useGrayscale ? getGrayscaleColor(d.color, d) : (colorMap[d.color] || '#888');
-      sampleCtx.fillRect(sx, sy, sw, sh);
-
-      // Border
-      if (borderWidth > 0) {
-        sampleCtx.strokeStyle = '#000';
-        sampleCtx.lineWidth = borderWidth;
-        sampleCtx.strokeRect(sx, sy, sw, sh);
+  function computeSampleDominoBounds(...dominoSets) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const dominoes of dominoSets) {
+      if (!Array.isArray(dominoes)) continue;
+      for (const d of dominoes) {
+        minX = Math.min(minX, d.x);
+        maxX = Math.max(maxX, d.x + d.w);
+        minY = Math.min(minY, d.y);
+        maxY = Math.max(maxY, d.y + d.h);
       }
     }
+    if (!isFinite(minX) || !isFinite(maxX) || !isFinite(minY) || !isFinite(maxY)) return null;
+    return {
+      minX,
+      maxX,
+      minY,
+      maxY,
+      width: Math.max(1, maxX - minX),
+      height: Math.max(1, maxY - minY)
+    };
   }
 
-  // Render double dimer configuration as loops
-  function renderDoubleDimerLoops(ctx, centerX, centerY, zoom, panX, panY, borderWidth = 1) {
-    // Create edge key from domino
-    const edgeKey = (d) => {
-      const cx = d.x + d.w / 2;
-      const cy = d.y + d.h / 2;
-      const horiz = d.w > d.h;
-      let x1, y1, x2, y2;
-      if (horiz) {
-        x1 = cx - d.w / 4;
-        x2 = cx + d.w / 4;
-        y1 = y2 = cy;
-      } else {
-        x1 = x2 = cx;
-        y1 = cy - d.h / 4;
-        y2 = cy + d.h / 4;
-      }
-      const q = v => Math.round(v * 1000);
-      return `${Math.min(q(x1), q(x2))},${Math.min(q(y1), q(y2))}-${Math.max(q(x1), q(x2))},${Math.max(q(y1), q(y2))}`;
-    };
+  function createSampleCanvasSurface(width, height) {
+    const safeWidth = Math.max(1, Math.ceil(width));
+    const safeHeight = Math.max(1, Math.ceil(height));
+    if (typeof OffscreenCanvas !== 'undefined') {
+      return new OffscreenCanvas(safeWidth, safeHeight);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = safeWidth;
+    canvas.height = safeHeight;
+    return canvas;
+  }
 
-    // Build edge map
+  function getSample2DDisplaySettings() {
+    const palettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
+    const colors = palettes[samplePaletteIndex] ? palettes[samplePaletteIndex].colors : palettes[0].colors;
+    const borderWidthVal = parseFloat(document.getElementById('sample-border-input')?.value);
+    return {
+      n: parseInt(document.getElementById('sample-N-input')?.value, 10) || 6,
+      borderWidth: Number.isFinite(borderWidthVal) ? Math.max(0, borderWidthVal) : 1,
+      useGrayscale: document.getElementById('sample-grayscale-checkbox')?.checked || false,
+      minLoopLength,
+      colorMap: {
+        yellow: colors[0],
+        green: colors[1],
+        blue: colors[2],
+        red: colors[3]
+      }
+    };
+  }
+
+  function getSampleDominoFillColor(d, settings) {
+    return settings.useGrayscale ? getGrayscaleColor(d.color, d) : (settings.colorMap[d.color] || '#888');
+  }
+
+  function invalidateSampleDoubleDimerLoopCache() {
+    sampleDoubleDimerLoopCache.config1 = null;
+    sampleDoubleDimerLoopCache.config2 = null;
+    sampleDoubleDimerLoopCache.base = null;
+    sampleDoubleDimerLoopCache.drawableMinLoopLength = null;
+    sampleDoubleDimerLoopCache.drawableEdges = null;
+  }
+
+  function invalidateSampleDoubleDimerLoopFilter() {
+    sampleDoubleDimerLoopCache.drawableMinLoopLength = null;
+    sampleDoubleDimerLoopCache.drawableEdges = null;
+  }
+
+  function getSampleDimerEdgeGeometry(d) {
+    const cx = d.x + d.w / 2;
+    const cy = d.y + d.h / 2;
+    const horiz = d.w > d.h;
+    let x1, y1, x2, y2;
+    if (horiz) {
+      x1 = cx - d.w / 4;
+      x2 = cx + d.w / 4;
+      y1 = y2 = cy;
+    } else {
+      x1 = x2 = cx;
+      y1 = cy - d.h / 4;
+      y2 = cy + d.h / 4;
+    }
+    const q = v => Math.round(v * 1000);
+    const v1Key = `${q(x1)},${q(y1)}`;
+    const v2Key = `${q(x2)},${q(y2)}`;
+    const key = `${Math.min(q(x1), q(x2))},${Math.min(q(y1), q(y2))}-${Math.max(q(x1), q(x2))},${Math.max(q(y1), q(y2))}`;
+    return { x1, y1, x2, y2, v1Key, v2Key, key };
+  }
+
+  function buildSampleDoubleDimerLoopData(config1, config2) {
     const edgeMap = new Map();
-    const addEdges = (list, type) => {
-      for (const d of list) {
-        const k = edgeKey(d);
-        if (!edgeMap.has(k)) {
-          edgeMap.set(k, { d, types: new Set() });
+    const addEdges = (list, typeBit) => {
+      for (const d of list || []) {
+        const geom = getSampleDimerEdgeGeometry(d);
+        if (!edgeMap.has(geom.key)) {
+          edgeMap.set(geom.key, { ...geom, typeMask: 0, loopId: -1 });
         }
-        edgeMap.get(k).types.add(type);
+        edgeMap.get(geom.key).typeMask |= typeBit;
       }
     };
 
-    addEdges(sampleDominoes, 1);
-    addEdges(sampleDominoes2, 2);
+    addEdges(config1, 1);
+    addEdges(config2, 2);
 
-    // Compute loop lengths by tracing connected components
-    // Build adjacency structure for loop detection
     const vertexToEdges = new Map();
     const allEdges = [];
-
-    edgeMap.forEach((val, key) => {
-      const d = val.d;
-      const cx = d.x + d.w / 2;
-      const cy = d.y + d.h / 2;
-      const horiz = d.w > d.h;
-      let x1, y1, x2, y2;
-      if (horiz) {
-        x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy;
-      } else {
-        x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4;
-      }
-
-      const v1Key = `${Math.round(x1 * 1000)},${Math.round(y1 * 1000)}`;
-      const v2Key = `${Math.round(x2 * 1000)},${Math.round(y2 * 1000)}`;
-
-      const edgeInfo = { x1, y1, x2, y2, val, key, v1Key, v2Key, loopId: -1 };
-      allEdges.push(edgeInfo);
-
-      if (!vertexToEdges.has(v1Key)) vertexToEdges.set(v1Key, []);
-      if (!vertexToEdges.has(v2Key)) vertexToEdges.set(v2Key, []);
-      vertexToEdges.get(v1Key).push(edgeInfo);
-      vertexToEdges.get(v2Key).push(edgeInfo);
+    edgeMap.forEach(edge => {
+      allEdges.push(edge);
+      if (!vertexToEdges.has(edge.v1Key)) vertexToEdges.set(edge.v1Key, []);
+      if (!vertexToEdges.has(edge.v2Key)) vertexToEdges.set(edge.v2Key, []);
+      vertexToEdges.get(edge.v1Key).push(edge);
+      vertexToEdges.get(edge.v2Key).push(edge);
     });
 
-    // Find loops (connected components of non-double edges)
     let loopId = 0;
     const loopSizes = new Map();
 
     for (const edge of allEdges) {
       if (edge.loopId >= 0) continue;
-      const isDouble = edge.val.types.has(1) && edge.val.types.has(2);
-      if (isDouble) {
-        edge.loopId = -2; // Mark as double edge
+      if (edge.typeMask === 3) {
+        edge.loopId = -2;
         continue;
       }
 
-      // BFS to find connected non-double edges
       const queue = [edge];
-      const visited = new Set();
-      visited.add(edge.key);
+      const visited = new Set([edge.key]);
       edge.loopId = loopId;
       let loopSize = 1;
 
-      while (queue.length > 0) {
-        const curr = queue.shift();
+      for (let head = 0; head < queue.length; head++) {
+        const curr = queue[head];
         for (const vKey of [curr.v1Key, curr.v2Key]) {
-          const neighbors = vertexToEdges.get(vKey) || [];
-          for (const neighbor of neighbors) {
-            if (visited.has(neighbor.key)) continue;
-            const neighborIsDouble = neighbor.val.types.has(1) && neighbor.val.types.has(2);
-            if (neighborIsDouble) continue;
+          for (const neighbor of (vertexToEdges.get(vKey) || [])) {
+            if (visited.has(neighbor.key) || neighbor.typeMask === 3) continue;
             visited.add(neighbor.key);
             neighbor.loopId = loopId;
             loopSize++;
@@ -4662,21 +5310,41 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       loopId++;
     }
 
-    // Draw edges
-    const baseLineWidth = Math.max(1.5, 3.5 * zoom / 10);
-    const lineWidth = baseLineWidth * Math.max(0.5, borderWidth);
-    const circleRadius = baseLineWidth * Math.max(0.5, borderWidth);
+    return { allEdges, loopSizes };
+  }
 
-    for (const edge of allEdges) {
-      const { x1, y1, x2, y2, val } = edge;
-      const isDouble = val.types.has(1) && val.types.has(2);
+  function getSampleDoubleDimerLoopData(profile = null) {
+    if (sampleDoubleDimerLoopCache.config1 === sampleDominoes &&
+        sampleDoubleDimerLoopCache.config2 === sampleDominoes2 &&
+        sampleDoubleDimerLoopCache.base) {
+      setSamplePhaseTiming(profile, 'doubleDimerLoopProcessingMs', 0);
+      return sampleDoubleDimerLoopCache.base;
+    }
 
-      // Skip double edges (loops of length 2) if minLoopLength > 2
+    const started = performance.now();
+    const base = buildSampleDoubleDimerLoopData(sampleDominoes, sampleDominoes2);
+    sampleDoubleDimerLoopCache.config1 = sampleDominoes;
+    sampleDoubleDimerLoopCache.config2 = sampleDominoes2;
+    sampleDoubleDimerLoopCache.base = base;
+    sampleDoubleDimerLoopCache.drawableMinLoopLength = null;
+    sampleDoubleDimerLoopCache.drawableEdges = null;
+    setSamplePhaseTiming(profile, 'doubleDimerLoopProcessingMs', performance.now() - started);
+    return base;
+  }
+
+  function getSampleDoubleDimerDrawableEdges(profile = null) {
+    const loopData = getSampleDoubleDimerLoopData(profile);
+    if (sampleDoubleDimerLoopCache.drawableEdges &&
+        sampleDoubleDimerLoopCache.drawableMinLoopLength === minLoopLength) {
+      return sampleDoubleDimerLoopCache.drawableEdges;
+    }
+
+    const drawableEdges = [];
+    for (const edge of loopData.allEdges) {
+      const isDouble = edge.typeMask === 3;
       if (isDouble && minLoopLength > 2) continue;
-
-      // Skip edges in loops smaller than minLoopLength
       if (!isDouble && edge.loopId >= 0) {
-        const loopSize = loopSizes.get(edge.loopId) || 0;
+        const loopSize = loopData.loopSizes.get(edge.loopId) || 0;
         if (loopSize < minLoopLength) continue;
       }
 
@@ -4684,39 +5352,431 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       if (isDouble) {
         color = 'purple';
         opacity = 1.0;
-      } else if (val.types.has(1)) {
+      } else if (edge.typeMask & 1) {
         color = 'black';
         opacity = 1.0;
       } else {
         color = 'red';
         opacity = 0.8;
       }
-
-      // Transform to screen coordinates
-      const sx1 = centerX + (x1 + panX) * zoom;
-      const sy1 = centerY - (y1 + panY) * zoom;
-      const sx2 = centerX + (x2 + panX) * zoom;
-      const sy2 = centerY - (y2 + panY) * zoom;
-
-      ctx.globalAlpha = opacity;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = lineWidth;
-      ctx.beginPath();
-      ctx.moveTo(sx1, sy1);
-      ctx.lineTo(sx2, sy2);
-      ctx.stroke();
-
-      // Draw endpoint circles
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(sx1, sy1, circleRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(sx2, sy2, circleRadius, 0, Math.PI * 2);
-      ctx.fill();
+      drawableEdges.push({ ...edge, color, opacity, isDouble });
     }
 
-    ctx.globalAlpha = 1.0;
+    sampleDoubleDimerLoopCache.drawableMinLoopLength = minLoopLength;
+    sampleDoubleDimerLoopCache.drawableEdges = drawableEdges;
+    return drawableEdges;
+  }
+
+  function drawSampleStandardDominoes(ctx, dominoes, settings, options = {}) {
+    const batches = new Map();
+    const seamPad = options.seamPad ? 0.03 : 0;
+    for (const d of dominoes) {
+      const fill = getSampleDominoFillColor(d, settings);
+      if (!batches.has(fill)) batches.set(fill, []);
+      batches.get(fill).push(d);
+    }
+
+    ctx.imageSmoothingEnabled = false;
+    for (const [fill, group] of batches) {
+      ctx.fillStyle = fill;
+      for (const d of group) {
+        ctx.fillRect(
+          d.x - seamPad,
+          d.y - seamPad,
+          d.w + 2 * seamPad,
+          d.h + 2 * seamPad
+        );
+      }
+    }
+
+    if (settings.borderWidth > 0) {
+      ctx.save();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = options.borderModelWidth ?? settings.borderWidth;
+      ctx.beginPath();
+      for (const d of dominoes) {
+        ctx.rect(d.x, d.y, d.w, d.h);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawSampleDoubleDimerEdges(ctx, drawableEdges, settings, options = {}) {
+    const screenLineWidth = Math.max(1.5, 3.5 * (options.zoom || 1) / 10) * Math.max(0.5, settings.borderWidth);
+    const lineWidth = options.lineWidthModel ?? (screenLineWidth / Math.max(options.zoom || 1, 0.001));
+    const circleRadius = options.circleRadiusModel ?? lineWidth;
+    const batches = new Map();
+
+    for (const edge of drawableEdges) {
+      const key = `${edge.color}|${edge.opacity}`;
+      if (!batches.has(key)) batches.set(key, []);
+      batches.get(key).push(edge);
+    }
+
+    ctx.save();
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'round';
+    for (const [key, edges] of batches) {
+      const [color, opacityText] = key.split('|');
+      ctx.globalAlpha = parseFloat(opacityText);
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      for (const edge of edges) {
+        ctx.moveTo(edge.x1, edge.y1);
+        ctx.lineTo(edge.x2, edge.y2);
+      }
+      ctx.stroke();
+
+      ctx.beginPath();
+      for (const edge of edges) {
+        ctx.moveTo(edge.x1 + circleRadius, edge.y1);
+        ctx.arc(edge.x1, edge.y1, circleRadius, 0, Math.PI * 2);
+        ctx.moveTo(edge.x2 + circleRadius, edge.y2);
+        ctx.arc(edge.x2, edge.y2, circleRadius, 0, Math.PI * 2);
+      }
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  class SampleDomino2DCanvasRenderer {
+    constructor(canvas) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.dominoes = [];
+      this.dominoes2 = [];
+      this.doubleDimer = false;
+      this.modelBounds = null;
+      this.viewport = { zoom: 1, panX: 0, panY: 0 };
+      this.hasViewport = false;
+      this.cssWidth = 1;
+      this.cssHeight = 1;
+      this.dpr = 1;
+      this.cache = null;
+      this.cacheValid = false;
+      this.cacheVersion = 0;
+      this.cacheKey = '';
+      this.framePending = false;
+      this.dragStart = null;
+      this.bindEvents();
+      this.resize(false);
+    }
+
+    bindEvents() {
+      this.canvas.addEventListener('pointerdown', event => {
+        if (!this.dominoes.length) return;
+        this.dragStart = {
+          x: event.clientX,
+          y: event.clientY,
+          panX: this.viewport.panX,
+          panY: this.viewport.panY
+        };
+        this.canvas.classList.add('dragging');
+        this.canvas.setPointerCapture?.(event.pointerId);
+      });
+
+      this.canvas.addEventListener('pointermove', event => {
+        if (!this.dragStart) return;
+        const dx = event.clientX - this.dragStart.x;
+        const dy = event.clientY - this.dragStart.y;
+        this.viewport.panX = this.dragStart.panX + dx / this.viewport.zoom;
+        this.viewport.panY = this.dragStart.panY - dy / this.viewport.zoom;
+        this.publishViewport();
+        this.scheduleDraw();
+      });
+
+      const endDrag = event => {
+        this.dragStart = null;
+        this.canvas.classList.remove('dragging');
+        this.canvas.releasePointerCapture?.(event.pointerId);
+      };
+      this.canvas.addEventListener('pointerup', endDrag);
+      this.canvas.addEventListener('pointercancel', endDrag);
+      this.canvas.addEventListener('pointerleave', event => {
+        if (this.dragStart && event.pointerId !== undefined) endDrag(event);
+      });
+
+      this.canvas.addEventListener('wheel', event => {
+        if (!this.dominoes.length) return;
+        event.preventDefault();
+        const rect = this.canvas.getBoundingClientRect();
+        const factor = event.deltaY > 0 ? 0.9 : 1.1;
+        this.zoomBy(factor, event.clientX - rect.left, event.clientY - rect.top);
+      }, { passive: false });
+
+      this.canvas.addEventListener('dblclick', () => this.resetView());
+    }
+
+    publishViewport() {
+      sampleZoom = this.viewport.zoom;
+      samplePanX = this.viewport.panX;
+      samplePanY = this.viewport.panY;
+    }
+
+    setSampleData(dominoes, dominoes2, options = {}) {
+      const nextDominoes = Array.isArray(dominoes) ? dominoes : [];
+      const nextDominoes2 = Array.isArray(dominoes2) ? dominoes2 : [];
+      const nextDoubleDimer = !!options.doubleDimer && nextDominoes2.length > 0;
+      const changed = this.dominoes !== nextDominoes ||
+        this.dominoes2 !== nextDominoes2 ||
+        this.doubleDimer !== nextDoubleDimer;
+
+      if (changed) {
+        this.dominoes = nextDominoes;
+        this.dominoes2 = nextDominoes2;
+        this.doubleDimer = nextDoubleDimer;
+        this.modelBounds = this.doubleDimer
+          ? computeSampleDominoBounds(nextDominoes, nextDominoes2)
+          : computeSampleDominoBounds(nextDominoes);
+        this.invalidateCache();
+      }
+
+      if (options.resetView || !this.hasViewport || (changed && !this.modelBounds)) {
+        this.fitToView();
+      }
+    }
+
+    invalidateCache() {
+      this.cache = null;
+      this.cacheValid = false;
+      this.cacheVersion++;
+    }
+
+    invalidateStyle() {
+      this.invalidateCache();
+      this.scheduleDraw();
+    }
+
+    resize(schedule = true) {
+      const rect = this.canvas.getBoundingClientRect();
+      this.cssWidth = Math.max(1, Math.round(rect.width || 1));
+      this.cssHeight = Math.max(1, Math.round(rect.height || 1));
+      this.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
+      const pixelWidth = Math.max(1, Math.round(this.cssWidth * this.dpr));
+      const pixelHeight = Math.max(1, Math.round(this.cssHeight * this.dpr));
+
+      if (this.canvas.width !== pixelWidth || this.canvas.height !== pixelHeight) {
+        this.canvas.width = pixelWidth;
+        this.canvas.height = pixelHeight;
+      }
+
+      if (!this.hasViewport && this.modelBounds) this.fitToView();
+      if (schedule) this.scheduleDraw();
+    }
+
+    fitToView() {
+      if (!this.modelBounds) {
+        this.viewport.zoom = 1;
+        this.viewport.panX = 0;
+        this.viewport.panY = 0;
+        this.hasViewport = false;
+        this.publishViewport();
+        return;
+      }
+
+      const padding = 0.9;
+      const zoomX = (this.cssWidth * padding) / this.modelBounds.width;
+      const zoomY = (this.cssHeight * padding) / this.modelBounds.height;
+      this.viewport.zoom = Math.min(zoomX, zoomY, 50);
+      this.viewport.panX = -(this.modelBounds.minX + this.modelBounds.maxX) / 2;
+      this.viewport.panY = -(this.modelBounds.minY + this.modelBounds.maxY) / 2;
+      this.hasViewport = true;
+      this.publishViewport();
+    }
+
+    resetView() {
+      this.fitToView();
+      this.scheduleDraw();
+    }
+
+    zoomBy(factor, anchorX = this.cssWidth / 2, anchorY = this.cssHeight / 2) {
+      const oldZoom = this.viewport.zoom || 1;
+      const newZoom = Math.max(0.02, Math.min(200, oldZoom * factor));
+      const centerX = this.cssWidth / 2;
+      const centerY = this.cssHeight / 2;
+      const modelX = (anchorX - centerX) / oldZoom - this.viewport.panX;
+      const modelY = (centerY - anchorY) / oldZoom - this.viewport.panY;
+      this.viewport.zoom = newZoom;
+      this.viewport.panX = (anchorX - centerX) / newZoom - modelX;
+      this.viewport.panY = (centerY - anchorY) / newZoom - modelY;
+      this.publishViewport();
+      this.scheduleDraw();
+    }
+
+    scheduleDraw() {
+      if (this.framePending) return;
+      this.framePending = true;
+      requestAnimationFrame(() => {
+        this.framePending = false;
+        this.drawFrame();
+      });
+    }
+
+    renderNow(profile = null) {
+      this.resize(false);
+      this.framePending = false;
+      this.drawFrame(profile);
+    }
+
+    getCacheBounds(settings) {
+      const linePadding = this.doubleDimer
+        ? Math.max(1, settings.borderWidth * 2)
+        : Math.max(0.25, settings.borderWidth);
+      const pad = SAMPLE_2D_CACHE_PADDING + linePadding;
+      return {
+        minX: this.modelBounds.minX - pad,
+        maxX: this.modelBounds.maxX + pad,
+        minY: this.modelBounds.minY - pad,
+        maxY: this.modelBounds.maxY + pad,
+        width: this.modelBounds.width + 2 * pad,
+        height: this.modelBounds.height + 2 * pad
+      };
+    }
+
+    makeCacheKey(settings) {
+      return [
+        this.cacheVersion,
+        this.doubleDimer ? 'double' : 'single',
+        settings.n,
+        settings.borderWidth,
+        settings.useGrayscale ? 1 : 0,
+        settings.minLoopLength,
+        settings.colorMap.yellow,
+        settings.colorMap.green,
+        settings.colorMap.blue,
+        settings.colorMap.red
+      ].join('|');
+    }
+
+    buildCache(settings, multiplier, profile = null) {
+      const bounds = this.getCacheBounds(settings);
+      const maxDim = Math.max(bounds.width, bounds.height, 1);
+      const cacheScale = Math.max(0.5, Math.min(this.dpr * multiplier, SAMPLE_2D_CACHE_MAX_PX / maxDim));
+      const surface = createSampleCanvasSurface(bounds.width * cacheScale, bounds.height * cacheScale);
+      const ctx = surface.getContext('2d');
+      ctx.save();
+      ctx.scale(cacheScale, cacheScale);
+      ctx.translate(-bounds.minX, -bounds.minY);
+      ctx.clearRect(bounds.minX, bounds.minY, bounds.width, bounds.height);
+      if (this.doubleDimer) {
+        const drawableEdges = getSampleDoubleDimerDrawableEdges(profile);
+        const screenLineWidth = Math.max(1.5, 3.5 * this.viewport.zoom / 10) * Math.max(0.5, settings.borderWidth);
+        const modelLineWidth = Math.max(0.05, screenLineWidth / Math.max(this.viewport.zoom || 1, 0.001));
+        drawSampleDoubleDimerEdges(ctx, drawableEdges, settings, {
+          zoom: this.viewport.zoom,
+          lineWidthModel: modelLineWidth,
+          circleRadiusModel: modelLineWidth
+        });
+      } else {
+        drawSampleStandardDominoes(ctx, this.dominoes, settings, {
+          seamPad: true,
+          borderModelWidth: Math.max(0.01, settings.borderWidth / Math.max(cacheScale, 1))
+        });
+      }
+      ctx.restore();
+      return { canvas: surface, bounds, scale: cacheScale };
+    }
+
+    ensureCache(settings, profile = null) {
+      const key = this.makeCacheKey(settings);
+      if (this.cacheValid && this.cache && this.cacheKey === key) return;
+
+      const version = this.cacheVersion;
+      this.cache = this.buildCache(settings, 1, profile);
+      this.cacheKey = key;
+      this.cacheValid = true;
+
+      const hiResMultiplier = this.dpr > 1 ? SAMPLE_2D_HIRES_MULTIPLIER : 1.5;
+      if (hiResMultiplier <= 1) return;
+      setTimeout(() => {
+        if (this.cacheVersion !== version || this.cacheKey !== key || !this.modelBounds) return;
+        const latestSettings = getSample2DDisplaySettings();
+        if (this.makeCacheKey(latestSettings) !== key) return;
+        this.cache = this.buildCache(latestSettings, hiResMultiplier);
+        this.scheduleDraw();
+      }, 0);
+    }
+
+    drawExactFrame(ctx, settings, profile = null) {
+      ctx.save();
+      ctx.translate(
+        this.cssWidth / 2 + this.viewport.panX * this.viewport.zoom,
+        this.cssHeight / 2 - this.viewport.panY * this.viewport.zoom
+      );
+      ctx.scale(this.viewport.zoom, -this.viewport.zoom);
+
+      if (this.doubleDimer) {
+        const drawableEdges = getSampleDoubleDimerDrawableEdges(profile);
+        drawSampleDoubleDimerEdges(ctx, drawableEdges, settings, { zoom: this.viewport.zoom });
+      } else {
+        drawSampleStandardDominoes(ctx, this.dominoes, settings, {
+          borderModelWidth: settings.borderWidth / Math.max(this.viewport.zoom, 0.001)
+        });
+      }
+      ctx.restore();
+    }
+
+    drawCachedFrame(ctx, settings, profile = null) {
+      this.ensureCache(settings, profile);
+      if (!this.cache) return;
+
+      ctx.save();
+      ctx.translate(
+        this.cssWidth / 2 + this.viewport.panX * this.viewport.zoom,
+        this.cssHeight / 2 - this.viewport.panY * this.viewport.zoom
+      );
+      ctx.scale(this.viewport.zoom, -this.viewport.zoom);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(
+        this.cache.canvas,
+        this.cache.bounds.minX,
+        this.cache.bounds.minY,
+        this.cache.bounds.width,
+        this.cache.bounds.height
+      );
+      ctx.restore();
+    }
+
+    drawFrame(profile = null) {
+      const ctx = this.ctx;
+      if (!ctx) return;
+
+      ctx.save();
+      ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      ctx.clearRect(0, 0, this.cssWidth, this.cssHeight);
+      ctx.fillStyle = '#fafafa';
+      ctx.fillRect(0, 0, this.cssWidth, this.cssHeight);
+      ctx.imageSmoothingEnabled = false;
+
+      if (this.dominoes.length > 0 && this.modelBounds) {
+        const settings = getSample2DDisplaySettings();
+        const exactRender = settings.n <= SAMPLE_2D_EXACT_RENDER_LIMIT;
+        if (exactRender) {
+          this.drawExactFrame(ctx, settings, profile);
+        } else {
+          this.drawCachedFrame(ctx, settings, profile);
+        }
+      }
+
+      ctx.restore();
+    }
+  }
+
+  function getSample2DRenderer() {
+    if (!sample2DRenderer && sampleCanvas) {
+      sample2DRenderer = new SampleDomino2DCanvasRenderer(sampleCanvas);
+      window.tembSample2DRenderer = sample2DRenderer;
+    }
+    return sample2DRenderer;
+  }
+
+  function renderSample(profile = null) {
+    const renderer = getSample2DRenderer();
+    if (!renderer) return;
+    renderer.setSampleData(sampleDominoes, sampleDominoes2, { doubleDimer: doubleDimerMode });
+    renderer.renderNow(profile);
   }
 
   // Render double dimer loops on T-graph using FACE shading
@@ -5510,6 +6570,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   // Sample canvas event handlers
   if (sampleCanvas) {
+    getSample2DRenderer();
     document.getElementById('sample-btn').addEventListener('click', generateRandomSample);
 
     // Enter key on sample inputs triggers sample
@@ -5524,8 +6585,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       if (sampleIs3DView && sampleRenderer3D) {
         sampleRenderer3D.zoomIn();
       } else {
-        sampleZoom *= 1.3;
-        renderSample();
+        getSample2DRenderer()?.zoomBy(1.3);
       }
     });
 
@@ -5533,8 +6593,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       if (sampleIs3DView && sampleRenderer3D) {
         sampleRenderer3D.zoomOut();
       } else {
-        sampleZoom /= 1.3;
-        renderSample();
+        getSample2DRenderer()?.zoomBy(1 / 1.3);
       }
     });
 
@@ -5549,6 +6608,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     // Border width input - re-render on change
     document.getElementById('sample-border-input').addEventListener('input', () => {
+      sample2DRenderer?.invalidateCache();
       renderSample();
     });
 
@@ -5574,7 +6634,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     if (minLoopLengthInput) {
       minLoopLengthInput.addEventListener('input', function() {
-        minLoopLength = parseInt(this.value) || 2;
+        minLoopLength = readSampleMinLoopLength();
+        invalidateSampleDoubleDimerLoopFilter();
+        sample2DRenderer?.invalidateCache();
         renderSample();
       });
     }
@@ -5594,51 +6656,12 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     // Clear status message when N input changes
     document.getElementById('sample-N-input').addEventListener('input', () => {
       document.getElementById('sample-time').textContent = '';
-    });
-
-    // Pan with mouse drag
-    let sampleIsPanning = false;
-    let sampleLastX = 0, sampleLastY = 0;
-
-    sampleCanvas.addEventListener('mousedown', (e) => {
-      sampleIsPanning = true;
-      sampleLastX = e.clientX;
-      sampleLastY = e.clientY;
-      sampleCanvas.style.cursor = 'grabbing';
-    });
-
-    sampleCanvas.addEventListener('mousemove', (e) => {
-      if (!sampleIsPanning) return;
-      const dx = e.clientX - sampleLastX;
-      const dy = e.clientY - sampleLastY;
-      samplePanX += dx / sampleZoom;
-      samplePanY -= dy / sampleZoom;  // Flip Y
-      sampleLastX = e.clientX;
-      sampleLastY = e.clientY;
-      renderSample();
-    });
-
-    sampleCanvas.addEventListener('mouseup', () => {
-      sampleIsPanning = false;
-      sampleCanvas.style.cursor = 'grab';
-    });
-
-    sampleCanvas.addEventListener('mouseleave', () => {
-      sampleIsPanning = false;
-      sampleCanvas.style.cursor = 'grab';
-    });
-
-    // Zoom with wheel
-    sampleCanvas.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const factor = e.deltaY > 0 ? 0.9 : 1.1;
-      sampleZoom *= factor;
-      renderSample();
+      clearSampleTimingDisplay();
     });
 
     // Responsive: re-render on window resize
     window.addEventListener('resize', () => {
-      renderSample();
+      getSample2DRenderer()?.resize();
     });
 
     // Sample PNG quality slider value display
@@ -5649,6 +6672,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     // Export PNG (canvas capture like T-embedding)
     document.getElementById('sample-export-png-btn').addEventListener('click', () => {
       if (sampleDominoes.length === 0) return;
+      sample2DRenderer?.renderNow();
 
       const N = parseInt(document.getElementById('sample-N-input').value) || 6;
       const quality = parseInt(document.getElementById('sample-png-quality').value) || 85;
@@ -5668,6 +6692,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
 
       // Draw the source canvas scaled
+      exportCtx.imageSmoothingEnabled = false;
       exportCtx.drawImage(sampleCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
 
       // Download
@@ -5707,100 +6732,17 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
       // Double dimer mode: draw edge lines
       if (doubleDimerMode && sampleDominoes2.length > 0) {
-        // Build edge map (same logic as renderDoubleDimerLoops)
-        const edgeKey = (d) => {
-          const cx = d.x + d.w / 2;
-          const cy = d.y + d.h / 2;
-          const horiz = d.w > d.h;
-          let x1, y1, x2, y2;
-          if (horiz) { x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy; }
-          else { x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4; }
-          const q = v => Math.round(v * 1000);
-          return `${Math.min(q(x1), q(x2))},${Math.min(q(y1), q(y2))}-${Math.max(q(x1), q(x2))},${Math.max(q(y1), q(y2))}`;
-        };
-
-        const edgeMap = new Map();
-        const addEdges = (list, type) => {
-          for (const d of list) {
-            const k = edgeKey(d);
-            if (!edgeMap.has(k)) edgeMap.set(k, { d, types: new Set() });
-            edgeMap.get(k).types.add(type);
-          }
-        };
-        addEdges(sampleDominoes, 1);
-        addEdges(sampleDominoes2, 2);
-
-        // Build adjacency for loop detection
-        const vertexToEdges = new Map();
-        const allEdges = [];
-        edgeMap.forEach((val, key) => {
-          const d = val.d;
-          const cx = d.x + d.w / 2, cy = d.y + d.h / 2;
-          const horiz = d.w > d.h;
-          let x1, y1, x2, y2;
-          if (horiz) { x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy; }
-          else { x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4; }
-          const v1Key = `${Math.round(x1 * 1000)},${Math.round(y1 * 1000)}`;
-          const v2Key = `${Math.round(x2 * 1000)},${Math.round(y2 * 1000)}`;
-          const edgeInfo = { x1, y1, x2, y2, val, key, v1Key, v2Key, loopId: -1 };
-          allEdges.push(edgeInfo);
-          if (!vertexToEdges.has(v1Key)) vertexToEdges.set(v1Key, []);
-          if (!vertexToEdges.has(v2Key)) vertexToEdges.set(v2Key, []);
-          vertexToEdges.get(v1Key).push(edgeInfo);
-          vertexToEdges.get(v2Key).push(edgeInfo);
-        });
-
-        // Detect loops via BFS
-        let loopId = 0;
-        const loopSizes = new Map();
-        for (const edge of allEdges) {
-          if (edge.loopId >= 0) continue;
-          const isDouble = edge.val.types.has(1) && edge.val.types.has(2);
-          if (isDouble) { edge.loopId = -2; continue; }
-          const queue = [edge];
-          const visited = new Set([edge.key]);
-          edge.loopId = loopId;
-          let loopSize = 1;
-          while (queue.length > 0) {
-            const curr = queue.shift();
-            for (const vKey of [curr.v1Key, curr.v2Key]) {
-              for (const neighbor of (vertexToEdges.get(vKey) || [])) {
-                if (visited.has(neighbor.key)) continue;
-                const neighborIsDouble = neighbor.val.types.has(1) && neighbor.val.types.has(2);
-                if (neighborIsDouble) continue;
-                visited.add(neighbor.key);
-                neighbor.loopId = loopId;
-                loopSize++;
-                queue.push(neighbor);
-              }
-            }
-          }
-          loopSizes.set(loopId, loopSize);
-          loopId++;
-        }
-
-        // Draw edges as SVG lines
+        const drawableEdges = getSampleDoubleDimerDrawableEdges();
         const lineWidth = 2 * Math.max(0.5, borderWidth);
-        for (const edge of allEdges) {
-          const { x1, y1, x2, y2, val } = edge;
-          const isDouble = val.types.has(1) && val.types.has(2);
-          if (isDouble && minLoopLength > 2) continue;
-          if (!isDouble && edge.loopId >= 0) {
-            const loopSize = loopSizes.get(edge.loopId) || 0;
-            if (loopSize < minLoopLength) continue;
-          }
-          let color;
-          if (isDouble) color = 'purple';
-          else if (val.types.has(1)) color = 'black';
-          else color = 'red';
-
+        for (const edge of drawableEdges) {
+          const { x1, y1, x2, y2 } = edge;
           const sx1 = (x1 - minX) * scale + padding;
           const sy1 = (maxY - y1) * scale + padding;
           const sx2 = (x2 - minX) * scale + padding;
           const sy2 = (maxY - y2) * scale + padding;
-          svg += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="${color}" stroke-width="${lineWidth}" stroke-linecap="round"/>`;
-          svg += `<circle cx="${sx1}" cy="${sy1}" r="${lineWidth/2}" fill="${color}"/>`;
-          svg += `<circle cx="${sx2}" cy="${sy2}" r="${lineWidth/2}" fill="${color}"/>`;
+          svg += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="${edge.color}" stroke-opacity="${edge.opacity}" stroke-width="${lineWidth}" stroke-linecap="round"/>`;
+          svg += `<circle cx="${sx1}" cy="${sy1}" r="${lineWidth/2}" fill="${edge.color}" fill-opacity="${edge.opacity}"/>`;
+          svg += `<circle cx="${sx2}" cy="${sy2}" r="${lineWidth/2}" fill="${edge.color}" fill-opacity="${edge.opacity}"/>`;
         }
       } else {
         // Normal domino rendering

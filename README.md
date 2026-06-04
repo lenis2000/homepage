@@ -12,6 +12,12 @@ Integrable probability, KPZ universality, Yang-Baxter equation, Bethe ansatz, Ma
 
 Use `make test-domino` for the dependency-free Chromium/WASM smoke test covering default 2D/lazy-3D page invariants and sampler output counts.
 
+## T-embedding Random Sampler
+
+The arbitrary-weight T-embedding page includes an optimized random shuffled sampler backed by `_simulations/domino_tilings/2025-12-11-t-embedding-shuffling.cpp` and the generated `js/2025-12-11-t-embedding-shuffling.js` bundle. Developers can run `window.tembShuffledSamplerBenchmark({ stopOnError: false, restore: true })` in the browser console for N=100, N=200, and N=330 single/double-dimer timing cases.
+
+Use `make test-temb-shuffling` to build `_site/` and run the focused source, WASM, and Chromium smoke test. To record benchmark JSON from the same built page, run `bundle exec jekyll build` and then `TEMB_SHUFFLED_BENCHMARK=1 node tools/test-temb-shuffling.mjs`. The smoke test requires Node.js 22+ for global `WebSocket` and a Chrome/Chromium executable discoverable through `CHROME_BIN`, `CHROMIUM_BIN`, `AGENT_BROWSER_EXECUTABLE_PATH`, or common system paths.
+
 ---
 
 ## Makefile Reference

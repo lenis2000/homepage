@@ -1,783 +1,885 @@
 /*
   2025-12-11-t-embedding-shuffling.cpp
 
-  Weighted EKLP shuffling for T-embedding page.
-  Based on 2025-11-18-double-dimer-gamma.cpp (the correct slim functions).
+  Weighted EKLP shuffling for the T-embedding page random sampler.
 
-  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js -s WASM=1 -s ASYNCIFY=1 -s MODULARIZE=1 -s 'EXPORT_NAME="createShufflingModule"' -s "EXPORTED_FUNCTIONS=['_simulateAztecWithWeightMatrix','_simulateAztecGammaDirect','_simulateAztecPeriodicDirect','_simulateAztecIIDDirect','_simulateAztecDoubleDimer','_freeString','_getProgress','_malloc','_free']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
+  Build from _simulations/domino_tilings:
+
+  emcc 2025-12-11-t-embedding-shuffling.cpp -o 2025-12-11-t-embedding-shuffling.js \
+    -s WASM=1 \
+    -s ASYNCIFY=1 \
+    -s MODULARIZE=1 \
+    -s 'EXPORT_NAME="createShufflingModule"' \
+    -s "EXPORTED_FUNCTIONS=['_simulateAztecWithWeightMatrix','_simulateAztecGammaDirect','_simulateAztecPeriodicDirect','_simulateAztecIIDDirect','_simulateAztecDoubleDimer','_freeString','_getProgress','_malloc','_free']" \
+    -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","setValue","getValue","HEAPF64"]' \
+    -s ALLOW_MEMORY_GROWTH=1 \
+    -s INITIAL_MEMORY=64MB \
+    -s ENVIRONMENT=web \
+    -fexceptions \
+    -s SINGLE_FILE=1 \
+    -O3 && mv 2025-12-11-t-embedding-shuffling.js ../../js/
 */
 
 #include <emscripten.h>
-#include <iostream>
-#include <vector>
+
+#include <algorithm>
+#include <chrono>
 #include <cmath>
-#include <random>
-#include <sstream>
-#include <string>
+#include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <functional>
-#include "matrix_optimized.h"
+#include <random>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 using namespace std;
 
-static std::mt19937 rng(std::random_device{}());
-
-// Global progress counter
+static constexpr int kMaxSupportedN = 330;
 volatile int progressCounter = 0;
 
-// Forward declarations
-pair<vector<MatrixDouble>, vector<MatrixDouble>> d3pslim(const MatrixDouble &x1);
-vector<MatrixDouble> probsslim(const MatrixDouble &x1);
-MatrixInt delslideslim(const MatrixInt &x1);
-MatrixInt createslim(MatrixInt &x0, const MatrixDouble &p);
-MatrixInt aztecgenslim(const vector<MatrixDouble> &x0);
+struct Xoshiro256pp {
+    using result_type = uint64_t;
 
-// d3pslim: computes the square move for all Aztec diamonds
-// Returns pair of [weights matrix list, exponents matrix list]
-pair<vector<MatrixDouble>, vector<MatrixDouble>> d3pslim(const MatrixDouble& x1) {
-    int n = x1.size();
-    int m = n / 2;
+    uint64_t s[4];
 
-    vector<MatrixDouble> A1, A2;
-    MatrixDouble B(n, n, 0.0);
-    MatrixDouble C(n, n, 0.0);
+    explicit Xoshiro256pp(uint64_t seed = 0) {
+        seedState(seed);
+    }
 
-    // Initialize first matrices
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            if (x1.at(i, j) == 0.0) {
-                B.at(i, j) = 1.0;
-                C.at(i, j) = 1.0;
+    static constexpr result_type min() {
+        return 0;
+    }
+
+    static constexpr result_type max() {
+        return UINT64_MAX;
+    }
+
+    static inline uint64_t rotl(const uint64_t x, int k) {
+        return (x << k) | (x >> (64 - k));
+    }
+
+    static inline uint64_t splitmix64(uint64_t& x) {
+        uint64_t z = (x += 0x9e3779b97f4a7c15ULL);
+        z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
+        z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
+        return z ^ (z >> 31);
+    }
+
+    void seedState(uint64_t seed) {
+        uint64_t x = seed;
+        for (int i = 0; i < 4; ++i) {
+            s[i] = splitmix64(x);
+        }
+    }
+
+    inline uint64_t next() {
+        const uint64_t result = rotl(s[0] + s[3], 23) + s[0];
+        const uint64_t t = s[1] << 17;
+
+        s[2] ^= s[0];
+        s[3] ^= s[1];
+        s[1] ^= s[2];
+        s[0] ^= s[3];
+        s[2] ^= t;
+        s[3] = rotl(s[3], 45);
+
+        return result;
+    }
+
+    inline uint64_t operator()() {
+        return next();
+    }
+
+    inline double next_double() {
+        const uint64_t v = (next() >> 12) | 0x3FF0000000000000ULL;
+        double d;
+        std::memcpy(&d, &v, sizeof(d));
+        return d - 1.0;
+    }
+};
+
+static uint64_t makeSamplerSeed() {
+    std::random_device rd;
+    uint64_t seed = static_cast<uint64_t>(
+        std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    seed ^= static_cast<uint64_t>(rd()) << 32;
+    seed ^= static_cast<uint64_t>(rd());
+    return seed;
+}
+
+static Xoshiro256pp shuffleRng(makeSamplerSeed());
+
+template <typename T>
+class FlatMatrix {
+private:
+    vector<T> data_;
+    int rows_ = 0;
+    int cols_ = 0;
+
+public:
+    FlatMatrix() = default;
+
+    FlatMatrix(int rows, int cols, const T& value = T()) {
+        reset(rows, cols, value);
+    }
+
+    void reset(int rows, int cols, const T& value = T()) {
+        if (rows < 0 || cols < 0) {
+            throw std::runtime_error("Negative matrix dimension");
+        }
+
+        const size_t needed = static_cast<size_t>(rows) * static_cast<size_t>(cols);
+        if (data_.size() < needed) {
+            data_.resize(needed);
+        }
+        rows_ = rows;
+        cols_ = cols;
+        std::fill(data_.begin(), data_.begin() + needed, value);
+    }
+
+    T* operator[](int row) {
+        return data_.data() + static_cast<size_t>(row) * static_cast<size_t>(cols_);
+    }
+
+    const T* operator[](int row) const {
+        return data_.data() + static_cast<size_t>(row) * static_cast<size_t>(cols_);
+    }
+
+    T& at(int row, int col) {
+        return (*this)[row][col];
+    }
+
+    const T& at(int row, int col) const {
+        return (*this)[row][col];
+    }
+
+    int size() const {
+        return rows_;
+    }
+
+    int rows() const {
+        return rows_;
+    }
+
+    int cols() const {
+        return cols_;
+    }
+};
+
+using MatrixDouble = FlatMatrix<double>;
+using MatrixInt = FlatMatrix<int>;
+
+class PackedDecisionPyramid {
+public:
+    int levels = 0;
+    vector<uint64_t> offsets;
+    vector<uint32_t> words;
+
+    PackedDecisionPyramid() = default;
+    explicit PackedDecisionPyramid(int n) { reset(n); }
+
+    void reset(int n) {
+        if (n < 0) {
+            throw std::runtime_error("Negative decision-pyramid level count");
+        }
+
+        levels = n;
+        offsets.assign(static_cast<size_t>(levels) + 1, 0);
+        for (int r = 1; r <= levels; ++r) {
+            offsets[r] = offsets[r - 1] + static_cast<uint64_t>(r) * static_cast<uint64_t>(r);
+        }
+
+        const uint64_t totalWords = (offsets[levels] + 31ULL) >> 5;
+        words.assign(static_cast<size_t>(totalWords), 0U);
+    }
+
+    inline uint64_t bitIndex(int rows, int i, int j) const {
+        return offsets[rows - 1] + static_cast<uint64_t>(i) * static_cast<uint64_t>(rows) + static_cast<uint64_t>(j);
+    }
+
+    inline void set(int rows, int i, int j, bool value) {
+        const uint64_t idx = bitIndex(rows, i, j);
+        const uint32_t mask = 1U << (idx & 31U);
+        uint32_t& word = words[static_cast<size_t>(idx >> 5)];
+        if (value) {
+            word |= mask;
+        } else {
+            word &= ~mask;
+        }
+    }
+
+    inline bool get(int rows, int i, int j) const {
+        const uint64_t idx = bitIndex(rows, i, j);
+        return (words[static_cast<size_t>(idx >> 5)] >> (idx & 31U)) & 1U;
+    }
+};
+
+static int checkedN(int n) {
+    if (n < 1) {
+        throw std::runtime_error("N must be at least 1");
+    }
+    if (n > kMaxSupportedN) {
+        throw std::runtime_error("N exceeds supported maximum 330");
+    }
+    return n;
+}
+
+static double clampProbability(double value) {
+    if (value <= 0.0) {
+        return 0.0;
+    }
+    if (value >= 1.0) {
+        return 1.0;
+    }
+    return value;
+}
+
+static double boundedProbability(double value) {
+    if (!std::isfinite(value)) {
+        throw std::runtime_error("Invalid creation probability");
+    }
+    if (value < -1e-12 || value > 1.0 + 1e-12) {
+        throw std::runtime_error("Creation probability out of range");
+    }
+    return clampProbability(value);
+}
+
+static void normalizeMatrixIfNeeded(MatrixDouble& matrix, double maxAbs) {
+    if (maxAbs <= 0.0 || !std::isfinite(maxAbs)) {
+        return;
+    }
+
+    if (maxAbs < 1e-100 || maxAbs > 1e100) {
+        const int rows = matrix.rows();
+        const int cols = matrix.cols();
+        for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < cols; ++j) {
+                matrix[i][j] /= maxAbs;
+            }
+        }
+    }
+}
+
+static void setProgressInRange(int start, int end, int completed, int total) {
+    if (total <= 0) {
+        progressCounter = end;
+        return;
+    }
+    const double t = completed / static_cast<double>(total);
+    progressCounter = start + static_cast<int>((end - start) * t);
+}
+
+static void computeDecisionPyramids(
+    const MatrixDouble& weights,
+    PackedDecisionPyramid& primary,
+    PackedDecisionPyramid* secondary = nullptr,
+    int progressStart = 0,
+    int progressEnd = 20) {
+
+    const int dim = weights.size();
+    if (dim <= 0 || (dim & 1) || weights.cols() != dim) {
+        throw std::runtime_error("Weight matrix dimension must be positive, square, and even");
+    }
+
+    const int levels = dim / 2;
+    primary.reset(levels);
+    if (secondary) {
+        secondary->reset(levels);
+    }
+
+    MatrixDouble currentValue(dim, dim, 0.0);
+    MatrixInt currentExp(dim, dim, 0);
+    MatrixDouble nextValue;
+    MatrixInt nextExp;
+
+    double currentMaxAbs = 0.0;
+    for (int i = 0; i < dim; ++i) {
+        for (int j = 0; j < dim; ++j) {
+            const double weight = weights[i][j];
+            if (!std::isfinite(weight)) {
+                throw std::runtime_error("Weight matrix contains a non-finite value");
+            }
+            if (std::fabs(weight) < 1e-12) {
+                currentValue[i][j] = 1.0;
+                currentExp[i][j] = 1;
             } else {
-                B.at(i, j) = x1.at(i, j);
-                C.at(i, j) = 0.0;
+                currentValue[i][j] = weight;
+                currentExp[i][j] = 0;
             }
+            currentMaxAbs = std::max(currentMaxAbs, std::fabs(currentValue[i][j]));
         }
     }
+    normalizeMatrixIfNeeded(currentValue, currentMaxAbs);
 
-    A1.push_back(B);
-    A2.push_back(C);
+    for (int size = dim; size >= 2; size -= 2) {
+        const int rows = size / 2;
 
-    // Main loop
-    for (int k = 0; k < m - 1; k++) {
-        int size = n - 2*k - 2;
-        B = MatrixDouble(size, size, 0.0);
-        C = MatrixDouble(size, size, 0.0);
+        for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < rows; ++j) {
+                const int i0 = i << 1;
+                const int j0 = j << 1;
+                const int expMain = currentExp[i0][j0] + currentExp[i0 + 1][j0 + 1];
+                const int expOther = currentExp[i0 + 1][j0] + currentExp[i0][j0 + 1];
 
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                int idx_i = i + 2*(i%2);
-                int idx_j = j + 2*(j%2);
+                bool primaryDecision;
+                bool secondaryDecision;
 
-                double a1_val = A1[k].at(idx_i, idx_j);
-                double a1_exp = A2[k].at(idx_i, idx_j);
-
-                double sum1_exp = A2[k].at(idx_i, idx_j) + A2[k].at(i+1, j+1);
-                double sum2_exp = A2[k].at(idx_i, j+1) + A2[k].at(i+1, idx_j);
-
-                double a2_val, a2_exp;
-
-                if (sum1_exp == sum2_exp) {
-                    a2_val = A1[k].at(idx_i, idx_j) * A1[k].at(i+1, j+1) +
-                            A1[k].at(idx_i, j+1) * A1[k].at(i+1, idx_j);
-                    a2_exp = sum1_exp;
-                } else if (sum1_exp < sum2_exp) {
-                    a2_val = A1[k].at(idx_i, idx_j) * A1[k].at(i+1, j+1);
-                    a2_exp = sum1_exp;
+                if (expMain > expOther) {
+                    primaryDecision = false;
+                    secondaryDecision = false;
+                } else if (expMain < expOther) {
+                    primaryDecision = true;
+                    secondaryDecision = true;
                 } else {
-                    a2_val = A1[k].at(idx_i, j+1) * A1[k].at(i+1, idx_j);
-                    a2_exp = sum2_exp;
+                    const double prodMain = currentValue[i0 + 1][j0 + 1] * currentValue[i0][j0];
+                    const double prodOther = currentValue[i0 + 1][j0] * currentValue[i0][j0 + 1];
+                    const double denom = prodMain + prodOther;
+                    if (denom == 0.0 || !std::isfinite(denom)) {
+                        throw std::runtime_error("Degenerate creation probability denominator");
+                    }
+                    const double probability = boundedProbability(prodMain / denom);
+                    primaryDecision = shuffleRng.next_double() < probability;
+                    secondaryDecision = secondary ? (shuffleRng.next_double() < probability) : primaryDecision;
                 }
 
-                B.at(i, j) = a1_val / a2_val;
-                C.at(i, j) = a1_exp - a2_exp;
-            }
-        }
-
-        A1.push_back(B);
-        A2.push_back(C);
-        emscripten_sleep(0);
-    }
-
-    return {A1, A2};
-}
-
-// probsslim: outputs the probabilities needed for creation steps
-vector<MatrixDouble> probsslim(const MatrixDouble& x1) {
-    auto [a1, a2] = d3pslim(x1);
-    int n = a1.size();
-    vector<MatrixDouble> A;
-
-    for (int k = 0; k < n; k++) {
-        int size = k + 1;
-        MatrixDouble C(size, size, 0.0);
-
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                double exp1 = a2[n-k-1].at(2*i, 2*j) + a2[n-k-1].at(2*i+1, 2*j+1);
-                double exp2 = a2[n-k-1].at(2*i+1, 2*j) + a2[n-k-1].at(2*i, 2*j+1);
-
-                if (exp1 > exp2) {
-                    C.at(i, j) = 0.0;
-                } else if (exp1 < exp2) {
-                    C.at(i, j) = 1.0;
-                } else {
-                    double num = a1[n-k-1].at(2*i+1, 2*j+1) * a1[n-k-1].at(2*i, 2*j);
-                    double den = num + a1[n-k-1].at(2*i+1, 2*j) * a1[n-k-1].at(2*i, 2*j+1);
-                    C.at(i, j) = num / den;
+                primary.set(rows, i, j, primaryDecision);
+                if (secondary) {
+                    secondary->set(rows, i, j, secondaryDecision);
                 }
             }
         }
-        A.push_back(C);
-    }
 
-    return A;
+        const int nextSize = size - 2;
+        if (nextSize == 0) {
+            progressCounter = progressEnd;
+            emscripten_sleep(0);
+            break;
+        }
+
+        nextValue.reset(nextSize, nextSize, 0.0);
+        nextExp.reset(nextSize, nextSize, 0);
+        double nextMaxAbs = 0.0;
+
+        for (int i = 0; i < nextSize; ++i) {
+            for (int j = 0; j < nextSize; ++j) {
+                const int ii = i + 2 * (i & 1);
+                const int jj = j + 2 * (j & 1);
+
+                const double current = currentValue[ii][jj];
+                const double diag = currentValue[i + 1][j + 1];
+                const double right = currentValue[ii][j + 1];
+                const double down = currentValue[i + 1][jj];
+
+                const int currentFlag = currentExp[ii][jj];
+                const int diagFlag = currentExp[i + 1][j + 1];
+                const int rightFlag = currentExp[ii][j + 1];
+                const int downFlag = currentExp[i + 1][jj];
+
+                const int expMain = currentFlag + diagFlag;
+                const int expOther = rightFlag + downFlag;
+                double denominator;
+                int denominatorExp;
+
+                if (expMain == expOther) {
+                    denominator = current * diag + right * down;
+                    denominatorExp = expMain;
+                } else if (expMain < expOther) {
+                    denominator = current * diag;
+                    denominatorExp = expMain;
+                } else {
+                    denominator = right * down;
+                    denominatorExp = expOther;
+                }
+
+                if (denominator == 0.0 || !std::isfinite(denominator)) {
+                    throw std::runtime_error("Degenerate square-move denominator");
+                }
+
+                nextValue[i][j] = current / denominator;
+                nextExp[i][j] = currentFlag - denominatorExp;
+                nextMaxAbs = std::max(nextMaxAbs, std::fabs(nextValue[i][j]));
+            }
+        }
+
+        normalizeMatrixIfNeeded(nextValue, nextMaxAbs);
+
+        std::swap(currentValue, nextValue);
+        std::swap(currentExp, nextExp);
+
+        if ((rows & 15) == 0 || rows == 1) {
+            setProgressInRange(progressStart, progressEnd, levels - rows + 1, levels);
+            emscripten_sleep(0);
+        }
+    }
 }
 
-// delslideslim: deletion and sliding step
-MatrixInt delslideslim(const MatrixInt& x1) {
-    int n = x1.size();
-    int m = n / 2;
-    MatrixInt a0(n + 2, n + 2, 0);
+static void delslideInPlace(MatrixInt& out, const MatrixInt& in) {
+    const int n = in.size();
+    out.reset(n + 2, n + 2, 0);
 
-    // Copy interior
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            a0.at(i+1, j+1) = x1.at(i, j);
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            out[i + 1][j + 1] = in[i][j];
         }
     }
 
-    // Deletion step
-    for (int i = 0; i < m; i++) {
-        for (int j = 0; j < m; j++) {
-            if (a0.at(2*i, 2*j) == 1 && a0.at(2*i+1, 2*j+1) == 1) {
-                a0.at(2*i, 2*j) = 0;
-                a0.at(2*i+1, 2*j+1) = 0;
-            } else if (a0.at(2*i, 2*j+1) == 1 && a0.at(2*i+1, 2*j) == 1) {
-                a0.at(2*i+1, 2*j) = 0;
-                a0.at(2*i, 2*j+1) = 0;
+    const int half = n / 2;
+    for (int i = 0; i < half; ++i) {
+        for (int j = 0; j < half; ++j) {
+            const int i2 = i << 1;
+            const int j2 = j << 1;
+            if (out[i2][j2] == 1 && out[i2 + 1][j2 + 1] == 1) {
+                out[i2][j2] = 0;
+                out[i2 + 1][j2 + 1] = 0;
+            } else if (out[i2][j2 + 1] == 1 && out[i2 + 1][j2] == 1) {
+                out[i2 + 1][j2] = 0;
+                out[i2][j2 + 1] = 0;
             }
         }
     }
 
-    // Sliding step
-    for (int i = 0; i <= m; i++) {
-        for (int j = 0; j <= m; j++) {
-            if (a0.at(2*i+1, 2*j+1) == 1) {
-                a0.at(2*i, 2*j) = 1;
-                a0.at(2*i+1, 2*j+1) = 0;
-            } else if (a0.at(2*i, 2*j) == 1) {
-                a0.at(2*i, 2*j) = 0;
-                a0.at(2*i+1, 2*j+1) = 1;
-            } else if (a0.at(2*i+1, 2*j) == 1) {
-                a0.at(2*i, 2*j+1) = 1;
-                a0.at(2*i+1, 2*j) = 0;
-            } else if (a0.at(2*i, 2*j+1) == 1) {
-                a0.at(2*i+1, 2*j) = 1;
-                a0.at(2*i, 2*j+1) = 0;
+    for (int i = 0; i < half + 1; ++i) {
+        for (int j = 0; j < half + 1; ++j) {
+            const int i2 = i << 1;
+            const int j2 = j << 1;
+            if (out[i2 + 1][j2 + 1] == 1) {
+                out[i2][j2] = 1;
+                out[i2 + 1][j2 + 1] = 0;
+            } else if (out[i2][j2] == 1) {
+                out[i2][j2] = 0;
+                out[i2 + 1][j2 + 1] = 1;
+            } else if (out[i2 + 1][j2] == 1) {
+                out[i2][j2 + 1] = 1;
+                out[i2 + 1][j2] = 0;
+            } else if (out[i2][j2 + 1] == 1) {
+                out[i2 + 1][j2] = 1;
+                out[i2][j2 + 1] = 0;
             }
         }
     }
-
-    return a0;
 }
 
-// createslim: creation step with probabilities
-MatrixInt createslim(MatrixInt& x0, const MatrixDouble& p) {
-    int n = x0.size();
-    int m = n / 2;
-    std::uniform_real_distribution<> uniform(0.0, 1.0);
+static void createStepInPlace(MatrixInt& config, const PackedDecisionPyramid& decisions, int rows) {
+    const int n = config.size();
+    const int half = n / 2;
 
-    for (int i = 0; i < m; i++) {
-        for (int j = 0; j < m; j++) {
-            // Check if 2x2 block is empty
-            if (x0.at(2*i, 2*j) == 0 && x0.at(2*i+1, 2*j) == 0 &&
-                x0.at(2*i, 2*j+1) == 0 && x0.at(2*i+1, 2*j+1) == 0) {
+    for (int i = 0; i < half; ++i) {
+        for (int j = 0; j < half; ++j) {
+            const int i2 = i << 1;
+            const int j2 = j << 1;
 
-                bool a1 = true, a2 = true, a3 = true, a4 = true;
+            if (config[i2][j2] == 0 && config[i2 + 1][j2] == 0 &&
+                config[i2][j2 + 1] == 0 && config[i2 + 1][j2 + 1] == 0) {
 
-                // Check left
+                bool leftClear = true;
+                bool rightClear = true;
+                bool topClear = true;
+                bool bottomClear = true;
+
                 if (j > 0) {
-                    a1 = (x0.at(2*i, 2*j-1) == 0) && (x0.at(2*i+1, 2*j-1) == 0);
+                    leftClear = config[i2][j2 - 1] == 0 && config[i2 + 1][j2 - 1] == 0;
                 }
-
-                // Check right
-                if (j < m - 1) {
-                    a2 = (x0.at(2*i, 2*j+2) == 0) && (x0.at(2*i+1, 2*j+2) == 0);
+                if (j < half - 1) {
+                    rightClear = config[i2][j2 + 2] == 0 && config[i2 + 1][j2 + 2] == 0;
                 }
-
-                // Check top
                 if (i > 0) {
-                    a3 = (x0.at(2*i-1, 2*j) == 0) && (x0.at(2*i-1, 2*j+1) == 0);
+                    topClear = config[i2 - 1][j2] == 0 && config[i2 - 1][j2 + 1] == 0;
+                }
+                if (i < half - 1) {
+                    bottomClear = config[i2 + 2][j2] == 0 && config[i2 + 2][j2 + 1] == 0;
                 }
 
-                // Check bottom
-                if (i < m - 1) {
-                    a4 = (x0.at(2*i+2, 2*j) == 0) && (x0.at(2*i+2, 2*j+1) == 0);
-                }
-
-                if (a1 && a2 && a3 && a4) {
-                    if (uniform(rng) < p.at(i, j)) {
-                        x0.at(2*i, 2*j) = 1;
-                        x0.at(2*i+1, 2*j+1) = 1;
+                if (leftClear && rightClear && topClear && bottomClear) {
+                    if (decisions.get(rows, i, j)) {
+                        config[i2][j2] = 1;
+                        config[i2 + 1][j2 + 1] = 1;
                     } else {
-                        x0.at(2*i+1, 2*j) = 1;
-                        x0.at(2*i, 2*j+1) = 1;
+                        config[i2 + 1][j2] = 1;
+                        config[i2][j2 + 1] = 1;
                     }
                 }
             }
         }
     }
-
-    return x0;
 }
 
-// aztecgenslim: generates an Aztec diamond using probabilities
-MatrixInt aztecgenslim(const vector<MatrixDouble>& x0) {
-    int n = x0.size();
-    std::uniform_real_distribution<> uniform(0.0, 1.0);
+static MatrixInt aztecgen(const PackedDecisionPyramid& decisions, int progressStart = 20, int progressEnd = 95) {
+    const int levels = decisions.levels;
+    if (levels <= 0) {
+        return MatrixInt();
+    }
 
-    MatrixInt a1(2, 2, 0);
-    if (uniform(rng) < x0[0].at(0, 0)) {
-        a1.at(0, 0) = 1; a1.at(0, 1) = 0;
-        a1.at(1, 0) = 0; a1.at(1, 1) = 1;
+    MatrixInt bufferA((levels << 1) + 2, (levels << 1) + 2, 0);
+    MatrixInt bufferB((levels << 1) + 2, (levels << 1) + 2, 0);
+
+    bufferA.reset(2, 2, 0);
+    if (decisions.get(1, 0, 0)) {
+        bufferA[0][0] = 1;
+        bufferA[1][1] = 1;
     } else {
-        a1.at(0, 0) = 0; a1.at(0, 1) = 1;
-        a1.at(1, 0) = 1; a1.at(1, 1) = 0;
+        bufferA[0][1] = 1;
+        bufferA[1][0] = 1;
     }
 
-    for (int i = 0; i < n - 1; i++) {
-        a1 = delslideslim(a1);
-        a1 = createslim(a1, x0[i+1]);
-        emscripten_sleep(0);
+    MatrixInt* current = &bufferA;
+    MatrixInt* next = &bufferB;
+    const int totalIterations = levels - 1;
+
+    for (int i = 0; i < totalIterations; ++i) {
+        delslideInPlace(*next, *current);
+        createStepInPlace(*next, decisions, i + 2);
+        std::swap(current, next);
+
+        if (((i + 1) & 15) == 0 || i + 1 == totalIterations) {
+            setProgressInRange(progressStart, progressEnd, i + 1, totalIterations);
+            emscripten_sleep(0);
+        }
     }
 
-    return a1;
+    progressCounter = progressEnd;
+    return std::move(*current);
 }
 
-// The EKLP shuffler takes EDGE WEIGHTS directly in ab_gamma format:
-//   - Even rows (i % 2 == 0): actual edge weights
-//   - Odd rows (i % 2 == 1): all 1.0
-// NO cross-ratio computation needed - just pass edge weights!
+static void appendJsonNumber(string& json, double value) {
+    char buf[32];
+    const int len = std::snprintf(buf, sizeof(buf), "%.15g", value);
+    if (len > 0) {
+        json.append(buf, static_cast<size_t>(len));
+    }
+}
 
-// Generate Gamma EDGE WEIGHTS for EKLP shuffling (Duits-Van Peski model)
-// EXACTLY matches ab_gamma from 2025-11-18-double-dimer-gamma.cpp
-//
-// Pattern:
-//   - Even rows (i % 2 == 0): edge weights - Gamma(beta) at j even, Gamma(alpha) at j odd
-//   - Odd rows (i % 2 == 1): all 1.0
-MatrixDouble generateGammaEdgeWeights(int n, double alpha, double beta) {
-    std::gamma_distribution<> gamma_a(alpha, 1.0);
-    std::gamma_distribution<> gamma_b(beta, 1.0);
+static void appendDominoJSON(string& json, bool& first, double x, double y, double w, double h, const char* color) {
+    if (!first) {
+        json.push_back(',');
+    } else {
+        first = false;
+    }
 
-    int dim = 2 * n;
-    MatrixDouble A(dim, dim, 1.0);  // Initialize all to 1.0
+    json += "{\"x\":";
+    appendJsonNumber(json, x);
+    json += ",\"y\":";
+    appendJsonNumber(json, y);
+    json += ",\"w\":";
+    appendJsonNumber(json, w);
+    json += ",\"h\":";
+    appendJsonNumber(json, h);
+    json += ",\"color\":\"";
+    json += color;
+    json += "\"}";
+}
 
-    for (int i = 0; i < dim; i++) {
-        if (i % 2 == 0) {  // EVEN ROWS ONLY (matching ab_gamma exactly)
-            for (int j = 0; j < dim; j++) {
-                if (j % 2 == 0) {
-                    A.at(i, j) = gamma_b(rng);  // beta
-                } else {
-                    A.at(i, j) = gamma_a(rng);  // alpha
-                }
+static bool appendStandardDominoFromMarker(string& json, bool& first, int i, int j, int size) {
+    const bool oddI = i & 1;
+    const bool oddJ = j & 1;
+    double x;
+    double y;
+    double w;
+    double h;
+    const char* color;
+
+    if (oddI && oddJ) {
+        color = "blue";
+        x = j - i - 2;
+        y = size + 1 - (i + j) - 1;
+        w = 4;
+        h = 2;
+    } else if (oddI && !oddJ) {
+        color = "yellow";
+        x = j - i - 1;
+        y = size + 1 - (i + j) - 2;
+        w = 2;
+        h = 4;
+    } else if (!oddI && !oddJ) {
+        color = "green";
+        x = j - i - 2;
+        y = size + 1 - (i + j) - 1;
+        w = 4;
+        h = 2;
+    } else if (!oddI && oddJ) {
+        color = "red";
+        x = j - i - 1;
+        y = size + 1 - (i + j) - 2;
+        w = 2;
+        h = 4;
+    } else {
+        return false;
+    }
+
+    appendDominoJSON(json, first, x, y, w, h, color);
+    return true;
+}
+
+static void appendDominoConfig(string& json, const MatrixInt& config) {
+    bool first = true;
+    const int size = config.size();
+
+    for (int i = 0; i < size; ++i) {
+        for (int j = 0; j < size; ++j) {
+            if (config[i][j] == 1) {
+                appendStandardDominoFromMarker(json, first, i, j, size);
             }
         }
-        // Odd rows stay 1.0 (already initialized)
     }
-    return A;
 }
 
-// Generate k×l periodic EDGE WEIGHTS for EKLP shuffling
-// Same structure as ab_gamma: even rows have edge weights, odd rows = 1.0
-//
-// Edge types on black faces (like T-embedding):
-//   α = bottom edge, β = right edge, γ = left edge, 1 = top edge
-//
-// In the EKLP matrix format:
-//   - Even rows: edge weights based on position
-//   - Odd rows: 1.0
-//
-// Pattern matching ab_gamma structure:
-//   j % 4 == 0: beta (right edge type)
-//   j % 4 == 1: alpha (bottom edge type)
-//   j % 4 == 2: gamma (left edge type)
-//   j % 4 == 3: 1.0 (top edge type)
-MatrixDouble generatePeriodicEdgeWeights(int n, int k, int l,
-                                          double* alphaWeights,
-                                          double* betaWeights,
-                                          double* gammaWeights) {
-    int dim = 2 * n;
-    MatrixDouble A(dim, dim, 1.0);
+static string serializeDominoConfig(const MatrixInt& config) {
+    const int size = config.size();
+    string json;
+    json.reserve(std::max<size_t>(2, static_cast<size_t>(size) * static_cast<size_t>(size) * 24));
+    json.push_back('[');
+    appendDominoConfig(json, config);
+    json.push_back(']');
+    return json;
+}
 
-    for (int i = 0; i < dim; i++) {
-        if (i % 2 == 0) {  // Even rows only (like ab_gamma)
-            for (int j = 0; j < dim; j++) {
-                // Compute periodic indices
-                int diagI = (i / 2);
-                int diagJ = j / 2;  // Group by 2 since we have 4 edge types per period
+static string serializeDoubleDimerConfig(const MatrixInt& config1, const MatrixInt& config2) {
+    const int size = std::max(config1.size(), config2.size());
+    string json;
+    json.reserve(std::max<size_t>(32, static_cast<size_t>(size) * static_cast<size_t>(size) * 48));
+    json += "{\"config1\":[";
+    appendDominoConfig(json, config1);
+    json += "],\"config2\":[";
+    appendDominoConfig(json, config2);
+    json += "]}";
+    return json;
+}
 
-                int pi = ((diagI % k) + k) % k;
-                int pj = ((diagJ % l) + l) % l;
+static char* makeCString(const string& value) {
+    char* out = static_cast<char*>(std::malloc(value.size() + 1));
+    if (!out) {
+        return nullptr;
+    }
+    std::memcpy(out, value.c_str(), value.size() + 1);
+    return out;
+}
 
-                // Alternate edge types like ab_gamma alternates alpha/beta
-                if (j % 2 == 0) {
-                    // j even → beta weight
-                    A.at(i, j) = betaWeights[pi * l + pj];
-                } else {
-                    // j odd → alpha weight
-                    A.at(i, j) = alphaWeights[pi * l + pj];
-                }
-                // Note: gamma weights affect the T-embedding but in ab_gamma format
-                // they're incorporated differently - multiply into the pattern
-                // For now, we use alpha/beta pattern like ab_gamma
+static string escapeJsonString(const string& value) {
+    string escaped;
+    escaped.reserve(value.size());
+    for (char c : value) {
+        switch (c) {
+            case '"':
+            case '\\':
+                escaped.push_back('\\');
+                escaped.push_back(c);
+                break;
+            case '\n':
+                escaped += "\\n";
+                break;
+            case '\r':
+                escaped += "\\r";
+                break;
+            case '\t':
+                escaped += "\\t";
+                break;
+            default:
+                escaped.push_back(c);
+                break;
+        }
+    }
+    return escaped;
+}
+
+static char* makeErrorCString(const string& message) {
+    string error = string("{\"error\":\"") + escapeJsonString(message) + "\"}";
+    return makeCString(error);
+}
+
+static MatrixDouble copyWeightMatrixFromPointer(int n, const double* weights) {
+    if (!weights) {
+        throw std::runtime_error("Weight pointer is null");
+    }
+
+    const int dim = 2 * n;
+    MatrixDouble matrix(dim, dim, 1.0);
+    for (int i = 0; i < dim; ++i) {
+        for (int j = 0; j < dim; ++j) {
+            matrix[i][j] = weights[static_cast<size_t>(i) * static_cast<size_t>(dim) + static_cast<size_t>(j)];
+        }
+    }
+    return matrix;
+}
+
+static MatrixDouble generateGammaEdgeWeights(int n, double alpha, double beta) {
+    if (!(alpha > 0.0) || !(beta > 0.0) || !std::isfinite(alpha) || !std::isfinite(beta)) {
+        throw std::runtime_error("Gamma alpha and beta must be positive finite values");
+    }
+
+    std::gamma_distribution<double> gammaAlpha(alpha, 1.0);
+    std::gamma_distribution<double> gammaBeta(beta, 1.0);
+
+    const int dim = 2 * n;
+    MatrixDouble weights(dim, dim, 1.0);
+
+    for (int i = 0; i < dim; ++i) {
+        if ((i & 1) == 0) {
+            for (int j = 0; j < dim; ++j) {
+                weights[i][j] = ((j & 1) == 0) ? gammaBeta(shuffleRng) : gammaAlpha(shuffleRng);
             }
         }
-        // Odd rows stay 1.0
     }
-    return A;
+
+    return weights;
 }
 
-// Generate IID EDGE WEIGHTS for EKLP shuffling
-// ALL edges are random: α, β, γ, δ (all four edge types)
-// This means ALL positions in the matrix get random values
-MatrixDouble generateIIDEdgeWeights(int n, double* randomValues) {
-    int dim = 2 * n;
-    MatrixDouble A(dim, dim, 1.0);
-    int idx = 0;
+static MatrixDouble generatePeriodicEdgeWeights(
+    int n,
+    int k,
+    int l,
+    const double* alphaWeights,
+    const double* betaWeights,
+    const double* gammaWeights) {
 
-    // ALL rows and ALL columns get random values
-    for (int i = 0; i < dim; i++) {
-        for (int j = 0; j < dim; j++) {
-            A.at(i, j) = randomValues[idx++];
+    if (k < 1 || l < 1) {
+        throw std::runtime_error("Periodic dimensions must be positive");
+    }
+    if (!alphaWeights || !betaWeights || !gammaWeights) {
+        throw std::runtime_error("Periodic weight pointer is null");
+    }
+
+    const int dim = 2 * n;
+    MatrixDouble weights(dim, dim, 1.0);
+
+    for (int cellI = 0; cellI < n; ++cellI) {
+        for (int cellJ = 0; cellJ < n; ++cellJ) {
+            const int pi = ((cellI % k) + k) % k;
+            const int pj = ((cellJ % l) + l) % l;
+            const size_t idx = static_cast<size_t>(pi) * static_cast<size_t>(l) + static_cast<size_t>(pj);
+            const double alpha = alphaWeights[idx];
+            const double beta = betaWeights[idx];
+            const double gamma = gammaWeights[idx];
+            if (!std::isfinite(alpha) || !std::isfinite(beta) || !std::isfinite(gamma)) {
+                throw std::runtime_error("Periodic weights must be finite");
+            }
+            if (alpha <= 0.0 || beta <= 0.0 || gamma <= 0.0) {
+                throw std::runtime_error("Periodic weights must be positive");
+            }
+
+            const int row = 2 * cellI;
+            const int col = 2 * cellJ;
+            weights[row][col + 1] = alpha;
+            weights[row][col] = beta;
+            weights[row + 1][col] = gamma;
         }
     }
-    return A;
+
+    return weights;
+}
+
+static string runSingleSampleJSON(const MatrixDouble& weights) {
+    PackedDecisionPyramid decisions;
+    computeDecisionPyramids(weights, decisions, nullptr, 0, 20);
+    MatrixInt dominoConfig = aztecgen(decisions, 20, 95);
+    progressCounter = 100;
+    emscripten_sleep(0);
+    return serializeDominoConfig(dominoConfig);
+}
+
+static string runDoubleDimerSampleJSON(const MatrixDouble& weights) {
+    PackedDecisionPyramid decisions1;
+    PackedDecisionPyramid decisions2;
+    computeDecisionPyramids(weights, decisions1, &decisions2, 0, 20);
+
+    MatrixInt dominoConfig1 = aztecgen(decisions1, 20, 57);
+    MatrixInt dominoConfig2 = aztecgen(decisions2, 57, 95);
+
+    progressCounter = 100;
+    emscripten_sleep(0);
+    return serializeDoubleDimerConfig(dominoConfig1, dominoConfig2);
+}
+
+static char* returnJSON(const string& json) {
+    char* out = makeCString(json);
+    if (!out) {
+        throw std::runtime_error("Failed to allocate memory for output");
+    }
+    return out;
+}
+
+static char* returnError(const std::exception& e) {
+    progressCounter = 100;
+    return makeErrorCString(e.what());
 }
 
 extern "C" {
 
-// Simulate with IID edge weights (pre-generated in JS)
 EMSCRIPTEN_KEEPALIVE
 char* simulateAztecIIDDirect(int n, double* edgeWeights) {
     try {
         progressCounter = 0;
-        if (n > 500) n = 500;
-
-        // Generate edge weight matrix from pre-generated random values
-        MatrixDouble A1a = generateIIDEdgeWeights(n, edgeWeights);
-
+        n = checkedN(n);
+        MatrixDouble weights = copyWeightMatrixFromPointer(n, edgeWeights);
         emscripten_sleep(0);
-
-        vector<MatrixDouble> prob = probsslim(A1a);
-        progressCounter = 10;
-        emscripten_sleep(0);
-
-        MatrixInt dominoConfig = aztecgenslim(prob);
-        progressCounter = 90;
-        emscripten_sleep(0);
-
-        ostringstream oss;
-        oss << "[";
-        int size = dominoConfig.size();
-        bool first = true;
-
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (dominoConfig.at(i, j) == 1) {
-                    double x, y, w, h;
-                    string color;
-                    bool oddI = (i & 1), oddJ = (j & 1);
-
-                    if (oddI && oddJ) {
-                        color = "blue"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
-                    } else if (oddI && !oddJ) {
-                        color = "yellow"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
-                    } else if (!oddI && !oddJ) {
-                        color = "green"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
-                    } else {
-                        color = "red"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
-                    }
-
-                    if (!first) oss << ",";
-                    else first = false;
-                    oss << "{\"x\":" << x << ",\"y\":" << y
-                        << ",\"w\":" << w << ",\"h\":" << h
-                        << ",\"color\":\"" << color << "\"}";
-                }
-            }
-        }
-
-        oss << "]";
-        progressCounter = 100;
-
-        string json = oss.str();
-        char* out = (char*)malloc(json.size() + 1);
-        if (!out) throw std::runtime_error("Memory allocation failed");
-        strcpy(out, json.c_str());
-        return out;
-
+        return returnJSON(runSingleSampleJSON(weights));
     } catch (const std::exception& e) {
-        std::string errorMsg = std::string("{\"error\":\"") + e.what() + "\"}";
-        char* out = (char*)malloc(errorMsg.size() + 1);
-        if (out) strcpy(out, errorMsg.c_str());
-        progressCounter = 100;
-        return out;
+        return returnError(e);
     }
 }
 
-// Simulate with k×l periodic edge weights
-// alphaWeights, betaWeights, gammaWeights are k*l arrays for the periodic pattern
 EMSCRIPTEN_KEEPALIVE
-char* simulateAztecPeriodicDirect(int n, int k, int l,
-                                   double* alphaWeights,
-                                   double* betaWeights,
-                                   double* gammaWeights) {
+char* simulateAztecPeriodicDirect(
+    int n,
+    int k,
+    int l,
+    double* alphaWeights,
+    double* betaWeights,
+    double* gammaWeights) {
+
     try {
         progressCounter = 0;
-
-        // Hard limit: N <= 500
-        if (n > 500) n = 500;
-
-        // Generate periodic edge weights
-        MatrixDouble A1a = generatePeriodicEdgeWeights(n, k, l, alphaWeights, betaWeights, gammaWeights);
-
+        n = checkedN(n);
+        MatrixDouble weights = generatePeriodicEdgeWeights(n, k, l, alphaWeights, betaWeights, gammaWeights);
         emscripten_sleep(0);
-
-        // Compute probability matrices
-        vector<MatrixDouble> prob = probsslim(A1a);
-        progressCounter = 10;
-        emscripten_sleep(0);
-
-        // Generate domino configuration
-        MatrixInt dominoConfig = aztecgenslim(prob);
-        progressCounter = 90;
-        emscripten_sleep(0);
-
-        // Build JSON output
-        ostringstream oss;
-        oss << "[";
-        int size = dominoConfig.size();
-        bool first = true;
-
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (dominoConfig.at(i, j) == 1) {
-                    double x, y, w, h;
-                    string color;
-                    bool oddI = (i & 1), oddJ = (j & 1);
-
-                    if (oddI && oddJ) {
-                        color = "blue"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
-                    } else if (oddI && !oddJ) {
-                        color = "yellow"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
-                    } else if (!oddI && !oddJ) {
-                        color = "green"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
-                    } else {
-                        color = "red"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
-                    }
-
-                    if (!first) oss << ",";
-                    else first = false;
-                    oss << "{\"x\":" << x << ",\"y\":" << y
-                        << ",\"w\":" << w << ",\"h\":" << h
-                        << ",\"color\":\"" << color << "\"}";
-                }
-            }
-        }
-
-        oss << "]";
-        progressCounter = 100;
-
-        string json = oss.str();
-        char* out = (char*)malloc(json.size() + 1);
-        if (!out) throw std::runtime_error("Memory allocation failed");
-        strcpy(out, json.c_str());
-        return out;
-
+        return returnJSON(runSingleSampleJSON(weights));
     } catch (const std::exception& e) {
-        std::string errorMsg = std::string("{\"error\":\"") + e.what() + "\"}";
-        char* out = (char*)malloc(errorMsg.size() + 1);
-        if (out) strcpy(out, errorMsg.c_str());
-        progressCounter = 100;
-        return out;
+        return returnError(e);
     }
 }
 
-// Simulate with Gamma edge weights (Duits-Van Peski)
 EMSCRIPTEN_KEEPALIVE
 char* simulateAztecGammaDirect(int n, double alpha, double beta) {
     try {
         progressCounter = 0;
-
-        // Hard limit: N <= 500
-        if (n > 500) n = 500;
-
-        // Generate Gamma edge weights (ab_gamma pattern)
-        MatrixDouble A1a = generateGammaEdgeWeights(n, alpha, beta);
-
+        n = checkedN(n);
+        MatrixDouble weights = generateGammaEdgeWeights(n, alpha, beta);
         emscripten_sleep(0);
-
-        // Compute probability matrices
-        vector<MatrixDouble> prob = probsslim(A1a);
-        progressCounter = 10;
-        emscripten_sleep(0);
-
-        // Generate domino configuration
-        MatrixInt dominoConfig = aztecgenslim(prob);
-        progressCounter = 90;
-        emscripten_sleep(0);
-
-        // Build JSON output
-        ostringstream oss;
-        oss << "[";
-        int size = dominoConfig.size();
-        bool first = true;
-
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (dominoConfig.at(i, j) == 1) {
-                    double x, y, w, h;
-                    string color;
-                    bool oddI = (i & 1), oddJ = (j & 1);
-
-                    if (oddI && oddJ) {
-                        color = "blue"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
-                    } else if (oddI && !oddJ) {
-                        color = "yellow"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
-                    } else if (!oddI && !oddJ) {
-                        color = "green"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
-                    } else {
-                        color = "red"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
-                    }
-
-                    if (!first) oss << ",";
-                    else first = false;
-                    oss << "{\"x\":" << x << ",\"y\":" << y
-                        << ",\"w\":" << w << ",\"h\":" << h
-                        << ",\"color\":\"" << color << "\"}";
-                }
-            }
-        }
-
-        oss << "]";
-        progressCounter = 100;
-
-        string json = oss.str();
-        char* out = (char*)malloc(json.size() + 1);
-        if (!out) throw std::runtime_error("Memory allocation failed");
-        strcpy(out, json.c_str());
-        return out;
-
+        return returnJSON(runSingleSampleJSON(weights));
     } catch (const std::exception& e) {
-        std::string errorMsg = std::string("{\"error\":\"") + e.what() + "\"}";
-        char* out = (char*)malloc(errorMsg.size() + 1);
-        if (out) strcpy(out, errorMsg.c_str());
-        progressCounter = 100;
-        return out;
+        return returnError(e);
     }
 }
 
-// Double dimer simulation: generates two independent configurations from the same weights
-// Returns JSON: {"config1": [...], "config2": [...]}
 EMSCRIPTEN_KEEPALIVE
 char* simulateAztecDoubleDimer(int n, double* edgeWeights) {
     try {
         progressCounter = 0;
-        if (n > 500) n = 500;
-
-        int dim = 2 * n;
-
-        // Copy weights into MatrixDouble
-        MatrixDouble A1a(dim, dim, 1.0);
-        for (int i = 0; i < dim; ++i) {
-            for (int j = 0; j < dim; ++j) {
-                A1a.at(i, j) = edgeWeights[i * dim + j];
-            }
-        }
-
+        n = checkedN(n);
+        MatrixDouble weights = copyWeightMatrixFromPointer(n, edgeWeights);
         emscripten_sleep(0);
-
-        // Compute probability matrices (once, for both configs)
-        vector<MatrixDouble> prob = probsslim(A1a);
-        progressCounter = 5;
-        emscripten_sleep(0);
-
-        // Generate first domino configuration
-        MatrixInt dominoConfig1 = aztecgenslim(prob);
-        progressCounter = 45;
-        emscripten_sleep(0);
-
-        // Generate second independent domino configuration (same probabilities)
-        MatrixInt dominoConfig2 = aztecgenslim(prob);
-        progressCounter = 85;
-        emscripten_sleep(0);
-
-        // Helper lambda to append config to JSON
-        auto appendConfig = [](ostringstream& oss, const MatrixInt& config, int size, bool& first) {
-            for (int i = 0; i < size; i++) {
-                for (int j = 0; j < size; j++) {
-                    if (config.at(i, j) == 1) {
-                        double x, y, w, h;
-                        string color;
-                        bool oddI = (i & 1), oddJ = (j & 1);
-
-                        if (oddI && oddJ) {
-                            color = "blue"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
-                        } else if (oddI && !oddJ) {
-                            color = "yellow"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
-                        } else if (!oddI && !oddJ) {
-                            color = "green"; x = j - i - 2; y = size + 1 - (i + j) - 1; w = 4; h = 2;
-                        } else {
-                            color = "red"; x = j - i - 1; y = size + 1 - (i + j) - 2; w = 2; h = 4;
-                        }
-
-                        if (!first) oss << ",";
-                        else first = false;
-                        oss << "{\"x\":" << x << ",\"y\":" << y
-                            << ",\"w\":" << w << ",\"h\":" << h
-                            << ",\"color\":\"" << color << "\"}";
-                    }
-                }
-            }
-        };
-
-        // Build JSON output with both configs
-        ostringstream oss;
-        oss << "{\"config1\":[";
-        bool first = true;
-        appendConfig(oss, dominoConfig1, dominoConfig1.size(), first);
-        oss << "],\"config2\":[";
-        first = true;
-        appendConfig(oss, dominoConfig2, dominoConfig2.size(), first);
-        oss << "]}";
-
-        progressCounter = 100;
-
-        string json = oss.str();
-        char* out = (char*)malloc(json.size() + 1);
-        if (!out) throw std::runtime_error("Memory allocation failed");
-        strcpy(out, json.c_str());
-        return out;
-
+        return returnJSON(runDoubleDimerSampleJSON(weights));
     } catch (const std::exception& e) {
-        std::string errorMsg = std::string("{\"error\":\"") + e.what() + "\"}";
-        char* out = (char*)malloc(errorMsg.size() + 1);
-        if (out) strcpy(out, errorMsg.c_str());
-        progressCounter = 100;
-        return out;
+        return returnError(e);
     }
 }
 
 EMSCRIPTEN_KEEPALIVE
-char* simulateAztecWithWeightMatrix(int n, double* weights) {
+char* simulateAztecWithWeightMatrix(int n, double* weightsPtr) {
     try {
         progressCounter = 0;
-
-        // Hard limit: N <= 500 (enforced in JS, but cap here as safety)
-        // Memory constraint: algorithm uses O(N³) memory
-        if (n > 500) n = 500;
-
-        int dim = 2 * n;
-
-        // Copy weights into MatrixDouble
-        MatrixDouble A1a(dim, dim, 1.0);
-        for (int i = 0; i < dim; ++i) {
-            for (int j = 0; j < dim; ++j) {
-                A1a.at(i, j) = weights[i * dim + j];
-            }
-        }
-
+        n = checkedN(n);
+        MatrixDouble weights = copyWeightMatrixFromPointer(n, weightsPtr);
         emscripten_sleep(0);
-
-        // Compute probability matrices using slim version
-        vector<MatrixDouble> prob;
-        try {
-            prob = probsslim(A1a);
-        } catch (const std::exception& e) {
-            throw std::runtime_error("Error computing probability matrices");
-        }
-        progressCounter = 10;
-        emscripten_sleep(0);
-
-        // Generate domino configuration using slim version
-        MatrixInt dominoConfig;
-        try {
-            dominoConfig = aztecgenslim(prob);
-        } catch (const std::exception& e) {
-            throw std::runtime_error("Error generating domino configuration");
-        }
-
-        progressCounter = 90;
-        emscripten_sleep(0);
-
-        // Build JSON output
-        ostringstream oss;
-        oss << "[";
-        int size = dominoConfig.size();
-        bool first = true;
-
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (dominoConfig.at(i, j) == 1) {
-                    double x, y, w, h;
-                    string color;
-                    bool oddI = (i & 1), oddJ = (j & 1);
-
-                    if (oddI && oddJ) {
-                        color = "blue";
-                        x = j - i - 2;
-                        y = size + 1 - (i + j) - 1;
-                        w = 4; h = 2;
-                    } else if (oddI && !oddJ) {
-                        color = "yellow";
-                        x = j - i - 1;
-                        y = size + 1 - (i + j) - 2;
-                        w = 2; h = 4;
-                    } else if (!oddI && !oddJ) {
-                        color = "green";
-                        x = j - i - 2;
-                        y = size + 1 - (i + j) - 1;
-                        w = 4; h = 2;
-                    } else {
-                        color = "red";
-                        x = j - i - 1;
-                        y = size + 1 - (i + j) - 2;
-                        w = 2; h = 4;
-                    }
-
-                    if (!first) oss << ",";
-                    else first = false;
-                    oss << "{\"x\":" << x << ",\"y\":" << y
-                        << ",\"w\":" << w << ",\"h\":" << h
-                        << ",\"color\":\"" << color << "\"}";
-                }
-            }
-        }
-
-        oss << "]";
-        progressCounter = 100;
-        emscripten_sleep(0);
-
-        string json = oss.str();
-        char* out = (char*)malloc(json.size() + 1);
-        if (!out) throw std::runtime_error("Memory allocation failed");
-        strcpy(out, json.c_str());
-        return out;
-
+        return returnJSON(runSingleSampleJSON(weights));
     } catch (const std::exception& e) {
-        std::string errorMsg = std::string("{\"error\":\"") + e.what() + "\"}";
-        char* out = (char*)malloc(errorMsg.size() + 1);
-        if (out) strcpy(out, errorMsg.c_str());
-        progressCounter = 100;
-        return out;
+        return returnError(e);
     }
 }
 
 EMSCRIPTEN_KEEPALIVE
 void freeString(char* str) {
-    free(str);
+    std::free(str);
 }
 
 EMSCRIPTEN_KEEPALIVE
