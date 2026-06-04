@@ -717,7 +717,7 @@ function initLocalPatchesSim() {
             stopAutoRotate();
             if (!controls || !renderer || !camera) return;
 
-            const rotateSpeed = 0.0075;
+            const rotateSpeed = 0.015;
             let remainingAngle = Math.PI * 2;
 
             function rotate() {
