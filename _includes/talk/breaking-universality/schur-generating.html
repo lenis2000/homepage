@@ -24,10 +24,20 @@
                 <span class="cite">[Bufetov–P.–Zografos 2025]</span>:<br>
                 The <strong>annealed</strong> SGF has an explicit product form (\(M\) is the size of the Aztec diamond,
 								\(N\) is the level):
-                <div style="text-align: center; margin-top: 0.5vh; font-size: clamp(1.3rem, 2.2vw, 1.7rem);">
-                    \(\displaystyle S_{\rho_N}(x_1,\ldots,x_N)=\left(\mathbf E_{\mathcal B_M}\prod_{i=1}^N(1-\boldsymbol\beta+x_i\boldsymbol\beta)\right)^{M-N}\),
+                <div style="text-align: center; margin-top: 0.5vh; font-size: clamp(1.15rem, 1.9vw, 1.55rem);">
+                    \(\displaystyle
+                    \begin{aligned}
+                    S_{\rho_N}(x_1,\ldots,x_N)
+                    &= \operatorname{\mathbf E}_{\boldsymbol{\mathcal B}_M}
+                    \prod_{j=N+1}^{M}\prod_{i=1}^{N}
+                    (1-\boldsymbol\beta_j+x_i\boldsymbol\beta_j) \\
+                    &=\left(\operatorname{\mathbf E}_{\boldsymbol{\mathcal B}_M}
+                    \prod_{i=1}^{N}(1-\boldsymbol\beta+x_i\boldsymbol\beta)
+                    \right)^{M-N}.
+                    \end{aligned}
+                    \)
                 </div>
-                where \(\boldsymbol\beta\sim\mathcal B_M\), and the raw edge weight is \(W=\boldsymbol\beta/(1-\boldsymbol\beta)\). No moment assumptions on \(W\): it can be heavy-tailed.
+                where \(\boldsymbol\beta,\boldsymbol\beta_j\sim\boldsymbol{\mathcal B}_M\) are independent, and the raw edge weight is \(W=\boldsymbol\beta/(1-\boldsymbol\beta)\). No moment assumptions on \(W\): it can be heavy-tailed.
             </div>
 
             <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">
