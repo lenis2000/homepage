@@ -2994,7 +2994,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       generatedAt: new Date().toISOString(),
       cases: results
     };
-    console.info('[temb] shuffled sampler benchmark summary', summary);
     return summary;
   }
 

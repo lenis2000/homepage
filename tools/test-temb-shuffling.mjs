@@ -108,6 +108,7 @@ function checkPageSource() {
   assert(source.includes("window.tembSample3DDebugState"), "sample 3D debug state should be exposed for smoke tests");
   assert(source.includes("window.tembSampleHeightFunctionDebugState"), "height-function cache debug state should be exposed for smoke tests");
   assert(!source.includes("colorValue"), "sample 3D should not allocate per-domino colored materials");
+  assert(!source.includes("[temb] shuffled sampler benchmark summary"), "benchmark helper should not emit noisy console logging");
 
   for (const key of [
     "controlReadMs",
@@ -584,11 +585,141 @@ async function runBrowserSmoke() {
     assert(largeRendererSmoke.after.cacheVersion === largeRendererSmoke.before.cacheVersion, "zoom redraws should not invalidate the large-sample cache");
     assert(largeRendererSmoke.after.cacheKey === largeRendererSmoke.before.cacheKey, "zoom redraws should reuse the same large-sample cache key");
 
+    const sampleControlsSmoke = await evaluate(client, `(() => {
+      const renderer = window.tembSample2DRenderer;
+      const minLoopInput = document.getElementById("sample-min-loop-length");
+      const paletteSelect = document.getElementById("sample-palette-select");
+      const grayscale = document.getElementById("sample-grayscale-checkbox");
+      const before = {
+        cacheKey: renderer?.cacheKey || "",
+        cacheVersion: renderer?.cacheVersion || 0,
+        cacheValid: !!renderer?.cacheValid
+      };
+
+      if (minLoopInput) {
+        minLoopInput.value = "20";
+        minLoopInput.dispatchEvent(new Event("input", { bubbles: true }));
+        renderer?.renderNow();
+      }
+      const afterMinLoop = {
+        cacheKey: renderer?.cacheKey || "",
+        cacheVersion: renderer?.cacheVersion || 0,
+        cacheValid: !!renderer?.cacheValid,
+        minLoopValue: minLoopInput?.value || ""
+      };
+
+      const paletteCount = paletteSelect?.options?.length || 0;
+      const paletteBefore = paletteSelect?.value || "";
+      if (paletteCount > 1) {
+        const nextIndex = ((paletteSelect.selectedIndex || 0) + 1) % paletteCount;
+        paletteSelect.value = paletteSelect.options[nextIndex].value;
+        paletteSelect.dispatchEvent(new Event("change", { bubbles: true }));
+        renderer?.renderNow();
+      }
+      const afterPalette = {
+        cacheKey: renderer?.cacheKey || "",
+        cacheVersion: renderer?.cacheVersion || 0,
+        cacheValid: !!renderer?.cacheValid,
+        paletteBefore,
+        paletteAfter: paletteSelect?.value || "",
+        paletteCount
+      };
+
+      const grayscaleBefore = !!grayscale?.checked;
+      if (grayscale) {
+        grayscale.checked = !grayscale.checked;
+        grayscale.dispatchEvent(new Event("change", { bubbles: true }));
+        renderer?.renderNow();
+      }
+      const afterGrayscale = {
+        cacheKey: renderer?.cacheKey || "",
+        cacheVersion: renderer?.cacheVersion || 0,
+        cacheValid: !!renderer?.cacheValid,
+        grayscaleBefore,
+        grayscaleAfter: !!grayscale?.checked
+      };
+
+      let download = null;
+      const originalClick = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function() {
+        download = {
+          fileName: this.download,
+          hrefPrefix: String(this.href).slice(0, 22),
+          hrefLength: String(this.href).length
+        };
+      };
+      try {
+        document.getElementById("sample-export-png-btn")?.click();
+      } finally {
+        HTMLAnchorElement.prototype.click = originalClick;
+      }
+
+      return { before, afterMinLoop, afterPalette, afterGrayscale, download };
+    })()`);
+    assert(sampleControlsSmoke.before.cacheValid, "sample controls smoke should start from a valid cached large render");
+    assert(sampleControlsSmoke.afterMinLoop.cacheValid, "min-loop filtering change should render successfully");
+    assert(sampleControlsSmoke.afterMinLoop.minLoopValue === "20", "min-loop input should accept the tested filter value");
+    assert(sampleControlsSmoke.afterMinLoop.cacheVersion > sampleControlsSmoke.before.cacheVersion, "min-loop filtering should invalidate only the drawable/cache layer");
+    assert(sampleControlsSmoke.afterMinLoop.cacheKey.includes("|20|"), "min-loop filtering should be reflected in the renderer cache key");
+    assert(sampleControlsSmoke.afterPalette.cacheValid, "palette change should render successfully");
+    if (sampleControlsSmoke.afterPalette.paletteCount > 1) {
+      assert(sampleControlsSmoke.afterPalette.paletteAfter !== sampleControlsSmoke.afterPalette.paletteBefore, "palette smoke should exercise a different palette");
+      assert(sampleControlsSmoke.afterPalette.cacheKey !== sampleControlsSmoke.afterMinLoop.cacheKey, "palette change should refresh the renderer cache key");
+    }
+    assert(sampleControlsSmoke.afterGrayscale.cacheValid, "grayscale change should render successfully");
+    assert(sampleControlsSmoke.afterGrayscale.grayscaleAfter !== sampleControlsSmoke.afterGrayscale.grayscaleBefore, "grayscale smoke should toggle the control");
+    assert(sampleControlsSmoke.afterGrayscale.cacheKey !== sampleControlsSmoke.afterPalette.cacheKey, "grayscale change should refresh the renderer cache key");
+    assert(sampleControlsSmoke.download?.fileName === "domino-sample-N330.png", "sample PNG export should use the active sample size in the filename");
+    assert(sampleControlsSmoke.download?.hrefPrefix === "data:image/png;base64,", "sample PNG export should produce a PNG data URL");
+    assert(sampleControlsSmoke.download?.hrefLength > 1000, "sample PNG export data URL should not be empty");
+
     const heightCacheSmoke = await evaluate(client, `window.tembSampleHeightFunctionDebugState()`);
     assert(heightCacheSmoke.hasDoubleDimerSample, "height cache smoke should run after a double-dimer sample");
     assert(heightCacheSmoke.diffSize > 0, "height cache smoke should compute non-empty height differences");
     assert(heightCacheSmoke.sameReference, "height cache should return the same cached Map for unchanged double-dimer configurations");
     assert(heightCacheSmoke.cacheMatchesSamples, "height cache should be keyed to the active sampled configurations");
+
+    const heightPaneSmoke = await evaluate(client, `window.tembShuffledSamplerBenchmark({
+      cases: [
+        { n: 40, doubleDimer: true, label: "height pane smoke" }
+      ],
+      stopOnError: true,
+      restore: false
+    }).then(async benchmark => {
+      const waitFrames = count => new Promise(resolve => {
+        const step = () => {
+          if (count-- <= 0) resolve();
+          else requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
+      const button = document.getElementById("height-function-btn");
+      const container = document.getElementById("height-function-container");
+      const closeButton = document.getElementById("height-function-close-btn");
+      if (button && button.style.display !== "none") button.click();
+      await waitFrames(20);
+      const canvas = container?.querySelector("canvas");
+      const debug = window.tembSampleHeightFunctionDebugState();
+      const visible = container?.style.display !== "none";
+      const canvasState = {
+        width: canvas?.width || 0,
+        height: canvas?.height || 0
+      };
+      closeButton?.click();
+      await waitFrames(3);
+      return {
+        benchmark,
+        visible,
+        canvasState,
+        debug,
+        closed: container?.style.display === "none"
+      };
+    })`, 180000);
+    assert(heightPaneSmoke.benchmark.cases.length === 1 && heightPaneSmoke.benchmark.cases[0].status === "ok", "height pane smoke sample should pass");
+    assert(heightPaneSmoke.visible, "height-function pane should become visible in double-dimer mode");
+    assert(heightPaneSmoke.canvasState.width > 0 && heightPaneSmoke.canvasState.height > 0, "height-function pane should create a 3D canvas");
+    assert(heightPaneSmoke.debug.sameReference && heightPaneSmoke.debug.diffSize > 0, "height-function pane should use cached height differences");
+    assert(heightPaneSmoke.closed, "height-function pane close control should hide the pane");
 
     const sample3DSmoke = await evaluate(client, `window.tembShuffledSamplerBenchmark({
       cases: [
@@ -676,6 +807,90 @@ async function runBrowserSmoke() {
     })()`);
     assert(main3DSmoke.width > 0 && main3DSmoke.height > 0, "main T-embedding 3D canvas should have dimensions after sample 3D smoke");
     assert(main3DSmoke.nonBackground > 0, "main T-embedding 3D view should remain non-blank after sample 3D smoke");
+
+    const collateralSmoke = await evaluate(client, `(async () => {
+      const waitFrames = count => new Promise(resolve => {
+        const step = () => {
+          if (count-- <= 0) resolve();
+          else requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
+      const inspectCanvas = canvas => {
+        if (!canvas || canvas.width === 0 || canvas.height === 0) return { width: 0, height: 0, nonBackground: 0 };
+        const ctx = canvas.getContext("2d");
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        let nonBackground = 0;
+        for (let i = 0; i < data.length; i += 16) {
+          const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+          if (a !== 0 && !(r >= 245 && g >= 245 && b >= 245)) nonBackground++;
+        }
+        return { width: canvas.width, height: canvas.height, nonBackground };
+      };
+
+      const errors = [];
+      const errorHandler = event => errors.push(event.message || event.error?.message || "unknown error");
+      window.addEventListener("error", errorHandler);
+
+      const nInput = document.getElementById("n-input");
+      if (nInput && nInput.value !== "6") nInput.value = "6";
+      document.getElementById("compute-btn")?.click();
+      for (let i = 0; i < 120; i++) {
+        await waitFrames(1);
+        if (/^[0-9]+\\.[0-9]{2}s$/.test(document.getElementById("compute-time")?.textContent || "")) break;
+      }
+
+      const mainCanvas = document.getElementById("main-temb-2d-canvas");
+      const mainBeforeOrigami = inspectCanvas(mainCanvas);
+      const origami = document.getElementById("show-origami-chk");
+      const origamiBefore = !!origami?.checked;
+      if (origami) {
+        origami.checked = !origamiBefore;
+        origami.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      await waitFrames(3);
+      const mainAfterOrigami = inspectCanvas(mainCanvas);
+      if (origami) {
+        origami.checked = origamiBefore;
+        origami.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+
+      const stepwise = document.getElementById("stepwise-section");
+      if (stepwise) stepwise.open = true;
+      if (typeof renderStepwiseTemb === "function") renderStepwiseTemb();
+      await waitFrames(3);
+      const stepwiseCanvas = inspectCanvas(document.getElementById("stepwise-temb-canvas"));
+
+      const mathematica = document.getElementById("mathematica-section");
+      if (mathematica) mathematica.open = true;
+      document.getElementById("recompute-face-weights-btn")?.click();
+      document.getElementById("recompute-mathematica-btn")?.click();
+      await waitFrames(3);
+      const faceText = document.getElementById("face-weights-output")?.textContent || "";
+      const mathematicaText = document.getElementById("mathematica-output")?.textContent || "";
+      const verificationText = document.getElementById("verify-levels")?.textContent || "";
+      window.removeEventListener("error", errorHandler);
+
+      return {
+        computeTime: document.getElementById("compute-time")?.textContent || "",
+        mainBeforeOrigami,
+        mainAfterOrigami,
+        stepwiseCanvas,
+        faceText,
+        mathematicaText,
+        verificationText,
+        errors
+      };
+    })()`, 240000);
+    assert(/^[0-9]+\.[0-9]{2}s$/.test(collateralSmoke.computeTime), "compute button should recompute a small T-embedding");
+    assert(collateralSmoke.mainBeforeOrigami.nonBackground > 0, "main 2D T-embedding should remain non-blank");
+    assert(collateralSmoke.mainAfterOrigami.nonBackground > 0, "origami overlay toggle should keep the main 2D view non-blank");
+    assert(collateralSmoke.stepwiseCanvas.width > 0 && collateralSmoke.stepwiseCanvas.height > 0, "stepwise canvas should have dimensions for small n");
+    assert(collateralSmoke.stepwiseCanvas.nonBackground > 0, "stepwise section should render for small n");
+    assert(!/will appear|No T-embedding computed yet/i.test(collateralSmoke.faceText), "face-weight verification output should be populated");
+    assert(!/will appear|No T-embedding computed yet/i.test(collateralSmoke.mathematicaText), "Mathematica coordinate output should be populated");
+    assert(!/will appear/i.test(collateralSmoke.verificationText), "Mathematica verification section should be populated");
+    assert(collateralSmoke.errors.length === 0, `collateral T-embedding smoke should not report browser errors: ${collateralSmoke.errors.join("; ")}`);
 
     if (process.env.TEMB_SHUFFLED_BENCHMARK === "1") {
       const benchmark = await evaluate(client, `window.tembShuffledSamplerBenchmark({ stopOnError: false, restore: true })`, 900000);

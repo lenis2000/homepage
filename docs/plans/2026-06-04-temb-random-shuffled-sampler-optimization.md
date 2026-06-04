@@ -180,9 +180,9 @@ Mirror the protection added for `/domino/`.
 
 Validate the sampler and protect the T-embedding page from collateral changes.
 
-- [ ] Run `bundle exec jekyll build` and fix any warnings/errors caused by these edits.
-- [ ] Use a local server and browser to test the random sampler: single sample, double dimer, min-loop filtering, palette/grayscale, pan/zoom, PNG export, sample 3D toggle, and height-function pane.
-- [ ] Also spot-check unrelated T-embedding functionality: compute T-embedding, 2D/3D main toggle, origami checkbox, stepwise section for small n, and Mathematica verification for small n.
-- [ ] Run the benchmark helper from Task 1 and record before/after numbers for N=100, N=200, and N=330 cases.
-- [ ] Remove noisy debug logging while keeping useful opt-in benchmark helpers and visible elapsed seconds.
-- [ ] Confirm generated bundle `js/2025-12-11-t-embedding-shuffling.js` is committed with its C++ source.
+- [x] Run `bundle exec jekyll build` and fix any warnings/errors caused by these edits.
+- [x] Use a local server and browser to test the random sampler: single sample, double dimer, min-loop filtering, palette/grayscale, pan/zoom, PNG export, sample 3D toggle, and height-function pane.
+- [x] Also spot-check unrelated T-embedding functionality: compute T-embedding, 2D/3D main toggle, origami checkbox, stepwise section for small n, and Mathematica verification for small n.
+- [x] Run the benchmark helper from Task 1 and record before/after numbers for N=100, N=200, and N=330 cases.
+- [x] Remove noisy debug logging while keeping useful opt-in benchmark helpers and visible elapsed seconds.
+- [x] Confirm generated bundle `js/2025-12-11-t-embedding-shuffling.js` is committed with its C++ source.
