@@ -883,8 +883,6 @@ permalink: /domino/
   }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="{{site.url}}/js/colorschemes.js"></script>
@@ -1364,6 +1362,9 @@ Module.onRuntimeInitialized = async function() {
   // Three.js setup
   let scene, camera, renderer, controls, dominoGroup;
   let animationActive = true;
+  const THREE_JS_URL = "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js";
+  const ORBIT_CONTROLS_URL = "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js";
+  let threeJSLibraryPromise = null;
 
   // Simulation state
   let simulationActive = false;
@@ -1382,6 +1383,7 @@ Module.onRuntimeInitialized = async function() {
   window.glauberRunning = glauberRunning;
   let glauberTimer = null;
   let lastSampleWasGlauber = false; // Track if the *last* visualization update came from Glauber
+  let no3DUserChanged = false;
 
   function initializeDefaultPaneState() {
     const no3DCheckbox = document.getElementById("no-3d-checkbox");
@@ -1590,7 +1592,70 @@ Module.onRuntimeInitialized = async function() {
   let isDemoMode = false;
   let rotationSpeed = 0.005; // Speed of rotation in radians
 
+  function loadDominoScriptOnce(src, isReady, marker) {
+    if (isReady()) return Promise.resolve();
+
+    return new Promise((resolve, reject) => {
+      const selector = `script[data-domino-lazy-script="${marker}"]`;
+      const existing = document.querySelector(selector);
+      if (existing) {
+        if (existing.dataset.dominoLoaded === "true") {
+          reject(new Error(`Loaded ${src}, but the expected 3D API is unavailable`));
+          return;
+        }
+        if (existing.dataset.dominoLoadFailed === "true") {
+          reject(new Error(`Failed to load ${src}`));
+          return;
+        }
+        existing.addEventListener("load", () => resolve(), { once: true });
+        existing.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)), { once: true });
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      script.dataset.dominoLazyScript = marker;
+      script.addEventListener("load", () => {
+        script.dataset.dominoLoaded = "true";
+        resolve();
+      }, { once: true });
+      script.addEventListener("error", () => {
+        script.dataset.dominoLoadFailed = "true";
+        reject(new Error(`Failed to load ${src}`));
+      }, { once: true });
+      document.head.appendChild(script);
+    }).then(() => {
+      if (!isReady()) throw new Error(`Loaded ${src}, but the expected 3D API is unavailable`);
+    });
+  }
+
+  async function ensureThreeJSLibrary() {
+    if (window.THREE?.WebGLRenderer && window.THREE?.OrbitControls) return true;
+    if (!threeJSLibraryPromise) {
+      threeJSLibraryPromise = loadDominoScriptOnce(
+        THREE_JS_URL,
+        () => Boolean(window.THREE?.WebGLRenderer),
+        "three-core"
+      ).then(() => loadDominoScriptOnce(
+        ORBIT_CONTROLS_URL,
+        () => Boolean(window.THREE?.OrbitControls),
+        "three-orbit-controls"
+      )).catch(error => {
+        threeJSLibraryPromise = null;
+        throw error;
+      });
+    }
+
+    await threeJSLibraryPromise;
+    return Boolean(window.THREE?.WebGLRenderer && window.THREE?.OrbitControls);
+  }
+
   function initThreeJS() {
+    if (!window.THREE?.WebGLRenderer || !window.THREE?.OrbitControls) {
+      throw new Error("Three.js is not loaded");
+    }
+
     animationActive = true;
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf0f0f0);
@@ -1664,8 +1729,19 @@ Module.onRuntimeInitialized = async function() {
     dominoGroup.scale.set(1, 1, 1);
   }
 
-  function ensureThreeJSReady() {
+  async function ensureThreeJSReady() {
     if (isNo3DEnabled() || getActiveView() !== "3d") return false;
+    try {
+      await ensureThreeJSLibrary();
+    } catch (error) {
+      console.error("[domino] failed to load 3D renderer", error);
+      setProgressStatus(`Unable to load 3D renderer: ${error.message}`, {
+        immediate: true,
+        clearAfterMs: 5000
+      });
+      return false;
+    }
+
     if (!renderer || !scene || !camera || !controls || !dominoGroup) {
       initThreeJS();
       return Boolean(renderer && scene && camera && controls && dominoGroup);
@@ -1799,16 +1875,12 @@ Module.onRuntimeInitialized = async function() {
     }
   }
 
-  // Initialize Three.js only when the opt-in 3D path is active.
-  if (!document.getElementById("no-3d-checkbox")?.checked &&
-      document.getElementById("view-3d-btn")?.classList.contains("active")) {
-    initThreeJS();
-  } else {
-    animationActive = false;
-  }
+  // Keep the default path free of WebGL setup. The 3D button loads Three.js on demand.
+  animationActive = false;
 
   // Add a global function to easily reset Three.js if needed
-  window.resetThreeJS = function() {
+  window.resetThreeJS = async function() {
+    if (!(await ensureThreeJSReady())) return "3D unavailable";
 
     if (renderer) {
       renderer.dispose();
@@ -2246,7 +2318,7 @@ Module.onRuntimeInitialized = async function() {
       return false;
     }
 
-    if (!ensureThreeJSReady()) {
+    if (!(await ensureThreeJSReady())) {
       skipDominoTiming(profile, "heightFunctionMs", "3D unavailable");
       skipDominoTiming(profile, "render3DMs", "3D unavailable");
       return false;
@@ -2546,6 +2618,7 @@ Module.onRuntimeInitialized = async function() {
     return {
       n: document.getElementById("n-input")?.value,
       no3D: document.getElementById("no-3d-checkbox")?.checked,
+      no3DUserChanged,
       view: document.getElementById("view-2d-btn")?.classList.contains("active") ? "2d" : "3d",
       periodicity: currentPeriodicity()
     };
@@ -2629,14 +2702,14 @@ Module.onRuntimeInitialized = async function() {
         if (profile.status === "error" && options.stopOnError !== false) break;
       }
     } finally {
-      if (options.restore === true) {
+      if (options.restore === true || snapshot.no3DUserChanged) {
         restoreBenchmarkControls(snapshot);
       }
 
-      if (options.leaveNo3D !== false) {
+      if (options.leaveNo3D !== false && !snapshot.no3DUserChanged) {
         document.getElementById("no-3d-checkbox").checked = true;
       }
-      if (options.leaveView !== "current") {
+      if (options.leaveView !== "current" && !snapshot.no3DUserChanged) {
         setBenchmarkView("2d", true);
       }
 
@@ -3153,7 +3226,7 @@ Module.onRuntimeInitialized = async function() {
 
   // Camera movement controls
   document.getElementById("move-up-btn").addEventListener("click", function() {
-    if (!camera || !controls) return;
+    if (!camera || !controls || !window.THREE?.Vector3) return;
     // Move camera up relative to current view
     const moveAmount = 5;
     const upVector = new THREE.Vector3(0, 1, 0);
@@ -3164,7 +3237,7 @@ Module.onRuntimeInitialized = async function() {
   });
 
   document.getElementById("move-down-btn").addEventListener("click", function() {
-    if (!camera || !controls) return;
+    if (!camera || !controls || !window.THREE?.Vector3) return;
     // Move camera down relative to current view
     const moveAmount = 5;
     const upVector = new THREE.Vector3(0, 1, 0);
@@ -3175,7 +3248,7 @@ Module.onRuntimeInitialized = async function() {
   });
 
   document.getElementById("move-left-btn").addEventListener("click", function() {
-    if (!camera || !controls) return;
+    if (!camera || !controls || !window.THREE?.Vector3) return;
     // Move camera left relative to current view
     const moveAmount = 5;
     const rightVector = new THREE.Vector3(1, 0, 0);
@@ -3186,7 +3259,7 @@ Module.onRuntimeInitialized = async function() {
   });
 
   document.getElementById("move-right-btn").addEventListener("click", function() {
-    if (!camera || !controls) return;
+    if (!camera || !controls || !window.THREE?.Vector3) return;
     // Move camera right relative to current view
     const moveAmount = 5;
     const rightVector = new THREE.Vector3(1, 0, 0);
@@ -3255,7 +3328,7 @@ Module.onRuntimeInitialized = async function() {
       return;
     }
 
-    ensureThreeJSReady();
+    await ensureThreeJSReady();
   });
 
   // Global variable to track last rendered order value
@@ -4737,6 +4810,7 @@ Module.onRuntimeInitialized = async function() {
 
   // No 3D checkbox event listener
   document.getElementById("no-3d-checkbox").addEventListener("change", function() {
+    no3DUserChanged = true;
     const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
     if (is3DView) {
       // If we're in 3D view, trigger the 3D button click to update the display
@@ -4893,6 +4967,12 @@ Module.onRuntimeInitialized = async function() {
       event.preventDefault();
       document.getElementById('nextPaletteBtn').click();
       return;
+    }
+
+    const isArrowKey = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key);
+    if (isArrowKey) {
+      if (getActiveView() !== "3d" || !camera || !controls || !window.THREE?.Vector3) return;
+      event.preventDefault();
     }
 
     // Arrow keys for camera movement (in 3D view)

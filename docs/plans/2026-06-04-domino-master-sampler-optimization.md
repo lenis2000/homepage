@@ -123,11 +123,11 @@ Keep SVG/TikZ/PDF export capability, but make the interactive 2D display canvas-
 
 Do not optimize the 3D renderer in this plan. It is too slow to draw and should not be part of default loading, default checks, or default benchmarks.
 
-- [ ] Keep `No 3D (faster)` checked by default on page load and after benchmark cleanup unless the user explicitly changed it.
-- [ ] Keep the page in the 2D pane by default; do not initialize WebGL/Three.js during initial load or default sampling.
-- [ ] If the user clicks the 3D pane while `No 3D` is checked, show the existing disabled/no-3D message instead of rendering.
-- [ ] If the user explicitly unchecks `No 3D` and chooses 3D, the existing 3D renderer may run unchanged; do not implement batched 3D geometry or other 3D rendering optimization here.
-- [ ] Ensure automated smoke tests only verify that the opt-in 3D path is still reachable or properly disabled; do not benchmark 3D performance.
+- [x] Keep `No 3D (faster)` checked by default on page load and after benchmark cleanup unless the user explicitly changed it.
+- [x] Keep the page in the 2D pane by default; do not initialize WebGL/Three.js during initial load or default sampling.
+- [x] If the user clicks the 3D pane while `No 3D` is checked, show the existing disabled/no-3D message instead of rendering.
+- [x] If the user explicitly unchecks `No 3D` and chooses 3D, the existing 3D renderer may run unchanged; do not implement batched 3D geometry or other 3D rendering optimization here.
+- [x] Ensure automated smoke tests only verify that the opt-in 3D path is still reachable or properly disabled; do not benchmark 3D performance.
 
 ### Task 6: Final `/domino/` verification and cleanup
 
