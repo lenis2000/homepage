@@ -8,13 +8,20 @@ This plan is intentionally scoped only to `/domino/`. Do not touch the T-embeddi
 
 ## Runner Note
 
-This repository currently has a local `.ralphex/` setup customized for a single-file data-art project. Before executing this plan with ralphex, temporarily remove or rename `.ralphex/prompts/task.txt`, and run with `--external-review-tool=none --skip-finalize` unless the local config has been reset. This plan must not edit `data-art/triangle.html`.
+The repository-local `.ralphex/` overrides have been reset to defaults for this work. Execute this plan with the normal ralphex pipeline; do not use stale data-art review prompts or scripts. This plan must not edit `data-art/triangle.html`.
 
 ## Docker Tool Requirements
 
-If executing with ralphex Docker, the image must include Ruby/Bundler/Jekyll for `bundle exec jekyll build` and Emscripten `emcc`/`em++` for regenerating `s/domino.js`. It should also have bash, git, make, node, python3, and C++/native build deps for Ruby gems.
+If executing with ralphex Docker, the image must include Ruby/Bundler/Jekyll for `bundle exec jekyll build`, Emscripten `emcc`/`em++` for regenerating `s/domino.js`, and a headless browser for `/domino/` smoke tests. It should also have bash, git, make, node, python3, and C++/native build deps for Ruby gems.
 
-Checked local images on 2026-06-04: `ghcr.io/umputun/ralphex-go:latest`, `ghcr.io/umputun/ralphex:latest`, and `ralphex-latex:latest` have bash/git/make/node/python3, but are missing ruby/bundle/jekyll/emcc/em++/g++/clang++/cmake. Use host execution or a custom ralphex image before running this plan with Docker.
+Use the repository-specific image from `Dockerfile.ralphex-homepage`:
+
+```sh
+docker build -t ralphex-homepage:latest -f Dockerfile.ralphex-homepage .
+RALPHEX_IMAGE=ralphex-homepage:latest ralphex-dk docs/plans/2026-06-04-domino-master-sampler-optimization.md
+```
+
+As of 2026-06-04, `ralphex-homepage:latest` includes Ruby/Bundler/Jekyll, Emscripten `emcc`/`em++`, Alpine Chromium, and `agent-browser`; `AGENT_BROWSER_EXECUTABLE_PATH` is preset to `/usr/bin/chromium-browser`.
 
 ## Context
 
