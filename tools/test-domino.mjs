@@ -162,10 +162,14 @@ async function evaluateDominoWasm(client) {
           "number", "number", "number", "number", "number",
           "number", "number", "number", "number", "number"
         ];
+        const sampler6x2Args = [
+          "number", "number", "number", "number", "number", "number", "number",
+          "number", "number", "number", "number", "number", "number"
+        ];
         const freeString = Module.cwrap("freeString", null, ["number"]);
-        const callSampler = async (name, n) => {
-          const fn = Module.cwrap(name, "number", samplerArgs, { async: true });
-          const ptr = await fn(n, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        const callSampler = async (name, args, argTypes = samplerArgs) => {
+          const fn = Module.cwrap(name, "number", argTypes, { async: true });
+          const ptr = await fn(...args);
           if (!ptr) throw new Error(name + " returned a null pointer");
           try {
             return JSON.parse(Module.UTF8ToString(ptr));
@@ -173,6 +177,10 @@ async function evaluateDominoWasm(client) {
             freeString(ptr);
           }
         };
+        const callNineWeightSampler = (label, n, weights = Array(9).fill(0)) =>
+          callSampler(label, [n, ...weights], samplerArgs);
+        const call6x2Sampler = (n, weights) =>
+          callSampler("simulateAztec6x2", [n, ...weights], sampler6x2Args);
         const checkDominoes = (label, dominoes, n, orientation) => {
           const expected = n * (n + 1);
           if (!Array.isArray(dominoes)) throw new Error(label + " did not return an array");
@@ -201,12 +209,26 @@ async function evaluateDominoWasm(client) {
         };
 
         for (const n of [2, 4, 12, 50]) {
-          checkDominoes("frozen horizontal n=" + n, await callSampler("simulateAztecHorizontal", n), n, "horizontal");
-          checkDominoes("frozen vertical n=" + n, await callSampler("simulateAztecVertical", n), n, "vertical");
+          checkDominoes("frozen horizontal n=" + n, await callNineWeightSampler("simulateAztecHorizontal", n), n, "horizontal");
+          checkDominoes("frozen vertical n=" + n, await callNineWeightSampler("simulateAztecVertical", n), n, "vertical");
         }
-        for (const n of [2, 4, 12]) {
-          checkDominoes("uniform n=" + n, await callSampler("simulateAztec", n), n);
+        for (const n of [2, 4, 12, 50]) {
+          checkDominoes("uniform n=" + n, await callNineWeightSampler("simulateAztec", n), n);
         }
+        checkDominoes("2x2 n=50", await callNineWeightSampler(
+          "simulateAztec",
+          50,
+          [1, 0.5, 1, 1.25, 1, 1.25, 1, 0.5, 1]
+        ), 50);
+        checkDominoes("3x3 n=50", await callNineWeightSampler(
+          "simulateAztec",
+          50,
+          [1, 1.2, 0.8, 1.5, 0.9, 1.1, 1.3, 0.7, 1.4]
+        ), 50);
+        checkDominoes("6x2 n=50", await call6x2Sampler(
+          50,
+          [1, 2, 1, 3, 1, 0.5, 1.5, 1, 0.75, 1, 2.5, 2]
+        ), 50);
         resolve("ok");
       };
       if (Module.calledRun) ready().catch(error => resolve({ error: error.message }));

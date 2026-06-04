@@ -5535,7 +5535,7 @@ Module.onRuntimeInitialized = async function() {
 
   if (sampleFab && sampleBtn) {
     sampleFab.addEventListener('click', () => {
-      if (glauberRunning) {
+      if (window.glauberRunning) {
         document.getElementById('glauber-btn')?.click();
       } else {
         sampleBtn.click();
