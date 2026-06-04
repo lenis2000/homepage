@@ -7071,8 +7071,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       } else {
         computeTimeSpan.textContent = `Computing final T level k=${finalK}...`;
         await delay(10);
-        const ptr = getTembeddingLevelJSON(finalK);
-        freeString(ptr);
+        getParsedTembLevel(finalK);
       }
 
       // maxK = n - 2 (for input n, we have T_0 through T_{n-2})
