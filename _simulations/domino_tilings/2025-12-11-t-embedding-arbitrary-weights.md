@@ -125,7 +125,7 @@ a11y-description: "Interactive visualization of t-embeddings of the Aztec diamon
 <h5>Random Domino Sampler</h5>
 <p>The <strong>🎲 Sample</strong> button generates random domino tilings of the Aztec diamond using the domino shuffling algorithm with the currently selected edge weights.</p>
 <ul>
-  <li><strong>Size (N)</strong>: The Aztec diamond size (supports up to N = 330).</li>
+  <li><strong>Size (N)</strong>: The Aztec diamond size (supports up to N = 1500).</li>
   <li><strong>Border</strong>: Gap between dominoes for visual clarity.</li>
   <li><strong>Double Dimer</strong>: When checked, samples two independent dimer configurations and displays their symmetric difference as colored loops. Dominoes shared by both configurations are hidden; the remaining dominoes form disjoint closed loops.</li>
   <li><strong>Min loop</strong>: Filter to show only loops of at least this length (useful for hiding short loops).</li>
@@ -334,7 +334,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 12px;">
     <label style="display: flex; align-items: center; gap: 6px;">
       <strong>Size (n):</strong>
-      <input id="n-input" type="number" value="6" min="1" max="330" style="width: 70px;" aria-label="Aztec diamond size">
+      <input id="n-input" type="number" value="6" min="1" max="1500" style="width: 70px;" aria-label="Aztec diamond size">
     </label>
 
     <label style="display: flex; align-items: center; gap: 6px;">
@@ -1030,7 +1030,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
       <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px;">
         <label style="display: flex; align-items: center; gap: 6px;">
           <strong>Size (N):</strong>
-          <input type="number" id="sample-N-input" value="6" min="1" max="330" style="width: 70px;" aria-label="Domino tiling size">
+          <input type="number" id="sample-N-input" value="6" min="1" max="1500" style="width: 70px;" aria-label="Domino tiling size">
         </label>
         <label style="display: flex; align-items: center; gap: 6px;">
           <strong>Border:</strong>
@@ -1567,7 +1567,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let isComputing = false;  // Flag to prevent re-entrancy during computation
 
   // Hard cap on n
-  const MAX_N = 200;
+  const MAX_N = 1500;
 
   // Step-by-step visualization is only available for n <= this threshold
   const STEP_BY_STEP_MAX_N = 15;
@@ -2706,6 +2706,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let sample2DRenderer = null;
   let activeRandomSampleRequestId = 0;
   let activeUserVisibleSampleRequestId = 0;
+  const SAMPLE_MAX_N = 1500;
   const SAMPLE_2D_EXACT_RENDER_LIMIT = 50;
   const SAMPLE_2D_CACHE_MAX_PX = 4096;
   const SAMPLE_2D_CACHE_PADDING = 4;
@@ -2886,10 +2887,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     let N = requestedN;
     let statusMessage = 'Sampling...';
 
-    if (N > 330) {
-      N = 330;
-      if (input) input.value = 330;
-      statusMessage = 'N capped to 330 (memory limit). Sampling...';
+    if (N > SAMPLE_MAX_N) {
+      N = SAMPLE_MAX_N;
+      if (input) input.value = SAMPLE_MAX_N;
+      statusMessage = `Maximum sample size is N = ${SAMPLE_MAX_N}; sampling at that size...`;
     } else if (N > 300) {
       statusMessage = 'Sampling (large N, may be slow)...';
     }
