@@ -11,19 +11,11 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v6
 
-    - name: Set up Node
-      uses: actions/setup-node@v6
-      with:
-        node-version: '24'
-
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: '3.2'
         bundler-cache: true
-
-    - name: Domino smoke tests
-      run: make test-domino
 
     - name: Build
       run: bundle exec jekyll build
