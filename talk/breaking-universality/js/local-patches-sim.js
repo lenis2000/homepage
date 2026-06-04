@@ -472,6 +472,8 @@ function initLocalPatchesSim() {
                     const next = pendingSample;
                     pendingSample = null;
                     sampleQueued(next.A, next.B, next.resetCamera);
+                } else {
+                    startOneRotation();
                 }
             }
         }
@@ -711,20 +713,35 @@ function initLocalPatchesSim() {
         }
 
         let autoRotateId = null;
-        function startAutoRotate() {
-            if (autoRotateId) return;
-            const rotateSpeed = 0.0075;
+        function startOneRotation() {
+            stopAutoRotate();
+            if (!controls || !renderer || !camera) return;
+
+            const rotateSpeed = 0.015;
+            let remainingAngle = Math.PI * 2;
+
             function rotate() {
-                if (!controls || !renderer) return;
+                if (!controls || !renderer || !camera) {
+                    autoRotateId = null;
+                    return;
+                }
+
+                const angle = Math.min(rotateSpeed, remainingAngle);
                 const x = camera.position.x - controls.target.x;
                 const z = camera.position.z - controls.target.z;
-                const cos = Math.cos(rotateSpeed);
-                const sin = Math.sin(rotateSpeed);
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
                 camera.position.x = controls.target.x + x * cos - z * sin;
                 camera.position.z = controls.target.z + x * sin + z * cos;
                 camera.lookAt(controls.target);
                 renderer.render(scene, camera);
-                autoRotateId = requestAnimationFrame(rotate);
+                remainingAngle -= angle;
+
+                if (remainingAngle > 0) {
+                    autoRotateId = requestAnimationFrame(rotate);
+                } else {
+                    autoRotateId = null;
+                }
             }
             rotate();
         }
@@ -757,7 +774,7 @@ function initLocalPatchesSim() {
                 }
 
                 window.slideEngine.registerSimulation('local-patches', {
-                    start() { startAutoRotate(); },
+                    start() { if (!sampling) startOneRotation(); },
                     pause() { stopAutoRotate(); },
                     steps: presets.length - 1,
                     onStep(step) {
@@ -780,7 +797,7 @@ function initLocalPatchesSim() {
                                 } else if (renderer) {
                                     renderer.render(scene, camera);
                                 }
-                                startAutoRotate();
+                                if (!sampling) startOneRotation();
                             } else {
                                 setTimeout(initWhenReady, 50);
                             }
