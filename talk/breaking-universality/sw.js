@@ -1,5 +1,5 @@
 // Service Worker for Breaking Universality Talk — Aggressive Precaching
-const CACHE_NAME = 'breaking-universality-talk-v7';
+const CACHE_NAME = 'breaking-universality-talk-v8';
 
 // All local assets to precache
 const PRECACHE_ASSETS = [
@@ -122,6 +122,8 @@ const PRECACHE_ASSETS = [
   '/talk/breaking-universality/images/lozenge_small_sample.png',
   '/talk/breaking-universality/images/hexagon-small-sample.png',
   '/talk/breaking-universality/images/fig_lozenge_and_paths.svg',
+  '/talk/breaking-universality/images/limit-shape-bernoulli-accurate.svg',
+  '/talk/breaking-universality/images/limit-shape-uniform-continuous-accurate.svg',
   '/talk/breaking-universality/images/nsf-logo.png',
   '/talk/breaking-universality/images/simons-logo.svg',
 
@@ -135,8 +137,6 @@ const STORAGE_ASSETS = [
   // Part III static images
   '/img/talks/aztec-4-grid-weights.png',
   '/img/talks/bpz_particles.png',
-  '/img/talks/bpz_Bernoulli_arctic.png',
-  '/img/talks/bpz_cont_uni_arctic.png',
 
   // Diagonal disorder double-dimer
   '/img/talks/bpz_dd_diagonal_uniform_annealed.png',
