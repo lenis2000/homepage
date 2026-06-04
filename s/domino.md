@@ -1346,7 +1346,11 @@ function create3DUnavailableMessage() {
   show3DCanvasMessage('3D visualization unavailable in this browser.<br>Switch to 2D view to see the visualization.');
 }
 
-Module.onRuntimeInitialized = async function() {
+let dominoRuntimeInitialized = false;
+async function initializeDominoRuntime() {
+  if (dominoRuntimeInitialized) return;
+  dominoRuntimeInitialized = true;
+
   const simulateAztec = Module.cwrap('simulateAztec','number',['number','number','number','number','number','number','number','number','number','number'],{async:true});
   const simulateAztec6x2 = Module.cwrap('simulateAztec6x2', 'number', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], {async:true});
   const simulateAztecHorizontal = Module.cwrap(
@@ -1391,8 +1395,16 @@ Module.onRuntimeInitialized = async function() {
   let glauberRunning = false;
   window.glauberRunning = glauberRunning;
   let glauberTimer = null;
+  let glauberStepInFlight = false;
   let lastSampleWasGlauber = false; // Track if the *last* visualization update came from Glauber
   let no3DUserChanged = false;
+
+  function clearGlauberTimer() {
+    if (glauberTimer === null) return;
+    clearTimeout(glauberTimer);
+    clearInterval(glauberTimer);
+    glauberTimer = null;
+  }
 
   function initializeDefaultPaneState() {
     const no3DCheckbox = document.getElementById("no-3d-checkbox");
@@ -1889,8 +1901,7 @@ Module.onRuntimeInitialized = async function() {
         const glauberStatus = document.getElementById('glauber-status');
         glauberRunning = false;
         window.glauberRunning = false;
-        clearInterval(glauberTimer);
-        glauberTimer = null;
+        clearGlauberTimer();
         glauberBtn.textContent = "Run Glauber";
         glauberBtn.classList.remove('running', 'btn-danger');
         glauberBtn.classList.add('btn-success');
@@ -1995,8 +2006,8 @@ Module.onRuntimeInitialized = async function() {
 
     if (glauberRunning) {
         // Stop dynamics
-        clearInterval(glauberTimer);
-        glauberTimer = null;
+        clearGlauberTimer();
+        glauberStepInFlight = false;
         glauberRunning = false;
         window.glauberRunning = false;
         glauberBtn.textContent = "Run Glauber";
@@ -2047,17 +2058,28 @@ Module.onRuntimeInitialized = async function() {
         const initialSteps = Math.max(1, parseInt(sweepsInput.value, 10) || 1);
         await advanceGlauberDynamics(initialSteps);
 
-        // Start the timer if still running
-        if (glauberRunning) {
-            const updateInterval = 100; // ms between redraws
-            glauberTimer = setInterval(async () => {
-                if (!glauberRunning) { // Check again inside interval
-                    clearInterval(glauberTimer);
-                    return;
-                }
+        async function runGlauberTick() {
+            if (!glauberRunning || glauberStepInFlight) return;
+
+            glauberStepInFlight = true;
+            try {
                 const stepsPerUpdate = Math.max(1, parseInt(sweepsInput.value, 10) || 1);
                 await advanceGlauberDynamics(stepsPerUpdate);
-            }, updateInterval);
+            } finally {
+                glauberStepInFlight = false;
+                if (glauberRunning) {
+                    const updateInterval = 100; // ms between redraws
+                    glauberTimer = setTimeout(runGlauberTick, updateInterval);
+                } else {
+                    glauberTimer = null;
+                }
+            }
+        }
+
+        // Start the serialized timer if still running
+        if (glauberRunning) {
+            const updateInterval = 100; // ms between redraws
+            glauberTimer = setTimeout(runGlauberTick, updateInterval);
         }
     }
   }
@@ -3556,6 +3578,7 @@ Module.onRuntimeInitialized = async function() {
   const DOMINO_2D_CACHE_MAX_PX = 4096;
   const DOMINO_2D_CACHE_PADDING = 4;
   let prevCanvasDominoKey = null;
+  let svg2DExportDirty = true;
 
   function canvasKey2D(d) {
     return `${d.x}|${d.y}`;
@@ -3849,7 +3872,7 @@ Module.onRuntimeInitialized = async function() {
       ctx.clearRect(cacheBounds.minX, cacheBounds.minY, cacheBounds.width, cacheBounds.height);
       this.drawDominoFillBatches(ctx, settings);
       this.drawCheckerboardOverlay(ctx, settings);
-      this.drawBorderStrokePass(ctx, settings);
+      this.drawBorderStrokePass(ctx, settings, cacheScale);
       this.drawPathOverlay(ctx, settings);
       this.drawDimerOverlay(ctx, settings);
       this.drawHeightLabels(ctx, settings);
@@ -3866,24 +3889,26 @@ Module.onRuntimeInitialized = async function() {
       const inset = settings.borderWidth > 0 ? Math.min(0.04, settings.borderWidth * 0.04) : 0;
       for (const d of this.dominoes) {
         const fill = getDominoFillColor(d, settings);
-        if (!batches.has(fill)) batches.set(fill, new Path2D());
-        const path = batches.get(fill);
-        path.rect(
-          d.x + inset,
-          d.y + inset,
-          Math.max(0.001, d.w - 2 * inset),
-          Math.max(0.001, d.h - 2 * inset)
-        );
+        if (!batches.has(fill)) batches.set(fill, []);
+        batches.get(fill).push(d);
       }
 
-      for (const [fill, path] of batches) {
+      for (const [fill, dominoes] of batches) {
         ctx.fillStyle = fill;
-        ctx.fill(path);
+        for (const d of dominoes) {
+          ctx.fillRect(
+            d.x + inset,
+            d.y + inset,
+            Math.max(0.001, d.w - 2 * inset),
+            Math.max(0.001, d.h - 2 * inset)
+          );
+        }
       }
     }
 
-    drawBorderStrokePass(ctx, settings) {
+    drawBorderStrokePass(ctx, settings, cacheScale = 1) {
       if (settings.borderWidth <= 0) return;
+      if (settings.borderWidth * cacheScale < 0.5) return;
       const path = new Path2D();
       const inset = Math.min(0.04, settings.borderWidth * 0.04);
       for (const d of this.dominoes) {
@@ -4056,7 +4081,10 @@ Module.onRuntimeInitialized = async function() {
     if (!bounds) return;
     svg.setAttribute("viewBox", `${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`);
     svg.dataset.renderer = dominoes.length <= DOMINO_2D_SVG_COMPAT_LIMIT ? "small-svg" : "canvas";
-    if (dominoes.length > DOMINO_2D_SVG_COMPAT_LIMIT) return;
+    if (dominoes.length > DOMINO_2D_SVG_COMPAT_LIMIT) {
+      svg2DExportDirty = false;
+      return;
+    }
 
     const settings = get2DDisplaySettings();
     const fragment = document.createDocumentFragment();
@@ -4073,6 +4101,7 @@ Module.onRuntimeInitialized = async function() {
       fragment.appendChild(rect);
     }
     svg.appendChild(fragment);
+    svg2DExportDirty = false;
   }
 
   domino2DRenderer = new Domino2DCanvasRenderer(
@@ -4082,6 +4111,7 @@ Module.onRuntimeInitialized = async function() {
 
   updateDominoDisplay = function() {
     if (!domino2DRenderer) return;
+    svg2DExportDirty = true;
     invalidate2DCanvasCache();
     domino2DRenderer.scheduleDraw();
   };
@@ -4097,7 +4127,7 @@ Module.onRuntimeInitialized = async function() {
     const shouldResetView = prevCanvasDominoKey === null || currentN !== lastNRendered;
     domino2DRenderer.setDominoes(dominoes, { resetView: shouldResetView });
     domino2DRenderer.renderNow();
-    sync2DSVGForExport(dominoes);
+    svg2DExportDirty = true;
     prevCanvasDominoKey = dominoes.length > 0 ? canvasKey2D(dominoes[0]) : "empty";
     lastNRendered = currentN;
   };
@@ -5223,6 +5253,7 @@ Module.onRuntimeInitialized = async function() {
 
   // Add event listeners for the TikZ buttons
   document.getElementById("tikz-btn").addEventListener("click", function() {
+    if (svg2DExportDirty) sync2DSVGForExport(cachedDominoes);
     svgToTikZ();
   });
 
@@ -5290,6 +5321,8 @@ Module.onRuntimeInitialized = async function() {
 
   // Add event listener for PDF download button
   document.getElementById("download-pdf-btn").addEventListener("click", function() {
+    if (svg2DExportDirty) sync2DSVGForExport(cachedDominoes);
+
     // Get the SVG element
     const svg = document.getElementById("aztec-svg-2d");
 
@@ -5456,7 +5489,19 @@ Module.onRuntimeInitialized = async function() {
       }
     }, 'image/png', 0.95);
   });
-};
+}
+
+if (Module.calledRun) {
+  initializeDominoRuntime();
+} else {
+  const previousDominoRuntimeInitialized = Module.onRuntimeInitialized;
+  Module.onRuntimeInitialized = async function() {
+    if (typeof previousDominoRuntimeInitialized === "function") {
+      await previousDominoRuntimeInitialized();
+    }
+    await initializeDominoRuntime();
+  };
+}
 
 /* About section is closed by default via HTML (no "show" class). */
 

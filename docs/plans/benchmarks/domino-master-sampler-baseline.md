@@ -21,13 +21,13 @@ Date: 2026-06-04
 
 Environment: local `_site` built with a localhost URL override and served at `http://127.0.0.1:4100/domino/`, headless Chromium, default 2D view with `No 3D (faster)` checked. The opt-in 3D smoke used SwiftShader only to verify reachability in headless Chromium; the benchmark below used the default 2D cases and did not benchmark 3D.
 
-Default `window.dominoSamplerBenchmark({ stopOnError: false, restore: true })` cases after the sampler and canvas optimizations:
+Default `window.dominoSamplerBenchmark({ stopOnError: false, restore: true })` cases after the sampler and canvas optimizations, with the code review fix that keeps the interactive canvas path out of medium-size `Path2D` bottlenecks:
 
 | n | status | WASM call | UTF8 conversion | JSON parse | 2D render | total |
 |---:|:---|---:|---:|---:|---:|---:|
-| 100 | ok | 663.6 ms | 1.6 ms | 5.0 ms | 357.6 ms | 1081.4 ms |
-| 200 | ok | 1493.3 ms | 18.4 ms | 13.3 ms | 622.2 ms | 2202.8 ms |
-| 300 | ok | 2352.6 ms | 13.7 ms | 20.8 ms | 121.9 ms | 2565.4 ms |
-| 500 | ok | 5983.9 ms | 118.7 ms | 49.4 ms | 609.6 ms | 6818.0 ms |
+| 100 | ok | 609.4 ms | 1.2 ms | 1.9 ms | 13.3 ms | 682.5 ms |
+| 200 | ok | 1388.6 ms | 3.4 ms | 10.0 ms | 70.0 ms | 1528.2 ms |
+| 300 | ok | 2778.0 ms | 17.8 ms | 49.4 ms | 105.1 ms | 3006.3 ms |
+| 500 | ok | 5531.4 ms | 158.3 ms | 105.5 ms | 310.3 ms | 6161.7 ms |
 
 The `n=500` default case now completes successfully in the default 2D path. Height-function and 3D render timings were skipped for all default benchmark cases because the benchmark intentionally keeps the 2D pane active with `No 3D` enabled.
