@@ -1,5 +1,5 @@
-<section class="slide slide-top" id="schur-generating" data-title="Schur Generating Functions for random weights">
-    <h2 class="slide-title">Schur Generating Functions for random weights</h2>
+<section class="slide slide-top" id="schur-generating" data-title="Schur Generating Functions for Random Environment">
+    <h2 class="slide-title">Schur Generating Functions for Random Environment</h2>
 
     <div style="display: grid; grid-template-columns: 48vw 44vw; gap: 2vw; margin-top: 2vh; padding: 0 1vw;">
         <!-- Left: correspondence + SGF -->
@@ -20,14 +20,14 @@
             </div>
 
             <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw; text-align: left;">
-                <strong style="color: var(--slide-accent);">For random weights</strong>
+                <strong style="color: var(--slide-accent);">For random environment</strong>
                 <span class="cite">[Bufetov–P.–Zografos 2025]</span>:<br>
                 The <strong>annealed</strong> SGF has an explicit product form (\(M\) is the size of the Aztec diamond,
 								\(N\) is the level):
                 <div style="text-align: center; margin-top: 0.5vh; font-size: clamp(1.3rem, 2.2vw, 1.7rem);">
-                    \(\displaystyle S_{\rho}(x_1,\ldots,x_N) = \mathbf{E}\Bigl(\prod_{i=1}^N (1-\beta+x_i\beta)\Bigr)^{M-N}\),
+                    \(\displaystyle S_{\rho_N}(x_1,\ldots,x_N)=\left(\mathbf E_{\mathcal B_M}\prod_{i=1}^N(1-\boldsymbol\beta+x_i\boldsymbol\beta)\right)^{M-N}\),
                 </div>
-								where \(\beta\) is an independent copy of the random weights \(W_j\).
+                where \(\boldsymbol\beta\sim\mathcal B_M\), and the raw edge weight is \(W=\boldsymbol\beta/(1-\boldsymbol\beta)\). No moment assumptions on \(W\): it can be heavy-tailed.
             </div>
 
             <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw; text-align: left;">

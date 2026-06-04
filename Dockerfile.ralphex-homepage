@@ -1,0 +1,51 @@
+# Homepage-specific ralphex image.
+# Adds the toolchain needed by the domino sampler optimization plans:
+# Ruby/Bundler/Jekyll for site validation and Emscripten for WASM rebuilds.
+
+FROM ghcr.io/umputun/ralphex:latest
+
+USER root
+
+ENV EMSDK=/opt/emsdk \
+    GEM_HOME=/usr/local/bundle \
+    BUNDLE_PATH=/usr/local/bundle \
+    BUNDLE_BIN=/usr/local/bundle/bin
+ENV PATH="${BUNDLE_BIN}:${EMSDK}:${EMSDK}/upstream/emscripten:${PATH}"
+
+RUN apk add --no-cache \
+      bash \
+      build-base \
+      cmake \
+      curl \
+      git \
+      libffi-dev \
+      linux-headers \
+      make \
+      ninja \
+      nodejs \
+      npm \
+      openssl-dev \
+      python3 \
+      ruby \
+      ruby-bundler \
+      ruby-dev \
+      tar \
+      wget \
+      xz \
+      yaml-dev \
+      zlib-dev && \
+    gem install --no-document bundler -v 2.5.14
+
+# Install Emscripten SDK. Keep this separate from Ruby gems so Docker can cache it.
+RUN git clone --depth 1 https://github.com/emscripten-core/emsdk.git ${EMSDK} && \
+    ${EMSDK}/emsdk install latest && \
+    ${EMSDK}/emsdk activate latest && \
+    emcc --version | head -1
+
+# Preinstall homepage Jekyll gems. The project is still mounted at /workspace at runtime.
+WORKDIR /tmp/homepage-gems
+COPY Gemfile Gemfile.lock ./
+RUN bundle _2.5.14_ install --jobs=4 --retry=3 && \
+    bundle _2.5.14_ exec jekyll --version
+
+WORKDIR /workspace
