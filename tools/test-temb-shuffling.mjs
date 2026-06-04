@@ -22,6 +22,21 @@ function checkPageSource() {
   assert(source.includes("window.tembShuffledSamplerBenchmark"), "benchmark helper should be exposed on window");
   assert(source.includes("TEMB_SHUFFLED_DEFAULT_BENCHMARK_CASES"), "default benchmark cases should be declared");
   assert(source.includes("{ n: 330, doubleDimer: true"), "default benchmark cases should include N=330 double dimer");
+  assert(source.includes("const sampleWeightCache = new Map()"), "sample EKLP weights should be cached by deterministic controls");
+  assert(source.includes("getSampleWeightParameterSnapshot"), "weight cache key should include preset-specific controls");
+  assert(source.includes("getOrGenerateSampleWeights"), "random sampler should use a named weight generation/cache phase");
+  assert(source.includes("shufflingModule.HEAPF64.set(eklpWeights, weightsPtr >> 3)"), "Float64Array weights should be bulk-copied into the WASM heap");
+  assert(!source.includes("shufflingModule.setValue(weightsPtr + i * 8, eklpWeights[i], 'double')"), "random sampler should not copy weights with per-element setValue");
+  assert(source.includes("decodeAndFreeShufflingResult"), "WASM results should be decoded through the shared free-in-finally helper");
+  assert(source.includes("Shuffling WASM returned no result pointer."), "null WASM pointers should produce useful errors");
+  assert(source.includes("parseShufflingJsonResponse"), "WASM JSON responses should be parsed through a named helper");
+  assert(source.includes("result.error"), "WASM {error: ...} responses should be surfaced to the status text");
+  assert(source.includes("readRandomSampleControlPhase"), "generateRandomSample should split out the control-read phase");
+  assert(source.includes("runRandomSampleShuffling"), "generateRandomSample should split out the shuffling phase");
+  assert(source.includes("updateRandomSampleState"), "generateRandomSample should split out sample state updates");
+  assert(source.includes("renderVisibleSampleViews"), "generateRandomSample should split out visible view rendering");
+  assert(source.includes("isSample3DPaneVisible()"), "sample 3D should only update while visible");
+  assert(source.includes("isHeightFunctionPaneVisible()"), "height function pane should only update while visible");
 
   for (const key of [
     "controlReadMs",
@@ -326,6 +341,20 @@ async function runBrowserSmoke() {
     assert(pixelState.main.nonBackground > 0, "main T-embedding canvas should be non-blank");
     assert(initialState.profile.timings.controlReadMs !== null, "profile should include control-read timing");
     assert(initialState.profile.timings.twoDRenderMs !== null, "profile should include 2D render timing");
+
+    const cacheBenchmark = await evaluate(client, `window.tembShuffledSamplerBenchmark({
+      cases: [
+        { n: 12, doubleDimer: false, label: "cache miss smoke" },
+        { n: 12, doubleDimer: false, label: "cache hit smoke" }
+      ],
+      stopOnError: true,
+      restore: true
+    })`, 120000);
+    assert(cacheBenchmark.cases.length === 2, "cache smoke benchmark should return two cases");
+    assert(cacheBenchmark.cases.every(c => c.status === "ok"), "cache smoke benchmark cases should pass");
+    assert(cacheBenchmark.cases[1].weightCacheHit === true, "second identical sample should reuse cached EKLP weights");
+    assert(cacheBenchmark.cases.every(c => c.timings.heapCopyMs !== null), "cache smoke benchmark should record heap copy timing");
+    assert(cacheBenchmark.cases.every(c => c.timings.utf8ConversionMs !== null), "cache smoke benchmark should record UTF8 conversion timing");
 
     if (process.env.TEMB_SHUFFLED_BENCHMARK === "1") {
       const benchmark = await evaluate(client, `window.tembShuffledSamplerBenchmark({ stopOnError: false, restore: true })`, 900000);

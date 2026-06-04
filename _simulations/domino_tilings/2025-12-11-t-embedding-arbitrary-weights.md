@@ -2716,6 +2716,18 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   // Cached IID weights - precomputed to avoid regenerating on each render
   let cachedIIDWeights = null;
   let cachedIIDKey = null;  // Key to check if cache is valid
+  const sampleWeightCache = new Map();
+  const SAMPLE_WEIGHT_CACHE_MAX_ENTRIES = 8;
+  const SAMPLE_WEIGHT_CACHEABLE_PRESETS = new Set([
+    'all-ones',
+    'uniform',
+    'random-iid',
+    'random-layered',
+    'random-straight-layered',
+    'random-gamma',
+    'gamma-periodic-2x2',
+    'periodic'
+  ]);
 
   const TEMB_SHUFFLED_DEFAULT_BENCHMARK_CASES = [
     { n: 100, doubleDimer: false, label: 'N=100 single' },
@@ -2756,6 +2768,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         heightFunctionPaneRenderMs: null,
         sample3DRenderMs: null
       },
+      weightCacheHit: false,
+      weightCacheKey: null,
       error: null
     };
   }
@@ -2923,6 +2937,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
           doubleDimer: profile.doubleDimer,
           dominoCount: profile.dominoCount,
           dominoCount2: profile.dominoCount2,
+          weightCacheHit: profile.weightCacheHit,
           timings: { ...profile.timings, totalMs: profile.totalMs },
           error: profile.error
         });
@@ -4525,16 +4540,268 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return arr;
   }
 
+  function getControlValue(id) {
+    const el = document.getElementById(id);
+    return el ? el.value : '';
+  }
+
+  function getCheckedRadioValue(name) {
+    const selected = document.querySelector(`input[name="${name}"]:checked`);
+    return selected ? selected.value : '';
+  }
+
+  function getControlValues(ids) {
+    const values = {};
+    for (const id of ids) {
+      values[id] = getControlValue(id);
+    }
+    return values;
+  }
+
+  function getPeriodicEditorSnapshot() {
+    return Array.from(document.querySelectorAll('#weights-tables input'))
+      .map(input => ({
+        type: input.dataset.type || '',
+        j: input.dataset.j || '',
+        i: input.dataset.i || '',
+        value: input.value
+      }))
+      .sort((a, b) => `${a.type}:${a.j}:${a.i}`.localeCompare(`${b.type}:${b.j}:${b.i}`));
+  }
+
+  function getSampleWeightParameterSnapshot(preset) {
+    if (preset === 'random-iid') {
+      return getControlValues([
+        'random-seed',
+        'iid-distribution-select',
+        'iid-min',
+        'iid-max',
+        'iid-bernoulli-p',
+        'iid-bernoulli-v1',
+        'iid-bernoulli-v2',
+        'iid-pareto-alpha',
+        'iid-pareto-xmin',
+        'iid-geom-p'
+      ]);
+    }
+
+    if (preset === 'random-layered') {
+      return {
+        regime: getCheckedRadioValue('layered-regime'),
+        ...getControlValues([
+          'layered-seed',
+          'layered1-val1',
+          'layered1-val2',
+          'layered1-prob1',
+          'layered1-prob2',
+          'layered2-val1',
+          'layered2-val2',
+          'layered3-val1',
+          'layered3-val2',
+          'layered3-prob1',
+          'layered3-prob2',
+          'layered4-w1',
+          'layered4-w2',
+          'layered5-min',
+          'layered5-max',
+          'layered6-alpha',
+          'layered6-xmin'
+        ])
+      };
+    }
+
+    if (preset === 'random-straight-layered') {
+      return {
+        regime: getCheckedRadioValue('straight-layered-regime'),
+        ...getControlValues([
+          'straight-layered-seed',
+          'straight-layered1-val1',
+          'straight-layered1-val2',
+          'straight-layered1-prob1',
+          'straight-layered1-prob2',
+          'straight-layered2-val1',
+          'straight-layered2-val2',
+          'straight-layered3-val1',
+          'straight-layered3-val2',
+          'straight-layered3-prob1',
+          'straight-layered3-prob2',
+          'straight-layered4-w1',
+          'straight-layered4-w2',
+          'straight-layered5-min',
+          'straight-layered5-max',
+          'straight-layered6-alpha',
+          'straight-layered6-xmin'
+        ])
+      };
+    }
+
+    if (preset === 'random-gamma') {
+      return getControlValues(['gamma-seed', 'gamma-alpha', 'gamma-beta']);
+    }
+
+    if (preset === 'gamma-periodic-2x2') {
+      return getControlValues([
+        'gamma-periodic-seed',
+        'gamma-periodic-alpha-0-0',
+        'gamma-periodic-alpha-0-1',
+        'gamma-periodic-alpha-1-0',
+        'gamma-periodic-alpha-1-1',
+        'gamma-periodic-beta-0-0',
+        'gamma-periodic-beta-0-1',
+        'gamma-periodic-beta-1-0',
+        'gamma-periodic-beta-1-1'
+      ]);
+    }
+
+    if (preset === 'periodic') {
+      return {
+        ...getControlValues(['periodic-k', 'periodic-l']),
+        weights: getPeriodicEditorSnapshot()
+      };
+    }
+
+    return {};
+  }
+
+  function normalizeSampleWeightCacheValue(value) {
+    if (ArrayBuffer.isView(value)) {
+      return Array.from(value, normalizeSampleWeightCacheValue);
+    }
+    if (Array.isArray(value)) {
+      return value.map(normalizeSampleWeightCacheValue);
+    }
+    if (value && typeof value === 'object') {
+      return Object.keys(value).sort().reduce((acc, key) => {
+        acc[key] = normalizeSampleWeightCacheValue(value[key]);
+        return acc;
+      }, {});
+    }
+    return value;
+  }
+
+  function createSampleWeightRequest(N) {
+    const preset = document.getElementById('weight-preset-select')?.value || 'all-ones';
+    const { mode, params } = getCurrentWeightParams();
+    return {
+      N,
+      preset,
+      mode,
+      params,
+      controls: getSampleWeightParameterSnapshot(preset)
+    };
+  }
+
+  function getSampleWeightCacheKey(request) {
+    return JSON.stringify(normalizeSampleWeightCacheValue(request));
+  }
+
+  function getCachedSampleWeights(cacheKey) {
+    if (!sampleWeightCache.has(cacheKey)) return null;
+    const cached = sampleWeightCache.get(cacheKey);
+    sampleWeightCache.delete(cacheKey);
+    sampleWeightCache.set(cacheKey, cached);
+    return cached;
+  }
+
+  function cacheSampleWeights(cacheKey, weights) {
+    sampleWeightCache.set(cacheKey, weights);
+    while (sampleWeightCache.size > SAMPLE_WEIGHT_CACHE_MAX_ENTRIES) {
+      const oldestKey = sampleWeightCache.keys().next().value;
+      sampleWeightCache.delete(oldestKey);
+    }
+  }
+
+  function getOrGenerateSampleWeights(controls, profile = null) {
+    return measureSamplePhase(profile, 'weightGenerationConversionMs', () => {
+      const request = createSampleWeightRequest(controls.N);
+      const cacheable = SAMPLE_WEIGHT_CACHEABLE_PRESETS.has(request.preset);
+      const cacheKey = cacheable ? getSampleWeightCacheKey(request) : null;
+
+      if (profile) {
+        profile.weightCacheKey = cacheKey;
+        profile.weightCacheHit = false;
+      }
+
+      if (cacheable) {
+        const cached = getCachedSampleWeights(cacheKey);
+        if (cached) {
+          if (profile) profile.weightCacheHit = true;
+          return cached;
+        }
+      }
+
+      const edges = generateEdgeWeights(controls.N, request.mode, request.params);
+      const weights = toEKLPMatrix(edges, controls.N);
+      if (cacheable) {
+        cacheSampleWeights(cacheKey, weights);
+      }
+      return weights;
+    });
+  }
+
+  function copyWeightsToShufflingHeap(weightsPtr, eklpWeights) {
+    if (eklpWeights instanceof Float64Array) {
+      shufflingModule.HEAPF64.set(eklpWeights, weightsPtr >> 3);
+      return;
+    }
+
+    const heapOffset = weightsPtr >> 3;
+    if (Array.isArray(eklpWeights)) {
+      for (let i = 0; i < eklpWeights.length; i++) {
+        shufflingModule.HEAPF64[heapOffset + i] = Number(eklpWeights[i]);
+      }
+      return;
+    }
+
+    if (ArrayBuffer.isView(eklpWeights)) {
+      shufflingModule.HEAPF64.set(Float64Array.from(eklpWeights), heapOffset);
+      return;
+    }
+
+    throw new Error('Invalid EKLP weights buffer');
+  }
+
+  function parseShufflingJsonResponse(jsonStr) {
+    let result;
+    try {
+      result = JSON.parse(jsonStr);
+    } catch (error) {
+      throw new Error(`Could not parse shuffling WASM response: ${error.message || error}`);
+    }
+    if (result && typeof result === 'object' && result.error) {
+      throw new Error(result.error);
+    }
+    return result;
+  }
+
+  function decodeAndFreeShufflingResult(resultPtr, profile = null) {
+    if (!resultPtr) {
+      throw new Error('Shuffling WASM returned no result pointer.');
+    }
+
+    let jsonStr = '';
+    try {
+      jsonStr = measureSamplePhase(profile, 'utf8ConversionMs', () => (
+        shufflingModule.UTF8ToString(resultPtr)
+      ));
+    } finally {
+      shufflingFreeString(resultPtr);
+    }
+
+    return measureSamplePhase(profile, 'jsonParseMs', () => parseShufflingJsonResponse(jsonStr));
+  }
+
   // Helper: Send weights to shuffling WASM and run simulation
   // Returns resultPtr (caller must free with shufflingFreeString)
   async function runShufflingWithWeights(N, eklpWeights, doubleDimer = true, profile = null) {
     const numWeights = eklpWeights.length;
     const weightsPtr = shufflingModule._malloc(numWeights * 8);
     try {
+      if (!weightsPtr) {
+        throw new Error('Could not allocate WASM heap space for EKLP weights.');
+      }
       measureSamplePhase(profile, 'heapCopyMs', () => {
-        for (let i = 0; i < numWeights; i++) {
-          shufflingModule.setValue(weightsPtr + i * 8, eklpWeights[i], 'double');
-        }
+        copyWeightsToShufflingHeap(weightsPtr, eklpWeights);
       });
       return await measureSampleAsyncPhase(profile, 'wasmShufflingMs', async () => (
         doubleDimer
@@ -4598,9 +4865,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       const resultPtr = await runShufflingWithWeights(N, eklpWeights, true);
 
       // Parse result
-      const jsonStr = shufflingModule.UTF8ToString(resultPtr);
-      shufflingFreeString(resultPtr);
-      const result = JSON.parse(jsonStr);
+      const result = decodeAndFreeShufflingResult(resultPtr);
 
       if (result.config1) {
         tembDoubleDimerConfig1 = result.config1;
@@ -4636,9 +4901,63 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
   }
 
+  function readRandomSampleControlPhase(profile) {
+    const controls = measureSamplePhase(profile, 'controlReadMs', readRandomSampleControls);
+    profile.n = controls.N;
+    profile.requestedN = controls.requestedN;
+    profile.doubleDimer = controls.doubleDimer;
+    return controls;
+  }
+
+  async function runRandomSampleShuffling(controls, sampleWeights, profile) {
+    return await runShufflingWithWeights(controls.N, sampleWeights, controls.doubleDimer, profile);
+  }
+
+  function parseRandomSampleResult(resultPtr, profile) {
+    return decodeAndFreeShufflingResult(resultPtr, profile);
+  }
+
+  function updateRandomSampleState(result, controls, profile) {
+    if (controls.doubleDimer && result.config1) {
+      sampleDominoes = result.config1;
+      sampleDominoes2 = result.config2 || [];
+    } else {
+      sampleDominoes = Array.isArray(result) ? result : [];
+      sampleDominoes2 = [];
+    }
+    profile.dominoCount = sampleDominoes.length;
+    profile.dominoCount2 = sampleDominoes2.length;
+  }
+
+  function isSample3DPaneVisible() {
+    return !!(sampleIs3DView && sample3DContainer && sample3DContainer.style.display !== 'none');
+  }
+
+  function isHeightFunctionPaneVisible() {
+    const container = document.getElementById('height-function-container');
+    return !!(heightFunctionActive && container && container.style.display !== 'none');
+  }
+
+  function renderVisibleSampleViews(controls, profile) {
+    resetSampleView();
+    measureSamplePhase(profile, 'twoDRenderMs', () => renderSample(profile));
+
+    if (isSample3DPaneVisible()) {
+      measureSamplePhase(profile, 'sample3DRenderMs', updateSample3DView);
+    }
+
+    updateHeightFunctionButtonVisibility();
+
+    if (isHeightFunctionPaneVisible() && controls.doubleDimer && sampleDominoes2.length > 0) {
+      measureSamplePhase(profile, 'heightFunctionPaneRenderMs', () => {
+        const heightDiff = computeDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
+        renderHeightFunctionSurface(heightDiff);
+      });
+    }
+  }
+
   async function generateRandomSample(options = {}) {
     const profile = createShuffledSamplerProfile(options);
-    let resultPtr = 0;
 
     clearSampleTimingDisplay();
     if (!wasmReady) {
@@ -4650,61 +4969,16 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     try {
-      const controls = measureSamplePhase(profile, 'controlReadMs', readRandomSampleControls);
-      profile.n = controls.N;
-      profile.requestedN = controls.requestedN;
-      profile.doubleDimer = controls.doubleDimer;
+      const controls = readRandomSampleControlPhase(profile);
       setSampleStatus(options.source === 'benchmark'
         ? `${options.label || 'Benchmark'}: sampling...`
         : controls.statusMessage);
 
-      // ALL modes use single source of truth: generateEdgeWeights() → toEKLPMatrix()
-      // This ensures same weights for single and double dimer sampling
-      const sampleWeights = measureSamplePhase(profile, 'weightGenerationConversionMs', () => {
-        const { mode, params } = getCurrentWeightParams();
-        const edges = generateEdgeWeights(controls.N, mode, params);
-        return toEKLPMatrix(edges, controls.N);
-      });
-
-      resultPtr = await runShufflingWithWeights(controls.N, sampleWeights, controls.doubleDimer, profile);
-      if (!resultPtr) {
-        throw new Error('Shuffling WASM returned a null result pointer');
-      }
-
-      const jsonStr = measureSamplePhase(profile, 'utf8ConversionMs', () => (
-        shufflingModule.UTF8ToString(resultPtr)
-      ));
-      const result = measureSamplePhase(profile, 'jsonParseMs', () => JSON.parse(jsonStr));
-      if (result && result.error) {
-        throw new Error(result.error);
-      }
-
-      // Handle double dimer mode: result has config1 and config2
-      if (controls.doubleDimer && result.config1) {
-        sampleDominoes = result.config1;
-        sampleDominoes2 = result.config2 || [];
-      } else {
-        sampleDominoes = Array.isArray(result) ? result : [];
-        sampleDominoes2 = [];
-      }
-      profile.dominoCount = sampleDominoes.length;
-      profile.dominoCount2 = sampleDominoes2.length;
-
-      // Reset view and render
-      resetSampleView();
-      measureSamplePhase(profile, 'twoDRenderMs', () => renderSample(profile));
-      measureSamplePhase(profile, 'sample3DRenderMs', updateSample3DView);
-
-      // Update height function button visibility
-      updateHeightFunctionButtonVisibility();
-
-      // Update height function pane if visible
-      if (heightFunctionActive && controls.doubleDimer) {
-        measureSamplePhase(profile, 'heightFunctionPaneRenderMs', () => {
-          const heightDiff = computeDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
-          renderHeightFunctionSurface(heightDiff);
-        });
-      }
+      const sampleWeights = getOrGenerateSampleWeights(controls, profile);
+      const resultPtr = await runRandomSampleShuffling(controls, sampleWeights, profile);
+      const result = parseRandomSampleResult(resultPtr, profile);
+      updateRandomSampleState(result, controls, profile);
+      renderVisibleSampleViews(controls, profile);
 
       finishShuffledSamplerProfile(profile, 'ok');
       if (profile.source !== 'benchmark') {
@@ -4719,10 +4993,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       setSampleStatus('Sampling failed: ' + (e.message || e));
       if (options.throwOnError) throw e;
       return profile;
-    } finally {
-      if (resultPtr && shufflingFreeString) {
-        shufflingFreeString(resultPtr);
-      }
     }
   }
 

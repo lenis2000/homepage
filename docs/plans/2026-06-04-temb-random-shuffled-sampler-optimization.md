@@ -120,12 +120,12 @@ Port the `/domino/` C++ sampler core patterns, not the old full probability-pyra
 
 Make the random sampler frontend avoid repeated expensive work.
 
-- [ ] Replace per-element WASM heap copying in `runShufflingWithWeights()` with `shufflingModule.HEAPF64.set(eklpWeights, weightsPtr >> 3)` when the source is a `Float64Array`; keep a fallback for plain arrays.
-- [ ] Cache generated EKLP weight typed arrays by `(N, preset, seed, preset parameters)` when controls imply reuse, while still regenerating when random-weight semantics require a new realization.
-- [ ] Check null pointers before `UTF8ToString`, always call `freeString()` in a `finally`, parse `{error: ...}` JSON responses, and show useful status text instead of a generic `Error`.
-- [ ] Split `generateRandomSample()` into named phases: read controls, get/generate weights, run shuffling, parse result, update sample state, render visible sample views.
-- [ ] Avoid updating sample 3D or the height-function pane when those panes are hidden/inactive.
-- [ ] Preserve all random sampler controls, IDs, event handlers, export behavior, palette behavior, and current Enter-to-sample behavior.
+- [x] Replace per-element WASM heap copying in `runShufflingWithWeights()` with `shufflingModule.HEAPF64.set(eklpWeights, weightsPtr >> 3)` when the source is a `Float64Array`; keep a fallback for plain arrays.
+- [x] Cache generated EKLP weight typed arrays by `(N, preset, seed, preset parameters)` when controls imply reuse, while still regenerating when random-weight semantics require a new realization.
+- [x] Check null pointers before `UTF8ToString`, always call `freeString()` in a `finally`, parse `{error: ...}` JSON responses, and show useful status text instead of a generic `Error`.
+- [x] Split `generateRandomSample()` into named phases: read controls, get/generate weights, run shuffling, parse result, update sample state, render visible sample views.
+- [x] Avoid updating sample 3D or the height-function pane when those panes are hidden/inactive.
+- [x] Preserve all random sampler controls, IDs, event handlers, export behavior, palette behavior, and current Enter-to-sample behavior.
 
 ### Task 4: Add cached crisp 2D rendering and precomputed double-dimer loops
 
