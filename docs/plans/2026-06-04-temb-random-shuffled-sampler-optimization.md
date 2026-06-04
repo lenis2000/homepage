@@ -1,5 +1,7 @@
 # T-embedding Random Shuffled Sampler Optimization
 
+Status: Completed 2026-06-04. This plan addressed Tasks 1-7; benchmark notes are recorded in `docs/plans/benchmarks/temb-random-shuffled-sampler-baseline.md`.
+
 ## Overview
 
 Optimize only the randomly shuffled domino sampler embedded in the arbitrary-weight T-embedding page. Do **not** optimize or rewrite the T-embedding recurrence, origami rendering, stepwise construction, Mathematica verification, or the main T-embedding visualization except where a shared helper is strictly needed by the random sampler.

@@ -2672,13 +2672,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       applyMasterWeightsToGeometry(n);
       computeAndDisplay();
 
-      // Precompute IID weights if needed
-      const preset = document.getElementById('weight-preset-select').value;
-      if (preset === 'random-iid') {
-        const N = parseInt(document.getElementById('sample-N-input').value) || 6;
-        getOrComputeIIDWeights(N);
-      }
-
       // Generate initial sample
       generateRandomSample();
 
@@ -2711,6 +2704,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let samplePanX = 0, samplePanY = 0;
   let samplePaletteIndex = 0;  // Default to first palette
   let sample2DRenderer = null;
+  let activeRandomSampleRequestId = 0;
+  let activeUserVisibleSampleRequestId = 0;
   const SAMPLE_2D_EXACT_RENDER_LIMIT = 50;
   const SAMPLE_2D_CACHE_MAX_PX = 4096;
   const SAMPLE_2D_CACHE_PADDING = 4;
@@ -2736,6 +2731,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let heightFunctionGroup = null;
   let heightFunctionActive = false;
   let heightFunctionAnimating = false;
+  let heightFunctionInitTimer = null;
 
   function invalidateSampleHeightFunctionCache() {
     sampleDoubleDimerHeightDiffCache.config1 = null;
@@ -2743,9 +2739,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     sampleDoubleDimerHeightDiffCache.diff = null;
   }
 
-  // Cached IID weights - precomputed to avoid regenerating on each render
-  let cachedIIDWeights = null;
-  let cachedIIDKey = null;  // Key to check if cache is valid
   const sampleWeightCache = new Map();
   const SAMPLE_WEIGHT_CACHE_MAX_ENTRIES = 8;
   const SAMPLE_WEIGHT_CACHEABLE_PRESETS = new Set([
@@ -2858,6 +2851,28 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return profile;
   }
 
+  function finishStaleShuffledSamplerProfile(profile) {
+    if (!profile) return profile;
+    profile.status = 'stale';
+    profile.totalMs = roundSampleTiming(performance.now() - profile.startedAt);
+    profile.error = 'Superseded by a newer sample request';
+    return profile;
+  }
+
+  function nextRandomSampleRequestId() {
+    activeRandomSampleRequestId += 1;
+    return activeRandomSampleRequestId;
+  }
+
+  function isActiveRandomSampleRequest(requestId) {
+    return requestId === activeRandomSampleRequestId;
+  }
+
+  function setSampleButtonBusy(isBusy) {
+    const sampleBtn = document.getElementById('sample-btn');
+    if (sampleBtn) sampleBtn.disabled = !!isBusy;
+  }
+
   function readSampleMinLoopLength() {
     const minLoopInput = document.getElementById('sample-min-loop-length');
     const parsed = parseInt(minLoopInput?.value, 10);
@@ -2905,7 +2920,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
   }
 
-  function restoreSampleBenchmarkControls(snapshot) {
+  async function restoreSampleBenchmarkControls(snapshot) {
     if (!snapshot) return;
     const nInput = document.getElementById('sample-N-input');
     const borderInput = document.getElementById('sample-border-input');
@@ -2927,9 +2942,13 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       setSampleViewMode(snapshot.sampleWas3D);
     } else if (sampleIs3DView) {
       updateSample3DView();
-    } else {
-      renderSample();
     }
+
+    await generateRandomSample({
+      source: 'benchmark',
+      label: 'Restoring sampler',
+      throwOnError: false
+    });
   }
 
   function nextSampleBenchmarkFrame() {
@@ -2984,7 +3003,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       }
     } finally {
       if (shouldRestore) {
-        restoreSampleBenchmarkControls(snapshot);
+        await restoreSampleBenchmarkControls(snapshot);
         clearSampleTimingDisplay();
         setSampleStatus('');
       }
@@ -2998,71 +3017,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   }
 
   window.tembShuffledSamplerBenchmark = runTembShuffledSamplerBenchmark;
-
-  function getIIDWeightsCacheKey(N) {
-    const seed = parseInt(document.getElementById('random-seed').value) || 42;
-    const distType = document.getElementById('iid-distribution-select').value;
-    let params = '';
-    if (distType === 'uniform') {
-      const a = parseFloat(document.getElementById('iid-min').value) || 0.5;
-      const b = parseFloat(document.getElementById('iid-max').value) || 2.0;
-      params = `${a},${b}`;
-    } else if (distType === 'bernoulli') {
-      const p = parseFloat(document.getElementById('iid-bernoulli-p').value) || 0.5;
-      const v1 = parseFloat(document.getElementById('iid-bernoulli-v1').value) || 0.5;
-      const v2 = parseFloat(document.getElementById('iid-bernoulli-v2').value) || 2.0;
-      params = `${p},${v1},${v2}`;
-    } else if (distType === 'pareto') {
-      const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
-      const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
-      params = `${alpha},${xmin}`;
-    } else if (distType === 'geometric') {
-      const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
-      params = `${p}`;
-    }
-    return `${N}:${seed}:${distType}:${params}`;
-  }
-
-  function getOrComputeIIDWeights(N) {
-    const key = getIIDWeightsCacheKey(N);
-    if (cachedIIDWeights && cachedIIDKey === key) {
-      return cachedIIDWeights;
-    }
-    // Compute new weights
-    const dim = 2 * N;
-    const seed = parseInt(document.getElementById('random-seed').value) || 42;
-    const rng = createSeededRNG(seed);
-    const numWeights = dim * dim;
-    const edgeWeights = new Float64Array(numWeights);
-    const distType = document.getElementById('iid-distribution-select').value;
-
-    for (let i = 0; i < numWeights; i++) {
-      if (distType === 'uniform') {
-        const a = parseFloat(document.getElementById('iid-min').value) || 0.5;
-        const b = parseFloat(document.getElementById('iid-max').value) || 2.0;
-        edgeWeights[i] = a + rng() * (b - a);
-      } else if (distType === 'bernoulli') {
-        const p = parseFloat(document.getElementById('iid-bernoulli-p').value) || 0.5;
-        const v1 = parseFloat(document.getElementById('iid-bernoulli-v1').value) || 0.5;
-        const v2 = parseFloat(document.getElementById('iid-bernoulli-v2').value) || 2.0;
-        edgeWeights[i] = rng() < p ? v1 : v2;
-      } else if (distType === 'exponential') {
-        edgeWeights[i] = -Math.log(1 - rng());
-      } else if (distType === 'pareto') {
-        const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
-        const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
-        edgeWeights[i] = xmin / Math.pow(1 - rng(), 1 / alpha);
-      } else if (distType === 'geometric') {
-        const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
-        edgeWeights[i] = Math.floor(Math.log(1 - rng()) / Math.log(1 - p)) + 1;
-      } else {
-        edgeWeights[i] = 0.5 + rng() * 1.5;
-      }
-    }
-    cachedIIDWeights = edgeWeights;
-    cachedIIDKey = key;
-    return edgeWeights;
-  }
 
   // 8-tone grayscale helper functions (for gas phase visualization)
   // Each color gets 2 shades based on coordinate parity (8 total shades)
@@ -3181,6 +3135,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let sample3DRenderedPaletteIndex = null;
   let sample3DRenderedGrayscale = null;
   let sample3DAnimating = false;
+  let sample3DInitTimer = null;
   let sample3DAutoRotate = false;
   let sample3DPresetIndex = 0;
   let sample3DAmbientLight, sample3DHemisphereLight, sample3DDirectionalLight, sample3DFillLight;
@@ -3536,6 +3491,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   function animateHeightFunction() {
     if (!heightFunctionAnimating) return;
+    if (!isHeightFunctionPaneVisible()) {
+      heightFunctionAnimating = false;
+      return;
+    }
     requestAnimationFrame(animateHeightFunction);
     if (heightFunctionControls) heightFunctionControls.update();
     if (heightFunctionRenderer && heightFunctionScene && heightFunctionCamera) {
@@ -3706,10 +3665,16 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     heightFunctionActive = true;
 
     // Wait for layout to be computed before initializing Three.js
-    setTimeout(() => {
+    if (heightFunctionInitTimer) clearTimeout(heightFunctionInitTimer);
+    heightFunctionInitTimer = setTimeout(() => {
+      heightFunctionInitTimer = null;
+      if (!isHeightFunctionPaneVisible()) return;
       // Initialize Three.js if needed
       if (!heightFunctionRenderer) {
         initHeightFunction3D(threeContainer);
+      } else if (!heightFunctionAnimating) {
+        heightFunctionAnimating = true;
+        animateHeightFunction();
       }
 
       // Compute and render height function difference
@@ -3722,11 +3687,16 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   // Hide height function pane
   function hideHeightFunctionPane() {
+    if (heightFunctionInitTimer) {
+      clearTimeout(heightFunctionInitTimer);
+      heightFunctionInitTimer = null;
+    }
     const container = document.getElementById('height-function-container');
     if (container) {
       container.style.display = 'none';
     }
     heightFunctionActive = false;
+    heightFunctionAnimating = false;
   }
 
   // Update height function button visibility
@@ -4028,6 +3998,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   // 3D View Management Functions
   function setSampleViewMode(use3D) {
+    if (sample3DInitTimer) {
+      clearTimeout(sample3DInitTimer);
+      sample3DInitTimer = null;
+    }
     sampleIs3DView = use3D;
     const canvas2D = document.getElementById('sample-canvas');
     const container3D = document.getElementById('sample-3d-container');
@@ -4046,7 +4020,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       rotateBtn.style.display = 'inline-block';
 
       // Create 3D renderer if not exists, with slight delay to ensure container has dimensions
-      setTimeout(() => {
+      sample3DInitTimer = setTimeout(() => {
+        sample3DInitTimer = null;
+        if (!sampleIs3DView || !container3D || container3D.style.display === 'none') return;
         if (!sampleRenderer3D) {
           sampleRenderer3D = new SampleDomino3DRenderer(container3D);
           window.tembSample3DRenderer = sampleRenderer3D;
@@ -4212,24 +4188,34 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     };
   }
 
-  function generateIIDWeight(distType, rng) {
+  function getNumericControlValue(id, fallback) {
+    const value = parseFloat(document.getElementById(id)?.value);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  function getParamNumber(params, key, fallback) {
+    const value = params && Number(params[key]);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  function generateIIDWeight(distType, rng, params = {}) {
     if (distType === 'uniform') {
-      const a = parseFloat(document.getElementById('iid-min').value) || 0.5;
-      const b = parseFloat(document.getElementById('iid-max').value) || 2.0;
+      const a = getParamNumber(params, 'min', getNumericControlValue('iid-min', 0.5));
+      const b = getParamNumber(params, 'max', getNumericControlValue('iid-max', 2.0));
       return a + rng() * (b - a);
     } else if (distType === 'bernoulli') {
-      const p = parseFloat(document.getElementById('iid-bernoulli-p').value) || 0.5;
-      const v1 = parseFloat(document.getElementById('iid-bernoulli-v1').value) || 0.5;
-      const v2 = parseFloat(document.getElementById('iid-bernoulli-v2').value) || 2.0;
+      const p = getParamNumber(params, 'bernoulliP', getNumericControlValue('iid-bernoulli-p', 0.5));
+      const v1 = getParamNumber(params, 'bernoulliV1', getNumericControlValue('iid-bernoulli-v1', 0.5));
+      const v2 = getParamNumber(params, 'bernoulliV2', getNumericControlValue('iid-bernoulli-v2', 2.0));
       return rng() < p ? v1 : v2;
     } else if (distType === 'exponential') {
       return -Math.log(1 - rng());
     } else if (distType === 'pareto') {
-      const alpha = parseFloat(document.getElementById('iid-pareto-alpha').value) || 2.0;
-      const xmin = parseFloat(document.getElementById('iid-pareto-xmin').value) || 1.0;
+      const alpha = getParamNumber(params, 'paretoAlpha', getNumericControlValue('iid-pareto-alpha', 2.0));
+      const xmin = getParamNumber(params, 'paretoXmin', getNumericControlValue('iid-pareto-xmin', 1.0));
       return xmin / Math.pow(1 - rng(), 1 / alpha);
     } else if (distType === 'geometric') {
-      const p = parseFloat(document.getElementById('iid-geom-p').value) || 0.5;
+      const p = getParamNumber(params, 'geometricP', getNumericControlValue('iid-geom-p', 0.5));
       return Math.floor(Math.log(1 - rng()) / Math.log(1 - p)) + 1;
     }
     return 1.0;
@@ -4439,7 +4425,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     if (mode === 'iid') {
       const distType = params.distType || 'uniform';
-      return generateIIDWeight(distType, rng);
+      return generateIIDWeight(distType, rng, params);
     }
 
     if (mode === 'layered') {
@@ -4714,7 +4700,21 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     } else if (preset === 'random-iid') {
       const seed = parseInt(document.getElementById('random-seed')?.value) || 42;
       const distType = document.getElementById('iid-distribution-select')?.value || 'uniform';
-      return { mode: 'iid', params: { seed, distType } };
+      return {
+        mode: 'iid',
+        params: {
+          seed,
+          distType,
+          min: getNumericControlValue('iid-min', 0.5),
+          max: getNumericControlValue('iid-max', 2.0),
+          bernoulliP: getNumericControlValue('iid-bernoulli-p', 0.5),
+          bernoulliV1: getNumericControlValue('iid-bernoulli-v1', 0.5),
+          bernoulliV2: getNumericControlValue('iid-bernoulli-v2', 2.0),
+          paretoAlpha: getNumericControlValue('iid-pareto-alpha', 2.0),
+          paretoXmin: getNumericControlValue('iid-pareto-xmin', 1.0),
+          geometricP: getNumericControlValue('iid-geom-p', 0.5)
+        }
+      };
 
     } else if (preset === 'random-layered') {
       const seed = parseInt(document.getElementById('layered-seed')?.value) || 42;
@@ -4772,129 +4772,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return arr;
   }
 
-  function getControlValue(id) {
-    const el = document.getElementById(id);
-    return el ? el.value : '';
-  }
-
-  function getCheckedRadioValue(name) {
-    const selected = document.querySelector(`input[name="${name}"]:checked`);
-    return selected ? selected.value : '';
-  }
-
-  function getControlValues(ids) {
-    const values = {};
-    for (const id of ids) {
-      values[id] = getControlValue(id);
-    }
-    return values;
-  }
-
-  function getPeriodicEditorSnapshot() {
-    return Array.from(document.querySelectorAll('#weights-tables input'))
-      .map(input => ({
-        type: input.dataset.type || '',
-        j: input.dataset.j || '',
-        i: input.dataset.i || '',
-        value: input.value
-      }))
-      .sort((a, b) => `${a.type}:${a.j}:${a.i}`.localeCompare(`${b.type}:${b.j}:${b.i}`));
-  }
-
-  function getSampleWeightParameterSnapshot(preset) {
-    if (preset === 'random-iid') {
-      return getControlValues([
-        'random-seed',
-        'iid-distribution-select',
-        'iid-min',
-        'iid-max',
-        'iid-bernoulli-p',
-        'iid-bernoulli-v1',
-        'iid-bernoulli-v2',
-        'iid-pareto-alpha',
-        'iid-pareto-xmin',
-        'iid-geom-p'
-      ]);
-    }
-
-    if (preset === 'random-layered') {
-      return {
-        regime: getCheckedRadioValue('layered-regime'),
-        ...getControlValues([
-          'layered-seed',
-          'layered1-val1',
-          'layered1-val2',
-          'layered1-prob1',
-          'layered1-prob2',
-          'layered2-val1',
-          'layered2-val2',
-          'layered3-val1',
-          'layered3-val2',
-          'layered3-prob1',
-          'layered3-prob2',
-          'layered4-w1',
-          'layered4-w2',
-          'layered5-min',
-          'layered5-max',
-          'layered6-alpha',
-          'layered6-xmin'
-        ])
-      };
-    }
-
-    if (preset === 'random-straight-layered') {
-      return {
-        regime: getCheckedRadioValue('straight-layered-regime'),
-        ...getControlValues([
-          'straight-layered-seed',
-          'straight-layered1-val1',
-          'straight-layered1-val2',
-          'straight-layered1-prob1',
-          'straight-layered1-prob2',
-          'straight-layered2-val1',
-          'straight-layered2-val2',
-          'straight-layered3-val1',
-          'straight-layered3-val2',
-          'straight-layered3-prob1',
-          'straight-layered3-prob2',
-          'straight-layered4-w1',
-          'straight-layered4-w2',
-          'straight-layered5-min',
-          'straight-layered5-max',
-          'straight-layered6-alpha',
-          'straight-layered6-xmin'
-        ])
-      };
-    }
-
-    if (preset === 'random-gamma') {
-      return getControlValues(['gamma-seed', 'gamma-alpha', 'gamma-beta']);
-    }
-
-    if (preset === 'gamma-periodic-2x2') {
-      return getControlValues([
-        'gamma-periodic-seed',
-        'gamma-periodic-alpha-0-0',
-        'gamma-periodic-alpha-0-1',
-        'gamma-periodic-alpha-1-0',
-        'gamma-periodic-alpha-1-1',
-        'gamma-periodic-beta-0-0',
-        'gamma-periodic-beta-0-1',
-        'gamma-periodic-beta-1-0',
-        'gamma-periodic-beta-1-1'
-      ]);
-    }
-
-    if (preset === 'periodic') {
-      return {
-        ...getControlValues(['periodic-k', 'periodic-l']),
-        weights: getPeriodicEditorSnapshot()
-      };
-    }
-
-    return {};
-  }
-
   function normalizeSampleWeightCacheValue(value) {
     if (ArrayBuffer.isView(value)) {
       return Array.from(value, normalizeSampleWeightCacheValue);
@@ -4918,8 +4795,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       N,
       preset,
       mode,
-      params,
-      controls: getSampleWeightParameterSnapshot(preset)
+      params
     };
   }
 
@@ -5141,14 +5017,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return controls;
   }
 
-  async function runRandomSampleShuffling(controls, sampleWeights, profile) {
-    return await runShufflingWithWeights(controls.N, sampleWeights, controls.doubleDimer, profile);
-  }
-
-  function parseRandomSampleResult(resultPtr, profile) {
-    return decodeAndFreeShufflingResult(resultPtr, profile);
-  }
-
   function updateRandomSampleState(result, controls, profile) {
     if (controls.doubleDimer && result.config1) {
       sampleDominoes = result.config1;
@@ -5195,7 +5063,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   }
 
   async function generateRandomSample(options = {}) {
+    const requestId = nextRandomSampleRequestId();
     const profile = createShuffledSamplerProfile(options);
+    const isUserVisibleRequest = profile.source !== 'benchmark';
 
     clearSampleTimingDisplay();
     if (!wasmReady) {
@@ -5206,6 +5076,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       return profile;
     }
 
+    if (isUserVisibleRequest) {
+      activeUserVisibleSampleRequestId = requestId;
+      setSampleButtonBusy(true);
+    }
+
     try {
       const controls = readRandomSampleControlPhase(profile);
       setSampleStatus(options.source === 'benchmark'
@@ -5213,8 +5088,13 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         : controls.statusMessage);
 
       const sampleWeights = getOrGenerateSampleWeights(controls, profile);
-      const resultPtr = await runRandomSampleShuffling(controls, sampleWeights, profile);
-      const result = parseRandomSampleResult(resultPtr, profile);
+      const resultPtr = await runShufflingWithWeights(controls.N, sampleWeights, controls.doubleDimer, profile);
+      const result = decodeAndFreeShufflingResult(resultPtr, profile);
+
+      if (!isActiveRandomSampleRequest(requestId)) {
+        return finishStaleShuffledSamplerProfile(profile);
+      }
+
       updateRandomSampleState(result, controls, profile);
       renderVisibleSampleViews(controls, profile);
 
@@ -5225,12 +5105,20 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       return profile;
 
     } catch (e) {
+      if (!isActiveRandomSampleRequest(requestId)) {
+        return finishStaleShuffledSamplerProfile(profile);
+      }
       console.error('Shuffling error:', e);
       finishShuffledSamplerProfile(profile, 'error', e);
       clearSampleTimingDisplay();
       setSampleStatus('Sampling failed: ' + (e.message || e));
       if (options.throwOnError) throw e;
       return profile;
+    } finally {
+      if (isUserVisibleRequest && activeUserVisibleSampleRequestId === requestId) {
+        activeUserVisibleSampleRequestId = 0;
+        setSampleButtonBusy(false);
+      }
     }
   }
 

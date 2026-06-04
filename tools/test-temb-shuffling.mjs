@@ -45,6 +45,9 @@ function checkShufflingSourceAndBundle() {
     cppSource.includes("computeDecisionPyramids(weights, decisions1, &decisions2"),
     "double-dimer shuffling should build two independent decision pyramids in one probability pass"
   );
+  assert(cppSource.includes("normalizeMatrixIfNeeded"), "C++ sampler should normalize extreme square-move layers");
+  assert(cppSource.includes("Degenerate square-move denominator"), "C++ sampler should reject degenerate square-move denominators");
+  assert(!cppSource.includes('std::strcpy(out, "[]")'), "C++ error allocation failure should not masquerade as an empty sample");
   assert(!cppSource.includes("d3pslim("), "C++ sampler should not keep the removed full d3pslim probability path");
   assert(!cppSource.includes("probsslim("), "C++ sampler should not keep the removed full probsslim probability path");
   assert(!/if\s*\(\s*n\s*>\s*(\d+)\s*\)\s*n\s*=\s*\1\s*;/.test(cppSource), "C++ sampler should not silently clamp n");
@@ -74,7 +77,8 @@ function checkPageSource() {
   assert(source.includes("TEMB_SHUFFLED_DEFAULT_BENCHMARK_CASES"), "default benchmark cases should be declared");
   assert(source.includes("{ n: 330, doubleDimer: true"), "default benchmark cases should include N=330 double dimer");
   assert(source.includes("const sampleWeightCache = new Map()"), "sample EKLP weights should be cached by deterministic controls");
-  assert(source.includes("getSampleWeightParameterSnapshot"), "weight cache key should include preset-specific controls");
+  assert(source.includes("createSampleWeightRequest"), "weight cache key should include the current weight request");
+  assert(source.includes("geometricP: getNumericControlValue"), "IID cache keys should include distribution-specific controls");
   assert(source.includes("getOrGenerateSampleWeights"), "random sampler should use a named weight generation/cache phase");
   assert(source.includes("shufflingModule.HEAPF64.set(eklpWeights, weightsPtr >> 3)"), "Float64Array weights should be bulk-copied into the WASM heap");
   assert(!source.includes("shufflingModule.setValue(weightsPtr + i * 8, eklpWeights[i], 'double')"), "random sampler should not copy weights with per-element setValue");
@@ -83,9 +87,10 @@ function checkPageSource() {
   assert(source.includes("parseShufflingJsonResponse"), "WASM JSON responses should be parsed through a named helper");
   assert(source.includes("result.error"), "WASM {error: ...} responses should be surfaced to the status text");
   assert(source.includes("readRandomSampleControlPhase"), "generateRandomSample should split out the control-read phase");
-  assert(source.includes("runRandomSampleShuffling"), "generateRandomSample should split out the shuffling phase");
+  assert(source.includes("runShufflingWithWeights(controls.N, sampleWeights"), "generateRandomSample should run the named shuffling phase");
   assert(source.includes("updateRandomSampleState"), "generateRandomSample should split out sample state updates");
   assert(source.includes("renderVisibleSampleViews"), "generateRandomSample should split out visible view rendering");
+  assert(source.includes("isActiveRandomSampleRequest"), "generateRandomSample should ignore stale async sample completions");
   assert(source.includes("isSample3DPaneVisible()"), "sample 3D should only update while visible");
   assert(source.includes("isHeightFunctionPaneVisible()"), "height function pane should only update while visible");
   assert(source.includes("#sample-canvas {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;"), "sample canvas should use crisp pixelated rendering");
@@ -152,7 +157,7 @@ function canonicalDominoConfig(dominoes) {
     .join("|");
 }
 
-function decodeWasmJson(module, resultPtr) {
+function decodeWasmJson(module, resultPtr, options = {}) {
   assert(resultPtr, "WASM shuffling export should return a non-null result pointer");
   let json = "";
   try {
@@ -162,7 +167,9 @@ function decodeWasmJson(module, resultPtr) {
   }
 
   const result = JSON.parse(json);
-  assert(!result?.error, `WASM shuffling returned error JSON: ${result.error}`);
+  if (!options.allowError) {
+    assert(!result?.error, `WASM shuffling returned error JSON: ${result.error}`);
+  }
   return result;
 }
 
@@ -179,6 +186,23 @@ async function callWeightedSampler(module, fn, n, weights) {
   } finally {
     module._free(weightsPtr);
   }
+}
+
+async function expectWasmError(module, promise, expectedText) {
+  const resultPtr = await promise;
+  const result = decodeWasmJson(module, resultPtr, { allowError: true });
+  assert(result && typeof result.error === "string", "WASM error path should return an error JSON object");
+  assert(
+    result.error.includes(expectedText),
+    `WASM error should mention ${expectedText}, got: ${result.error}`
+  );
+}
+
+function allocateWeights(module, weights) {
+  const ptr = module._malloc(weights.length * Float64Array.BYTES_PER_ELEMENT);
+  assert(ptr, "WASM heap allocation for test weights should succeed");
+  module.HEAPF64.set(weights, ptr >> 3);
+  return ptr;
 }
 
 function assertDominoCount(dominoes, n, label) {
@@ -199,6 +223,8 @@ async function runStandaloneWasmSmoke() {
   const module = await createShufflingModule();
   const simulateAztecWithWeightMatrix = module.cwrap("simulateAztecWithWeightMatrix", "number", ["number", "number"], { async: true });
   const simulateAztecDoubleDimer = module.cwrap("simulateAztecDoubleDimer", "number", ["number", "number"], { async: true });
+  const simulateAztecGammaDirect = module.cwrap("simulateAztecGammaDirect", "number", ["number", "number", "number"], { async: true });
+  const simulateAztecPeriodicDirect = module.cwrap("simulateAztecPeriodicDirect", "number", ["number", "number", "number", "number", "number", "number"], { async: true });
 
   const singleN = 6;
   const singleWeights = createDeterministicWeights(singleN, 0x5eed1234);
@@ -222,6 +248,61 @@ async function runStandaloneWasmSmoke() {
     sawIndependentConfigurations,
     "simulateAztecDoubleDimer should not accidentally return identical configurations for generic random weights"
   );
+
+  const invalidNWeights = createDeterministicWeights(1, 0xabcdef01);
+  const invalidNPtr = allocateWeights(module, invalidNWeights);
+  try {
+    await expectWasmError(
+      module,
+      simulateAztecWithWeightMatrix(0, invalidNPtr),
+      "N must be at least 1"
+    );
+  } finally {
+    module._free(invalidNPtr);
+  }
+
+  await expectWasmError(
+    module,
+    simulateAztecWithWeightMatrix(2, 0),
+    "Weight pointer is null"
+  );
+
+  const nonFiniteWeights = createDeterministicWeights(2, 0xf00d1234);
+  nonFiniteWeights[3] = Number.POSITIVE_INFINITY;
+  const nonFinitePtr = allocateWeights(module, nonFiniteWeights);
+  try {
+    await expectWasmError(
+      module,
+      simulateAztecDoubleDimer(2, nonFinitePtr),
+      "non-finite"
+    );
+  } finally {
+    module._free(nonFinitePtr);
+  }
+
+  await expectWasmError(
+    module,
+    simulateAztecGammaDirect(4, 0, 1),
+    "positive finite"
+  );
+
+  const periodicAlpha = new Float64Array([1, 1, 1, 1]);
+  const periodicBeta = new Float64Array([1, 1, 1, 1]);
+  const periodicGamma = new Float64Array([1, 1, -1, 1]);
+  const alphaPtr = allocateWeights(module, periodicAlpha);
+  const betaPtr = allocateWeights(module, periodicBeta);
+  const gammaPtr = allocateWeights(module, periodicGamma);
+  try {
+    await expectWasmError(
+      module,
+      simulateAztecPeriodicDirect(4, 2, 2, alphaPtr, betaPtr, gammaPtr),
+      "Periodic weights must be positive"
+    );
+  } finally {
+    module._free(alphaPtr);
+    module._free(betaPtr);
+    module._free(gammaPtr);
+  }
 }
 
 function findBrowser() {
@@ -525,6 +606,66 @@ async function runBrowserSmoke() {
     assert(cacheBenchmark.cases.every(c => c.timings.heapCopyMs !== null), "cache smoke benchmark should record heap copy timing");
     assert(cacheBenchmark.cases.every(c => c.timings.utf8ConversionMs !== null), "cache smoke benchmark should record UTF8 conversion timing");
 
+    const cacheInvalidationSmoke = await evaluate(client, `(async () => {
+      const runCase = async (n, label) => {
+        const benchmark = await window.tembShuffledSamplerBenchmark({
+          cases: [{ n, doubleDimer: false, label }],
+          stopOnError: true,
+          restore: false
+        });
+        const result = benchmark.cases[0];
+        return {
+          status: result.status,
+          key: window.tembLastShuffledSamplerProfile?.weightCacheKey || "",
+          hit: !!result.weightCacheHit
+        };
+      };
+
+      const presetSelect = document.getElementById("weight-preset-select");
+      const seed = document.getElementById("random-seed");
+      const min = document.getElementById("iid-min");
+      const periodicK = document.getElementById("periodic-k");
+      const periodicL = document.getElementById("periodic-l");
+
+      presetSelect.value = "random-iid";
+      presetSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      seed.value = "70101";
+      min.value = "0.37";
+      const iidFirst = await runCase(12, "iid first");
+      const iidRepeat = await runCase(12, "iid repeat");
+      seed.value = "70102";
+      const seedChange = await runCase(12, "iid seed change");
+      min.value = "0.43";
+      const paramChange = await runCase(12, "iid param change");
+      const nChange = await runCase(13, "iid n change");
+
+      presetSelect.value = "periodic";
+      presetSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      periodicK.value = "2";
+      periodicL.value = "2";
+      periodicK.dispatchEvent(new Event("change", { bubbles: true }));
+      periodicL.dispatchEvent(new Event("change", { bubbles: true }));
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      const periodicGamma = document.querySelector('#weights-tables input[data-type="2"]');
+      if (periodicGamma) periodicGamma.value = "1.25";
+      const periodicFirst = await runCase(12, "periodic first");
+      if (periodicGamma) periodicGamma.value = "1.75";
+      const periodicChange = await runCase(12, "periodic gamma change");
+
+      return { iidFirst, iidRepeat, seedChange, paramChange, nChange, periodicFirst, periodicChange };
+    })()`, 240000);
+    assert(cacheInvalidationSmoke.iidFirst.status === "ok", "IID cache invalidation first sample should pass");
+    assert(cacheInvalidationSmoke.iidRepeat.hit, "repeated IID controls should hit the cache");
+    assert(!cacheInvalidationSmoke.seedChange.hit, "changing IID seed should miss the cache");
+    assert(cacheInvalidationSmoke.seedChange.key !== cacheInvalidationSmoke.iidFirst.key, "changing IID seed should change the cache key");
+    assert(!cacheInvalidationSmoke.paramChange.hit, "changing IID distribution params should miss the cache");
+    assert(cacheInvalidationSmoke.paramChange.key !== cacheInvalidationSmoke.seedChange.key, "changing IID distribution params should change the cache key");
+    assert(!cacheInvalidationSmoke.nChange.hit, "changing sample N should miss the cache");
+    assert(cacheInvalidationSmoke.nChange.key !== cacheInvalidationSmoke.paramChange.key, "changing sample N should change the cache key");
+    assert(cacheInvalidationSmoke.periodicFirst.status === "ok" && cacheInvalidationSmoke.periodicChange.status === "ok", "periodic cache invalidation samples should pass");
+    assert(!cacheInvalidationSmoke.periodicChange.hit, "changing periodic editor weights should miss the cache");
+    assert(cacheInvalidationSmoke.periodicChange.key !== cacheInvalidationSmoke.periodicFirst.key, "changing periodic editor weights should change the cache key");
+
     const rendererSmoke = await evaluate(client, `(() => {
       const sampleCanvas = document.getElementById("sample-canvas");
       const renderer = window.tembSample2DRenderer;
@@ -786,6 +927,7 @@ async function runBrowserSmoke() {
     assert(sample3DSmoke.afterPalette.grayscale !== sample3DSmoke.before.grayscale, "sample 3D grayscale toggle should update color state");
     assert(!sample3DSmoke.after2D.visible, "sample 3D should be hidden after switching back to 2D");
     assert(!sample3DSmoke.after2D.animating, "sample 3D animation should stop in 2D mode");
+    assert(sample3DSmoke.diagnostics.errors.length === 0, `sample 3D smoke should not report browser errors: ${sample3DSmoke.diagnostics.errors.join("; ")}`);
 
     const main3DSmoke = await evaluate(client, `(() => {
       const btn = document.getElementById("toggle-2d-3d-btn");

@@ -67,6 +67,15 @@ emcc YYYY-MM-DD-name.cpp -o YYYY-MM-DD-name.js \
 mv YYYY-MM-DD-name.js ../../js/
 ```
 
+### T-embedding Shuffled Sampler
+- Source: `_simulations/domino_tilings/2025-12-11-t-embedding-shuffling.cpp`
+- Generated bundle: `js/2025-12-11-t-embedding-shuffling.js`
+- Use the exact `emcc` preamble in the C++ file and commit the regenerated JS bundle with source changes.
+- Validate with `make test-temb-shuffling` after the bundle is regenerated.
+- The optimized shuffling core uses flat matrices, Xoshiro256++, `PackedDecisionPyramid`, layer normalization, ping-pong buffers, and independent packed decision pyramids for double-dimer samples.
+- The JS sampler bulk-copies EKLP weights with `HEAPF64.set`; keep `HEAPF64` in `EXPORTED_RUNTIME_METHODS`.
+- Keep `kMaxSupportedN` aligned with the `#sample-N-input` UI max.
+
 
 ## Creating a New Simulation
 
@@ -124,6 +133,9 @@ Different simulation types require different exported functions:
 
 // T-embeddings
 '_doTembJSONwithA', '_freeString', '_getProgress', '_resetProgress'
+
+// T-embedding shuffled sampler
+'_simulateAztecWithWeightMatrix', '_simulateAztecGammaDirect', '_simulateAztecPeriodicDirect', '_simulateAztecIIDDirect', '_simulateAztecDoubleDimer', '_freeString', '_getProgress', '_malloc', '_free'
 ```
 
 Always check the base simulation's exports when creating a new simulation.

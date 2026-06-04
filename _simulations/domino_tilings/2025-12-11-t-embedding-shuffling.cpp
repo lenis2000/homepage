@@ -17,7 +17,7 @@
     -s ENVIRONMENT=web \
     -fexceptions \
     -s SINGLE_FILE=1 \
-    -O3 -ffast-math && mv 2025-12-11-t-embedding-shuffling.js ../../js/
+    -O3 && mv 2025-12-11-t-embedding-shuffling.js ../../js/
 */
 
 #include <emscripten.h>
@@ -227,9 +227,6 @@ static int checkedN(int n) {
 }
 
 static double clampProbability(double value) {
-    if (!std::isfinite(value)) {
-        return 0.5;
-    }
     if (value <= 0.0) {
         return 0.0;
     }
@@ -237,6 +234,32 @@ static double clampProbability(double value) {
         return 1.0;
     }
     return value;
+}
+
+static double boundedProbability(double value) {
+    if (!std::isfinite(value)) {
+        throw std::runtime_error("Invalid creation probability");
+    }
+    if (value < -1e-12 || value > 1.0 + 1e-12) {
+        throw std::runtime_error("Creation probability out of range");
+    }
+    return clampProbability(value);
+}
+
+static void normalizeMatrixIfNeeded(MatrixDouble& matrix, double maxAbs) {
+    if (maxAbs <= 0.0 || !std::isfinite(maxAbs)) {
+        return;
+    }
+
+    if (maxAbs < 1e-100 || maxAbs > 1e100) {
+        const int rows = matrix.rows();
+        const int cols = matrix.cols();
+        for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < cols; ++j) {
+                matrix[i][j] /= maxAbs;
+            }
+        }
+    }
 }
 
 static void setProgressInRange(int start, int end, int completed, int total) {
@@ -271,6 +294,7 @@ static void computeDecisionPyramids(
     MatrixDouble nextValue;
     MatrixInt nextExp;
 
+    double currentMaxAbs = 0.0;
     for (int i = 0; i < dim; ++i) {
         for (int j = 0; j < dim; ++j) {
             const double weight = weights[i][j];
@@ -284,8 +308,10 @@ static void computeDecisionPyramids(
                 currentValue[i][j] = weight;
                 currentExp[i][j] = 0;
             }
+            currentMaxAbs = std::max(currentMaxAbs, std::fabs(currentValue[i][j]));
         }
     }
+    normalizeMatrixIfNeeded(currentValue, currentMaxAbs);
 
     for (int size = dim; size >= 2; size -= 2) {
         const int rows = size / 2;
@@ -310,7 +336,10 @@ static void computeDecisionPyramids(
                     const double prodMain = currentValue[i0 + 1][j0 + 1] * currentValue[i0][j0];
                     const double prodOther = currentValue[i0 + 1][j0] * currentValue[i0][j0 + 1];
                     const double denom = prodMain + prodOther;
-                    const double probability = clampProbability(std::fabs(denom) < 1e-300 ? 0.5 : prodMain / denom);
+                    if (denom == 0.0 || !std::isfinite(denom)) {
+                        throw std::runtime_error("Degenerate creation probability denominator");
+                    }
+                    const double probability = boundedProbability(prodMain / denom);
                     primaryDecision = shuffleRng.next_double() < probability;
                     secondaryDecision = secondary ? (shuffleRng.next_double() < probability) : primaryDecision;
                 }
@@ -331,6 +360,7 @@ static void computeDecisionPyramids(
 
         nextValue.reset(nextSize, nextSize, 0.0);
         nextExp.reset(nextSize, nextSize, 0);
+        double nextMaxAbs = 0.0;
 
         for (int i = 0; i < nextSize; ++i) {
             for (int j = 0; j < nextSize; ++j) {
@@ -363,14 +393,17 @@ static void computeDecisionPyramids(
                     denominatorExp = expOther;
                 }
 
-                if (!std::isfinite(denominator) || std::fabs(denominator) < 1e-300) {
-                    denominator = denominator < 0.0 ? -1e-300 : 1e-300;
+                if (denominator == 0.0 || !std::isfinite(denominator)) {
+                    throw std::runtime_error("Degenerate square-move denominator");
                 }
 
                 nextValue[i][j] = current / denominator;
                 nextExp[i][j] = currentFlag - denominatorExp;
+                nextMaxAbs = std::max(nextMaxAbs, std::fabs(nextValue[i][j]));
             }
         }
+
+        normalizeMatrixIfNeeded(nextValue, nextMaxAbs);
 
         std::swap(currentValue, nextValue);
         std::swap(currentExp, nextExp);
@@ -651,14 +684,7 @@ static string escapeJsonString(const string& value) {
 
 static char* makeErrorCString(const string& message) {
     string error = string("{\"error\":\"") + escapeJsonString(message) + "\"}";
-    char* out = makeCString(error);
-    if (!out) {
-        out = static_cast<char*>(std::malloc(3));
-        if (out) {
-            std::strcpy(out, "[]");
-        }
-    }
-    return out;
+    return makeCString(error);
 }
 
 static MatrixDouble copyWeightMatrixFromPointer(int n, const double* weights) {
@@ -716,20 +742,26 @@ static MatrixDouble generatePeriodicEdgeWeights(
     const int dim = 2 * n;
     MatrixDouble weights(dim, dim, 1.0);
 
-    for (int i = 0; i < dim; ++i) {
-        if ((i & 1) == 0) {
-            for (int j = 0; j < dim; ++j) {
-                const int pi = ((i / 2) % k + k) % k;
-                const int pj = ((j / 2) % l + l) % l;
-                const size_t idx = static_cast<size_t>(pi) * static_cast<size_t>(l) + static_cast<size_t>(pj);
-                if (!std::isfinite(alphaWeights[idx]) ||
-                    !std::isfinite(betaWeights[idx]) ||
-                    !std::isfinite(gammaWeights[idx])) {
-                    throw std::runtime_error("Periodic weights must be finite");
-                }
-                const double selected = ((j & 1) == 0) ? betaWeights[idx] : alphaWeights[idx];
-                weights[i][j] = selected;
+    for (int cellI = 0; cellI < n; ++cellI) {
+        for (int cellJ = 0; cellJ < n; ++cellJ) {
+            const int pi = ((cellI % k) + k) % k;
+            const int pj = ((cellJ % l) + l) % l;
+            const size_t idx = static_cast<size_t>(pi) * static_cast<size_t>(l) + static_cast<size_t>(pj);
+            const double alpha = alphaWeights[idx];
+            const double beta = betaWeights[idx];
+            const double gamma = gammaWeights[idx];
+            if (!std::isfinite(alpha) || !std::isfinite(beta) || !std::isfinite(gamma)) {
+                throw std::runtime_error("Periodic weights must be finite");
             }
+            if (alpha <= 0.0 || beta <= 0.0 || gamma <= 0.0) {
+                throw std::runtime_error("Periodic weights must be positive");
+            }
+
+            const int row = 2 * cellI;
+            const int col = 2 * cellJ;
+            weights[row][col + 1] = alpha;
+            weights[row][col] = beta;
+            weights[row + 1][col] = gamma;
         }
     }
 
