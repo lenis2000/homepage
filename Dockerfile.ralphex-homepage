@@ -7,9 +7,12 @@ FROM ghcr.io/umputun/ralphex:latest
 USER root
 
 ENV EMSDK=/opt/emsdk \
+    EM_CONFIG=/opt/emsdk/.emscripten \
+    EM_CACHE=/tmp/emscripten-cache \
     GEM_HOME=/usr/local/bundle \
     BUNDLE_PATH=/usr/local/bundle \
-    BUNDLE_BIN=/usr/local/bundle/bin
+    BUNDLE_BIN=/usr/local/bundle/bin \
+    BUNDLE_GEMFILE=/tmp/homepage-gems/Gemfile
 ENV PATH="${BUNDLE_BIN}:${EMSDK}:${EMSDK}/upstream/emscripten:${PATH}"
 
 RUN apk add --no-cache \
@@ -38,19 +41,35 @@ RUN apk add --no-cache \
       yaml-dev \
       zlib-dev && \
     gem install --no-document bundler -v 2.5.14 && \
-    gem install --no-document csv logger
+    gem install --no-document base64 csv logger
 
 # Install Emscripten SDK. Keep this separate from Ruby gems so Docker can cache it.
 RUN git clone --depth 1 https://github.com/emscripten-core/emsdk.git ${EMSDK} && \
     ${EMSDK}/emsdk install latest && \
     ${EMSDK}/emsdk activate latest && \
     sed -i "s#^NODE_JS = .*#NODE_JS = ['/usr/bin/node']#" ${EMSDK}/.emscripten && \
-    emcc --version
+    printf '#!/bin/sh\nexec /opt/emsdk/upstream/emscripten/emcc "$@"\n' > /usr/local/bin/emcc && \
+    printf '#!/bin/sh\nexec /opt/emsdk/upstream/emscripten/em++ "$@"\n' > /usr/local/bin/em++ && \
+    chmod +x /usr/local/bin/emcc /usr/local/bin/em++ && \
+    emcc --version && \
+    rm -rf ${EM_CACHE} && \
+    mkdir -p ${EM_CACHE} && \
+    chmod 1777 ${EM_CACHE}
 
 # Preinstall homepage Jekyll gems. The project is still mounted at /workspace at runtime.
 WORKDIR /tmp/homepage-gems
 COPY Gemfile Gemfile.lock ./
-RUN bundle install --jobs=4 --retry=3 && \
+RUN printf '\n# Runtime gems needed by Ruby 3.4+ when using Jekyll 4.3.x\ngem "base64"\ngem "csv"\ngem "logger"\n' >> Gemfile && \
+    bundle install --jobs=4 --retry=3 && \
+    ln -sf "$(ruby -e 'print Gem.bindir')/jekyll" /usr/local/bin/jekyll && \
+    ln -sf /srv/ralphex /usr/local/bin/ralphex && \
     bundle exec jekyll --version
+
+# The homepage tree contains macOS virtualenv symlinks that Jekyll opens while scanning.
+# In Docker those absolute /opt/homebrew targets do not exist, so provide harmless
+# placeholder files to keep Jekyll's source scan from failing on broken symlinks.
+RUN mkdir -p /opt/homebrew/opt/python@3.13/bin /opt/homebrew/opt/python@3.14/bin && \
+    touch /opt/homebrew/opt/python@3.13/bin/python3.13 \
+          /opt/homebrew/opt/python@3.14/bin/python3.14
 
 WORKDIR /workspace
