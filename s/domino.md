@@ -2547,6 +2547,7 @@ async function initializeDominoRuntime() {
     }
 
     if (shouldShowLarge3DMessage(n)) {
+      animationActive = false;
       createLargeTilingMessage();
       skipDominoTiming(profile, "heightFunctionMs", "3D unavailable for n > 300");
       skipDominoTiming(profile, "render3DMs", "3D unavailable for n > 300");
@@ -2554,6 +2555,7 @@ async function initializeDominoRuntime() {
     }
 
     if (isNo3DEnabled()) {
+      animationActive = false;
       createNo3DMessage();
       skipDominoTiming(profile, "heightFunctionMs", "No 3D enabled");
       skipDominoTiming(profile, "render3DMs", "No 3D enabled");
@@ -2616,9 +2618,11 @@ async function initializeDominoRuntime() {
       if (!shouldRender3D(n)) {
         let reason = "2D view active";
         if (shouldShowLarge3DMessage(n)) {
+          animationActive = false;
           createLargeTilingMessage();
           reason = "3D unavailable for n > 300";
         } else if (getActiveView() === "3d" && isNo3DEnabled()) {
+          animationActive = false;
           createNo3DMessage();
           reason = "No 3D enabled";
         }

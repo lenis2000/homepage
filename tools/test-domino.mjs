@@ -65,6 +65,42 @@ async function wait(ms) {
   await new Promise(resolve => setTimeout(resolve, ms));
 }
 
+async function waitForChildExit(child, timeoutMs = 5000) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) return;
+  await new Promise(resolve => {
+    const done = () => {
+      clearTimeout(timer);
+      child.off("exit", done);
+      child.off("close", done);
+      resolve();
+    };
+    const timer = setTimeout(done, timeoutMs);
+    child.once("exit", done);
+    child.once("close", done);
+  });
+}
+
+async function shutdownBrowser(client, chrome) {
+  await client?.send("Browser.close").catch(() => {});
+  client?.close();
+  if (!chrome || chrome.exitCode !== null || chrome.signalCode !== null) return;
+  chrome.kill("SIGTERM");
+  await waitForChildExit(chrome);
+  if (chrome.exitCode === null && chrome.signalCode === null) {
+    chrome.kill("SIGKILL");
+    await waitForChildExit(chrome, 2000);
+  }
+}
+
+function removeTempDir(directory) {
+  fs.rmSync(directory, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 100
+  });
+}
+
 async function runCommand(command, args, options = {}) {
   await new Promise((resolve, reject) => {
     const child = spawn(command, args, {
@@ -283,6 +319,7 @@ async function evaluateDominoWasm(client) {
           }
         };
 
+        const fail = error => resolve({ error: String(error?.message ?? error) });
         for (const n of [2, 4, 12, 50]) {
           checkDominoes("frozen horizontal n=" + n, await callNineWeightSampler("simulateAztecHorizontal", n), n, "horizontal");
           checkDominoes("frozen vertical n=" + n, await callNineWeightSampler("simulateAztecVertical", n), n, "vertical");
@@ -306,8 +343,8 @@ async function evaluateDominoWasm(client) {
         ), 50);
         resolve("ok");
       };
-      if (Module.calledRun) ready().catch(error => resolve({ error: error.message }));
-      else Module.onRuntimeInitialized = () => ready().catch(error => resolve({ error: error.message }));
+      if (Module.calledRun) ready().catch(fail);
+      else Module.onRuntimeInitialized = () => ready().catch(fail);
     })
   `;
 
@@ -317,8 +354,17 @@ async function evaluateDominoWasm(client) {
     returnByValue: true,
     timeout: 60000
   }, 70000);
-  const value = result.result?.result?.value;
-  if (value?.error) throw new Error(value.error);
+  if (result.result?.exceptionDetails) {
+    throw new Error(result.result.exceptionDetails.text || "Browser WASM evaluation failed");
+  }
+  const remote = result.result?.result;
+  if (remote?.subtype === "error") {
+    throw new Error(remote.description || remote.value || "Browser WASM evaluation failed");
+  }
+  const value = remote?.value;
+  if (value && typeof value === "object" && "error" in value) {
+    throw new Error(String(value.error));
+  }
   assert(value === "ok", `Unexpected WASM test result: ${JSON.stringify(value)}`);
 }
 
@@ -484,13 +530,10 @@ async function checkBuiltDominoPage() {
     assert(disabled3DState.message.includes("3D visualization disabled"), "3D disabled message should be visible");
     assert(!disabled3DState.threeLoaded && !disabled3DState.lazyThreeScript, "Disabled 3D path should not load Three.js");
 
-    await client.send("Browser.close").catch(() => {});
   } finally {
-    client?.close();
-    chrome?.kill("SIGTERM");
+    await shutdownBrowser(client, chrome);
     if (server) await new Promise(resolve => server.close(resolve));
-    await wait(100);
-    fs.rmSync(tmp, { recursive: true, force: true });
+    removeTempDir(tmp);
   }
 }
 
@@ -522,12 +565,9 @@ async function checkWasmBundle() {
     await client.send("Page.enable");
     await client.send("Runtime.enable");
     await evaluateDominoWasm(client);
-    await client.send("Browser.close").catch(() => {});
   } finally {
-    client?.close();
-    chrome.kill("SIGTERM");
-    await wait(100);
-    fs.rmSync(tmp, { recursive: true, force: true });
+    await shutdownBrowser(client, chrome);
+    removeTempDir(tmp);
   }
 }
 
