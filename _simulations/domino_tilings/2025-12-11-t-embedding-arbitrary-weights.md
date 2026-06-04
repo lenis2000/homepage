@@ -1572,6 +1572,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   // Step-by-step visualization is only available for n <= this threshold
   const STEP_BY_STEP_MAX_N = 15;
 
+  // Full T_0,...,T_k precomputation is convenient for small/GIF use cases,
+  // but it stores O(n^3) vertices.  Large interactive runs only materialize
+  // the final level, which keeps n≈300 usable on iOS Safari.
+  const FULL_TEMB_PRECOMPUTE_MAX_N = 102;  // final k <= 100
+
   // Helper to parse and clamp n input
   function parseN() {
     let n = parseInt(document.getElementById('n-input').value) || 6;
@@ -1635,8 +1640,43 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let clearTembLevels;
   let clearStoredWeightsExport;
 
+  const parsedTembLevelCache = new Map();
+  const parsedOrigamiLevelCache = new Map();
+  const PARSED_LEVEL_CACHE_MAX_ENTRIES = 4;
+
+  function clearParsedLevelCaches() {
+    parsedTembLevelCache.clear();
+    parsedOrigamiLevelCache.clear();
+  }
+
+  function rememberParsedLevel(cache, k, data) {
+    if (cache.has(k)) cache.delete(k);
+    cache.set(k, data);
+    while (cache.size > PARSED_LEVEL_CACHE_MAX_ENTRIES) {
+      cache.delete(cache.keys().next().value);
+    }
+    return data;
+  }
+
+  function getParsedTembLevel(k) {
+    if (parsedTembLevelCache.has(k)) return parsedTembLevelCache.get(k);
+    const ptr = getTembeddingLevelJSON(k);
+    const json = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    return rememberParsedLevel(parsedTembLevelCache, k, JSON.parse(json));
+  }
+
+  function getParsedOrigamiLevel(k) {
+    if (parsedOrigamiLevelCache.has(k)) return parsedOrigamiLevelCache.get(k);
+    const ptr = getOrigamiLevelJSON(k);
+    const json = Module.UTF8ToString(ptr);
+    freeString(ptr);
+    return rememberParsedLevel(parsedOrigamiLevelCache, k, JSON.parse(json));
+  }
+
   // Track current weight mode: 0=All 1's (uniform), 1=Random IID, 2=Layered, 3=Gamma, 4=Periodic
   let currentWeightMode = 1;  // Default to Random IID
+  let manualWeightsActive = false;  // Imported edge weights should still run folding
 
   // Classify face type based on centroid coordinates and current face count
   // Returns: {type: 'ROOT'|'alpha_top'|'alpha_bottom'|'alpha_left'|'alpha_right'|'beta'|'gamma', k: number, i: number, j: number}
@@ -4997,16 +5037,17 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     const numWeights = masterWeights.length;
     const ptr = Module._malloc(numWeights * 8);
 
-    // Copy weights to WASM heap
-    for (let i = 0; i < numWeights; i++) {
-      Module.setValue(ptr + i * 8, masterWeights[i], 'double');
+    try {
+      if (!ptr) throw new Error('Could not allocate WASM heap space for T-embedding weights.');
+      // Bulk copy is much faster and creates less pressure on mobile Safari than
+      // calling Module.setValue once per entry.
+      (Module.HEAPF64 || HEAPF64).set(masterWeights, ptr >> 3);
+
+      // Apply to geometry engine
+      applyExternalWeights(ptr, numWeights);
+    } finally {
+      Module._free(ptr);
     }
-
-    // Apply to geometry engine
-    applyExternalWeights(ptr, numWeights);
-
-    // Free memory
-    Module._free(ptr);
   }
 
   // Sample double dimer configuration for T-embedding visualization
@@ -6954,13 +6995,16 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
       // Clear any previous T-embedding cache
       clearTembLevels();
+      clearParsedLevelCaches();
 
       // Clear stale stored face weights before capturing fresh ones
       clearStoredWeightsExport();
 
       // --- PHASE 1: FOLDING ---
       // Skip folding for uniform weights (all 1's) - all coefficients are 1
-      if (currentWeightMode === 0) {
+      const selectedPreset = document.getElementById('weight-preset-select')?.value || 'all-ones';
+      const uniformPresetActive = (selectedPreset === 'all-ones' && !manualWeightsActive) || currentWeightMode === 0;
+      if (uniformPresetActive) {
         computeTimeSpan.textContent = "Uniform weights (skip folding)...";
         await delay(10);
         // No folding needed - coefficients are all 1
@@ -7014,14 +7058,21 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       updateTembTimer(0, finalK);
       await delay(10);  // Yield to render text
 
-      for (let k = 0; k <= finalK; k++) {
-        let ptr = getTembeddingLevelJSON(k);
-        freeString(ptr);
-        if (performance.now() - tembLastUpdate > 1000) {
-          updateTembTimer(k, finalK);
-          tembLastUpdate = performance.now();
-          await delay(0);
+      if (n <= FULL_TEMB_PRECOMPUTE_MAX_N) {
+        for (let k = 0; k <= finalK; k++) {
+          let ptr = getTembeddingLevelJSON(k);
+          freeString(ptr);
+          if (performance.now() - tembLastUpdate > 1000) {
+            updateTembTimer(k, finalK);
+            tembLastUpdate = performance.now();
+            await delay(0);
+          }
         }
+      } else {
+        computeTimeSpan.textContent = `Computing final T level k=${finalK}...`;
+        await delay(10);
+        const ptr = getTembeddingLevelJSON(finalK);
+        freeString(ptr);
       }
 
       // maxK = n - 2 (for input n, we have T_0 through T_{n-2})
@@ -7031,7 +7082,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       currentK = Math.min(currentK, maxK);
       if (currentK < 0) currentK = 0;
       updateStepDisplay();
-      renderStepwiseTemb();
+      if (n <= STEP_BY_STEP_MAX_N) {
+        renderStepwiseTemb();
+      }
 
       // Also render the main visualization (2D or 3D)
       if (mainViewIs3D) {
@@ -7059,6 +7112,14 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     document.getElementById('step-value').textContent = currentK;
     document.getElementById('step-prev-btn').disabled = (currentK <= 0);
     document.getElementById('step-next-btn').disabled = (currentK >= maxK);
+
+    const n = currentSimulationN || parseN();
+    if (n > STEP_BY_STEP_MAX_N) {
+      document.getElementById('mathematica-output').textContent = 'Available for n ≤ 15.';
+      document.getElementById('verify-levels').innerHTML = '<em style="font-size: 11px;">Available for n ≤ 15.</em>';
+      return;
+    }
+
     updateMathematicaOutput();
     updateVerifyOutput();
   }
@@ -7066,6 +7127,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   // Generate Mathematica array output for ALL T levels (T_0 through T_maxK)
   function updateMathematicaOutput() {
     const mathDiv = document.getElementById('mathematica-output');
+    if ((currentSimulationN || parseN()) > STEP_BY_STEP_MAX_N) {
+      mathDiv.textContent = 'Available for n ≤ 15.';
+      return;
+    }
     if (!wasmReady || !getTembeddingLevelJSON) {
       mathDiv.innerHTML = '<em>Loading...</em>';
       return;
@@ -7135,6 +7200,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   // n1,n2,n3,n4 go counterclockwise: R, U, L, D
   function updateVerifyOutput() {
     const container = document.getElementById('verify-levels');
+    if ((currentSimulationN || parseN()) > STEP_BY_STEP_MAX_N) {
+      container.innerHTML = '<em style="font-size: 11px;">Available for n ≤ 15.</em>';
+      return;
+    }
     if (!wasmReady || !getTembeddingLevelJSON || !getStoredFaceWeightsJSON) {
       container.innerHTML = '<em style="font-size: 11px;">Loading...</em>';
       return;
@@ -7452,13 +7521,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     // Get final T-embedding level (k = n-2)
     const finalK = Math.max(0, n - 2);
-    const ptr = getTembeddingLevelJSON(finalK);
-    const json = Module.UTF8ToString(ptr);
-    freeString(ptr);
 
     let data;
     try {
-      data = JSON.parse(json);
+      data = getParsedTembLevel(finalK);
     } catch (e) {
       ctx.fillStyle = '#888';
       ctx.font = '14px sans-serif';
@@ -7732,13 +7798,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     // ========== ORIGAMI MAP (in blue) ==========
     const showOrigami = document.getElementById('show-origami-chk').checked;
     if (showOrigami && getOrigamiLevelJSON) {
-      const origamiPtr = getOrigamiLevelJSON(finalK);
-      const origamiJson = Module.UTF8ToString(origamiPtr);
-      freeString(origamiPtr);
-
       let origamiData;
       try {
-        origamiData = JSON.parse(origamiJson);
+        origamiData = getParsedOrigamiLevel(finalK);
       } catch (e) {
         origamiData = null;
       }
@@ -8043,13 +8105,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     const finalK = Math.max(0, n - 2);
 
-    // Get T-embedding data
-    let ptr = getTembeddingLevelJSON(finalK);
-    let json = Module.UTF8ToString(ptr);
-    freeString(ptr);
+    // Get T-embedding and origami data
     let tembData;
     try {
-      tembData = JSON.parse(json);
+      tembData = getParsedTembLevel(finalK);
     } catch (e) {
       ctx.fillStyle = '#888';
       ctx.font = '14px sans-serif';
@@ -8058,13 +8117,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       return;
     }
 
-    // Get origami data
-    ptr = getOrigamiLevelJSON(finalK);
-    json = Module.UTF8ToString(ptr);
-    freeString(ptr);
     let origamiData;
     try {
-      origamiData = JSON.parse(json);
+      origamiData = getParsedOrigamiLevel(finalK);
     } catch (e) {
       ctx.fillStyle = '#888';
       ctx.font = '14px sans-serif';
@@ -8405,19 +8460,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     if (!wasmReady || !getTembeddingLevelJSON || !getOrigamiLevelJSON) return;
 
-    // Get T-embedding data
-    let ptr = getTembeddingLevelJSON(finalK);
-    let json = Module.UTF8ToString(ptr);
-    freeString(ptr);
     let tembData;
-    try { tembData = JSON.parse(json); } catch (e) { return; }
+    try { tembData = getParsedTembLevel(finalK); } catch (e) { return; }
 
-    // Get origami data
-    ptr = getOrigamiLevelJSON(finalK);
-    json = Module.UTF8ToString(ptr);
-    freeString(ptr);
     let origamiData;
-    try { origamiData = JSON.parse(json); } catch (e) { return; }
+    try { origamiData = getParsedOrigamiLevel(finalK); } catch (e) { return; }
 
     if (!tembData.vertices || !origamiData.vertices) return;
 
@@ -8561,12 +8608,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     const finalK = Math.max(0, n - 2);
 
     // Get T-embedding data for (x, y) coordinates
-    let ptr = getTembeddingLevelJSON(finalK);
-    let json = Module.UTF8ToString(ptr);
-    freeString(ptr);
     let tembData;
     try {
-      tembData = JSON.parse(json);
+      tembData = getParsedTembLevel(finalK);
     } catch (e) {
       ctx.fillStyle = '#666';
       ctx.font = '14px sans-serif';
@@ -8576,12 +8620,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     // Get origami data for z = Re[O(i,j)] or Im[O(i,j)]
-    ptr = getOrigamiLevelJSON(finalK);
-    json = Module.UTF8ToString(ptr);
-    freeString(ptr);
     let origamiData;
     try {
-      origamiData = JSON.parse(json);
+      origamiData = getParsedOrigamiLevel(finalK);
     } catch (e) {
       ctx.fillStyle = '#666';
       ctx.font = '14px sans-serif';
@@ -9500,6 +9541,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   // Handle weight preset dropdown change - show/hide relevant params
   weightPresetSelect.addEventListener('change', () => {
+    manualWeightsActive = false;
     updateParamVisibility(weightPresetSelect.value);
     // Update time estimate based on new preset
     if (typeof updateTimeEstimate === 'function') updateTimeEstimate();
@@ -9901,6 +9943,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     updateVEForN(n);
 
     // Always treat as fresh simulation state
+    manualWeightsActive = false;
     currentSimulationN = n;
     currentK = 0;
 
@@ -10028,16 +10071,19 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
           });
 
           const ptr = Module._malloc(dim * dim * 8);
-          for (let i = 0; i < dim * dim; i++) {
-            Module.setValue(ptr + i * 8, masterWeights[i], 'double');
+          try {
+            if (!ptr) throw new Error('Could not allocate WASM heap space for imported weights.');
+            (Module.HEAPF64 || HEAPF64).set(masterWeights, ptr >> 3);
+            applyExternalWeights(ptr, dim * dim);
+          } finally {
+            Module._free(ptr);
           }
-          applyExternalWeights(ptr, dim * dim);
-          Module._free(ptr);
         }
 
         // Switch to "All 1's" preset so manual weights aren't overwritten on next compute
+        manualWeightsActive = true;
         weightPresetSelect.value = 'all-ones';
-        updateWeightParamsVisibility();
+        updateParamVisibility(weightPresetSelect.value);
 
         computeAndDisplay();
       } catch (err) {
@@ -10950,13 +10996,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     // Get T-embedding data
-    const ptr = getTembeddingLevelJSON(finalK);
-    const json = Module.UTF8ToString(ptr);
-    freeString(ptr);
-
     let data;
     try {
-      data = JSON.parse(json);
+      data = getParsedTembLevel(finalK);
     } catch (e) {
       return null;
     }
@@ -11071,13 +11113,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     // Origami overlay (if enabled)
     if (showOrigami && getOrigamiLevelJSON) {
-      const origPtr = getOrigamiLevelJSON(finalK);
-      const origJson = Module.UTF8ToString(origPtr);
-      freeString(origPtr);
-
       let origamiData;
       try {
-        origamiData = JSON.parse(origJson);
+        origamiData = getParsedOrigamiLevel(finalK);
       } catch (e) {
         origamiData = null;
       }
@@ -11618,24 +11656,18 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     // Get T-embedding data
-    let ptr = getTembeddingLevelJSON(finalK);
-    let json = Module.UTF8ToString(ptr);
-    freeString(ptr);
     let tembData;
     try {
-      tembData = JSON.parse(json);
+      tembData = getParsedTembLevel(finalK);
     } catch (e) {
       alert('Error parsing T-embedding data');
       return;
     }
 
     // Get origami data
-    ptr = getOrigamiLevelJSON(finalK);
-    json = Module.UTF8ToString(ptr);
-    freeString(ptr);
     let origamiData;
     try {
-      origamiData = JSON.parse(json);
+      origamiData = getParsedOrigamiLevel(finalK);
     } catch (e) {
       alert('Error parsing origami data');
       return;
@@ -11889,6 +11921,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       initAztecGraph(actualMaxN);
       applyMasterWeightsToGeometry(actualMaxN);
       clearTembLevels();
+      clearParsedLevelCaches();
 
       // Run folding for non-uniform weights (once for the full graph)
       const preset = document.getElementById('weight-preset-select').value;
@@ -12228,6 +12261,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         // Restore state
         initAztecGraph(savedN);
         currentSimulationN = savedN;
+        clearParsedLevelCaches();
 
         progressEl.style.display = 'none';
         gifBtn.disabled = false;
@@ -12284,6 +12318,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   });
   document.getElementById('recompute-mathematica-btn').addEventListener('click', function() {
     clearTembLevels();  // Clear T-embedding cache to force recomputation
+    clearParsedLevelCaches();
     renderStepwiseTemb();  // Recompute T from stored face weights
     updateMathematicaOutput();
     updateVerifyOutput();

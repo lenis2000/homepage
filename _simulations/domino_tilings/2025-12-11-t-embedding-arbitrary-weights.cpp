@@ -2486,6 +2486,23 @@ static std::vector<TembLevel> g_tembLevels;
 // Storage for origami map (same structure as T-embedding)
 static std::vector<TembLevel> g_origamiLevels;
 
+// Keep every level for small/export use cases, but avoid cubic memory growth for
+// large interactive renders (e.g. n=300 on iOS).  A final T_k level has O(k^2)
+// vertices, while retaining all T_0,...,T_k levels has O(k^3) vertices.
+static const int KEEP_ALL_TEMB_LEVELS_MAX_K = 100;
+
+static void pruneLevelsToSingle(std::vector<TembLevel>& levels, int keepK) {
+    for (auto& level : levels) {
+        if (level.k == keepK) {
+            TembLevel keep = std::move(level);
+            levels.clear();
+            levels.push_back(std::move(keep));
+            return;
+        }
+    }
+    levels.clear();
+}
+
 // Compute T_0 using ROOT weight
 // T_0(0,0) = 0
 // T_0(1,0) = 1, T_0(-1,0) = -1
@@ -3350,12 +3367,20 @@ static std::string getOrigamiLevelJSONInternal(int k) {
         }
     }
 
-    // If not found, compute from O_0 up to O_k
+    // If not found, compute from O_0 up to O_k.  For large k we keep only
+    // the rolling previous/current level to avoid O(k^3) memory usage.
     if (!found) {
+        const bool keepAllLevels = (k <= KEEP_ALL_TEMB_LEVELS_MAX_K);
         g_origamiLevels.clear();
         computeO0();
+        if (!keepAllLevels && k == 0) {
+            pruneLevelsToSingle(g_origamiLevels, 0);
+        }
         for (int level = 1; level <= k; level++) {
             computeOk(level);
+            if (!keepAllLevels) {
+                pruneLevelsToSingle(g_origamiLevels, level);
+            }
         }
     }
 
@@ -3401,13 +3426,20 @@ static std::string getTembLevelJSON(int k) {
         }
     }
 
-    // If not found, compute from T_0 up to T_k
+    // If not found, compute from T_0 up to T_k.  For large k we keep only
+    // the rolling previous/current level to avoid O(k^3) memory usage.
     if (!found) {
-        // Clear and recompute all levels up to k
+        const bool keepAllLevels = (k <= KEEP_ALL_TEMB_LEVELS_MAX_K);
         g_tembLevels.clear();
         computeT0();
+        if (!keepAllLevels && k == 0) {
+            pruneLevelsToSingle(g_tembLevels, 0);
+        }
         for (int level = 1; level <= k; level++) {
             computeTk(level);
+            if (!keepAllLevels) {
+                pruneLevelsToSingle(g_tembLevels, level);
+            }
         }
     }
 
@@ -3852,10 +3884,16 @@ void computeTembedding() {
         if (sw.k > maxK) maxK = sw.k;
     }
 
-    // Compute T_1 through T_maxK based on captured face weights
+    // Compute T_1 through T_maxK based on captured face weights.  For large
+    // maxK keep only the rolling current level to avoid cubic memory growth.
+    const bool keepAllLevels = (maxK <= KEEP_ALL_TEMB_LEVELS_MAX_K);
     for (int k = 1; k <= maxK; k++) {
         computeTk(k);
         computeOk(k);  // Also compute origami map
+        if (!keepAllLevels) {
+            pruneLevelsToSingle(g_tembLevels, k);
+            pruneLevelsToSingle(g_origamiLevels, k);
+        }
     }
 }
 
