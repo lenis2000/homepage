@@ -1318,6 +1318,13 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
 /* Canvas containers */
 #stepwise-temb-canvas.panning, #aztec-graph-canvas.panning { cursor: grabbing; }
+#sample-canvas {
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+#sample-canvas.dragging {
+  cursor: grabbing !important;
+}
 #sample-3d-container {
   width: 100%;
   height: 50vh;
@@ -2703,6 +2710,18 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let sampleZoom = 1.0;
   let samplePanX = 0, samplePanY = 0;
   let samplePaletteIndex = 0;  // Default to first palette
+  let sample2DRenderer = null;
+  const SAMPLE_2D_EXACT_RENDER_LIMIT = 50;
+  const SAMPLE_2D_CACHE_MAX_PX = 4096;
+  const SAMPLE_2D_CACHE_PADDING = 4;
+  const SAMPLE_2D_HIRES_MULTIPLIER = 2;
+  const sampleDoubleDimerLoopCache = {
+    config1: null,
+    config2: null,
+    base: null,
+    drawableMinLoopLength: null,
+    drawableEdges: null
+  };
 
   // Height function visualization for double dimer
   let heightFunctionScene = null;
@@ -2828,10 +2847,15 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return profile;
   }
 
+  function readSampleMinLoopLength() {
+    const minLoopInput = document.getElementById('sample-min-loop-length');
+    const parsed = parseInt(minLoopInput?.value, 10);
+    return Number.isFinite(parsed) ? Math.max(0, parsed) : 2;
+  }
+
   function readRandomSampleControls() {
     const input = document.getElementById('sample-N-input');
     const doubleDimerChk = document.getElementById('sample-double-dimer-chk');
-    const minLoopInput = document.getElementById('sample-min-loop-length');
     const requestedN = parseInt(input?.value) || 6;
     let N = requestedN;
     let statusMessage = 'Sampling...';
@@ -2845,7 +2869,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     doubleDimerMode = !!doubleDimerChk?.checked;
-    minLoopLength = parseInt(minLoopInput?.value) || 2;
+    minLoopLength = readSampleMinLoopLength();
     return { N, requestedN, doubleDimer: doubleDimerMode, minLoopLength, statusMessage };
   }
 
@@ -2879,7 +2903,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     if (borderInput && snapshot.border !== undefined) borderInput.value = snapshot.border;
     if (minLoopInput && snapshot.minLoopLength !== undefined) minLoopInput.value = snapshot.minLoopLength;
     setSampleDoubleDimerControl(snapshot.doubleDimer);
-    minLoopLength = parseInt(minLoopInput?.value) || 2;
+    minLoopLength = readSampleMinLoopLength();
+    invalidateSampleDoubleDimerLoopFilter();
 
     if (snapshot.heightFunctionWasActive) {
       showHeightFunctionPane();
@@ -3832,6 +3857,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       perspectiveBtn.style.display = 'none';
       presetBtn.style.display = 'none';
       rotateBtn.style.display = 'none';
+      resetSampleView();
       renderSample();
     }
   }
@@ -3884,8 +3910,6 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       updateSample3DView();
     });
   }
-
-  const sampleCtx = sampleCanvas ? sampleCanvas.getContext('2d') : null;
 
   // Initialize shuffling module function bindings (called from loadAllWasmModules)
   function initShufflingFunctions() {
@@ -4925,6 +4949,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       sampleDominoes = Array.isArray(result) ? result : [];
       sampleDominoes2 = [];
     }
+    invalidateSampleDoubleDimerLoopCache();
+    sample2DRenderer?.invalidateCache();
     profile.dominoCount = sampleDominoes.length;
     profile.dominoCount2 = sampleDominoes2.length;
   }
@@ -4997,6 +5023,15 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   }
 
   function resetSampleView() {
+    const renderer = getSample2DRenderer();
+    if (renderer) {
+      renderer.setSampleData(sampleDominoes, sampleDominoes2, {
+        doubleDimer: doubleDimerMode,
+        resetView: true
+      });
+      return;
+    }
+
     if (sampleDominoes.length === 0) {
       sampleZoom = 1.0;
       samplePanX = 0;
@@ -5028,163 +5063,141 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     samplePanY = -centerY;
   }
 
-  function renderSample(profile = null) {
-    if (!sampleCanvas || !sampleCtx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const rect = sampleCanvas.getBoundingClientRect();
-    sampleCanvas.width = rect.width * dpr;
-    sampleCanvas.height = rect.height * dpr;
-    sampleCtx.scale(dpr, dpr);
-
-    // Clear
-    sampleCtx.fillStyle = '#fafafa';
-    sampleCtx.fillRect(0, 0, rect.width, rect.height);
-
-    if (sampleDominoes.length === 0) return;
-
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-
-    // Get colors from ColorSchemes using selected palette
-    const palettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
-    const colors = palettes[samplePaletteIndex] ? palettes[samplePaletteIndex].colors : palettes[0].colors;
-
-    // Color mapping: yellow=0, green=1, blue=2, red=3
-    const colorMap = {
-      'yellow': colors[0],
-      'green': colors[1],
-      'blue': colors[2],
-      'red': colors[3]
-    };
-
-    // Get border width from input
-    const borderWidthVal = parseFloat(document.getElementById('sample-border-input').value);
-    const borderWidth = isNaN(borderWidthVal) ? 1 : borderWidthVal;
-
-    // Check grayscale mode
-    const useGrayscale = document.getElementById('sample-grayscale-checkbox')?.checked || false;
-
-    // Double dimer mode: render loops
-    if (doubleDimerMode && sampleDominoes2.length > 0) {
-      renderDoubleDimerLoops(sampleCtx, centerX, centerY, sampleZoom, samplePanX, samplePanY, borderWidth, profile);
-      return;
-    }
-
-    // Standard domino rendering
-    for (const d of sampleDominoes) {
-      const sx = centerX + (d.x + samplePanX) * sampleZoom;
-      const sy = centerY - (d.y + d.h + samplePanY) * sampleZoom;  // Flip Y
-      const sw = d.w * sampleZoom;
-      const sh = d.h * sampleZoom;
-
-      // Use grayscale or palette colors
-      sampleCtx.fillStyle = useGrayscale ? getGrayscaleColor(d.color, d) : (colorMap[d.color] || '#888');
-      sampleCtx.fillRect(sx, sy, sw, sh);
-
-      // Border
-      if (borderWidth > 0) {
-        sampleCtx.strokeStyle = '#000';
-        sampleCtx.lineWidth = borderWidth;
-        sampleCtx.strokeRect(sx, sy, sw, sh);
+  function computeSampleDominoBounds(...dominoSets) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const dominoes of dominoSets) {
+      if (!Array.isArray(dominoes)) continue;
+      for (const d of dominoes) {
+        minX = Math.min(minX, d.x);
+        maxX = Math.max(maxX, d.x + d.w);
+        minY = Math.min(minY, d.y);
+        maxY = Math.max(maxY, d.y + d.h);
       }
     }
+    if (!isFinite(minX) || !isFinite(maxX) || !isFinite(minY) || !isFinite(maxY)) return null;
+    return {
+      minX,
+      maxX,
+      minY,
+      maxY,
+      width: Math.max(1, maxX - minX),
+      height: Math.max(1, maxY - minY)
+    };
   }
 
-  // Render double dimer configuration as loops
-  function renderDoubleDimerLoops(ctx, centerX, centerY, zoom, panX, panY, borderWidth = 1, profile = null) {
-    const loopProcessingStart = performance.now();
+  function createSampleCanvasSurface(width, height) {
+    const safeWidth = Math.max(1, Math.ceil(width));
+    const safeHeight = Math.max(1, Math.ceil(height));
+    if (typeof OffscreenCanvas !== 'undefined') {
+      return new OffscreenCanvas(safeWidth, safeHeight);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = safeWidth;
+    canvas.height = safeHeight;
+    return canvas;
+  }
 
-    // Create edge key from domino
-    const edgeKey = (d) => {
-      const cx = d.x + d.w / 2;
-      const cy = d.y + d.h / 2;
-      const horiz = d.w > d.h;
-      let x1, y1, x2, y2;
-      if (horiz) {
-        x1 = cx - d.w / 4;
-        x2 = cx + d.w / 4;
-        y1 = y2 = cy;
-      } else {
-        x1 = x2 = cx;
-        y1 = cy - d.h / 4;
-        y2 = cy + d.h / 4;
+  function getSample2DDisplaySettings() {
+    const palettes = window.ColorSchemes || [{ name: 'Domino Default', colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
+    const colors = palettes[samplePaletteIndex] ? palettes[samplePaletteIndex].colors : palettes[0].colors;
+    const borderWidthVal = parseFloat(document.getElementById('sample-border-input')?.value);
+    return {
+      n: parseInt(document.getElementById('sample-N-input')?.value, 10) || 6,
+      borderWidth: Number.isFinite(borderWidthVal) ? Math.max(0, borderWidthVal) : 1,
+      useGrayscale: document.getElementById('sample-grayscale-checkbox')?.checked || false,
+      minLoopLength,
+      colorMap: {
+        yellow: colors[0],
+        green: colors[1],
+        blue: colors[2],
+        red: colors[3]
       }
-      const q = v => Math.round(v * 1000);
-      return `${Math.min(q(x1), q(x2))},${Math.min(q(y1), q(y2))}-${Math.max(q(x1), q(x2))},${Math.max(q(y1), q(y2))}`;
     };
+  }
 
-    // Build edge map
+  function getSampleDominoFillColor(d, settings) {
+    return settings.useGrayscale ? getGrayscaleColor(d.color, d) : (settings.colorMap[d.color] || '#888');
+  }
+
+  function invalidateSampleDoubleDimerLoopCache() {
+    sampleDoubleDimerLoopCache.config1 = null;
+    sampleDoubleDimerLoopCache.config2 = null;
+    sampleDoubleDimerLoopCache.base = null;
+    sampleDoubleDimerLoopCache.drawableMinLoopLength = null;
+    sampleDoubleDimerLoopCache.drawableEdges = null;
+  }
+
+  function invalidateSampleDoubleDimerLoopFilter() {
+    sampleDoubleDimerLoopCache.drawableMinLoopLength = null;
+    sampleDoubleDimerLoopCache.drawableEdges = null;
+  }
+
+  function getSampleDimerEdgeGeometry(d) {
+    const cx = d.x + d.w / 2;
+    const cy = d.y + d.h / 2;
+    const horiz = d.w > d.h;
+    let x1, y1, x2, y2;
+    if (horiz) {
+      x1 = cx - d.w / 4;
+      x2 = cx + d.w / 4;
+      y1 = y2 = cy;
+    } else {
+      x1 = x2 = cx;
+      y1 = cy - d.h / 4;
+      y2 = cy + d.h / 4;
+    }
+    const q = v => Math.round(v * 1000);
+    const v1Key = `${q(x1)},${q(y1)}`;
+    const v2Key = `${q(x2)},${q(y2)}`;
+    const key = `${Math.min(q(x1), q(x2))},${Math.min(q(y1), q(y2))}-${Math.max(q(x1), q(x2))},${Math.max(q(y1), q(y2))}`;
+    return { x1, y1, x2, y2, v1Key, v2Key, key };
+  }
+
+  function buildSampleDoubleDimerLoopData(config1, config2) {
     const edgeMap = new Map();
-    const addEdges = (list, type) => {
-      for (const d of list) {
-        const k = edgeKey(d);
-        if (!edgeMap.has(k)) {
-          edgeMap.set(k, { d, types: new Set() });
+    const addEdges = (list, typeBit) => {
+      for (const d of list || []) {
+        const geom = getSampleDimerEdgeGeometry(d);
+        if (!edgeMap.has(geom.key)) {
+          edgeMap.set(geom.key, { ...geom, typeMask: 0, loopId: -1 });
         }
-        edgeMap.get(k).types.add(type);
+        edgeMap.get(geom.key).typeMask |= typeBit;
       }
     };
 
-    addEdges(sampleDominoes, 1);
-    addEdges(sampleDominoes2, 2);
+    addEdges(config1, 1);
+    addEdges(config2, 2);
 
-    // Compute loop lengths by tracing connected components
-    // Build adjacency structure for loop detection
     const vertexToEdges = new Map();
     const allEdges = [];
-
-    edgeMap.forEach((val, key) => {
-      const d = val.d;
-      const cx = d.x + d.w / 2;
-      const cy = d.y + d.h / 2;
-      const horiz = d.w > d.h;
-      let x1, y1, x2, y2;
-      if (horiz) {
-        x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy;
-      } else {
-        x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4;
-      }
-
-      const v1Key = `${Math.round(x1 * 1000)},${Math.round(y1 * 1000)}`;
-      const v2Key = `${Math.round(x2 * 1000)},${Math.round(y2 * 1000)}`;
-
-      const edgeInfo = { x1, y1, x2, y2, val, key, v1Key, v2Key, loopId: -1 };
-      allEdges.push(edgeInfo);
-
-      if (!vertexToEdges.has(v1Key)) vertexToEdges.set(v1Key, []);
-      if (!vertexToEdges.has(v2Key)) vertexToEdges.set(v2Key, []);
-      vertexToEdges.get(v1Key).push(edgeInfo);
-      vertexToEdges.get(v2Key).push(edgeInfo);
+    edgeMap.forEach(edge => {
+      allEdges.push(edge);
+      if (!vertexToEdges.has(edge.v1Key)) vertexToEdges.set(edge.v1Key, []);
+      if (!vertexToEdges.has(edge.v2Key)) vertexToEdges.set(edge.v2Key, []);
+      vertexToEdges.get(edge.v1Key).push(edge);
+      vertexToEdges.get(edge.v2Key).push(edge);
     });
 
-    // Find loops (connected components of non-double edges)
     let loopId = 0;
     const loopSizes = new Map();
 
     for (const edge of allEdges) {
       if (edge.loopId >= 0) continue;
-      const isDouble = edge.val.types.has(1) && edge.val.types.has(2);
-      if (isDouble) {
-        edge.loopId = -2; // Mark as double edge
+      if (edge.typeMask === 3) {
+        edge.loopId = -2;
         continue;
       }
 
-      // BFS to find connected non-double edges
       const queue = [edge];
-      const visited = new Set();
-      visited.add(edge.key);
+      const visited = new Set([edge.key]);
       edge.loopId = loopId;
       let loopSize = 1;
 
-      while (queue.length > 0) {
-        const curr = queue.shift();
+      for (let head = 0; head < queue.length; head++) {
+        const curr = queue[head];
         for (const vKey of [curr.v1Key, curr.v2Key]) {
-          const neighbors = vertexToEdges.get(vKey) || [];
-          for (const neighbor of neighbors) {
-            if (visited.has(neighbor.key)) continue;
-            const neighborIsDouble = neighbor.val.types.has(1) && neighbor.val.types.has(2);
-            if (neighborIsDouble) continue;
+          for (const neighbor of (vertexToEdges.get(vKey) || [])) {
+            if (visited.has(neighbor.key) || neighbor.typeMask === 3) continue;
             visited.add(neighbor.key);
             neighbor.loopId = loopId;
             loopSize++;
@@ -5197,23 +5210,41 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       loopId++;
     }
 
-    setSamplePhaseTiming(profile, 'doubleDimerLoopProcessingMs', performance.now() - loopProcessingStart);
+    return { allEdges, loopSizes };
+  }
 
-    // Draw edges
-    const baseLineWidth = Math.max(1.5, 3.5 * zoom / 10);
-    const lineWidth = baseLineWidth * Math.max(0.5, borderWidth);
-    const circleRadius = baseLineWidth * Math.max(0.5, borderWidth);
+  function getSampleDoubleDimerLoopData(profile = null) {
+    if (sampleDoubleDimerLoopCache.config1 === sampleDominoes &&
+        sampleDoubleDimerLoopCache.config2 === sampleDominoes2 &&
+        sampleDoubleDimerLoopCache.base) {
+      setSamplePhaseTiming(profile, 'doubleDimerLoopProcessingMs', 0);
+      return sampleDoubleDimerLoopCache.base;
+    }
 
-    for (const edge of allEdges) {
-      const { x1, y1, x2, y2, val } = edge;
-      const isDouble = val.types.has(1) && val.types.has(2);
+    const started = performance.now();
+    const base = buildSampleDoubleDimerLoopData(sampleDominoes, sampleDominoes2);
+    sampleDoubleDimerLoopCache.config1 = sampleDominoes;
+    sampleDoubleDimerLoopCache.config2 = sampleDominoes2;
+    sampleDoubleDimerLoopCache.base = base;
+    sampleDoubleDimerLoopCache.drawableMinLoopLength = null;
+    sampleDoubleDimerLoopCache.drawableEdges = null;
+    setSamplePhaseTiming(profile, 'doubleDimerLoopProcessingMs', performance.now() - started);
+    return base;
+  }
 
-      // Skip double edges (loops of length 2) if minLoopLength > 2
+  function getSampleDoubleDimerDrawableEdges(profile = null) {
+    const loopData = getSampleDoubleDimerLoopData(profile);
+    if (sampleDoubleDimerLoopCache.drawableEdges &&
+        sampleDoubleDimerLoopCache.drawableMinLoopLength === minLoopLength) {
+      return sampleDoubleDimerLoopCache.drawableEdges;
+    }
+
+    const drawableEdges = [];
+    for (const edge of loopData.allEdges) {
+      const isDouble = edge.typeMask === 3;
       if (isDouble && minLoopLength > 2) continue;
-
-      // Skip edges in loops smaller than minLoopLength
       if (!isDouble && edge.loopId >= 0) {
-        const loopSize = loopSizes.get(edge.loopId) || 0;
+        const loopSize = loopData.loopSizes.get(edge.loopId) || 0;
         if (loopSize < minLoopLength) continue;
       }
 
@@ -5221,39 +5252,431 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       if (isDouble) {
         color = 'purple';
         opacity = 1.0;
-      } else if (val.types.has(1)) {
+      } else if (edge.typeMask & 1) {
         color = 'black';
         opacity = 1.0;
       } else {
         color = 'red';
         opacity = 0.8;
       }
-
-      // Transform to screen coordinates
-      const sx1 = centerX + (x1 + panX) * zoom;
-      const sy1 = centerY - (y1 + panY) * zoom;
-      const sx2 = centerX + (x2 + panX) * zoom;
-      const sy2 = centerY - (y2 + panY) * zoom;
-
-      ctx.globalAlpha = opacity;
-      ctx.strokeStyle = color;
-      ctx.lineWidth = lineWidth;
-      ctx.beginPath();
-      ctx.moveTo(sx1, sy1);
-      ctx.lineTo(sx2, sy2);
-      ctx.stroke();
-
-      // Draw endpoint circles
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(sx1, sy1, circleRadius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(sx2, sy2, circleRadius, 0, Math.PI * 2);
-      ctx.fill();
+      drawableEdges.push({ ...edge, color, opacity, isDouble });
     }
 
-    ctx.globalAlpha = 1.0;
+    sampleDoubleDimerLoopCache.drawableMinLoopLength = minLoopLength;
+    sampleDoubleDimerLoopCache.drawableEdges = drawableEdges;
+    return drawableEdges;
+  }
+
+  function drawSampleStandardDominoes(ctx, dominoes, settings, options = {}) {
+    const batches = new Map();
+    const seamPad = options.seamPad ? 0.03 : 0;
+    for (const d of dominoes) {
+      const fill = getSampleDominoFillColor(d, settings);
+      if (!batches.has(fill)) batches.set(fill, []);
+      batches.get(fill).push(d);
+    }
+
+    ctx.imageSmoothingEnabled = false;
+    for (const [fill, group] of batches) {
+      ctx.fillStyle = fill;
+      for (const d of group) {
+        ctx.fillRect(
+          d.x - seamPad,
+          d.y - seamPad,
+          d.w + 2 * seamPad,
+          d.h + 2 * seamPad
+        );
+      }
+    }
+
+    if (settings.borderWidth > 0) {
+      ctx.save();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = options.borderModelWidth ?? settings.borderWidth;
+      ctx.beginPath();
+      for (const d of dominoes) {
+        ctx.rect(d.x, d.y, d.w, d.h);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawSampleDoubleDimerEdges(ctx, drawableEdges, settings, options = {}) {
+    const screenLineWidth = Math.max(1.5, 3.5 * (options.zoom || 1) / 10) * Math.max(0.5, settings.borderWidth);
+    const lineWidth = options.lineWidthModel ?? (screenLineWidth / Math.max(options.zoom || 1, 0.001));
+    const circleRadius = options.circleRadiusModel ?? lineWidth;
+    const batches = new Map();
+
+    for (const edge of drawableEdges) {
+      const key = `${edge.color}|${edge.opacity}`;
+      if (!batches.has(key)) batches.set(key, []);
+      batches.get(key).push(edge);
+    }
+
+    ctx.save();
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'round';
+    for (const [key, edges] of batches) {
+      const [color, opacityText] = key.split('|');
+      ctx.globalAlpha = parseFloat(opacityText);
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      for (const edge of edges) {
+        ctx.moveTo(edge.x1, edge.y1);
+        ctx.lineTo(edge.x2, edge.y2);
+      }
+      ctx.stroke();
+
+      ctx.beginPath();
+      for (const edge of edges) {
+        ctx.moveTo(edge.x1 + circleRadius, edge.y1);
+        ctx.arc(edge.x1, edge.y1, circleRadius, 0, Math.PI * 2);
+        ctx.moveTo(edge.x2 + circleRadius, edge.y2);
+        ctx.arc(edge.x2, edge.y2, circleRadius, 0, Math.PI * 2);
+      }
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  class SampleDomino2DCanvasRenderer {
+    constructor(canvas) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.dominoes = [];
+      this.dominoes2 = [];
+      this.doubleDimer = false;
+      this.modelBounds = null;
+      this.viewport = { zoom: 1, panX: 0, panY: 0 };
+      this.hasViewport = false;
+      this.cssWidth = 1;
+      this.cssHeight = 1;
+      this.dpr = 1;
+      this.cache = null;
+      this.cacheValid = false;
+      this.cacheVersion = 0;
+      this.cacheKey = '';
+      this.framePending = false;
+      this.dragStart = null;
+      this.bindEvents();
+      this.resize(false);
+    }
+
+    bindEvents() {
+      this.canvas.addEventListener('pointerdown', event => {
+        if (!this.dominoes.length) return;
+        this.dragStart = {
+          x: event.clientX,
+          y: event.clientY,
+          panX: this.viewport.panX,
+          panY: this.viewport.panY
+        };
+        this.canvas.classList.add('dragging');
+        this.canvas.setPointerCapture?.(event.pointerId);
+      });
+
+      this.canvas.addEventListener('pointermove', event => {
+        if (!this.dragStart) return;
+        const dx = event.clientX - this.dragStart.x;
+        const dy = event.clientY - this.dragStart.y;
+        this.viewport.panX = this.dragStart.panX + dx / this.viewport.zoom;
+        this.viewport.panY = this.dragStart.panY - dy / this.viewport.zoom;
+        this.publishViewport();
+        this.scheduleDraw();
+      });
+
+      const endDrag = event => {
+        this.dragStart = null;
+        this.canvas.classList.remove('dragging');
+        this.canvas.releasePointerCapture?.(event.pointerId);
+      };
+      this.canvas.addEventListener('pointerup', endDrag);
+      this.canvas.addEventListener('pointercancel', endDrag);
+      this.canvas.addEventListener('pointerleave', event => {
+        if (this.dragStart && event.pointerId !== undefined) endDrag(event);
+      });
+
+      this.canvas.addEventListener('wheel', event => {
+        if (!this.dominoes.length) return;
+        event.preventDefault();
+        const rect = this.canvas.getBoundingClientRect();
+        const factor = event.deltaY > 0 ? 0.9 : 1.1;
+        this.zoomBy(factor, event.clientX - rect.left, event.clientY - rect.top);
+      }, { passive: false });
+
+      this.canvas.addEventListener('dblclick', () => this.resetView());
+    }
+
+    publishViewport() {
+      sampleZoom = this.viewport.zoom;
+      samplePanX = this.viewport.panX;
+      samplePanY = this.viewport.panY;
+    }
+
+    setSampleData(dominoes, dominoes2, options = {}) {
+      const nextDominoes = Array.isArray(dominoes) ? dominoes : [];
+      const nextDominoes2 = Array.isArray(dominoes2) ? dominoes2 : [];
+      const nextDoubleDimer = !!options.doubleDimer && nextDominoes2.length > 0;
+      const changed = this.dominoes !== nextDominoes ||
+        this.dominoes2 !== nextDominoes2 ||
+        this.doubleDimer !== nextDoubleDimer;
+
+      if (changed) {
+        this.dominoes = nextDominoes;
+        this.dominoes2 = nextDominoes2;
+        this.doubleDimer = nextDoubleDimer;
+        this.modelBounds = this.doubleDimer
+          ? computeSampleDominoBounds(nextDominoes, nextDominoes2)
+          : computeSampleDominoBounds(nextDominoes);
+        this.invalidateCache();
+      }
+
+      if (options.resetView || !this.hasViewport || (changed && !this.modelBounds)) {
+        this.fitToView();
+      }
+    }
+
+    invalidateCache() {
+      this.cache = null;
+      this.cacheValid = false;
+      this.cacheVersion++;
+    }
+
+    invalidateStyle() {
+      this.invalidateCache();
+      this.scheduleDraw();
+    }
+
+    resize(schedule = true) {
+      const rect = this.canvas.getBoundingClientRect();
+      this.cssWidth = Math.max(1, Math.round(rect.width || 1));
+      this.cssHeight = Math.max(1, Math.round(rect.height || 1));
+      this.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
+      const pixelWidth = Math.max(1, Math.round(this.cssWidth * this.dpr));
+      const pixelHeight = Math.max(1, Math.round(this.cssHeight * this.dpr));
+
+      if (this.canvas.width !== pixelWidth || this.canvas.height !== pixelHeight) {
+        this.canvas.width = pixelWidth;
+        this.canvas.height = pixelHeight;
+      }
+
+      if (!this.hasViewport && this.modelBounds) this.fitToView();
+      if (schedule) this.scheduleDraw();
+    }
+
+    fitToView() {
+      if (!this.modelBounds) {
+        this.viewport.zoom = 1;
+        this.viewport.panX = 0;
+        this.viewport.panY = 0;
+        this.hasViewport = false;
+        this.publishViewport();
+        return;
+      }
+
+      const padding = 0.9;
+      const zoomX = (this.cssWidth * padding) / this.modelBounds.width;
+      const zoomY = (this.cssHeight * padding) / this.modelBounds.height;
+      this.viewport.zoom = Math.min(zoomX, zoomY, 50);
+      this.viewport.panX = -(this.modelBounds.minX + this.modelBounds.maxX) / 2;
+      this.viewport.panY = -(this.modelBounds.minY + this.modelBounds.maxY) / 2;
+      this.hasViewport = true;
+      this.publishViewport();
+    }
+
+    resetView() {
+      this.fitToView();
+      this.scheduleDraw();
+    }
+
+    zoomBy(factor, anchorX = this.cssWidth / 2, anchorY = this.cssHeight / 2) {
+      const oldZoom = this.viewport.zoom || 1;
+      const newZoom = Math.max(0.02, Math.min(200, oldZoom * factor));
+      const centerX = this.cssWidth / 2;
+      const centerY = this.cssHeight / 2;
+      const modelX = (anchorX - centerX) / oldZoom - this.viewport.panX;
+      const modelY = (centerY - anchorY) / oldZoom - this.viewport.panY;
+      this.viewport.zoom = newZoom;
+      this.viewport.panX = (anchorX - centerX) / newZoom - modelX;
+      this.viewport.panY = (centerY - anchorY) / newZoom - modelY;
+      this.publishViewport();
+      this.scheduleDraw();
+    }
+
+    scheduleDraw() {
+      if (this.framePending) return;
+      this.framePending = true;
+      requestAnimationFrame(() => {
+        this.framePending = false;
+        this.drawFrame();
+      });
+    }
+
+    renderNow(profile = null) {
+      this.resize(false);
+      this.framePending = false;
+      this.drawFrame(profile);
+    }
+
+    getCacheBounds(settings) {
+      const linePadding = this.doubleDimer
+        ? Math.max(1, settings.borderWidth * 2)
+        : Math.max(0.25, settings.borderWidth);
+      const pad = SAMPLE_2D_CACHE_PADDING + linePadding;
+      return {
+        minX: this.modelBounds.minX - pad,
+        maxX: this.modelBounds.maxX + pad,
+        minY: this.modelBounds.minY - pad,
+        maxY: this.modelBounds.maxY + pad,
+        width: this.modelBounds.width + 2 * pad,
+        height: this.modelBounds.height + 2 * pad
+      };
+    }
+
+    makeCacheKey(settings) {
+      return [
+        this.cacheVersion,
+        this.doubleDimer ? 'double' : 'single',
+        settings.n,
+        settings.borderWidth,
+        settings.useGrayscale ? 1 : 0,
+        settings.minLoopLength,
+        settings.colorMap.yellow,
+        settings.colorMap.green,
+        settings.colorMap.blue,
+        settings.colorMap.red
+      ].join('|');
+    }
+
+    buildCache(settings, multiplier, profile = null) {
+      const bounds = this.getCacheBounds(settings);
+      const maxDim = Math.max(bounds.width, bounds.height, 1);
+      const cacheScale = Math.max(0.5, Math.min(this.dpr * multiplier, SAMPLE_2D_CACHE_MAX_PX / maxDim));
+      const surface = createSampleCanvasSurface(bounds.width * cacheScale, bounds.height * cacheScale);
+      const ctx = surface.getContext('2d');
+      ctx.save();
+      ctx.scale(cacheScale, cacheScale);
+      ctx.translate(-bounds.minX, -bounds.minY);
+      ctx.clearRect(bounds.minX, bounds.minY, bounds.width, bounds.height);
+      if (this.doubleDimer) {
+        const drawableEdges = getSampleDoubleDimerDrawableEdges(profile);
+        const screenLineWidth = Math.max(1.5, 3.5 * this.viewport.zoom / 10) * Math.max(0.5, settings.borderWidth);
+        const modelLineWidth = Math.max(0.05, screenLineWidth / Math.max(this.viewport.zoom || 1, 0.001));
+        drawSampleDoubleDimerEdges(ctx, drawableEdges, settings, {
+          zoom: this.viewport.zoom,
+          lineWidthModel: modelLineWidth,
+          circleRadiusModel: modelLineWidth
+        });
+      } else {
+        drawSampleStandardDominoes(ctx, this.dominoes, settings, {
+          seamPad: true,
+          borderModelWidth: Math.max(0.01, settings.borderWidth / Math.max(cacheScale, 1))
+        });
+      }
+      ctx.restore();
+      return { canvas: surface, bounds, scale: cacheScale };
+    }
+
+    ensureCache(settings, profile = null) {
+      const key = this.makeCacheKey(settings);
+      if (this.cacheValid && this.cache && this.cacheKey === key) return;
+
+      const version = this.cacheVersion;
+      this.cache = this.buildCache(settings, 1, profile);
+      this.cacheKey = key;
+      this.cacheValid = true;
+
+      const hiResMultiplier = this.dpr > 1 ? SAMPLE_2D_HIRES_MULTIPLIER : 1.5;
+      if (hiResMultiplier <= 1) return;
+      setTimeout(() => {
+        if (this.cacheVersion !== version || this.cacheKey !== key || !this.modelBounds) return;
+        const latestSettings = getSample2DDisplaySettings();
+        if (this.makeCacheKey(latestSettings) !== key) return;
+        this.cache = this.buildCache(latestSettings, hiResMultiplier);
+        this.scheduleDraw();
+      }, 0);
+    }
+
+    drawExactFrame(ctx, settings, profile = null) {
+      ctx.save();
+      ctx.translate(
+        this.cssWidth / 2 + this.viewport.panX * this.viewport.zoom,
+        this.cssHeight / 2 - this.viewport.panY * this.viewport.zoom
+      );
+      ctx.scale(this.viewport.zoom, -this.viewport.zoom);
+
+      if (this.doubleDimer) {
+        const drawableEdges = getSampleDoubleDimerDrawableEdges(profile);
+        drawSampleDoubleDimerEdges(ctx, drawableEdges, settings, { zoom: this.viewport.zoom });
+      } else {
+        drawSampleStandardDominoes(ctx, this.dominoes, settings, {
+          borderModelWidth: settings.borderWidth / Math.max(this.viewport.zoom, 0.001)
+        });
+      }
+      ctx.restore();
+    }
+
+    drawCachedFrame(ctx, settings, profile = null) {
+      this.ensureCache(settings, profile);
+      if (!this.cache) return;
+
+      ctx.save();
+      ctx.translate(
+        this.cssWidth / 2 + this.viewport.panX * this.viewport.zoom,
+        this.cssHeight / 2 - this.viewport.panY * this.viewport.zoom
+      );
+      ctx.scale(this.viewport.zoom, -this.viewport.zoom);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(
+        this.cache.canvas,
+        this.cache.bounds.minX,
+        this.cache.bounds.minY,
+        this.cache.bounds.width,
+        this.cache.bounds.height
+      );
+      ctx.restore();
+    }
+
+    drawFrame(profile = null) {
+      const ctx = this.ctx;
+      if (!ctx) return;
+
+      ctx.save();
+      ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      ctx.clearRect(0, 0, this.cssWidth, this.cssHeight);
+      ctx.fillStyle = '#fafafa';
+      ctx.fillRect(0, 0, this.cssWidth, this.cssHeight);
+      ctx.imageSmoothingEnabled = false;
+
+      if (this.dominoes.length > 0 && this.modelBounds) {
+        const settings = getSample2DDisplaySettings();
+        const exactRender = settings.n <= SAMPLE_2D_EXACT_RENDER_LIMIT;
+        if (exactRender) {
+          this.drawExactFrame(ctx, settings, profile);
+        } else {
+          this.drawCachedFrame(ctx, settings, profile);
+        }
+      }
+
+      ctx.restore();
+    }
+  }
+
+  function getSample2DRenderer() {
+    if (!sample2DRenderer && sampleCanvas) {
+      sample2DRenderer = new SampleDomino2DCanvasRenderer(sampleCanvas);
+      window.tembSample2DRenderer = sample2DRenderer;
+    }
+    return sample2DRenderer;
+  }
+
+  function renderSample(profile = null) {
+    const renderer = getSample2DRenderer();
+    if (!renderer) return;
+    renderer.setSampleData(sampleDominoes, sampleDominoes2, { doubleDimer: doubleDimerMode });
+    renderer.renderNow(profile);
   }
 
   // Render double dimer loops on T-graph using FACE shading
@@ -6047,6 +6470,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   // Sample canvas event handlers
   if (sampleCanvas) {
+    getSample2DRenderer();
     document.getElementById('sample-btn').addEventListener('click', generateRandomSample);
 
     // Enter key on sample inputs triggers sample
@@ -6061,8 +6485,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       if (sampleIs3DView && sampleRenderer3D) {
         sampleRenderer3D.zoomIn();
       } else {
-        sampleZoom *= 1.3;
-        renderSample();
+        getSample2DRenderer()?.zoomBy(1.3);
       }
     });
 
@@ -6070,8 +6493,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       if (sampleIs3DView && sampleRenderer3D) {
         sampleRenderer3D.zoomOut();
       } else {
-        sampleZoom /= 1.3;
-        renderSample();
+        getSample2DRenderer()?.zoomBy(1 / 1.3);
       }
     });
 
@@ -6086,6 +6508,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     // Border width input - re-render on change
     document.getElementById('sample-border-input').addEventListener('input', () => {
+      sample2DRenderer?.invalidateCache();
       renderSample();
     });
 
@@ -6111,7 +6534,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     if (minLoopLengthInput) {
       minLoopLengthInput.addEventListener('input', function() {
-        minLoopLength = parseInt(this.value) || 2;
+        minLoopLength = readSampleMinLoopLength();
+        invalidateSampleDoubleDimerLoopFilter();
+        sample2DRenderer?.invalidateCache();
         renderSample();
       });
     }
@@ -6134,49 +6559,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       clearSampleTimingDisplay();
     });
 
-    // Pan with mouse drag
-    let sampleIsPanning = false;
-    let sampleLastX = 0, sampleLastY = 0;
-
-    sampleCanvas.addEventListener('mousedown', (e) => {
-      sampleIsPanning = true;
-      sampleLastX = e.clientX;
-      sampleLastY = e.clientY;
-      sampleCanvas.style.cursor = 'grabbing';
-    });
-
-    sampleCanvas.addEventListener('mousemove', (e) => {
-      if (!sampleIsPanning) return;
-      const dx = e.clientX - sampleLastX;
-      const dy = e.clientY - sampleLastY;
-      samplePanX += dx / sampleZoom;
-      samplePanY -= dy / sampleZoom;  // Flip Y
-      sampleLastX = e.clientX;
-      sampleLastY = e.clientY;
-      renderSample();
-    });
-
-    sampleCanvas.addEventListener('mouseup', () => {
-      sampleIsPanning = false;
-      sampleCanvas.style.cursor = 'grab';
-    });
-
-    sampleCanvas.addEventListener('mouseleave', () => {
-      sampleIsPanning = false;
-      sampleCanvas.style.cursor = 'grab';
-    });
-
-    // Zoom with wheel
-    sampleCanvas.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const factor = e.deltaY > 0 ? 0.9 : 1.1;
-      sampleZoom *= factor;
-      renderSample();
-    });
-
     // Responsive: re-render on window resize
     window.addEventListener('resize', () => {
-      renderSample();
+      getSample2DRenderer()?.resize();
     });
 
     // Sample PNG quality slider value display
@@ -6187,6 +6572,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     // Export PNG (canvas capture like T-embedding)
     document.getElementById('sample-export-png-btn').addEventListener('click', () => {
       if (sampleDominoes.length === 0) return;
+      sample2DRenderer?.renderNow();
 
       const N = parseInt(document.getElementById('sample-N-input').value) || 6;
       const quality = parseInt(document.getElementById('sample-png-quality').value) || 85;
@@ -6206,6 +6592,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
 
       // Draw the source canvas scaled
+      exportCtx.imageSmoothingEnabled = false;
       exportCtx.drawImage(sampleCanvas, 0, 0, exportCanvas.width, exportCanvas.height);
 
       // Download
@@ -6245,100 +6632,17 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
       // Double dimer mode: draw edge lines
       if (doubleDimerMode && sampleDominoes2.length > 0) {
-        // Build edge map (same logic as renderDoubleDimerLoops)
-        const edgeKey = (d) => {
-          const cx = d.x + d.w / 2;
-          const cy = d.y + d.h / 2;
-          const horiz = d.w > d.h;
-          let x1, y1, x2, y2;
-          if (horiz) { x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy; }
-          else { x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4; }
-          const q = v => Math.round(v * 1000);
-          return `${Math.min(q(x1), q(x2))},${Math.min(q(y1), q(y2))}-${Math.max(q(x1), q(x2))},${Math.max(q(y1), q(y2))}`;
-        };
-
-        const edgeMap = new Map();
-        const addEdges = (list, type) => {
-          for (const d of list) {
-            const k = edgeKey(d);
-            if (!edgeMap.has(k)) edgeMap.set(k, { d, types: new Set() });
-            edgeMap.get(k).types.add(type);
-          }
-        };
-        addEdges(sampleDominoes, 1);
-        addEdges(sampleDominoes2, 2);
-
-        // Build adjacency for loop detection
-        const vertexToEdges = new Map();
-        const allEdges = [];
-        edgeMap.forEach((val, key) => {
-          const d = val.d;
-          const cx = d.x + d.w / 2, cy = d.y + d.h / 2;
-          const horiz = d.w > d.h;
-          let x1, y1, x2, y2;
-          if (horiz) { x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy; }
-          else { x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4; }
-          const v1Key = `${Math.round(x1 * 1000)},${Math.round(y1 * 1000)}`;
-          const v2Key = `${Math.round(x2 * 1000)},${Math.round(y2 * 1000)}`;
-          const edgeInfo = { x1, y1, x2, y2, val, key, v1Key, v2Key, loopId: -1 };
-          allEdges.push(edgeInfo);
-          if (!vertexToEdges.has(v1Key)) vertexToEdges.set(v1Key, []);
-          if (!vertexToEdges.has(v2Key)) vertexToEdges.set(v2Key, []);
-          vertexToEdges.get(v1Key).push(edgeInfo);
-          vertexToEdges.get(v2Key).push(edgeInfo);
-        });
-
-        // Detect loops via BFS
-        let loopId = 0;
-        const loopSizes = new Map();
-        for (const edge of allEdges) {
-          if (edge.loopId >= 0) continue;
-          const isDouble = edge.val.types.has(1) && edge.val.types.has(2);
-          if (isDouble) { edge.loopId = -2; continue; }
-          const queue = [edge];
-          const visited = new Set([edge.key]);
-          edge.loopId = loopId;
-          let loopSize = 1;
-          while (queue.length > 0) {
-            const curr = queue.shift();
-            for (const vKey of [curr.v1Key, curr.v2Key]) {
-              for (const neighbor of (vertexToEdges.get(vKey) || [])) {
-                if (visited.has(neighbor.key)) continue;
-                const neighborIsDouble = neighbor.val.types.has(1) && neighbor.val.types.has(2);
-                if (neighborIsDouble) continue;
-                visited.add(neighbor.key);
-                neighbor.loopId = loopId;
-                loopSize++;
-                queue.push(neighbor);
-              }
-            }
-          }
-          loopSizes.set(loopId, loopSize);
-          loopId++;
-        }
-
-        // Draw edges as SVG lines
+        const drawableEdges = getSampleDoubleDimerDrawableEdges();
         const lineWidth = 2 * Math.max(0.5, borderWidth);
-        for (const edge of allEdges) {
-          const { x1, y1, x2, y2, val } = edge;
-          const isDouble = val.types.has(1) && val.types.has(2);
-          if (isDouble && minLoopLength > 2) continue;
-          if (!isDouble && edge.loopId >= 0) {
-            const loopSize = loopSizes.get(edge.loopId) || 0;
-            if (loopSize < minLoopLength) continue;
-          }
-          let color;
-          if (isDouble) color = 'purple';
-          else if (val.types.has(1)) color = 'black';
-          else color = 'red';
-
+        for (const edge of drawableEdges) {
+          const { x1, y1, x2, y2 } = edge;
           const sx1 = (x1 - minX) * scale + padding;
           const sy1 = (maxY - y1) * scale + padding;
           const sx2 = (x2 - minX) * scale + padding;
           const sy2 = (maxY - y2) * scale + padding;
-          svg += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="${color}" stroke-width="${lineWidth}" stroke-linecap="round"/>`;
-          svg += `<circle cx="${sx1}" cy="${sy1}" r="${lineWidth/2}" fill="${color}"/>`;
-          svg += `<circle cx="${sx2}" cy="${sy2}" r="${lineWidth/2}" fill="${color}"/>`;
+          svg += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="${edge.color}" stroke-opacity="${edge.opacity}" stroke-width="${lineWidth}" stroke-linecap="round"/>`;
+          svg += `<circle cx="${sx1}" cy="${sy1}" r="${lineWidth/2}" fill="${edge.color}" fill-opacity="${edge.opacity}"/>`;
+          svg += `<circle cx="${sx2}" cy="${sy2}" r="${lineWidth/2}" fill="${edge.color}" fill-opacity="${edge.opacity}"/>`;
         }
       } else {
         // Normal domino rendering

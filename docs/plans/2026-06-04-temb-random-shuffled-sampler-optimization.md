@@ -134,16 +134,16 @@ Make the random sampler frontend avoid repeated expensive work.
 
 Make `#sample-canvas` canvas-first and pan/zoom-friendly, matching the visual sharpness of RSK and `/domino/`.
 
-- [ ] Add CSS to `#sample-canvas`: `image-rendering: crisp-edges; image-rendering: pixelated;`.
-- [ ] Implement a `SampleDomino2DCanvasRenderer` with persistent viewport state, HiDPI device-pixel-ratio handling, `requestAnimationFrame` scheduling, and explicit cache invalidation.
-- [ ] For small samples, draw directly/exactly to the visible canvas so N=6/12 examples are not blurry.
-- [ ] For larger samples, render once into an `OffscreenCanvas` or hidden canvas and draw the cached bitmap with `ctx.imageSmoothingEnabled = false`; pan/zoom must not loop over all dominoes.
-- [ ] If adopting the RSK progressive cache pattern, do a quick 1x cache first and then swap in a higher-resolution cache asynchronously; keep smoothing disabled for both draws.
-- [ ] Batch initial standard domino drawing by palette color or grayscale bucket, with a single border/stroke pass when borders are enabled.
-- [ ] Precompute double-dimer edge maps, loop IDs, loop sizes, and filtered drawable edge lists only when sample configurations or `minLoopLength` changes.
-- [ ] Render double-dimer loops from precomputed drawable data; pan/zoom must not rebuild edge maps or redo BFS.
-- [ ] Keep PNG export working and visually matching the on-screen sample canvas.
-- [ ] Verify N=330 single mode and double-dimer mode remain interactive in 2D.
+- [x] Add CSS to `#sample-canvas`: `image-rendering: crisp-edges; image-rendering: pixelated;`.
+- [x] Implement a `SampleDomino2DCanvasRenderer` with persistent viewport state, HiDPI device-pixel-ratio handling, `requestAnimationFrame` scheduling, and explicit cache invalidation.
+- [x] For small samples, draw directly/exactly to the visible canvas so N=6/12 examples are not blurry.
+- [x] For larger samples, render once into an `OffscreenCanvas` or hidden canvas and draw the cached bitmap with `ctx.imageSmoothingEnabled = false`; pan/zoom must not loop over all dominoes.
+- [x] If adopting the RSK progressive cache pattern, do a quick 1x cache first and then swap in a higher-resolution cache asynchronously; keep smoothing disabled for both draws.
+- [x] Batch initial standard domino drawing by palette color or grayscale bucket, with a single border/stroke pass when borders are enabled.
+- [x] Precompute double-dimer edge maps, loop IDs, loop sizes, and filtered drawable edge lists only when sample configurations or `minLoopLength` changes.
+- [x] Render double-dimer loops from precomputed drawable data; pan/zoom must not rebuild edge maps or redo BFS.
+- [x] Keep PNG export working and visually matching the on-screen sample canvas.
+- [x] Verify N=330 single mode and double-dimer mode remain interactive in 2D.
 
 ### Task 5: Batch the random sampler's 3D and height-function displays
 

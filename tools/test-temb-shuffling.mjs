@@ -37,6 +37,16 @@ function checkPageSource() {
   assert(source.includes("renderVisibleSampleViews"), "generateRandomSample should split out visible view rendering");
   assert(source.includes("isSample3DPaneVisible()"), "sample 3D should only update while visible");
   assert(source.includes("isHeightFunctionPaneVisible()"), "height function pane should only update while visible");
+  assert(source.includes("#sample-canvas {\n  image-rendering: crisp-edges;\n  image-rendering: pixelated;"), "sample canvas should use crisp pixelated rendering");
+  assert(source.includes("class SampleDomino2DCanvasRenderer"), "sample canvas should use the cached 2D renderer");
+  assert(source.includes("requestAnimationFrame(() =>"), "sample 2D renderer should schedule draws with requestAnimationFrame");
+  assert(source.includes("OffscreenCanvas"), "sample 2D renderer should use an offscreen or hidden canvas cache");
+  assert(source.includes("ctx.imageSmoothingEnabled = false"), "sample 2D cached image draws should disable smoothing");
+  assert(source.includes("drawSampleStandardDominoes"), "standard sample dominoes should be batched through a shared draw helper");
+  assert(source.includes("buildSampleDoubleDimerLoopData"), "double-dimer loop topology should be precomputed");
+  assert(source.includes("getSampleDoubleDimerDrawableEdges"), "double-dimer drawable edges should be cached by min-loop filter");
+  assert(source.includes("sample2DRenderer?.renderNow();"), "sample PNG export should flush the current 2D renderer frame");
+  assert(!source.includes("function renderDoubleDimerLoops("), "double-dimer loops should not be rebuilt inside the visible draw call");
 
   for (const key of [
     "controlReadMs",
@@ -53,7 +63,7 @@ function checkPageSource() {
     assert(source.includes(key), `sample profile should include ${key}`);
   }
 
-  assert(source.includes("renderDoubleDimerLoops(sampleCtx"), "2D render should route double-dimer timing through renderDoubleDimerLoops");
+  assert(source.includes("setSamplePhaseTiming(profile, 'doubleDimerLoopProcessingMs'"), "2D render should still record double-dimer loop processing timing");
   assert(source.includes("shufflingFreeString(resultPtr);"), "WASM result strings should be freed after parsing");
 }
 
@@ -355,6 +365,66 @@ async function runBrowserSmoke() {
     assert(cacheBenchmark.cases[1].weightCacheHit === true, "second identical sample should reuse cached EKLP weights");
     assert(cacheBenchmark.cases.every(c => c.timings.heapCopyMs !== null), "cache smoke benchmark should record heap copy timing");
     assert(cacheBenchmark.cases.every(c => c.timings.utf8ConversionMs !== null), "cache smoke benchmark should record UTF8 conversion timing");
+
+    const rendererSmoke = await evaluate(client, `(() => {
+      const sampleCanvas = document.getElementById("sample-canvas");
+      const renderer = window.tembSample2DRenderer;
+      return {
+        imageRendering: getComputedStyle(sampleCanvas).imageRendering,
+        hasRenderer: !!renderer,
+        hasRenderNow: typeof renderer?.renderNow === "function",
+        hasZoomBy: typeof renderer?.zoomBy === "function",
+        canvasWidth: sampleCanvas?.width || 0,
+        canvasHeight: sampleCanvas?.height || 0
+      };
+    })()`);
+    assert(rendererSmoke.hasRenderer, "sample canvas should expose the cached 2D renderer");
+    assert(rendererSmoke.hasRenderNow && rendererSmoke.hasZoomBy, "sample renderer should expose render and zoom controls");
+    assert(rendererSmoke.canvasWidth > 0 && rendererSmoke.canvasHeight > 0, "sample renderer should size the canvas");
+    assert(/pixelated|crisp-edges/.test(rendererSmoke.imageRendering), "sample canvas should use pixelated image rendering");
+
+    const largeRendererSmoke = await evaluate(client, `window.tembShuffledSamplerBenchmark({
+      cases: [
+        { n: 330, doubleDimer: false, label: "N=330 single 2D cache smoke" },
+        { n: 330, doubleDimer: true, label: "N=330 double-dimer 2D cache smoke" }
+      ],
+      stopOnError: true,
+      restore: false
+    }).then(async benchmark => {
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const renderer = window.tembSample2DRenderer;
+      const before = {
+        cacheValid: !!renderer?.cacheValid,
+        cacheVersion: renderer?.cacheVersion,
+        cacheKey: renderer?.cacheKey,
+        doubleDimer: !!renderer?.doubleDimer,
+        dominoes: renderer?.dominoes?.length || 0,
+        dominoes2: renderer?.dominoes2?.length || 0,
+        cacheWidth: renderer?.cache?.canvas?.width || 0,
+        cacheHeight: renderer?.cache?.canvas?.height || 0
+      };
+      renderer.zoomBy(1.2);
+      renderer.zoomBy(1 / 1.2);
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const after = {
+        cacheValid: !!renderer?.cacheValid,
+        cacheVersion: renderer?.cacheVersion,
+        cacheKey: renderer?.cacheKey,
+        framePending: !!renderer?.framePending
+      };
+      return { benchmark, before, after };
+    })`, 240000);
+    assert(largeRendererSmoke.benchmark.cases.length === 2, "N=330 cache smoke should return both cases");
+    assert(largeRendererSmoke.benchmark.cases.every(c => c.status === "ok"), "N=330 single and double-dimer cache smokes should pass");
+    assert(largeRendererSmoke.benchmark.cases[0].dominoCount > 0, "N=330 single smoke should produce dominoes");
+    assert(largeRendererSmoke.benchmark.cases[1].dominoCount > 0 && largeRendererSmoke.benchmark.cases[1].dominoCount2 > 0, "N=330 double-dimer smoke should produce both configurations");
+    assert(largeRendererSmoke.benchmark.cases[1].timings.doubleDimerLoopProcessingMs !== null, "N=330 double-dimer smoke should time loop preprocessing");
+    assert(largeRendererSmoke.before.doubleDimer, "large renderer smoke should leave the renderer in double-dimer mode");
+    assert(largeRendererSmoke.before.dominoes > 0 && largeRendererSmoke.before.dominoes2 > 0, "large renderer should hold both double-dimer configurations");
+    assert(largeRendererSmoke.before.cacheValid && largeRendererSmoke.before.cacheWidth > 0 && largeRendererSmoke.before.cacheHeight > 0, "large renderer should have a cached bitmap");
+    assert(largeRendererSmoke.after.cacheValid, "large renderer cache should remain valid after zoom redraws");
+    assert(largeRendererSmoke.after.cacheVersion === largeRendererSmoke.before.cacheVersion, "zoom redraws should not invalidate the large-sample cache");
+    assert(largeRendererSmoke.after.cacheKey === largeRendererSmoke.before.cacheKey, "zoom redraws should reuse the same large-sample cache key");
 
     if (process.env.TEMB_SHUFFLED_BENCHMARK === "1") {
       const benchmark = await evaluate(client, `window.tembShuffledSamplerBenchmark({ stopOnError: false, restore: true })`, 900000);
