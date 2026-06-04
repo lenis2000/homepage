@@ -37,6 +37,10 @@ function checkPageSource() {
   assert(source.includes('id="no-3d-checkbox" checked'), "No 3D should be checked by default");
   assert(source.includes('<button id="view-2d-btn" class="active"'), "2D view should be active by default");
   assert(source.includes('<canvas id="aztec-canvas-2d"'), "2D view should include the canvas renderer");
+  assert(!source.includes("periodicity-select"), "Share links should not reference the removed periodicity select");
+  assert(!source.includes("weight-a"), "Share links should not reference removed 2x2 weight IDs");
+  assert(source.includes("setPeriodicityFromUrl"), "URL load should restore radio-based periodicity");
+  assert(source.includes("w6x2"), "URL state should preserve 6x2 weights");
 
   const updateStart = source.indexOf("async function updateVisualization(");
   const updateEnd = source.indexOf("function snapshotBenchmarkControls()", updateStart);
@@ -88,6 +92,10 @@ async function openTab(port, url) {
 }
 
 function createCdpClient(wsUrl) {
+  if (typeof WebSocket !== "function") {
+    throw new Error("The domino smoke test requires Node.js 22+ with a global WebSocket implementation.");
+  }
+
   const ws = new WebSocket(wsUrl);
   let nextId = 1;
   const pending = new Map();

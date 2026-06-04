@@ -1342,6 +1342,10 @@ function createNo3DMessage() {
   show3DCanvasMessage('3D visualization disabled.<br>Uncheck "No 3D" to enable 3D rendering.<br><br>Switch to 2D view to see the visualization.');
 }
 
+function create3DUnavailableMessage() {
+  show3DCanvasMessage('3D visualization unavailable in this browser.<br>Switch to 2D view to see the visualization.');
+}
+
 Module.onRuntimeInitialized = async function() {
   const simulateAztec = Module.cwrap('simulateAztec','number',['number','number','number','number','number','number','number','number','number','number'],{async:true});
   const simulateAztec6x2 = Module.cwrap('simulateAztec6x2', 'number', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], {async:true});
@@ -1729,6 +1733,24 @@ Module.onRuntimeInitialized = async function() {
     dominoGroup.scale.set(1, 1, 1);
   }
 
+  function resetThreeJSState() {
+    animationActive = false;
+    window.removeEventListener('resize', onWindowResize);
+    clear3DMeshes();
+    controls?.dispose?.();
+    if (renderer) {
+      renderer.dispose?.();
+      if (renderer.domElement?.parentNode) {
+        renderer.domElement.parentNode.removeChild(renderer.domElement);
+      }
+    }
+    scene = null;
+    camera = null;
+    renderer = null;
+    controls = null;
+    dominoGroup = null;
+  }
+
   async function ensureThreeJSReady() {
     if (isNo3DEnabled() || getActiveView() !== "3d") return false;
     try {
@@ -1743,7 +1765,18 @@ Module.onRuntimeInitialized = async function() {
     }
 
     if (!renderer || !scene || !camera || !controls || !dominoGroup) {
-      initThreeJS();
+      try {
+        initThreeJS();
+      } catch (error) {
+        console.error("[domino] failed to initialize 3D renderer", error);
+        resetThreeJSState();
+        create3DUnavailableMessage();
+        setProgressStatus(`Unable to initialize 3D renderer: ${error.message}`, {
+          immediate: true,
+          clearAfterMs: 5000
+        });
+        return false;
+      }
       return Boolean(renderer && scene && camera && controls && dominoGroup);
     }
     const container = document.getElementById('aztec-canvas');
@@ -2485,31 +2518,31 @@ Module.onRuntimeInitialized = async function() {
   }
 
   async function renderVisibleCachedDominoes(profile = null, signal = null) {
-    if (!cachedDominoes) return;
+    if (!cachedDominoes) return false;
     const n = parseInt(document.getElementById("n-input").value, 10) || 0;
 
     if (getActiveView() === "2d") {
       const render2DStart = dominoNow();
       await render2D(cachedDominoes);
       setDominoTiming(profile, "render2DMs", dominoNow() - render2DStart);
-      return;
+      return true;
     }
 
     if (shouldShowLarge3DMessage(n)) {
       createLargeTilingMessage();
       skipDominoTiming(profile, "heightFunctionMs", "3D unavailable for n > 300");
       skipDominoTiming(profile, "render3DMs", "3D unavailable for n > 300");
-      return;
+      return false;
     }
 
     if (isNo3DEnabled()) {
       createNo3DMessage();
       skipDominoTiming(profile, "heightFunctionMs", "No 3D enabled");
       skipDominoTiming(profile, "render3DMs", "No 3D enabled");
-      return;
+      return false;
     }
 
-    await render3DFromDominoes(cachedDominoes, n, profile, signal);
+    return await render3DFromDominoes(cachedDominoes, n, profile, signal);
   }
 
   async function updateVisualization(n, profileOptions = {}) {
@@ -3301,8 +3334,10 @@ Module.onRuntimeInitialized = async function() {
 
     if (cachedDominoes && cachedDominoes.length > 0) {
       setProgressStatus("Restoring cached 3D visualization...", { immediate: true });
-      await renderVisibleCachedDominoes();
-      setProgressStatus("Using cached 3D visualization", { immediate: true, clearAfterMs: 2000 });
+      const rendered = await renderVisibleCachedDominoes();
+      if (rendered) {
+        setProgressStatus("Using cached 3D visualization", { immediate: true, clearAfterMs: 2000 });
+      }
       return;
     }
 
@@ -4166,21 +4201,62 @@ Module.onRuntimeInitialized = async function() {
   function serializeStateToUrl() {
     const params = new URLSearchParams();
     const n = document.getElementById('n-input').value;
-    const periodicitySelect = document.getElementById('periodicity-select');
-    const periodicity = periodicitySelect ? periodicitySelect.value : 'uniform';
+    const periodicity = currentPeriodicity();
 
     params.set('n', n);
     if (periodicity !== 'uniform') params.set('p', periodicity);
 
-    // Add 2x2 or 3x3 weights if applicable
     if (periodicity === '2x2') {
-      const a = document.getElementById('weight-a')?.value;
-      const b = document.getElementById('weight-b')?.value;
+      const a = document.getElementById('a-input')?.value;
+      const b = document.getElementById('b-input')?.value;
       if (a) params.set('a', a);
       if (b) params.set('b', b);
+    } else if (periodicity === '3x3') {
+      const weights = readInputValues(['w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7', 'w8', 'w9']);
+      if (weights.length) params.set('w', weights.join(','));
+    } else if (periodicity === '6x2') {
+      const weights = readInputValues(Array.from({ length: 12 }, (_, i) => `w6x2_${i + 1}`));
+      if (weights.length) params.set('w6x2', weights.join(','));
     }
 
     return window.location.origin + window.location.pathname + '?' + params.toString();
+  }
+
+  function readInputValues(ids) {
+    return ids.map(id => document.getElementById(id)?.value ?? '');
+  }
+
+  function setInputValues(ids, values) {
+    ids.forEach((id, index) => {
+      if (values[index] === undefined || values[index] === '') return;
+      const input = document.getElementById(id);
+      if (!input) return;
+      input.value = values[index];
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }
+
+  function parseWeightList(value) {
+    return String(value || '')
+      .split(',')
+      .map(part => part.trim())
+      .filter(Boolean);
+  }
+
+  function readWeightsFromParams(params, listParam, ids) {
+    if (params.has(listParam)) return parseWeightList(params.get(listParam));
+    return ids.map(id => params.get(id) || '');
+  }
+
+  function setPeriodicityFromUrl(value) {
+    const allowed = new Set(['uniform', '2x2', '3x3', '6x2', 'frozenH', 'frozenV']);
+    if (!allowed.has(value)) return;
+    const radio = Array.from(document.querySelectorAll('input[name="periodicity"]'))
+      .find(input => input.value === value);
+    if (!radio) return;
+    radio.checked = true;
+    radio.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   function copyShareLink() {
@@ -4211,17 +4287,21 @@ Module.onRuntimeInitialized = async function() {
       document.getElementById('n-input').value = params.get('n');
     }
     if (params.has('p')) {
-      const periodicitySelect = document.getElementById('periodicity-select');
-      if (periodicitySelect) periodicitySelect.value = params.get('p');
+      setPeriodicityFromUrl(params.get('p'));
     }
     if (params.has('a')) {
-      const weightA = document.getElementById('weight-a');
+      const weightA = document.getElementById('a-input');
       if (weightA) weightA.value = params.get('a');
     }
     if (params.has('b')) {
-      const weightB = document.getElementById('weight-b');
+      const weightB = document.getElementById('b-input');
       if (weightB) weightB.value = params.get('b');
     }
+    const weight3x3Ids = ['w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7', 'w8', 'w9'];
+    const weight6x2Ids = Array.from({ length: 12 }, (_, i) => `w6x2_${i + 1}`);
+    setInputValues(weight3x3Ids, readWeightsFromParams(params, 'w', weight3x3Ids));
+    setInputValues(weight6x2Ids, readWeightsFromParams(params, 'w6x2', weight6x2Ids));
+    updatePeriodicityParams();
   })();
 
   // ========================================================================
