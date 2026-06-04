@@ -1,4 +1,4 @@
-.PHONY: serve serve-full invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-venv arxiv-related arxiv-rebuild arxiv-full-update arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-search arxiv-sources arxiv-sources-upload arxiv-sources-upload-check arxiv-sources-convert-ps arxiv-sources-manifest arxiv-sources-process
+.PHONY: serve serve-full test-domino invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-venv arxiv-related arxiv-rebuild arxiv-full-update arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-search arxiv-sources arxiv-sources-upload arxiv-sources-upload-check arxiv-sources-convert-ps arxiv-sources-manifest arxiv-sources-process
 
 define jekyll_serve
 	@mkdir -p /tmp/jekyll-status
@@ -23,6 +23,9 @@ serve:
 
 serve-full:
 	$(call jekyll_serve,)
+
+test-domino:
+	node tools/test-domino.mjs
 
 invalidate:
 	@echo "Creating CloudFront invalidations..."

@@ -35,18 +35,39 @@ permalink: /domino/
     vertical-align: top;
   }
 
+  #aztec-canvas-2d {
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: grab;
+  }
+
+  #aztec-canvas-2d.dragging {
+    cursor: grabbing;
+  }
 
   #aztec-svg-2d {
     touch-action: none; /* Prevent browser defaults on touch */
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    display: none;
   }
 
   #aztec-2d-canvas {
-    background-color: #f8f8f8;
-    border: 1px solid #ddd;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    background: var(--bg-secondary, #f8f8f8);
+    border: 1px solid var(--border-color, #ddd);
+    box-sizing: border-box;
+    position: relative;
     display: none; /* Hidden by default */
+  }
+
+  [data-theme="dark"] #aztec-2d-canvas {
+    background: var(--bg-secondary, #1f1f1f);
+    border-color: var(--border-color, #444);
   }
 
   /* View toggle and display options styling */
@@ -862,8 +883,6 @@ permalink: /domino/
   }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="{{site.url}}/js/colorschemes.js"></script>
@@ -943,7 +962,7 @@ permalink: /domino/
       <div class="control-section-content">
         <div class="control-row">
           <label for="n-input">Aztec Diamond Order:</label>
-          <input id="n-input" type="number" value="12" min="2" step="2" max="300" size="3" class="mobile-input" style="width: 70px;">
+          <input id="n-input" type="number" value="12" min="2" step="2" max="2000" size="3" class="mobile-input" style="width: 70px;">
         </div>
         <div class="control-row">
           <button id="sample-btn" class="btn-action">Sample</button>
@@ -1147,7 +1166,7 @@ permalink: /domino/
           </div>
           <div class="control-row">
             <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 12px;">
-              <input type="checkbox" id="no-3d-checkbox">
+              <input type="checkbox" id="no-3d-checkbox" checked>
               No 3D (faster)
             </label>
           </div>
@@ -1206,9 +1225,9 @@ permalink: /domino/
         <div class="export-divider"></div>
         <div class="export-group">
           <span class="export-group-label">Images</span>
-          <button id="download-png-btn" class="btn-utility" style="font-size: 11px; display: none;">PNG</button>
-          <button id="download-pdf-btn" class="btn-utility" style="font-size: 11px; display: none;">PDF</button>
-          <button id="download-3d-btn" class="btn-utility" style="font-size: 11px;">3D Screenshot</button>
+          <button id="download-png-btn" class="btn-utility" style="font-size: 11px;">PNG</button>
+          <button id="download-pdf-btn" class="btn-utility" style="font-size: 11px;">PDF</button>
+          <button id="download-3d-btn" class="btn-utility" style="font-size: 11px; display: none;">3D Screenshot</button>
         </div>
         <div class="export-divider"></div>
         <div class="export-group">
@@ -1262,19 +1281,20 @@ permalink: /domino/
     <!-- View Toggle overlay -->
     <div class="view-overlay">
       <div class="view-toggle-pills">
-        <button id="view-3d-btn" class="active" title="3D height function view">3D</button>
-        <button id="view-2d-btn" title="2D domino view">2D</button>
+        <button id="view-3d-btn" title="3D height function view">3D</button>
+        <button id="view-2d-btn" class="active" title="2D domino view">2D</button>
       </div>
       <button id="help-btn" title="Keyboard shortcuts" style="width: 28px; height: 28px; border: 1px solid var(--border-color, #888); border-radius: 50%; background: var(--bg-primary, white); color: #666; font-size: 14px; cursor: pointer; padding: 0; margin-left: 8px;">?</button>
     </div>
 
-    <!-- 3D Visualization Pane (default) -->
-    <div id="aztec-canvas"></div>
+    <!-- 3D Visualization Pane (opt-in) -->
+    <div id="aztec-canvas" style="display: none;"></div>
 
-    <!-- 2D Visualization Pane (hidden by default) -->
-    <div id="aztec-2d-canvas" style="display: none; position: relative; overflow: hidden; height: 70vh;">
+    <!-- 2D Visualization Pane (default) -->
+    <div id="aztec-2d-canvas" style="display: block; position: relative; overflow: hidden; height: 70vh;">
       <!-- 2D controls moved to sidebar -->
-      <svg id="aztec-svg-2d" style="width: 100%; height: 100%; border: 1px solid var(--border-color, #ccc);"></svg>
+      <canvas id="aztec-canvas-2d" aria-label="2D Aztec diamond tiling"></canvas>
+      <svg id="aztec-svg-2d" aria-hidden="true"></svg>
     </div>
   </div>
 </main>
@@ -1292,9 +1312,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // No collapsible functionality needed
 });
 
-// Helper function to create a message for large tilings (n > 300) in 3D view
-function createLargeTilingMessage() {
+function show3DCanvasMessage(html) {
   const container = document.getElementById('aztec-canvas');
+  if (!container) return;
   container.innerHTML = '';
   const messageDiv = document.createElement('div');
   messageDiv.style.width = '100%';
@@ -1309,11 +1329,28 @@ function createLargeTilingMessage() {
   messageDiv.style.fontSize = '18px';
   messageDiv.style.fontWeight = 'bold';
   messageDiv.style.textAlign = 'center';
-  messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.<br><br>To see a 3D visualization, decrease n to 300 or less and click Sample.';
+  messageDiv.innerHTML = html;
   container.appendChild(messageDiv);
 }
 
-Module.onRuntimeInitialized = async function() {
+// Helper function to create a message for large tilings (n > 300) in 3D view
+function createLargeTilingMessage() {
+  show3DCanvasMessage('For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.<br><br>To see a 3D visualization, decrease n to 300 or less and click Sample.');
+}
+
+function createNo3DMessage() {
+  show3DCanvasMessage('3D visualization disabled.<br>Uncheck "No 3D" to enable 3D rendering.<br><br>Switch to 2D view to see the visualization.');
+}
+
+function create3DUnavailableMessage() {
+  show3DCanvasMessage('3D visualization unavailable in this browser.<br>Switch to 2D view to see the visualization.');
+}
+
+let dominoRuntimeInitialized = false;
+async function initializeDominoRuntime() {
+  if (dominoRuntimeInitialized) return;
+  dominoRuntimeInitialized = true;
+
   const simulateAztec = Module.cwrap('simulateAztec','number',['number','number','number','number','number','number','number','number','number','number'],{async:true});
   const simulateAztec6x2 = Module.cwrap('simulateAztec6x2', 'number', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], {async:true});
   const simulateAztecHorizontal = Module.cwrap(
@@ -1327,12 +1364,20 @@ Module.onRuntimeInitialized = async function() {
      'number','number','number','number'], {async:true});
   const freeString    = Module.cwrap('freeString',null,['number']);
   const getProgress   = Module.cwrap('getProgress','number',[]);
-  const performGlauberSteps = Module.cwrap('performGlauberSteps', 'number', ['string', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], {async: true});
+  const performGlauberSteps = Module.cwrap('performGlauberSteps', 'number', [
+    'string',
+    'number', 'number', 'number', 'number', 'number', 'number',
+    'number', 'number', 'number', 'number', 'number', 'number',
+    'number'
+  ], {async: true});
   const wasGlauberActive = Module.cwrap('wasGlauberActive', 'boolean', []);
 
   // Three.js setup
   let scene, camera, renderer, controls, dominoGroup;
   let animationActive = true;
+  const THREE_JS_URL = "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js";
+  const ORBIT_CONTROLS_URL = "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js";
+  let threeJSLibraryPromise = null;
 
   // Simulation state
   let simulationActive = false;
@@ -1342,6 +1387,7 @@ Module.onRuntimeInitialized = async function() {
   const cancelBtn = document.getElementById("cancel-btn");
   let progressInterval;
   let cachedDominoes = null; // Store dominoes for 2D view
+  let domino2DRenderer = null;
   let useHeightFunction = false; // Track height function visibility state
   let heightGroup; // Group for height function display
 
@@ -1349,13 +1395,289 @@ Module.onRuntimeInitialized = async function() {
   let glauberRunning = false;
   window.glauberRunning = glauberRunning;
   let glauberTimer = null;
+  let glauberStepInFlight = false;
   let lastSampleWasGlauber = false; // Track if the *last* visualization update came from Glauber
+  let no3DUserChanged = false;
+
+  function clearGlauberTimer() {
+    if (glauberTimer === null) return;
+    clearTimeout(glauberTimer);
+    clearInterval(glauberTimer);
+    glauberTimer = null;
+  }
+
+  function initializeDefaultPaneState() {
+    const no3DCheckbox = document.getElementById("no-3d-checkbox");
+    if (no3DCheckbox) no3DCheckbox.checked = true;
+
+    document.getElementById("view-3d-btn")?.classList.remove("active");
+    document.getElementById("view-2d-btn")?.classList.add("active");
+
+    const canvas3D = document.getElementById("aztec-canvas");
+    const canvas2D = document.getElementById("aztec-2d-canvas");
+    if (canvas3D) canvas3D.style.display = "none";
+    if (canvas2D) canvas2D.style.display = "block";
+
+    document.getElementById("download-png-btn").style.display = "inline-block";
+    document.getElementById("download-pdf-btn").style.display = "inline-block";
+    document.getElementById("download-3d-btn").style.display = "none";
+    document.getElementById("n-input").setAttribute("max", "2000");
+  }
+
+  initializeDefaultPaneState();
+
+  const DOMINO_DEFAULT_BENCHMARK_CASES = [
+    { n: 100, view: "2d", no3D: true, periodicity: "uniform" },
+    { n: 500, view: "2d", no3D: true, periodicity: "uniform" },
+    { n: 1000, view: "2d", no3D: true, periodicity: "uniform" },
+    { n: 2000, view: "2d", no3D: true, periodicity: "uniform" }
+  ];
+
+  function dominoNow() {
+    return (window.performance && performance.now) ? performance.now() : Date.now();
+  }
+
+  function roundTiming(ms) {
+    return Math.round(ms * 10) / 10;
+  }
+
+  function currentPeriodicity() {
+    return document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
+  }
+
+  function createDominoProfile(n, options = {}) {
+    return {
+      n,
+      source: options.source || "sample",
+      label: options.label || null,
+      periodicity: currentPeriodicity(),
+      view: document.getElementById("view-2d-btn")?.classList.contains("active") ? "2d" : "3d",
+      no3D: Boolean(document.getElementById("no-3d-checkbox")?.checked),
+      startedAt: new Date().toISOString(),
+      startedAtMs: dominoNow(),
+      status: "running",
+      timings: {
+        wasmCallMs: null,
+        utf8ConversionMs: null,
+        jsonParseMs: null,
+        render2DMs: null,
+        heightFunctionMs: null,
+        render3DMs: null,
+        totalMs: null
+      },
+      skipped: []
+    };
+  }
+
+  function setDominoTiming(profile, key, elapsedMs) {
+    if (!profile) return;
+    profile.timings[key] = roundTiming(elapsedMs);
+  }
+
+  function skipDominoTiming(profile, key, reason) {
+    if (!profile || profile.skipped.some(item => item.key === key)) return;
+    profile.skipped.push({ key, reason });
+  }
+
+  function finishDominoProfile(profile, status = "ok") {
+    if (!profile || profile.status !== "running") return profile;
+    profile.status = status;
+    profile.finishedAt = new Date().toISOString();
+    profile.timings.totalMs = roundTiming(dominoNow() - profile.startedAtMs);
+
+    window.dominoSamplerLastTiming = profile;
+    window.dominoSamplerTimings = window.dominoSamplerTimings || [];
+    window.dominoSamplerTimings.push(profile);
+    if (window.dominoSamplerTimings.length > 50) {
+      window.dominoSamplerTimings.shift();
+    }
+
+    if (window.dominoSamplerLogTimings === true) {
+      console.info("[domino] sampler profile", profile);
+      if (console.table) console.table(profile.timings);
+    }
+    return profile;
+  }
+
+  function profileSummary(profile) {
+    if (!profile || profile.status !== "ok") return "";
+    const t = profile.timings;
+    const parts = [
+      `total ${t.totalMs}ms`,
+      t.wasmCallMs !== null ? `wasm ${t.wasmCallMs}ms` : null,
+      t.utf8ConversionMs !== null ? `utf8 ${t.utf8ConversionMs}ms` : null,
+      t.jsonParseMs !== null ? `parse ${t.jsonParseMs}ms` : null,
+      t.render2DMs !== null ? `2D ${t.render2DMs}ms` : null,
+      t.heightFunctionMs !== null ? `height ${t.heightFunctionMs}ms` : null,
+      t.render3DMs !== null ? `3D ${t.render3DMs}ms` : null
+    ].filter(Boolean);
+    return `Profile: ${parts.join(", ")}`;
+  }
+
+  function showDominoProfileStatus(profile) {
+    const message = profileSummary(profile);
+    if (!message || !progressElem || profile.source === "benchmark") return;
+    setProgressStatus(message, { immediate: true, clearAfterMs: 6000 });
+  }
+
+  let statusFramePending = false;
+  let pendingStatusMessage = null;
+  let pendingStatusOptions = {};
+  let lastStatusUpdateMs = 0;
+  let statusClearTimer = null;
+  const STATUS_UPDATE_INTERVAL_MS = 125;
+
+  function setProgressStatus(message, options = {}) {
+    if (!progressElem) return;
+    pendingStatusMessage = message;
+    pendingStatusOptions = options;
+
+    const applyStatus = () => {
+      statusFramePending = false;
+      const now = dominoNow();
+      if (!pendingStatusOptions.immediate &&
+          now - lastStatusUpdateMs < STATUS_UPDATE_INTERVAL_MS) {
+        scheduleStatusFrame();
+        return;
+      }
+
+      progressElem.innerText = pendingStatusMessage || "";
+      lastStatusUpdateMs = now;
+
+      if (statusClearTimer) {
+        clearTimeout(statusClearTimer);
+        statusClearTimer = null;
+      }
+      if (pendingStatusOptions.clearAfterMs) {
+        const expectedMessage = pendingStatusMessage;
+        statusClearTimer = setTimeout(() => {
+          if (progressElem.innerText === expectedMessage) {
+            progressElem.innerText = "";
+          }
+        }, pendingStatusOptions.clearAfterMs);
+      }
+    };
+
+    function scheduleStatusFrame() {
+      if (statusFramePending) return;
+      statusFramePending = true;
+      requestAnimationFrame(applyStatus);
+    }
+
+    if (options.immediate) {
+      applyStatus();
+    } else {
+      scheduleStatusFrame();
+    }
+  }
+
+  function clearProgressStatus(options = {}) {
+    if (statusClearTimer) {
+      clearTimeout(statusClearTimer);
+      statusClearTimer = null;
+    }
+    pendingStatusMessage = "";
+    pendingStatusOptions = {};
+    if (options.immediate && progressElem) {
+      progressElem.innerText = "";
+      return;
+    }
+    setProgressStatus("", { immediate: Boolean(options.immediate) });
+  }
+
+  function getActiveView() {
+    return document.getElementById("view-2d-btn")?.classList.contains("active") ? "2d" : "3d";
+  }
+
+  function isNo3DEnabled() {
+    return Boolean(document.getElementById("no-3d-checkbox")?.checked);
+  }
+
+  function shouldRender2D(n) {
+    return getActiveView() === "2d";
+  }
+
+  function shouldRender3D(n) {
+    return getActiveView() === "3d" && n <= 300 && !isNo3DEnabled();
+  }
+
+  function shouldShowLarge3DMessage(n) {
+    return getActiveView() === "3d" && n > 300;
+  }
+
+  function invalidate2DCanvasCache() {
+    domino2DRenderer?.invalidateCache("external");
+  }
 
   // Demo mode state
   let isDemoMode = false;
   let rotationSpeed = 0.005; // Speed of rotation in radians
 
+  function loadDominoScriptOnce(src, isReady, marker) {
+    if (isReady()) return Promise.resolve();
+
+    return new Promise((resolve, reject) => {
+      const selector = `script[data-domino-lazy-script="${marker}"]`;
+      const existing = document.querySelector(selector);
+      if (existing) {
+        if (existing.dataset.dominoLoaded === "true") {
+          reject(new Error(`Loaded ${src}, but the expected 3D API is unavailable`));
+          return;
+        }
+        if (existing.dataset.dominoLoadFailed === "true") {
+          reject(new Error(`Failed to load ${src}`));
+          return;
+        }
+        existing.addEventListener("load", () => resolve(), { once: true });
+        existing.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)), { once: true });
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      script.dataset.dominoLazyScript = marker;
+      script.addEventListener("load", () => {
+        script.dataset.dominoLoaded = "true";
+        resolve();
+      }, { once: true });
+      script.addEventListener("error", () => {
+        script.dataset.dominoLoadFailed = "true";
+        reject(new Error(`Failed to load ${src}`));
+      }, { once: true });
+      document.head.appendChild(script);
+    }).then(() => {
+      if (!isReady()) throw new Error(`Loaded ${src}, but the expected 3D API is unavailable`);
+    });
+  }
+
+  async function ensureThreeJSLibrary() {
+    if (window.THREE?.WebGLRenderer && window.THREE?.OrbitControls) return true;
+    if (!threeJSLibraryPromise) {
+      threeJSLibraryPromise = loadDominoScriptOnce(
+        THREE_JS_URL,
+        () => Boolean(window.THREE?.WebGLRenderer),
+        "three-core"
+      ).then(() => loadDominoScriptOnce(
+        ORBIT_CONTROLS_URL,
+        () => Boolean(window.THREE?.OrbitControls),
+        "three-orbit-controls"
+      )).catch(error => {
+        threeJSLibraryPromise = null;
+        throw error;
+      });
+    }
+
+    await threeJSLibraryPromise;
+    return Boolean(window.THREE?.WebGLRenderer && window.THREE?.OrbitControls);
+  }
+
   function initThreeJS() {
+    if (!window.THREE?.WebGLRenderer || !window.THREE?.OrbitControls) {
+      throw new Error("Three.js is not loaded");
+    }
+
+    animationActive = true;
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf0f0f0);
     const container = document.getElementById('aztec-canvas');
@@ -1404,6 +1726,86 @@ Module.onRuntimeInitialized = async function() {
     scene.add(dominoGroup);
 
     animate();
+  }
+
+  function disposeThreeMesh(mesh) {
+    if (!mesh) return;
+    if (mesh.geometry) mesh.geometry.dispose();
+    if (Array.isArray(mesh.material)) {
+      mesh.material.forEach(material => material?.dispose?.());
+    } else if (mesh.material) {
+      mesh.material.dispose();
+    }
+  }
+
+  function clear3DMeshes() {
+    if (!dominoGroup) return;
+    while (dominoGroup.children.length > 0) {
+      const mesh = dominoGroup.children[0];
+      dominoGroup.remove(mesh);
+      disposeThreeMesh(mesh);
+    }
+    dominoGroup.position.set(0, 0, 0);
+    dominoGroup.rotation.set(0, 0, 0);
+    dominoGroup.scale.set(1, 1, 1);
+  }
+
+  function resetThreeJSState() {
+    animationActive = false;
+    window.removeEventListener('resize', onWindowResize);
+    clear3DMeshes();
+    controls?.dispose?.();
+    if (renderer) {
+      renderer.dispose?.();
+      if (renderer.domElement?.parentNode) {
+        renderer.domElement.parentNode.removeChild(renderer.domElement);
+      }
+    }
+    scene = null;
+    camera = null;
+    renderer = null;
+    controls = null;
+    dominoGroup = null;
+  }
+
+  async function ensureThreeJSReady() {
+    if (isNo3DEnabled() || getActiveView() !== "3d") return false;
+    try {
+      await ensureThreeJSLibrary();
+    } catch (error) {
+      console.error("[domino] failed to load 3D renderer", error);
+      setProgressStatus(`Unable to load 3D renderer: ${error.message}`, {
+        immediate: true,
+        clearAfterMs: 5000
+      });
+      return false;
+    }
+
+    if (!renderer || !scene || !camera || !controls || !dominoGroup) {
+      try {
+        initThreeJS();
+      } catch (error) {
+        console.error("[domino] failed to initialize 3D renderer", error);
+        resetThreeJSState();
+        create3DUnavailableMessage();
+        setProgressStatus(`Unable to initialize 3D renderer: ${error.message}`, {
+          immediate: true,
+          clearAfterMs: 5000
+        });
+        return false;
+      }
+      return Boolean(renderer && scene && camera && controls && dominoGroup);
+    }
+    const container = document.getElementById('aztec-canvas');
+    if (container && renderer.domElement && !container.contains(renderer.domElement)) {
+      container.innerHTML = '';
+      container.appendChild(renderer.domElement);
+    }
+    if (!animationActive) {
+      animationActive = true;
+      animate();
+    }
+    return true;
   }
 
   function onWindowResize(){
@@ -1499,8 +1901,7 @@ Module.onRuntimeInitialized = async function() {
         const glauberStatus = document.getElementById('glauber-status');
         glauberRunning = false;
         window.glauberRunning = false;
-        clearInterval(glauberTimer);
-        glauberTimer = null;
+        clearGlauberTimer();
         glauberBtn.textContent = "Run Glauber";
         glauberBtn.classList.remove('running', 'btn-danger');
         glauberBtn.classList.add('btn-success');
@@ -1523,11 +1924,12 @@ Module.onRuntimeInitialized = async function() {
     }
   }
 
-  // Initialize Three.js when the module is loaded
-  initThreeJS();
+  // Keep the default path free of WebGL setup. The 3D button loads Three.js on demand.
+  animationActive = false;
 
   // Add a global function to easily reset Three.js if needed
-  window.resetThreeJS = function() {
+  window.resetThreeJS = async function() {
+    if (!(await ensureThreeJSReady())) return "3D unavailable";
 
     if (renderer) {
       renderer.dispose();
@@ -1544,57 +1946,52 @@ Module.onRuntimeInitialized = async function() {
     const periodicity = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
     let params = [periodicity]; // First arg is string name
     if (periodicity === '6x2') {
-        // Get the 6x2 weights from the UI inputs
-        // We can only pass 9 parameters, so we'll pass the first 9 weights
-        // and reuse some values for the remaining positions
-        const w1 = parseFloat(document.getElementById('w6x2_1').value) || 1.0;
-        const w2 = parseFloat(document.getElementById('w6x2_2').value) || 20.0;
-        const w3 = parseFloat(document.getElementById('w6x2_3').value) || 1.0;
-        const w4 = parseFloat(document.getElementById('w6x2_4').value) || 20.0;
-        const w5 = parseFloat(document.getElementById('w6x2_5').value) || 1.0;
-        const w6 = parseFloat(document.getElementById('w6x2_6').value) || 20.0;
-        const w7 = parseFloat(document.getElementById('w6x2_7').value) || 1.0;
-        const w8 = parseFloat(document.getElementById('w6x2_8').value) || 20.0;
-        const w9 = parseFloat(document.getElementById('w6x2_9').value) || 1.0;
-        // Note: We can only pass 9 parameters, so w10, w11, w12 will be handled by storing them during sample
-        params.push(w1, w2, w3, w4, w5, w6, w7, w8, w9);
+        for (let i = 1; i <= 12; i++) {
+            const val = parseFloat(document.getElementById(`w6x2_${i}`).value);
+            params.push(Number.isFinite(val) ? val : 1.0);
+        }
     } else if (periodicity === '2x2') {
         const a = parseFloat(document.getElementById('a-input').value) || 0.5;
         const b = parseFloat(document.getElementById('b-input').value) || 1.0;
-        params.push(a, b, 0,0,0,0,0,0,0); // Pass a, b as p1, p2
+        params.push(a, b, 0,0,0,0,0,0,0,0,0,0); // Pass a, b as p1, p2
     } else if (periodicity === '3x3') {
         for (let i = 1; i <= 9; i++) {
             const val = parseFloat(document.getElementById(`w${i}`).value) || 1.0;
             params.push(val);
         }
+        params.push(0,0,0);
     } else { // Uniform
-        params.push(1,1,1,1,1,1,1,1,1); // Pass all 1s
+        params.push(1,1,1,1,1,1,1,1,1,1,1,1); // Pass all 1s
     }
     params.push(nSteps); // Add number of steps
 
     // 2. Call C++ function
     const ptr = await performGlauberSteps(...params);
-    const jsonStr = Module.UTF8ToString(ptr);
-    freeString(ptr);
+    if (!ptr) {
+        setProgressStatus("Glauber error: WASM returned a null pointer.", { immediate: true, clearAfterMs: 4000 });
+        return 0;
+    }
+
+    let jsonStr = "";
+    try {
+        jsonStr = Module.UTF8ToString(ptr);
+    } finally {
+        freeString(ptr);
+    }
 
     // 3. Parse result and update cache
     try {
-        const result = JSON.parse(jsonStr);
-        if (result.error) {
-            console.error("Glauber error:", result.error);
-            // Optionally stop dynamics on error
-            // toggleGlauberDynamics();
-            return 0;
-        }
+        const result = parseDominoWasmResult(jsonStr, null);
         cachedDominoes = result;
+        invalidate2DCanvasCache();
         lastSampleWasGlauber = true; // Mark that Glauber produced this state
 
-        // 4. Update visualization (both 2D and 3D if applicable)
-        await updateVisualizationFromCache();
+        // 4. Update the visible visualization only
+        await renderVisibleCachedDominoes();
 
         return nSteps; // Return number of steps successfully run
     } catch (e) {
-        console.error("Error parsing Glauber result:", e, jsonStr);
+        setProgressStatus(`Glauber error: ${e.message}`, { immediate: true, clearAfterMs: 4000 });
         return 0;
     }
   }
@@ -1609,8 +2006,8 @@ Module.onRuntimeInitialized = async function() {
 
     if (glauberRunning) {
         // Stop dynamics
-        clearInterval(glauberTimer);
-        glauberTimer = null;
+        clearGlauberTimer();
+        glauberStepInFlight = false;
         glauberRunning = false;
         window.glauberRunning = false;
         glauberBtn.textContent = "Run Glauber";
@@ -1661,136 +2058,28 @@ Module.onRuntimeInitialized = async function() {
         const initialSteps = Math.max(1, parseInt(sweepsInput.value, 10) || 1);
         await advanceGlauberDynamics(initialSteps);
 
-        // Start the timer if still running
-        if (glauberRunning) {
-            const updateInterval = 100; // ms between redraws
-            glauberTimer = setInterval(async () => {
-                if (!glauberRunning) { // Check again inside interval
-                    clearInterval(glauberTimer);
-                    return;
-                }
+        async function runGlauberTick() {
+            if (!glauberRunning || glauberStepInFlight) return;
+
+            glauberStepInFlight = true;
+            try {
                 const stepsPerUpdate = Math.max(1, parseInt(sweepsInput.value, 10) || 1);
                 await advanceGlauberDynamics(stepsPerUpdate);
-            }, updateInterval);
-        }
-    }
-  }
-
-  // Function to update both 2D and 3D visualizations from cachedDominoes
-  async function updateVisualizationFromCache() {
-    if (!cachedDominoes) return;
-
-    const n = parseInt(document.getElementById("n-input").value, 10) || 0;
-    const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
-    const is2DView = document.getElementById("view-2d-btn").classList.contains("active");
-
-    // Update 2D view immediately if active
-    if (is2DView) {
-        await render2D(cachedDominoes); // Re-render 2D SVG
-    }
-
-    // Update 3D view if active and n is suitable and 3D is not disabled
-    const no3D = document.getElementById("no-3d-checkbox").checked;
-    if (is3DView && n <= 300 && !no3D) {
-        // Clear existing domino group
-        if (dominoGroup) {
-            while(dominoGroup.children.length > 0){
-                const m = dominoGroup.children[0];
-                dominoGroup.remove(m);
-                if (m.geometry) m.geometry.dispose();
-                if (m.material) m.material.dispose();
-            }
-        } else {
-            initThreeJS(); // Reinitialize if group doesn't exist
-        }
-
-        // Recalculate height map and render (similar logic as in updateVisualization)
-        const heightMap = calculateHeightFunction(cachedDominoes);
-        const scale = 60 / (2 * n);
-        const colors = {
-          blue: hexToThreeColor(currentColors.blue),
-          green: hexToThreeColor(currentColors.green),
-          red: hexToThreeColor(currentColors.red),
-          yellow: hexToThreeColor(currentColors.yellow)
-        };
-        const showColors3D = document.getElementById("show-colors-checkbox").checked;
-        const showGradient3D = document.getElementById("height-gradient-checkbox").checked;
-        const monoColor3D = 0x999999;
-
-        // Pre-calculate all faces for height range
-        const allFaces = cachedDominoes.map(d => createDominoFaces(d, heightMap, scale));
-        let minHeight = Infinity, maxHeight = -Infinity;
-        for (const f of allFaces) {
-          if (f && f.avgHeight !== undefined) {
-            minHeight = Math.min(minHeight, f.avgHeight);
-            maxHeight = Math.max(maxHeight, f.avgHeight);
-          }
-        }
-        const heightRange = maxHeight - minHeight;
-
-        allFaces.forEach(faceData => {
-            if (!faceData || !faceData.color || !Array.isArray(faceData.vertices)) return;
-
-            try {
-                const geom = new THREE.BufferGeometry();
-                const pos = [];
-                faceData.vertices.forEach(v => pos.push(v[0] * scale, v[1] * scale, v[2] * scale));
-                geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-
-                const isH = (faceData.color === 'blue' || faceData.color === 'green');
-                // ── choose full 12‑triangle index list (6 vertices) ──
-                const indices = isH
-                  // horizontal domino (blue/green): vertices 0‑5 →
-                  //   0,1,3, 3,2,1  – top face
-                  //   0,1,4         – long left side
-                  //   3,2,5         – long right side
-                  ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
-                  // vertical domino (red/yellow): same pattern
-                  : [0,1,3, 3,2,1, 0,1,4, 3,2,5];
-
-                if (cachedDominoes.length * 6 > 65535) {
-                    geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
+            } finally {
+                glauberStepInFlight = false;
+                if (glauberRunning) {
+                    const updateInterval = 100; // ms between redraws
+                    glauberTimer = setTimeout(runGlauberTick, updateInterval);
                 } else {
-                    geom.setIndex(indices);
+                    glauberTimer = null;
                 }
-                geom.computeVertexNormals();
-
-                const colorValue = colors[faceData.color] || 0x808080;
-
-                // Apply height gradient if enabled
-                let finalColor = colorValue;
-                if (showColors3D && showGradient3D && heightRange > 0 && faceData.avgHeight !== undefined) {
-                  const t = (faceData.avgHeight - minHeight) / heightRange;
-                  const baseColor = new THREE.Color(colorValue);
-                  const darkColor = baseColor.clone().multiplyScalar(0.4);
-                  finalColor = darkColor.lerp(baseColor, t).getHex();
-                }
-
-                const mat = new THREE.MeshStandardMaterial({
-                    color: showColors3D ? finalColor : monoColor3D,
-                    side: THREE.DoubleSide,
-                    flatShading: true
-                });
-                mat.userData = { originalColorValue: colorValue, gradientColorValue: finalColor };
-                const mesh = new THREE.Mesh(geom, mat);
-                mesh.userData.originalColor = faceData.color;
-                mesh.userData.avgHeight = faceData.avgHeight;
-                dominoGroup.add(mesh);
-            } catch(e) {
-                console.error("Error creating 3D mesh during Glauber update:", e);
             }
-        });
-
-        // Recenter (optional, could keep previous center/scale)
-        if (dominoGroup.children.length > 0) {
-            const box = new THREE.Box3().setFromObject(dominoGroup);
-            const center = box.getCenter(new THREE.Vector3());
-            center.x += -0.7; center.z += 4; // Adjust center
-            dominoGroup.position.sub(center);
         }
-        // Ensure render happens
-        if (renderer && animationActive) {
-            //renderer.render(scene, camera); // Render handled by animate loop
+
+        // Start the serialized timer if still running
+        if (glauberRunning) {
+            const updateInterval = 100; // ms between redraws
+            glauberTimer = setTimeout(runGlauberTick, updateInterval);
         }
     }
   }
@@ -1962,55 +2251,23 @@ Module.onRuntimeInitialized = async function() {
     };
   }
 
-  async function updateVisualization(n) {
-    // If Glauber is running, stop it
-    if (glauberRunning) {
-        toggleGlauberDynamics(); // Stop the dynamics
-    }
-    lastSampleWasGlauber = false; // Reset flag when generating a fresh sample
-
-    /* ------------------------------------------------------------------ */
-     /* 1. wipe previous geometry *and* transforms                          */
-     /* ------------------------------------------------------------------ */
-     if (dominoGroup) {
-       dominoGroup.clear();                    // three ≥ r152 preferred to loop/remove
-       dominoGroup.position.set(0, 0, 0);
-       dominoGroup.rotation.set(0, 0, 0);
-       dominoGroup.scale.set(1, 1, 1);         // <‑‑ the crucial line
-     } else {
-       // Something went wrong with the 3D scene - reinitialize
-
-       initThreeJS();
-     }
-     /* ------------------------------------------------------------------ */
-
-
-    // Check if we're in 3D view with n > 300
-    const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
-    const skip3DRendering = is3DView && n > 300;
-
-    // Get the current periodicity setting
-    const periodicity = document.querySelector('input[name="periodicity"]:checked').value;
-    const isFrozenH = (periodicity === 'frozenH');
-    const isFrozenV = (periodicity === 'frozenV');
-
-    let w1=1.0, w2=1.0, w3=1.0, w4=1.0, w5=1.0, w6=1.0, w7=1.0, w8=1.0, w9=1.0;
-    let a=1.0, b=1.0;
+  function readSamplingWeights() {
+    const periodicity = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
+    const isFrozenH = periodicity === 'frozenH';
+    const isFrozenV = periodicity === 'frozenV';
+    let w1 = 1.0, w2 = 1.0, w3 = 1.0, w4 = 1.0, w5 = 1.0, w6 = 1.0, w7 = 1.0, w8 = 1.0, w9 = 1.0;
+    let a = 1.0, b = 1.0;
 
     if (!isFrozenH && !isFrozenV) {
       if (periodicity === '2x2') {
-        // Safe get values with defaults
         const aInput = document.getElementById("a-input");
         const bInput = document.getElementById("b-input");
         a = aInput && !isNaN(parseFloat(aInput.value)) ? parseFloat(aInput.value) : 0.5;
         b = bInput && !isNaN(parseFloat(bInput.value)) ? parseFloat(bInput.value) : 1.0;
-
-        // For 2x2, we'll set the 3x3 weights specially
         w1 = 1.0; w2 = a; w3 = 1.0;
         w4 = b; w5 = 1.0; w6 = b;
         w7 = 1.0; w8 = a; w9 = 1.0;
       } else if (periodicity === '3x3') {
-        // Get values from the 3x3 weight inputs
         for (let i = 1; i <= 9; i++) {
           const input = document.getElementById(`w${i}`);
           const val = input && !isNaN(parseFloat(input.value)) ? parseFloat(input.value) : 1.0;
@@ -2024,347 +2281,485 @@ Module.onRuntimeInitialized = async function() {
           else if (i === 8) w8 = val;
           else if (i === 9) w9 = val;
         }
-
-
-      } else {
-        // Uniform weights - all weights are 1.0
-        w1 = 1.0; w2 = 1.0; w3 = 1.0;
-        w4 = 1.0; w5 = 1.0; w6 = 1.0;
-        w7 = 1.0; w8 = 1.0; w9 = 1.0;
-
-
-      }
-    }
-    // Clear previous models
-    if (dominoGroup && dominoGroup.children) {
-      // Improved clearing that's safer and handles possible null conditions
-      while(dominoGroup.children && dominoGroup.children.length > 0){
-        const m = dominoGroup.children[0];
-        if (m) {
-          dominoGroup.remove(m);
-          if (m.geometry) m.geometry.dispose();
-          if (m.material) m.material.dispose();
-        }
       }
     }
 
-    // Remember demo mode state
+    return { periodicity, isFrozenH, isFrozenV, weights: [w1, w2, w3, w4, w5, w6, w7, w8, w9] };
+  }
+
+  async function sampleDominoesFromWasm(n, profile, signal) {
+    const { periodicity, isFrozenH, isFrozenV, weights } = readSamplingWeights();
+    let ptr = 0;
+    const wasmStart = dominoNow();
+
+    if (isFrozenH) {
+      ptr = await simulateAztecHorizontal(n, 0,0,0,0,0,0,0,0,0,0);
+    } else if (isFrozenV) {
+      ptr = await simulateAztecVertical(n, 0,0,0,0,0,0,0,0,0,0);
+    } else if (periodicity === '6x2') {
+      const v = [];
+      for (let i = 1; i <= 12; i++) {
+        const input = document.getElementById(`w6x2_${i}`);
+        v.push(input && !isNaN(parseFloat(input.value)) ? parseFloat(input.value) : 1.0);
+      }
+      ptr = await simulateAztec6x2(n, ...v);
+    } else {
+      ptr = await simulateAztec(n, ...weights);
+    }
+
+    setDominoTiming(profile, "wasmCallMs", dominoNow() - wasmStart);
+    if (signal?.aborted) {
+      if (ptr) freeString(ptr);
+      return null;
+    }
+    if (!ptr) {
+      throw new Error("WASM sampler returned a null pointer.");
+    }
+
+    const utf8Start = dominoNow();
+    let raw = "";
+    try {
+      raw = Module.UTF8ToString(ptr);
+    } finally {
+      setDominoTiming(profile, "utf8ConversionMs", dominoNow() - utf8Start);
+      freeString(ptr);
+    }
+
+    return raw;
+  }
+
+  function parseDominoWasmResult(raw, profile) {
+    if (!raw) {
+      throw new Error("WASM sampler returned an empty response.");
+    }
+    const parseStart = dominoNow();
+    const result = JSON.parse(raw);
+    setDominoTiming(profile, "jsonParseMs", dominoNow() - parseStart);
+
+    if (result && typeof result === "object" && !Array.isArray(result) && result.error) {
+      throw new Error(result.error);
+    }
+    if (!Array.isArray(result)) {
+      throw new Error("WASM sampler returned an unexpected response.");
+    }
+    return result;
+  }
+
+  async function render2DIfVisible(dominoes, n, profile) {
+    if (!shouldRender2D(n)) {
+      skipDominoTiming(profile, "render2DMs", "2D pane inactive");
+      return false;
+    }
+
+    const render2DStart = dominoNow();
+    await render2D(dominoes);
+    setDominoTiming(profile, "render2DMs", dominoNow() - render2DStart);
+    return true;
+  }
+
+  async function render3DFromDominoes(dominoes, n, profile, signal, options = {}) {
+    if (!shouldRender3D(n)) {
+      skipDominoTiming(profile, "heightFunctionMs", isNo3DEnabled() ? "No 3D enabled" : "3D pane inactive");
+      skipDominoTiming(profile, "render3DMs", isNo3DEnabled() ? "No 3D enabled" : "3D pane inactive");
+      return false;
+    }
+
+    if (!(await ensureThreeJSReady())) {
+      skipDominoTiming(profile, "heightFunctionMs", "3D unavailable");
+      skipDominoTiming(profile, "render3DMs", "3D unavailable");
+      return false;
+    }
+
+    clear3DMeshes();
     const wasInDemoMode = isDemoMode;
+
+    setProgressStatus("Calculating height function...");
+    await sleep(10);
+    if (signal?.aborted) return false;
+
+    const heightStart = dominoNow();
+    const heightMap = calculateHeightFunction(dominoes);
+    setDominoTiming(profile, "heightFunctionMs", dominoNow() - heightStart);
+    if (signal?.aborted) return false;
+
+    const scale = 60 / (2 * n);
+    const colors = {
+      blue: hexToThreeColor(currentColors.blue),
+      green: hexToThreeColor(currentColors.green),
+      red: hexToThreeColor(currentColors.red),
+      yellow: hexToThreeColor(currentColors.yellow)
+    };
+
+    setProgressStatus("Processing domino data...");
+    await sleep(10);
+    if (signal?.aborted) return false;
+
+    const render3DStart = dominoNow();
+    const faces = [];
+    const CHUNK_SIZE = 200;
+    for (let i = 0; i < dominoes.length; i += CHUNK_SIZE) {
+      if (signal?.aborted) return false;
+      const chunk = dominoes.slice(i, i + CHUNK_SIZE);
+      const chunkFaces = chunk.map(domino => createDominoFaces(domino, heightMap, scale));
+      faces.push(...chunkFaces);
+      setProgressStatus(`Processing... (${Math.floor(100 * (i + chunk.length) / dominoes.length)}%)`);
+      await sleep(0);
+    }
+
+    const total = faces.length;
+    if (total === 0 || signal?.aborted) return false;
+
+    let minHeight = Infinity, maxHeight = -Infinity;
+    for (const f of faces) {
+      if (f && f.avgHeight !== undefined) {
+        minHeight = Math.min(minHeight, f.avgHeight);
+        maxHeight = Math.max(maxHeight, f.avgHeight);
+      }
+    }
+    const heightRange = maxHeight - minHeight;
+
+    setProgressStatus("Rendering...");
+    let idx = 0;
+
+    function processBatch(start) {
+      return new Promise(resolve => {
+        requestAnimationFrame(() => {
+          if (signal?.aborted) {
+            resolve(false);
+            return;
+          }
+
+          const BATCH_SIZE = 200;
+          const end = Math.min(start + BATCH_SIZE, total);
+
+          for (let i = start; i < end; i++) {
+            if (signal?.aborted) {
+              resolve(false);
+              return;
+            }
+
+            const f = faces[i];
+            if (!f || !f.color || !Array.isArray(f.vertices)) continue;
+
+            try {
+              const geom = new THREE.BufferGeometry();
+              const pos = [];
+              for (const v of f.vertices) {
+                pos.push(v[0] * scale, v[1] * scale, v[2] * scale);
+              }
+
+              geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+
+              const isH = (f.color === 'blue' || f.color === 'green');
+              const indices = isH
+                ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
+                : [0,1,3, 3,2,1, 0,1,4, 3,2,5];
+
+              if (total > 65535 / 6) {
+                geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
+              } else {
+                geom.setIndex(indices);
+              }
+
+              geom.computeVertexNormals();
+
+              const showColors = document.getElementById("show-colors-checkbox").checked;
+              const showGradient = document.getElementById("height-gradient-checkbox").checked;
+              const monoColor = 0x999999;
+              const colorValue = colors[f.color] || 0x808080;
+
+              let finalColor = colorValue;
+              if (showColors && showGradient && heightRange > 0 && f.avgHeight !== undefined) {
+                const t = (f.avgHeight - minHeight) / heightRange;
+                const baseColor = new THREE.Color(colorValue);
+                const darkColor = baseColor.clone().multiplyScalar(0.4);
+                finalColor = darkColor.lerp(baseColor, t).getHex();
+              }
+
+              const mat = new THREE.MeshStandardMaterial({
+                color: showColors ? finalColor : monoColor,
+                side: THREE.DoubleSide,
+                flatShading: true
+              });
+              mat.userData = { originalColorValue: colorValue, gradientColorValue: finalColor };
+
+              const mesh = new THREE.Mesh(geom, mat);
+              mesh.userData.originalColor = f.color;
+              mesh.userData.avgHeight = f.avgHeight;
+              dominoGroup.add(mesh);
+            } catch (e) {
+
+            }
+          }
+
+          idx = end;
+          setProgressStatus(`Rendering... (${Math.floor(100 * (idx / total))}%)`);
+          resolve(idx < total);
+        });
+      });
+    }
+
+    let hasMore = true;
+    while (hasMore && (!signal || simulationActive) && !signal?.aborted) {
+      hasMore = await processBatch(idx);
+    }
+    if (signal?.aborted) return false;
+
+    if (idx >= total && dominoGroup.children.length > 0) {
+      const box = new THREE.Box3().setFromObject(dominoGroup);
+      const center = box.getCenter(new THREE.Vector3());
+      center.x += -0.7;
+      center.z += 4;
+      dominoGroup.position.sub(center);
+
+      const sizeXYZ = box.getSize(new THREE.Vector3());
+      const margin = 0.05;
+      const viewW = camera.right - camera.left;
+      const viewH = camera.top - camera.bottom;
+      const maxScale = (1 - margin) * Math.min(
+        viewW / sizeXYZ.x,
+        viewH / sizeXYZ.z
+      );
+
+      dominoGroup.scale.setScalar(maxScale);
+      controls.target.set(0, 0, 0);
+      controls.update();
+
+      if (wasInDemoMode || options.restoreDemoMode) {
+        setDemoViewCamera();
+      }
+
+      setDominoTiming(profile, "render3DMs", dominoNow() - render3DStart);
+    }
+
+    return true;
+  }
+
+  async function renderVisibleCachedDominoes(profile = null, signal = null) {
+    if (!cachedDominoes) return false;
+    const n = parseInt(document.getElementById("n-input").value, 10) || 0;
+
+    if (getActiveView() === "2d") {
+      const render2DStart = dominoNow();
+      await render2D(cachedDominoes);
+      setDominoTiming(profile, "render2DMs", dominoNow() - render2DStart);
+      return true;
+    }
+
+    if (shouldShowLarge3DMessage(n)) {
+      animationActive = false;
+      createLargeTilingMessage();
+      skipDominoTiming(profile, "heightFunctionMs", "3D unavailable for n > 300");
+      skipDominoTiming(profile, "render3DMs", "3D unavailable for n > 300");
+      return false;
+    }
+
+    if (isNo3DEnabled()) {
+      animationActive = false;
+      createNo3DMessage();
+      skipDominoTiming(profile, "heightFunctionMs", "No 3D enabled");
+      skipDominoTiming(profile, "render3DMs", "No 3D enabled");
+      return false;
+    }
+
+    return await render3DFromDominoes(cachedDominoes, n, profile, signal);
+  }
+
+  async function updateVisualization(n, profileOptions = {}) {
+    const profile = createDominoProfile(n, profileOptions);
+    let profileCompleted = false;
+    function completeProfile(status) {
+      if (profileCompleted) return profile;
+      profileCompleted = true;
+      finishDominoProfile(profile, status);
+      showDominoProfileStatus(profile);
+      return profile;
+    }
+
+    // If Glauber is running, stop it
+    if (glauberRunning) {
+        toggleGlauberDynamics(); // Stop the dynamics
+    }
+    lastSampleWasGlauber = false; // Reset flag when generating a fresh sample
 
     startSimulation();
     const signal = abortController.signal;
 
     // Start progress polling
-    progressElem.innerText = "Sampling... (0%)";
+    setProgressStatus("Sampling... (0%)", { immediate: true });
     progressInterval = setInterval(() => {
       if (!simulationActive) {
         clearInterval(progressInterval);
         return;
       }
       const p = getProgress();
-      progressElem.innerText = `Sampling... (${p}%)`;
+      setProgressStatus(`Sampling... (${p}%)`);
       if(p >= 100) clearInterval(progressInterval);
-    }, 100);
+    }, 250);
 
     try {
       // Allow UI to update before starting heavy computation
       await sleep(50);
-      if (signal.aborted) return;
+      if (signal.aborted) return completeProfile("aborted");
 
-      // Get domino configuration from C++ code
-      let ptrPromise;
-      if (isFrozenH) {
-        ptrPromise = simulateAztecHorizontal(n, 0,0,0,0,0,0,0,0,0,0);
-      } else if (isFrozenV) {
-        ptrPromise = simulateAztecVertical(n, 0,0,0,0,0,0,0,0,0,0);
-      } else if (periodicity === '6x2') {
-        const v = [];
-        for (let i = 1; i <= 12; i++) {
-            const input = document.getElementById(`w6x2_${i}`);
-            v.push(input && !isNaN(parseFloat(input.value)) ? parseFloat(input.value) : 1.0);
-        }
-        ptrPromise = simulateAztec6x2(n, ...v);
-      } else {
-        ptrPromise = simulateAztec(n, w1,w2,w3,w4,w5,w6,w7,w8,w9);
-      }
+      const raw = await sampleDominoesFromWasm(n, profile, signal);
+      if (raw === null || signal.aborted) return completeProfile("aborted");
 
-      // Wait for simulation to complete
-      const ptr = await ptrPromise;
-      if (signal.aborted) {
-        if (ptr) freeString(ptr);
-        return;
-      }
-
-      let raw = Module.UTF8ToString(ptr);
-      freeString(ptr);
-      if (signal.aborted) return;
-
-      // Parse the results
-      const dominoes = JSON.parse(raw);
-      if (dominoes.error) throw new Error(dominoes.error);
-      if (signal.aborted) return;
+      const dominoes = parseDominoWasmResult(raw, profile);
+      if (signal.aborted) return completeProfile("aborted");
 
       // Cache the dominoes for 2D view
       cachedDominoes = dominoes;
+      invalidate2DCanvasCache();
 
-      // Check if this is a large tiling (n > 300)
-      const isLargeTiling = n > 300;
+      await render2DIfVisible(dominoes, n, profile);
+      if (signal.aborted) return completeProfile("aborted");
 
-
-      /* Only render the 2‑D SVG if the pane is actually on screen
-         (mobile Safari gives it height 0 while it is display:none).      */
-      const need2D = document.getElementById("view-2d-btn")
-                         .classList.contains("active")        // user is in 2‑D view
-                   || n > 300;                                // 3‑D disabled anyway
-      if (need2D) await render2D(dominoes);                   // otherwise defer
-
-      // For large tilings (n > 300), prepare a message for 3D view
-      if (isLargeTiling) {
-
-        // Create a div with a message in the 3D canvas container
-        const container = document.getElementById('aztec-canvas');
-        container.innerHTML = '';
-        const messageDiv = document.createElement('div');
-        messageDiv.style.width = '100%';
-        messageDiv.style.height = '100%';
-        messageDiv.style.display = 'flex';
-        messageDiv.style.alignItems = 'center';
-        messageDiv.style.justifyContent = 'center';
-        messageDiv.style.backgroundColor = '#f0f0f0';
-        messageDiv.style.border = '1px solid #ccc';
-        messageDiv.style.padding = '20px';
-        messageDiv.style.boxSizing = 'border-box';
-        messageDiv.style.fontSize = '18px';
-        messageDiv.style.fontWeight = 'bold';
-        messageDiv.style.textAlign = 'center';
-        messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.<br><br>To see a 3D visualization, decrease n to 300 or less and click Sample.';
-        container.appendChild(messageDiv);
-
-        progressElem.innerText = "";
-        stopSimulation();
-        return;
-      }
-
-      // For n ≤ 300, check if 3D rendering is disabled
-      const no3D = document.getElementById("no-3d-checkbox").checked;
-      if (no3D) {
-        // Skip 3D processing entirely when no 3D is checked
-        progressElem.innerText = "";
-        stopSimulation();
-        return;
-      }
-
-      progressElem.innerText = "Calculating height function...";
-      await sleep(10);
-      if (signal.aborted) return;
-
-      // Calculate the height function (in chunks if large)
-      const heightMap = calculateHeightFunction(dominoes);
-      if (signal.aborted) return;
-
-      // Scale factor based on n
-      const scale = 60/(2*n);
-
-      // Colors for the materials - use current custom colors
-      const colors = {
-        blue:   hexToThreeColor(currentColors.blue),
-        green:  hexToThreeColor(currentColors.green),
-        red:    hexToThreeColor(currentColors.red),
-        yellow: hexToThreeColor(currentColors.yellow)
-      };
-
-      // Create the 3D faces with proper heights
-      progressElem.innerText = "Processing domino data...";
-      await sleep(10);
-      if (signal.aborted) return;
-
-      // Process faces in chunks to keep UI responsive
-      const facesPromise = (async () => {
-        const faces = [];
-        const CHUNK_SIZE = 200;
-
-        for (let i = 0; i < dominoes.length; i += CHUNK_SIZE) {
-          if (signal.aborted) return null;
-
-          // Process a chunk of dominoes
-          const chunk = dominoes.slice(i, i + CHUNK_SIZE);
-          const chunkFaces = chunk.map(domino =>
-            createDominoFaces(domino, heightMap, scale));
-          faces.push(...chunkFaces);
-
-          // Update progress and yield to UI
-          progressElem.innerText =
-            `Processing... (${Math.floor(100*(i+chunk.length)/dominoes.length)}%)`;
-          await sleep(0);
+      if (!shouldRender3D(n)) {
+        let reason = "2D view active";
+        if (shouldShowLarge3DMessage(n)) {
+          animationActive = false;
+          createLargeTilingMessage();
+          reason = "3D unavailable for n > 300";
+        } else if (getActiveView() === "3d" && isNo3DEnabled()) {
+          animationActive = false;
+          createNo3DMessage();
+          reason = "No 3D enabled";
         }
-
-        return faces;
-      })();
-
-      const faces = await facesPromise;
-      if (!faces || signal.aborted) return;
-
-      const total = faces.length;
-      if (total === 0 || signal.aborted) return;
-
-      // Calculate height range for gradient coloring
-      let minHeight = Infinity, maxHeight = -Infinity;
-      for (const f of faces) {
-        if (f && f.avgHeight !== undefined) {
-          minHeight = Math.min(minHeight, f.avgHeight);
-          maxHeight = Math.max(maxHeight, f.avgHeight);
-        }
-      }
-      const heightRange = maxHeight - minHeight;
-
-      // Batch processing of faces for better performance
-      progressElem.innerText = "Rendering...";
-      let idx = 0;
-
-      function processBatch(start) {
-        return new Promise(resolve => {
-          requestAnimationFrame(() => {
-            if (signal.aborted) {
-              resolve(false);
-              return;
-            }
-
-            const BATCH_SIZE = 200;
-            const end = Math.min(start + BATCH_SIZE, total);
-
-            for (let i = start; i < end; i++) {
-              if (signal.aborted) {
-                resolve(false);
-                return;
-              }
-
-              const f = faces[i];
-              if (!f || !f.color || !Array.isArray(f.vertices)) continue;
-
-              try {
-                const geom = new THREE.BufferGeometry();
-                // Vertices positions
-                const pos = [];
-                for (const v of f.vertices) {
-                  pos.push(v[0]*scale, v[1]*scale, v[2]*scale);
-                }
-
-                geom.setAttribute(
-                  'position',
-                  new THREE.Float32BufferAttribute(pos, 3)
-                );
-
-                // Triangulation indices
-                const isH = (f.color === 'blue' || f.color === 'green');
-                const indices = isH
-                  ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
-                  : [0,1,3, 3,2,1, 0,1,4, 3,2,5];
-
-                // Use 32-bit indices if needed for larger models
-                if (total > 65535 / 6) { // 6 vertices per domino
-                  geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
-                } else {
-                  geom.setIndex(indices);
-                }
-
-                geom.computeVertexNormals();
-
-                // Check if we should show colors in 3D view
-                const showColors = document.getElementById("show-colors-checkbox").checked;
-                const showGradient = document.getElementById("height-gradient-checkbox").checked;
-                const monoColor = 0x999999; // Default monochrome color when not showing colors
-                const colorValue = colors[f.color] || 0x808080;
-
-                // Apply height gradient if enabled
-                let finalColor = colorValue;
-                if (showColors && showGradient && heightRange > 0 && f.avgHeight !== undefined) {
-                  const t = (f.avgHeight - minHeight) / heightRange; // 0 at bottom, 1 at top
-                  const baseColor = new THREE.Color(colorValue);
-                  const darkColor = baseColor.clone().multiplyScalar(0.4); // darker at bottom
-                  finalColor = darkColor.lerp(baseColor, t).getHex();
-                }
-
-                const mat = new THREE.MeshStandardMaterial({
-                  color: showColors ? finalColor : monoColor,
-                  side: THREE.DoubleSide,
-                  flatShading: true
-                });
-
-                // Store the original color code for later use in the userData
-                mat.userData = { originalColorValue: colorValue, gradientColorValue: finalColor };
-
-                // Create the mesh and store the original color for later toggling
-                const mesh = new THREE.Mesh(geom, mat);
-                mesh.userData.originalColor = f.color;
-                mesh.userData.avgHeight = f.avgHeight;
-
-                dominoGroup.add(mesh);
-              } catch(e) {
-
-              }
-            }
-
-            idx = end;
-            progressElem.innerText = `Rendering... (${Math.floor(100*(idx/total))}%)`;
-            resolve(idx < total);
-          });
-        });
+        skipDominoTiming(profile, "heightFunctionMs", reason);
+        skipDominoTiming(profile, "render3DMs", reason);
+      } else {
+        const rendered3D = await render3DFromDominoes(dominoes, n, profile, signal);
+        if (!rendered3D && signal.aborted) return completeProfile("aborted");
       }
 
-      // Process batches sequentially with yield points for UI
-      let hasMore = true;
-      while (hasMore && simulationActive && !signal.aborted) {
-        hasMore = await processBatch(idx);
-      }
-
-      if (signal.aborted) return;
-
-      // Only finish if we completed all batches
-      if (idx >= total) {
-        progressElem.innerText = "";
-
-        // === recentre the tiling ===
-        const box = new THREE.Box3().setFromObject(dominoGroup);
-        const center = box.getCenter(new THREE.Vector3());
-        // Shift the center a little for better visualization
-        center.x += -0.7;  // Shift right a bit
-        center.z +=  4;  // Shift forward a bit
-        dominoGroup.position.sub(center);
-
-        const sizeXYZ   = box.getSize(new THREE.Vector3());       // model extents
-        const margin    = 0.05;                                   // 5 % breathing room
-
-        // For an orthographic camera its “view size” is the difference of the planes:
-        const viewW = camera.right  - camera.left;
-        const viewH = camera.top    - camera.bottom;
-
-        /* choose the limiting dimension (the one that would clip first) */
-        const maxScale = (1 - margin) * Math.min(
-          viewW / sizeXYZ.x,
-          viewH / sizeXYZ.z          // z‑extent projects to vertical axis in your set‑up
-        );
-
-        dominoGroup.scale.setScalar(maxScale);
-        controls.target.set(0, 0, 0);   // orbit around the true centre
-        controls.update();
-
-        // If we were in demo mode before update, restore demo view
-        if (wasInDemoMode) {
-          setDemoViewCamera();
-        }
-      }
-
-      // Cleanup - reuse the stopSimulation function since it handles everything properly
       stopSimulation();
-      if (progressElem) progressElem.innerText = "";
+      clearProgressStatus({ immediate: true });
+      return completeProfile("ok");
 
     } catch(err) {
 
-      if (progressElem) progressElem.innerText = `Error: ${err.message}`;
-      // Also use stopSimulation for cleanup on error
+      profile.error = err.message;
       stopSimulation();
+      clearProgressStatus({ immediate: true });
+      setProgressStatus(`Error: ${err.message}`, { immediate: true });
+      return completeProfile("error");
     }
   }
+
+  function snapshotBenchmarkControls() {
+    return {
+      n: document.getElementById("n-input")?.value,
+      no3D: document.getElementById("no-3d-checkbox")?.checked,
+      no3DUserChanged,
+      view: document.getElementById("view-2d-btn")?.classList.contains("active") ? "2d" : "3d",
+      periodicity: currentPeriodicity()
+    };
+  }
+
+  function setBenchmarkView(view, no3D) {
+    const no3DCheckbox = document.getElementById("no-3d-checkbox");
+    if (no3DCheckbox) no3DCheckbox.checked = no3D;
+
+    if (view === "3d") {
+      document.getElementById("view-3d-btn")?.click();
+    } else {
+      document.getElementById("view-2d-btn")?.click();
+    }
+  }
+
+  function setBenchmarkPeriodicity(periodicity) {
+    const radio = document.querySelector(`input[name="periodicity"][value="${periodicity}"]`);
+    if (!radio) return;
+    radio.checked = true;
+    radio.dispatchEvent(new Event("change"));
+    updatePeriodicityParams();
+  }
+
+  function restoreBenchmarkControls(snapshot) {
+    if (!snapshot) return;
+    setBenchmarkView(snapshot.view, snapshot.no3D);
+    if (snapshot.n !== undefined) {
+      document.getElementById("n-input").value = snapshot.n;
+      updateHeightFunctionVisibility(parseInt(snapshot.n, 10) || 12);
+    }
+    setBenchmarkPeriodicity(snapshot.periodicity);
+  }
+
+  function normalizeBenchmarkCase(testCase) {
+    const n = Math.max(2, parseInt(testCase.n, 10) || 100);
+    const view = testCase.view === "3d" ? "3d" : "2d";
+    const no3D = testCase.no3D !== undefined ? Boolean(testCase.no3D) : view !== "3d";
+    return {
+      n,
+      view,
+      no3D,
+      periodicity: testCase.periodicity || "uniform",
+      label: testCase.label || `${view} n=${n}`
+    };
+  }
+
+  window.dominoSamplerBenchmark = async function(options = {}) {
+    const rawCases = Array.isArray(options.cases) && options.cases.length
+      ? options.cases
+      : DOMINO_DEFAULT_BENCHMARK_CASES;
+    const cases = rawCases.map(normalizeBenchmarkCase);
+    const snapshot = snapshotBenchmarkControls();
+    const results = [];
+    const startedAt = new Date().toISOString();
+
+    try {
+      for (let i = 0; i < cases.length; i++) {
+        const benchmarkCase = cases[i];
+        setBenchmarkView(benchmarkCase.view, benchmarkCase.no3D);
+        setBenchmarkPeriodicity(benchmarkCase.periodicity);
+        document.getElementById("n-input").value = benchmarkCase.n;
+        updateHeightFunctionVisibility(benchmarkCase.n);
+
+        setProgressStatus(`Benchmark ${i + 1}/${cases.length}: ${benchmarkCase.label}`, { immediate: true });
+
+        await sleep(options.caseDelayMs ?? 25);
+        const profile = await updateVisualization(benchmarkCase.n, {
+          source: "benchmark",
+          label: benchmarkCase.label
+        });
+
+        results.push({
+          case: benchmarkCase,
+          status: profile.status,
+          timings: { ...profile.timings },
+          skipped: [...profile.skipped],
+          error: profile.error || null
+        });
+
+        if (profile.status === "error" && options.stopOnError !== false) break;
+      }
+    } finally {
+      if (options.restore === true || snapshot.no3DUserChanged) {
+        restoreBenchmarkControls(snapshot);
+      }
+
+      if (options.leaveNo3D !== false && !snapshot.no3DUserChanged) {
+        document.getElementById("no-3d-checkbox").checked = true;
+      }
+      if (options.leaveView !== "current" && !snapshot.no3DUserChanged) {
+        setBenchmarkView("2d", true);
+      }
+
+      setProgressStatus("Benchmark complete", { immediate: true, clearAfterMs: 4000 });
+    }
+
+    const summary = {
+      startedAt,
+      finishedAt: new Date().toISOString(),
+      defaultCases: !(Array.isArray(options.cases) && options.cases.length),
+      results
+    };
+
+    window.dominoSamplerLastBenchmark = summary;
+    console.info("[domino] benchmark summary", summary);
+    return summary;
+  };
 
   // Add Glauber button event listener with iOS touch fix
   let glauberTouchFired = false;
@@ -2395,46 +2790,13 @@ Module.onRuntimeInitialized = async function() {
     // Update height function visibility based on n value
     updateHeightFunctionVisibility(n);
 
-    // Get the current view (3D or 2D)
-    const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
-
-    // Absolute maximum n values for each view
-    const max3DN = 300;
-    const max2DN = 500;
+    // Absolute maximum n value for the sampler.
+    const max2DN = 2000;
 
     // Check if n is within allowed range
-    if ((is3DView && n > max3DN && n <= max2DN)) {
-      // If in 3D view with n between 300 and 500, ask if user wants to switch to 2D
-      if (confirm(`For n > ${max3DN}, only 2D visualization is available. Switch to 2D view automatically?`)) {
-        // Switch to 2D view
-        document.getElementById("view-2d-btn").click();
-        // Now update visualization
-        updateVisualization(n);
-      }
-      return;
-    } else if (n > max2DN) {
+    if (n > max2DN) {
       // Absolute maximum exceeded
       return alert(`n is too large. Maximum value is ${max2DN}.`);
-    }
-
-    // Handle 3D view initialization and clearing
-    if (is3DView) {
-      if (n <= max3DN) {
-        // For valid n in 3D view, initialize properly
-        // Make sure the 3D view is fully initialized
-        const container = document.getElementById('aztec-canvas');
-        const hasCanvas = container.querySelector('canvas') !== null;
-
-        // Only clear the container if we're keeping the 3D view (n <= 300)
-        // and there's no WebGL canvas yet
-        if (!hasCanvas) {
-          console.log("Ensuring Three.js is initialized");
-          initThreeJS();
-        }
-
-        // Show helpful information in the progress indicator for valid n
-        progressElem.innerText = "Generating new 3D visualization...";
-      }
     }
 
     // If we get here, n is within allowed range for current view
@@ -2574,12 +2936,14 @@ Module.onRuntimeInitialized = async function() {
 
         // Update cached dominoes and refresh visualization
         cachedDominoes = newDominoes;
+        invalidate2DCanvasCache();
 
         // Stop any running simulation
         stopSimulation();
+        clearProgressStatus({ immediate: true });
 
         // Update visualization using existing cached data
-        updateVisualizationFromCache();
+        renderVisibleCachedDominoes();
 
         alert(`Successfully loaded ${newDominoes.length} dominoes from CSV file.`);
 
@@ -2605,6 +2969,7 @@ Module.onRuntimeInitialized = async function() {
 
   // Set up demo view camera position
   function setDemoViewCamera() {
+    if (!camera || !controls) return;
     // Reset any existing rotation
     if (dominoGroup) dominoGroup.rotation.set(0, 0, 0);
 
@@ -2671,10 +3036,12 @@ Module.onRuntimeInitialized = async function() {
     updateColorsInVisualization();
   });
 
-  // Function to update colors in both 2D and 3D visualizations
+  // Function to update colors in the visible visualization
   function updateColorsInVisualization() {
-    // Update 3D visualization if it exists (regardless of which view is active)
-    if (dominoGroup && dominoGroup.children.length > 0) {
+    const activeView = getActiveView();
+
+    // Update 3D only when it is visible.
+    if (activeView === "3d" && !isNo3DEnabled() && dominoGroup && dominoGroup.children.length > 0) {
       // Update 3D materials
       dominoGroup.children.forEach(mesh => {
         if (mesh.material && mesh.userData.originalColor) {
@@ -2694,12 +3061,10 @@ Module.onRuntimeInitialized = async function() {
       }
     }
 
-    // Update 2D visualization if cached dominoes exist
-    if (cachedDominoes && cachedDominoes.length > 0) {
-      // Update the 2D display regardless of which view is active
-      if (dominoLayer) {
-        updateDominoDisplay();
-      }
+    // Update 2D only when it is visible; hidden views rebuild from cached data on switch.
+    if (activeView === "2d" && cachedDominoes && cachedDominoes.length > 0) {
+      invalidate2DCanvasCache();
+      updateDominoDisplay();
     }
   }
 
@@ -2894,6 +3259,7 @@ Module.onRuntimeInitialized = async function() {
 
   // Camera movement controls
   document.getElementById("move-up-btn").addEventListener("click", function() {
+    if (!camera || !controls || !window.THREE?.Vector3) return;
     // Move camera up relative to current view
     const moveAmount = 5;
     const upVector = new THREE.Vector3(0, 1, 0);
@@ -2904,6 +3270,7 @@ Module.onRuntimeInitialized = async function() {
   });
 
   document.getElementById("move-down-btn").addEventListener("click", function() {
+    if (!camera || !controls || !window.THREE?.Vector3) return;
     // Move camera down relative to current view
     const moveAmount = 5;
     const upVector = new THREE.Vector3(0, 1, 0);
@@ -2914,6 +3281,7 @@ Module.onRuntimeInitialized = async function() {
   });
 
   document.getElementById("move-left-btn").addEventListener("click", function() {
+    if (!camera || !controls || !window.THREE?.Vector3) return;
     // Move camera left relative to current view
     const moveAmount = 5;
     const rightVector = new THREE.Vector3(1, 0, 0);
@@ -2924,6 +3292,7 @@ Module.onRuntimeInitialized = async function() {
   });
 
   document.getElementById("move-right-btn").addEventListener("click", function() {
+    if (!camera || !controls || !window.THREE?.Vector3) return;
     // Move camera right relative to current view
     const moveAmount = 5;
     const rightVector = new THREE.Vector3(1, 0, 0);
@@ -2935,6 +3304,12 @@ Module.onRuntimeInitialized = async function() {
 
   // Reset view button handler
   document.getElementById("reset-view-btn").addEventListener("click", function() {
+    if (getActiveView() === "2d") {
+      domino2DRenderer?.resetView();
+      return;
+    }
+
+    if (!camera || !controls) return;
     if (isDemoMode) {
       setDemoViewCamera();
     } else {
@@ -2950,118 +3325,45 @@ Module.onRuntimeInitialized = async function() {
   });
 
   // View toggle handlers
-  document.getElementById("view-3d-btn").addEventListener("click", function() {
-    const no3D = document.getElementById("no-3d-checkbox").checked;
+  document.getElementById("view-3d-btn").addEventListener("click", async function() {
+    const no3D = isNo3DEnabled();
 
-    // Show 3D view, hide 2D view
     document.getElementById("aztec-canvas").style.display = "block";
     document.getElementById("aztec-2d-canvas").style.display = "none";
-
-    // Update toggle button states
     document.getElementById("view-3d-btn").classList.add("active");
     document.getElementById("view-2d-btn").classList.remove("active");
-
-    // Show/hide appropriate download buttons
     document.getElementById("download-png-btn").style.display = "none";
     document.getElementById("download-pdf-btn").style.display = "none";
     document.getElementById("download-3d-btn").style.display = no3D ? "none" : "inline-block";
-
-    // Set the max n for 3D view
     document.getElementById("n-input").setAttribute("max", "300");
 
+    const n = parseInt(document.getElementById("n-input").value, 10) || 0;
     if (no3D) {
-      // Show no 3D message
-      const container = document.getElementById('aztec-canvas');
-      container.innerHTML = '';
-      const messageDiv = document.createElement('div');
-      messageDiv.style.width = '100%';
-      messageDiv.style.height = '100%';
-      messageDiv.style.display = 'flex';
-      messageDiv.style.alignItems = 'center';
-      messageDiv.style.justifyContent = 'center';
-      messageDiv.style.backgroundColor = '#f0f0f0';
-      messageDiv.style.border = '1px solid #ccc';
-      messageDiv.style.padding = '20px';
-      messageDiv.style.boxSizing = 'border-box';
-      messageDiv.style.fontSize = '18px';
-      messageDiv.style.fontWeight = 'bold';
-      messageDiv.style.textAlign = 'center';
-      messageDiv.innerHTML = '3D visualization disabled.<br>Uncheck "No 3D" to enable 3D rendering.<br><br>Switch to 2D view to see the visualization.';
-      container.appendChild(messageDiv);
+      createNo3DMessage();
       animationActive = false;
-    } else {
-      // Resume animation for 3D view
-      if (!animationActive) {
-        animationActive = true;
-        animate();
-      }
+      return;
     }
 
-    // Check if the renderer is properly initialized/restored
-    const container = document.getElementById('aztec-canvas');
-    if (!container.querySelector('canvas')) {
-
-      initThreeJS();
-
-      // If we have cached dominoes, render them again
-      if (cachedDominoes && cachedDominoes.length > 0) {
-        // For large n, show a message instead
-        const n = parseInt(document.getElementById("n-input").value, 10);
-        if (n > 300) {
-          createLargeTilingMessage();
-        } else {
-          // Small enough to render in 3D, try to restore
-          try {
-            const message = document.createElement('div');
-            message.style.textAlign = 'center';
-            message.style.padding = '20px';
-            message.style.fontWeight = 'bold';
-            message.innerHTML = 'Restoring 3D visualization...';
-            container.appendChild(message);
-
-            // Use setTimeout to allow the UI to update
-            setTimeout(() => {
-              updateVisualization(n);
-            }, 10);
-          } catch (e) {
-
-          }
-        }
-      }
+    if (n > 300) {
+      createLargeTilingMessage();
+      animationActive = false;
+      setProgressStatus("Using cached tiling (n > 300 is only available in 2D view)", {
+        immediate: true,
+        clearAfterMs: 3000
+      });
+      return;
     }
 
-    // If we have cached dominoes, handle the view switch appropriately
     if (cachedDominoes && cachedDominoes.length > 0) {
-      const n = parseInt(document.getElementById("n-input").value, 10);
-
-      if (n > 300) {
-        // Show message for large n
-        const container = document.getElementById('aztec-canvas');
-        container.innerHTML = '';
-        const messageDiv = document.createElement('div');
-        messageDiv.style.width = '100%';
-        messageDiv.style.height = '100%';
-        messageDiv.style.display = 'flex';
-        messageDiv.style.alignItems = 'center';
-        messageDiv.style.justifyContent = 'center';
-        messageDiv.style.backgroundColor = '#f0f0f0';
-        messageDiv.style.border = '1px solid #ccc';
-        messageDiv.style.padding = '20px';
-        messageDiv.style.boxSizing = 'border-box';
-        messageDiv.style.fontSize = '18px';
-        messageDiv.style.fontWeight = 'bold';
-        messageDiv.style.textAlign = 'center';
-        messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.<br><br>To see a 3D visualization, decrease n to 300 or less and click Sample.';
-        container.appendChild(messageDiv);
-
-        progressElem.innerText = "Using cached tiling (n > 300 is only available in 2D view)";
-        setTimeout(() => { progressElem.innerText = ""; }, 3000);
-      } else {
-        // For n ≤ 300, show informational message
-        progressElem.innerText = "Using cached 3D visualization";
-        setTimeout(() => { progressElem.innerText = ""; }, 2000);
+      setProgressStatus("Restoring cached 3D visualization...", { immediate: true });
+      const rendered = await renderVisibleCachedDominoes();
+      if (rendered) {
+        setProgressStatus("Using cached 3D visualization", { immediate: true, clearAfterMs: 2000 });
       }
+      return;
     }
+
+    await ensureThreeJSReady();
   });
 
   // Global variable to track last rendered order value
@@ -3148,66 +3450,6 @@ Module.onRuntimeInitialized = async function() {
     return grayHex(lum);
   }
 
-  // Setup 2D visualization elements
-  const svg2d = d3.select("#aztec-svg-2d")
-    .style("touch-action", "none"); // Prevent browser default touch actions
-  let initialTransform2d = {}; // Store initial transform parameters for 2D
-
-  // ---- 2‑D layer bookkeeping ----------------------------------------------
-  let dominoLayer   = null;   // <g> that holds *only* domino items
-  let dominoIndex   = new Map();   // key ↦ {rect,tri,datum}
-  let prevDominoKey = null;   // to detect first render
-
-  function key2D(d){      // unique key → bottom‑left lattice coord
-    return `${d.x}|${d.y}`;
-  }
-
-  // Create zoom behavior for 2D
-  const zoom2d = d3.zoom()
-    .scaleExtent([0.001, 50]) // Min and max zoom scale
-    .on("zoom", (event) => {
-      if (!initialTransform2d.scale) return; // Skip if no initial transform is set
-
-      // Apply the zoom transformation on top of initial transform
-      const group = svg2d.select("g");
-      const t = event.transform;
-      group.attr("transform",
-        `translate(${initialTransform2d.translateX * t.k + t.x},${initialTransform2d.translateY * t.k + t.y}) scale(${initialTransform2d.scale * t.k})`);
-    });
-
-  // Enable zoom on the 2D SVG
-  svg2d.call(zoom2d);
-
-  // Add double-click to reset zoom for 2D
-  svg2d.on("dblclick.zoom", () => {
-    svg2d.transition()
-      .duration(750)
-      .call(zoom2d.transform, d3.zoomIdentity);
-  });
-
-  // Add event listeners for 2D zoom controls
-  document.getElementById("zoom-in-btn-2d").addEventListener("click", () => {
-    svg2d.transition()
-      .duration(300)
-      .call(zoom2d.scaleBy, 1.3);
-  });
-
-  document.getElementById("zoom-out-btn-2d").addEventListener("click", () => {
-    svg2d.transition()
-      .duration(300)
-      .call(zoom2d.scaleBy, 0.7);
-  });
-
-  document.getElementById("zoom-reset-btn-2d").addEventListener("click", () => {
-    if (initialTransform2d.scale) {
-      svg2d.transition()
-        .duration(300)
-        .call(zoom2d.transform, d3.zoomIdentity);
-    }
-  });
-
-  // Grayscale values are now hardcoded, no interactive controls needed
-
   // Hardcoded grayscale values
   const grayscaleValues = {
     blue: { p0: 100, p1: 253 },
@@ -3220,560 +3462,49 @@ Module.onRuntimeInitialized = async function() {
 
   // 2D grayscale toggle handler
   document.getElementById("grayscale-checkbox-2d").addEventListener("change", function() {
-    updateDominoDisplay();
+    if (getActiveView() === "2d") updateDominoDisplay();
   });
 
   // Checkerboard overlay toggle handler
   document.getElementById("checkerboard-checkbox-2d").addEventListener("change", function() {
-    updateDominoDisplay();
+    if (getActiveView() === "2d") updateDominoDisplay();
   });
 
   // Border width input handler - update immediately on input
   document.getElementById("border-width-input").addEventListener("input", function() {
-    updateDominoDisplay();
+    if (getActiveView() === "2d") updateDominoDisplay();
   });
 
   // Nonintersecting paths toggle handler
   document.getElementById("paths-checkbox-2d").addEventListener("change", function() {
-    updateDominoDisplay();
+    if (getActiveView() === "2d") updateDominoDisplay();
   });
 
   // Dimers toggle handler
   document.getElementById("dimers-checkbox-2d").addEventListener("change", function() {
-    updateDominoDisplay();
+    if (getActiveView() === "2d") updateDominoDisplay();
   });
 
   // Height function toggle handler
   document.getElementById("height-function-checkbox-2d").addEventListener("change", function() {
     useHeightFunction = this.checked;
-    updateDominoDisplay();
+    if (getActiveView() === "2d") updateDominoDisplay();
   });
-
-  // Function to determine if a lattice face (2x2 square) is part of the checkerboard pattern
-  function getCheckerboardPattern(d) {
-    // Dominoes are 2x4 (horizontal) or 4x2 (vertical)
-    // We want to create a checkerboard pattern on the underlying 2x2 lattice faces
-
-    // Get the position of each lattice face (2x2 square)
-    // For a horizontal domino (2x4), it covers 2 lattice faces
-    // For a vertical domino (4x2), it also covers 2 lattice faces
-
-    // Convert domino coordinates to lattice coordinates (each lattice face is 2x2)
-    const latticeX = Math.floor(d.x / 2);
-    const latticeY = Math.floor(d.y / 2);
-
-    // Traditional checkerboard pattern on the lattice
-    // True if the sum of lattice coordinates is even
-    return (latticeX + latticeY) % 2 === 0;
-  }
-
-  // Function to update domino display based on various display settings
-  function updateDominoDisplay() {
-    const useGrayscale = document.getElementById("grayscale-checkbox-2d").checked;
-    const showCheckerboard = document.getElementById("checkerboard-checkbox-2d").checked;
-    const showPaths = document.getElementById("paths-checkbox-2d").checked;
-    const showDimers = document.getElementById("dimers-checkbox-2d").checked;
-    const showColors = document.getElementById("show-colors-checkbox").checked;
-    const monoColor = "#F8F8F8"; // Extremely light monochrome color
-
-    // First, make sure we have a persistent layer to work with
-    if (!dominoLayer) return;
-
-    // Remove any existing overlays
-    dominoLayer.selectAll(".checkerboard-square").remove();
-    dominoLayer.selectAll(".path-line").remove();
-    dominoLayer.selectAll(".dimer-circle").remove();
-    dominoLayer.selectAll(".dimer-line").remove();
-    dominoLayer.selectAll(".height-node").remove();
-    dominoLayer.selectAll(".height-label").remove();
-
-    // Get the current border thickness value
-    const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
-
-    // Toggle colors between normal and grayscale for the dominoes and update border width
-    // Use dominoIndex for fast direct access to each domino's rect and tri objects
-    dominoIndex.forEach((domino, key) => {
-      const d = domino.datum;
-
-      // Set fill color based on settings
-      let fill;
-      if (!showColors) {
-        fill = monoColor;
-      } else if (useGrayscale) {
-        fill = getGrayscaleColor(d.color, d);
-      } else {
-        // Use custom colors if available, otherwise fall back to original color
-        fill = currentColors[d.color] || d.color;
-      }
-
-      // Apply styling directly to the rectangle
-      domino.rect
-        .attr("fill", fill)
-        .attr("stroke", currentColors.border || "#000")
-        .attr("stroke-width", borderWidth);
-    });
-
-    // If checkerboard is enabled, draw 2x2 lattice squares
-    if (showCheckerboard) {
-      // Create a set of all 2x2 lattice faces used by the dominoes
-      const latticeSet = new Set();
-      const latticeSquares = [];
-
-      // First, collect all the 2x2 lattice face positions from our indexed dominoes
-      dominoIndex.forEach((domino, key) => {
-        const d = domino.datum;
-        // For a horizontal domino (2x4), it covers 2 lattice faces side by side
-        // For a vertical domino (4x2), it covers 2 lattice faces one above the other
-
-        const isHorizontal = d.w > d.h;
-
-        if (isHorizontal) {
-          // Horizontal domino covers 2 faces horizontally
-          const leftX = Math.floor(d.x / 2) * 2;
-          const y = Math.floor(d.y / 2) * 2;
-
-          // Add both lattice faces
-          const leftKey = `${leftX},${y}`;
-          const rightKey = `${leftX + 2},${y}`;
-
-          if (!latticeSet.has(leftKey)) {
-            latticeSet.add(leftKey);
-            latticeSquares.push({x: leftX, y: y, size: 2});
-          }
-
-          if (!latticeSet.has(rightKey)) {
-            latticeSet.add(rightKey);
-            latticeSquares.push({x: leftX + 2, y: y, size: 2});
-          }
-        } else {
-          // Vertical domino covers 2 faces vertically
-          const x = Math.floor(d.x / 2) * 2;
-          const topY = Math.floor(d.y / 2) * 2;
-
-          // Add both lattice faces
-          const topKey = `${x},${topY}`;
-          const bottomKey = `${x},${topY + 2}`;
-
-          if (!latticeSet.has(topKey)) {
-            latticeSet.add(topKey);
-            latticeSquares.push({x: x, y: topY, size: 2});
-          }
-
-          if (!latticeSet.has(bottomKey)) {
-            latticeSet.add(bottomKey);
-            latticeSquares.push({x: x, y: topY + 2, size: 2});
-          }
-        }
-      });
-
-      // Now draw all the lattice faces with checkerboard pattern
-      dominoLayer.selectAll(".checkerboard-square")
-          .data(latticeSquares)
-          .enter()
-          .append("rect")
-          .attr("class", "checkerboard-square")
-          .attr("x", d => d.x)
-          .attr("y", d => d.y)
-          .attr("width", d => d.size)
-          .attr("height", d => d.size)
-          .attr("fill", function(d) {
-            // Create checkerboard pattern based on lattice coordinates
-            const isBlack = ((d.x / 2) + (d.y / 2)) % 2 === 0;
-            return isBlack ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0)"; // Black or transparent
-          })
-          .attr("pointer-events", "none"); // Allow clicking through to the dominoes
-    }
-
-    // If nonintersecting paths are enabled, draw them
-    if (showPaths) {
-      // Create paths based on domino type and orientation
-      const pathSegments = [];
-
-      // Process each domino from our index
-      dominoIndex.forEach((domino, key) => {
-        const d = domino.datum;
-        const isHorizontal = d.w > d.h;
-        const color = d.color;
-
-        // Calculate center points
-        const centerX = d.x + d.w/2;
-        const centerY = d.y + d.h/2;
-
-        // Get color type
-        let colorType = "";
-        if (isHorizontal) {
-          if (typeof color === 'string' && (color.includes("green") || color === "#1e8c28" || color === "#00ff00")) {
-            colorType = "green";
-          } else if (typeof color === 'string' && (color.includes("blue") || color === "#4363d8" || color === "#0000ff")) {
-            colorType = "blue";
-          }
-        } else {
-          if (typeof color === 'string' && (color.includes("yellow") || color === "#fca414" || color === "#ffff00")) {
-            colorType = "yellow";
-          } else if (typeof color === 'string' && (color.includes("red") || color === "#ff2244" || color === "#ff0000")) {
-            colorType = "red";
-          }
-        }
-
-        if (isHorizontal && colorType === "green") {
-          // Green horizontal domino - horizontal path through center
-          // Draw a horizontal line through the center of the green domino
-          pathSegments.push({
-            x1: d.x, // left edge
-            y1: centerY,
-            x2: d.x + d.w, // right edge
-            y2: centerY,
-            color: "black" // All paths are black now
-          });
-        }
-        else if (!isHorizontal) {
-          // For vertical dominoes (yellow or red)
-          const centerX = d.x + d.w/2; // center X
-          const centerY = d.y + d.h/2; // center Y
-          const tileWidth = d.w;  // width of the domino
-          const tileHeight = d.h; // height of the domino
-
-          // Calculate path length through the center (maintaining 45° angle)
-          // For 45° angle, we need equal horizontal and vertical components
-          // We'll use the smaller of width/2 and height/2 to ensure we maintain the angle
-          // but scaled appropriately to make the path go through most of the tile
-          const pathHalfLength = Math.min(tileWidth, tileHeight) * 1.2; // Slightly longer to ensure it crosses the tile
-
-          if (colorType === "yellow") {
-            // Yellow vertical domino - up-right 45° diagonal through center
-            pathSegments.push({
-              x1: centerX - pathHalfLength/2,
-              y1: centerY + pathHalfLength/2, // Adding because y increases downward in SVG
-              x2: centerX + pathHalfLength/2,
-              y2: centerY - pathHalfLength/2, // Subtracting because y increases downward in SVG
-              color: "black"
-            });
-          }
-          else if (colorType === "red") {
-            // Red vertical domino - down-right 45° diagonal through center
-            pathSegments.push({
-              x1: centerX - pathHalfLength/2,
-              y1: centerY - pathHalfLength/2, // Subtracting because y increases downward in SVG
-              x2: centerX + pathHalfLength/2,
-              y2: centerY + pathHalfLength/2, // Adding because y increases downward in SVG
-              color: "black"
-            });
-          }
-        }
-      });
-
-      // Draw all path segments
-      dominoLayer.selectAll(".path-line")
-          .data(pathSegments)
-          .enter()
-          .append("line")
-          .attr("class", "path-line")
-          .attr("x1", d => d.x1)
-          .attr("y1", d => d.y1)
-          .attr("x2", d => d.x2)
-          .attr("y2", d => d.y2)
-          .attr("stroke", "black") // All paths are black now
-          .attr("stroke-width", 0.6)
-          .attr("pointer-events", "none"); // Allow clicking through to dominoes
-    }
-
-    // If dimers are enabled, draw them
-    if (showDimers) {
-      // Use dominoes from our index
-      const dominoes = [];
-      dominoIndex.forEach((domino, key) => {
-        const d = domino.datum;
-        // Only add dominoes with valid coordinates
-        if (d && typeof d.x === 'number' && typeof d.y === 'number' &&
-            typeof d.w === 'number' && typeof d.h === 'number' &&
-            !isNaN(d.x) && !isNaN(d.y) && !isNaN(d.w) && !isNaN(d.h)) {
-          dominoes.push(d);
-        }
-      });
-
-      // Create dimer representations
-      const dimerNodes = [];
-      const dimerEdges = [];
-
-      // Process each domino to create dimer edges and nodes
-      dominoes.forEach(d => {
-        // Skip dominoes with invalid dimensions
-        if (d.w <= 0 || d.h <= 0) return;
-
-        const isHorizontal = d.w > d.h;
-
-        // For each domino, we'll add two nodes and one edge connecting them
-        // The dimer length should be half the long side of the domino
-
-        try {
-          if (isHorizontal) {
-            // Horizontal domino (blue or green)
-            const centerX = d.x + d.w/2;  // Center of the domino
-            const midY = d.y + d.h/2;     // Vertical center
-
-            // Calculate dimer length (half the domino width)
-            const dimerLength = d.w / 2;
-
-            // Place nodes at the midpoints between center and edges
-            const leftX = centerX - dimerLength/2;
-            const rightX = centerX + dimerLength/2;
-
-            // Validate all coordinates are numbers and not NaN
-            if (isNaN(leftX) || isNaN(rightX) || isNaN(midY)) return;
-
-            // Add nodes
-            const leftNode = {
-              x: leftX,
-              y: midY,
-              radius: 0.4 // Radius for node circles
-            };
-
-            const rightNode = {
-              x: rightX,
-              y: midY,
-              radius: 0.4
-            };
-
-            dimerNodes.push(leftNode, rightNode);
-
-            // Add edge connecting the two nodes
-            dimerEdges.push({
-              x1: leftX,
-              y1: midY,
-              x2: rightX,
-              y2: midY
-            });
-
-          } else {
-            // Vertical domino (red or yellow)
-            const midX = d.x + d.w/2;     // Horizontal center
-            const centerY = d.y + d.h/2;  // Center of the domino
-
-            // Calculate dimer length (half the domino height)
-            const dimerLength = d.h / 2;
-
-            // Place nodes at the midpoints between center and edges
-            const topY = centerY - dimerLength/2;
-            const bottomY = centerY + dimerLength/2;
-
-            // Validate all coordinates are numbers and not NaN
-            if (isNaN(midX) || isNaN(topY) || isNaN(bottomY)) return;
-
-            // Add nodes
-            const topNode = {
-              x: midX,
-              y: topY,
-              radius: 0.4
-            };
-
-            const bottomNode = {
-              x: midX,
-              y: bottomY,
-              radius: 0.4
-            };
-
-            dimerNodes.push(topNode, bottomNode);
-
-            // Add edge connecting the two nodes
-            dimerEdges.push({
-              x1: midX,
-              y1: topY,
-              x2: midX,
-              y2: bottomY
-            });
-          }
-        } catch (e) {
-
-        }
-      });
-
-      // Additional validation for all dimer edges and nodes
-      const validDimerEdges = dimerEdges.filter(d =>
-        typeof d.x1 === 'number' && !isNaN(d.x1) &&
-        typeof d.y1 === 'number' && !isNaN(d.y1) &&
-        typeof d.x2 === 'number' && !isNaN(d.x2) &&
-        typeof d.y2 === 'number' && !isNaN(d.y2)
-      );
-
-      const validDimerNodes = dimerNodes.filter(d =>
-        typeof d.x === 'number' && !isNaN(d.x) &&
-        typeof d.y === 'number' && !isNaN(d.y) &&
-        typeof d.radius === 'number' && !isNaN(d.radius)
-      );
-
-      // Draw dimer edges and nodes
-
-      // First draw edges (lines)
-      dominoLayer.selectAll(".dimer-line")
-          .data(validDimerEdges)
-          .enter()
-          .append("line")
-          .attr("class", "dimer-line")
-          .attr("x1", d => d.x1)
-          .attr("y1", d => d.y1)
-          .attr("x2", d => d.x2)
-          .attr("y2", d => d.y2)
-          .attr("stroke", "black")
-          .attr("stroke-width", 0.3)
-          .attr("pointer-events", "none");
-
-      // Then draw nodes (circles)
-      dominoLayer.selectAll(".dimer-circle")
-          .data(validDimerNodes)
-          .enter()
-          .append("circle")
-          .attr("class", "dimer-circle")
-          .attr("cx", d => d.x)
-          .attr("cy", d => d.y)
-          .attr("r", d => d.radius)
-          .attr("fill", "black")
-          .attr("stroke", "none")
-          .attr("pointer-events", "none");
-    }
-
-    // If height function is enabled, draw it last so it appears on top
-    useHeightFunction = document.getElementById("height-function-checkbox-2d").checked;
-    if (useHeightFunction) {
-      toggleHeightFunction();
-      // The height function is already set to raise() internally
-    }
-  }
-
-  // Function to toggle height function on/off
-  function toggleHeightFunction() {
-    // Remove any existing height function elements
-    if (!dominoLayer) return;
-    dominoLayer.selectAll(".height-label,.height-node,.oldHeightBubble,.height-function-group").remove();
-
-    // If height function is not enabled or n > 30, just return
-    const n = parseInt(document.getElementById("n-input").value, 10);
-    if (!useHeightFunction || n > 30 || !cachedDominoes || cachedDominoes.length === 0) return;
-
-    // Make sure we use cached dominoes directly which has known good coordinates
-    // rather than trying to collect them from the display which might have NaN issues
-    const dominoes = [...cachedDominoes];
-
-    // 1. Determine lattice unit (scaling factor)
-    const minSidePx = Math.min(...dominoes.map(d => Math.min(d.w, d.h)));
-    const unit = minSidePx / 2; // 2 lattice units → 1 short side
-    if (unit <= 0) return;
-
-    // 2. Convert each domino to (orient, sign, gx, gy)
-    const dominoData = dominoes.map(d => {
-      const horiz = d.w > d.h;
-      const orient = horiz ? 0 : 1;
-      const sign = horiz
-        ? (d.color === "green" ? -1 : 1)   // horizontal: green = −1, blue = +1
-        : (d.color === "yellow" ? -1 : 1);  // vertical: yellow = −1, red = +1
-      const gx = Math.round(d.x / unit);   // lattice coordinates
-      const gy = Math.round(d.y / unit);
-      return [orient, sign, gx, gy];
-    });
-
-    // 3. Build graph with height increments
-    const adj = new Map();
-
-    function addEdge(v1, v2, dh) {
-      const v1Key = `${v1},${v2}` === v1 ? v1 : `${v1[0]},${v1[1]}`;
-      const v2Key = `${v1},${v2}` === v2 ? v2 : `${v2[0]},${v2[1]}`;
-
-      if (!adj.has(v1Key)) adj.set(v1Key, []);
-      if (!adj.has(v2Key)) adj.set(v2Key, []);
-
-      adj.get(v1Key).push([v2Key, dh]);
-      adj.get(v2Key).push([v1Key, -dh]);
-    }
-
-    dominoData.forEach(([o, s, x, y]) => {
-      if (o === 0) { // horizontal (4×2)
-        const TL = [x, y+2], TM = [x+2, y+2], TR = [x+4, y+2];
-        const BL = [x, y], BM = [x+2, y], BR = [x+4, y];
-
-        addEdge(TL, TM, -s); addEdge(TM, TR, s);
-        addEdge(BL, BM, s); addEdge(BM, BR, -s);
-        addEdge(TL, BL, s); addEdge(TM, BM, 3*s);
-        addEdge(TR, BR, s);
-      } else { // vertical (2×4)
-        const TL = [x, y+4], TR = [x+2, y+4];
-        const ML = [x, y+2], MR = [x+2, y+2];
-        const BL = [x, y], BR = [x+2, y];
-
-        addEdge(TL, TR, -s); addEdge(ML, MR, -3*s); addEdge(BL, BR, -s);
-        addEdge(TL, ML, s); addEdge(ML, BL, -s);
-        addEdge(TR, MR, -s); addEdge(MR, BR, s);
-      }
-    });
-
-    // 4. Breadth-first integration of heights
-    const verts = Array.from(adj.keys()).map(k => {
-      const [gx, gy] = k.split(',').map(Number);
-      return {k, gx, gy};
-    });
-
-    // Find the "bottom-left" vertex as the root
-    const root = verts.reduce((a, b) =>
-      (a.gy < b.gy) || (a.gy === b.gy && a.gx <= b.gx) ? a : b
-    ).k;
-
-    const heights = new Map([[root, 0]]);
-    const queue = [root];
-
-    while (queue.length > 0) {
-      const v = queue.shift();
-      for (const [w, dh] of adj.get(v)) {
-        if (!heights.has(w)) {
-          heights.set(w, heights.get(v) + dh);
-          queue.push(w);
-        }
-      }
-    }
-
-    // 5. Calculate font size based on n value (smaller font for larger n)
-    const fontSize = Math.max(0.8, Math.min(1.2, 3.6 - n / 20.0))/1.0; // n = order
-
-    // 6. Render just the numbers in pixels
-    // Create a group for the height function labels
-    const heightLabelsGroup = dominoLayer.append("g")
-        .attr("class", "height-function-group");
-
-    heights.forEach((h, key) => {
-      const [gx, gy] = key.split(',').map(Number);
-      const px = gx * unit, py = gy * unit;  // back to pixels
-
-      // Add just the height value (text only, no circles)
-      heightLabelsGroup.append("text")
-        .attr("class", "height-label")
-        .attr("x", px)
-        .attr("y", py)
-        .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "central")
-        .attr("font-size", `${fontSize}px`)
-        .text(-h); // Negate height as per the requirements
-    });
-
-    // Make height function appear above everything else
-    heightLabelsGroup.raise();
-  }
-
-  // Helper function to check if a domino is horizontal
-  function isHorizontalDomino(d) {
-    return d.w > d.h;
-  }
 
   // Global color toggle handler
   document.getElementById("show-colors-checkbox").addEventListener("change", function() {
     const showColors = this.checked; // Get the current state of the checkbox
 
 
-    // Update 2D view if it exists
-    const svg2dGroup = svg2d.select("g");
-    if (!svg2dGroup.empty()) {
+    // Update 2D view if it is visible
+    if (getActiveView() === "2d" && cachedDominoes && cachedDominoes.length > 0) {
       updateDominoDisplay();
     }
 
-    // Update 3D view if it exists and we're not in a large tiling case
+    // Update 3D view only if it is visible and we're not in a large tiling case
     const n = parseInt(document.getElementById("n-input").value, 10);
-    if (n <= 300 && dominoGroup && dominoGroup.children && dominoGroup.children.length > 0) {
+    if (getActiveView() === "3d" && !isNo3DEnabled() &&
+        n <= 300 && dominoGroup && dominoGroup.children && dominoGroup.children.length > 0) {
       const monoColor3D = 0x999999;
 
       // Use current custom colors instead of hardcoded colors
@@ -3825,9 +3556,10 @@ Module.onRuntimeInitialized = async function() {
     const showGradient = this.checked;
     const showColors = document.getElementById("show-colors-checkbox").checked;
 
-    // Update 3D view if it exists and colors are shown
+    // Update 3D view only if it is visible and colors are shown
     const n = parseInt(document.getElementById("n-input").value, 10);
-    if (n <= 300 && dominoGroup && dominoGroup.children && dominoGroup.children.length > 0) {
+    if (getActiveView() === "3d" && !isNo3DEnabled() &&
+        n <= 300 && dominoGroup && dominoGroup.children && dominoGroup.children.length > 0) {
       dominoGroup.children.forEach(mesh => {
         if (mesh.material && showColors) {
           if (showGradient && mesh.material.userData && mesh.material.userData.gradientColorValue) {
@@ -3845,93 +3577,597 @@ Module.onRuntimeInitialized = async function() {
     }
   });
 
-  // Function to render dominoes in 2D view
-  async function render2D(dominoes){
-    if(!dominoes?.length) return;
+  const DOMINO_2D_OVERLAY_LIMIT = 220;
+  const DOMINO_2D_EXACT_RENDER_LIMIT = 100;
+  const DOMINO_2D_SVG_COMPAT_LIMIT = 5000;
+  const DOMINO_2D_CACHE_MAX_PX = 4096;
+  const DOMINO_2D_CACHE_PADDING = 4;
+  let prevCanvasDominoKey = null;
+  let svg2DExportDirty = true;
 
-    /* -------- Initial build --------------------------------------------- */
-    if(!dominoLayer){
-      // build once
-      svg2d.selectAll("g").remove();          // scrap stray stuff from old versions
-      dominoLayer = svg2d.append("g")
-                         .attr("class","domino-layer");
-    }
-
-    /* -------- Compute /‑‑‑only‑on‑first‑render‑or‑n‑change‑‑‑/ ------------------------ */
-    // Check if this is first render or n has changed
-    const currentN = parseInt(document.getElementById('n-input').value, 10);
-    let needInitialTransform = prevDominoKey === null || currentN !== lastNRendered;
-
-    if (needInitialTransform) {
-      const minX = d3.min(dominoes,d=>d.x),
-            minY = d3.min(dominoes,d=>d.y),
-            maxX = d3.max(dominoes,d=>d.x+d.w),
-            maxY = d3.max(dominoes,d=>d.y+d.h);
-
-      const box   = svg2d.node().getBoundingClientRect(),
-            scale = Math.min(box.width /(maxX-minX),
-                            box.height/(maxY-minY))*0.9,
-            tx    = (box.width  -(maxX-minX)*scale)/2 - minX*scale,
-            ty    = (box.height -(maxY-minY)*scale)/2 - minY*scale
-                    - box.height*0.04;                   // vertical shift
-
-      dominoLayer.attr("transform",`translate(${tx},${ty}) scale(${scale})`);
-
-      // Save initial transform values for zoom behavior
-      initialTransform2d = {
-        translateX: tx,
-        translateY: ty,
-        scale: scale
-      };
-
-      // Update lastNRendered
-      lastNRendered = currentN;
-    } else {
-      /* dominoLayer already exists ⇒ keep whatever transform/zoom
-         the user currently has.  Nothing to do here. */
-    }
-
-    /* -------- Data‑join -------------------------------------------------- */
-    // join by bottom‑left coordinate
-    const join = dominoLayer.selectAll("g.dom")
-                  .data(dominoes,key2D);
-
-    // EXIT – remove gone dominoes
-    join.exit().each(function(d){
-        const k = key2D(d);
-        dominoIndex.delete(k);
-      }).remove();
-
-    // ENTER – new domino container
-    const gEnter = join.enter()
-          .append("g").attr("class","dom");
-
-    //  ► rect
-    gEnter.append("rect");
-
-    // UPDATE + ENTER
-    const gAll = gEnter.merge(join);
-
-    gAll.each(function(d){
-       const k = key2D(d), g = d3.select(this);
-       // ----------------------------------------------------------------- rect
-       g.select("rect")
-        .attr("x",d.x).attr("y",d.y)
-        .attr("width",d.w).attr("height",d.h)
-        .attr("stroke", currentColors.border || "#000");      // use custom border color
-
-       // store reference for lightning‑fast single‑domino tweaks later if needed
-       dominoIndex.set(k,{rect:g.select("rect"),datum:d});
-    });
-
-    // Mark that we've done a render by setting prevDominoKey
-    prevDominoKey = dominoes.length > 0 ? key2D(dominoes[0]) : "empty";
-
-    // apply current colouring / overlays
-    updateDominoDisplay();
+  function canvasKey2D(d) {
+    return `${d.x}|${d.y}`;
   }
 
-  document.getElementById("view-2d-btn").addEventListener("click", function() {
+  function get2DOrder() {
+    return parseInt(document.getElementById("n-input").value, 10) || 0;
+  }
+
+  function get2DDisplaySettings() {
+    const n = get2DOrder();
+    return {
+      n,
+      showColors: document.getElementById("show-colors-checkbox")?.checked !== false,
+      useGrayscale: Boolean(document.getElementById("grayscale-checkbox-2d")?.checked),
+      showCheckerboard: Boolean(document.getElementById("checkerboard-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
+      showPaths: Boolean(document.getElementById("paths-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
+      showDimers: Boolean(document.getElementById("dimers-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
+      showHeightLabels: Boolean(document.getElementById("height-function-checkbox-2d")?.checked) && n <= 30,
+      borderWidth: Math.max(0, parseFloat(document.getElementById("border-width-input")?.value) || 0),
+      borderColor: currentColors.border || "#000",
+      monoColor: "#F8F8F8"
+    };
+  }
+
+  function getDominoFillColor(d, settings = get2DDisplaySettings()) {
+    if (!settings.showColors) return settings.monoColor;
+    if (settings.useGrayscale) return getGrayscaleColor(d.color, d);
+    return currentColors[d.color] || d.color || "#cccccc";
+  }
+
+  function normalizeDominoColorName(d) {
+    const color = String(d.color || "").toLowerCase();
+    if (color.includes("green") || color === "#1e8c28" || color === "#00ff00") return "green";
+    if (color.includes("blue") || color === "#4363d8" || color === "#0000ff") return "blue";
+    if (color.includes("yellow") || color === "#fca414" || color === "#ffff00") return "yellow";
+    if (color.includes("red") || color === "#ff2244" || color === "#ff0000") return "red";
+    return d.w > d.h ? "blue" : "red";
+  }
+
+  function computeDominoBounds(dominoes) {
+    if (!dominoes || dominoes.length === 0) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const d of dominoes) {
+      minX = Math.min(minX, d.x);
+      minY = Math.min(minY, d.y);
+      maxX = Math.max(maxX, d.x + d.w);
+      maxY = Math.max(maxY, d.y + d.h);
+    }
+    if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) return null;
+    return {
+      minX,
+      minY,
+      maxX,
+      maxY,
+      width: Math.max(1, maxX - minX),
+      height: Math.max(1, maxY - minY)
+    };
+  }
+
+  function createCanvasSurface(width, height) {
+    const safeWidth = Math.max(1, Math.ceil(width));
+    const safeHeight = Math.max(1, Math.ceil(height));
+    if (typeof OffscreenCanvas !== "undefined") {
+      return new OffscreenCanvas(safeWidth, safeHeight);
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = safeWidth;
+    canvas.height = safeHeight;
+    return canvas;
+  }
+
+  function collectCheckerboardSquares(dominoes) {
+    const latticeSet = new Set();
+    const squares = [];
+    for (const d of dominoes) {
+      if (d.w > d.h) {
+        const leftX = Math.floor(d.x / 2) * 2;
+        const y = Math.floor(d.y / 2) * 2;
+        const leftKey = `${leftX},${y}`;
+        const rightKey = `${leftX + 2},${y}`;
+        if (!latticeSet.has(leftKey)) {
+          latticeSet.add(leftKey);
+          squares.push({ x: leftX, y, size: 2 });
+        }
+        if (!latticeSet.has(rightKey)) {
+          latticeSet.add(rightKey);
+          squares.push({ x: leftX + 2, y, size: 2 });
+        }
+      } else {
+        const x = Math.floor(d.x / 2) * 2;
+        const topY = Math.floor(d.y / 2) * 2;
+        const topKey = `${x},${topY}`;
+        const bottomKey = `${x},${topY + 2}`;
+        if (!latticeSet.has(topKey)) {
+          latticeSet.add(topKey);
+          squares.push({ x, y: topY, size: 2 });
+        }
+        if (!latticeSet.has(bottomKey)) {
+          latticeSet.add(bottomKey);
+          squares.push({ x, y: topY + 2, size: 2 });
+        }
+      }
+    }
+    return squares;
+  }
+
+  class Domino2DCanvasRenderer {
+    constructor(container, canvas) {
+      this.container = container;
+      this.canvas = canvas;
+      this.ctx = canvas.getContext("2d");
+      this.dominoes = [];
+      this.modelBounds = null;
+      this.cacheBounds = null;
+      this.cacheCanvas = null;
+      this.cacheValid = false;
+      this.framePending = false;
+      this.dpr = 1;
+      this.cssWidth = 1;
+      this.cssHeight = 1;
+      this.viewport = { scale: 1, translateX: 0, translateY: 0 };
+      this.hasViewport = false;
+      this.isDragging = false;
+      this.dragStart = null;
+      this.lastBoundsKey = null;
+
+      this.bindEvents();
+      this.resize();
+      if (typeof ResizeObserver !== "undefined") {
+        this.resizeObserver = new ResizeObserver(() => this.resize());
+        this.resizeObserver.observe(container);
+      } else {
+        window.addEventListener("resize", () => this.resize());
+      }
+    }
+
+    bindEvents() {
+      this.canvas.addEventListener("wheel", event => {
+        if (!this.dominoes.length) return;
+        event.preventDefault();
+        const rect = this.canvas.getBoundingClientRect();
+        const factor = event.deltaY > 0 ? 0.85 : 1.18;
+        this.zoomBy(factor, event.clientX - rect.left, event.clientY - rect.top);
+      }, { passive: false });
+
+      this.canvas.addEventListener("pointerdown", event => {
+        if (!this.dominoes.length) return;
+        this.isDragging = true;
+        this.dragStart = {
+          x: event.clientX,
+          y: event.clientY,
+          translateX: this.viewport.translateX,
+          translateY: this.viewport.translateY
+        };
+        this.canvas.classList.add("dragging");
+        this.canvas.setPointerCapture?.(event.pointerId);
+      });
+
+      this.canvas.addEventListener("pointermove", event => {
+        if (!this.isDragging || !this.dragStart) return;
+        this.viewport.translateX = this.dragStart.translateX + event.clientX - this.dragStart.x;
+        this.viewport.translateY = this.dragStart.translateY + event.clientY - this.dragStart.y;
+        this.scheduleDraw();
+      });
+
+      const endDrag = event => {
+        this.isDragging = false;
+        this.dragStart = null;
+        this.canvas.classList.remove("dragging");
+        this.canvas.releasePointerCapture?.(event.pointerId);
+      };
+      this.canvas.addEventListener("pointerup", endDrag);
+      this.canvas.addEventListener("pointercancel", endDrag);
+      this.canvas.addEventListener("dblclick", () => this.resetView());
+    }
+
+    resize() {
+      const rect = this.container.getBoundingClientRect();
+      this.cssWidth = Math.max(1, Math.round(rect.width || this.container.clientWidth || 1));
+      this.cssHeight = Math.max(1, Math.round(rect.height || this.container.clientHeight || 1));
+      this.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
+      const pixelWidth = Math.max(1, Math.round(this.cssWidth * this.dpr));
+      const pixelHeight = Math.max(1, Math.round(this.cssHeight * this.dpr));
+
+      if (this.canvas.width !== pixelWidth || this.canvas.height !== pixelHeight) {
+        this.canvas.width = pixelWidth;
+        this.canvas.height = pixelHeight;
+        this.canvas.style.width = `${this.cssWidth}px`;
+        this.canvas.style.height = `${this.cssHeight}px`;
+      }
+
+      if (this.modelBounds && !this.hasViewport) this.fitToView();
+      this.scheduleDraw();
+    }
+
+    setDominoes(dominoes, options = {}) {
+      this.dominoes = Array.isArray(dominoes) ? dominoes : [];
+      this.modelBounds = computeDominoBounds(this.dominoes);
+      const boundsKey = this.modelBounds
+        ? `${this.modelBounds.minX}|${this.modelBounds.minY}|${this.modelBounds.maxX}|${this.modelBounds.maxY}`
+        : "empty";
+      const shouldReset = options.resetView || !this.hasViewport || boundsKey !== this.lastBoundsKey;
+      this.lastBoundsKey = boundsKey;
+      this.invalidateCache("dominoes");
+      if (shouldReset) this.fitToView();
+      this.scheduleDraw();
+    }
+
+    invalidateCache() {
+      this.cacheValid = false;
+    }
+
+    fitToView() {
+      if (!this.modelBounds) return;
+      const pad = 16;
+      const availableWidth = Math.max(1, this.cssWidth - 2 * pad);
+      const availableHeight = Math.max(1, this.cssHeight - 2 * pad);
+      const scale = Math.max(
+        0.001,
+        Math.min(availableWidth / this.modelBounds.width, availableHeight / this.modelBounds.height) * 0.98
+      );
+      this.viewport.scale = scale;
+      this.viewport.translateX = (this.cssWidth - this.modelBounds.width * scale) / 2 - this.modelBounds.minX * scale;
+      this.viewport.translateY = (this.cssHeight - this.modelBounds.height * scale) / 2 - this.modelBounds.minY * scale;
+      this.hasViewport = true;
+    }
+
+    resetView() {
+      this.fitToView();
+      this.scheduleDraw();
+    }
+
+    zoomBy(factor, anchorX = this.cssWidth / 2, anchorY = this.cssHeight / 2) {
+      const oldScale = this.viewport.scale || 1;
+      const newScale = Math.max(0.02, Math.min(80, oldScale * factor));
+      const modelX = (anchorX - this.viewport.translateX) / oldScale;
+      const modelY = (anchorY - this.viewport.translateY) / oldScale;
+      this.viewport.scale = newScale;
+      this.viewport.translateX = anchorX - modelX * newScale;
+      this.viewport.translateY = anchorY - modelY * newScale;
+      this.scheduleDraw();
+    }
+
+    scheduleDraw() {
+      if (this.framePending) return;
+      this.framePending = true;
+      requestAnimationFrame(() => {
+        this.framePending = false;
+        this.drawFrame();
+      });
+    }
+
+    renderNow() {
+      this.resize();
+      if (get2DOrder() > DOMINO_2D_EXACT_RENDER_LIMIT) this.renderCache();
+      this.drawFrame();
+    }
+
+    getCanvasBackground() {
+      const styles = getComputedStyle(this.container);
+      return styles.backgroundColor && styles.backgroundColor !== "rgba(0, 0, 0, 0)"
+        ? styles.backgroundColor
+        : "#f8f8f8";
+    }
+
+    renderCache() {
+      if (this.cacheValid || !this.dominoes.length || !this.modelBounds) return;
+
+      const cacheBounds = {
+        minX: this.modelBounds.minX - DOMINO_2D_CACHE_PADDING,
+        minY: this.modelBounds.minY - DOMINO_2D_CACHE_PADDING,
+        maxX: this.modelBounds.maxX + DOMINO_2D_CACHE_PADDING,
+        maxY: this.modelBounds.maxY + DOMINO_2D_CACHE_PADDING
+      };
+      cacheBounds.width = cacheBounds.maxX - cacheBounds.minX;
+      cacheBounds.height = cacheBounds.maxY - cacheBounds.minY;
+
+      const naturalScale = Math.max(1, Math.min(this.dpr, 2));
+      const cacheScale = Math.max(
+        0.5,
+        Math.min(naturalScale, DOMINO_2D_CACHE_MAX_PX / Math.max(cacheBounds.width, cacheBounds.height))
+      );
+      const surface = createCanvasSurface(cacheBounds.width * cacheScale, cacheBounds.height * cacheScale);
+      const ctx = surface.getContext("2d");
+      const settings = get2DDisplaySettings();
+
+      ctx.save();
+      ctx.scale(cacheScale, cacheScale);
+      ctx.translate(-cacheBounds.minX, -cacheBounds.minY);
+      ctx.clearRect(cacheBounds.minX, cacheBounds.minY, cacheBounds.width, cacheBounds.height);
+      this.drawDominoFillBatches(ctx, settings);
+      this.drawCheckerboardOverlay(ctx, settings);
+      this.drawBorderStrokePass(ctx, settings, cacheScale);
+      this.drawPathOverlay(ctx, settings);
+      this.drawDimerOverlay(ctx, settings);
+      this.drawHeightLabels(ctx, settings);
+      ctx.restore();
+
+      this.cacheBounds = cacheBounds;
+      this.cacheCanvas = surface;
+      this.cacheValid = true;
+      this.cacheScale = cacheScale;
+    }
+
+    drawDominoFillBatches(ctx, settings) {
+      const batches = new Map();
+      const inset = settings.borderWidth > 0 ? Math.min(0.04, settings.borderWidth * 0.04) : 0;
+      for (const d of this.dominoes) {
+        const fill = getDominoFillColor(d, settings);
+        if (!batches.has(fill)) batches.set(fill, []);
+        batches.get(fill).push(d);
+      }
+
+      for (const [fill, dominoes] of batches) {
+        ctx.fillStyle = fill;
+        for (const d of dominoes) {
+          ctx.fillRect(
+            d.x + inset,
+            d.y + inset,
+            Math.max(0.001, d.w - 2 * inset),
+            Math.max(0.001, d.h - 2 * inset)
+          );
+        }
+      }
+    }
+
+    drawBorderStrokePass(ctx, settings, cacheScale = 1) {
+      if (settings.borderWidth <= 0) return;
+      if (settings.borderWidth * cacheScale < 0.5) return;
+      const path = new Path2D();
+      const inset = Math.min(0.04, settings.borderWidth * 0.04);
+      for (const d of this.dominoes) {
+        path.rect(
+          d.x + inset,
+          d.y + inset,
+          Math.max(0.001, d.w - 2 * inset),
+          Math.max(0.001, d.h - 2 * inset)
+        );
+      }
+      ctx.save();
+      ctx.strokeStyle = settings.borderColor;
+      ctx.lineWidth = settings.borderWidth;
+      ctx.lineJoin = "miter";
+      ctx.stroke(path);
+      ctx.restore();
+    }
+
+    drawCheckerboardOverlay(ctx, settings) {
+      if (!settings.showCheckerboard) return;
+      const path = new Path2D();
+      for (const square of collectCheckerboardSquares(this.dominoes)) {
+        const isBlack = ((square.x / 2) + (square.y / 2)) % 2 === 0;
+        if (isBlack) path.rect(square.x, square.y, square.size, square.size);
+      }
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.18)";
+      ctx.fill(path);
+      ctx.restore();
+    }
+
+    drawPathOverlay(ctx, settings) {
+      if (!settings.showPaths) return;
+      ctx.save();
+      ctx.beginPath();
+      for (const d of this.dominoes) {
+        const isHorizontal = d.w > d.h;
+        const colorType = normalizeDominoColorName(d);
+        const centerX = d.x + d.w / 2;
+        const centerY = d.y + d.h / 2;
+        const pathHalfLength = Math.min(d.w, d.h) * 1.2;
+
+        if (isHorizontal && colorType === "green") {
+          ctx.moveTo(d.x, centerY);
+          ctx.lineTo(d.x + d.w, centerY);
+        } else if (!isHorizontal && colorType === "yellow") {
+          ctx.moveTo(centerX - pathHalfLength / 2, centerY + pathHalfLength / 2);
+          ctx.lineTo(centerX + pathHalfLength / 2, centerY - pathHalfLength / 2);
+        } else if (!isHorizontal && colorType === "red") {
+          ctx.moveTo(centerX - pathHalfLength / 2, centerY - pathHalfLength / 2);
+          ctx.lineTo(centerX + pathHalfLength / 2, centerY + pathHalfLength / 2);
+        }
+      }
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 0.6;
+      ctx.lineCap = "round";
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    drawDimerOverlay(ctx, settings) {
+      if (!settings.showDimers) return;
+      const edges = [];
+      const nodes = [];
+      for (const d of this.dominoes) {
+        if (d.w <= 0 || d.h <= 0) continue;
+        if (d.w > d.h) {
+          const centerX = d.x + d.w / 2;
+          const midY = d.y + d.h / 2;
+          const dimerLength = d.w / 2;
+          const leftX = centerX - dimerLength / 2;
+          const rightX = centerX + dimerLength / 2;
+          edges.push([leftX, midY, rightX, midY]);
+          nodes.push([leftX, midY], [rightX, midY]);
+        } else {
+          const midX = d.x + d.w / 2;
+          const centerY = d.y + d.h / 2;
+          const dimerLength = d.h / 2;
+          const topY = centerY - dimerLength / 2;
+          const bottomY = centerY + dimerLength / 2;
+          edges.push([midX, topY, midX, bottomY]);
+          nodes.push([midX, topY], [midX, bottomY]);
+        }
+      }
+
+      ctx.save();
+      ctx.strokeStyle = "black";
+      ctx.fillStyle = "black";
+      ctx.lineWidth = 0.3;
+      ctx.beginPath();
+      for (const [x1, y1, x2, y2] of edges) {
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+      }
+      ctx.stroke();
+      ctx.beginPath();
+      for (const [x, y] of nodes) {
+        ctx.moveTo(x + 0.4, y);
+        ctx.arc(x, y, 0.4, 0, Math.PI * 2);
+      }
+      ctx.fill();
+      ctx.restore();
+    }
+
+    drawHeightLabels(ctx, settings) {
+      if (!settings.showHeightLabels) return;
+      const heights = calculateHeightFunction(this.dominoes);
+      if (!heights.size) return;
+      const minSidePx = Math.min(...this.dominoes.map(d => Math.min(d.w, d.h)));
+      const unit = minSidePx / 2;
+      if (unit <= 0) return;
+      const fontSize = Math.max(0.8, Math.min(1.2, 3.6 - settings.n / 20.0));
+
+      ctx.save();
+      ctx.font = `${fontSize}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.fillStyle = "#000";
+      ctx.lineWidth = 0.3;
+      for (const [key, h] of heights) {
+        const [gx, gy] = key.split(",").map(Number);
+        const px = gx * unit;
+        const py = gy * unit;
+        ctx.strokeText(String(h), px, py);
+        ctx.fillText(String(h), px, py);
+      }
+      ctx.restore();
+    }
+
+    drawExactFrame(ctx, settings) {
+      ctx.save();
+      ctx.translate(this.viewport.translateX, this.viewport.translateY);
+      ctx.scale(this.viewport.scale, this.viewport.scale);
+      this.drawDominoFillBatches(ctx, settings);
+      this.drawCheckerboardOverlay(ctx, settings);
+      this.drawBorderStrokePass(ctx, settings, Math.max(1, this.viewport.scale));
+      this.drawPathOverlay(ctx, settings);
+      this.drawDimerOverlay(ctx, settings);
+      this.drawHeightLabels(ctx, settings);
+      ctx.restore();
+    }
+
+    drawFrame() {
+      const ctx = this.ctx;
+      ctx.save();
+      ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      ctx.clearRect(0, 0, this.cssWidth, this.cssHeight);
+      ctx.fillStyle = this.getCanvasBackground();
+      ctx.fillRect(0, 0, this.cssWidth, this.cssHeight);
+
+      if (this.dominoes.length && this.modelBounds) {
+        const settings = get2DDisplaySettings();
+        if (settings.n <= DOMINO_2D_EXACT_RENDER_LIMIT) {
+          this.drawExactFrame(ctx, settings);
+        } else {
+          this.renderCache();
+          if (this.cacheCanvas && this.cacheBounds) {
+            ctx.imageSmoothingEnabled = true;
+            if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(
+              this.cacheCanvas,
+              this.viewport.translateX + this.cacheBounds.minX * this.viewport.scale,
+              this.viewport.translateY + this.cacheBounds.minY * this.viewport.scale,
+              this.cacheBounds.width * this.viewport.scale,
+              this.cacheBounds.height * this.viewport.scale
+            );
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    toBlob(callback) {
+      this.renderNow();
+      this.canvas.toBlob(callback, "image/png", 1.0);
+    }
+  }
+
+  function sync2DSVGForExport(dominoes = cachedDominoes) {
+    const svg = document.getElementById("aztec-svg-2d");
+    if (!svg) return;
+    svg.replaceChildren();
+    if (!dominoes || dominoes.length === 0) return;
+
+    const bounds = computeDominoBounds(dominoes);
+    if (!bounds) return;
+    svg.setAttribute("viewBox", `${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`);
+    svg.dataset.renderer = dominoes.length <= DOMINO_2D_SVG_COMPAT_LIMIT ? "small-svg" : "canvas";
+    if (dominoes.length > DOMINO_2D_SVG_COMPAT_LIMIT) {
+      svg2DExportDirty = false;
+      return;
+    }
+
+    const settings = get2DDisplaySettings();
+    const fragment = document.createDocumentFragment();
+    const ns = "http://www.w3.org/2000/svg";
+    for (const d of dominoes) {
+      const rect = document.createElementNS(ns, "rect");
+      rect.setAttribute("x", d.x);
+      rect.setAttribute("y", d.y);
+      rect.setAttribute("width", d.w);
+      rect.setAttribute("height", d.h);
+      rect.setAttribute("fill", getDominoFillColor(d, settings));
+      rect.setAttribute("stroke", settings.borderColor);
+      rect.setAttribute("stroke-width", settings.borderWidth);
+      fragment.appendChild(rect);
+    }
+    svg.appendChild(fragment);
+    svg2DExportDirty = false;
+  }
+
+  domino2DRenderer = new Domino2DCanvasRenderer(
+    document.getElementById("aztec-2d-canvas"),
+    document.getElementById("aztec-canvas-2d")
+  );
+
+  updateDominoDisplay = function() {
+    if (!domino2DRenderer) return;
+    svg2DExportDirty = true;
+    invalidate2DCanvasCache();
+    domino2DRenderer.scheduleDraw();
+  };
+
+  toggleHeightFunction = function() {
+    useHeightFunction = document.getElementById("height-function-checkbox-2d")?.checked || false;
+    updateDominoDisplay();
+  };
+
+  render2D = async function(dominoes) {
+    if (!dominoes?.length || !domino2DRenderer) return;
+    const currentN = parseInt(document.getElementById("n-input").value, 10);
+    const shouldResetView = prevCanvasDominoKey === null || currentN !== lastNRendered;
+    domino2DRenderer.setDominoes(dominoes, { resetView: shouldResetView });
+    domino2DRenderer.renderNow();
+    svg2DExportDirty = true;
+    prevCanvasDominoKey = dominoes.length > 0 ? canvasKey2D(dominoes[0]) : "empty";
+    lastNRendered = currentN;
+  };
+
+  document.getElementById("zoom-in-btn-2d").addEventListener("click", () => {
+    domino2DRenderer?.zoomBy(1.3);
+  });
+
+  document.getElementById("zoom-out-btn-2d").addEventListener("click", () => {
+    domino2DRenderer?.zoomBy(0.7);
+  });
+
+  document.getElementById("zoom-reset-btn-2d").addEventListener("click", () => {
+    domino2DRenderer?.resetView();
+  });
+
+  document.getElementById("view-2d-btn").addEventListener("click", async function() {
     // Show 2D view, hide 3D view
     document.getElementById("aztec-canvas").style.display = "none";
     document.getElementById("aztec-2d-canvas").style.display = "block";
@@ -3946,7 +4182,7 @@ Module.onRuntimeInitialized = async function() {
     document.getElementById("download-3d-btn").style.display = "none";
 
     // Set the max n for 2D view
-    document.getElementById("n-input").setAttribute("max", "500");
+    document.getElementById("n-input").setAttribute("max", "2000");
 
     // Always reuse the cached dominoes if we have them
     if (cachedDominoes && cachedDominoes.length > 0) {
@@ -3956,16 +4192,17 @@ Module.onRuntimeInitialized = async function() {
         lastNRendered = null; // Force a recalculation of the transform
       }
 
-      render2D(cachedDominoes);
+      await render2D(cachedDominoes);
 
       // If we're switching from 3D to 2D, update the progress indicator
       const n = parseInt(document.getElementById("n-input").value, 10);
       if (n > 300) {
-        progressElem.innerText = "Using cached tiling (n > 300 is only available in 2D view)";
-        setTimeout(() => { progressElem.innerText = ""; }, 3000);
+        setProgressStatus("Using cached tiling (n > 300 is only available in 2D view)", {
+          immediate: true,
+          clearAfterMs: 3000
+        });
       } else {
-        progressElem.innerText = "Using cached tiling";
-        setTimeout(() => { progressElem.innerText = ""; }, 2000);
+        setProgressStatus("Using cached tiling", { immediate: true, clearAfterMs: 2000 });
       }
     }
 
@@ -3975,6 +4212,7 @@ Module.onRuntimeInitialized = async function() {
 
   // No 3D checkbox event listener
   document.getElementById("no-3d-checkbox").addEventListener("change", function() {
+    no3DUserChanged = true;
     const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
     if (is3DView) {
       // If we're in 3D view, trigger the 3D button click to update the display
@@ -4012,21 +4250,62 @@ Module.onRuntimeInitialized = async function() {
   function serializeStateToUrl() {
     const params = new URLSearchParams();
     const n = document.getElementById('n-input').value;
-    const periodicitySelect = document.getElementById('periodicity-select');
-    const periodicity = periodicitySelect ? periodicitySelect.value : 'uniform';
+    const periodicity = currentPeriodicity();
 
     params.set('n', n);
     if (periodicity !== 'uniform') params.set('p', periodicity);
 
-    // Add 2x2 or 3x3 weights if applicable
     if (periodicity === '2x2') {
-      const a = document.getElementById('weight-a')?.value;
-      const b = document.getElementById('weight-b')?.value;
+      const a = document.getElementById('a-input')?.value;
+      const b = document.getElementById('b-input')?.value;
       if (a) params.set('a', a);
       if (b) params.set('b', b);
+    } else if (periodicity === '3x3') {
+      const weights = readInputValues(['w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7', 'w8', 'w9']);
+      if (weights.length) params.set('w', weights.join(','));
+    } else if (periodicity === '6x2') {
+      const weights = readInputValues(Array.from({ length: 12 }, (_, i) => `w6x2_${i + 1}`));
+      if (weights.length) params.set('w6x2', weights.join(','));
     }
 
     return window.location.origin + window.location.pathname + '?' + params.toString();
+  }
+
+  function readInputValues(ids) {
+    return ids.map(id => document.getElementById(id)?.value ?? '');
+  }
+
+  function setInputValues(ids, values) {
+    ids.forEach((id, index) => {
+      if (values[index] === undefined || values[index] === '') return;
+      const input = document.getElementById(id);
+      if (!input) return;
+      input.value = values[index];
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }
+
+  function parseWeightList(value) {
+    return String(value || '')
+      .split(',')
+      .map(part => part.trim())
+      .filter(Boolean);
+  }
+
+  function readWeightsFromParams(params, listParam, ids) {
+    if (params.has(listParam)) return parseWeightList(params.get(listParam));
+    return ids.map(id => params.get(id) || '');
+  }
+
+  function setPeriodicityFromUrl(value) {
+    const allowed = new Set(['uniform', '2x2', '3x3', '6x2', 'frozenH', 'frozenV']);
+    if (!allowed.has(value)) return;
+    const radio = Array.from(document.querySelectorAll('input[name="periodicity"]'))
+      .find(input => input.value === value);
+    if (!radio) return;
+    radio.checked = true;
+    radio.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   function copyShareLink() {
@@ -4057,17 +4336,21 @@ Module.onRuntimeInitialized = async function() {
       document.getElementById('n-input').value = params.get('n');
     }
     if (params.has('p')) {
-      const periodicitySelect = document.getElementById('periodicity-select');
-      if (periodicitySelect) periodicitySelect.value = params.get('p');
+      setPeriodicityFromUrl(params.get('p'));
     }
     if (params.has('a')) {
-      const weightA = document.getElementById('weight-a');
+      const weightA = document.getElementById('a-input');
       if (weightA) weightA.value = params.get('a');
     }
     if (params.has('b')) {
-      const weightB = document.getElementById('weight-b');
+      const weightB = document.getElementById('b-input');
       if (weightB) weightB.value = params.get('b');
     }
+    const weight3x3Ids = ['w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7', 'w8', 'w9'];
+    const weight6x2Ids = Array.from({ length: 12 }, (_, i) => `w6x2_${i + 1}`);
+    setInputValues(weight3x3Ids, readWeightsFromParams(params, 'w', weight3x3Ids));
+    setInputValues(weight6x2Ids, readWeightsFromParams(params, 'w6x2', weight6x2Ids));
+    updatePeriodicityParams();
   })();
 
   // ========================================================================
@@ -4131,6 +4414,12 @@ Module.onRuntimeInitialized = async function() {
       event.preventDefault();
       document.getElementById('nextPaletteBtn').click();
       return;
+    }
+
+    const isArrowKey = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key);
+    if (isArrowKey) {
+      if (getActiveView() !== "3d" || !camera || !controls || !window.THREE?.Vector3) return;
+      event.preventDefault();
     }
 
     // Arrow keys for camera movement (in 3D view)
@@ -4207,8 +4496,9 @@ Module.onRuntimeInitialized = async function() {
     if (firstSampleDone) return;
     firstSampleAttempts++;
 
-    // 1. container for 3‑D view
-    const container = document.getElementById('aztec-canvas');
+    // 1. container for the active default view
+    const activeViewIs2D = document.getElementById("view-2d-btn")?.classList.contains("active");
+    const container = document.getElementById(activeViewIs2D ? 'aztec-2d-canvas' : 'aztec-canvas');
 
     // 2. if it is still collapsed (0×0), try again (with limit)
     if (!container || !container.clientWidth || !container.clientHeight) {
@@ -4225,8 +4515,7 @@ Module.onRuntimeInitialized = async function() {
     updateHeightFunctionVisibility(n);
 
     // Add visible loading indicator before starting
-    const progressElem = document.getElementById("progress-indicator");
-    if (progressElem) progressElem.innerText = "Initializing...";
+    setProgressStatus("Initializing...", { immediate: true });
 
     // Use a short timeout to ensure UI updates before heavy computation
     setTimeout(() => {
@@ -4987,6 +5276,7 @@ Module.onRuntimeInitialized = async function() {
 
   // Add event listeners for the TikZ buttons
   document.getElementById("tikz-btn").addEventListener("click", function() {
+    if (svg2DExportDirty) sync2DSVGForExport(cachedDominoes);
     svgToTikZ();
   });
 
@@ -5028,90 +5318,34 @@ Module.onRuntimeInitialized = async function() {
 
   // Add event listener for PNG download button
   document.getElementById("download-png-btn").addEventListener("click", function() {
-    // Get the SVG element
-    const svg = document.getElementById("aztec-svg-2d");
-
-    // Check if SVG has content (dominoes have been drawn)
-    if (!svg || !cachedDominoes || cachedDominoes.length === 0) {
+    if (!domino2DRenderer || !cachedDominoes || cachedDominoes.length === 0) {
       alert("Please sample a domino tiling first by clicking the 'Sample' button.");
       return;
     }
 
-    // Get current parameters for filename
     const n = parseInt(document.getElementById("n-input").value) || 12;
     const periodicity = document.querySelector('input[name="periodicity"]:checked').value;
-
-    // Create filename with parameters
     const filename = `aztec_diamond_2d_n${n}_${periodicity}.png`;
 
-    // Clone the SVG to avoid modifying the original
-    const svgClone = svg.cloneNode(true);
-
-    // Get the SVG's computed dimensions
-    const svgRect = svg.getBoundingClientRect();
-    const width = svgRect.width || 800;
-    const height = svgRect.height || 600;
-
-    // Set explicit dimensions on the cloned SVG
-    svgClone.setAttribute('width', width);
-    svgClone.setAttribute('height', height);
-
-    // Ensure the SVG has proper namespace
-    if (!svgClone.getAttribute('xmlns')) {
-      svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    }
-
-    // Create a canvas element with maximum resolution for best quality
-    const canvas = document.createElement('canvas');
-    const scale = 4; // 4x resolution for maximum quality
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-    const ctx = canvas.getContext('2d');
-
-    // Enable high-quality rendering
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.scale(scale, scale);
-
-    // Convert SVG to data URL with proper encoding
-    const svgData = new XMLSerializer().serializeToString(svgClone);
-    const encodedSvgData = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
-
-    // Create an image and load the SVG
-    const img = new Image();
-    img.onload = function() {
-      // Fill with white background
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, width, height);
-
-      // Draw the SVG image
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // Convert canvas to PNG with maximum quality (no compression)
-      canvas.toBlob(function(blob) {
-        if (blob) {
-          const a = document.createElement('a');
-          a.download = filename;
-          a.href = URL.createObjectURL(blob);
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(a.href);
-        } else {
-          alert('Error creating PNG file');
-        }
-      }, 'image/png', 1.0); // Maximum quality (no compression)
-    };
-
-    img.onerror = function() {
-      alert('Error loading SVG for conversion');
-    };
-
-    img.src = encodedSvgData;
+    domino2DRenderer.toBlob(function(blob) {
+      if (blob) {
+        const a = document.createElement('a');
+        a.download = filename;
+        a.href = URL.createObjectURL(blob);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      } else {
+        alert('Error creating PNG file');
+      }
+    });
   });
 
   // Add event listener for PDF download button
   document.getElementById("download-pdf-btn").addEventListener("click", function() {
+    if (svg2DExportDirty) sync2DSVGForExport(cachedDominoes);
+
     // Get the SVG element
     const svg = document.getElementById("aztec-svg-2d");
 
@@ -5192,7 +5426,7 @@ Module.onRuntimeInitialized = async function() {
 
       // Get current color settings
       const showColors = document.getElementById("show-colors-checkbox")?.checked !== false;
-      const useGrayscale = document.getElementById("grayscale-checkbox")?.checked === true;
+      const useGrayscale = document.getElementById("grayscale-checkbox-2d")?.checked === true;
       const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
 
       cachedDominoes.forEach(domino => {
@@ -5278,7 +5512,19 @@ Module.onRuntimeInitialized = async function() {
       }
     }, 'image/png', 0.95);
   });
-};
+}
+
+if (Module.calledRun) {
+  initializeDominoRuntime();
+} else {
+  const previousDominoRuntimeInitialized = Module.onRuntimeInitialized;
+  Module.onRuntimeInitialized = async function() {
+    if (typeof previousDominoRuntimeInitialized === "function") {
+      await previousDominoRuntimeInitialized();
+    }
+    await initializeDominoRuntime();
+  };
+}
 
 /* About section is closed by default via HTML (no "show" class). */
 
@@ -5357,8 +5603,11 @@ Module.onRuntimeInitialized = async function() {
 
   if (sampleFab && sampleBtn) {
     sampleFab.addEventListener('click', () => {
-      // Toggle Glauber dynamics on/off
-      document.getElementById('glauber-btn')?.click();
+      if (window.glauberRunning) {
+        document.getElementById('glauber-btn')?.click();
+      } else {
+        sampleBtn.click();
+      }
     });
   }
 

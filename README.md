@@ -6,6 +6,14 @@ Integrable probability, KPZ universality, Yang-Baxter equation, Bethe ansatz, Ma
 
 ---
 
+## Domino Sampler (`/domino/`)
+
+`/domino/` opens in the HiDPI 2D canvas view by default with `No 3D (faster)` enabled. The 3D height-function view is an explicit opt-in legacy path and is unavailable for `n > 300`; the 2D sampler supports `n` up to 2000 and draws small tilings (`n <= 100`) directly for sharp exact rendering. Developers can run `window.dominoSamplerBenchmark({ stopOnError: false, restore: true })` in the browser console for the default 2D timing cases.
+
+Use `make test-domino` for the dependency-free Chromium/WASM smoke test covering default 2D/lazy-3D page invariants and sampler output counts.
+
+---
+
 ## Makefile Reference
 
 ### Deployment Targets

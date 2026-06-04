@@ -168,6 +168,7 @@ g++ -std=c++17 -Ofast -ffast-math -funroll-loops -DNDEBUG -fno-exceptions -fno-r
 ### Performance Optimizations Applied
 - **Xoshiro256++ RNG**: Replaced `std::mt19937` (624 words state) with fast 4×uint64_t RNG that fits in registers
 - **Ping-pong buffers**: Pre-allocate 2 matrices, swap pointers instead of N allocations per sample
+- **Rolling probability pyramid**: `probsslim()` now keeps only current/next shuffling weight matrices while writing probability matrices, avoiding the old full `d3pslim()` value/exponent pyramid and making N=1000 feasible
 - **In-place operations**: `delslideInPlace()` and `createStepInPlace()` avoid matrix copies
 - **Direct 2D HeightGrid**: BFS uses `vector<int>` with offset addressing instead of `unordered_map`
 - **int64_t coordinate encoding**: Replaced `unordered_map<string, ...>` with `unordered_map<int64_t, ...>`
@@ -214,6 +215,7 @@ g++ -std=c++17 -Ofast -ffast-math -funroll-loops -DNDEBUG -fno-exceptions -fno-r
 ### Weight Presets
 - `uniform` - All weights = 1
 - `gamma` - Gamma(α) on alpha-edges, Gamma(β) on beta-edges (defaults: α=0.2, β=0.25)
+- `gamma-2x2-periodic` / `gamma-periodic-2x2` - Gamma with 2×2 periodic shape matrices matching the T-embedding UI preset: α_ij=0.2, β_00=β_11=3, β_01=β_10=0.25
 - `bernoulli` - Random IID: v1 with prob p, else v2
 - `gaussian` - Log-normal: exp(β * X), X ~ N(0,1)
 - `2x2periodic` - Checkerboard 4×4 block pattern

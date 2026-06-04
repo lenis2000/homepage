@@ -1,6 +1,7 @@
 # Homepage-specific ralphex image.
 # Adds the toolchain needed by the domino sampler optimization plans:
-# Ruby/Bundler/Jekyll for site validation and Emscripten for WASM rebuilds.
+# Ruby/Bundler/Jekyll for site validation, Emscripten for WASM rebuilds,
+# and headless Chromium/agent-browser for Docker browser smoke tests.
 
 FROM ghcr.io/umputun/ralphex:latest
 
@@ -71,5 +72,22 @@ RUN printf '\n# Runtime gems needed by Ruby 3.4+ when using Jekyll 4.3.x\ngem "b
 RUN mkdir -p /opt/homebrew/opt/python@3.13/bin /opt/homebrew/opt/python@3.14/bin && \
     touch /opt/homebrew/opt/python@3.13/bin/python3.13 \
           /opt/homebrew/opt/python@3.14/bin/python3.14
+
+# Browser smoke-test tooling for ralphex-dk. Chrome for Testing has no Linux
+# ARM64 builds, so use Alpine's Chromium package and tell agent-browser where
+# to find it by default.
+ENV AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    CHROME_BIN=/usr/bin/chromium-browser \
+    CHROMIUM_BIN=/usr/bin/chromium-browser \
+    NPM_CONFIG_CACHE=/tmp/npm-cache
+RUN apk add --no-cache \
+      chromium \
+      chromium-swiftshader \
+      font-noto \
+      ttf-freefont && \
+    npm install --global agent-browser@0.27.1 && \
+    agent-browser --version && \
+    mkdir -p /tmp/npm-cache && \
+    chmod 1777 /tmp/npm-cache
 
 WORKDIR /workspace
