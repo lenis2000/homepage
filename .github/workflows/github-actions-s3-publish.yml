@@ -11,6 +11,9 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
+    - name: Domino smoke tests
+      run: make test-domino
+
     - name: Build
       uses: jerryjvl/jekyll-build-action@v1
 

@@ -103,11 +103,6 @@ static std::mt19937 glauberRng(std::random_device{}());
 // Global progress counter (0 to 100)
 volatile int progressCounter = 0;
 
-struct Cell {
-    double value;
-    int flag;
-};
-
 template <typename T>
 class FlatMatrix {
 private:
@@ -120,27 +115,6 @@ public:
 
     FlatMatrix(int rows, int cols, const T& value = T()) {
         reset(rows, cols, value);
-    }
-
-    FlatMatrix(int rows, const vector<T>& row) {
-        rows_ = rows;
-        cols_ = static_cast<int>(row.size());
-        data_.reserve(static_cast<size_t>(rows_) * cols_);
-        for (int i = 0; i < rows_; ++i) {
-            data_.insert(data_.end(), row.begin(), row.end());
-        }
-    }
-
-    FlatMatrix(std::initializer_list<std::initializer_list<T>> rows) {
-        rows_ = static_cast<int>(rows.size());
-        cols_ = rows_ ? static_cast<int>(rows.begin()->size()) : 0;
-        data_.reserve(static_cast<size_t>(rows_) * cols_);
-        for (const auto& row : rows) {
-            if (static_cast<int>(row.size()) != cols_) {
-                throw std::runtime_error("FlatMatrix initializer rows have inconsistent lengths");
-            }
-            data_.insert(data_.end(), row.begin(), row.end());
-        }
     }
 
     void reset(int rows, int cols, const T& value = T()) {
@@ -161,21 +135,9 @@ public:
         return data_.data() + static_cast<size_t>(row) * cols_;
     }
 
-    T& at(int row, int col) {
-        return data_[static_cast<size_t>(row) * cols_ + col];
-    }
-
-    const T& at(int row, int col) const {
-        return data_[static_cast<size_t>(row) * cols_ + col];
-    }
-
     int size() const { return rows_; }
-    int rows() const { return rows_; }
-    int cols() const { return cols_; }
-    bool empty() const { return rows_ == 0 || cols_ == 0; }
 };
 
-using Matrix = FlatMatrix<Cell>;
 using MatrixDouble = FlatMatrix<double>;
 using MatrixInt = FlatMatrix<int>;
 using Vertex = pair<int, int>;
@@ -822,18 +784,12 @@ char* simulateAztecHorizontal(int n,
             for (int j = 0; j < N; ++j) {
                 const bool oddI = i & 1;
                 const bool oddJ = j & 1;
+                const int y = N - (i + j);
 
-                /* Renderer y‑coord (centre‑of‑diamond = 0) */
-                const int y = (N + 1) - (i + j) - 1;
-
-                /*  blue  = NW marker  (companion SE = i+1,j+1)
-                 *  green = SE marker  (companion NW = i‑1,j‑1)          */
-                if (y >= 0) {                            // TOP half
-                    if (oddI && oddJ && i <= N - 2 && j <= N - 2  && i >= 3 && j >= 3)
-                        conf[i][j] = 1;                  // blue marker
-                } else {                                 // BOTTOM half
-                    if (!oddI && !oddJ && i >= 1 && j >= 1 && i <= N  && j <= N )
-                        conf[i][j] = 1;                  // green marker
+                if (y > 0) {
+                    if (!oddI && !oddJ) conf[i][j] = 1;  // green marker
+                } else {
+                    if (oddI && oddJ) conf[i][j] = 1;    // blue marker
                 }
             }
         }
@@ -896,14 +852,10 @@ char* simulateAztecVertical(int n,
                 const bool oddJ = j & 1;
                 const int  x    = j - i - 1;          // renderer’s x‑coord
 
-                /*  yellow  (NE marker)  needs companion SW = (i+1,j‑1)
-                 *  red     (SW marker)  needs companion NE = (i‑1,j+1)  */
-                if (x <= 0){                                            // left half
-                    if ( oddI && !oddJ && i <= N-2 && j >= 2 )
-                        conf[i][j] = 1;          /* yellow marker */
-                } else {                                              // right half
-                    if (!oddI && oddJ && i >= 0 && j <= N )
-                        conf[i][j] = 1;          /* red marker */
+                if (x < 0) {
+                    if (oddI && !oddJ) conf[i][j] = 1;    // yellow marker
+                } else {
+                    if (!oddI && oddJ) conf[i][j] = 1;    // red marker
                 }
             }
         }
@@ -926,7 +878,7 @@ char* simulateAztecVertical(int n,
 
                 double x = j - i - 1;
                 double y = N + 1 - (i + j) - 2;
-                const char* col = (x <= 0) ? "yellow" : "red";
+                const char* col = (x < 0) ? "yellow" : "red";
 
                 appendDominoJSON(json, first, x, y, 2, 4, col);
             }

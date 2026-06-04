@@ -1584,9 +1584,7 @@ Module.onRuntimeInitialized = async function() {
     return getActiveView() === "3d" && n > 300;
   }
 
-  let domino2DCacheVersion = 0;
   function invalidate2DCanvasCache() {
-    domino2DCacheVersion += 1;
     domino2DRenderer?.invalidateCache("external");
   }
 
@@ -1949,7 +1947,7 @@ Module.onRuntimeInitialized = async function() {
         lastSampleWasGlauber = true; // Mark that Glauber produced this state
 
         // 4. Update the visible visualization only
-        await updateVisualizationFromCache();
+        await renderVisibleCachedDominoes();
 
         return nSteps; // Return number of steps successfully run
     } catch (e) {
@@ -2033,11 +2031,6 @@ Module.onRuntimeInitialized = async function() {
             }, updateInterval);
         }
     }
-  }
-
-  // Function to update the visible visualization from cachedDominoes
-  async function updateVisualizationFromCache() {
-    await renderVisibleCachedDominoes();
   }
 
   // Calculate height function based on domino configuration
@@ -2536,30 +2529,6 @@ Module.onRuntimeInitialized = async function() {
     }
     lastSampleWasGlauber = false; // Reset flag when generating a fresh sample
 
-    if (shouldShowLarge3DMessage(n)) {
-      createLargeTilingMessage();
-      clearProgressStatus({ immediate: true });
-      skipDominoTiming(profile, "wasmCallMs", "3D unavailable for n > 300");
-      skipDominoTiming(profile, "utf8ConversionMs", "3D unavailable for n > 300");
-      skipDominoTiming(profile, "jsonParseMs", "3D unavailable for n > 300");
-      skipDominoTiming(profile, "render2DMs", "2D pane inactive");
-      skipDominoTiming(profile, "heightFunctionMs", "3D unavailable for n > 300");
-      skipDominoTiming(profile, "render3DMs", "3D unavailable for n > 300");
-      return completeProfile("ok");
-    }
-
-    if (getActiveView() === "3d" && isNo3DEnabled()) {
-      createNo3DMessage();
-      clearProgressStatus({ immediate: true });
-      skipDominoTiming(profile, "wasmCallMs", "No 3D enabled");
-      skipDominoTiming(profile, "utf8ConversionMs", "No 3D enabled");
-      skipDominoTiming(profile, "jsonParseMs", "No 3D enabled");
-      skipDominoTiming(profile, "render2DMs", "2D pane inactive");
-      skipDominoTiming(profile, "heightFunctionMs", "No 3D enabled");
-      skipDominoTiming(profile, "render3DMs", "No 3D enabled");
-      return completeProfile("ok");
-    }
-
     startSimulation();
     const signal = abortController.signal;
 
@@ -2594,7 +2563,14 @@ Module.onRuntimeInitialized = async function() {
       if (signal.aborted) return completeProfile("aborted");
 
       if (!shouldRender3D(n)) {
-        const reason = getActiveView() === "2d" ? "2D view active" : "No 3D enabled";
+        let reason = "2D view active";
+        if (shouldShowLarge3DMessage(n)) {
+          createLargeTilingMessage();
+          reason = "3D unavailable for n > 300";
+        } else if (getActiveView() === "3d" && isNo3DEnabled()) {
+          createNo3DMessage();
+          reason = "No 3D enabled";
+        }
         skipDominoTiming(profile, "heightFunctionMs", reason);
         skipDominoTiming(profile, "render3DMs", reason);
       } else {
@@ -2912,7 +2888,7 @@ Module.onRuntimeInitialized = async function() {
         clearProgressStatus({ immediate: true });
 
         // Update visualization using existing cached data
-        updateVisualizationFromCache();
+        renderVisibleCachedDominoes();
 
         alert(`Successfully loaded ${newDominoes.length} dominoes from CSV file.`);
 
@@ -3417,66 +3393,6 @@ Module.onRuntimeInitialized = async function() {
     return grayHex(lum);
   }
 
-  // Setup 2D visualization elements
-  const svg2d = d3.select("#aztec-svg-2d")
-    .style("touch-action", "none"); // Prevent browser default touch actions
-  let initialTransform2d = {}; // Store initial transform parameters for 2D
-
-  // ---- 2‑D layer bookkeeping ----------------------------------------------
-  let dominoLayer   = null;   // <g> that holds *only* domino items
-  let dominoIndex   = new Map();   // key ↦ {rect,tri,datum}
-  let prevDominoKey = null;   // to detect first render
-
-  function key2D(d){      // unique key → bottom‑left lattice coord
-    return `${d.x}|${d.y}`;
-  }
-
-  // Create zoom behavior for 2D
-  const zoom2d = d3.zoom()
-    .scaleExtent([0.001, 50]) // Min and max zoom scale
-    .on("zoom", (event) => {
-      if (!initialTransform2d.scale) return; // Skip if no initial transform is set
-
-      // Apply the zoom transformation on top of initial transform
-      const group = svg2d.select("g");
-      const t = event.transform;
-      group.attr("transform",
-        `translate(${initialTransform2d.translateX * t.k + t.x},${initialTransform2d.translateY * t.k + t.y}) scale(${initialTransform2d.scale * t.k})`);
-    });
-
-  // Enable zoom on the 2D SVG
-  svg2d.call(zoom2d);
-
-  // Add double-click to reset zoom for 2D
-  svg2d.on("dblclick.zoom", () => {
-    svg2d.transition()
-      .duration(750)
-      .call(zoom2d.transform, d3.zoomIdentity);
-  });
-
-  // Add event listeners for 2D zoom controls
-  document.getElementById("zoom-in-btn-2d").addEventListener("click", () => {
-    svg2d.transition()
-      .duration(300)
-      .call(zoom2d.scaleBy, 1.3);
-  });
-
-  document.getElementById("zoom-out-btn-2d").addEventListener("click", () => {
-    svg2d.transition()
-      .duration(300)
-      .call(zoom2d.scaleBy, 0.7);
-  });
-
-  document.getElementById("zoom-reset-btn-2d").addEventListener("click", () => {
-    if (initialTransform2d.scale) {
-      svg2d.transition()
-        .duration(300)
-        .call(zoom2d.transform, d3.zoomIdentity);
-    }
-  });
-
-  // Grayscale values are now hardcoded, no interactive controls needed
-
   // Hardcoded grayscale values
   const grayscaleValues = {
     blue: { p0: 100, p1: 253 },
@@ -3517,517 +3433,6 @@ Module.onRuntimeInitialized = async function() {
     useHeightFunction = this.checked;
     if (getActiveView() === "2d") updateDominoDisplay();
   });
-
-  // Function to determine if a lattice face (2x2 square) is part of the checkerboard pattern
-  function getCheckerboardPattern(d) {
-    // Dominoes are 2x4 (horizontal) or 4x2 (vertical)
-    // We want to create a checkerboard pattern on the underlying 2x2 lattice faces
-
-    // Get the position of each lattice face (2x2 square)
-    // For a horizontal domino (2x4), it covers 2 lattice faces
-    // For a vertical domino (4x2), it also covers 2 lattice faces
-
-    // Convert domino coordinates to lattice coordinates (each lattice face is 2x2)
-    const latticeX = Math.floor(d.x / 2);
-    const latticeY = Math.floor(d.y / 2);
-
-    // Traditional checkerboard pattern on the lattice
-    // True if the sum of lattice coordinates is even
-    return (latticeX + latticeY) % 2 === 0;
-  }
-
-  // Function to update domino display based on various display settings
-  function updateDominoDisplay() {
-    const useGrayscale = document.getElementById("grayscale-checkbox-2d").checked;
-    const showCheckerboard = document.getElementById("checkerboard-checkbox-2d").checked;
-    const showPaths = document.getElementById("paths-checkbox-2d").checked;
-    const showDimers = document.getElementById("dimers-checkbox-2d").checked;
-    const showColors = document.getElementById("show-colors-checkbox").checked;
-    const monoColor = "#F8F8F8"; // Extremely light monochrome color
-
-    // First, make sure we have a persistent layer to work with
-    if (!dominoLayer) return;
-
-    // Remove any existing overlays
-    dominoLayer.selectAll(".checkerboard-square").remove();
-    dominoLayer.selectAll(".path-line").remove();
-    dominoLayer.selectAll(".dimer-circle").remove();
-    dominoLayer.selectAll(".dimer-line").remove();
-    dominoLayer.selectAll(".height-node").remove();
-    dominoLayer.selectAll(".height-label").remove();
-
-    // Get the current border thickness value
-    const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
-
-    // Toggle colors between normal and grayscale for the dominoes and update border width
-    // Use dominoIndex for fast direct access to each domino's rect and tri objects
-    dominoIndex.forEach((domino, key) => {
-      const d = domino.datum;
-
-      // Set fill color based on settings
-      let fill;
-      if (!showColors) {
-        fill = monoColor;
-      } else if (useGrayscale) {
-        fill = getGrayscaleColor(d.color, d);
-      } else {
-        // Use custom colors if available, otherwise fall back to original color
-        fill = currentColors[d.color] || d.color;
-      }
-
-      // Apply styling directly to the rectangle
-      domino.rect
-        .attr("fill", fill)
-        .attr("stroke", currentColors.border || "#000")
-        .attr("stroke-width", borderWidth);
-    });
-
-    // If checkerboard is enabled, draw 2x2 lattice squares
-    if (showCheckerboard) {
-      // Create a set of all 2x2 lattice faces used by the dominoes
-      const latticeSet = new Set();
-      const latticeSquares = [];
-
-      // First, collect all the 2x2 lattice face positions from our indexed dominoes
-      dominoIndex.forEach((domino, key) => {
-        const d = domino.datum;
-        // For a horizontal domino (2x4), it covers 2 lattice faces side by side
-        // For a vertical domino (4x2), it covers 2 lattice faces one above the other
-
-        const isHorizontal = d.w > d.h;
-
-        if (isHorizontal) {
-          // Horizontal domino covers 2 faces horizontally
-          const leftX = Math.floor(d.x / 2) * 2;
-          const y = Math.floor(d.y / 2) * 2;
-
-          // Add both lattice faces
-          const leftKey = `${leftX},${y}`;
-          const rightKey = `${leftX + 2},${y}`;
-
-          if (!latticeSet.has(leftKey)) {
-            latticeSet.add(leftKey);
-            latticeSquares.push({x: leftX, y: y, size: 2});
-          }
-
-          if (!latticeSet.has(rightKey)) {
-            latticeSet.add(rightKey);
-            latticeSquares.push({x: leftX + 2, y: y, size: 2});
-          }
-        } else {
-          // Vertical domino covers 2 faces vertically
-          const x = Math.floor(d.x / 2) * 2;
-          const topY = Math.floor(d.y / 2) * 2;
-
-          // Add both lattice faces
-          const topKey = `${x},${topY}`;
-          const bottomKey = `${x},${topY + 2}`;
-
-          if (!latticeSet.has(topKey)) {
-            latticeSet.add(topKey);
-            latticeSquares.push({x: x, y: topY, size: 2});
-          }
-
-          if (!latticeSet.has(bottomKey)) {
-            latticeSet.add(bottomKey);
-            latticeSquares.push({x: x, y: topY + 2, size: 2});
-          }
-        }
-      });
-
-      // Now draw all the lattice faces with checkerboard pattern
-      dominoLayer.selectAll(".checkerboard-square")
-          .data(latticeSquares)
-          .enter()
-          .append("rect")
-          .attr("class", "checkerboard-square")
-          .attr("x", d => d.x)
-          .attr("y", d => d.y)
-          .attr("width", d => d.size)
-          .attr("height", d => d.size)
-          .attr("fill", function(d) {
-            // Create checkerboard pattern based on lattice coordinates
-            const isBlack = ((d.x / 2) + (d.y / 2)) % 2 === 0;
-            return isBlack ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0)"; // Black or transparent
-          })
-          .attr("pointer-events", "none"); // Allow clicking through to the dominoes
-    }
-
-    // If nonintersecting paths are enabled, draw them
-    if (showPaths) {
-      // Create paths based on domino type and orientation
-      const pathSegments = [];
-
-      // Process each domino from our index
-      dominoIndex.forEach((domino, key) => {
-        const d = domino.datum;
-        const isHorizontal = d.w > d.h;
-        const color = d.color;
-
-        // Calculate center points
-        const centerX = d.x + d.w/2;
-        const centerY = d.y + d.h/2;
-
-        // Get color type
-        let colorType = "";
-        if (isHorizontal) {
-          if (typeof color === 'string' && (color.includes("green") || color === "#1e8c28" || color === "#00ff00")) {
-            colorType = "green";
-          } else if (typeof color === 'string' && (color.includes("blue") || color === "#4363d8" || color === "#0000ff")) {
-            colorType = "blue";
-          }
-        } else {
-          if (typeof color === 'string' && (color.includes("yellow") || color === "#fca414" || color === "#ffff00")) {
-            colorType = "yellow";
-          } else if (typeof color === 'string' && (color.includes("red") || color === "#ff2244" || color === "#ff0000")) {
-            colorType = "red";
-          }
-        }
-
-        if (isHorizontal && colorType === "green") {
-          // Green horizontal domino - horizontal path through center
-          // Draw a horizontal line through the center of the green domino
-          pathSegments.push({
-            x1: d.x, // left edge
-            y1: centerY,
-            x2: d.x + d.w, // right edge
-            y2: centerY,
-            color: "black" // All paths are black now
-          });
-        }
-        else if (!isHorizontal) {
-          // For vertical dominoes (yellow or red)
-          const centerX = d.x + d.w/2; // center X
-          const centerY = d.y + d.h/2; // center Y
-          const tileWidth = d.w;  // width of the domino
-          const tileHeight = d.h; // height of the domino
-
-          // Calculate path length through the center (maintaining 45° angle)
-          // For 45° angle, we need equal horizontal and vertical components
-          // We'll use the smaller of width/2 and height/2 to ensure we maintain the angle
-          // but scaled appropriately to make the path go through most of the tile
-          const pathHalfLength = Math.min(tileWidth, tileHeight) * 1.2; // Slightly longer to ensure it crosses the tile
-
-          if (colorType === "yellow") {
-            // Yellow vertical domino - up-right 45° diagonal through center
-            pathSegments.push({
-              x1: centerX - pathHalfLength/2,
-              y1: centerY + pathHalfLength/2, // Adding because y increases downward in SVG
-              x2: centerX + pathHalfLength/2,
-              y2: centerY - pathHalfLength/2, // Subtracting because y increases downward in SVG
-              color: "black"
-            });
-          }
-          else if (colorType === "red") {
-            // Red vertical domino - down-right 45° diagonal through center
-            pathSegments.push({
-              x1: centerX - pathHalfLength/2,
-              y1: centerY - pathHalfLength/2, // Subtracting because y increases downward in SVG
-              x2: centerX + pathHalfLength/2,
-              y2: centerY + pathHalfLength/2, // Adding because y increases downward in SVG
-              color: "black"
-            });
-          }
-        }
-      });
-
-      // Draw all path segments
-      dominoLayer.selectAll(".path-line")
-          .data(pathSegments)
-          .enter()
-          .append("line")
-          .attr("class", "path-line")
-          .attr("x1", d => d.x1)
-          .attr("y1", d => d.y1)
-          .attr("x2", d => d.x2)
-          .attr("y2", d => d.y2)
-          .attr("stroke", "black") // All paths are black now
-          .attr("stroke-width", 0.6)
-          .attr("pointer-events", "none"); // Allow clicking through to dominoes
-    }
-
-    // If dimers are enabled, draw them
-    if (showDimers) {
-      // Use dominoes from our index
-      const dominoes = [];
-      dominoIndex.forEach((domino, key) => {
-        const d = domino.datum;
-        // Only add dominoes with valid coordinates
-        if (d && typeof d.x === 'number' && typeof d.y === 'number' &&
-            typeof d.w === 'number' && typeof d.h === 'number' &&
-            !isNaN(d.x) && !isNaN(d.y) && !isNaN(d.w) && !isNaN(d.h)) {
-          dominoes.push(d);
-        }
-      });
-
-      // Create dimer representations
-      const dimerNodes = [];
-      const dimerEdges = [];
-
-      // Process each domino to create dimer edges and nodes
-      dominoes.forEach(d => {
-        // Skip dominoes with invalid dimensions
-        if (d.w <= 0 || d.h <= 0) return;
-
-        const isHorizontal = d.w > d.h;
-
-        // For each domino, we'll add two nodes and one edge connecting them
-        // The dimer length should be half the long side of the domino
-
-        try {
-          if (isHorizontal) {
-            // Horizontal domino (blue or green)
-            const centerX = d.x + d.w/2;  // Center of the domino
-            const midY = d.y + d.h/2;     // Vertical center
-
-            // Calculate dimer length (half the domino width)
-            const dimerLength = d.w / 2;
-
-            // Place nodes at the midpoints between center and edges
-            const leftX = centerX - dimerLength/2;
-            const rightX = centerX + dimerLength/2;
-
-            // Validate all coordinates are numbers and not NaN
-            if (isNaN(leftX) || isNaN(rightX) || isNaN(midY)) return;
-
-            // Add nodes
-            const leftNode = {
-              x: leftX,
-              y: midY,
-              radius: 0.4 // Radius for node circles
-            };
-
-            const rightNode = {
-              x: rightX,
-              y: midY,
-              radius: 0.4
-            };
-
-            dimerNodes.push(leftNode, rightNode);
-
-            // Add edge connecting the two nodes
-            dimerEdges.push({
-              x1: leftX,
-              y1: midY,
-              x2: rightX,
-              y2: midY
-            });
-
-          } else {
-            // Vertical domino (red or yellow)
-            const midX = d.x + d.w/2;     // Horizontal center
-            const centerY = d.y + d.h/2;  // Center of the domino
-
-            // Calculate dimer length (half the domino height)
-            const dimerLength = d.h / 2;
-
-            // Place nodes at the midpoints between center and edges
-            const topY = centerY - dimerLength/2;
-            const bottomY = centerY + dimerLength/2;
-
-            // Validate all coordinates are numbers and not NaN
-            if (isNaN(midX) || isNaN(topY) || isNaN(bottomY)) return;
-
-            // Add nodes
-            const topNode = {
-              x: midX,
-              y: topY,
-              radius: 0.4
-            };
-
-            const bottomNode = {
-              x: midX,
-              y: bottomY,
-              radius: 0.4
-            };
-
-            dimerNodes.push(topNode, bottomNode);
-
-            // Add edge connecting the two nodes
-            dimerEdges.push({
-              x1: midX,
-              y1: topY,
-              x2: midX,
-              y2: bottomY
-            });
-          }
-        } catch (e) {
-
-        }
-      });
-
-      // Additional validation for all dimer edges and nodes
-      const validDimerEdges = dimerEdges.filter(d =>
-        typeof d.x1 === 'number' && !isNaN(d.x1) &&
-        typeof d.y1 === 'number' && !isNaN(d.y1) &&
-        typeof d.x2 === 'number' && !isNaN(d.x2) &&
-        typeof d.y2 === 'number' && !isNaN(d.y2)
-      );
-
-      const validDimerNodes = dimerNodes.filter(d =>
-        typeof d.x === 'number' && !isNaN(d.x) &&
-        typeof d.y === 'number' && !isNaN(d.y) &&
-        typeof d.radius === 'number' && !isNaN(d.radius)
-      );
-
-      // Draw dimer edges and nodes
-
-      // First draw edges (lines)
-      dominoLayer.selectAll(".dimer-line")
-          .data(validDimerEdges)
-          .enter()
-          .append("line")
-          .attr("class", "dimer-line")
-          .attr("x1", d => d.x1)
-          .attr("y1", d => d.y1)
-          .attr("x2", d => d.x2)
-          .attr("y2", d => d.y2)
-          .attr("stroke", "black")
-          .attr("stroke-width", 0.3)
-          .attr("pointer-events", "none");
-
-      // Then draw nodes (circles)
-      dominoLayer.selectAll(".dimer-circle")
-          .data(validDimerNodes)
-          .enter()
-          .append("circle")
-          .attr("class", "dimer-circle")
-          .attr("cx", d => d.x)
-          .attr("cy", d => d.y)
-          .attr("r", d => d.radius)
-          .attr("fill", "black")
-          .attr("stroke", "none")
-          .attr("pointer-events", "none");
-    }
-
-    // If height function is enabled, draw it last so it appears on top
-    useHeightFunction = document.getElementById("height-function-checkbox-2d").checked;
-    if (useHeightFunction) {
-      toggleHeightFunction();
-      // The height function is already set to raise() internally
-    }
-  }
-
-  // Function to toggle height function on/off
-  function toggleHeightFunction() {
-    // Remove any existing height function elements
-    if (!dominoLayer) return;
-    dominoLayer.selectAll(".height-label,.height-node,.oldHeightBubble,.height-function-group").remove();
-
-    // If height function is not enabled or n > 30, just return
-    const n = parseInt(document.getElementById("n-input").value, 10);
-    if (!useHeightFunction || n > 30 || !cachedDominoes || cachedDominoes.length === 0) return;
-
-    // Make sure we use cached dominoes directly which has known good coordinates
-    // rather than trying to collect them from the display which might have NaN issues
-    const dominoes = [...cachedDominoes];
-
-    // 1. Determine lattice unit (scaling factor)
-    const minSidePx = Math.min(...dominoes.map(d => Math.min(d.w, d.h)));
-    const unit = minSidePx / 2; // 2 lattice units → 1 short side
-    if (unit <= 0) return;
-
-    // 2. Convert each domino to (orient, sign, gx, gy)
-    const dominoData = dominoes.map(d => {
-      const horiz = d.w > d.h;
-      const orient = horiz ? 0 : 1;
-      const sign = horiz
-        ? (d.color === "green" ? -1 : 1)   // horizontal: green = −1, blue = +1
-        : (d.color === "yellow" ? -1 : 1);  // vertical: yellow = −1, red = +1
-      const gx = Math.round(d.x / unit);   // lattice coordinates
-      const gy = Math.round(d.y / unit);
-      return [orient, sign, gx, gy];
-    });
-
-    // 3. Build graph with height increments
-    const adj = new Map();
-
-    function addEdge(v1, v2, dh) {
-      const v1Key = `${v1},${v2}` === v1 ? v1 : `${v1[0]},${v1[1]}`;
-      const v2Key = `${v1},${v2}` === v2 ? v2 : `${v2[0]},${v2[1]}`;
-
-      if (!adj.has(v1Key)) adj.set(v1Key, []);
-      if (!adj.has(v2Key)) adj.set(v2Key, []);
-
-      adj.get(v1Key).push([v2Key, dh]);
-      adj.get(v2Key).push([v1Key, -dh]);
-    }
-
-    dominoData.forEach(([o, s, x, y]) => {
-      if (o === 0) { // horizontal (4×2)
-        const TL = [x, y+2], TM = [x+2, y+2], TR = [x+4, y+2];
-        const BL = [x, y], BM = [x+2, y], BR = [x+4, y];
-
-        addEdge(TL, TM, -s); addEdge(TM, TR, s);
-        addEdge(BL, BM, s); addEdge(BM, BR, -s);
-        addEdge(TL, BL, s); addEdge(TM, BM, 3*s);
-        addEdge(TR, BR, s);
-      } else { // vertical (2×4)
-        const TL = [x, y+4], TR = [x+2, y+4];
-        const ML = [x, y+2], MR = [x+2, y+2];
-        const BL = [x, y], BR = [x+2, y];
-
-        addEdge(TL, TR, -s); addEdge(ML, MR, -3*s); addEdge(BL, BR, -s);
-        addEdge(TL, ML, s); addEdge(ML, BL, -s);
-        addEdge(TR, MR, -s); addEdge(MR, BR, s);
-      }
-    });
-
-    // 4. Breadth-first integration of heights
-    const verts = Array.from(adj.keys()).map(k => {
-      const [gx, gy] = k.split(',').map(Number);
-      return {k, gx, gy};
-    });
-
-    // Find the "bottom-left" vertex as the root
-    const root = verts.reduce((a, b) =>
-      (a.gy < b.gy) || (a.gy === b.gy && a.gx <= b.gx) ? a : b
-    ).k;
-
-    const heights = new Map([[root, 0]]);
-    const queue = [root];
-
-    while (queue.length > 0) {
-      const v = queue.shift();
-      for (const [w, dh] of adj.get(v)) {
-        if (!heights.has(w)) {
-          heights.set(w, heights.get(v) + dh);
-          queue.push(w);
-        }
-      }
-    }
-
-    // 5. Calculate font size based on n value (smaller font for larger n)
-    const fontSize = Math.max(0.8, Math.min(1.2, 3.6 - n / 20.0))/1.0; // n = order
-
-    // 6. Render just the numbers in pixels
-    // Create a group for the height function labels
-    const heightLabelsGroup = dominoLayer.append("g")
-        .attr("class", "height-function-group");
-
-    heights.forEach((h, key) => {
-      const [gx, gy] = key.split(',').map(Number);
-      const px = gx * unit, py = gy * unit;  // back to pixels
-
-      // Add just the height value (text only, no circles)
-      heightLabelsGroup.append("text")
-        .attr("class", "height-label")
-        .attr("x", px)
-        .attr("y", py)
-        .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "central")
-        .attr("font-size", `${fontSize}px`)
-        .text(-h); // Negate height as per the requirements
-    });
-
-    // Make height function appear above everything else
-    heightLabelsGroup.raise();
-  }
-
-  // Helper function to check if a domino is horizontal
-  function isHorizontalDomino(d) {
-    return d.w > d.h;
-  }
 
   // Global color toggle handler
   document.getElementById("show-colors-checkbox").addEventListener("change", function() {
@@ -4114,92 +3519,6 @@ Module.onRuntimeInitialized = async function() {
       }
     }
   });
-
-  // Function to render dominoes in 2D view
-  async function render2D(dominoes){
-    if(!dominoes?.length) return;
-
-    /* -------- Initial build --------------------------------------------- */
-    if(!dominoLayer){
-      // build once
-      svg2d.selectAll("g").remove();          // scrap stray stuff from old versions
-      dominoLayer = svg2d.append("g")
-                         .attr("class","domino-layer");
-    }
-
-    /* -------- Compute /‑‑‑only‑on‑first‑render‑or‑n‑change‑‑‑/ ------------------------ */
-    // Check if this is first render or n has changed
-    const currentN = parseInt(document.getElementById('n-input').value, 10);
-    let needInitialTransform = prevDominoKey === null || currentN !== lastNRendered;
-
-    if (needInitialTransform) {
-      const minX = d3.min(dominoes,d=>d.x),
-            minY = d3.min(dominoes,d=>d.y),
-            maxX = d3.max(dominoes,d=>d.x+d.w),
-            maxY = d3.max(dominoes,d=>d.y+d.h);
-
-      const box   = svg2d.node().getBoundingClientRect(),
-            scale = Math.min(box.width /(maxX-minX),
-                            box.height/(maxY-minY))*0.9,
-            tx    = (box.width  -(maxX-minX)*scale)/2 - minX*scale,
-            ty    = (box.height -(maxY-minY)*scale)/2 - minY*scale
-                    - box.height*0.04;                   // vertical shift
-
-      dominoLayer.attr("transform",`translate(${tx},${ty}) scale(${scale})`);
-
-      // Save initial transform values for zoom behavior
-      initialTransform2d = {
-        translateX: tx,
-        translateY: ty,
-        scale: scale
-      };
-
-      // Update lastNRendered
-      lastNRendered = currentN;
-    } else {
-      /* dominoLayer already exists ⇒ keep whatever transform/zoom
-         the user currently has.  Nothing to do here. */
-    }
-
-    /* -------- Data‑join -------------------------------------------------- */
-    // join by bottom‑left coordinate
-    const join = dominoLayer.selectAll("g.dom")
-                  .data(dominoes,key2D);
-
-    // EXIT – remove gone dominoes
-    join.exit().each(function(d){
-        const k = key2D(d);
-        dominoIndex.delete(k);
-      }).remove();
-
-    // ENTER – new domino container
-    const gEnter = join.enter()
-          .append("g").attr("class","dom");
-
-    //  ► rect
-    gEnter.append("rect");
-
-    // UPDATE + ENTER
-    const gAll = gEnter.merge(join);
-
-    gAll.each(function(d){
-       const k = key2D(d), g = d3.select(this);
-       // ----------------------------------------------------------------- rect
-       g.select("rect")
-        .attr("x",d.x).attr("y",d.y)
-        .attr("width",d.w).attr("height",d.h)
-        .attr("stroke", currentColors.border || "#000");      // use custom border color
-
-       // store reference for lightning‑fast single‑domino tweaks later if needed
-       dominoIndex.set(k,{rect:g.select("rect"),datum:d});
-    });
-
-    // Mark that we've done a render by setting prevDominoKey
-    prevDominoKey = dominoes.length > 0 ? key2D(dominoes[0]) : "empty";
-
-    // apply current colouring / overlays
-    updateDominoDisplay();
-  }
 
   const DOMINO_2D_OVERLAY_LIMIT = 220;
   const DOMINO_2D_SVG_COMPAT_LIMIT = 5000;
@@ -4314,10 +3633,9 @@ Module.onRuntimeInitialized = async function() {
   }
 
   class Domino2DCanvasRenderer {
-    constructor(container, canvas, svg) {
+    constructor(container, canvas) {
       this.container = container;
       this.canvas = canvas;
-      this.svg = svg;
       this.ctx = canvas.getContext("2d");
       this.dominoes = [];
       this.modelBounds = null;
@@ -4416,9 +3734,8 @@ Module.onRuntimeInitialized = async function() {
       this.scheduleDraw();
     }
 
-    invalidateCache(reason = "style") {
+    invalidateCache() {
       this.cacheValid = false;
-      this.cacheReason = reason;
     }
 
     fitToView() {
@@ -4729,8 +4046,7 @@ Module.onRuntimeInitialized = async function() {
 
   domino2DRenderer = new Domino2DCanvasRenderer(
     document.getElementById("aztec-2d-canvas"),
-    document.getElementById("aztec-canvas-2d"),
-    document.getElementById("aztec-svg-2d")
+    document.getElementById("aztec-canvas-2d")
   );
 
   updateDominoDisplay = function() {

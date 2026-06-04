@@ -320,44 +320,6 @@ MatrixDouble generateBiasedGammaWeights(int dim, double alpha, double beta) {
     return weights;
 }
 
-MatrixDouble generateGamma2x2PeriodicWeights(int dim, double alphaShape = 0.2,
-                                             double betaDiagShape = 3.0,
-                                             double betaOffdiagShape = 0.25) {
-    MatrixDouble weights(dim, dim, 1.0);
-
-    const double alphaShapes[2][2] = {
-        {alphaShape, alphaShape},
-        {alphaShape, alphaShape}
-    };
-    const double betaShapes[2][2] = {
-        {betaDiagShape, betaOffdiagShape},
-        {betaOffdiagShape, betaDiagShape}
-    };
-
-    gamma_distribution<double> gammaAlpha[2][2] = {
-        {gamma_distribution<double>(alphaShapes[0][0], 1.0), gamma_distribution<double>(alphaShapes[0][1], 1.0)},
-        {gamma_distribution<double>(alphaShapes[1][0], 1.0), gamma_distribution<double>(alphaShapes[1][1], 1.0)}
-    };
-    gamma_distribution<double> gammaBeta[2][2] = {
-        {gamma_distribution<double>(betaShapes[0][0], 1.0), gamma_distribution<double>(betaShapes[0][1], 1.0)},
-        {gamma_distribution<double>(betaShapes[1][0], 1.0), gamma_distribution<double>(betaShapes[1][1], 1.0)}
-    };
-
-    // EKLP matrix convention: alpha edges are (2I, 2J+1), beta edges are (2I, 2J).
-    // The 2x2 shape matrices repeat in the black-face diagonal coordinates (I, J).
-    for (int i = 0; i < dim; i += 2) {
-        int pi = (i / 2) & 1;
-        for (int j = 0; j < dim; j += 2) {
-            int pj = (j / 2) & 1;
-            weights.at(i, j) = gammaBeta[pi][pj](rng);
-            if (j + 1 < dim) {
-                weights.at(i, j + 1) = gammaAlpha[pi][pj](rng);
-            }
-        }
-    }
-    return weights;
-}
-
 MatrixDouble generate2x2PeriodicWeights(int dim, double a, double b) {
     MatrixDouble weights(dim, dim);
     for (int i = 0; i < dim; i++) {
@@ -666,101 +628,38 @@ pair<vector<MatrixDouble>, vector<MatrixDouble>> d3pslim(const MatrixDouble& x1)
     return {std::move(A1), std::move(A2)};
 }
 
-vector<MatrixDouble> probsslim(const MatrixDouble& weights) {
-    const int dim = weights.size();
-    const int levels = dim / 2;
-    vector<MatrixDouble> probabilities;
-    probabilities.reserve(levels);
-    probabilities.resize(levels);
+vector<MatrixDouble> probsslim(const MatrixDouble& x1) {
+    auto [a1, a2] = d3pslim(x1);
+    int n = a1.size();
+    vector<MatrixDouble> A;
+    // OPTIMIZATION: Pre-reserve
+    A.reserve(n);
 
-    MatrixDouble currentValue(dim, dim, 0.0);
-    MatrixInt currentExp(dim, dim, 0);
+    for (int k = 0; k < n; k++) {
+        int size = k + 1;
+        MatrixDouble C(size, size, 0.0);
 
-    for (int i = 0; i < dim; i++) {
-        for (int j = 0; j < dim; j++) {
-            if (weights.at(i, j) == 0.0) {
-                currentValue.at(i, j) = 1.0;
-                currentExp.at(i, j) = 1;
-            } else {
-                currentValue.at(i, j) = weights.at(i, j);
-                currentExp.at(i, j) = 0;
-            }
-        }
-    }
-
-    for (int size = dim; size >= 2; size -= 2) {
-        const int rows = size / 2;
-        probabilities[rows - 1] = MatrixDouble(rows, rows, 0.0);
-        MatrixDouble& probs = probabilities[rows - 1];
-
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < rows; j++) {
-                const int i0 = i << 1;
-                const int j0 = j << 1;
-                int exp1 = currentExp.at(i0, j0) + currentExp.at(i0 + 1, j0 + 1);
-                int exp2 = currentExp.at(i0 + 1, j0) + currentExp.at(i0, j0 + 1);
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                double exp1 = a2[n-k-1].at(2*i, 2*j) + a2[n-k-1].at(2*i+1, 2*j+1);
+                double exp2 = a2[n-k-1].at(2*i+1, 2*j) + a2[n-k-1].at(2*i, 2*j+1);
 
                 if (exp1 > exp2) {
-                    probs.at(i, j) = 0.0;
+                    C.at(i, j) = 0.0;
                 } else if (exp1 < exp2) {
-                    probs.at(i, j) = 1.0;
+                    C.at(i, j) = 1.0;
                 } else {
-                    double num = currentValue.at(i0 + 1, j0 + 1) * currentValue.at(i0, j0);
-                    double den = num + currentValue.at(i0 + 1, j0) * currentValue.at(i0, j0 + 1);
-                    if (den == 0.0) den = 1e-300;
-                    probs.at(i, j) = num / den;
+                    double num = a1[n-k-1].at(2*i+1, 2*j+1) * a1[n-k-1].at(2*i, 2*j);
+                    double den = num + a1[n-k-1].at(2*i+1, 2*j) * a1[n-k-1].at(2*i, 2*j+1);
+                    C.at(i, j) = num / den;
                 }
             }
         }
-
-        const int nextSize = size - 2;
-        if (nextSize == 0) break;
-
-        MatrixDouble nextValue(nextSize, nextSize, 0.0);
-        MatrixInt nextExp(nextSize, nextSize, 0);
-
-        for (int i = 0; i < nextSize; i++) {
-            for (int j = 0; j < nextSize; j++) {
-                const int ii = i + 2 * (i & 1);
-                const int jj = j + 2 * (j & 1);
-
-                const double current = currentValue.at(ii, jj);
-                const double diag = currentValue.at(i + 1, j + 1);
-                const double right = currentValue.at(ii, j + 1);
-                const double down = currentValue.at(i + 1, jj);
-
-                const int currentFlag = currentExp.at(ii, jj);
-                const int diagFlag = currentExp.at(i + 1, j + 1);
-                const int rightFlag = currentExp.at(ii, j + 1);
-                const int downFlag = currentExp.at(i + 1, jj);
-
-                const int sum1 = currentFlag + diagFlag;
-                const int sum2 = rightFlag + downFlag;
-                double a2;
-                int a2Exp;
-
-                if (sum1 == sum2) {
-                    a2 = current * diag + right * down;
-                    a2Exp = sum1;
-                } else if (sum1 < sum2) {
-                    a2 = current * diag;
-                    a2Exp = sum1;
-                } else {
-                    a2 = right * down;
-                    a2Exp = sum2;
-                }
-
-                if (a2 == 0.0) a2 = 1e-300;
-                nextValue.at(i, j) = current / a2;
-                nextExp.at(i, j) = currentFlag - a2Exp;
-            }
-        }
-
-        currentValue = std::move(nextValue);
-        currentExp = std::move(nextExp);
+        // OPTIMIZATION: Use move semantics
+        A.push_back(std::move(C));
     }
 
-    return probabilities;
+    return A;
 }
 
 // OPTIMIZATION: In-place delslide that reuses pre-allocated buffer
@@ -2093,9 +1992,6 @@ Weight Presets:
                         Params: --beta
   gamma                 Gamma(alpha) on alpha-edges, Gamma(beta) on beta-edges
                         Params: --alpha (default 0.2), --beta (default 0.25)
-  gamma-2x2-periodic    Gamma with 2x2 periodic shape matrices: alpha_ij=0.2,
-                        beta_00=beta_11=3, beta_01=beta_10=0.25
-                        Alias: gamma-periodic-2x2
   2x2periodic           Checkerboard 4x4 block pattern
                         Params: --a, --b
 
@@ -2142,7 +2038,6 @@ Examples:
   ./double_dimer 200 -o output.png
   ./double_dimer -n 300 --preset gamma -o gamma.png
   ./double_dimer 300 --preset gamma --alpha 0.2 --beta 0.25 -o biased.png
-  ./double_dimer 300 --preset gamma-2x2-periodic --seed 42 -o gamma2x2.png
 
   # Layered weights
   ./double_dimer 200 --preset diagonal-layered --v1 2 --v2 0.5 -o diag.png
@@ -2276,8 +2171,6 @@ MatrixDouble generateWeightsFromPreset(const Args& args, int dim) {
         return generateGaussianWeights(dim, args.beta);
     } else if (args.preset == "gamma") {
         return generateBiasedGammaWeights(dim, args.alpha, args.beta);
-    } else if (args.preset == "gamma-2x2-periodic" || args.preset == "gamma-periodic-2x2") {
-        return generateGamma2x2PeriodicWeights(dim);
     } else if (args.preset == "2x2periodic") {
         return generate2x2PeriodicWeights(dim, args.a, args.b);
     } else if (args.preset == "diagonal-layered") {
@@ -2365,12 +2258,6 @@ int main(int argc, char* argv[]) {
     } else if (args.preset == "gamma") {
         weights = generateBiasedGammaWeights(dim, args.alpha, args.beta);
         if (args.verbose) cerr << "  Gamma: alpha=" << args.alpha << ", beta=" << args.beta << endl;
-    } else if (args.preset == "gamma-2x2-periodic" || args.preset == "gamma-periodic-2x2") {
-        weights = generateGamma2x2PeriodicWeights(dim);
-        if (args.verbose) {
-            cerr << "  Gamma 2x2 periodic shapes: alpha=[0.2 0.2; 0.2 0.2], "
-                 << "beta=[3 0.25; 0.25 3]" << endl;
-        }
     } else if (args.preset == "2x2periodic") {
         weights = generate2x2PeriodicWeights(dim, args.a, args.b);
     } else if (args.preset == "diagonal-layered") {

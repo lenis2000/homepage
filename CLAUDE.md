@@ -4,6 +4,7 @@
 - For cpp compile, look at their preambles
 - Simulation-specific documentation is in `_simulations/CLAUDE.md`
 - Simulation pages use `a11y-description` front matter for screen reader descriptions (rendered as visually-hidden text by `_layouts/sim_page.html`). Add this field when creating new simulation pages.
+- For ralphex Docker runs on homepage plans, build `ralphex-homepage:latest` with `docker build -t ralphex-homepage:latest -f Dockerfile.ralphex-homepage .` and run with `RALPHEX_IMAGE=ralphex-homepage:latest`. The image includes Ruby/Bundler/Jekyll, Emscripten, Chromium, and `agent-browser`; use the normal ralphex pipeline because repository-local `.ralphex` overrides were removed.
 
 ## Paper Posts & S3 Storage
 

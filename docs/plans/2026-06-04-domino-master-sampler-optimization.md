@@ -114,7 +114,7 @@ Keep SVG/TikZ/PDF export capability, but make the interactive 2D display canvas-
 - [x] Port existing 2D overlays to canvas or hybrid overlay rendering: checkerboard, paths, dimers, and height labels for n <= 30. Keep overlay drawing disabled or simplified automatically when n is too large.
 - [x] Improve 2D visual polish: crisp HiDPI output, better centered initial fit, dark-mode background/border variables, optional small border gap that does not create blurry seams, and palette/grayscale updates without full DOM rebuilds.
 - [x] Keep PNG export working from the canvas; keep PDF/TikZ export by generating from cached domino data or the preserved SVG path.
-- [x] Verify n=500 pan/zoom is fluid and that switching 3D -> 2D reuses cached domino data without resampling. (Automated static check verifies cached `drawImage()` pan/zoom and cached 3D -> 2D switching; subjective fluidity not automatable here.)
+- [x] Verify n=500 pan/zoom is fluid and that switching 3D -> 2D reuses cached domino data without resampling. (Automated smoke checks cover the canvas render path and cached 3D -> 2D switching; subjective fluidity not automatable here.)
 
 ### Task 5: Keep `/domino/` 3D out of the default path
 
