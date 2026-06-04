@@ -91,14 +91,14 @@ Port the allocation and RNG improvements from `double-dimer-cli.cpp` and the RSK
 
 Make the frontend avoid unnecessary work and fail descriptively.
 
-- [ ] In `updateVisualization()`, check for null WASM pointers before `UTF8ToString`, parse C++ `{error: ...}` responses explicitly, and clear stale status/timing on failure.
-- [ ] Switch the initial active pane/buttons/CSS state so the page opens in 2D by default, and set the `No 3D (faster)` checkbox checked by default.
-- [ ] Split sampling, parsing, 2D rendering, height computation, and 3D rendering into clearly named functions so visible-view decisions happen before expensive work.
-- [ ] If the active view is 2D or `No 3D` is checked, skip height-map computation and all Three.js geometry work entirely.
-- [ ] If the active view is 3D and `n > 300`, show the existing large-tiling message without creating/discarding WebGL objects.
-- [ ] In Glauber updates, update only the visible view; invalidate the 2D canvas cache when the domino configuration changes, and avoid hidden 3D rebuilds.
-- [ ] Throttle progress/status updates to animation frames or coarse intervals so status text does not become a bottleneck for large n.
-- [ ] Preserve all existing controls, IDs, button behavior, export behavior, palette behavior, and existing keyboard shortcuts, but do not add new shortcuts.
+- [x] In `updateVisualization()`, check for null WASM pointers before `UTF8ToString`, parse C++ `{error: ...}` responses explicitly, and clear stale status/timing on failure.
+- [x] Switch the initial active pane/buttons/CSS state so the page opens in 2D by default, and set the `No 3D (faster)` checkbox checked by default.
+- [x] Split sampling, parsing, 2D rendering, height computation, and 3D rendering into clearly named functions so visible-view decisions happen before expensive work.
+- [x] If the active view is 2D or `No 3D` is checked, skip height-map computation and all Three.js geometry work entirely.
+- [x] If the active view is 3D and `n > 300`, show the existing large-tiling message without creating/discarding WebGL objects.
+- [x] In Glauber updates, update only the visible view; invalidate the 2D canvas cache when the domino configuration changes, and avoid hidden 3D rebuilds.
+- [x] Throttle progress/status updates to animation frames or coarse intervals so status text does not become a bottleneck for large n.
+- [x] Preserve all existing controls, IDs, button behavior, export behavior, palette behavior, and existing keyboard shortcuts, but do not add new shortcuts.
 
 ### Task 4: Replace `/domino/` large 2D SVG drawing with a fast polished canvas path
 

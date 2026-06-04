@@ -1292,9 +1292,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // No collapsible functionality needed
 });
 
-// Helper function to create a message for large tilings (n > 300) in 3D view
-function createLargeTilingMessage() {
+function show3DCanvasMessage(html) {
   const container = document.getElementById('aztec-canvas');
+  if (!container) return;
   container.innerHTML = '';
   const messageDiv = document.createElement('div');
   messageDiv.style.width = '100%';
@@ -1309,8 +1309,17 @@ function createLargeTilingMessage() {
   messageDiv.style.fontSize = '18px';
   messageDiv.style.fontWeight = 'bold';
   messageDiv.style.textAlign = 'center';
-  messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.<br><br>To see a 3D visualization, decrease n to 300 or less and click Sample.';
+  messageDiv.innerHTML = html;
   container.appendChild(messageDiv);
+}
+
+// Helper function to create a message for large tilings (n > 300) in 3D view
+function createLargeTilingMessage() {
+  show3DCanvasMessage('For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.<br><br>To see a 3D visualization, decrease n to 300 or less and click Sample.');
+}
+
+function createNo3DMessage() {
+  show3DCanvasMessage('3D visualization disabled.<br>Uncheck "No 3D" to enable 3D rendering.<br><br>Switch to 2D view to see the visualization.');
 }
 
 Module.onRuntimeInitialized = async function() {
@@ -1350,6 +1359,26 @@ Module.onRuntimeInitialized = async function() {
   window.glauberRunning = glauberRunning;
   let glauberTimer = null;
   let lastSampleWasGlauber = false; // Track if the *last* visualization update came from Glauber
+
+  function initializeDefaultPaneState() {
+    const no3DCheckbox = document.getElementById("no-3d-checkbox");
+    if (no3DCheckbox) no3DCheckbox.checked = true;
+
+    document.getElementById("view-3d-btn")?.classList.remove("active");
+    document.getElementById("view-2d-btn")?.classList.add("active");
+
+    const canvas3D = document.getElementById("aztec-canvas");
+    const canvas2D = document.getElementById("aztec-2d-canvas");
+    if (canvas3D) canvas3D.style.display = "none";
+    if (canvas2D) canvas2D.style.display = "block";
+
+    document.getElementById("download-png-btn").style.display = "inline-block";
+    document.getElementById("download-pdf-btn").style.display = "inline-block";
+    document.getElementById("download-3d-btn").style.display = "none";
+    document.getElementById("n-input").setAttribute("max", "500");
+  }
+
+  initializeDefaultPaneState();
 
   const DOMINO_DEFAULT_BENCHMARK_CASES = [
     { n: 100, view: "2d", no3D: true, periodicity: "uniform" },
@@ -1440,10 +1469,97 @@ Module.onRuntimeInitialized = async function() {
   function showDominoProfileStatus(profile) {
     const message = profileSummary(profile);
     if (!message || !progressElem || profile.source === "benchmark") return;
-    progressElem.innerText = message;
-    setTimeout(() => {
-      if (progressElem.innerText === message) progressElem.innerText = "";
-    }, 6000);
+    setProgressStatus(message, { immediate: true, clearAfterMs: 6000 });
+  }
+
+  let statusFramePending = false;
+  let pendingStatusMessage = null;
+  let pendingStatusOptions = {};
+  let lastStatusUpdateMs = 0;
+  let statusClearTimer = null;
+  const STATUS_UPDATE_INTERVAL_MS = 125;
+
+  function setProgressStatus(message, options = {}) {
+    if (!progressElem) return;
+    pendingStatusMessage = message;
+    pendingStatusOptions = options;
+
+    const applyStatus = () => {
+      statusFramePending = false;
+      const now = dominoNow();
+      if (!pendingStatusOptions.immediate &&
+          now - lastStatusUpdateMs < STATUS_UPDATE_INTERVAL_MS) {
+        scheduleStatusFrame();
+        return;
+      }
+
+      progressElem.innerText = pendingStatusMessage || "";
+      lastStatusUpdateMs = now;
+
+      if (statusClearTimer) {
+        clearTimeout(statusClearTimer);
+        statusClearTimer = null;
+      }
+      if (pendingStatusOptions.clearAfterMs) {
+        const expectedMessage = pendingStatusMessage;
+        statusClearTimer = setTimeout(() => {
+          if (progressElem.innerText === expectedMessage) {
+            progressElem.innerText = "";
+          }
+        }, pendingStatusOptions.clearAfterMs);
+      }
+    };
+
+    function scheduleStatusFrame() {
+      if (statusFramePending) return;
+      statusFramePending = true;
+      requestAnimationFrame(applyStatus);
+    }
+
+    if (options.immediate) {
+      applyStatus();
+    } else {
+      scheduleStatusFrame();
+    }
+  }
+
+  function clearProgressStatus(options = {}) {
+    if (statusClearTimer) {
+      clearTimeout(statusClearTimer);
+      statusClearTimer = null;
+    }
+    pendingStatusMessage = "";
+    pendingStatusOptions = {};
+    if (options.immediate && progressElem) {
+      progressElem.innerText = "";
+      return;
+    }
+    setProgressStatus("", { immediate: Boolean(options.immediate) });
+  }
+
+  function getActiveView() {
+    return document.getElementById("view-2d-btn")?.classList.contains("active") ? "2d" : "3d";
+  }
+
+  function isNo3DEnabled() {
+    return Boolean(document.getElementById("no-3d-checkbox")?.checked);
+  }
+
+  function shouldRender2D(n) {
+    return getActiveView() === "2d";
+  }
+
+  function shouldRender3D(n) {
+    return getActiveView() === "3d" && n <= 300 && !isNo3DEnabled();
+  }
+
+  function shouldShowLarge3DMessage(n) {
+    return getActiveView() === "3d" && n > 300;
+  }
+
+  let domino2DCacheVersion = 0;
+  function invalidate2DCanvasCache() {
+    domino2DCacheVersion += 1;
   }
 
   // Demo mode state
@@ -1451,6 +1567,7 @@ Module.onRuntimeInitialized = async function() {
   let rotationSpeed = 0.005; // Speed of rotation in radians
 
   function initThreeJS() {
+    animationActive = true;
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0xf0f0f0);
     const container = document.getElementById('aztec-canvas');
@@ -1499,6 +1616,46 @@ Module.onRuntimeInitialized = async function() {
     scene.add(dominoGroup);
 
     animate();
+  }
+
+  function disposeThreeMesh(mesh) {
+    if (!mesh) return;
+    if (mesh.geometry) mesh.geometry.dispose();
+    if (Array.isArray(mesh.material)) {
+      mesh.material.forEach(material => material?.dispose?.());
+    } else if (mesh.material) {
+      mesh.material.dispose();
+    }
+  }
+
+  function clear3DMeshes() {
+    if (!dominoGroup) return;
+    while (dominoGroup.children.length > 0) {
+      const mesh = dominoGroup.children[0];
+      dominoGroup.remove(mesh);
+      disposeThreeMesh(mesh);
+    }
+    dominoGroup.position.set(0, 0, 0);
+    dominoGroup.rotation.set(0, 0, 0);
+    dominoGroup.scale.set(1, 1, 1);
+  }
+
+  function ensureThreeJSReady() {
+    if (isNo3DEnabled() || getActiveView() !== "3d") return false;
+    if (!renderer || !scene || !camera || !controls || !dominoGroup) {
+      initThreeJS();
+      return Boolean(renderer && scene && camera && controls && dominoGroup);
+    }
+    const container = document.getElementById('aztec-canvas');
+    if (container && renderer.domElement && !container.contains(renderer.domElement)) {
+      container.innerHTML = '';
+      container.appendChild(renderer.domElement);
+    }
+    if (!animationActive) {
+      animationActive = true;
+      animate();
+    }
+    return true;
   }
 
   function onWindowResize(){
@@ -1674,27 +1831,31 @@ Module.onRuntimeInitialized = async function() {
 
     // 2. Call C++ function
     const ptr = await performGlauberSteps(...params);
-    const jsonStr = Module.UTF8ToString(ptr);
-    freeString(ptr);
+    if (!ptr) {
+        setProgressStatus("Glauber error: WASM returned a null pointer.", { immediate: true, clearAfterMs: 4000 });
+        return 0;
+    }
+
+    let jsonStr = "";
+    try {
+        jsonStr = Module.UTF8ToString(ptr);
+    } finally {
+        freeString(ptr);
+    }
 
     // 3. Parse result and update cache
     try {
-        const result = JSON.parse(jsonStr);
-        if (result.error) {
-            console.error("Glauber error:", result.error);
-            // Optionally stop dynamics on error
-            // toggleGlauberDynamics();
-            return 0;
-        }
+        const result = parseDominoWasmResult(jsonStr, null);
         cachedDominoes = result;
+        invalidate2DCanvasCache();
         lastSampleWasGlauber = true; // Mark that Glauber produced this state
 
-        // 4. Update visualization (both 2D and 3D if applicable)
+        // 4. Update the visible visualization only
         await updateVisualizationFromCache();
 
         return nSteps; // Return number of steps successfully run
     } catch (e) {
-        console.error("Error parsing Glauber result:", e, jsonStr);
+        setProgressStatus(`Glauber error: ${e.message}`, { immediate: true, clearAfterMs: 4000 });
         return 0;
     }
   }
@@ -1776,123 +1937,9 @@ Module.onRuntimeInitialized = async function() {
     }
   }
 
-  // Function to update both 2D and 3D visualizations from cachedDominoes
+  // Function to update the visible visualization from cachedDominoes
   async function updateVisualizationFromCache() {
-    if (!cachedDominoes) return;
-
-    const n = parseInt(document.getElementById("n-input").value, 10) || 0;
-    const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
-    const is2DView = document.getElementById("view-2d-btn").classList.contains("active");
-
-    // Update 2D view immediately if active
-    if (is2DView) {
-        await render2D(cachedDominoes); // Re-render 2D SVG
-    }
-
-    // Update 3D view if active and n is suitable and 3D is not disabled
-    const no3D = document.getElementById("no-3d-checkbox").checked;
-    if (is3DView && n <= 300 && !no3D) {
-        // Clear existing domino group
-        if (dominoGroup) {
-            while(dominoGroup.children.length > 0){
-                const m = dominoGroup.children[0];
-                dominoGroup.remove(m);
-                if (m.geometry) m.geometry.dispose();
-                if (m.material) m.material.dispose();
-            }
-        } else {
-            initThreeJS(); // Reinitialize if group doesn't exist
-        }
-
-        // Recalculate height map and render (similar logic as in updateVisualization)
-        const heightMap = calculateHeightFunction(cachedDominoes);
-        const scale = 60 / (2 * n);
-        const colors = {
-          blue: hexToThreeColor(currentColors.blue),
-          green: hexToThreeColor(currentColors.green),
-          red: hexToThreeColor(currentColors.red),
-          yellow: hexToThreeColor(currentColors.yellow)
-        };
-        const showColors3D = document.getElementById("show-colors-checkbox").checked;
-        const showGradient3D = document.getElementById("height-gradient-checkbox").checked;
-        const monoColor3D = 0x999999;
-
-        // Pre-calculate all faces for height range
-        const allFaces = cachedDominoes.map(d => createDominoFaces(d, heightMap, scale));
-        let minHeight = Infinity, maxHeight = -Infinity;
-        for (const f of allFaces) {
-          if (f && f.avgHeight !== undefined) {
-            minHeight = Math.min(minHeight, f.avgHeight);
-            maxHeight = Math.max(maxHeight, f.avgHeight);
-          }
-        }
-        const heightRange = maxHeight - minHeight;
-
-        allFaces.forEach(faceData => {
-            if (!faceData || !faceData.color || !Array.isArray(faceData.vertices)) return;
-
-            try {
-                const geom = new THREE.BufferGeometry();
-                const pos = [];
-                faceData.vertices.forEach(v => pos.push(v[0] * scale, v[1] * scale, v[2] * scale));
-                geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-
-                const isH = (faceData.color === 'blue' || faceData.color === 'green');
-                // ── choose full 12‑triangle index list (6 vertices) ──
-                const indices = isH
-                  // horizontal domino (blue/green): vertices 0‑5 →
-                  //   0,1,3, 3,2,1  – top face
-                  //   0,1,4         – long left side
-                  //   3,2,5         – long right side
-                  ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
-                  // vertical domino (red/yellow): same pattern
-                  : [0,1,3, 3,2,1, 0,1,4, 3,2,5];
-
-                if (cachedDominoes.length * 6 > 65535) {
-                    geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
-                } else {
-                    geom.setIndex(indices);
-                }
-                geom.computeVertexNormals();
-
-                const colorValue = colors[faceData.color] || 0x808080;
-
-                // Apply height gradient if enabled
-                let finalColor = colorValue;
-                if (showColors3D && showGradient3D && heightRange > 0 && faceData.avgHeight !== undefined) {
-                  const t = (faceData.avgHeight - minHeight) / heightRange;
-                  const baseColor = new THREE.Color(colorValue);
-                  const darkColor = baseColor.clone().multiplyScalar(0.4);
-                  finalColor = darkColor.lerp(baseColor, t).getHex();
-                }
-
-                const mat = new THREE.MeshStandardMaterial({
-                    color: showColors3D ? finalColor : monoColor3D,
-                    side: THREE.DoubleSide,
-                    flatShading: true
-                });
-                mat.userData = { originalColorValue: colorValue, gradientColorValue: finalColor };
-                const mesh = new THREE.Mesh(geom, mat);
-                mesh.userData.originalColor = faceData.color;
-                mesh.userData.avgHeight = faceData.avgHeight;
-                dominoGroup.add(mesh);
-            } catch(e) {
-                console.error("Error creating 3D mesh during Glauber update:", e);
-            }
-        });
-
-        // Recenter (optional, could keep previous center/scale)
-        if (dominoGroup.children.length > 0) {
-            const box = new THREE.Box3().setFromObject(dominoGroup);
-            const center = box.getCenter(new THREE.Vector3());
-            center.x += -0.7; center.z += 4; // Adjust center
-            dominoGroup.position.sub(center);
-        }
-        // Ensure render happens
-        if (renderer && animationActive) {
-            //renderer.render(scene, camera); // Render handled by animate loop
-        }
-    }
+    await renderVisibleCachedDominoes();
   }
 
   // Calculate height function based on domino configuration
@@ -2062,6 +2109,318 @@ Module.onRuntimeInitialized = async function() {
     };
   }
 
+  function readSamplingWeights() {
+    const periodicity = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
+    const isFrozenH = periodicity === 'frozenH';
+    const isFrozenV = periodicity === 'frozenV';
+    let w1 = 1.0, w2 = 1.0, w3 = 1.0, w4 = 1.0, w5 = 1.0, w6 = 1.0, w7 = 1.0, w8 = 1.0, w9 = 1.0;
+    let a = 1.0, b = 1.0;
+
+    if (!isFrozenH && !isFrozenV) {
+      if (periodicity === '2x2') {
+        const aInput = document.getElementById("a-input");
+        const bInput = document.getElementById("b-input");
+        a = aInput && !isNaN(parseFloat(aInput.value)) ? parseFloat(aInput.value) : 0.5;
+        b = bInput && !isNaN(parseFloat(bInput.value)) ? parseFloat(bInput.value) : 1.0;
+        w1 = 1.0; w2 = a; w3 = 1.0;
+        w4 = b; w5 = 1.0; w6 = b;
+        w7 = 1.0; w8 = a; w9 = 1.0;
+      } else if (periodicity === '3x3') {
+        for (let i = 1; i <= 9; i++) {
+          const input = document.getElementById(`w${i}`);
+          const val = input && !isNaN(parseFloat(input.value)) ? parseFloat(input.value) : 1.0;
+          if (i === 1) w1 = val;
+          else if (i === 2) w2 = val;
+          else if (i === 3) w3 = val;
+          else if (i === 4) w4 = val;
+          else if (i === 5) w5 = val;
+          else if (i === 6) w6 = val;
+          else if (i === 7) w7 = val;
+          else if (i === 8) w8 = val;
+          else if (i === 9) w9 = val;
+        }
+      }
+    }
+
+    return { periodicity, isFrozenH, isFrozenV, weights: [w1, w2, w3, w4, w5, w6, w7, w8, w9] };
+  }
+
+  async function sampleDominoesFromWasm(n, profile, signal) {
+    const { periodicity, isFrozenH, isFrozenV, weights } = readSamplingWeights();
+    let ptr = 0;
+    const wasmStart = dominoNow();
+
+    if (isFrozenH) {
+      ptr = await simulateAztecHorizontal(n, 0,0,0,0,0,0,0,0,0,0);
+    } else if (isFrozenV) {
+      ptr = await simulateAztecVertical(n, 0,0,0,0,0,0,0,0,0,0);
+    } else if (periodicity === '6x2') {
+      const v = [];
+      for (let i = 1; i <= 12; i++) {
+        const input = document.getElementById(`w6x2_${i}`);
+        v.push(input && !isNaN(parseFloat(input.value)) ? parseFloat(input.value) : 1.0);
+      }
+      ptr = await simulateAztec6x2(n, ...v);
+    } else {
+      ptr = await simulateAztec(n, ...weights);
+    }
+
+    setDominoTiming(profile, "wasmCallMs", dominoNow() - wasmStart);
+    if (signal?.aborted) {
+      if (ptr) freeString(ptr);
+      return null;
+    }
+    if (!ptr) {
+      throw new Error("WASM sampler returned a null pointer.");
+    }
+
+    const utf8Start = dominoNow();
+    let raw = "";
+    try {
+      raw = Module.UTF8ToString(ptr);
+    } finally {
+      setDominoTiming(profile, "utf8ConversionMs", dominoNow() - utf8Start);
+      freeString(ptr);
+    }
+
+    return raw;
+  }
+
+  function parseDominoWasmResult(raw, profile) {
+    if (!raw) {
+      throw new Error("WASM sampler returned an empty response.");
+    }
+    const parseStart = dominoNow();
+    const result = JSON.parse(raw);
+    setDominoTiming(profile, "jsonParseMs", dominoNow() - parseStart);
+
+    if (result && typeof result === "object" && !Array.isArray(result) && result.error) {
+      throw new Error(result.error);
+    }
+    if (!Array.isArray(result)) {
+      throw new Error("WASM sampler returned an unexpected response.");
+    }
+    return result;
+  }
+
+  async function render2DIfVisible(dominoes, n, profile) {
+    if (!shouldRender2D(n)) {
+      skipDominoTiming(profile, "render2DMs", "2D pane inactive");
+      return false;
+    }
+
+    const render2DStart = dominoNow();
+    await render2D(dominoes);
+    setDominoTiming(profile, "render2DMs", dominoNow() - render2DStart);
+    return true;
+  }
+
+  async function render3DFromDominoes(dominoes, n, profile, signal, options = {}) {
+    if (!shouldRender3D(n)) {
+      skipDominoTiming(profile, "heightFunctionMs", isNo3DEnabled() ? "No 3D enabled" : "3D pane inactive");
+      skipDominoTiming(profile, "render3DMs", isNo3DEnabled() ? "No 3D enabled" : "3D pane inactive");
+      return false;
+    }
+
+    if (!ensureThreeJSReady()) {
+      skipDominoTiming(profile, "heightFunctionMs", "3D unavailable");
+      skipDominoTiming(profile, "render3DMs", "3D unavailable");
+      return false;
+    }
+
+    clear3DMeshes();
+    const wasInDemoMode = isDemoMode;
+
+    setProgressStatus("Calculating height function...");
+    await sleep(10);
+    if (signal?.aborted) return false;
+
+    const heightStart = dominoNow();
+    const heightMap = calculateHeightFunction(dominoes);
+    setDominoTiming(profile, "heightFunctionMs", dominoNow() - heightStart);
+    if (signal?.aborted) return false;
+
+    const scale = 60 / (2 * n);
+    const colors = {
+      blue: hexToThreeColor(currentColors.blue),
+      green: hexToThreeColor(currentColors.green),
+      red: hexToThreeColor(currentColors.red),
+      yellow: hexToThreeColor(currentColors.yellow)
+    };
+
+    setProgressStatus("Processing domino data...");
+    await sleep(10);
+    if (signal?.aborted) return false;
+
+    const render3DStart = dominoNow();
+    const faces = [];
+    const CHUNK_SIZE = 200;
+    for (let i = 0; i < dominoes.length; i += CHUNK_SIZE) {
+      if (signal?.aborted) return false;
+      const chunk = dominoes.slice(i, i + CHUNK_SIZE);
+      const chunkFaces = chunk.map(domino => createDominoFaces(domino, heightMap, scale));
+      faces.push(...chunkFaces);
+      setProgressStatus(`Processing... (${Math.floor(100 * (i + chunk.length) / dominoes.length)}%)`);
+      await sleep(0);
+    }
+
+    const total = faces.length;
+    if (total === 0 || signal?.aborted) return false;
+
+    let minHeight = Infinity, maxHeight = -Infinity;
+    for (const f of faces) {
+      if (f && f.avgHeight !== undefined) {
+        minHeight = Math.min(minHeight, f.avgHeight);
+        maxHeight = Math.max(maxHeight, f.avgHeight);
+      }
+    }
+    const heightRange = maxHeight - minHeight;
+
+    setProgressStatus("Rendering...");
+    let idx = 0;
+
+    function processBatch(start) {
+      return new Promise(resolve => {
+        requestAnimationFrame(() => {
+          if (signal?.aborted) {
+            resolve(false);
+            return;
+          }
+
+          const BATCH_SIZE = 200;
+          const end = Math.min(start + BATCH_SIZE, total);
+
+          for (let i = start; i < end; i++) {
+            if (signal?.aborted) {
+              resolve(false);
+              return;
+            }
+
+            const f = faces[i];
+            if (!f || !f.color || !Array.isArray(f.vertices)) continue;
+
+            try {
+              const geom = new THREE.BufferGeometry();
+              const pos = [];
+              for (const v of f.vertices) {
+                pos.push(v[0] * scale, v[1] * scale, v[2] * scale);
+              }
+
+              geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+
+              const isH = (f.color === 'blue' || f.color === 'green');
+              const indices = isH
+                ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
+                : [0,1,3, 3,2,1, 0,1,4, 3,2,5];
+
+              if (total > 65535 / 6) {
+                geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
+              } else {
+                geom.setIndex(indices);
+              }
+
+              geom.computeVertexNormals();
+
+              const showColors = document.getElementById("show-colors-checkbox").checked;
+              const showGradient = document.getElementById("height-gradient-checkbox").checked;
+              const monoColor = 0x999999;
+              const colorValue = colors[f.color] || 0x808080;
+
+              let finalColor = colorValue;
+              if (showColors && showGradient && heightRange > 0 && f.avgHeight !== undefined) {
+                const t = (f.avgHeight - minHeight) / heightRange;
+                const baseColor = new THREE.Color(colorValue);
+                const darkColor = baseColor.clone().multiplyScalar(0.4);
+                finalColor = darkColor.lerp(baseColor, t).getHex();
+              }
+
+              const mat = new THREE.MeshStandardMaterial({
+                color: showColors ? finalColor : monoColor,
+                side: THREE.DoubleSide,
+                flatShading: true
+              });
+              mat.userData = { originalColorValue: colorValue, gradientColorValue: finalColor };
+
+              const mesh = new THREE.Mesh(geom, mat);
+              mesh.userData.originalColor = f.color;
+              mesh.userData.avgHeight = f.avgHeight;
+              dominoGroup.add(mesh);
+            } catch (e) {
+
+            }
+          }
+
+          idx = end;
+          setProgressStatus(`Rendering... (${Math.floor(100 * (idx / total))}%)`);
+          resolve(idx < total);
+        });
+      });
+    }
+
+    let hasMore = true;
+    while (hasMore && (!signal || simulationActive) && !signal?.aborted) {
+      hasMore = await processBatch(idx);
+    }
+    if (signal?.aborted) return false;
+
+    if (idx >= total && dominoGroup.children.length > 0) {
+      const box = new THREE.Box3().setFromObject(dominoGroup);
+      const center = box.getCenter(new THREE.Vector3());
+      center.x += -0.7;
+      center.z += 4;
+      dominoGroup.position.sub(center);
+
+      const sizeXYZ = box.getSize(new THREE.Vector3());
+      const margin = 0.05;
+      const viewW = camera.right - camera.left;
+      const viewH = camera.top - camera.bottom;
+      const maxScale = (1 - margin) * Math.min(
+        viewW / sizeXYZ.x,
+        viewH / sizeXYZ.z
+      );
+
+      dominoGroup.scale.setScalar(maxScale);
+      controls.target.set(0, 0, 0);
+      controls.update();
+
+      if (wasInDemoMode || options.restoreDemoMode) {
+        setDemoViewCamera();
+      }
+
+      setDominoTiming(profile, "render3DMs", dominoNow() - render3DStart);
+    }
+
+    return true;
+  }
+
+  async function renderVisibleCachedDominoes(profile = null, signal = null) {
+    if (!cachedDominoes) return;
+    const n = parseInt(document.getElementById("n-input").value, 10) || 0;
+
+    if (getActiveView() === "2d") {
+      const render2DStart = dominoNow();
+      await render2D(cachedDominoes);
+      setDominoTiming(profile, "render2DMs", dominoNow() - render2DStart);
+      return;
+    }
+
+    if (shouldShowLarge3DMessage(n)) {
+      createLargeTilingMessage();
+      skipDominoTiming(profile, "heightFunctionMs", "3D unavailable for n > 300");
+      skipDominoTiming(profile, "render3DMs", "3D unavailable for n > 300");
+      return;
+    }
+
+    if (isNo3DEnabled()) {
+      createNo3DMessage();
+      skipDominoTiming(profile, "heightFunctionMs", "No 3D enabled");
+      skipDominoTiming(profile, "render3DMs", "No 3D enabled");
+      return;
+    }
+
+    await render3DFromDominoes(cachedDominoes, n, profile, signal);
+  }
+
   async function updateVisualization(n, profileOptions = {}) {
     const profile = createDominoProfile(n, profileOptions);
     let profileCompleted = false;
@@ -2079,426 +2438,82 @@ Module.onRuntimeInitialized = async function() {
     }
     lastSampleWasGlauber = false; // Reset flag when generating a fresh sample
 
-    const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
-    const no3DAtStart = document.getElementById("no-3d-checkbox").checked;
-    const shouldPrepare3D = is3DView && n <= 300 && !no3DAtStart;
-
-    /* ------------------------------------------------------------------ */
-     /* 1. wipe previous geometry *and* transforms                          */
-     /* ------------------------------------------------------------------ */
-     if (dominoGroup) {
-       dominoGroup.clear();                    // three ≥ r152 preferred to loop/remove
-       dominoGroup.position.set(0, 0, 0);
-       dominoGroup.rotation.set(0, 0, 0);
-       dominoGroup.scale.set(1, 1, 1);         // <‑‑ the crucial line
-     } else if (shouldPrepare3D) {
-       // Something went wrong with the 3D scene - reinitialize
-
-       initThreeJS();
-     }
-     /* ------------------------------------------------------------------ */
-
-
-    // Check if we're in 3D view with n > 300
-    const skip3DRendering = is3DView && n > 300;
-
-    // Get the current periodicity setting
-    const periodicity = document.querySelector('input[name="periodicity"]:checked').value;
-    const isFrozenH = (periodicity === 'frozenH');
-    const isFrozenV = (periodicity === 'frozenV');
-
-    let w1=1.0, w2=1.0, w3=1.0, w4=1.0, w5=1.0, w6=1.0, w7=1.0, w8=1.0, w9=1.0;
-    let a=1.0, b=1.0;
-
-    if (!isFrozenH && !isFrozenV) {
-      if (periodicity === '2x2') {
-        // Safe get values with defaults
-        const aInput = document.getElementById("a-input");
-        const bInput = document.getElementById("b-input");
-        a = aInput && !isNaN(parseFloat(aInput.value)) ? parseFloat(aInput.value) : 0.5;
-        b = bInput && !isNaN(parseFloat(bInput.value)) ? parseFloat(bInput.value) : 1.0;
-
-        // For 2x2, we'll set the 3x3 weights specially
-        w1 = 1.0; w2 = a; w3 = 1.0;
-        w4 = b; w5 = 1.0; w6 = b;
-        w7 = 1.0; w8 = a; w9 = 1.0;
-      } else if (periodicity === '3x3') {
-        // Get values from the 3x3 weight inputs
-        for (let i = 1; i <= 9; i++) {
-          const input = document.getElementById(`w${i}`);
-          const val = input && !isNaN(parseFloat(input.value)) ? parseFloat(input.value) : 1.0;
-          if (i === 1) w1 = val;
-          else if (i === 2) w2 = val;
-          else if (i === 3) w3 = val;
-          else if (i === 4) w4 = val;
-          else if (i === 5) w5 = val;
-          else if (i === 6) w6 = val;
-          else if (i === 7) w7 = val;
-          else if (i === 8) w8 = val;
-          else if (i === 9) w9 = val;
-        }
-
-
-      } else {
-        // Uniform weights - all weights are 1.0
-        w1 = 1.0; w2 = 1.0; w3 = 1.0;
-        w4 = 1.0; w5 = 1.0; w6 = 1.0;
-        w7 = 1.0; w8 = 1.0; w9 = 1.0;
-
-
-      }
-    }
-    // Clear previous models
-    if (dominoGroup && dominoGroup.children) {
-      // Improved clearing that's safer and handles possible null conditions
-      while(dominoGroup.children && dominoGroup.children.length > 0){
-        const m = dominoGroup.children[0];
-        if (m) {
-          dominoGroup.remove(m);
-          if (m.geometry) m.geometry.dispose();
-          if (m.material) m.material.dispose();
-        }
-      }
+    if (shouldShowLarge3DMessage(n)) {
+      createLargeTilingMessage();
+      clearProgressStatus({ immediate: true });
+      skipDominoTiming(profile, "wasmCallMs", "3D unavailable for n > 300");
+      skipDominoTiming(profile, "utf8ConversionMs", "3D unavailable for n > 300");
+      skipDominoTiming(profile, "jsonParseMs", "3D unavailable for n > 300");
+      skipDominoTiming(profile, "render2DMs", "2D pane inactive");
+      skipDominoTiming(profile, "heightFunctionMs", "3D unavailable for n > 300");
+      skipDominoTiming(profile, "render3DMs", "3D unavailable for n > 300");
+      return completeProfile("ok");
     }
 
-    // Remember demo mode state
-    const wasInDemoMode = isDemoMode;
+    if (getActiveView() === "3d" && isNo3DEnabled()) {
+      createNo3DMessage();
+      clearProgressStatus({ immediate: true });
+      skipDominoTiming(profile, "wasmCallMs", "No 3D enabled");
+      skipDominoTiming(profile, "utf8ConversionMs", "No 3D enabled");
+      skipDominoTiming(profile, "jsonParseMs", "No 3D enabled");
+      skipDominoTiming(profile, "render2DMs", "2D pane inactive");
+      skipDominoTiming(profile, "heightFunctionMs", "No 3D enabled");
+      skipDominoTiming(profile, "render3DMs", "No 3D enabled");
+      return completeProfile("ok");
+    }
 
     startSimulation();
     const signal = abortController.signal;
 
     // Start progress polling
-    progressElem.innerText = "Sampling... (0%)";
+    setProgressStatus("Sampling... (0%)", { immediate: true });
     progressInterval = setInterval(() => {
       if (!simulationActive) {
         clearInterval(progressInterval);
         return;
       }
       const p = getProgress();
-      progressElem.innerText = `Sampling... (${p}%)`;
+      setProgressStatus(`Sampling... (${p}%)`);
       if(p >= 100) clearInterval(progressInterval);
-    }, 100);
+    }, 250);
 
     try {
       // Allow UI to update before starting heavy computation
       await sleep(50);
       if (signal.aborted) return completeProfile("aborted");
 
-      // Get domino configuration from C++ code
-      let ptrPromise;
-      const wasmStart = dominoNow();
-      if (isFrozenH) {
-        ptrPromise = simulateAztecHorizontal(n, 0,0,0,0,0,0,0,0,0,0);
-      } else if (isFrozenV) {
-        ptrPromise = simulateAztecVertical(n, 0,0,0,0,0,0,0,0,0,0);
-      } else if (periodicity === '6x2') {
-        const v = [];
-        for (let i = 1; i <= 12; i++) {
-            const input = document.getElementById(`w6x2_${i}`);
-            v.push(input && !isNaN(parseFloat(input.value)) ? parseFloat(input.value) : 1.0);
-        }
-        ptrPromise = simulateAztec6x2(n, ...v);
-      } else {
-        ptrPromise = simulateAztec(n, w1,w2,w3,w4,w5,w6,w7,w8,w9);
-      }
+      const raw = await sampleDominoesFromWasm(n, profile, signal);
+      if (raw === null || signal.aborted) return completeProfile("aborted");
 
-      // Wait for simulation to complete
-      const ptr = await ptrPromise;
-      setDominoTiming(profile, "wasmCallMs", dominoNow() - wasmStart);
-      if (signal.aborted) {
-        if (ptr) freeString(ptr);
-        return completeProfile("aborted");
-      }
-
-      const utf8Start = dominoNow();
-      let raw = Module.UTF8ToString(ptr);
-      setDominoTiming(profile, "utf8ConversionMs", dominoNow() - utf8Start);
-      freeString(ptr);
-      if (signal.aborted) return completeProfile("aborted");
-
-      // Parse the results
-      const parseStart = dominoNow();
-      const dominoes = JSON.parse(raw);
-      setDominoTiming(profile, "jsonParseMs", dominoNow() - parseStart);
-      if (dominoes.error) throw new Error(dominoes.error);
+      const dominoes = parseDominoWasmResult(raw, profile);
       if (signal.aborted) return completeProfile("aborted");
 
       // Cache the dominoes for 2D view
       cachedDominoes = dominoes;
+      invalidate2DCanvasCache();
 
-      // Check if this is a large tiling (n > 300)
-      const isLargeTiling = n > 300;
+      await render2DIfVisible(dominoes, n, profile);
+      if (signal.aborted) return completeProfile("aborted");
 
-
-      /* Only render the 2‑D SVG if the pane is actually on screen
-         (mobile Safari gives it height 0 while it is display:none).      */
-      const need2D = document.getElementById("view-2d-btn")
-                         .classList.contains("active")        // user is in 2‑D view
-                   || n > 300;                                // 3‑D disabled anyway
-      if (need2D) {
-        const render2DStart = dominoNow();
-        await render2D(dominoes);
-        setDominoTiming(profile, "render2DMs", dominoNow() - render2DStart);
+      if (!shouldRender3D(n)) {
+        const reason = getActiveView() === "2d" ? "2D view active" : "No 3D enabled";
+        skipDominoTiming(profile, "heightFunctionMs", reason);
+        skipDominoTiming(profile, "render3DMs", reason);
       } else {
-        skipDominoTiming(profile, "render2DMs", "2D pane inactive");
+        const rendered3D = await render3DFromDominoes(dominoes, n, profile, signal);
+        if (!rendered3D && signal.aborted) return completeProfile("aborted");
       }
 
-      // For large tilings (n > 300), prepare a message for 3D view
-      if (isLargeTiling) {
-
-        // Create a div with a message in the 3D canvas container
-        const container = document.getElementById('aztec-canvas');
-        container.innerHTML = '';
-        const messageDiv = document.createElement('div');
-        messageDiv.style.width = '100%';
-        messageDiv.style.height = '100%';
-        messageDiv.style.display = 'flex';
-        messageDiv.style.alignItems = 'center';
-        messageDiv.style.justifyContent = 'center';
-        messageDiv.style.backgroundColor = '#f0f0f0';
-        messageDiv.style.border = '1px solid #ccc';
-        messageDiv.style.padding = '20px';
-        messageDiv.style.boxSizing = 'border-box';
-        messageDiv.style.fontSize = '18px';
-        messageDiv.style.fontWeight = 'bold';
-        messageDiv.style.textAlign = 'center';
-        messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.<br><br>To see a 3D visualization, decrease n to 300 or less and click Sample.';
-        container.appendChild(messageDiv);
-
-        progressElem.innerText = "";
-        stopSimulation();
-        skipDominoTiming(profile, "heightFunctionMs", "3D unavailable for n > 300");
-        skipDominoTiming(profile, "render3DMs", "3D unavailable for n > 300");
-        return completeProfile("ok");
-      }
-
-      // For n ≤ 300, check if 3D rendering is disabled
-      const no3D = document.getElementById("no-3d-checkbox").checked;
-      if (no3D) {
-        // Skip 3D processing entirely when no 3D is checked
-        progressElem.innerText = "";
-        stopSimulation();
-        skipDominoTiming(profile, "heightFunctionMs", "No 3D enabled");
-        skipDominoTiming(profile, "render3DMs", "No 3D enabled");
-        return completeProfile("ok");
-      }
-
-      progressElem.innerText = "Calculating height function...";
-      await sleep(10);
-      if (signal.aborted) return completeProfile("aborted");
-
-      // Calculate the height function (in chunks if large)
-      const heightStart = dominoNow();
-      const heightMap = calculateHeightFunction(dominoes);
-      setDominoTiming(profile, "heightFunctionMs", dominoNow() - heightStart);
-      if (signal.aborted) return completeProfile("aborted");
-
-      // Scale factor based on n
-      const scale = 60/(2*n);
-
-      // Colors for the materials - use current custom colors
-      const colors = {
-        blue:   hexToThreeColor(currentColors.blue),
-        green:  hexToThreeColor(currentColors.green),
-        red:    hexToThreeColor(currentColors.red),
-        yellow: hexToThreeColor(currentColors.yellow)
-      };
-
-      // Create the 3D faces with proper heights
-      progressElem.innerText = "Processing domino data...";
-      await sleep(10);
-      if (signal.aborted) return completeProfile("aborted");
-
-      // Process faces in chunks to keep UI responsive
-      const render3DStart = dominoNow();
-      const facesPromise = (async () => {
-        const faces = [];
-        const CHUNK_SIZE = 200;
-
-        for (let i = 0; i < dominoes.length; i += CHUNK_SIZE) {
-          if (signal.aborted) return null;
-
-          // Process a chunk of dominoes
-          const chunk = dominoes.slice(i, i + CHUNK_SIZE);
-          const chunkFaces = chunk.map(domino =>
-            createDominoFaces(domino, heightMap, scale));
-          faces.push(...chunkFaces);
-
-          // Update progress and yield to UI
-          progressElem.innerText =
-            `Processing... (${Math.floor(100*(i+chunk.length)/dominoes.length)}%)`;
-          await sleep(0);
-        }
-
-        return faces;
-      })();
-
-      const faces = await facesPromise;
-      if (!faces || signal.aborted) return completeProfile("aborted");
-
-      const total = faces.length;
-      if (total === 0 || signal.aborted) return completeProfile("aborted");
-
-      // Calculate height range for gradient coloring
-      let minHeight = Infinity, maxHeight = -Infinity;
-      for (const f of faces) {
-        if (f && f.avgHeight !== undefined) {
-          minHeight = Math.min(minHeight, f.avgHeight);
-          maxHeight = Math.max(maxHeight, f.avgHeight);
-        }
-      }
-      const heightRange = maxHeight - minHeight;
-
-      // Batch processing of faces for better performance
-      progressElem.innerText = "Rendering...";
-      let idx = 0;
-
-      function processBatch(start) {
-        return new Promise(resolve => {
-          requestAnimationFrame(() => {
-            if (signal.aborted) {
-              resolve(false);
-              return;
-            }
-
-            const BATCH_SIZE = 200;
-            const end = Math.min(start + BATCH_SIZE, total);
-
-            for (let i = start; i < end; i++) {
-              if (signal.aborted) {
-                resolve(false);
-                return;
-              }
-
-              const f = faces[i];
-              if (!f || !f.color || !Array.isArray(f.vertices)) continue;
-
-              try {
-                const geom = new THREE.BufferGeometry();
-                // Vertices positions
-                const pos = [];
-                for (const v of f.vertices) {
-                  pos.push(v[0]*scale, v[1]*scale, v[2]*scale);
-                }
-
-                geom.setAttribute(
-                  'position',
-                  new THREE.Float32BufferAttribute(pos, 3)
-                );
-
-                // Triangulation indices
-                const isH = (f.color === 'blue' || f.color === 'green');
-                const indices = isH
-                  ? [0,1,3, 3,2,1, 0,1,4, 3,2,5]
-                  : [0,1,3, 3,2,1, 0,1,4, 3,2,5];
-
-                // Use 32-bit indices if needed for larger models
-                if (total > 65535 / 6) { // 6 vertices per domino
-                  geom.setIndex(new THREE.BufferAttribute(new Uint32Array(indices), 1));
-                } else {
-                  geom.setIndex(indices);
-                }
-
-                geom.computeVertexNormals();
-
-                // Check if we should show colors in 3D view
-                const showColors = document.getElementById("show-colors-checkbox").checked;
-                const showGradient = document.getElementById("height-gradient-checkbox").checked;
-                const monoColor = 0x999999; // Default monochrome color when not showing colors
-                const colorValue = colors[f.color] || 0x808080;
-
-                // Apply height gradient if enabled
-                let finalColor = colorValue;
-                if (showColors && showGradient && heightRange > 0 && f.avgHeight !== undefined) {
-                  const t = (f.avgHeight - minHeight) / heightRange; // 0 at bottom, 1 at top
-                  const baseColor = new THREE.Color(colorValue);
-                  const darkColor = baseColor.clone().multiplyScalar(0.4); // darker at bottom
-                  finalColor = darkColor.lerp(baseColor, t).getHex();
-                }
-
-                const mat = new THREE.MeshStandardMaterial({
-                  color: showColors ? finalColor : monoColor,
-                  side: THREE.DoubleSide,
-                  flatShading: true
-                });
-
-                // Store the original color code for later use in the userData
-                mat.userData = { originalColorValue: colorValue, gradientColorValue: finalColor };
-
-                // Create the mesh and store the original color for later toggling
-                const mesh = new THREE.Mesh(geom, mat);
-                mesh.userData.originalColor = f.color;
-                mesh.userData.avgHeight = f.avgHeight;
-
-                dominoGroup.add(mesh);
-              } catch(e) {
-
-              }
-            }
-
-            idx = end;
-            progressElem.innerText = `Rendering... (${Math.floor(100*(idx/total))}%)`;
-            resolve(idx < total);
-          });
-        });
-      }
-
-      // Process batches sequentially with yield points for UI
-      let hasMore = true;
-      while (hasMore && simulationActive && !signal.aborted) {
-        hasMore = await processBatch(idx);
-      }
-
-      if (signal.aborted) return completeProfile("aborted");
-
-      // Only finish if we completed all batches
-      if (idx >= total) {
-        progressElem.innerText = "";
-
-        // === recentre the tiling ===
-        const box = new THREE.Box3().setFromObject(dominoGroup);
-        const center = box.getCenter(new THREE.Vector3());
-        // Shift the center a little for better visualization
-        center.x += -0.7;  // Shift right a bit
-        center.z +=  4;  // Shift forward a bit
-        dominoGroup.position.sub(center);
-
-        const sizeXYZ   = box.getSize(new THREE.Vector3());       // model extents
-        const margin    = 0.05;                                   // 5 % breathing room
-
-        // For an orthographic camera its “view size” is the difference of the planes:
-        const viewW = camera.right  - camera.left;
-        const viewH = camera.top    - camera.bottom;
-
-        /* choose the limiting dimension (the one that would clip first) */
-        const maxScale = (1 - margin) * Math.min(
-          viewW / sizeXYZ.x,
-          viewH / sizeXYZ.z          // z‑extent projects to vertical axis in your set‑up
-        );
-
-        dominoGroup.scale.setScalar(maxScale);
-        controls.target.set(0, 0, 0);   // orbit around the true centre
-        controls.update();
-
-        // If we were in demo mode before update, restore demo view
-        if (wasInDemoMode) {
-          setDemoViewCamera();
-        }
-
-        setDominoTiming(profile, "render3DMs", dominoNow() - render3DStart);
-      }
-
-      // Cleanup - reuse the stopSimulation function since it handles everything properly
       stopSimulation();
-      if (progressElem) progressElem.innerText = "";
+      clearProgressStatus({ immediate: true });
       return completeProfile("ok");
 
     } catch(err) {
 
       profile.error = err.message;
-      if (progressElem) progressElem.innerText = `Error: ${err.message}`;
-      // Also use stopSimulation for cleanup on error
       stopSimulation();
+      clearProgressStatus({ immediate: true });
+      setProgressStatus(`Error: ${err.message}`, { immediate: true });
       return completeProfile("error");
     }
   }
@@ -2571,10 +2586,7 @@ Module.onRuntimeInitialized = async function() {
         document.getElementById("n-input").value = benchmarkCase.n;
         updateHeightFunctionVisibility(benchmarkCase.n);
 
-        if (progressElem) {
-          progressElem.innerText =
-            `Benchmark ${i + 1}/${cases.length}: ${benchmarkCase.label}`;
-        }
+        setProgressStatus(`Benchmark ${i + 1}/${cases.length}: ${benchmarkCase.label}`, { immediate: true });
 
         await sleep(options.caseDelayMs ?? 25);
         const profile = await updateVisualization(benchmarkCase.n, {
@@ -2604,12 +2616,7 @@ Module.onRuntimeInitialized = async function() {
         setBenchmarkView("2d", true);
       }
 
-      if (progressElem) {
-        progressElem.innerText = "Benchmark complete";
-        setTimeout(() => {
-          if (progressElem.innerText === "Benchmark complete") progressElem.innerText = "";
-        }, 4000);
-      }
+      setProgressStatus("Benchmark complete", { immediate: true, clearAfterMs: 4000 });
     }
 
     const summary = {
@@ -2653,46 +2660,13 @@ Module.onRuntimeInitialized = async function() {
     // Update height function visibility based on n value
     updateHeightFunctionVisibility(n);
 
-    // Get the current view (3D or 2D)
-    const is3DView = document.getElementById("view-3d-btn").classList.contains("active");
-
-    // Absolute maximum n values for each view
-    const max3DN = 300;
+    // Absolute maximum n value for the sampler.
     const max2DN = 500;
 
     // Check if n is within allowed range
-    if ((is3DView && n > max3DN && n <= max2DN)) {
-      // If in 3D view with n between 300 and 500, ask if user wants to switch to 2D
-      if (confirm(`For n > ${max3DN}, only 2D visualization is available. Switch to 2D view automatically?`)) {
-        // Switch to 2D view
-        document.getElementById("view-2d-btn").click();
-        // Now update visualization
-        updateVisualization(n);
-      }
-      return;
-    } else if (n > max2DN) {
+    if (n > max2DN) {
       // Absolute maximum exceeded
       return alert(`n is too large. Maximum value is ${max2DN}.`);
-    }
-
-    // Handle 3D view initialization and clearing
-    if (is3DView) {
-      if (n <= max3DN) {
-        // For valid n in 3D view, initialize properly
-        // Make sure the 3D view is fully initialized
-        const container = document.getElementById('aztec-canvas');
-        const hasCanvas = container.querySelector('canvas') !== null;
-
-        // Only clear the container if we're keeping the 3D view (n <= 300)
-        // and there's no WebGL canvas yet
-        if (!hasCanvas) {
-          console.log("Ensuring Three.js is initialized");
-          initThreeJS();
-        }
-
-        // Show helpful information in the progress indicator for valid n
-        progressElem.innerText = "Generating new 3D visualization...";
-      }
     }
 
     // If we get here, n is within allowed range for current view
@@ -2832,9 +2806,11 @@ Module.onRuntimeInitialized = async function() {
 
         // Update cached dominoes and refresh visualization
         cachedDominoes = newDominoes;
+        invalidate2DCanvasCache();
 
         // Stop any running simulation
         stopSimulation();
+        clearProgressStatus({ immediate: true });
 
         // Update visualization using existing cached data
         updateVisualizationFromCache();
@@ -2863,6 +2839,7 @@ Module.onRuntimeInitialized = async function() {
 
   // Set up demo view camera position
   function setDemoViewCamera() {
+    if (!camera || !controls) return;
     // Reset any existing rotation
     if (dominoGroup) dominoGroup.rotation.set(0, 0, 0);
 
@@ -2929,10 +2906,12 @@ Module.onRuntimeInitialized = async function() {
     updateColorsInVisualization();
   });
 
-  // Function to update colors in both 2D and 3D visualizations
+  // Function to update colors in the visible visualization
   function updateColorsInVisualization() {
-    // Update 3D visualization if it exists (regardless of which view is active)
-    if (dominoGroup && dominoGroup.children.length > 0) {
+    const activeView = getActiveView();
+
+    // Update 3D only when it is visible.
+    if (activeView === "3d" && !isNo3DEnabled() && dominoGroup && dominoGroup.children.length > 0) {
       // Update 3D materials
       dominoGroup.children.forEach(mesh => {
         if (mesh.material && mesh.userData.originalColor) {
@@ -2952,10 +2931,10 @@ Module.onRuntimeInitialized = async function() {
       }
     }
 
-    // Update 2D visualization if cached dominoes exist
-    if (cachedDominoes && cachedDominoes.length > 0) {
-      // Update the 2D display regardless of which view is active
+    // Update 2D only when it is visible; hidden views rebuild from cached data on switch.
+    if (activeView === "2d" && cachedDominoes && cachedDominoes.length > 0) {
       if (dominoLayer) {
+        invalidate2DCanvasCache();
         updateDominoDisplay();
       }
     }
@@ -3152,6 +3131,7 @@ Module.onRuntimeInitialized = async function() {
 
   // Camera movement controls
   document.getElementById("move-up-btn").addEventListener("click", function() {
+    if (!camera || !controls) return;
     // Move camera up relative to current view
     const moveAmount = 5;
     const upVector = new THREE.Vector3(0, 1, 0);
@@ -3162,6 +3142,7 @@ Module.onRuntimeInitialized = async function() {
   });
 
   document.getElementById("move-down-btn").addEventListener("click", function() {
+    if (!camera || !controls) return;
     // Move camera down relative to current view
     const moveAmount = 5;
     const upVector = new THREE.Vector3(0, 1, 0);
@@ -3172,6 +3153,7 @@ Module.onRuntimeInitialized = async function() {
   });
 
   document.getElementById("move-left-btn").addEventListener("click", function() {
+    if (!camera || !controls) return;
     // Move camera left relative to current view
     const moveAmount = 5;
     const rightVector = new THREE.Vector3(1, 0, 0);
@@ -3182,6 +3164,7 @@ Module.onRuntimeInitialized = async function() {
   });
 
   document.getElementById("move-right-btn").addEventListener("click", function() {
+    if (!camera || !controls) return;
     // Move camera right relative to current view
     const moveAmount = 5;
     const rightVector = new THREE.Vector3(1, 0, 0);
@@ -3193,6 +3176,7 @@ Module.onRuntimeInitialized = async function() {
 
   // Reset view button handler
   document.getElementById("reset-view-btn").addEventListener("click", function() {
+    if (!camera || !controls) return;
     if (isDemoMode) {
       setDemoViewCamera();
     } else {
@@ -3208,118 +3192,43 @@ Module.onRuntimeInitialized = async function() {
   });
 
   // View toggle handlers
-  document.getElementById("view-3d-btn").addEventListener("click", function() {
-    const no3D = document.getElementById("no-3d-checkbox").checked;
+  document.getElementById("view-3d-btn").addEventListener("click", async function() {
+    const no3D = isNo3DEnabled();
 
-    // Show 3D view, hide 2D view
     document.getElementById("aztec-canvas").style.display = "block";
     document.getElementById("aztec-2d-canvas").style.display = "none";
-
-    // Update toggle button states
     document.getElementById("view-3d-btn").classList.add("active");
     document.getElementById("view-2d-btn").classList.remove("active");
-
-    // Show/hide appropriate download buttons
     document.getElementById("download-png-btn").style.display = "none";
     document.getElementById("download-pdf-btn").style.display = "none";
     document.getElementById("download-3d-btn").style.display = no3D ? "none" : "inline-block";
-
-    // Set the max n for 3D view
     document.getElementById("n-input").setAttribute("max", "300");
 
+    const n = parseInt(document.getElementById("n-input").value, 10) || 0;
     if (no3D) {
-      // Show no 3D message
-      const container = document.getElementById('aztec-canvas');
-      container.innerHTML = '';
-      const messageDiv = document.createElement('div');
-      messageDiv.style.width = '100%';
-      messageDiv.style.height = '100%';
-      messageDiv.style.display = 'flex';
-      messageDiv.style.alignItems = 'center';
-      messageDiv.style.justifyContent = 'center';
-      messageDiv.style.backgroundColor = '#f0f0f0';
-      messageDiv.style.border = '1px solid #ccc';
-      messageDiv.style.padding = '20px';
-      messageDiv.style.boxSizing = 'border-box';
-      messageDiv.style.fontSize = '18px';
-      messageDiv.style.fontWeight = 'bold';
-      messageDiv.style.textAlign = 'center';
-      messageDiv.innerHTML = '3D visualization disabled.<br>Uncheck "No 3D" to enable 3D rendering.<br><br>Switch to 2D view to see the visualization.';
-      container.appendChild(messageDiv);
+      createNo3DMessage();
       animationActive = false;
-    } else {
-      // Resume animation for 3D view
-      if (!animationActive) {
-        animationActive = true;
-        animate();
-      }
+      return;
     }
 
-    // Check if the renderer is properly initialized/restored
-    const container = document.getElementById('aztec-canvas');
-    if (!no3D && !container.querySelector('canvas')) {
-
-      initThreeJS();
-
-      // If we have cached dominoes, render them again
-      if (cachedDominoes && cachedDominoes.length > 0) {
-        // For large n, show a message instead
-        const n = parseInt(document.getElementById("n-input").value, 10);
-        if (n > 300) {
-          createLargeTilingMessage();
-        } else {
-          // Small enough to render in 3D, try to restore
-          try {
-            const message = document.createElement('div');
-            message.style.textAlign = 'center';
-            message.style.padding = '20px';
-            message.style.fontWeight = 'bold';
-            message.innerHTML = 'Restoring 3D visualization...';
-            container.appendChild(message);
-
-            // Use setTimeout to allow the UI to update
-            setTimeout(() => {
-              updateVisualization(n);
-            }, 10);
-          } catch (e) {
-
-          }
-        }
-      }
+    if (n > 300) {
+      createLargeTilingMessage();
+      animationActive = false;
+      setProgressStatus("Using cached tiling (n > 300 is only available in 2D view)", {
+        immediate: true,
+        clearAfterMs: 3000
+      });
+      return;
     }
 
-    // If we have cached dominoes, handle the view switch appropriately
     if (cachedDominoes && cachedDominoes.length > 0) {
-      const n = parseInt(document.getElementById("n-input").value, 10);
-
-      if (n > 300) {
-        // Show message for large n
-        const container = document.getElementById('aztec-canvas');
-        container.innerHTML = '';
-        const messageDiv = document.createElement('div');
-        messageDiv.style.width = '100%';
-        messageDiv.style.height = '100%';
-        messageDiv.style.display = 'flex';
-        messageDiv.style.alignItems = 'center';
-        messageDiv.style.justifyContent = 'center';
-        messageDiv.style.backgroundColor = '#f0f0f0';
-        messageDiv.style.border = '1px solid #ccc';
-        messageDiv.style.padding = '20px';
-        messageDiv.style.boxSizing = 'border-box';
-        messageDiv.style.fontSize = '18px';
-        messageDiv.style.fontWeight = 'bold';
-        messageDiv.style.textAlign = 'center';
-        messageDiv.innerHTML = 'For n > 300, only 2D visualization is available.<br>Switch to the 2D view using the button above.<br><br>To see a 3D visualization, decrease n to 300 or less and click Sample.';
-        container.appendChild(messageDiv);
-
-        progressElem.innerText = "Using cached tiling (n > 300 is only available in 2D view)";
-        setTimeout(() => { progressElem.innerText = ""; }, 3000);
-      } else {
-        // For n ≤ 300, show informational message
-        progressElem.innerText = "Using cached 3D visualization";
-        setTimeout(() => { progressElem.innerText = ""; }, 2000);
-      }
+      setProgressStatus("Restoring cached 3D visualization...", { immediate: true });
+      await renderVisibleCachedDominoes();
+      setProgressStatus("Using cached 3D visualization", { immediate: true, clearAfterMs: 2000 });
+      return;
     }
+
+    ensureThreeJSReady();
   });
 
   // Global variable to track last rendered order value
@@ -3478,33 +3387,33 @@ Module.onRuntimeInitialized = async function() {
 
   // 2D grayscale toggle handler
   document.getElementById("grayscale-checkbox-2d").addEventListener("change", function() {
-    updateDominoDisplay();
+    if (getActiveView() === "2d") updateDominoDisplay();
   });
 
   // Checkerboard overlay toggle handler
   document.getElementById("checkerboard-checkbox-2d").addEventListener("change", function() {
-    updateDominoDisplay();
+    if (getActiveView() === "2d") updateDominoDisplay();
   });
 
   // Border width input handler - update immediately on input
   document.getElementById("border-width-input").addEventListener("input", function() {
-    updateDominoDisplay();
+    if (getActiveView() === "2d") updateDominoDisplay();
   });
 
   // Nonintersecting paths toggle handler
   document.getElementById("paths-checkbox-2d").addEventListener("change", function() {
-    updateDominoDisplay();
+    if (getActiveView() === "2d") updateDominoDisplay();
   });
 
   // Dimers toggle handler
   document.getElementById("dimers-checkbox-2d").addEventListener("change", function() {
-    updateDominoDisplay();
+    if (getActiveView() === "2d") updateDominoDisplay();
   });
 
   // Height function toggle handler
   document.getElementById("height-function-checkbox-2d").addEventListener("change", function() {
     useHeightFunction = this.checked;
-    updateDominoDisplay();
+    if (getActiveView() === "2d") updateDominoDisplay();
   });
 
   // Function to determine if a lattice face (2x2 square) is part of the checkerboard pattern
@@ -4023,15 +3932,16 @@ Module.onRuntimeInitialized = async function() {
     const showColors = this.checked; // Get the current state of the checkbox
 
 
-    // Update 2D view if it exists
+    // Update 2D view if it is visible
     const svg2dGroup = svg2d.select("g");
-    if (!svg2dGroup.empty()) {
+    if (getActiveView() === "2d" && !svg2dGroup.empty()) {
       updateDominoDisplay();
     }
 
-    // Update 3D view if it exists and we're not in a large tiling case
+    // Update 3D view only if it is visible and we're not in a large tiling case
     const n = parseInt(document.getElementById("n-input").value, 10);
-    if (n <= 300 && dominoGroup && dominoGroup.children && dominoGroup.children.length > 0) {
+    if (getActiveView() === "3d" && !isNo3DEnabled() &&
+        n <= 300 && dominoGroup && dominoGroup.children && dominoGroup.children.length > 0) {
       const monoColor3D = 0x999999;
 
       // Use current custom colors instead of hardcoded colors
@@ -4083,9 +3993,10 @@ Module.onRuntimeInitialized = async function() {
     const showGradient = this.checked;
     const showColors = document.getElementById("show-colors-checkbox").checked;
 
-    // Update 3D view if it exists and colors are shown
+    // Update 3D view only if it is visible and colors are shown
     const n = parseInt(document.getElementById("n-input").value, 10);
-    if (n <= 300 && dominoGroup && dominoGroup.children && dominoGroup.children.length > 0) {
+    if (getActiveView() === "3d" && !isNo3DEnabled() &&
+        n <= 300 && dominoGroup && dominoGroup.children && dominoGroup.children.length > 0) {
       dominoGroup.children.forEach(mesh => {
         if (mesh.material && showColors) {
           if (showGradient && mesh.material.userData && mesh.material.userData.gradientColorValue) {
@@ -4189,7 +4100,7 @@ Module.onRuntimeInitialized = async function() {
     updateDominoDisplay();
   }
 
-  document.getElementById("view-2d-btn").addEventListener("click", function() {
+  document.getElementById("view-2d-btn").addEventListener("click", async function() {
     // Show 2D view, hide 3D view
     document.getElementById("aztec-canvas").style.display = "none";
     document.getElementById("aztec-2d-canvas").style.display = "block";
@@ -4214,16 +4125,17 @@ Module.onRuntimeInitialized = async function() {
         lastNRendered = null; // Force a recalculation of the transform
       }
 
-      render2D(cachedDominoes);
+      await render2D(cachedDominoes);
 
       // If we're switching from 3D to 2D, update the progress indicator
       const n = parseInt(document.getElementById("n-input").value, 10);
       if (n > 300) {
-        progressElem.innerText = "Using cached tiling (n > 300 is only available in 2D view)";
-        setTimeout(() => { progressElem.innerText = ""; }, 3000);
+        setProgressStatus("Using cached tiling (n > 300 is only available in 2D view)", {
+          immediate: true,
+          clearAfterMs: 3000
+        });
       } else {
-        progressElem.innerText = "Using cached tiling";
-        setTimeout(() => { progressElem.innerText = ""; }, 2000);
+        setProgressStatus("Using cached tiling", { immediate: true, clearAfterMs: 2000 });
       }
     }
 
@@ -4484,8 +4396,7 @@ Module.onRuntimeInitialized = async function() {
     updateHeightFunctionVisibility(n);
 
     // Add visible loading indicator before starting
-    const progressElem = document.getElementById("progress-indicator");
-    if (progressElem) progressElem.innerText = "Initializing...";
+    setProgressStatus("Initializing...", { immediate: true });
 
     // Use a short timeout to ensure UI updates before heavy computation
     setTimeout(() => {
