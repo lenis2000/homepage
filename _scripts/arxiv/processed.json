@@ -21512,6 +21512,11 @@
     "decision": "ACCEPT",
     "source": "scan"
   },
+  "1512.00507": {
+    "date": "2015-12-01",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "1512.00700": {
     "date": "2015-12-02",
     "decision": "REJECT",
