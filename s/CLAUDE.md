@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build/Compilation
 - Compile C++ to JS with Emscripten: `emcc file.cpp -o file.js -s WASM=1 -s ASYNCIFY=1 -s "EXPORTED_FUNCTIONS=['_functionName']" -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' -s ALLOW_MEMORY_GROWTH=1 -s INITIAL_MEMORY=64MB -s ENVIRONMENT=web -s SINGLE_FILE=1 -O3 -ffast-math`
 - Make modifications based on specific function exports needed
-- `/domino/` uses an optimized C++ sampler core with flat row-major matrices, Xoshiro256++ for the hot shuffling path, a rolling probability pyramid, and ping-pong shuffling buffers. Keep exported names stable and regenerate `s/domino.js` whenever `s/domino.cpp` changes.
+- `/domino/` uses an optimized C++ sampler core with flat row-major matrices, Xoshiro256++ for the hot shuffling path, packed Bernoulli decisions for the shuffling pyramid, and ping-pong shuffling buffers. Keep exported names stable and regenerate `s/domino.js` whenever `s/domino.cpp` changes.
 - `/domino/` C++ functions return malloc-owned C strings and encode failures as JSON objects with an `error` field. JavaScript must check for null pointers before `UTF8ToString`, parse `{error: ...}`, and call `freeString()`.
 - `/domino/` defaults to the 2D canvas renderer with `No 3D` enabled. Interactive 2D display is canvas-first; the hidden SVG remains only for export compatibility. Three.js loads lazily and 3D remains an explicit opt-in path.
 

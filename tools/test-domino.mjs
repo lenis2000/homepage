@@ -33,6 +33,8 @@ function findBrowser() {
 
 function checkPageSource() {
   const source = fs.readFileSync(path.join(root, "s", "domino.md"), "utf8");
+  const cppSource = fs.readFileSync(path.join(root, "s", "domino.cpp"), "utf8");
+  const wasmBundle = fs.readFileSync(path.join(root, "s", "domino.js"), "utf8");
 
   assert(
     !/<script[^>]+src="https:\/\/cdn\.jsdelivr\.net\/npm\/three@/i.test(source),
@@ -44,6 +46,9 @@ function checkPageSource() {
   assert(source.includes('max="2000"'), "2D sampler input should allow n up to 2000");
   assert(source.includes('const max2DN = 2000'), "2D sampler guard should allow n up to 2000");
   assert(source.includes('const DOMINO_2D_EXACT_RENDER_LIMIT = 100'), "Small 2D tilings should use exact canvas rendering");
+  assert(cppSource.includes("PackedDecisionPyramid"), "C++ sampler should use packed shuffling decisions for large n");
+  assert(!cppSource.includes("dim > 1000"), "C++ sampler should not keep the old n=500 hard cap");
+  assert(!wasmBundle.includes("Input size too large, would exceed memory limits"), "Compiled WASM bundle should not contain the old n=500 hard cap");
   assert(!source.includes("periodicity-select"), "Share links should not reference the removed periodicity select");
   assert(!source.includes("weight-a"), "Share links should not reference removed 2x2 weight IDs");
   assert(source.includes("setPeriodicityFromUrl"), "URL load should restore radio-based periodicity");
@@ -570,6 +575,12 @@ async function checkWasmBundle() {
     client = createCdpClient(tab.webSocketDebuggerUrl);
     await client.send("Page.enable");
     await client.send("Runtime.enable");
+    await waitForPageCondition(
+      client,
+      `typeof Module !== "undefined" && Boolean(Module.cwrap)`,
+      "the standalone domino WASM bundle to load",
+      30000
+    );
     await evaluateDominoWasm(client);
   } finally {
     await shutdownBrowser(client, chrome);

@@ -8,6 +8,7 @@ emcc domino.cpp -o domino.js\
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
  -s ENVIRONMENT=web \
+ -fexceptions \
  -s SINGLE_FILE=1 \
  -O3 -ffast-math
 
@@ -241,16 +242,51 @@ void glauberStep(std::uniform_real_distribution<> &u) {
      g_glauber_active = true; // Mark that Glauber has modified the state
 }
 
-vector<MatrixDouble> computeProbabilityPyramid(const MatrixDouble& weights) {
+class PackedDecisionPyramid {
+public:
+    int levels = 0;
+    vector<uint64_t> offsets;   // offsets[r - 1] is the first bit for the r x r level
+    vector<uint32_t> words;
+
+    PackedDecisionPyramid() = default;
+    explicit PackedDecisionPyramid(int n) { reset(n); }
+
+    void reset(int n) {
+        levels = n;
+        offsets.assign(static_cast<size_t>(levels) + 1, 0);
+        for (int r = 1; r <= levels; ++r) {
+            offsets[r] = offsets[r - 1] + static_cast<uint64_t>(r) * static_cast<uint64_t>(r);
+        }
+        const uint64_t totalWords = (offsets[levels] + 31ULL) >> 5;
+        words.assign(static_cast<size_t>(totalWords), 0U);
+    }
+
+    inline uint64_t bitIndex(int rows, int i, int j) const {
+        return offsets[rows - 1] + static_cast<uint64_t>(i) * static_cast<uint64_t>(rows) + static_cast<uint64_t>(j);
+    }
+
+    inline void set(int rows, int i, int j, bool value) {
+        const uint64_t idx = bitIndex(rows, i, j);
+        const uint32_t mask = 1U << (idx & 31U);
+        uint32_t& word = words[static_cast<size_t>(idx >> 5)];
+        if (value) word |= mask;
+        else word &= ~mask;
+    }
+
+    inline bool get(int rows, int i, int j) const {
+        const uint64_t idx = bitIndex(rows, i, j);
+        return (words[static_cast<size_t>(idx >> 5)] >> (idx & 31U)) & 1U;
+    }
+};
+
+PackedDecisionPyramid computeDecisionPyramid(const MatrixDouble& weights) {
     const int dim = weights.size();
     if (dim <= 0 || (dim & 1)) {
         throw std::runtime_error("Weight matrix dimension must be positive and even");
     }
 
     const int levels = dim / 2;
-    vector<MatrixDouble> probabilities;
-    probabilities.reserve(levels);
-    probabilities.resize(levels);
+    PackedDecisionPyramid decisions(levels);
 
     MatrixDouble currentValue(dim, dim, 0.0);
     MatrixInt currentExp(dim, dim, 0);
@@ -271,8 +307,6 @@ vector<MatrixDouble> computeProbabilityPyramid(const MatrixDouble& weights) {
 
     for (int size = dim; size >= 2; size -= 2) {
         const int rows = size / 2;
-        MatrixDouble& probs = probabilities[rows - 1];
-        probs.reset(rows, rows, 0.0);
 
         for (int i = 0; i < rows; ++i) {
             for (int j = 0; j < rows; ++j) {
@@ -281,17 +315,19 @@ vector<MatrixDouble> computeProbabilityPyramid(const MatrixDouble& weights) {
                 const int sum1 = currentExp[i0][j0] + currentExp[i0 + 1][j0 + 1];
                 const int sum2 = currentExp[i0 + 1][j0] + currentExp[i0][j0 + 1];
 
+                bool chooseMain;
                 if (sum1 > sum2) {
-                    probs[i][j] = 0.0;
+                    chooseMain = false;
                 } else if (sum1 < sum2) {
-                    probs[i][j] = 1.0;
+                    chooseMain = true;
                 } else {
                     const double prodMain = currentValue[i0 + 1][j0 + 1] * currentValue[i0][j0];
                     const double prodOther = currentValue[i0 + 1][j0] * currentValue[i0][j0 + 1];
                     double denom = prodMain + prodOther;
                     if (fabs(denom) < 1e-9) denom = 1e-9;
-                    probs[i][j] = prodMain / denom;
+                    chooseMain = shuffleRng.next_double() < (prodMain / denom);
                 }
+                decisions.set(rows, i, j, chooseMain);
             }
         }
 
@@ -342,9 +378,14 @@ vector<MatrixDouble> computeProbabilityPyramid(const MatrixDouble& weights) {
 
         std::swap(currentValue, nextValue);
         std::swap(currentExp, nextExp);
+
+        if ((rows & 15) == 0) {
+            progressCounter = 1 + static_cast<int>(((levels - rows + 1) / static_cast<double>(levels)) * 9.0);
+            emscripten_sleep(0);
+        }
     }
 
-    return probabilities;
+    return decisions;
 }
 
 void delslideInPlace(MatrixInt& out, const MatrixInt& in) {
@@ -393,7 +434,7 @@ void delslideInPlace(MatrixInt& out, const MatrixInt& in) {
     }
 }
 
-void createStepInPlace(MatrixInt& config, const MatrixDouble& probs) {
+void createStepInPlace(MatrixInt& config, const PackedDecisionPyramid& decisions, int rows) {
     const int n = config.size();
     const int half = n / 2;
     for (int i = 0; i < half; ++i) {
@@ -412,7 +453,7 @@ void createStepInPlace(MatrixInt& config, const MatrixDouble& probs) {
                 if (i < half - 1)
                     a4 = (config[i2 + 2][j2] == 0) && (config[i2 + 2][j2 + 1] == 0);
                 if (a1 && a2 && a3 && a4) {
-                    if (shuffleRng.next_double() < probs[i][j]) {
+                    if (decisions.get(rows, i, j)) {
                         config[i2][j2] = 1;
                         config[i2 + 1][j2 + 1] = 1;
                     } else {
@@ -425,8 +466,8 @@ void createStepInPlace(MatrixInt& config, const MatrixDouble& probs) {
     }
 }
 
-MatrixInt aztecgen(const vector<MatrixDouble>& probabilities) {
-    const int levels = static_cast<int>(probabilities.size());
+MatrixInt aztecgen(const PackedDecisionPyramid& decisions) {
+    const int levels = decisions.levels;
     if (levels <= 0) {
         return MatrixInt();
     }
@@ -435,7 +476,7 @@ MatrixInt aztecgen(const vector<MatrixDouble>& probabilities) {
     MatrixInt bufferB((levels << 1) + 2, (levels << 1) + 2, 0);
 
     bufferA.reset(2, 2, 0);
-    if (shuffleRng.next_double() < probabilities[0][0][0]) {
+    if (decisions.get(1, 0, 0)) {
         bufferA[0][0] = 1;
         bufferA[1][1] = 1;
     } else {
@@ -449,7 +490,7 @@ MatrixInt aztecgen(const vector<MatrixDouble>& probabilities) {
 
     for (int i = 0; i < totalIterations; ++i) {
         delslideInPlace(*next, *current);
-        createStepInPlace(*next, probabilities[i + 1]);
+        createStepInPlace(*next, decisions, i + 2);
         std::swap(current, next);
 
         progressCounter = 10 + static_cast<int>(((i + 1) / static_cast<double>(totalIterations)) * 80);
@@ -599,10 +640,6 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
         // Create weight matrix A1a: dimensions 2*n x 2*n with periodic pattern
         int dim = 2 * n;
 
-        // Check if memory allocation would be too large
-        if (dim > 1000) {
-            throw std::runtime_error("Input size too large, would exceed memory limits");
-        }
 
         MatrixDouble A1a(dim, dim, 0.0);
 
@@ -645,21 +682,21 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
 
         emscripten_sleep(0); // Yield to update UI
 
-        vector<MatrixDouble> prob;
+        PackedDecisionPyramid decisions;
         try {
-            prob = computeProbabilityPyramid(A1a);
+            decisions = computeDecisionPyramid(A1a);
         } catch (const std::exception& e) {
-            throw std::runtime_error("Error computing probability matrices");
+            throw std::runtime_error(string("Error computing shuffling decisions: ") + e.what());
         }
-        progressCounter = 10; // Probabilities computed.
+        progressCounter = 10; // Decisions computed.
         emscripten_sleep(0); // Yield to update UI
 
         // Generate domino configuration.
         MatrixInt dominoConfig;
         try {
-            dominoConfig = aztecgen(prob);
+            dominoConfig = aztecgen(decisions);
         } catch (const std::exception& e) {
-            throw std::runtime_error("Error generating domino configuration");
+            throw std::runtime_error(string("Error generating domino configuration: ") + e.what());
         }
         // Store the generated configuration and parameters globally
         g_conf = dominoConfig; // Store the generated MatrixInt
@@ -711,9 +748,6 @@ char* simulateAztec6x2(int n, double v1, double v2, double v3, double v4, double
     try {
         progressCounter = 0;
         int dim = 2 * n;
-        if (dim > 1000) {
-            throw std::runtime_error("Input size too large, would exceed memory limits");
-        }
 
         // Store weights globally for Glauber dynamics
         g_w6x2[0] = v1; g_w6x2[1] = v2; g_w6x2[2] = v3;
@@ -736,11 +770,11 @@ char* simulateAztec6x2(int n, double v1, double v2, double v3, double v4, double
         }
         emscripten_sleep(0);
 
-        vector<MatrixDouble> prob = computeProbabilityPyramid(A1a);
+        PackedDecisionPyramid decisions = computeDecisionPyramid(A1a);
         progressCounter = 10;
         emscripten_sleep(0);
 
-        MatrixInt dominoConfig = aztecgen(prob);
+        MatrixInt dominoConfig = aztecgen(decisions);
 
         // Store the generated configuration and parameters globally for Glauber
         g_conf = dominoConfig;

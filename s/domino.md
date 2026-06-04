@@ -41,6 +41,8 @@ permalink: /domino/
     display: block;
     touch-action: none;
     cursor: grab;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
   }
 
   #aztec-canvas-2d.dragging {
@@ -967,7 +969,8 @@ permalink: /domino/
         <div class="control-row">
           <button id="sample-btn" class="btn-action">Sample</button>
           <button id="cancel-btn" style="display: none; background-color: #dc3545; color: white; border-color: #dc3545;">Cancel</button>
-          <span id="progress-indicator" style="font-size: 12px; color: #666;"></span>
+          <span id="progress-indicator" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
+          <span id="timing-display" style="font-size: 12px; color: #666; margin-left: 4px;" role="status" aria-live="polite"></span>
         </div>
         <div class="control-row">
           <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
@@ -1383,6 +1386,7 @@ async function initializeDominoRuntime() {
   let simulationActive = false;
   let abortController = null;
   const progressElem = document.getElementById("progress-indicator");
+  const timingDisplay = document.getElementById("timing-display");
   const updateBtn = document.getElementById("update-btn");
   const cancelBtn = document.getElementById("cancel-btn");
   let progressInterval;
@@ -1518,6 +1522,19 @@ async function initializeDominoRuntime() {
     const message = profileSummary(profile);
     if (!message || !progressElem || profile.source === "benchmark") return;
     setProgressStatus(message, { immediate: true, clearAfterMs: 6000 });
+  }
+
+  function setSamplingTimingDisplay(profile) {
+    if (!timingDisplay || !profile || profile.source === "benchmark") return;
+    if (profile.status === "ok" && profile.timings.totalMs !== null) {
+      timingDisplay.innerText = `(${(profile.timings.totalMs / 1000).toFixed(2)}s)`;
+    } else if (profile.status === "error") {
+      timingDisplay.innerText = "";
+    }
+  }
+
+  function clearSamplingTimingDisplay() {
+    if (timingDisplay) timingDisplay.innerText = "";
   }
 
   let statusFramePending = false;
@@ -2572,6 +2589,7 @@ async function initializeDominoRuntime() {
       if (profileCompleted) return profile;
       profileCompleted = true;
       finishDominoProfile(profile, status);
+      setSamplingTimingDisplay(profile);
       showDominoProfileStatus(profile);
       return profile;
     }
@@ -2583,6 +2601,7 @@ async function initializeDominoRuntime() {
     lastSampleWasGlauber = false; // Reset flag when generating a fresh sample
 
     startSimulation();
+    clearSamplingTimingDisplay();
     const signal = abortController.signal;
 
     // Start progress polling
@@ -2642,6 +2661,7 @@ async function initializeDominoRuntime() {
       profile.error = err.message;
       stopSimulation();
       clearProgressStatus({ immediate: true });
+      clearSamplingTimingDisplay();
       setProgressStatus(`Error: ${err.message}`, { immediate: true });
       return completeProfile("error");
     }
@@ -4073,8 +4093,9 @@ async function initializeDominoRuntime() {
         } else {
           this.renderCache();
           if (this.cacheCanvas && this.cacheBounds) {
-            ctx.imageSmoothingEnabled = true;
-            if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
+            // Match the RSK sampler canvas: no smoothing, so large tilings remain crisp/pixelated
+            // instead of becoming blurry under cache scaling.
+            ctx.imageSmoothingEnabled = false;
             ctx.drawImage(
               this.cacheCanvas,
               this.viewport.translateX + this.cacheBounds.minX * this.viewport.scale,
