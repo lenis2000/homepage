@@ -35,18 +35,39 @@ permalink: /domino/
     vertical-align: top;
   }
 
+  #aztec-canvas-2d {
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: grab;
+  }
+
+  #aztec-canvas-2d.dragging {
+    cursor: grabbing;
+  }
 
   #aztec-svg-2d {
     touch-action: none; /* Prevent browser defaults on touch */
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    display: none;
   }
 
   #aztec-2d-canvas {
-    background-color: #f8f8f8;
-    border: 1px solid #ddd;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    background: var(--bg-secondary, #f8f8f8);
+    border: 1px solid var(--border-color, #ddd);
+    box-sizing: border-box;
+    position: relative;
     display: none; /* Hidden by default */
+  }
+
+  [data-theme="dark"] #aztec-2d-canvas {
+    background: var(--bg-secondary, #1f1f1f);
+    border-color: var(--border-color, #444);
   }
 
   /* View toggle and display options styling */
@@ -1274,7 +1295,8 @@ permalink: /domino/
     <!-- 2D Visualization Pane (default) -->
     <div id="aztec-2d-canvas" style="display: block; position: relative; overflow: hidden; height: 70vh;">
       <!-- 2D controls moved to sidebar -->
-      <svg id="aztec-svg-2d" style="width: 100%; height: 100%; border: 1px solid var(--border-color, #ccc);"></svg>
+      <canvas id="aztec-canvas-2d" aria-label="2D Aztec diamond tiling"></canvas>
+      <svg id="aztec-svg-2d" aria-hidden="true"></svg>
     </div>
   </div>
 </main>
@@ -1351,6 +1373,7 @@ Module.onRuntimeInitialized = async function() {
   const cancelBtn = document.getElementById("cancel-btn");
   let progressInterval;
   let cachedDominoes = null; // Store dominoes for 2D view
+  let domino2DRenderer = null;
   let useHeightFunction = false; // Track height function visibility state
   let heightGroup; // Group for height function display
 
@@ -1560,6 +1583,7 @@ Module.onRuntimeInitialized = async function() {
   let domino2DCacheVersion = 0;
   function invalidate2DCanvasCache() {
     domino2DCacheVersion += 1;
+    domino2DRenderer?.invalidateCache("external");
   }
 
   // Demo mode state
@@ -2933,10 +2957,8 @@ Module.onRuntimeInitialized = async function() {
 
     // Update 2D only when it is visible; hidden views rebuild from cached data on switch.
     if (activeView === "2d" && cachedDominoes && cachedDominoes.length > 0) {
-      if (dominoLayer) {
-        invalidate2DCanvasCache();
-        updateDominoDisplay();
-      }
+      invalidate2DCanvasCache();
+      updateDominoDisplay();
     }
   }
 
@@ -3176,6 +3198,11 @@ Module.onRuntimeInitialized = async function() {
 
   // Reset view button handler
   document.getElementById("reset-view-btn").addEventListener("click", function() {
+    if (getActiveView() === "2d") {
+      domino2DRenderer?.resetView();
+      return;
+    }
+
     if (!camera || !controls) return;
     if (isDemoMode) {
       setDemoViewCamera();
@@ -3933,8 +3960,7 @@ Module.onRuntimeInitialized = async function() {
 
 
     // Update 2D view if it is visible
-    const svg2dGroup = svg2d.select("g");
-    if (getActiveView() === "2d" && !svg2dGroup.empty()) {
+    if (getActiveView() === "2d" && cachedDominoes && cachedDominoes.length > 0) {
       updateDominoDisplay();
     }
 
@@ -4099,6 +4125,572 @@ Module.onRuntimeInitialized = async function() {
     // apply current colouring / overlays
     updateDominoDisplay();
   }
+
+  const DOMINO_2D_OVERLAY_LIMIT = 220;
+  const DOMINO_2D_SVG_COMPAT_LIMIT = 5000;
+  const DOMINO_2D_CACHE_MAX_PX = 4096;
+  const DOMINO_2D_CACHE_PADDING = 4;
+  let prevCanvasDominoKey = null;
+
+  function canvasKey2D(d) {
+    return `${d.x}|${d.y}`;
+  }
+
+  function get2DOrder() {
+    return parseInt(document.getElementById("n-input").value, 10) || 0;
+  }
+
+  function get2DDisplaySettings() {
+    const n = get2DOrder();
+    return {
+      n,
+      showColors: document.getElementById("show-colors-checkbox")?.checked !== false,
+      useGrayscale: Boolean(document.getElementById("grayscale-checkbox-2d")?.checked),
+      showCheckerboard: Boolean(document.getElementById("checkerboard-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
+      showPaths: Boolean(document.getElementById("paths-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
+      showDimers: Boolean(document.getElementById("dimers-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
+      showHeightLabels: Boolean(document.getElementById("height-function-checkbox-2d")?.checked) && n <= 30,
+      borderWidth: Math.max(0, parseFloat(document.getElementById("border-width-input")?.value) || 0),
+      borderColor: currentColors.border || "#000",
+      monoColor: "#F8F8F8"
+    };
+  }
+
+  function getDominoFillColor(d, settings = get2DDisplaySettings()) {
+    if (!settings.showColors) return settings.monoColor;
+    if (settings.useGrayscale) return getGrayscaleColor(d.color, d);
+    return currentColors[d.color] || d.color || "#cccccc";
+  }
+
+  function normalizeDominoColorName(d) {
+    const color = String(d.color || "").toLowerCase();
+    if (color.includes("green") || color === "#1e8c28" || color === "#00ff00") return "green";
+    if (color.includes("blue") || color === "#4363d8" || color === "#0000ff") return "blue";
+    if (color.includes("yellow") || color === "#fca414" || color === "#ffff00") return "yellow";
+    if (color.includes("red") || color === "#ff2244" || color === "#ff0000") return "red";
+    return d.w > d.h ? "blue" : "red";
+  }
+
+  function computeDominoBounds(dominoes) {
+    if (!dominoes || dominoes.length === 0) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const d of dominoes) {
+      minX = Math.min(minX, d.x);
+      minY = Math.min(minY, d.y);
+      maxX = Math.max(maxX, d.x + d.w);
+      maxY = Math.max(maxY, d.y + d.h);
+    }
+    if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) return null;
+    return {
+      minX,
+      minY,
+      maxX,
+      maxY,
+      width: Math.max(1, maxX - minX),
+      height: Math.max(1, maxY - minY)
+    };
+  }
+
+  function createCanvasSurface(width, height) {
+    const safeWidth = Math.max(1, Math.ceil(width));
+    const safeHeight = Math.max(1, Math.ceil(height));
+    if (typeof OffscreenCanvas !== "undefined") {
+      return new OffscreenCanvas(safeWidth, safeHeight);
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = safeWidth;
+    canvas.height = safeHeight;
+    return canvas;
+  }
+
+  function collectCheckerboardSquares(dominoes) {
+    const latticeSet = new Set();
+    const squares = [];
+    for (const d of dominoes) {
+      if (d.w > d.h) {
+        const leftX = Math.floor(d.x / 2) * 2;
+        const y = Math.floor(d.y / 2) * 2;
+        const leftKey = `${leftX},${y}`;
+        const rightKey = `${leftX + 2},${y}`;
+        if (!latticeSet.has(leftKey)) {
+          latticeSet.add(leftKey);
+          squares.push({ x: leftX, y, size: 2 });
+        }
+        if (!latticeSet.has(rightKey)) {
+          latticeSet.add(rightKey);
+          squares.push({ x: leftX + 2, y, size: 2 });
+        }
+      } else {
+        const x = Math.floor(d.x / 2) * 2;
+        const topY = Math.floor(d.y / 2) * 2;
+        const topKey = `${x},${topY}`;
+        const bottomKey = `${x},${topY + 2}`;
+        if (!latticeSet.has(topKey)) {
+          latticeSet.add(topKey);
+          squares.push({ x, y: topY, size: 2 });
+        }
+        if (!latticeSet.has(bottomKey)) {
+          latticeSet.add(bottomKey);
+          squares.push({ x, y: topY + 2, size: 2 });
+        }
+      }
+    }
+    return squares;
+  }
+
+  class Domino2DCanvasRenderer {
+    constructor(container, canvas, svg) {
+      this.container = container;
+      this.canvas = canvas;
+      this.svg = svg;
+      this.ctx = canvas.getContext("2d");
+      this.dominoes = [];
+      this.modelBounds = null;
+      this.cacheBounds = null;
+      this.cacheCanvas = null;
+      this.cacheValid = false;
+      this.framePending = false;
+      this.dpr = 1;
+      this.cssWidth = 1;
+      this.cssHeight = 1;
+      this.viewport = { scale: 1, translateX: 0, translateY: 0 };
+      this.hasViewport = false;
+      this.isDragging = false;
+      this.dragStart = null;
+      this.lastBoundsKey = null;
+
+      this.bindEvents();
+      this.resize();
+      if (typeof ResizeObserver !== "undefined") {
+        this.resizeObserver = new ResizeObserver(() => this.resize());
+        this.resizeObserver.observe(container);
+      } else {
+        window.addEventListener("resize", () => this.resize());
+      }
+    }
+
+    bindEvents() {
+      this.canvas.addEventListener("wheel", event => {
+        if (!this.dominoes.length) return;
+        event.preventDefault();
+        const rect = this.canvas.getBoundingClientRect();
+        const factor = event.deltaY > 0 ? 0.85 : 1.18;
+        this.zoomBy(factor, event.clientX - rect.left, event.clientY - rect.top);
+      }, { passive: false });
+
+      this.canvas.addEventListener("pointerdown", event => {
+        if (!this.dominoes.length) return;
+        this.isDragging = true;
+        this.dragStart = {
+          x: event.clientX,
+          y: event.clientY,
+          translateX: this.viewport.translateX,
+          translateY: this.viewport.translateY
+        };
+        this.canvas.classList.add("dragging");
+        this.canvas.setPointerCapture?.(event.pointerId);
+      });
+
+      this.canvas.addEventListener("pointermove", event => {
+        if (!this.isDragging || !this.dragStart) return;
+        this.viewport.translateX = this.dragStart.translateX + event.clientX - this.dragStart.x;
+        this.viewport.translateY = this.dragStart.translateY + event.clientY - this.dragStart.y;
+        this.scheduleDraw();
+      });
+
+      const endDrag = event => {
+        this.isDragging = false;
+        this.dragStart = null;
+        this.canvas.classList.remove("dragging");
+        this.canvas.releasePointerCapture?.(event.pointerId);
+      };
+      this.canvas.addEventListener("pointerup", endDrag);
+      this.canvas.addEventListener("pointercancel", endDrag);
+      this.canvas.addEventListener("dblclick", () => this.resetView());
+    }
+
+    resize() {
+      const rect = this.container.getBoundingClientRect();
+      this.cssWidth = Math.max(1, Math.round(rect.width || this.container.clientWidth || 1));
+      this.cssHeight = Math.max(1, Math.round(rect.height || this.container.clientHeight || 1));
+      this.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
+      const pixelWidth = Math.max(1, Math.round(this.cssWidth * this.dpr));
+      const pixelHeight = Math.max(1, Math.round(this.cssHeight * this.dpr));
+
+      if (this.canvas.width !== pixelWidth || this.canvas.height !== pixelHeight) {
+        this.canvas.width = pixelWidth;
+        this.canvas.height = pixelHeight;
+        this.canvas.style.width = `${this.cssWidth}px`;
+        this.canvas.style.height = `${this.cssHeight}px`;
+      }
+
+      if (this.modelBounds && !this.hasViewport) this.fitToView();
+      this.scheduleDraw();
+    }
+
+    setDominoes(dominoes, options = {}) {
+      this.dominoes = Array.isArray(dominoes) ? dominoes : [];
+      this.modelBounds = computeDominoBounds(this.dominoes);
+      const boundsKey = this.modelBounds
+        ? `${this.modelBounds.minX}|${this.modelBounds.minY}|${this.modelBounds.maxX}|${this.modelBounds.maxY}`
+        : "empty";
+      const shouldReset = options.resetView || !this.hasViewport || boundsKey !== this.lastBoundsKey;
+      this.lastBoundsKey = boundsKey;
+      this.invalidateCache("dominoes");
+      if (shouldReset) this.fitToView();
+      this.scheduleDraw();
+    }
+
+    invalidateCache(reason = "style") {
+      this.cacheValid = false;
+      this.cacheReason = reason;
+    }
+
+    fitToView() {
+      if (!this.modelBounds) return;
+      const pad = 16;
+      const availableWidth = Math.max(1, this.cssWidth - 2 * pad);
+      const availableHeight = Math.max(1, this.cssHeight - 2 * pad);
+      const scale = Math.max(
+        0.001,
+        Math.min(availableWidth / this.modelBounds.width, availableHeight / this.modelBounds.height) * 0.98
+      );
+      this.viewport.scale = scale;
+      this.viewport.translateX = (this.cssWidth - this.modelBounds.width * scale) / 2 - this.modelBounds.minX * scale;
+      this.viewport.translateY = (this.cssHeight - this.modelBounds.height * scale) / 2 - this.modelBounds.minY * scale;
+      this.hasViewport = true;
+    }
+
+    resetView() {
+      this.fitToView();
+      this.scheduleDraw();
+    }
+
+    zoomBy(factor, anchorX = this.cssWidth / 2, anchorY = this.cssHeight / 2) {
+      const oldScale = this.viewport.scale || 1;
+      const newScale = Math.max(0.02, Math.min(80, oldScale * factor));
+      const modelX = (anchorX - this.viewport.translateX) / oldScale;
+      const modelY = (anchorY - this.viewport.translateY) / oldScale;
+      this.viewport.scale = newScale;
+      this.viewport.translateX = anchorX - modelX * newScale;
+      this.viewport.translateY = anchorY - modelY * newScale;
+      this.scheduleDraw();
+    }
+
+    scheduleDraw() {
+      if (this.framePending) return;
+      this.framePending = true;
+      requestAnimationFrame(() => {
+        this.framePending = false;
+        this.drawFrame();
+      });
+    }
+
+    renderNow() {
+      this.resize();
+      this.renderCache();
+      this.drawFrame();
+    }
+
+    getCanvasBackground() {
+      const styles = getComputedStyle(this.container);
+      return styles.backgroundColor && styles.backgroundColor !== "rgba(0, 0, 0, 0)"
+        ? styles.backgroundColor
+        : "#f8f8f8";
+    }
+
+    renderCache() {
+      if (this.cacheValid || !this.dominoes.length || !this.modelBounds) return;
+
+      const cacheBounds = {
+        minX: this.modelBounds.minX - DOMINO_2D_CACHE_PADDING,
+        minY: this.modelBounds.minY - DOMINO_2D_CACHE_PADDING,
+        maxX: this.modelBounds.maxX + DOMINO_2D_CACHE_PADDING,
+        maxY: this.modelBounds.maxY + DOMINO_2D_CACHE_PADDING
+      };
+      cacheBounds.width = cacheBounds.maxX - cacheBounds.minX;
+      cacheBounds.height = cacheBounds.maxY - cacheBounds.minY;
+
+      const naturalScale = Math.max(1, Math.min(this.dpr, 2));
+      const cacheScale = Math.max(
+        0.5,
+        Math.min(naturalScale, DOMINO_2D_CACHE_MAX_PX / Math.max(cacheBounds.width, cacheBounds.height))
+      );
+      const surface = createCanvasSurface(cacheBounds.width * cacheScale, cacheBounds.height * cacheScale);
+      const ctx = surface.getContext("2d");
+      const settings = get2DDisplaySettings();
+
+      ctx.save();
+      ctx.scale(cacheScale, cacheScale);
+      ctx.translate(-cacheBounds.minX, -cacheBounds.minY);
+      ctx.clearRect(cacheBounds.minX, cacheBounds.minY, cacheBounds.width, cacheBounds.height);
+      this.drawDominoFillBatches(ctx, settings);
+      this.drawCheckerboardOverlay(ctx, settings);
+      this.drawBorderStrokePass(ctx, settings);
+      this.drawPathOverlay(ctx, settings);
+      this.drawDimerOverlay(ctx, settings);
+      this.drawHeightLabels(ctx, settings);
+      ctx.restore();
+
+      this.cacheBounds = cacheBounds;
+      this.cacheCanvas = surface;
+      this.cacheValid = true;
+      this.cacheScale = cacheScale;
+    }
+
+    drawDominoFillBatches(ctx, settings) {
+      const batches = new Map();
+      const inset = settings.borderWidth > 0 ? Math.min(0.04, settings.borderWidth * 0.04) : 0;
+      for (const d of this.dominoes) {
+        const fill = getDominoFillColor(d, settings);
+        if (!batches.has(fill)) batches.set(fill, new Path2D());
+        const path = batches.get(fill);
+        path.rect(
+          d.x + inset,
+          d.y + inset,
+          Math.max(0.001, d.w - 2 * inset),
+          Math.max(0.001, d.h - 2 * inset)
+        );
+      }
+
+      for (const [fill, path] of batches) {
+        ctx.fillStyle = fill;
+        ctx.fill(path);
+      }
+    }
+
+    drawBorderStrokePass(ctx, settings) {
+      if (settings.borderWidth <= 0) return;
+      const path = new Path2D();
+      const inset = Math.min(0.04, settings.borderWidth * 0.04);
+      for (const d of this.dominoes) {
+        path.rect(
+          d.x + inset,
+          d.y + inset,
+          Math.max(0.001, d.w - 2 * inset),
+          Math.max(0.001, d.h - 2 * inset)
+        );
+      }
+      ctx.save();
+      ctx.strokeStyle = settings.borderColor;
+      ctx.lineWidth = settings.borderWidth;
+      ctx.lineJoin = "miter";
+      ctx.stroke(path);
+      ctx.restore();
+    }
+
+    drawCheckerboardOverlay(ctx, settings) {
+      if (!settings.showCheckerboard) return;
+      const path = new Path2D();
+      for (const square of collectCheckerboardSquares(this.dominoes)) {
+        const isBlack = ((square.x / 2) + (square.y / 2)) % 2 === 0;
+        if (isBlack) path.rect(square.x, square.y, square.size, square.size);
+      }
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.18)";
+      ctx.fill(path);
+      ctx.restore();
+    }
+
+    drawPathOverlay(ctx, settings) {
+      if (!settings.showPaths) return;
+      ctx.save();
+      ctx.beginPath();
+      for (const d of this.dominoes) {
+        const isHorizontal = d.w > d.h;
+        const colorType = normalizeDominoColorName(d);
+        const centerX = d.x + d.w / 2;
+        const centerY = d.y + d.h / 2;
+        const pathHalfLength = Math.min(d.w, d.h) * 1.2;
+
+        if (isHorizontal && colorType === "green") {
+          ctx.moveTo(d.x, centerY);
+          ctx.lineTo(d.x + d.w, centerY);
+        } else if (!isHorizontal && colorType === "yellow") {
+          ctx.moveTo(centerX - pathHalfLength / 2, centerY + pathHalfLength / 2);
+          ctx.lineTo(centerX + pathHalfLength / 2, centerY - pathHalfLength / 2);
+        } else if (!isHorizontal && colorType === "red") {
+          ctx.moveTo(centerX - pathHalfLength / 2, centerY - pathHalfLength / 2);
+          ctx.lineTo(centerX + pathHalfLength / 2, centerY + pathHalfLength / 2);
+        }
+      }
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 0.6;
+      ctx.lineCap = "round";
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    drawDimerOverlay(ctx, settings) {
+      if (!settings.showDimers) return;
+      const edges = [];
+      const nodes = [];
+      for (const d of this.dominoes) {
+        if (d.w <= 0 || d.h <= 0) continue;
+        if (d.w > d.h) {
+          const centerX = d.x + d.w / 2;
+          const midY = d.y + d.h / 2;
+          const dimerLength = d.w / 2;
+          const leftX = centerX - dimerLength / 2;
+          const rightX = centerX + dimerLength / 2;
+          edges.push([leftX, midY, rightX, midY]);
+          nodes.push([leftX, midY], [rightX, midY]);
+        } else {
+          const midX = d.x + d.w / 2;
+          const centerY = d.y + d.h / 2;
+          const dimerLength = d.h / 2;
+          const topY = centerY - dimerLength / 2;
+          const bottomY = centerY + dimerLength / 2;
+          edges.push([midX, topY, midX, bottomY]);
+          nodes.push([midX, topY], [midX, bottomY]);
+        }
+      }
+
+      ctx.save();
+      ctx.strokeStyle = "black";
+      ctx.fillStyle = "black";
+      ctx.lineWidth = 0.3;
+      ctx.beginPath();
+      for (const [x1, y1, x2, y2] of edges) {
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+      }
+      ctx.stroke();
+      ctx.beginPath();
+      for (const [x, y] of nodes) {
+        ctx.moveTo(x + 0.4, y);
+        ctx.arc(x, y, 0.4, 0, Math.PI * 2);
+      }
+      ctx.fill();
+      ctx.restore();
+    }
+
+    drawHeightLabels(ctx, settings) {
+      if (!settings.showHeightLabels) return;
+      const heights = calculateHeightFunction(this.dominoes);
+      if (!heights.size) return;
+      const minSidePx = Math.min(...this.dominoes.map(d => Math.min(d.w, d.h)));
+      const unit = minSidePx / 2;
+      if (unit <= 0) return;
+      const fontSize = Math.max(0.8, Math.min(1.2, 3.6 - settings.n / 20.0));
+
+      ctx.save();
+      ctx.font = `${fontSize}px sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.fillStyle = "#000";
+      ctx.lineWidth = 0.3;
+      for (const [key, h] of heights) {
+        const [gx, gy] = key.split(",").map(Number);
+        const px = gx * unit;
+        const py = gy * unit;
+        ctx.strokeText(String(h), px, py);
+        ctx.fillText(String(h), px, py);
+      }
+      ctx.restore();
+    }
+
+    drawFrame() {
+      const ctx = this.ctx;
+      ctx.save();
+      ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      ctx.clearRect(0, 0, this.cssWidth, this.cssHeight);
+      ctx.fillStyle = this.getCanvasBackground();
+      ctx.fillRect(0, 0, this.cssWidth, this.cssHeight);
+
+      if (this.dominoes.length && this.modelBounds) {
+        this.renderCache();
+        if (this.cacheCanvas && this.cacheBounds) {
+          ctx.imageSmoothingEnabled = true;
+          if ("imageSmoothingQuality" in ctx) ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(
+            this.cacheCanvas,
+            this.viewport.translateX + this.cacheBounds.minX * this.viewport.scale,
+            this.viewport.translateY + this.cacheBounds.minY * this.viewport.scale,
+            this.cacheBounds.width * this.viewport.scale,
+            this.cacheBounds.height * this.viewport.scale
+          );
+        }
+      }
+      ctx.restore();
+    }
+
+    toBlob(callback) {
+      this.renderNow();
+      this.canvas.toBlob(callback, "image/png", 1.0);
+    }
+  }
+
+  function sync2DSVGForExport(dominoes = cachedDominoes) {
+    const svg = document.getElementById("aztec-svg-2d");
+    if (!svg) return;
+    svg.replaceChildren();
+    if (!dominoes || dominoes.length === 0) return;
+
+    const bounds = computeDominoBounds(dominoes);
+    if (!bounds) return;
+    svg.setAttribute("viewBox", `${bounds.minX} ${bounds.minY} ${bounds.width} ${bounds.height}`);
+    svg.dataset.renderer = dominoes.length <= DOMINO_2D_SVG_COMPAT_LIMIT ? "small-svg" : "canvas";
+    if (dominoes.length > DOMINO_2D_SVG_COMPAT_LIMIT) return;
+
+    const settings = get2DDisplaySettings();
+    const fragment = document.createDocumentFragment();
+    const ns = "http://www.w3.org/2000/svg";
+    for (const d of dominoes) {
+      const rect = document.createElementNS(ns, "rect");
+      rect.setAttribute("x", d.x);
+      rect.setAttribute("y", d.y);
+      rect.setAttribute("width", d.w);
+      rect.setAttribute("height", d.h);
+      rect.setAttribute("fill", getDominoFillColor(d, settings));
+      rect.setAttribute("stroke", settings.borderColor);
+      rect.setAttribute("stroke-width", settings.borderWidth);
+      fragment.appendChild(rect);
+    }
+    svg.appendChild(fragment);
+  }
+
+  domino2DRenderer = new Domino2DCanvasRenderer(
+    document.getElementById("aztec-2d-canvas"),
+    document.getElementById("aztec-canvas-2d"),
+    document.getElementById("aztec-svg-2d")
+  );
+
+  updateDominoDisplay = function() {
+    if (!domino2DRenderer) return;
+    invalidate2DCanvasCache();
+    domino2DRenderer.scheduleDraw();
+  };
+
+  toggleHeightFunction = function() {
+    useHeightFunction = document.getElementById("height-function-checkbox-2d")?.checked || false;
+    updateDominoDisplay();
+  };
+
+  render2D = async function(dominoes) {
+    if (!dominoes?.length || !domino2DRenderer) return;
+    const currentN = parseInt(document.getElementById("n-input").value, 10);
+    const shouldResetView = prevCanvasDominoKey === null || currentN !== lastNRendered;
+    domino2DRenderer.setDominoes(dominoes, { resetView: shouldResetView });
+    domino2DRenderer.renderNow();
+    sync2DSVGForExport(dominoes);
+    prevCanvasDominoKey = dominoes.length > 0 ? canvasKey2D(dominoes[0]) : "empty";
+    lastNRendered = currentN;
+  };
+
+  document.getElementById("zoom-in-btn-2d").addEventListener("click", () => {
+    domino2DRenderer?.zoomBy(1.3);
+  });
+
+  document.getElementById("zoom-out-btn-2d").addEventListener("click", () => {
+    domino2DRenderer?.zoomBy(0.7);
+  });
+
+  document.getElementById("zoom-reset-btn-2d").addEventListener("click", () => {
+    domino2DRenderer?.resetView();
+  });
 
   document.getElementById("view-2d-btn").addEventListener("click", async function() {
     // Show 2D view, hide 3D view
@@ -5198,86 +5790,28 @@ Module.onRuntimeInitialized = async function() {
 
   // Add event listener for PNG download button
   document.getElementById("download-png-btn").addEventListener("click", function() {
-    // Get the SVG element
-    const svg = document.getElementById("aztec-svg-2d");
-
-    // Check if SVG has content (dominoes have been drawn)
-    if (!svg || !cachedDominoes || cachedDominoes.length === 0) {
+    if (!domino2DRenderer || !cachedDominoes || cachedDominoes.length === 0) {
       alert("Please sample a domino tiling first by clicking the 'Sample' button.");
       return;
     }
 
-    // Get current parameters for filename
     const n = parseInt(document.getElementById("n-input").value) || 12;
     const periodicity = document.querySelector('input[name="periodicity"]:checked').value;
-
-    // Create filename with parameters
     const filename = `aztec_diamond_2d_n${n}_${periodicity}.png`;
 
-    // Clone the SVG to avoid modifying the original
-    const svgClone = svg.cloneNode(true);
-
-    // Get the SVG's computed dimensions
-    const svgRect = svg.getBoundingClientRect();
-    const width = svgRect.width || 800;
-    const height = svgRect.height || 600;
-
-    // Set explicit dimensions on the cloned SVG
-    svgClone.setAttribute('width', width);
-    svgClone.setAttribute('height', height);
-
-    // Ensure the SVG has proper namespace
-    if (!svgClone.getAttribute('xmlns')) {
-      svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    }
-
-    // Create a canvas element with maximum resolution for best quality
-    const canvas = document.createElement('canvas');
-    const scale = 4; // 4x resolution for maximum quality
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-    const ctx = canvas.getContext('2d');
-
-    // Enable high-quality rendering
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.scale(scale, scale);
-
-    // Convert SVG to data URL with proper encoding
-    const svgData = new XMLSerializer().serializeToString(svgClone);
-    const encodedSvgData = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
-
-    // Create an image and load the SVG
-    const img = new Image();
-    img.onload = function() {
-      // Fill with white background
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, width, height);
-
-      // Draw the SVG image
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // Convert canvas to PNG with maximum quality (no compression)
-      canvas.toBlob(function(blob) {
-        if (blob) {
-          const a = document.createElement('a');
-          a.download = filename;
-          a.href = URL.createObjectURL(blob);
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(a.href);
-        } else {
-          alert('Error creating PNG file');
-        }
-      }, 'image/png', 1.0); // Maximum quality (no compression)
-    };
-
-    img.onerror = function() {
-      alert('Error loading SVG for conversion');
-    };
-
-    img.src = encodedSvgData;
+    domino2DRenderer.toBlob(function(blob) {
+      if (blob) {
+        const a = document.createElement('a');
+        a.download = filename;
+        a.href = URL.createObjectURL(blob);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      } else {
+        alert('Error creating PNG file');
+      }
+    });
   });
 
   // Add event listener for PDF download button
@@ -5362,7 +5896,7 @@ Module.onRuntimeInitialized = async function() {
 
       // Get current color settings
       const showColors = document.getElementById("show-colors-checkbox")?.checked !== false;
-      const useGrayscale = document.getElementById("grayscale-checkbox")?.checked === true;
+      const useGrayscale = document.getElementById("grayscale-checkbox-2d")?.checked === true;
       const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
 
       cachedDominoes.forEach(domino => {

@@ -107,14 +107,14 @@ Make the frontend avoid unnecessary work and fail descriptively.
 
 Keep SVG/TikZ/PDF export capability, but make the interactive 2D display canvas-first for speed and visual quality.
 
-- [ ] Add a HiDPI `<canvas>` inside `#aztec-2d-canvas` while preserving the existing `#aztec-svg-2d` element for export/small-overlay compatibility.
-- [ ] Implement a `Domino2DCanvasRenderer` with persistent viewport state, device-pixel-ratio scaling, `requestAnimationFrame` scheduling, and explicit cache invalidation when dominoes/colors/overlays change.
-- [ ] Render the full tiling once to an `OffscreenCanvas` or hidden canvas at model coordinates; during pan/zoom draw the cached bitmap with `drawImage()` rather than looping over all dominoes.
-- [ ] Batch initial canvas drawing by fill/stroke style: one path per color or grayscale bucket, one stroke pass when borders are enabled.
-- [ ] Port existing 2D overlays to canvas or hybrid overlay rendering: checkerboard, paths, dimers, and height labels for n <= 30. Keep overlay drawing disabled or simplified automatically when n is too large.
-- [ ] Improve 2D visual polish: crisp HiDPI output, better centered initial fit, dark-mode background/border variables, optional small border gap that does not create blurry seams, and palette/grayscale updates without full DOM rebuilds.
-- [ ] Keep PNG export working from the canvas; keep PDF/TikZ export by generating from cached domino data or the preserved SVG path.
-- [ ] Verify n=500 pan/zoom is fluid and that switching 3D -> 2D reuses cached domino data without resampling.
+- [x] Add a HiDPI `<canvas>` inside `#aztec-2d-canvas` while preserving the existing `#aztec-svg-2d` element for export/small-overlay compatibility.
+- [x] Implement a `Domino2DCanvasRenderer` with persistent viewport state, device-pixel-ratio scaling, `requestAnimationFrame` scheduling, and explicit cache invalidation when dominoes/colors/overlays change.
+- [x] Render the full tiling once to an `OffscreenCanvas` or hidden canvas at model coordinates; during pan/zoom draw the cached bitmap with `drawImage()` rather than looping over all dominoes.
+- [x] Batch initial canvas drawing by fill/stroke style: one path per color or grayscale bucket, one stroke pass when borders are enabled.
+- [x] Port existing 2D overlays to canvas or hybrid overlay rendering: checkerboard, paths, dimers, and height labels for n <= 30. Keep overlay drawing disabled or simplified automatically when n is too large.
+- [x] Improve 2D visual polish: crisp HiDPI output, better centered initial fit, dark-mode background/border variables, optional small border gap that does not create blurry seams, and palette/grayscale updates without full DOM rebuilds.
+- [x] Keep PNG export working from the canvas; keep PDF/TikZ export by generating from cached domino data or the preserved SVG path.
+- [x] Verify n=500 pan/zoom is fluid and that switching 3D -> 2D reuses cached domino data without resampling. (Automated static check verifies cached `drawImage()` pan/zoom and cached 3D -> 2D switching; subjective fluidity not automatable here.)
 
 ### Task 5: Keep `/domino/` 3D out of the default path
 
