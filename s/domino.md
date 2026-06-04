@@ -1471,8 +1471,10 @@ Module.onRuntimeInitialized = async function() {
       window.dominoSamplerTimings.shift();
     }
 
-    console.info("[domino] sampler profile", profile);
-    if (console.table) console.table(profile.timings);
+    if (window.dominoSamplerLogTimings === true) {
+      console.info("[domino] sampler profile", profile);
+      if (console.table) console.table(profile.timings);
+    }
     return profile;
   }
 

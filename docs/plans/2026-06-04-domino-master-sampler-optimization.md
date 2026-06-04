@@ -137,8 +137,8 @@ Do not optimize the 3D renderer in this plan. It is too slow to draw and should 
 
 Validate correctness, performance, and visual quality after all optimizations.
 
-- [ ] Run `bundle exec jekyll build` and fix any warnings/errors caused by these edits.
-- [ ] Use a local server and browser to test `/domino/` in the default 2D view first, with `No 3D (faster)` checked: uniform, 2x2, 3x3, 6x2, frozen horizontal, frozen vertical, palette changes, grayscale, checkerboard, paths, dimers, height labels, PNG/PDF/TikZ/CSV/JSON/export buttons, and Glauber start/stop. Then do a short explicit 2D/3D switching smoke test that does not benchmark or optimize 3D.
-- [ ] Run the benchmark helper from Task 1 with its default 2D cases and record before/after numbers for the main cases. Do not run 3D benchmark cases for this plan unless explicitly requested.
-- [ ] Remove noisy debug logging while keeping the useful opt-in benchmark helper.
-- [ ] Confirm generated bundle `s/domino.js` is committed with `s/domino.cpp`.
+- [x] Run `bundle exec jekyll build` and fix any warnings/errors caused by these edits.
+- [x] Use a local server and browser to test `/domino/` in the default 2D view first, with `No 3D (faster)` checked: uniform, 2x2, 3x3, 6x2, frozen horizontal, frozen vertical, palette changes, grayscale, checkerboard, paths, dimers, height labels, PNG/PDF/TikZ/CSV/export buttons, and Glauber start/stop. Then do a short explicit 2D/3D switching smoke test that does not benchmark or optimize 3D. (Automated browser smoke passed; no JSON export button exists in the current UI.)
+- [x] Run the benchmark helper from Task 1 with its default 2D cases and record before/after numbers for the main cases. Do not run 3D benchmark cases for this plan unless explicitly requested.
+- [x] Remove noisy debug logging while keeping the useful opt-in benchmark helper.
+- [x] Confirm generated bundle `s/domino.js` is committed with `s/domino.cpp`.
