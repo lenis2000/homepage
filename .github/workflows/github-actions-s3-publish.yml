@@ -9,35 +9,34 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v6
 
     - name: Set up Node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: '24'
 
     - name: Set up Ruby
       uses: ruby/setup-ruby@v1
       with:
+        ruby-version: '3.2'
         bundler-cache: true
 
     - name: Domino smoke tests
       run: make test-domino
 
     - name: Build
-      uses: jerryjvl/jekyll-build-action@v1
+      run: bundle exec jekyll build
 
-    - name: Clean HTML files with sudo
+    - name: Clean HTML files
       run: |
-        # Use sudo for all operations
-        sudo find _site -name "*.html" -type f | while read file; do
-          sudo grep -v '^[[:space:]]*$' "$file" | sudo tee "$file.tmp" > /dev/null
-          sudo mv "$file.tmp" "$file"
+        find _site -name "*.html" -type f -print0 | while IFS= read -r -d '' file; do
+          awk 'NF { print }' "$file" > "$file.tmp"
+          mv "$file.tmp" "$file"
         done
 
-
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v6
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -45,29 +44,29 @@ jobs:
 
     - name: Auxiliary actions
       run: |
-        sudo git clone https://github.com/lenis2000/CV.git ./_site/research/CV
-        sudo mv ./_site/research/CV/__petrovCV__.pdf ./_site/research/petrovCV.pdf
-        sudo mv ./_site/research/CV/__petrovCV__short.pdf ./_site/research/petrovCVbrief.pdf
-        sudo rm -Rf _site/research/CV
+        git clone --depth 1 https://github.com/lenis2000/CV.git ./_site/research/CV
+        mv ./_site/research/CV/__petrovCV__.pdf ./_site/research/petrovCV.pdf
+        mv ./_site/research/CV/__petrovCV__short.pdf ./_site/research/petrovCVbrief.pdf
+        rm -Rf _site/research/CV
 
         # get fresh githubbed syllabi from GitHub
-        sudo git clone https://github.com/lenis2000/Syllabi.git ./_site/teaching/syll
-        sudo mv ./_site/teaching/syll/Syllabus_2310_f16.pdf ./_site/teaching/
-        sudo mv ./_site/teaching/syll/Syllabus_3100_s17.pdf ./_site/teaching/
-        sudo mv ./_site/teaching/syll/Syllabus_3100_f18.pdf ./_site/teaching/
-        sudo mv ./_site/teaching/syll/Syllabus_7310_s19.pdf ./_site/teaching/
-        sudo mv ./_site/teaching/syll/Syllabus_7310_s20.pdf ./_site/teaching/
-        sudo mv ./_site/teaching/syll/Syllabus_3340_s20.pdf ./_site/teaching/
-        sudo mv ./_site/teaching/syll/Syllabus_3100_f20.pdf ./_site/teaching/
-        sudo mv ./_site/teaching/syll/Syllabus_3100_s22.pdf ./_site/teaching/
-        sudo mv ./_site/teaching/syll/Syllabus_3100_f22.pdf ./_site/teaching/
-        sudo mv ./_site/teaching/syll/Syllabus_3340_s23.pdf ./_site/teaching/
-        sudo mv ./_site/teaching/syll/Syllabus_3100_f23.pdf ./_site/teaching/
-        sudo mv ./_site/teaching/syll/Syllabus_2310_f24.pdf ./_site/teaching/
-        sudo mv ./_site/teaching/syll/Syllabus_EGMT_f25.pdf ./_site/teaching/
-        sudo mv ./_site/teaching/syll/Syllabus_EGMT_s26.pdf ./_site/teaching/
-        sudo mv ./_site/teaching/syll/Syllabus_EGMT_s26.html ./_site/teaching/
-        sudo rm -Rf _site/teaching/syll
+        git clone --depth 1 https://github.com/lenis2000/Syllabi.git ./_site/teaching/syll
+        mv ./_site/teaching/syll/Syllabus_2310_f16.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_3100_s17.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_3100_f18.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_7310_s19.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_7310_s20.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_3340_s20.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_3100_f20.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_3100_s22.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_3100_f22.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_3340_s23.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_3100_f23.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_2310_f24.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_EGMT_f25.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_EGMT_s26.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_EGMT_s26.html ./_site/teaching/
+        rm -Rf _site/teaching/syll
 
     # - name: Check HTML
     #   uses: chabad360/htmlproofer@master
