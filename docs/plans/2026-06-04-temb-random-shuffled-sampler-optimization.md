@@ -99,19 +99,19 @@ Instrument the sampler before changing it.
 
 Port the `/domino/` C++ sampler core patterns, not the old full probability-pyramid approach.
 
-- [ ] Replace nested `vector<vector<...>>` matrices in the shuffling path with a flat row-major `FlatMatrix<T>` class compatible with the existing code.
-- [ ] Replace `std::mt19937` in the hot shuffling path with Xoshiro256++ and fast `next_double()`.
-- [ ] Replace `d3pslim()` + `probsslim()` full intermediate storage with a rolling square-move pass that keeps only current/next value and exponent matrices.
-- [ ] Store Bernoulli shuffling outcomes in a compact `PackedDecisionPyramid` (`uint32_t`/bit-packed), as in `/domino/`, instead of storing one `double` probability per square per level.
-- [ ] For single samples, compute one packed decision pyramid and feed it to ping-pong `aztecgen`.
-- [ ] For double dimer, compute two independent packed decision pyramids from the same weight realization in one rolling probability pass (two RNG draws per square when needed), then run `aztecgen` twice. Do not generate identical samples by sharing decisions.
-- [ ] Replace `delslide()` and `createslim()` fresh allocations with in-place `delslideInPlace()` and `createStepInPlace()` using preallocated ping-pong `MatrixInt` buffers.
-- [ ] Preserve exported function names/signatures: `simulateAztecWithWeightMatrix`, `simulateAztecGammaDirect`, `simulateAztecPeriodicDirect`, `simulateAztecIIDDirect`, `simulateAztecDoubleDimer`, `freeString`, `getProgress`, `malloc`, and `free`.
-- [ ] Return malloc-owned C strings and encode C++ failures as `{"error":"..."}` JSON. Compile with exception support if needed, as `/domino/` now does.
-- [ ] Deduplicate JSON serialization for single and double-dimer output via shared helpers.
-- [ ] Keep the UI maximum N at 330 unless this task explicitly verifies a safe increase; remove stale internal caps that contradict the UI.
-- [ ] Recompile using the preamble command in `2025-12-11-t-embedding-shuffling.cpp`, updated with any required flags, and move the generated JS to `js/`.
-- [ ] Smoke-test single and double-dimer calls for N=50 and N=150, including at least one non-uniform weight preset.
+- [x] Replace nested `vector<vector<...>>` matrices in the shuffling path with a flat row-major `FlatMatrix<T>` class compatible with the existing code.
+- [x] Replace `std::mt19937` in the hot shuffling path with Xoshiro256++ and fast `next_double()`.
+- [x] Replace `d3pslim()` + `probsslim()` full intermediate storage with a rolling square-move pass that keeps only current/next value and exponent matrices.
+- [x] Store Bernoulli shuffling outcomes in a compact `PackedDecisionPyramid` (`uint32_t`/bit-packed), as in `/domino/`, instead of storing one `double` probability per square per level.
+- [x] For single samples, compute one packed decision pyramid and feed it to ping-pong `aztecgen`.
+- [x] For double dimer, compute two independent packed decision pyramids from the same weight realization in one rolling probability pass (two RNG draws per square when needed), then run `aztecgen` twice. Do not generate identical samples by sharing decisions.
+- [x] Replace `delslide()` and `createslim()` fresh allocations with in-place `delslideInPlace()` and `createStepInPlace()` using preallocated ping-pong `MatrixInt` buffers.
+- [x] Preserve exported function names/signatures: `simulateAztecWithWeightMatrix`, `simulateAztecGammaDirect`, `simulateAztecPeriodicDirect`, `simulateAztecIIDDirect`, `simulateAztecDoubleDimer`, `freeString`, `getProgress`, `malloc`, and `free`.
+- [x] Return malloc-owned C strings and encode C++ failures as `{"error":"..."}` JSON. Compile with exception support if needed, as `/domino/` now does.
+- [x] Deduplicate JSON serialization for single and double-dimer output via shared helpers.
+- [x] Keep the UI maximum N at 330 unless this task explicitly verifies a safe increase; remove stale internal caps that contradict the UI.
+- [x] Recompile using the preamble command in `2025-12-11-t-embedding-shuffling.cpp`, updated with any required flags, and move the generated JS to `js/`.
+- [x] Smoke-test single and double-dimer calls for N=50 and N=150, including at least one non-uniform weight preset.
 
 ### Task 3: Optimize JS heap transfer, caching, and error handling
 
