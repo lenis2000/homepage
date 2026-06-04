@@ -167,10 +167,10 @@ Optimize sample 3D only; do not change main T-embedding 3D/origami rendering.
 
 Mirror the protection added for `/domino/`.
 
-- [ ] Add source checks that the T-embedding shuffling C++ contains `PackedDecisionPyramid`, no stale internal cap below the UI max, and the generated JS does not contain removed stale error strings.
-- [ ] Add a standalone WASM smoke test for `simulateAztecWithWeightMatrix` and `simulateAztecDoubleDimer` at small N; verify domino counts and that double-dimer configurations are not accidentally identical for a generic random seed.
-- [ ] If practical, add a browser smoke test that loads the page, triggers a sample, and verifies non-blank `#sample-canvas` without touching the main T-embedding pipeline.
-- [ ] Keep the test dependency-free like `tools/test-domino.mjs` and make it work with `CHROME_BIN`, `CHROMIUM_BIN`, or macOS Chrome paths.
+- [x] Add source checks that the T-embedding shuffling C++ contains `PackedDecisionPyramid`, no stale internal cap below the UI max, and the generated JS does not contain removed stale error strings.
+- [x] Add a standalone WASM smoke test for `simulateAztecWithWeightMatrix` and `simulateAztecDoubleDimer` at small N; verify domino counts and that double-dimer configurations are not accidentally identical for a generic random seed.
+- [x] If practical, add a browser smoke test that loads the page, triggers a sample, and verifies non-blank `#sample-canvas` without touching the main T-embedding pipeline.
+- [x] Keep the test dependency-free like `tools/test-domino.mjs` and make it work with `CHROME_BIN`, `CHROMIUM_BIN`, or macOS Chrome paths.
 
 ### Task 7: Final random-sampler verification and cleanup
 

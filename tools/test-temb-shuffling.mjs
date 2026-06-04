@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import fs from "node:fs";
 import http from "node:http";
 import os from "node:os";
@@ -7,11 +8,61 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const pageSourcePath = path.join(root, "_simulations", "domino_tilings", "2025-12-11-t-embedding-arbitrary-weights.md");
+const shufflingCppPath = path.join(root, "_simulations", "domino_tilings", "2025-12-11-t-embedding-shuffling.cpp");
+const shufflingBundlePath = path.join(root, "js", "2025-12-11-t-embedding-shuffling.js");
 const builtSiteDir = path.join(root, "_site");
 const pageUrlPath = "/simulations/2025-12-11-t-embedding-arbitrary-weights/";
+const require = createRequire(import.meta.url);
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function parseSampleUiMax(source) {
+  const match = source.match(/<input[^>]+id="sample-N-input"[^>]+max="(\d+)"/);
+  assert(match, "sample-N-input should declare a max value");
+  return Number.parseInt(match[1], 10);
+}
+
+function checkShufflingSourceAndBundle() {
+  const pageSource = fs.readFileSync(pageSourcePath, "utf8");
+  const cppSource = fs.readFileSync(shufflingCppPath, "utf8");
+  const wasmBundle = fs.readFileSync(shufflingBundlePath);
+  const sampleUiMax = parseSampleUiMax(pageSource);
+  const maxSupportedMatch = cppSource.match(/kMaxSupportedN\s*=\s*(\d+)/);
+
+  assert(maxSupportedMatch, "C++ sampler should declare kMaxSupportedN");
+  const maxSupportedN = Number.parseInt(maxSupportedMatch[1], 10);
+  assert(
+    maxSupportedN >= sampleUiMax,
+    `C++ sampler cap ${maxSupportedN} should not be below sample UI max ${sampleUiMax}`
+  );
+  assert(
+    cppSource.includes("PackedDecisionPyramid"),
+    "T-embedding shuffling C++ should use PackedDecisionPyramid"
+  );
+  assert(
+    cppSource.includes("computeDecisionPyramids(weights, decisions1, &decisions2"),
+    "double-dimer shuffling should build two independent decision pyramids in one probability pass"
+  );
+  assert(!cppSource.includes("d3pslim("), "C++ sampler should not keep the removed full d3pslim probability path");
+  assert(!cppSource.includes("probsslim("), "C++ sampler should not keep the removed full probsslim probability path");
+  assert(!/if\s*\(\s*n\s*>\s*(\d+)\s*\)\s*n\s*=\s*\1\s*;/.test(cppSource), "C++ sampler should not silently clamp n");
+
+  for (const staleText of [
+    "Memory allocation failed",
+    "Error computing probability matrices",
+    "Error generating domino configuration",
+    "Input size too large, would exceed memory limits",
+    "Hard limit: N <= 500",
+    "probsslim",
+    "d3pslim"
+  ]) {
+    assert(
+      !wasmBundle.includes(Buffer.from(staleText)),
+      `generated shuffling JS should not contain stale text: ${staleText}`
+    );
+  }
 }
 
 function checkPageSource() {
@@ -75,6 +126,101 @@ function checkPageSource() {
 
   assert(source.includes("setSamplePhaseTiming(profile, 'doubleDimerLoopProcessingMs'"), "2D render should still record double-dimer loop processing timing");
   assert(source.includes("shufflingFreeString(resultPtr);"), "WASM result strings should be freed after parsing");
+}
+
+function createDeterministicWeights(n, seed) {
+  const dim = 2 * n;
+  const weights = new Float64Array(dim * dim);
+  let state = seed >>> 0;
+  if (state === 0) state = 1;
+
+  for (let i = 0; i < weights.length; i++) {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    weights[i] = 0.35 + ((state >>> 0) / 0x100000000) * 2.4;
+  }
+
+  return weights;
+}
+
+function canonicalDominoConfig(dominoes) {
+  return dominoes
+    .map(domino => `${domino.x},${domino.y},${domino.w},${domino.h},${domino.color}`)
+    .sort()
+    .join("|");
+}
+
+function decodeWasmJson(module, resultPtr) {
+  assert(resultPtr, "WASM shuffling export should return a non-null result pointer");
+  let json = "";
+  try {
+    json = module.UTF8ToString(resultPtr);
+  } finally {
+    module._freeString(resultPtr);
+  }
+
+  const result = JSON.parse(json);
+  assert(!result?.error, `WASM shuffling returned error JSON: ${result.error}`);
+  return result;
+}
+
+async function callWeightedSampler(module, fn, n, weights) {
+  const expectedLength = (2 * n) * (2 * n);
+  assert(weights.length === expectedLength, `expected ${expectedLength} EKLP weights for N=${n}`);
+
+  const weightsPtr = module._malloc(weights.length * Float64Array.BYTES_PER_ELEMENT);
+  assert(weightsPtr, "WASM heap allocation for EKLP weights should succeed");
+  try {
+    module.HEAPF64.set(weights, weightsPtr >> 3);
+    const resultPtr = await fn(n, weightsPtr);
+    return decodeWasmJson(module, resultPtr);
+  } finally {
+    module._free(weightsPtr);
+  }
+}
+
+function assertDominoCount(dominoes, n, label) {
+  assert(Array.isArray(dominoes), `${label} should return an array of dominoes`);
+  assert(dominoes.length === n * (n + 1), `${label} should return ${n * (n + 1)} dominoes for N=${n}, got ${dominoes.length}`);
+  for (const domino of dominoes) {
+    assert(Number.isFinite(domino.x), `${label} domino x coordinate should be numeric`);
+    assert(Number.isFinite(domino.y), `${label} domino y coordinate should be numeric`);
+    assert(Number.isFinite(domino.w) && domino.w > 0, `${label} domino width should be positive`);
+    assert(Number.isFinite(domino.h) && domino.h > 0, `${label} domino height should be positive`);
+    assert(typeof domino.color === "string" && domino.color.length > 0, `${label} domino color should be present`);
+  }
+}
+
+async function runStandaloneWasmSmoke() {
+  assert(fs.existsSync(shufflingBundlePath), "generated shuffling JS bundle should exist");
+  const createShufflingModule = require(shufflingBundlePath);
+  const module = await createShufflingModule();
+  const simulateAztecWithWeightMatrix = module.cwrap("simulateAztecWithWeightMatrix", "number", ["number", "number"], { async: true });
+  const simulateAztecDoubleDimer = module.cwrap("simulateAztecDoubleDimer", "number", ["number", "number"], { async: true });
+
+  const singleN = 6;
+  const singleWeights = createDeterministicWeights(singleN, 0x5eed1234);
+  const singleResult = await callWeightedSampler(module, simulateAztecWithWeightMatrix, singleN, singleWeights);
+  assertDominoCount(singleResult, singleN, "simulateAztecWithWeightMatrix");
+
+  const doubleN = 8;
+  let sawIndependentConfigurations = false;
+  for (const seed of [0xdecafbad, 0x9e3779b9, 0x12345678, 0x87654321]) {
+    const doubleWeights = createDeterministicWeights(doubleN, seed);
+    const doubleResult = await callWeightedSampler(module, simulateAztecDoubleDimer, doubleN, doubleWeights);
+    assertDominoCount(doubleResult.config1, doubleN, "simulateAztecDoubleDimer config1");
+    assertDominoCount(doubleResult.config2, doubleN, "simulateAztecDoubleDimer config2");
+    if (canonicalDominoConfig(doubleResult.config1) !== canonicalDominoConfig(doubleResult.config2)) {
+      sawIndependentConfigurations = true;
+      break;
+    }
+  }
+
+  assert(
+    sawIndependentConfigurations,
+    "simulateAztecDoubleDimer should not accidentally return identical configurations for generic random weights"
+  );
 }
 
 function findBrowser() {
@@ -542,6 +688,8 @@ async function runBrowserSmoke() {
   }
 }
 
+checkShufflingSourceAndBundle();
 checkPageSource();
+await runStandaloneWasmSmoke();
 await runBrowserSmoke();
-console.log("T-embedding shuffling instrumentation smoke test passed.");
+console.log("T-embedding shuffling smoke test passed.");
