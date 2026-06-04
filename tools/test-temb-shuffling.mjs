@@ -47,6 +47,16 @@ function checkPageSource() {
   assert(source.includes("getSampleDoubleDimerDrawableEdges"), "double-dimer drawable edges should be cached by min-loop filter");
   assert(source.includes("sample2DRenderer?.renderNow();"), "sample PNG export should flush the current 2D renderer frame");
   assert(!source.includes("function renderDoubleDimerLoops("), "double-dimer loops should not be rebuilt inside the visible draw call");
+  assert(source.includes("buildSample3DMergedGeometry"), "sample 3D should build one merged geometry");
+  assert(source.includes("new THREE.Mesh(geometry, sample3DMaterial)"), "sample 3D should render through a single shared mesh/material");
+  assert(source.includes("vertexColors: true"), "sample 3D material should use vertex colors");
+  assert(source.includes("fillSample3DColorAttribute"), "sample 3D palette changes should update color attributes");
+  assert(source.includes("stopSample3DAnimation();"), "sample 3D animation should stop when returning to 2D mode");
+  assert(source.includes("getCachedDoubleDimerHeightDifference"), "height-function differences should be cached by sampled configurations");
+  assert(source.includes("invalidateSampleHeightFunctionCache"), "height-function cache should be invalidated on new samples");
+  assert(source.includes("window.tembSample3DDebugState"), "sample 3D debug state should be exposed for smoke tests");
+  assert(source.includes("window.tembSampleHeightFunctionDebugState"), "height-function cache debug state should be exposed for smoke tests");
+  assert(!source.includes("colorValue"), "sample 3D should not allocate per-domino colored materials");
 
   for (const key of [
     "controlReadMs",
@@ -294,6 +304,8 @@ async function runBrowserSmoke() {
       "--headless=new",
       "--disable-gpu",
       "--disable-dev-shm-usage",
+      "--enable-unsafe-swiftshader",
+      "--use-angle=swiftshader",
       "--no-sandbox",
       `--remote-debugging-port=${chromePort}`,
       `--user-data-dir=${userDataDir}`,
@@ -425,6 +437,99 @@ async function runBrowserSmoke() {
     assert(largeRendererSmoke.after.cacheValid, "large renderer cache should remain valid after zoom redraws");
     assert(largeRendererSmoke.after.cacheVersion === largeRendererSmoke.before.cacheVersion, "zoom redraws should not invalidate the large-sample cache");
     assert(largeRendererSmoke.after.cacheKey === largeRendererSmoke.before.cacheKey, "zoom redraws should reuse the same large-sample cache key");
+
+    const heightCacheSmoke = await evaluate(client, `window.tembSampleHeightFunctionDebugState()`);
+    assert(heightCacheSmoke.hasDoubleDimerSample, "height cache smoke should run after a double-dimer sample");
+    assert(heightCacheSmoke.diffSize > 0, "height cache smoke should compute non-empty height differences");
+    assert(heightCacheSmoke.sameReference, "height cache should return the same cached Map for unchanged double-dimer configurations");
+    assert(heightCacheSmoke.cacheMatchesSamples, "height cache should be keyed to the active sampled configurations");
+
+    const sample3DSmoke = await evaluate(client, `window.tembShuffledSamplerBenchmark({
+      cases: [
+        { n: 80, doubleDimer: false, label: "N=80 sample 3D smoke" }
+      ],
+      stopOnError: true,
+      restore: false
+    }).then(async benchmark => {
+      const waitFrames = count => new Promise(resolve => {
+        const step = () => {
+          if (count-- <= 0) resolve();
+          else requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
+      const errors = [];
+      const errorHandler = event => errors.push(event.message || event.error?.message || "unknown error");
+      window.addEventListener("error", errorHandler);
+      const toggle = document.getElementById("sample-toggle-3d-btn");
+      const toggleTextBefore = toggle?.textContent?.trim() || "";
+      if (toggle?.textContent?.trim() === "3D") toggle.click();
+      const toggleTextAfterClick = toggle?.textContent?.trim() || "";
+      for (let i = 0; i < 80; i++) {
+        await waitFrames(1);
+        const state = window.tembSample3DDebugState();
+        if (state.initialized && state.hasMergedMesh && state.vertexCount > 0) break;
+      }
+      const before = window.tembSample3DDebugState();
+      const grayscale = document.getElementById("sample-grayscale-checkbox");
+      if (grayscale) {
+        grayscale.checked = !grayscale.checked;
+        grayscale.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      await waitFrames(3);
+      const afterPalette = window.tembSample3DDebugState();
+      if (toggle?.textContent?.trim() === "2D") toggle.click();
+      await waitFrames(3);
+      const after2D = window.tembSample3DDebugState();
+      window.removeEventListener("error", errorHandler);
+      return {
+        benchmark,
+        before,
+        afterPalette,
+        after2D,
+        diagnostics: {
+          toggleTextBefore,
+          toggleTextAfterClick,
+          finalToggleText: toggle?.textContent?.trim() || "",
+          directSetterType: typeof setSampleViewMode,
+          threeType: typeof THREE,
+          errors
+        }
+      };
+    })`, 240000);
+    assert(sample3DSmoke.benchmark.cases.length === 1 && sample3DSmoke.benchmark.cases[0].status === "ok", "sample 3D smoke benchmark should pass");
+    assert(sample3DSmoke.before.initialized && sample3DSmoke.before.visible, `sample 3D should initialize only after toggling into 3D mode: ${JSON.stringify(sample3DSmoke.before)} diagnostics=${JSON.stringify(sample3DSmoke.diagnostics)}`);
+    assert(sample3DSmoke.before.hasMergedMesh, `sample 3D should create a merged mesh: ${JSON.stringify(sample3DSmoke.before)}`);
+    assert(sample3DSmoke.before.childCount === 1, `sample 3D group should contain one merged mesh: ${JSON.stringify(sample3DSmoke.before)}`);
+    assert(sample3DSmoke.before.vertexCount > sample3DSmoke.before.renderedDominoCount, "sample 3D geometry should contain batched vertices");
+    assert(sample3DSmoke.before.colorCount === sample3DSmoke.before.vertexCount, "sample 3D geometry should have one color per vertex");
+    assert(sample3DSmoke.before.materialUsesVertexColors, "sample 3D material should use vertex colors");
+    assert(sample3DSmoke.afterPalette.childCount === 1, "sample 3D palette changes should keep one shared mesh");
+    assert(sample3DSmoke.afterPalette.vertexCount === sample3DSmoke.before.vertexCount, "sample 3D palette changes should reuse geometry vertices");
+    assert(sample3DSmoke.afterPalette.grayscale !== sample3DSmoke.before.grayscale, "sample 3D grayscale toggle should update color state");
+    assert(!sample3DSmoke.after2D.visible, "sample 3D should be hidden after switching back to 2D");
+    assert(!sample3DSmoke.after2D.animating, "sample 3D animation should stop in 2D mode");
+
+    const main3DSmoke = await evaluate(client, `(() => {
+      const btn = document.getElementById("toggle-2d-3d-btn");
+      const container3D = document.getElementById("main-3d-container");
+      if (container3D?.style.display === "none" || !container3D?.style.display) btn?.click();
+      const canvas = document.getElementById("main-temb-3d-canvas");
+      const ctx = canvas?.getContext("2d");
+      if (!canvas || !ctx || canvas.width === 0 || canvas.height === 0) {
+        return { width: canvas?.width || 0, height: canvas?.height || 0, nonBackground: 0 };
+      }
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let nonBackground = 0;
+      for (let i = 0; i < data.length; i += 16) {
+        const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+        if (a !== 0 && !(r >= 245 && g >= 245 && b >= 245)) nonBackground++;
+      }
+      if (container3D?.style.display !== "none") btn?.click();
+      return { width: canvas.width, height: canvas.height, nonBackground };
+    })()`);
+    assert(main3DSmoke.width > 0 && main3DSmoke.height > 0, "main T-embedding 3D canvas should have dimensions after sample 3D smoke");
+    assert(main3DSmoke.nonBackground > 0, "main T-embedding 3D view should remain non-blank after sample 3D smoke");
 
     if (process.env.TEMB_SHUFFLED_BENCHMARK === "1") {
       const benchmark = await evaluate(client, `window.tembShuffledSamplerBenchmark({ stopOnError: false, restore: true })`, 900000);

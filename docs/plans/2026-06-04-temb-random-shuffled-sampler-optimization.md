@@ -152,12 +152,12 @@ Make `#sample-canvas` canvas-first and pan/zoom-friendly, matching the visual sh
 
 Optimize sample 3D only; do not change main T-embedding 3D/origami rendering.
 
-- [ ] Replace sample 3D per-domino `BufferGeometry`, material, and mesh creation with merged typed-array geometry and shared materials.
-- [ ] Use vertex colors or shared color attributes so palette/grayscale changes do not require thousands of materials.
-- [ ] Dispose old sample 3D geometries/materials correctly and preserve the user's sample 3D camera where possible.
-- [ ] Avoid initializing or rendering sample 3D while the sample view is in 2D mode.
-- [ ] If the double-dimer height-function pane is active, cache height differences and avoid recomputing unless the underlying two configurations changed.
-- [ ] Verify sample 3D is smooth for moderate N and does not affect the main T-embedding 3D view.
+- [x] Replace sample 3D per-domino `BufferGeometry`, material, and mesh creation with merged typed-array geometry and shared materials.
+- [x] Use vertex colors or shared color attributes so palette/grayscale changes do not require thousands of materials.
+- [x] Dispose old sample 3D geometries/materials correctly and preserve the user's sample 3D camera where possible.
+- [x] Avoid initializing or rendering sample 3D while the sample view is in 2D mode.
+- [x] If the double-dimer height-function pane is active, cache height differences and avoid recomputing unless the underlying two configurations changed.
+- [x] Verify sample 3D is smooth for moderate N and does not affect the main T-embedding 3D view.
 
 ### Task 6: Add focused smoke tests and stale-WASM guards
 

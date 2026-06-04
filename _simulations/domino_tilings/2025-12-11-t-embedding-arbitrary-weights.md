@@ -2722,6 +2722,11 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     drawableMinLoopLength: null,
     drawableEdges: null
   };
+  const sampleDoubleDimerHeightDiffCache = {
+    config1: null,
+    config2: null,
+    diff: null
+  };
 
   // Height function visualization for double dimer
   let heightFunctionScene = null;
@@ -2731,6 +2736,12 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let heightFunctionGroup = null;
   let heightFunctionActive = false;
   let heightFunctionAnimating = false;
+
+  function invalidateSampleHeightFunctionCache() {
+    sampleDoubleDimerHeightDiffCache.config1 = null;
+    sampleDoubleDimerHeightDiffCache.config2 = null;
+    sampleDoubleDimerHeightDiffCache.diff = null;
+  }
 
   // Cached IID weights - precomputed to avoid regenerating on each render
   let cachedIIDWeights = null;
@@ -3164,12 +3175,85 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   // Simple 3D renderer for sample dominoes (based on domino.md approach)
   let sample3DScene, sample3DCamera, sample3DRenderer, sample3DControls, sample3DDominoGroup;
+  let sample3DMesh = null;
+  let sample3DMaterial = null;
+  let sample3DMaterialPresetIndex = null;
+  let sample3DRenderedDominoes = null;
+  let sample3DRenderedPaletteIndex = null;
+  let sample3DRenderedGrayscale = null;
   let sample3DAnimating = false;
   let sample3DAutoRotate = false;
   let sample3DPresetIndex = 0;
   let sample3DAmbientLight, sample3DHemisphereLight, sample3DDirectionalLight, sample3DFillLight;
   let sample3DPerspective = false;  // false = orthographic, true = perspective
   let sample3DOrthoCamera, sample3DPerspCamera;  // Both camera types
+
+  function disposeSample3DGeometry() {
+    if (sample3DMesh) {
+      if (sample3DDominoGroup) sample3DDominoGroup.remove(sample3DMesh);
+      if (sample3DMesh.geometry) sample3DMesh.geometry.dispose();
+      sample3DMesh = null;
+    }
+    sample3DRenderedDominoes = null;
+    sample3DRenderedPaletteIndex = null;
+    sample3DRenderedGrayscale = null;
+  }
+
+  function disposeSample3DMaterial() {
+    if (sample3DMaterial) {
+      sample3DMaterial.dispose();
+      sample3DMaterial = null;
+      sample3DMaterialPresetIndex = null;
+    }
+  }
+
+  function createSample3DSharedMaterial() {
+    const preset = SAMPLE_3D_PRESETS[sample3DPresetIndex] || SAMPLE_3D_PRESETS[0];
+    const materialConfig = preset.material || {};
+    const params = {
+      vertexColors: true,
+      side: THREE.DoubleSide,
+      flatShading: materialConfig.flatShading !== false
+    };
+
+    if (materialConfig.type === 'phong') {
+      return new THREE.MeshPhongMaterial({
+        ...params,
+        shininess: materialConfig.shininess ?? 60
+      });
+    }
+    if (materialConfig.type === 'lambert') {
+      return new THREE.MeshLambertMaterial(params);
+    }
+    return new THREE.MeshStandardMaterial({
+      ...params,
+      roughness: materialConfig.roughness ?? 0.5,
+      metalness: materialConfig.metalness ?? 0.15
+    });
+  }
+
+  function ensureSample3DSharedMaterial() {
+    if (sample3DMaterial && sample3DMaterialPresetIndex === sample3DPresetIndex) {
+      return sample3DMaterial;
+    }
+
+    const oldMaterial = sample3DMaterial;
+    sample3DMaterial = createSample3DSharedMaterial();
+    sample3DMaterialPresetIndex = sample3DPresetIndex;
+    if (sample3DMesh) sample3DMesh.material = sample3DMaterial;
+    if (oldMaterial) oldMaterial.dispose();
+    return sample3DMaterial;
+  }
+
+  function startSample3DAnimation() {
+    if (sample3DAnimating) return;
+    sample3DAnimating = true;
+    requestAnimationFrame(animateSample3D);
+  }
+
+  function stopSample3DAnimation() {
+    sample3DAnimating = false;
+  }
 
   function applySample3DPreset(presetIndex) {
     if (!sample3DScene) return;
@@ -3189,6 +3273,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       sample3DFillLight.intensity = preset.fill.intensity;
       sample3DFillLight.position.set(...preset.fill.position);
     }
+    ensureSample3DSharedMaterial();
   }
 
   function initSample3D(container) {
@@ -3241,15 +3326,13 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     sample3DDominoGroup = new THREE.Group();
     sample3DScene.add(sample3DDominoGroup);
 
-    if (!sample3DAnimating) {
-      sample3DAnimating = true;
-      animateSample3D();
-    }
+    startSample3DAnimation();
   }
 
   function animateSample3D() {
     if (!sample3DAnimating) return;
     requestAnimationFrame(animateSample3D);
+    if (!isSample3DPaneVisible()) return;
     if (sample3DControls) sample3DControls.update();
     if (sample3DAutoRotate && sample3DDominoGroup) {
       sample3DDominoGroup.rotation.y += 0.005;
@@ -3263,6 +3346,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     const container = document.getElementById('sample-3d-container');
     if (!container || !sample3DRenderer) return;
     const w = container.clientWidth, h = container.clientHeight;
+    if (w <= 0 || h <= 0) return;
     const frustum = 100, aspect = w / h;
     // Update orthographic camera
     if (sample3DOrthoCamera) {
@@ -3366,6 +3450,20 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       diff.set(key, v1 - v2);
     }
 
+    return diff;
+  }
+
+  function getCachedDoubleDimerHeightDifference(config1, config2) {
+    if (sampleDoubleDimerHeightDiffCache.config1 === config1 &&
+        sampleDoubleDimerHeightDiffCache.config2 === config2 &&
+        sampleDoubleDimerHeightDiffCache.diff) {
+      return sampleDoubleDimerHeightDiffCache.diff;
+    }
+
+    const diff = computeDoubleDimerHeightDifference(config1, config2);
+    sampleDoubleDimerHeightDiffCache.config1 = config1;
+    sampleDoubleDimerHeightDiffCache.config2 = config2;
+    sampleDoubleDimerHeightDiffCache.diff = diff;
     return diff;
   }
 
@@ -3617,7 +3715,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
       // Compute and render height function difference
       if (sampleDominoes.length > 0 && sampleDominoes2.length > 0) {
-        const heightDiff = computeDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
+        const heightDiff = getCachedDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
         renderHeightFunctionSurface(heightDiff);
       }
     }, 50);
@@ -3679,82 +3777,150 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return { color: domino.color, vertices };
   }
 
-  function hexToThreeColor(hex) {
-    return new THREE.Color(hex).getHex();
+  function sample3DHexToRgb(hex) {
+    const normalized = (hex || '#808080').replace('#', '');
+    const full = normalized.length === 3
+      ? normalized.split('').map(ch => ch + ch).join('')
+      : normalized.padEnd(6, '0').slice(0, 6);
+    const value = parseInt(full, 16);
+    if (!Number.isFinite(value)) return [0.5, 0.5, 0.5];
+    return [
+      ((value >> 16) & 255) / 255,
+      ((value >> 8) & 255) / 255,
+      (value & 255) / 255
+    ];
   }
 
-  function renderSample3DDominoes(dominoes) {
-    if (!sample3DDominoGroup) return;
-
-    while (sample3DDominoGroup.children.length > 0) {
-      const m = sample3DDominoGroup.children[0];
-      sample3DDominoGroup.remove(m);
-      if (m.geometry) m.geometry.dispose();
-      if (m.material) m.material.dispose();
-    }
-
-    if (!dominoes || dominoes.length === 0) return;
-
-    const heightMap = calculateSampleHeightFunction(dominoes);
+  function getSample3DColorContext() {
     const palettes = window.ColorSchemes || [{ colors: ['#FFCD00', '#228B22', '#0057B7', '#DC143C'] }];
     const paletteColors = palettes[samplePaletteIndex] ? palettes[samplePaletteIndex].colors : palettes[0].colors;
-    const colors = {
-      yellow: hexToThreeColor(paletteColors[0]),
-      green: hexToThreeColor(paletteColors[1]),
-      blue: hexToThreeColor(paletteColors[2]),
-      red: hexToThreeColor(paletteColors[3])
+    return {
+      colorMap: {
+        yellow: paletteColors[0],
+        green: paletteColors[1],
+        blue: paletteColors[2],
+        red: paletteColors[3]
+      },
+      colorCache: new Map(),
+      useGrayscale: document.getElementById('sample-grayscale-checkbox')?.checked || false
     };
+  }
 
-    // Check grayscale mode
-    const useGrayscale = document.getElementById('sample-grayscale-checkbox')?.checked || false;
+  function getSample3DDominoRgb(domino, colorContext) {
+    const hex = colorContext.useGrayscale
+      ? getGrayscaleColor(domino.color, domino)
+      : (colorContext.colorMap[domino.color] || '#808080');
+    if (!colorContext.colorCache.has(hex)) {
+      colorContext.colorCache.set(hex, sample3DHexToRgb(hex));
+    }
+    return colorContext.colorCache.get(hex);
+  }
 
-    // Find N for scaling
+  function fillSample3DColorAttribute(dominoes, colorAttribute) {
+    if (!colorAttribute || !dominoes) return false;
+    const colors = colorAttribute.array;
+    const colorContext = getSample3DColorContext();
+    let offset = 0;
+    for (const domino of dominoes) {
+      const rgb = getSample3DDominoRgb(domino, colorContext);
+      for (let i = 0; i < 6; i++) {
+        colors[offset++] = rgb[0];
+        colors[offset++] = rgb[1];
+        colors[offset++] = rgb[2];
+      }
+    }
+    colorAttribute.needsUpdate = true;
+    sample3DRenderedPaletteIndex = samplePaletteIndex;
+    sample3DRenderedGrayscale = colorContext.useGrayscale;
+    return true;
+  }
+
+  function buildSample3DMergedGeometry(dominoes) {
+    const heightMap = calculateSampleHeightFunction(dominoes);
+    const colorContext = getSample3DColorContext();
     let maxCoord = 0;
     for (const d of dominoes) {
       maxCoord = Math.max(maxCoord, Math.abs(d.x + d.w), Math.abs(d.y + d.h));
     }
     const scale = 60 / Math.max(maxCoord, 1);
+    const verticesPerDomino = 6;
+    const indicesPerDomino = 12;
+    const vertexCount = dominoes.length * verticesPerDomino;
+    const positions = new Float32Array(vertexCount * 3);
+    const colors = new Float32Array(vertexCount * 3);
+    const IndexArray = vertexCount > 65535 ? Uint32Array : Uint16Array;
+    const indices = new IndexArray(dominoes.length * indicesPerDomino);
+    const localIndices = [0, 1, 3, 3, 2, 1, 0, 1, 4, 3, 2, 5];
+    let vertexOffset = 0;
+    let indexOffset = 0;
 
     for (const domino of dominoes) {
       const faceData = createSampleDominoFace(domino, heightMap);
       if (!faceData || !faceData.vertices) continue;
 
-      try {
-        const geom = new THREE.BufferGeometry();
-        const pos = [];
-        faceData.vertices.forEach(v => pos.push(v[0] * scale, v[1] * scale, v[2] * scale));
-        geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-
-        const isH = (faceData.color === 'blue' || faceData.color === 'green');
-        const indices = [0,1,3, 3,2,1, 0,1,4, 3,2,5];
-        geom.setIndex(indices);
-        geom.computeVertexNormals();
-
-        // Use grayscale or palette colors
-        let colorValue;
-        if (useGrayscale) {
-          const grayHexColor = getGrayscaleColor(faceData.color, domino);
-          colorValue = hexToThreeColor(grayHexColor);
-        } else {
-          colorValue = colors[faceData.color] || 0x808080;
-        }
-
-        const mat = new THREE.MeshStandardMaterial({
-          color: colorValue,
-          side: THREE.DoubleSide,
-          flatShading: true
-        });
-        const mesh = new THREE.Mesh(geom, mat);
-        sample3DDominoGroup.add(mesh);
-      } catch (e) {
-        console.error("Error creating 3D mesh:", e);
+      const baseVertex = vertexOffset / 3;
+      const rgb = getSample3DDominoRgb(domino, colorContext);
+      for (const v of faceData.vertices) {
+        positions[vertexOffset] = v[0] * scale;
+        colors[vertexOffset++] = rgb[0];
+        positions[vertexOffset] = v[1] * scale;
+        colors[vertexOffset++] = rgb[1];
+        positions[vertexOffset] = v[2] * scale;
+        colors[vertexOffset++] = rgb[2];
+      }
+      for (const localIndex of localIndices) {
+        indices[indexOffset++] = baseVertex + localIndex;
       }
     }
 
-    if (sample3DDominoGroup.children.length > 0) {
-      const box = new THREE.Box3().setFromObject(sample3DDominoGroup);
-      const center = box.getCenter(new THREE.Vector3());
-      sample3DDominoGroup.position.sub(center);
+    if (vertexOffset === 0 || indexOffset === 0) return null;
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions.subarray(0, vertexOffset), 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors.subarray(0, vertexOffset), 3));
+    geometry.setIndex(new THREE.BufferAttribute(indices.subarray(0, indexOffset), 1));
+    geometry.computeVertexNormals();
+    geometry.computeBoundingBox();
+    return geometry;
+  }
+
+  function renderSample3DDominoes(dominoes) {
+    if (!sample3DDominoGroup) return;
+    if (!dominoes || dominoes.length === 0) {
+      disposeSample3DGeometry();
+      return;
+    }
+
+    ensureSample3DSharedMaterial();
+    const useGrayscale = document.getElementById('sample-grayscale-checkbox')?.checked || false;
+    if (sample3DMesh && sample3DRenderedDominoes === dominoes) {
+      if (sample3DRenderedPaletteIndex !== samplePaletteIndex || sample3DRenderedGrayscale !== useGrayscale) {
+        fillSample3DColorAttribute(dominoes, sample3DMesh.geometry.getAttribute('color'));
+      }
+      return;
+    }
+
+    disposeSample3DGeometry();
+
+    try {
+      const geometry = buildSample3DMergedGeometry(dominoes);
+      if (!geometry) return;
+
+      sample3DMesh = new THREE.Mesh(geometry, sample3DMaterial);
+      sample3DDominoGroup.add(sample3DMesh);
+      sample3DRenderedDominoes = dominoes;
+      sample3DRenderedPaletteIndex = samplePaletteIndex;
+      sample3DRenderedGrayscale = useGrayscale;
+
+      if (geometry.boundingBox) {
+        const center = geometry.boundingBox.getCenter(new THREE.Vector3());
+        sample3DDominoGroup.position.set(-center.x, -center.y, -center.z);
+      } else {
+        sample3DDominoGroup.position.set(0, 0, 0);
+      }
+    } catch (e) {
+      console.error('Error creating merged 3D domino geometry:', e);
+      disposeSample3DGeometry();
     }
   }
 
@@ -3763,6 +3929,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     constructor(container) {
       initSample3D(container);
       window.addEventListener('resize', sample3DHandleResize);
+      window.tembSample3DRenderer = this;
     }
     handleResize() { sample3DHandleResize(); }
     zoomIn() {
@@ -3819,7 +3986,46 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     set autoRotate(val) { sample3DAutoRotate = val; }
     get autoRotate() { return sample3DAutoRotate; }
     renderDominoes(dominoes) { renderSample3DDominoes(dominoes); }
+    debugState() {
+      const geometry = sample3DMesh?.geometry || null;
+      const positionAttribute = geometry?.getAttribute('position') || null;
+      const colorAttribute = geometry?.getAttribute('color') || null;
+      return {
+        initialized: !!sample3DRenderer,
+        visible: isSample3DPaneVisible(),
+        animating: sample3DAnimating,
+        childCount: sample3DDominoGroup?.children.length || 0,
+        hasMergedMesh: !!sample3DMesh,
+        materialType: sample3DMaterial?.type || null,
+        materialUsesVertexColors: !!sample3DMaterial?.vertexColors,
+        vertexCount: positionAttribute?.count || 0,
+        colorCount: colorAttribute?.count || 0,
+        indexCount: geometry?.index?.count || 0,
+        renderedDominoCount: sample3DRenderedDominoes?.length || 0,
+        paletteIndex: sample3DRenderedPaletteIndex,
+        grayscale: sample3DRenderedGrayscale
+      };
+    }
   }
+
+  window.tembSample3DDebugState = () => sampleRenderer3D
+    ? sampleRenderer3D.debugState()
+    : { initialized: false, visible: false, animating: sample3DAnimating };
+
+  window.tembSampleHeightFunctionDebugState = () => {
+    if (!sampleDominoes.length || !sampleDominoes2.length) {
+      return { hasDoubleDimerSample: false, diffSize: 0, sameReference: true, cacheMatchesSamples: false };
+    }
+    const first = getCachedDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
+    const second = getCachedDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
+    return {
+      hasDoubleDimerSample: true,
+      diffSize: first?.size || 0,
+      sameReference: first === second,
+      cacheMatchesSamples: sampleDoubleDimerHeightDiffCache.config1 === sampleDominoes &&
+        sampleDoubleDimerHeightDiffCache.config2 === sampleDominoes2
+    };
+  };
 
   // 3D View Management Functions
   function setSampleViewMode(use3D) {
@@ -3844,12 +4050,15 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       setTimeout(() => {
         if (!sampleRenderer3D) {
           sampleRenderer3D = new SampleDomino3DRenderer(container3D);
+          window.tembSample3DRenderer = sampleRenderer3D;
         } else {
           sampleRenderer3D.handleResize();
+          startSample3DAnimation();
         }
         updateSample3DView();
       }, 50);
     } else {
+      stopSample3DAnimation();
       canvas2D.style.display = 'block';
       container3D.style.display = 'none';
       toggle3DBtn.textContent = '3D';
@@ -4950,6 +5159,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       sampleDominoes2 = [];
     }
     invalidateSampleDoubleDimerLoopCache();
+    invalidateSampleHeightFunctionCache();
+    if (sample3DRenderedDominoes && sample3DRenderedDominoes !== sampleDominoes) {
+      disposeSample3DGeometry();
+    }
     sample2DRenderer?.invalidateCache();
     profile.dominoCount = sampleDominoes.length;
     profile.dominoCount2 = sampleDominoes2.length;
@@ -4976,7 +5189,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     if (isHeightFunctionPaneVisible() && controls.doubleDimer && sampleDominoes2.length > 0) {
       measureSamplePhase(profile, 'heightFunctionPaneRenderMs', () => {
-        const heightDiff = computeDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
+        const heightDiff = getCachedDoubleDimerHeightDifference(sampleDominoes, sampleDominoes2);
         renderHeightFunctionSurface(heightDiff);
       });
     }
