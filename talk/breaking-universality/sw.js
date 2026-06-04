@@ -1,5 +1,5 @@
 // Service Worker for Breaking Universality Talk — Aggressive Precaching
-const CACHE_NAME = 'breaking-universality-talk-v5';
+const CACHE_NAME = 'breaking-universality-talk-v6';
 
 // All local assets to precache
 const PRECACHE_ASSETS = [
