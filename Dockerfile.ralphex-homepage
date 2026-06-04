@@ -18,6 +18,8 @@ RUN apk add --no-cache \
       cmake \
       curl \
       git \
+      gcompat \
+      libc6-compat \
       libffi-dev \
       linux-headers \
       make \
@@ -28,24 +30,27 @@ RUN apk add --no-cache \
       python3 \
       ruby \
       ruby-bundler \
+      ruby-csv \
       ruby-dev \
       tar \
       wget \
       xz \
       yaml-dev \
       zlib-dev && \
-    gem install --no-document bundler -v 2.5.14
+    gem install --no-document bundler -v 2.5.14 && \
+    gem install --no-document csv logger
 
 # Install Emscripten SDK. Keep this separate from Ruby gems so Docker can cache it.
 RUN git clone --depth 1 https://github.com/emscripten-core/emsdk.git ${EMSDK} && \
     ${EMSDK}/emsdk install latest && \
     ${EMSDK}/emsdk activate latest && \
-    emcc --version | head -1
+    sed -i "s#^NODE_JS = .*#NODE_JS = ['/usr/bin/node']#" ${EMSDK}/.emscripten && \
+    emcc --version
 
 # Preinstall homepage Jekyll gems. The project is still mounted at /workspace at runtime.
 WORKDIR /tmp/homepage-gems
 COPY Gemfile Gemfile.lock ./
-RUN bundle _2.5.14_ install --jobs=4 --retry=3 && \
-    bundle _2.5.14_ exec jekyll --version
+RUN bundle install --jobs=4 --retry=3 && \
+    bundle exec jekyll --version
 
 WORKDIR /workspace
