@@ -1321,6 +1321,14 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 #sample-canvas {
   image-rendering: crisp-edges;
   image-rendering: pixelated;
+  cursor: grab;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#sample-canvas-wrapper {
+  overscroll-behavior: contain;
 }
 #sample-canvas.dragging {
   cursor: grabbing !important;
@@ -5582,43 +5590,136 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       this.cacheKey = '';
       this.framePending = false;
       this.dragStart = null;
+      this.activePointers = new Map();
+      this.primaryPointerId = null;
+      this.pinchStart = null;
+      // CSS also sets this, but keeping the property here helps iOS Safari when
+      // the canvas is recreated or inline styles win.
+      this.canvas.style.touchAction = 'none';
       this.bindEvents();
       this.resize(false);
     }
 
     bindEvents() {
-      this.canvas.addEventListener('pointerdown', event => {
-        if (!this.dominoes.length) return;
+      const pointerPoint = event => {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+          clientX: event.clientX,
+          clientY: event.clientY,
+          canvasX: event.clientX - rect.left,
+          canvasY: event.clientY - rect.top
+        };
+      };
+
+      const twoPointerGesture = () => {
+        const points = Array.from(this.activePointers.values()).slice(0, 2);
+        if (points.length < 2) return null;
+        const dx = points[1].clientX - points[0].clientX;
+        const dy = points[1].clientY - points[0].clientY;
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+          distance: Math.max(1, Math.hypot(dx, dy)),
+          midpointX: (points[0].clientX + points[1].clientX) / 2 - rect.left,
+          midpointY: (points[0].clientY + points[1].clientY) / 2 - rect.top
+        };
+      };
+
+      const beginPinch = () => {
+        const gesture = twoPointerGesture();
+        if (!gesture) return;
+        const centerX = this.cssWidth / 2;
+        const centerY = this.cssHeight / 2;
+        this.pinchStart = {
+          distance: gesture.distance,
+          zoom: this.viewport.zoom,
+          // Model point under the initial midpoint.  During pinch we keep this
+          // point under the moving midpoint, so two fingers can pan and zoom at
+          // once just like a native image viewer.
+          modelX: (gesture.midpointX - centerX) / this.viewport.zoom - this.viewport.panX,
+          modelY: (centerY - gesture.midpointY) / this.viewport.zoom - this.viewport.panY
+        };
+      };
+
+      const beginSinglePointerPan = (pointerId, point) => {
+        this.primaryPointerId = pointerId;
+        this.pinchStart = null;
         this.dragStart = {
-          x: event.clientX,
-          y: event.clientY,
+          x: point.clientX,
+          y: point.clientY,
           panX: this.viewport.panX,
           panY: this.viewport.panY
         };
+      };
+
+      const finishPointer = event => {
+        this.activePointers.delete(event.pointerId);
+        this.canvas.releasePointerCapture?.(event.pointerId);
+
+        if (this.activePointers.size === 0) {
+          this.dragStart = null;
+          this.pinchStart = null;
+          this.primaryPointerId = null;
+          this.canvas.classList.remove('dragging');
+          return;
+        }
+
+        if (this.activePointers.size === 1) {
+          const [pointerId, point] = this.activePointers.entries().next().value;
+          beginSinglePointerPan(pointerId, point);
+        } else {
+          this.dragStart = null;
+          this.primaryPointerId = null;
+          beginPinch();
+        }
+      };
+
+      this.canvas.addEventListener('pointerdown', event => {
+        if (!this.dominoes.length) return;
+        if (event.pointerType === 'mouse' && event.button !== 0) return;
+        event.preventDefault();
+        const point = pointerPoint(event);
+        this.activePointers.set(event.pointerId, point);
         this.canvas.classList.add('dragging');
         this.canvas.setPointerCapture?.(event.pointerId);
+
+        if (this.activePointers.size === 1) {
+          beginSinglePointerPan(event.pointerId, point);
+        } else {
+          this.dragStart = null;
+          this.primaryPointerId = null;
+          beginPinch();
+        }
       });
 
       this.canvas.addEventListener('pointermove', event => {
-        if (!this.dragStart) return;
-        const dx = event.clientX - this.dragStart.x;
-        const dy = event.clientY - this.dragStart.y;
-        this.viewport.panX = this.dragStart.panX + dx / this.viewport.zoom;
-        this.viewport.panY = this.dragStart.panY - dy / this.viewport.zoom;
+        if (!this.activePointers.has(event.pointerId)) return;
+        event.preventDefault();
+        const point = pointerPoint(event);
+        this.activePointers.set(event.pointerId, point);
+
+        if (this.activePointers.size >= 2) {
+          const gesture = twoPointerGesture();
+          if (!gesture) return;
+          if (!this.pinchStart) beginPinch();
+          const zoom = Math.max(0.02, Math.min(200, this.pinchStart.zoom * gesture.distance / this.pinchStart.distance));
+          const centerX = this.cssWidth / 2;
+          const centerY = this.cssHeight / 2;
+          this.viewport.zoom = zoom;
+          this.viewport.panX = (gesture.midpointX - centerX) / zoom - this.pinchStart.modelX;
+          this.viewport.panY = (centerY - gesture.midpointY) / zoom - this.pinchStart.modelY;
+        } else if (this.dragStart && event.pointerId === this.primaryPointerId) {
+          const dx = point.clientX - this.dragStart.x;
+          const dy = point.clientY - this.dragStart.y;
+          this.viewport.panX = this.dragStart.panX + dx / this.viewport.zoom;
+          this.viewport.panY = this.dragStart.panY - dy / this.viewport.zoom;
+        }
+
         this.publishViewport();
         this.scheduleDraw();
       });
 
-      const endDrag = event => {
-        this.dragStart = null;
-        this.canvas.classList.remove('dragging');
-        this.canvas.releasePointerCapture?.(event.pointerId);
-      };
-      this.canvas.addEventListener('pointerup', endDrag);
-      this.canvas.addEventListener('pointercancel', endDrag);
-      this.canvas.addEventListener('pointerleave', event => {
-        if (this.dragStart && event.pointerId !== undefined) endDrag(event);
-      });
+      this.canvas.addEventListener('pointerup', finishPointer);
+      this.canvas.addEventListener('pointercancel', finishPointer);
 
       this.canvas.addEventListener('wheel', event => {
         if (!this.dominoes.length) return;
@@ -5629,6 +5730,12 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       }, { passive: false });
 
       this.canvas.addEventListener('dblclick', () => this.resetView());
+
+      // Legacy iOS Safari emits gesture events for pinch.  Prevent the browser
+      // page zoom so the gesture stays inside the tiling canvas.
+      ['gesturestart', 'gesturechange', 'gestureend'].forEach(name => {
+        this.canvas.addEventListener(name, event => event.preventDefault(), { passive: false });
+      });
     }
 
     publishViewport() {
