@@ -888,7 +888,7 @@ permalink: /domino/
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="{{site.url}}/js/colorschemes.js"></script>
-<script src="{{site.url}}/s/domino.js"></script>
+<script src="{{ '/s/domino.js' | relative_url }}"></script>
 
 <div class="accordion" id="infoAccordion">
   <div class="card">

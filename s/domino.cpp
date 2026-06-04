@@ -279,6 +279,25 @@ public:
     }
 };
 
+void normalizeMatrixIfNeeded(MatrixDouble& matrix, double maxAbs) {
+    if (maxAbs <= 0.0 || !std::isfinite(maxAbs)) {
+        return;
+    }
+
+    // The square-move recurrence is homogeneous under a common rescaling of
+    // all entries in the current matrix.  Keeping the scale moderate avoids
+    // both overflow and the old incorrect practice of clamping tiny
+    // denominators to an arbitrary epsilon (which changed the measure).
+    if (maxAbs < 1e-100 || maxAbs > 1e100) {
+        const int n = matrix.size();
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < n; ++j) {
+                matrix[i][j] /= maxAbs;
+            }
+        }
+    }
+}
+
 PackedDecisionPyramid computeDecisionPyramid(const MatrixDouble& weights) {
     const int dim = weights.size();
     if (dim <= 0 || (dim & 1)) {
@@ -293,6 +312,7 @@ PackedDecisionPyramid computeDecisionPyramid(const MatrixDouble& weights) {
     MatrixDouble nextValue;
     MatrixInt nextExp;
 
+    double currentMaxAbs = 0.0;
     for (int i = 0; i < dim; ++i) {
         for (int j = 0; j < dim; ++j) {
             if (fabs(weights[i][j]) < 1e-9) {
@@ -302,8 +322,10 @@ PackedDecisionPyramid computeDecisionPyramid(const MatrixDouble& weights) {
                 currentValue[i][j] = weights[i][j];
                 currentExp[i][j] = 0;
             }
+            currentMaxAbs = std::max(currentMaxAbs, fabs(currentValue[i][j]));
         }
     }
+    normalizeMatrixIfNeeded(currentValue, currentMaxAbs);
 
     for (int size = dim; size >= 2; size -= 2) {
         const int rows = size / 2;
@@ -323,8 +345,10 @@ PackedDecisionPyramid computeDecisionPyramid(const MatrixDouble& weights) {
                 } else {
                     const double prodMain = currentValue[i0 + 1][j0 + 1] * currentValue[i0][j0];
                     const double prodOther = currentValue[i0 + 1][j0] * currentValue[i0][j0 + 1];
-                    double denom = prodMain + prodOther;
-                    if (fabs(denom) < 1e-9) denom = 1e-9;
+                    const double denom = prodMain + prodOther;
+                    if (denom == 0.0 || !std::isfinite(denom)) {
+                        throw std::runtime_error("Degenerate creation probability denominator");
+                    }
                     chooseMain = shuffleRng.next_double() < (prodMain / denom);
                 }
                 decisions.set(rows, i, j, chooseMain);
@@ -338,6 +362,7 @@ PackedDecisionPyramid computeDecisionPyramid(const MatrixDouble& weights) {
 
         nextValue.reset(nextSize, nextSize, 0.0);
         nextExp.reset(nextSize, nextSize, 0);
+        double nextMaxAbs = 0.0;
 
         for (int i = 0; i < nextSize; ++i) {
             for (int j = 0; j < nextSize; ++j) {
@@ -370,11 +395,16 @@ PackedDecisionPyramid computeDecisionPyramid(const MatrixDouble& weights) {
                     a2Exp = sum2;
                 }
 
-                if (fabs(a2) < 1e-9) a2 = 1e-9;
+                if (a2 == 0.0 || !std::isfinite(a2)) {
+                    throw std::runtime_error("Degenerate square-move denominator");
+                }
                 nextValue[i][j] = current / a2;
                 nextExp[i][j] = currentFlag - a2Exp;
+                nextMaxAbs = std::max(nextMaxAbs, fabs(nextValue[i][j]));
             }
         }
+
+        normalizeMatrixIfNeeded(nextValue, nextMaxAbs);
 
         std::swap(currentValue, nextValue);
         std::swap(currentExp, nextExp);
