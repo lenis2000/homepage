@@ -99,23 +99,54 @@ function createCdpClient(wsUrl) {
   const ws = new WebSocket(wsUrl);
   let nextId = 1;
   const pending = new Map();
+  let closedError = null;
+
+  function rejectPending(error) {
+    closedError = error;
+    for (const { reject, timer } of pending.values()) {
+      clearTimeout(timer);
+      reject(error);
+    }
+    pending.clear();
+  }
 
   ws.addEventListener("message", event => {
     const message = JSON.parse(event.data);
     if (message.id && pending.has(message.id)) {
-      pending.get(message.id)(message);
+      const { resolve, reject, timer } = pending.get(message.id);
+      clearTimeout(timer);
       pending.delete(message.id);
+      if (message.error) reject(new Error(`${message.error.message || "CDP command failed"} (${message.error.code})`));
+      else resolve(message);
     }
   });
 
-  const opened = new Promise(resolve => ws.addEventListener("open", resolve, { once: true }));
+  const opened = new Promise((resolve, reject) => {
+    ws.addEventListener("open", resolve, { once: true });
+    ws.addEventListener("error", () => reject(new Error("Chromium WebSocket failed before opening")), { once: true });
+    ws.addEventListener("close", () => reject(new Error("Chromium WebSocket closed before opening")), { once: true });
+  });
+
+  ws.addEventListener("error", () => {
+    rejectPending(new Error("Chromium WebSocket error"));
+  });
+  ws.addEventListener("close", () => {
+    rejectPending(new Error("Chromium WebSocket closed"));
+  });
 
   return {
-    async send(method, params = {}) {
+    async send(method, params = {}, timeoutMs = 30000) {
       await opened;
+      if (closedError) throw closedError;
       const id = nextId++;
       ws.send(JSON.stringify({ id, method, params }));
-      return new Promise(resolve => pending.set(id, resolve));
+      return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+          pending.delete(id);
+          reject(new Error(`Timed out waiting for CDP command ${method}`));
+        }, timeoutMs);
+        pending.set(id, { resolve, reject, timer });
+      });
     },
     close() {
       ws.close();
@@ -188,7 +219,7 @@ async function evaluateDominoWasm(client) {
     awaitPromise: true,
     returnByValue: true,
     timeout: 60000
-  });
+  }, 70000);
   const value = result.result?.result?.value;
   if (value?.error) throw new Error(value.error);
   assert(value === "ok", "Unexpected WASM test result");

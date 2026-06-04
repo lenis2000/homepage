@@ -911,8 +911,9 @@ int getProgress() {
 // Function to perform multiple Glauber steps and return the result as JSON
 EMSCRIPTEN_KEEPALIVE
 char* performGlauberSteps(
-    const char* periodicity_cstr, // "uniform", "2x2", or "3x3"
-    double p1, double p2, double p3, double p4, double p5, double p6, double p7, double p8, double p9, // Use all 9 for flexibility
+    const char* periodicity_cstr, // "uniform", "2x2", "3x3", or "6x2"
+    double p1, double p2, double p3, double p4, double p5, double p6,
+    double p7, double p8, double p9, double p10, double p11, double p12,
     int nSteps)
 {
     try {
@@ -949,15 +950,19 @@ char* performGlauberSteps(
                 g_w = current_w;
             }
         } else if (periodicity == "6x2") {
-            // Check if any of the first 9 weights have changed
-            array<double, 9> current_w = {p1, p2, p3, p4, p5, p6, p7, p8, p9};
-            for (size_t i = 0; i < 9; ++i) {
+            array<double, 12> current_w = {
+                p1, p2, p3, p4, p5, p6,
+                p7, p8, p9, p10, p11, p12
+            };
+            for (size_t i = 0; i < current_w.size(); ++i) {
                 if (std::abs(current_w[i] - g_w6x2[i]) > 1e-9) {
                     weights_changed = true;
                     break;
                 }
             }
-            // Note: we'll update g_w6x2 in the rebuild section below
+            if (weights_changed) {
+                g_w6x2 = current_w;
+            }
         }
          // No specific weight check needed for "uniform" if periodicity changes
 
@@ -981,15 +986,6 @@ char* performGlauberSteps(
                      }
                  }
              } else if (g_periodicity == "6x2") {
-                 // For 6x2 mode, update the global weights with passed parameters
-                 // We only have 9 parameters, so we'll update the first 9 weights
-                 // and keep the last 3 from the global state
-                 g_w6x2[0] = p1; g_w6x2[1] = p2; g_w6x2[2] = p3;
-                 g_w6x2[3] = p4; g_w6x2[4] = p5; g_w6x2[5] = p6;
-                 g_w6x2[6] = p7; g_w6x2[7] = p8; g_w6x2[8] = p9;
-                 // Keep g_w6x2[9], g_w6x2[10], g_w6x2[11] from previous state
-                 
-                 // Now rebuild the weight matrix with the updated values
                  const double W[2][6] = {
                      {g_w6x2[0], g_w6x2[1], g_w6x2[2], g_w6x2[3], g_w6x2[4], g_w6x2[5]},
                      {g_w6x2[6], g_w6x2[7], g_w6x2[8], g_w6x2[9], g_w6x2[10], g_w6x2[11]}

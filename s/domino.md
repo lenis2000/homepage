@@ -1360,7 +1360,12 @@ Module.onRuntimeInitialized = async function() {
      'number','number','number','number'], {async:true});
   const freeString    = Module.cwrap('freeString',null,['number']);
   const getProgress   = Module.cwrap('getProgress','number',[]);
-  const performGlauberSteps = Module.cwrap('performGlauberSteps', 'number', ['string', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], {async: true});
+  const performGlauberSteps = Module.cwrap('performGlauberSteps', 'number', [
+    'string',
+    'number', 'number', 'number', 'number', 'number', 'number',
+    'number', 'number', 'number', 'number', 'number', 'number',
+    'number'
+  ], {async: true});
   const wasGlauberActive = Module.cwrap('wasGlauberActive', 'boolean', []);
 
   // Three.js setup
@@ -1930,31 +1935,22 @@ Module.onRuntimeInitialized = async function() {
     const periodicity = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
     let params = [periodicity]; // First arg is string name
     if (periodicity === '6x2') {
-        // Get the 6x2 weights from the UI inputs
-        // We can only pass 9 parameters, so we'll pass the first 9 weights
-        // and reuse some values for the remaining positions
-        const w1 = parseFloat(document.getElementById('w6x2_1').value) || 1.0;
-        const w2 = parseFloat(document.getElementById('w6x2_2').value) || 20.0;
-        const w3 = parseFloat(document.getElementById('w6x2_3').value) || 1.0;
-        const w4 = parseFloat(document.getElementById('w6x2_4').value) || 20.0;
-        const w5 = parseFloat(document.getElementById('w6x2_5').value) || 1.0;
-        const w6 = parseFloat(document.getElementById('w6x2_6').value) || 20.0;
-        const w7 = parseFloat(document.getElementById('w6x2_7').value) || 1.0;
-        const w8 = parseFloat(document.getElementById('w6x2_8').value) || 20.0;
-        const w9 = parseFloat(document.getElementById('w6x2_9').value) || 1.0;
-        // Note: We can only pass 9 parameters, so w10, w11, w12 will be handled by storing them during sample
-        params.push(w1, w2, w3, w4, w5, w6, w7, w8, w9);
+        for (let i = 1; i <= 12; i++) {
+            const val = parseFloat(document.getElementById(`w6x2_${i}`).value);
+            params.push(Number.isFinite(val) ? val : 1.0);
+        }
     } else if (periodicity === '2x2') {
         const a = parseFloat(document.getElementById('a-input').value) || 0.5;
         const b = parseFloat(document.getElementById('b-input').value) || 1.0;
-        params.push(a, b, 0,0,0,0,0,0,0); // Pass a, b as p1, p2
+        params.push(a, b, 0,0,0,0,0,0,0,0,0,0); // Pass a, b as p1, p2
     } else if (periodicity === '3x3') {
         for (let i = 1; i <= 9; i++) {
             const val = parseFloat(document.getElementById(`w${i}`).value) || 1.0;
             params.push(val);
         }
+        params.push(0,0,0);
     } else { // Uniform
-        params.push(1,1,1,1,1,1,1,1,1); // Pass all 1s
+        params.push(1,1,1,1,1,1,1,1,1,1,1,1); // Pass all 1s
     }
     params.push(nSteps); // Add number of steps
 
@@ -5539,8 +5535,11 @@ Module.onRuntimeInitialized = async function() {
 
   if (sampleFab && sampleBtn) {
     sampleFab.addEventListener('click', () => {
-      // Toggle Glauber dynamics on/off
-      document.getElementById('glauber-btn')?.click();
+      if (glauberRunning) {
+        document.getElementById('glauber-btn')?.click();
+      } else {
+        sampleBtn.click();
+      }
     });
   }
 
