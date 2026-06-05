@@ -105,17 +105,17 @@ If Chromium is available, the Node test should include browser smoke tests. If n
 
 Before changing architecture, document the current behavior and performance.
 
-- [ ] Identify the exact hot path causing tab freezes: `sampleMany()` / `sampleRows()` / `swapAdjacentRows()` / per-column `localForward()` in synchronous JS.
-- [ ] Record baseline timings for default sample, old screenshot-like parameters, and one larger stress case. If a case freezes, record that qualitatively instead of waiting forever.
-- [ ] Record current mathematical invariants to preserve:
+- [x] Identify the exact hot path causing tab freezes: `sampleMany()` / `sampleRows()` / `swapAdjacentRows()` / per-column `localForward()` in synchronous JS.
+- [x] Record baseline timings for default sample, old screenshot-like parameters, and one larger stress case. If a case freezes, record that qualitatively instead of waiting forever.
+- [x] Record current mathematical invariants to preserve:
   - row order after all swaps is `w_1,...,w_M,x_N,...,x_1`;
   - `mu[j]` has length `N` for `j=0..M`;
   - `lam[j]` has length `j` for `j=0..N`;
   - `lam[N] = mu[M]`;
   - partitions are weakly decreasing and nonnegative;
   - row interlacing holds on both sides.
-- [ ] Add a small deterministic JS reference hook if needed for tests. It can be dev-only, but must allow seeded randomness so C++/WASM can be checked on tiny systems.
-- [ ] Confirm which stale old files are unused (`js/factorial-glauber.js`, `js/factorial-wasm.js`). Do not delete them until a source search and browser smoke test confirm `/factorial/` does not load them.
+- [x] Add a small deterministic JS reference hook if needed for tests. It can be dev-only, but must allow seeded randomness so C++/WASM can be checked on tiny systems.
+- [x] Confirm which stale old files are unused (`js/factorial-glauber.js`, `js/factorial-wasm.js`). Do not delete them until a source search and browser smoke test confirm `/factorial/` does not load them.
 
 ### Task 1: Implement workerized WASM exact sampler
 

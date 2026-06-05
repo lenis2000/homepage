@@ -14,6 +14,8 @@
   let xArr = [];
   let wArr = [];
   let ySpec = null;
+  let randomUnit = Math.random;
+  let columnCapOverride = null;
 
   // Final sampled GT data, in the format used by the old page view.
   let mu = [];   // mu[j], j=0..M, each length N
@@ -43,6 +45,46 @@
   function round6(x) {
     if (!Number.isFinite(x)) return x;
     return parseFloat(x.toPrecision(6));
+  }
+
+  function createXoshiro256pp(seedLo = 1, seedHi = 0) {
+    const mask = (1n << 64n) - 1n;
+    function asUint64(value) {
+      if (typeof value === 'bigint') return BigInt.asUintN(64, value);
+      if (typeof value === 'string') return BigInt.asUintN(64, BigInt(value));
+      const number = Number.isFinite(Number(value)) ? Math.trunc(Number(value)) : 0;
+      return BigInt.asUintN(64, BigInt(number));
+    }
+    function rotl(x, k) {
+      const shift = BigInt(k);
+      return ((x << shift) | (x >> (64n - shift))) & mask;
+    }
+
+    let splitmixState = BigInt.asUintN(64, asUint64(seedLo) ^ (asUint64(seedHi) << 32n));
+    function splitmix64() {
+      splitmixState = BigInt.asUintN(64, splitmixState + 0x9e3779b97f4a7c15n);
+      let z = splitmixState;
+      z = BigInt.asUintN(64, (z ^ (z >> 30n)) * 0xbf58476d1ce4e5b9n);
+      z = BigInt.asUintN(64, (z ^ (z >> 27n)) * 0x94d049bb133111ebn);
+      return BigInt.asUintN(64, z ^ (z >> 31n));
+    }
+
+    let s0 = splitmix64();
+    let s1 = splitmix64();
+    let s2 = splitmix64();
+    let s3 = splitmix64();
+
+    return function nextDouble() {
+      const result = BigInt.asUintN(64, rotl(BigInt.asUintN(64, s0 + s3), 23) + s0);
+      const t = BigInt.asUintN(64, s1 << 17n);
+      s2 = BigInt.asUintN(64, s2 ^ s0);
+      s3 = BigInt.asUintN(64, s3 ^ s1);
+      s1 = BigInt.asUintN(64, s1 ^ s2);
+      s0 = BigInt.asUintN(64, s0 ^ s3);
+      s2 = BigInt.asUintN(64, s2 ^ t);
+      s3 = rotl(s3, 45);
+      return Number(result >> 11n) / 0x20000000000000;
+    };
   }
 
   function arrayToCSV(arr) {
@@ -369,7 +411,7 @@
     if (!(total > 0) || !Number.isFinite(total)) {
       throw new Error(`Bad Bernoulli normalization for boundary ${boundary.join(',')}.`);
     }
-    let u = Math.random() * total;
+    let u = randomUnit() * total;
     for (const b of B) {
       u -= b.weight;
       if (u <= 0) return { triple: b.triple, random: true };
@@ -397,6 +439,13 @@
       for (const v of s) if (v > m) m = v;
     }
     return m;
+  }
+
+  function currentColumnCap() {
+    if (columnCapOverride != null) {
+      return Math.max(1, Math.min(1000000, Math.trunc(columnCapOverride)));
+    }
+    return clampInt($('fs-max-cols')?.value || '20000', 100, 1000000);
   }
 
   function buildFrozenRhs() {
@@ -430,7 +479,7 @@
     const top = levels[pos + 2];
     const newMid = new Set();
     const maxInitialColumn = maxSet(bottom, mid, top);
-    const columnCap = clampInt($('fs-max-cols')?.value || '20000', 100, 1000000);
+    const columnCap = currentColumnCap();
 
     let hW = 0;      // lower W-row horizontal state in the unprocessed A side
     let hC = 0;      // upper check-row horizontal state in the unprocessed A side
@@ -505,7 +554,8 @@
     return part;
   }
 
-  function rebuildMuLamFromLevels() {
+  function rebuildMuLamFromLevels(options = {}) {
+    const updateDom = options.updateDom !== false;
     // Final bottom-to-top order should be w_1,...,w_M,x_N,...,x_1.
     for (let j = 0; j < M; j++) {
       if (!rows[j] || rows[j].type !== 'C') throw new Error('Final row order check failed in w-block.');
@@ -529,7 +579,138 @@
     const lambda = mu[M] || [];
     stats.size = lambda.reduce((s, v) => s + v, 0);
     stats.maxPos = maxPositionSeen();
-    $('fs-lambda').textContent = lambda.length ? `(${lambda.join(', ')})` : '∅';
+    if (updateDom) $('fs-lambda').textContent = lambda.length ? `(${lambda.join(', ')})` : '∅';
+  }
+
+  function sortedLevelArray(set) {
+    return Array.from(set || []).sort((a, b) => a - b);
+  }
+
+  function snapshotReferenceResult() {
+    return {
+      N,
+      M,
+      mu: mu.map(row => row.slice()),
+      lam: lam.map(row => row.slice()),
+      lambda: (mu[M] || []).slice(),
+      stats: { ...stats },
+      rows: rows.map(row => ({ ...row })),
+      levels: levels.map(sortedLevelArray),
+    };
+  }
+
+  function arrayYSpec(values) {
+    const arr = values.map(Number);
+    for (const v of arr) {
+      if (!Number.isFinite(v)) throw new Error('y contains a non-finite value');
+    }
+    return {
+      kind: 'array',
+      preview: arr.slice(0, Math.min(arr.length, 120)),
+      value(k) {
+        if (k <= 0) return 0;
+        return k <= arr.length ? arr[k - 1] : 0;
+      },
+      length: arr.length,
+    };
+  }
+
+  function referenceArrayInput(input, len, label) {
+    let arr;
+    if (Array.isArray(input)) {
+      arr = input.map(Number);
+    } else if (typeof input === 'string') {
+      arr = parseArrayInput(input, len, label);
+    } else if (label === 'x' && xArr.length >= len) {
+      arr = xArr.slice(0, len);
+    } else if (label === 'w' && wArr.length >= len) {
+      arr = wArr.slice(0, len);
+    } else {
+      throw new Error(`reference ${label} values are required`);
+    }
+    if (arr.length < len) throw new Error(`${label} has length ${arr.length}, but needs at least ${len}`);
+    arr = arr.slice(0, len);
+    for (const v of arr) {
+      if (!Number.isFinite(v)) throw new Error(`${label} contains a non-finite value`);
+    }
+    return arr;
+  }
+
+  function referenceYInput(input) {
+    if (Array.isArray(input)) return arrayYSpec(input);
+    if (typeof input === 'string') return parseYInput(input);
+    if (ySpec) return ySpec;
+    throw new Error('reference y values are required');
+  }
+
+  function validateReferenceParameters() {
+    for (let i = 0; i < xArr.length; i++) {
+      for (let j = 0; j < wArr.length; j++) {
+        if (!(wArr[j] > xArr[i])) {
+          throw new Error(`Need w_${j + 1} > x_${i + 1}; got ${wArr[j]} <= ${xArr[i]}`);
+        }
+      }
+    }
+  }
+
+  function runReferenceSample(options = {}) {
+    const saved = {
+      N,
+      M,
+      xArr,
+      wArr,
+      ySpec,
+      mu,
+      lam,
+      rows,
+      levels,
+      stats,
+      randomUnit,
+      columnCapOverride,
+    };
+
+    try {
+      N = Math.max(1, Math.min(120, Math.trunc(Number(options.N ?? N))));
+      M = Math.max(1, Math.min(120, Math.trunc(Number(options.M ?? M))));
+      xArr = referenceArrayInput(options.x, N, 'x');
+      wArr = referenceArrayInput(options.w, M, 'w');
+      ySpec = referenceYInput(options.y);
+      validateReferenceParameters();
+
+      const seedLo = options.seedLo ?? options.seed ?? 1;
+      const seedHi = options.seedHi ?? 0;
+      randomUnit = createXoshiro256pp(seedLo, seedHi);
+      columnCapOverride = options.columnCap ?? 20000;
+      stats = {
+        samples: 0,
+        size: 0,
+        maxPos: 0,
+        rowSwaps: 0,
+        localMoves: 0,
+        randomChoices: 0,
+        elapsedMs: 0,
+      };
+
+      const t0 = performance.now();
+      sampleRows();
+      rebuildMuLamFromLevels({ updateDom: false });
+      stats.samples = 1;
+      stats.elapsedMs = performance.now() - t0;
+      return snapshotReferenceResult();
+    } finally {
+      N = saved.N;
+      M = saved.M;
+      xArr = saved.xArr;
+      wArr = saved.wArr;
+      ySpec = saved.ySpec;
+      mu = saved.mu;
+      lam = saved.lam;
+      rows = saved.rows;
+      levels = saved.levels;
+      stats = saved.stats;
+      randomUnit = saved.randomUnit;
+      columnCapOverride = saved.columnCapOverride;
+    }
   }
 
   function resetFrozen() {
@@ -957,6 +1138,7 @@
 
     window.factorialExactSamplerSample = sampleOnce;
     window.factorialExactSamplerState = () => ({ N, M, xArr, wArr, mu, lam, stats, rows, levels });
+    window.factorialYBEReferenceSample = runReferenceSample;
   }
 
   if (document.readyState === 'loading') {
