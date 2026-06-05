@@ -14,6 +14,13 @@ title: "Exact sampler for factorial Schur processes"
     --fs-border: var(--border-color, #d7dde5);
     --fs-muted: var(--text-secondary, #666);
     --fs-text: var(--text-primary, #212529);
+    --fs-blue: #1976d2;
+    --fs-ok: #137333;
+    --fs-warn: #9a5a00;
+    --fs-danger: #b00020;
+    --fs-code-bg: #f5f5f5;
+    --fs-legend: #444;
+    --fs-lambda-text: #333;
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 8px;
@@ -21,6 +28,17 @@ title: "Exact sampler for factorial Schur processes"
   }
   [data-theme="dark"] .fs-wrap {
     --fs-panel-strong: #202833;
+    --fs-blue: #5aa9ff;
+    --fs-ok: #37c878;
+    --fs-warn: #f0ad4e;
+    --fs-danger: #ff8a9a;
+    --fs-code-bg: #2b3440;
+    --fs-legend: #c5ced8;
+    --fs-lambda-text: #e0e5eb;
+  }
+  .fs-intro {
+    color: var(--fs-muted);
+    margin-top: 0;
   }
   .fs-app-shell {
     display: grid;
@@ -183,10 +201,10 @@ title: "Exact sampler for factorial Schur processes"
   .fs-paramline { display:flex; gap:6px; align-items:center; margin-top:4px; }
   .fs-paramline label { width: 22px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; font-size: 13px; }
   .fs-paramline input[type="text"] { flex: 1; }
-  .fs-note { font-size: 11px; color: #777; margin: 2px 0 4px 0; }
-  .fs-note.ok { color:#137333; }
-  .fs-note.warn { color:#9a5a00; font-weight:600; }
-  .fs-note.err { color:#b00020; font-weight:600; }
+  .fs-note { font-size: 11px; color: var(--fs-muted); margin: 2px 0 4px 0; }
+  .fs-note.ok { color: var(--fs-ok); }
+  .fs-note.warn { color: var(--fs-warn); font-weight:600; }
+  .fs-note.err { color: var(--fs-danger); font-weight:600; }
   .fs-summary-grid {
     display: grid;
     gap: 5px;
@@ -203,22 +221,22 @@ title: "Exact sampler for factorial Schur processes"
   .fs-validation-panel {
     background: var(--fs-panel-strong);
     border: 1px solid var(--fs-border);
-    border-left: 4px solid #1976d2;
+    border-left: 4px solid var(--fs-blue);
     border-radius: 4px;
     padding: 7px 8px;
     margin: 8px 0;
   }
   .fs-validation-panel.fs-validation-error {
-    border-left-color: #b00020;
+    border-left-color: var(--fs-danger);
   }
   .fs-validation-panel.fs-validation-warn,
   .fs-validation-panel.fs-validation-canceled {
-    border-left-color: #9a5a00;
+    border-left-color: var(--fs-warn);
   }
   .fs-validation-panel.fs-validation-ok,
   .fs-validation-panel.fs-validation-ready,
   .fs-validation-panel.fs-validation-done {
-    border-left-color: #137333;
+    border-left-color: var(--fs-ok);
   }
   .fs-validation-heading {
     font-size: 12px;
@@ -323,7 +341,7 @@ title: "Exact sampler for factorial Schur processes"
     margin: 6px 0;
   }
   .fs-stats span { display:inline-block; margin-right: 14px; }
-  .fs-stats .v { color:#1976d2; font-weight: 600; }
+  .fs-stats .v { color: var(--fs-blue); font-weight: 600; }
   .fs-status-strip {
     display: flex;
     flex-wrap: wrap;
@@ -331,23 +349,24 @@ title: "Exact sampler for factorial Schur processes"
     align-items: center;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12px;
-    color: #444;
+    color: var(--fs-legend);
     margin: 2px 0 6px 0;
   }
-  .fs-status-strip .v { color:#1976d2; font-weight: 600; }
+  .fs-status-strip .v { color: var(--fs-blue); font-weight: 600; }
   .fs-info {
     font-size: 14px;
     line-height: 1.55;
   }
-  .fs-info code { background: #f5f5f5; padding: 1px 4px; border-radius: 3px; }
-  .fs-legend { font-size: 12px; color: #444; }
+  .fs-info code { background: var(--fs-code-bg); padding: 1px 4px; border-radius: 3px; }
+  .fs-legend { font-size: 12px; color: var(--fs-legend); }
+  .fs-scale-value { font-size: 11px; color: var(--fs-blue); }
   .fs-chip { display:inline-block; padding:1px 6px; border-radius:8px; font-family: ui-monospace, monospace; }
   .fs-chip.mu { background:#fff4dc; border:1px solid #f0c067; color:#7a4a00; }
   .fs-chip.lam { background:#dceeff; border:1px solid #7eb6e8; color:#0a3a6e; }
   .fs-lambda-line {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12px;
-    color: #333;
+    color: var(--fs-lambda-text);
     margin: 6px 0 10px 0;
     overflow-wrap: anywhere;
   }
@@ -387,7 +406,7 @@ title: "Exact sampler for factorial Schur processes"
 <div class="fs-wrap">
 
 <h1 style="margin-bottom: 4px;">Exact sampler for the factorial Schur process</h1>
-<p style="color:#666;margin-top:0;">
+<p class="fs-intro">
 Reverse-Cauchy sampler for
 <code>s<sub>λ</sub>(x | y) · š<sub>λ</sub>(w | y)</code>, implemented by the
 Yang--Baxter bijectivisation.  The local random split is
@@ -486,7 +505,7 @@ Yang--Baxter bijectivisation.  The local random split is
       <summary>View/style controls</summary>
       <div class="fs-section-body">
         <label class="fs-field stack" for="fs-scale">
-          <span>cell size <span id="fs-scale-val" style="font-size:11px;color:#1976d2;">20px</span></span>
+          <span>cell size <span id="fs-scale-val" class="fs-scale-value">20px</span></span>
           <input id="fs-scale" type="range" min="3" max="60" step="1" value="20">
         </label>
         <div class="fs-button-row">

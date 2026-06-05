@@ -554,6 +554,10 @@ async function runBrowserSmoke() {
           ) changedPixels += 1;
         }
       }
+      const renderer = window.factorialYBERenderer;
+      const canvasSize = renderer.cssSize();
+      const layout = renderer.layoutBounds(canvasSize.width);
+      const fittedScreenHeight = layout.height * renderer.viewport.scale;
       return {
         okPreset,
         ok,
@@ -566,7 +570,10 @@ async function runBrowserSmoke() {
         lambda: state.mu[state.M],
         runState: state.runState,
         phaseText: document.getElementById("fs-status-phase").textContent,
-        changedPixels
+        changedPixels,
+        fittedScreenHeight,
+        canvasHeight: canvasSize.height,
+        xStep: layout.xStep
       };
     })()`, 120000);
 
@@ -579,6 +586,11 @@ async function runBrowserSmoke() {
     assert(oldFanSampleResult.maxPos > 12, "old fan sample should produce a nontrivial fan extent");
     assert(oldFanSampleResult.runState === "done" && oldFanSampleResult.phaseText === "done", "old fan sample should finish in done status");
     assert(oldFanSampleResult.changedPixels > 0, "old fan canvas should be nonblank after sampling");
+    assert(oldFanSampleResult.xStep < 0.02, "old fan renderer should horizontally compress the long fan support");
+    assert(
+      oldFanSampleResult.fittedScreenHeight > oldFanSampleResult.canvasHeight * 0.45,
+      `old fan renderer should not collapse the fan into a thin band: ${JSON.stringify(oldFanSampleResult)}`
+    );
     const screenshotPath = await captureSmokeScreenshot(client, "old-fan");
     console.log(`Factorial screenshot helper wrote ${screenshotPath}.`);
 

@@ -272,14 +272,14 @@ Add automated protection so this page does not regress.
 
 Finish with visual review, not just code tests.
 
-- [ ] Run `/factorial/` locally and inspect at desktop width around 1920×1080.
-- [ ] Capture screenshots for default preset, old fan preset, and large stress/pending state. Use `/tmp` or `~/scratch` only.
-- [ ] Check light and dark mode if the site supports both.
-- [ ] Check mobile/narrow layout: controls should not crush the canvas or create horizontal page scrolling.
-- [ ] Confirm pan/zoom feels smooth: wheel anchored under cursor, drag does not lag, fit button recenters the meaningful region.
-- [ ] Confirm multicolor is not the default and the default view is aesthetically coherent.
-- [ ] Confirm all controls still work: apply preset, edit parameters manually, apply/reset, sample once, sample many if retained, cancel/reset, fit/zoom buttons, square/non-square cells if retained.
-- [ ] Run final validation commands:
+- [x] Run `/factorial/` locally and inspect at desktop width around 1920×1080. Used local Jekyll preview plus Chromium screenshots.
+- [x] Capture screenshots for default preset, old fan preset, and large stress/pending state. Use `/tmp` or `~/scratch` only. Stored QA screenshots under `/tmp/factorial-ybe-qa*`.
+- [x] Check light and dark mode if the site supports both. Checked with `data-theme="dark"` and fixed remaining page-local fixed-color text.
+- [x] Check mobile/narrow layout: controls should not crush the canvas or create horizontal page scrolling. Checked 390px mobile viewport and canvas scroll position with no horizontal overflow.
+- [x] Confirm pan/zoom feels smooth: wheel anchored under cursor, drag does not lag, fit button recenters the meaningful region. Browser probes verified anchored zoom, pan updates, and fit behavior; subjective manual feel is not automatable here.
+- [x] Confirm multicolor is not the default and the default view is aesthetically coherent.
+- [x] Confirm all controls still work: apply preset, edit parameters manually, apply/reset, sample once, sample many if retained, cancel/reset, fit/zoom buttons, square/non-square cells if retained. Covered by browser smoke plus Task 6 QA probes.
+- [x] Run final validation commands:
 
 ```sh
 bash factorial/build-ybe.sh
@@ -287,4 +287,4 @@ node tools/test-factorial-ybe.mjs
 bundle exec jekyll build
 ```
 
-- [ ] Commit changes with a concise signed-off message such as `Improve factorial sampler performance and UI`.
+- [x] Commit changes with a concise signed-off message such as `Improve factorial sampler performance and UI`.

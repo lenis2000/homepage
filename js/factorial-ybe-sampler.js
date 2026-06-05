@@ -1828,7 +1828,7 @@
       if (this.squareCells || !this.geometry) return 1;
       const rawWidth = Math.max(1, this.geometry.rawBounds.maxX - this.geometry.rawBounds.minX + 2);
       const budgetUnits = Math.max(6, (width - 96) / Math.max(3, this.baseScale));
-      return Math.max(0.08, Math.min(1, budgetUnits / rawWidth));
+      return Math.max(0.0015, Math.min(1, budgetUnits / rawWidth));
     }
 
     layoutBounds(width) {
@@ -1858,7 +1858,7 @@
 
     fitToContent(width, height) {
       const bounds = this.layoutBounds(width);
-      const pad = 36;
+      const pad = 54;
       const availableW = Math.max(80, width - pad * 2);
       const availableH = Math.max(80, height - pad * 2);
       const fitScale = Math.min(availableW / bounds.width, availableH / bounds.height);
