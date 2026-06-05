@@ -46,6 +46,8 @@ function checkSource() {
   assert(!sampler.includes("dim > 1000"), "sampler should not keep old hard-coded small caps");
   assert(!wasmBundle.includes("Input size too large, would exceed memory limits"), "WASM bundle should not contain an old generated small-cap error");
   assert(worker.includes("validateSampleMessage"), "worker should validate message shapes before calling WASM");
+  assert(worker.includes("MAX_N = 10000"), "worker should mirror the C++ N/M dimension guard");
+  assert(worker.includes("Sampler level storage request is too large"), "worker should reject oversized sampler storage before WASM allocation");
   assert(worker.includes("expected x length"), "worker should reject x/N length mismatches");
   assert(worker.includes("expected y length at least"), "worker should reject short y buffers");
   assert(worker.includes("_sampleFactorialYBE"), "worker should call the exported C++ sampler");
@@ -57,6 +59,7 @@ function checkSource() {
   assert(!wasmBundle.includes("_getProgress"), "WASM bundle should not export unused progress plumbing");
   assert(wasmBundle.includes("_malloc"), "WASM bundle should export _malloc");
   assert(wasmBundle.includes("_free"), "WASM bundle should export _free");
+  assert(wasmBundle.includes("Sampler level storage request is too large"), "WASM bundle should include the oversized-storage guard");
 }
 
 function mimeType(filePath) {
@@ -786,7 +789,27 @@ async function runBrowserSmoke() {
         seedLo: 7,
         seedHi: 9
       });
-      return { equality, positivity, capTooSmall, shortX, shortW, shortY, nonFinite };
+      const oversizedN = await window.__factorialSmokeDirectWorker({
+        N: 10001,
+        M: 1,
+        x: [0.2],
+        w: [1.0],
+        y: Array(100).fill(0),
+        columnCap: 100,
+        seedLo: 7,
+        seedHi: 9
+      });
+      const storageTooLarge = await window.__factorialSmokeDirectWorker({
+        N: 10000,
+        M: 10000,
+        x: Array(10000).fill(0.2),
+        w: Array(10000).fill(1.0),
+        y: Array(20000).fill(0),
+        columnCap: 20000,
+        seedLo: 7,
+        seedHi: 9
+      });
+      return { equality, positivity, capTooSmall, shortX, shortW, shortY, nonFinite, oversizedN, storageTooLarge };
     })()`, 60000);
 
     assert(directWorkerErrors.equality?.type === "error", "invalid equality should return a worker error message");
@@ -803,6 +826,10 @@ async function runBrowserSmoke() {
     assert(/expected y length at least 10, got 1/i.test(directWorkerErrors.shortY.error || ""), "short y buffer should be rejected before WASM");
     assert(directWorkerErrors.nonFinite?.type === "error", "non-finite parameters should return a worker error message");
     assert(/x contains a non-finite value/i.test(directWorkerErrors.nonFinite.error || ""), "non-finite parameters should surface the C++ finite-value error");
+    assert(directWorkerErrors.oversizedN?.type === "error", "oversized N should return a worker error message");
+    assert(/N and M are too large/i.test(directWorkerErrors.oversizedN.error || ""), "oversized N should be rejected before buffer length checks");
+    assert(directWorkerErrors.storageTooLarge?.type === "error", "oversized storage shape should return a worker error message");
+    assert(/Sampler level storage request is too large/i.test(directWorkerErrors.storageTooLarge.error || ""), "oversized storage shape should be rejected before WASM allocation");
 
     const rendererResult = await evaluate(client, `(async () => {
       await new Promise(resolve => requestAnimationFrame(() => resolve()));

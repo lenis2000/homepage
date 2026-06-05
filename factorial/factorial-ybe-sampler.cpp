@@ -15,6 +15,27 @@
 
 namespace {
 
+constexpr int kMaxN = 10000;
+constexpr int kMaxM = 10000;
+constexpr int kMaxColumnCap = 1000000;
+constexpr size_t kMaxBitLevelWords = 4ULL * 1024ULL * 1024ULL;
+
+size_t checkedBitLevelWords(int levels, int cap) {
+  if (levels <= 0) throw std::runtime_error("Internal level count must be positive.");
+  if (cap <= 0) throw std::runtime_error("Column cap must be positive.");
+  const size_t wordsPerLevel = (static_cast<size_t>(cap) + 63ULL) >> 6;
+  const size_t levelCount = static_cast<size_t>(levels);
+  if (wordsPerLevel == 0 ||
+      levelCount > std::numeric_limits<size_t>::max() / wordsPerLevel) {
+    throw std::runtime_error("Sampler level storage size overflow.");
+  }
+  const size_t totalWords = levelCount * wordsPerLevel;
+  if (totalWords > kMaxBitLevelWords) {
+    throw std::runtime_error("Sampler level storage request is too large.");
+  }
+  return totalWords;
+}
+
 struct Xoshiro256pp {
   uint64_t s[4] = {0, 0, 0, 0};
 
@@ -175,11 +196,14 @@ class BitLevels {
   void reset(int levels, int cap) {
     if (levels <= 0) throw std::runtime_error("Internal level count must be positive.");
     if (cap <= 0) throw std::runtime_error("Column cap must be positive.");
+    const size_t totalWords = checkedBitLevelWords(levels, cap);
     levelCount = levels;
     columnCap = cap;
-    wordsPerLevel = (columnCap + 63) >> 6;
-    const size_t totalWords = static_cast<size_t>(levelCount) *
-                              static_cast<size_t>(wordsPerLevel);
+    const size_t wordCount = (static_cast<size_t>(columnCap) + 63ULL) >> 6;
+    if (wordCount > static_cast<size_t>(std::numeric_limits<int>::max())) {
+      throw std::runtime_error("Column cap is too large for sampler storage.");
+    }
+    wordsPerLevel = static_cast<int>(wordCount);
     bits.assign(totalWords, 0);
     activeMax.assign(static_cast<size_t>(levelCount), 0);
     counts.assign(static_cast<size_t>(levelCount), 0);
@@ -345,17 +369,19 @@ class Sampler {
         w(wPtr),
         y(yPtr),
         yLen(yLength),
-        rng(seedLo, seedHi),
-        levels(n + m + 1, cap) {
+        rng(seedLo, seedHi) {
     validateInputs();
+    levels.reset(N + M + 1, columnCap);
   }
 
   void validateInputs() const {
     if (N <= 0 || M <= 0) throw std::runtime_error("N and M must be positive.");
-    if (N > 10000 || M > 10000) throw std::runtime_error("N and M are too large.");
+    if (N > kMaxN || M > kMaxM) throw std::runtime_error("N and M are too large.");
+    if (columnCap > kMaxColumnCap) throw std::runtime_error("Column cap is too large.");
     if (columnCap < std::max(1, N)) {
       throw std::runtime_error("Column cap is too small for the frozen initial condition.");
     }
+    checkedBitLevelWords(N + M + 1, columnCap);
     if (!x || !w) throw std::runtime_error("Null x/w parameter pointer.");
     if (yLen < 0) throw std::runtime_error("Negative y length.");
     if (yLen > 0 && !y) throw std::runtime_error("Null y parameter pointer.");

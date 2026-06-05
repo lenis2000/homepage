@@ -2,6 +2,10 @@
   'use strict';
 
   let modulePromise = null;
+  const MAX_N = 10000;
+  const MAX_M = 10000;
+  const MAX_COLUMN_CAP = 1000000;
+  const MAX_BIT_LEVEL_WORDS = 4 * 1024 * 1024;
 
   function loadModule() {
     if (!modulePromise) {
@@ -37,10 +41,22 @@
     return number;
   }
 
+  function validateStorageShape(N, M, columnCap) {
+    if (N > MAX_N || M > MAX_M) throw new Error('N and M are too large.');
+    if (columnCap > MAX_COLUMN_CAP) throw new Error('Column cap is too large.');
+    const levelCount = N + M + 1;
+    const wordsPerLevel = Math.ceil(columnCap / 64);
+    const totalWords = levelCount * wordsPerLevel;
+    if (!Number.isSafeInteger(totalWords) || totalWords > MAX_BIT_LEVEL_WORDS) {
+      throw new Error('Sampler level storage request is too large.');
+    }
+  }
+
   function validateSampleMessage(message, x, w, y) {
     const N = finitePositiveInteger(message.N, 'N');
     const M = finitePositiveInteger(message.M, 'M');
     const columnCap = finitePositiveInteger(message.columnCap, 'columnCap');
+    validateStorageShape(N, M, columnCap);
     if (!(x instanceof Float64Array) || x.length !== N) {
       throw new Error(`Worker parameter mismatch: expected x length ${N}, got ${x?.length ?? 'missing'}.`);
     }
