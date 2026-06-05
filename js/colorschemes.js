@@ -16,6 +16,7 @@
  * - _simulations/domino_tilings/2025-12-04-RSK-sampling.md
  * - _simulations/domino_tilings/2025-12-05-ultimate-domino.md
  * - _simulations/domino_tilings/2025-12-07-q-whittaker-shuffling.md
+ * - factorial/index.html
  * - s/domino.md
  */
 

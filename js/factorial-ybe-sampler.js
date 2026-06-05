@@ -1759,8 +1759,9 @@
       const next = value === 'lozenges' ? 'lozenges' : 'paths';
       if (next === this.viewMode) return;
       this.viewMode = next;
+      this.viewInitialized = false;
       this.invalidateBackground();
-      this.scheduleDraw();
+      this.fit();
     }
 
     snapshotViewport() {
@@ -1793,7 +1794,6 @@
       const lambdaLevel = m;
       const paths = [];
       const lambdaParticles = [];
-      const levelOccupancy = Array.from({ length: totalLevels + 1 }, () => new Set());
 
       const include = (point) => {
         rawBounds.minX = Math.min(rawBounds.minX, point.x);
@@ -1828,7 +1828,6 @@
           const point = { x: pos, y: totalLevels - level, level, track };
           particles.push(point);
           include(point);
-          levelOccupancy[level]?.add(point.x);
           if (level === lambdaLevel) lambdaParticles.push(point);
           if (!previous) {
             polyline.push(point);
@@ -1857,13 +1856,44 @@
         rawBounds.maxY = Math.max(1, totalLevels);
       }
 
+      const centersFromPartition = (row) => (row || []).map((part, index) => part - (index + 1)).sort((a, b) => a - b);
+      const lozengeRows = [];
+      for (let length = 0; length <= n; length++) {
+        lozengeRows.push({ level: length, rank: length, kind: 'lambda', centers: centersFromPartition(data.lam?.[length]) });
+      }
+      for (let j = m - 1; j >= 0; j--) {
+        lozengeRows.push({ level: n + (m - j), rank: n, kind: 'mu', centers: centersFromPartition(data.mu?.[j]) });
+      }
+      let lozengeMinCenter = Infinity;
+      let lozengeMaxCenter = -Infinity;
+      for (const row of lozengeRows) {
+        for (const center of row.centers) {
+          lozengeMinCenter = Math.min(lozengeMinCenter, center);
+          lozengeMaxCenter = Math.max(lozengeMaxCenter, center);
+        }
+      }
+      if (!Number.isFinite(lozengeMinCenter)) {
+        lozengeMinCenter = -n;
+        lozengeMaxCenter = 1;
+      }
+      const rowCount = Math.max(1, lozengeRows.length);
+      const lozengeBounds = {
+        minX: lozengeMinCenter - 4,
+        maxX: lozengeMaxCenter + rowCount / 2 + 4,
+        minY: -0.9 * (rowCount + 2),
+        maxY: 2,
+      };
+
       return {
         N: n,
         M: m,
         totalLevels,
         paths,
         lambdaParticles,
-        levelOccupancy,
+        lozengeRows,
+        lozengeMinCenter,
+        lozengeMaxCenter,
+        lozengeBounds,
         rawBounds,
       };
     }
@@ -1898,6 +1928,18 @@
 
     layoutBounds(width) {
       if (!this.geometry) return { minX: 0, minY: 0, maxX: 1, maxY: 1, width: 1, height: 1, xStep: 1 };
+      if (this.viewMode === 'lozenges' && this.geometry.lozengeBounds) {
+        const raw = this.geometry.lozengeBounds;
+        return {
+          minX: raw.minX,
+          minY: raw.minY,
+          maxX: raw.maxX,
+          maxY: raw.maxY,
+          width: Math.max(1, raw.maxX - raw.minX),
+          height: Math.max(1, raw.maxY - raw.minY),
+          xStep: 1,
+        };
+      }
       const xStep = this.xStep(width);
       const raw = this.geometry.rawBounds;
       const exitPad = Math.max(1.2, Math.min(4, (raw.maxX - raw.minX + 1) * 0.08));
@@ -2084,6 +2126,8 @@
       const darkAttr = document.documentElement.getAttribute('data-theme') === 'dark';
       const darkMedia = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       const dark = darkAttr || (!document.documentElement.getAttribute('data-theme') && darkMedia);
+      const uvaPalette = (window.ColorSchemes || []).find(scheme => scheme.name === 'UVA')?.colors || ['#E57200', '#232D4B', '#F9DCBF', '#002D62'];
+      const [uvaOrange, uvaBlue, uvaOrange25, uvaDarkBlue] = uvaPalette;
       return dark ? {
         canvas: '#17232d',
         wBand: '#2c241b',
@@ -2092,14 +2136,14 @@
         gridMajor: 'rgba(229,114,0,0.30)',
         label: '#d7dde5',
         muted: '#aeb7c0',
-        navy: '#89b7df',
-        orange: '#ff9933',
-        lambda: '#ffb15f',
-        lozengeA: '#26394c',
-        lozengeB: '#344255',
-        lozengeC: '#3c3428',
-        lozengeStroke: 'rgba(230,238,246,0.16)',
-        lozengeParticle: '#ff9933',
+        navy: uvaOrange25,
+        orange: uvaOrange,
+        lambda: uvaOrange,
+        lozengeA: uvaBlue,
+        lozengeB: uvaOrange25,
+        lozengeC: uvaOrange25,
+        lozengeStroke: 'rgba(230,238,246,0.22)',
+        lozengeParticle: uvaOrange,
       } : {
         canvas: '#fbfcff',
         wBand: '#fff4df',
@@ -2108,14 +2152,14 @@
         gridMajor: 'rgba(229,114,0,0.28)',
         label: '#27394f',
         muted: '#66788a',
-        navy: '#002f6c',
-        orange: '#e57200',
-        lambda: '#d65f00',
-        lozengeA: '#edf4fb',
-        lozengeB: '#fff4df',
-        lozengeC: '#f7efe6',
-        lozengeStroke: 'rgba(0,47,108,0.16)',
-        lozengeParticle: '#e57200',
+        navy: uvaDarkBlue || uvaBlue,
+        orange: uvaOrange,
+        lambda: uvaOrange,
+        lozengeA: uvaBlue,
+        lozengeB: uvaOrange25,
+        lozengeC: uvaOrange25,
+        lozengeStroke: 'rgba(0,47,108,0.18)',
+        lozengeParticle: uvaOrange,
       };
     }
 
@@ -2358,29 +2402,53 @@
       }
     }
 
-    lozengePath(ctx2d, cx, cy, rx, ry, kind) {
-      ctx2d.beginPath();
-      if (kind === 'left') {
-        ctx2d.moveTo(cx - rx, cy - ry);
-        ctx2d.lineTo(cx, cy - ry);
-        ctx2d.lineTo(cx + rx, cy + ry);
-        ctx2d.lineTo(cx, cy + ry);
-      } else if (kind === 'right') {
-        ctx2d.moveTo(cx, cy - ry);
-        ctx2d.lineTo(cx + rx, cy - ry);
-        ctx2d.lineTo(cx, cy + ry);
-        ctx2d.lineTo(cx - rx, cy + ry);
-      } else {
-        ctx2d.moveTo(cx - rx, cy);
-        ctx2d.lineTo(cx, cy - ry);
-        ctx2d.lineTo(cx + rx, cy);
-        ctx2d.lineTo(cx, cy + ry);
-      }
-      ctx2d.closePath();
+    lozengeModelPoint(x, y) {
+      // Mathematica Dynamic.nb uses GeometricTransformation[..., {{1,1/2},{0,.85}}].
+      // We flip the second coordinate for canvas-y-down rendering.
+      return { x: x + y / 2, y: -0.85 * y };
     }
 
-    fillLozenge(ctx2d, cx, cy, rx, ry, kind, fill, stroke, lineWidth = 1) {
-      this.lozengePath(ctx2d, cx, cy, rx, ry, kind);
+    lozengePolygon(kind, x, y) {
+      let raw;
+      if (kind === 'vertical') {
+        raw = [
+          [x - 0.5, y],
+          [x - 0.5, y + 1],
+          [x + 0.5, y],
+          [x + 0.5, y - 1],
+        ];
+      } else if (kind === 's') {
+        raw = [
+          [x - 0.5, y],
+          [x - 0.5, y + 1],
+          [x + 0.5, y + 1],
+          [x + 0.5, y],
+        ];
+      } else {
+        raw = [
+          [x - 0.5, y],
+          [x - 1.5, y + 1],
+          [x - 0.5, y + 1],
+          [x + 0.5, y],
+        ];
+      }
+      return raw.map(([px, py]) => this.lozengeModelPoint(px, py));
+    }
+
+    lozengeScreenPoint(point) {
+      return {
+        x: (point.x - this.viewport.tx) * this.viewport.scale,
+        y: (point.y - this.viewport.ty) * this.viewport.scale,
+      };
+    }
+
+    drawLozengePolygon(ctx2d, kind, x, y, fill, stroke, lineWidth = 1) {
+      const vertices = this.lozengePolygon(kind, x, y).map(v => this.lozengeScreenPoint(v));
+      if (!vertices.length) return;
+      ctx2d.beginPath();
+      ctx2d.moveTo(vertices[0].x, vertices[0].y);
+      for (let i = 1; i < vertices.length; i++) ctx2d.lineTo(vertices[i].x, vertices[i].y);
+      ctx2d.closePath();
       ctx2d.fillStyle = fill;
       ctx2d.fill();
       if (stroke && lineWidth > 0) {
@@ -2390,87 +2458,109 @@
       }
     }
 
-    drawLozenges(size, xStep, colors) {
+    lozengeTileVisible(x, y, view) {
+      const pts = this.lozengePolygon('vertical', x, y);
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const pt of pts) {
+        minX = Math.min(minX, pt.x);
+        maxX = Math.max(maxX, pt.x);
+        minY = Math.min(minY, pt.y);
+        maxY = Math.max(maxY, pt.y);
+      }
+      return maxX >= view.left && minX <= view.right && maxY >= view.top && minY <= view.bottom;
+    }
+
+    countCentersAtMost(centers, x) {
+      let lo = 0;
+      let hi = centers.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (centers[mid] <= x) lo = mid + 1;
+        else hi = mid;
+      }
+      return lo;
+    }
+
+    drawLozenges(size, _xStep, colors) {
       const geometry = this.geometry;
       if (!geometry) return;
+      const rows = geometry.lozengeRows || [];
       const ctx2d = this.ctx;
       const scale = this.viewport.scale;
-      const cellPxX = Math.max(0.001, scale * xStep);
-      const cellPxY = Math.max(0.001, scale);
-      const rx = Math.max(1.4, cellPxX * 0.48);
-      const ry = Math.max(1.4, cellPxY * 0.46);
-      const viewLeftRaw = this.viewport.tx / Math.max(0.0001, xStep);
-      const viewRightRaw = (this.viewport.tx + size.width / scale) / Math.max(0.0001, xStep);
-      const viewTop = this.viewport.ty;
-      const viewBottom = this.viewport.ty + size.height / scale;
-      const firstCol = Math.max(Math.floor(geometry.rawBounds.minX) - 2, Math.floor(viewLeftRaw) - 2);
-      const lastCol = Math.min(Math.ceil(geometry.rawBounds.maxX) + 2, Math.ceil(viewRightRaw) + 2);
-      const firstLevel = Math.max(0, Math.floor(geometry.totalLevels - viewBottom) - 2);
-      const lastLevel = Math.min(geometry.totalLevels, Math.ceil(geometry.totalLevels - viewTop) + 2);
-      const estimatedTiles = Math.max(0, lastCol - firstCol + 1) * Math.max(0, lastLevel - firstLevel + 1);
-      const drawBackgroundTiles = cellPxX >= 4 && cellPxY >= 4 && estimatedTiles <= 45000;
-      const stroke = cellPxX >= 7 && cellPxY >= 7 ? colors.lozengeStroke : '';
+      const view = {
+        left: this.viewport.tx,
+        right: this.viewport.tx + size.width / scale,
+        top: this.viewport.ty,
+        bottom: this.viewport.ty + size.height / scale,
+      };
+      const cellPx = scale;
+      const stroke = cellPx >= 7 ? colors.lozengeStroke : '';
+      const strongStroke = cellPx >= 4 ? (stroke || colors.lozengeStroke) : '';
+      const lineWidth = Math.max(0.5, Math.min(1.4, cellPx * 0.035));
 
       ctx2d.setTransform(size.dpr, 0, 0, size.dpr, 0, 0);
       ctx2d.fillStyle = colors.canvas;
       ctx2d.fillRect(0, 0, size.width, size.height);
 
-      if (drawBackgroundTiles) {
-        ctx2d.globalAlpha = 0.78;
-        for (let level = firstLevel; level <= lastLevel; level++) {
-          const occ = geometry.levelOccupancy[level] || new Set();
-          const prev = level > 0 ? geometry.levelOccupancy[level - 1] : null;
-          for (let col = firstCol; col <= lastCol; col++) {
-            if (occ.has(col)) continue;
-            const kind = prev?.has(col) ? 'right' : prev?.has(col - 1) ? 'left' : ((col + level) & 1 ? 'right' : 'left');
-            const fill = kind === 'left' ? colors.lozengeA : kind === 'right' ? colors.lozengeB : colors.lozengeC;
-            const cx = this.screenX(col, xStep);
-            const cy = this.screenY(this.modelYForLevel(level));
-            if (cx < -rx || cx > size.width + rx || cy < -ry || cy > size.height + ry) continue;
-            this.fillLozenge(ctx2d, cx, cy, rx, ry, kind, fill, stroke, 1);
+      // Fill the non-vertical lozenges as in Dynamic_v_only.nb.  The row
+      // lambda^k has k particles with centers lambda^k_i-i; the strip below it
+      // is decided by the jump of cumulative counts between lambda^{k-1} and
+      // lambda^k.  This is the genuine triangular GT/lozenge dictionary.
+      const globalMaxX = Number.isFinite(geometry.lozengeMaxCenter) ? Math.ceil(geometry.lozengeMaxCenter) : -1;
+      let estimatedFill = 0;
+      const stripWindows = [];
+      for (let k = 1; k < rows.length; k++) {
+        const prev = rows[k - 1].centers;
+        const curr = rows[k].centers;
+        const y = k - 1;
+        const rank = Math.max(1, rows[k].rank || k);
+        const domainMinX = -rank;
+        const domainMaxX = globalMaxX;
+        const visibleMinX = Math.floor(view.left - y / 2) - 3;
+        const visibleMaxX = Math.ceil(view.right - y / 2) + 3;
+        const minX = Math.max(domainMinX, visibleMinX);
+        const maxX = Math.min(domainMaxX, visibleMaxX);
+        if (maxX < minX) continue;
+        stripWindows.push({ rank, y, minX, maxX, prev, curr });
+        estimatedFill += maxX - minX + 1;
+      }
+      const drawFill = cellPx >= 3.5 && estimatedFill <= 70000;
+      if (drawFill) {
+        ctx2d.globalAlpha = 0.88;
+        for (const strip of stripWindows) {
+          for (let x = strip.minX; x <= strip.maxX; x++) {
+            const delta = this.countCentersAtMost(strip.curr, x) - this.countCentersAtMost(strip.prev, x);
+            if (delta === 1) {
+              if (!this.lozengeTileVisible(x + 1, strip.y, view)) continue;
+              this.drawLozengePolygon(ctx2d, 's', x + 1, strip.y, colors.lozengeA, stroke, lineWidth);
+            } else if (x + strip.rank > 0) {
+              if (!this.lozengeTileVisible(x + 1, strip.y, view)) continue;
+              this.drawLozengePolygon(ctx2d, 'l', x + 1, strip.y, colors.lozengeB, stroke, lineWidth);
+            }
           }
         }
         ctx2d.globalAlpha = 1;
       }
 
-      const lambdaY = this.screenY(this.modelYForLevel(geometry.M));
-      ctx2d.strokeStyle = colors.orange;
-      ctx2d.globalAlpha = 0.55;
-      ctx2d.lineWidth = Math.max(1.2, Math.min(3, cellPxY * 0.08));
-      ctx2d.beginPath();
-      ctx2d.moveTo(0, lambdaY);
-      ctx2d.lineTo(size.width, lambdaY);
-      ctx2d.stroke();
-      ctx2d.globalAlpha = 1;
-
-      let drawn = 0;
-      const maxParticleLozenges = cellPxX >= 3 && cellPxY >= 3 ? 90000 : 30000;
-      const particleStroke = colors.canvas;
-      for (let level = firstLevel; level <= lastLevel; level++) {
-        const occ = geometry.levelOccupancy[level];
-        if (!occ) continue;
-        for (const col of occ) {
-          if (col < firstCol || col > lastCol) continue;
-          const cx = this.screenX(col, xStep);
-          const cy = this.screenY(this.modelYForLevel(level));
-          if (cx < -rx || cx > size.width + rx || cy < -ry || cy > size.height + ry) continue;
-          const isLambda = level === geometry.M;
-          const fill = isLambda ? colors.lambda : colors.lozengeParticle;
-          const kind = isLambda ? 'flat' : 'flat';
-          const lw = Math.max(0.8, Math.min(2, Math.min(cellPxX, cellPxY) * 0.08));
-          this.fillLozenge(ctx2d, cx, cy, rx * 0.96, ry * 0.96, kind, fill, particleStroke, lw);
-          drawn += 1;
-          if (drawn >= maxParticleLozenges) break;
+      let drawnVertical = 0;
+      const maxVertical = cellPx >= 3.5 ? 120000 : 45000;
+      for (let y = 1; y < rows.length; y++) {
+        const row = rows[y];
+        for (const center of row.centers) {
+          if (!this.lozengeTileVisible(center, y, view)) continue;
+          this.drawLozengePolygon(ctx2d, 'vertical', center, y, colors.lozengeParticle, strongStroke, lineWidth);
+          drawnVertical += 1;
+          if (drawnVertical >= maxVertical) break;
         }
-        if (drawn >= maxParticleLozenges) break;
+        if (drawnVertical >= maxVertical) break;
       }
 
-      if (!drawBackgroundTiles && cellPxX >= 2.5 && cellPxY >= 2.5) {
+      if (!drawFill && cellPx >= 2.5) {
         ctx2d.font = '12px "franklingothic-book", Arial, sans-serif';
         ctx2d.fillStyle = colors.muted;
         ctx2d.textAlign = 'left';
         ctx2d.textBaseline = 'top';
-        ctx2d.fillText('zoom in for individual lozenges', 12, 42);
+        ctx2d.fillText('zoom in for filled lozenges', 12, 42);
       }
     }
 
