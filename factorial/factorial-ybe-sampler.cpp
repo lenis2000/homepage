@@ -451,14 +451,15 @@ class Sampler {
 
     if (!transition.random) return transition.deterministic;
 
-    randomChoices += 1;
     const double denom = ww + yy;
     const double pFirst = (xx + yy) / denom;
     if (!(pFirst >= -1e-12 && pFirst <= 1.0 + 1e-12) || !std::isfinite(pFirst)) {
       throw std::runtime_error("Bad Bernoulli probability. Check local positivity.");
     }
-    const double clamped = std::max(0.0, std::min(1.0, pFirst));
-    return rng.nextDouble() < clamped ? transition.first : transition.second;
+    if (pFirst <= 0.0) return transition.second;
+    if (pFirst >= 1.0) return transition.first;
+    randomChoices += 1;
+    return rng.nextDouble() < pFirst ? transition.first : transition.second;
   }
 
   void swapAdjacentRows(int pos) {

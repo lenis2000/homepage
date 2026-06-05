@@ -343,12 +343,17 @@
     if (!/^[0-9eE+\-*/().\s^a-zA-Z_]+$/.test(s)) {
       throw new Error('unsupported character in expression');
     }
-    const ids = s.match(/[A-Za-z_]\w*/g) || [];
+    const ids = [...s.matchAll(/[A-Za-z_]\w*/g)];
     const allowed = new Set([
       'i','j','k','n','N','M','q','alpha','beta','gamma','a','b','g',
       'sqrt','exp','log','pow','sin','cos','tan','abs','min','max','PI','E'
     ]);
-    for (const id of ids) {
+    for (const match of ids) {
+      const id = match[0];
+      const index = match.index || 0;
+      if ((id === 'e' || id === 'E') && index > 0 && /[0-9.]/.test(s[index - 1]) && /^[+-]?\d/.test(s.slice(index + 1))) {
+        continue;
+      }
       if (!allowed.has(id)) throw new Error(`unknown variable/function ${id}`);
     }
     // In this UI, ^ means exponentiation, as in the previous parameter entry.

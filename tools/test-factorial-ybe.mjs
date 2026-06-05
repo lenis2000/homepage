@@ -583,6 +583,11 @@ async function runBrowserSmoke() {
       document.getElementById("fs-y").value = "0^columnCap";
       const okRepeats = window.factorialYBEValidateControls();
       const repeatState = window.factorialExactSamplerState();
+      document.getElementById("fs-x").value = "1e-3*q^i";
+      document.getElementById("fs-w").value = "1^M";
+      document.getElementById("fs-y").value = "0^columnCap";
+      const okScientific = window.factorialYBEValidateControls();
+      const scientificState = window.factorialExactSamplerState();
       return {
         okExpression,
         expressionW: expressionState.wArr,
@@ -591,6 +596,8 @@ async function runBrowserSmoke() {
         okRepeats,
         repeatX: repeatState.xArr,
         repeatW: repeatState.wArr,
+        okScientific,
+        scientificX: scientificState.xArr,
         phaseText: document.getElementById("fs-status-phase").textContent,
         elapsedText: document.getElementById("fs-status-elapsed").textContent,
         xNote: document.getElementById("fs-x-note").textContent,
@@ -607,6 +614,8 @@ async function runBrowserSmoke() {
     assert(parserResult.okRepeats, "symbolic repeat syntax should validate");
     assert(parserResult.repeatX.length === 4 && parserResult.repeatX.every(value => value === 1), "1^N should expand to N x-values");
     assert(parserResult.repeatW.length === 5 && parserResult.repeatW.every(value => value === 1.001), "1.001^M should expand to M w-values");
+    assert(parserResult.okScientific, "scientific-notation expressions should validate");
+    assert(parserResult.scientificX.length === 4 && parserResult.scientificX.every(value => value > 0 && value < 0.001), "scientific-notation expression should expand to small x-values");
     assert(parserResult.phaseText === "ready", "successful validation should leave the page ready");
     assert(/s$/.test(parserResult.elapsedText), "elapsed status should be shown in seconds");
     assert(parserResult.xNote.includes("first=") && parserResult.xNote.includes("min=") && parserResult.xNote.includes("max="), "x summary should include first/last/min/max values");
@@ -717,6 +726,35 @@ async function runBrowserSmoke() {
     assert(workerResult.runState === "done" && workerResult.phaseText === "done", "worker sample should finish in done status");
     assert(/s$/.test(workerResult.elapsedText), "worker sample should report elapsed seconds");
     console.log(`Factorial worker/WASM smoke passed: lambda=(${workerResult.lambda.join(",")}), moves=${workerResult.localMoves}.`);
+
+    const boundaryAgreement = await evaluate(client, `(async () => {
+      const options = {
+        N: 2,
+        M: 2,
+        x: [0, 0.3],
+        w: [1, 1],
+        y: Array(200).fill(0),
+        seedLo: 1,
+        seedHi: 0,
+        columnCap: 200
+      };
+      const reference = window.factorialYBEReferenceSample(options);
+      const worker = await window.__factorialSmokeDirectWorker(options);
+      return {
+        type: worker.type,
+        error: worker.error || "",
+        sameMu: JSON.stringify(worker.result?.mu) === JSON.stringify(reference.mu),
+        sameLam: JSON.stringify(worker.result?.lam) === JSON.stringify(reference.lam),
+        workerLambda: worker.result?.lambda || [],
+        referenceLambda: reference.lambda || [],
+        workerRandomChoices: worker.result?.stats?.randomChoices,
+        referenceRandomChoices: reference.stats?.randomChoices
+      };
+    })()`, 60000);
+
+    assert(boundaryAgreement.type === "result", `boundary worker smoke should return a result: ${JSON.stringify(boundaryAgreement)}`);
+    assert(boundaryAgreement.sameMu && boundaryAgreement.sameLam, `boundary worker/WASM output should match the seeded JS reference: ${JSON.stringify(boundaryAgreement)}`);
+    assert(boundaryAgreement.workerRandomChoices === boundaryAgreement.referenceRandomChoices, `boundary worker should not consume RNG for deterministic zero-probability transitions: ${JSON.stringify(boundaryAgreement)}`);
 
     const directWorkerErrors = await evaluate(client, `(async () => {
       const equality = await window.__factorialSmokeDirectWorker({
