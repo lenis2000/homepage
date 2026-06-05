@@ -1077,6 +1077,7 @@ async function runBrowserSmoke() {
 
     const sampleManyResult = await evaluate(client, `(async () => {
       window.factorialYBEApplyPreset("default-balanced");
+      window.factorialYBECancelSample();
       const before = window.factorialExactSamplerState().stats.samples || 0;
       document.getElementById("fs-sample-count").value = "10";
       document.getElementById("fs-multi-sample-btn").click();

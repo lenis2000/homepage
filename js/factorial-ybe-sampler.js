@@ -1412,6 +1412,7 @@
   }
 
   async function sampleMany(count) {
+    samplingCanceled = false;
     let ok = true;
     for (let i = 0; i < count; i++) {
       if (samplingCanceled) break;
