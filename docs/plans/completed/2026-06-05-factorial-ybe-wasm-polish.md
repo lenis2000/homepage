@@ -1,5 +1,7 @@
 # Factorial Schur exact sampler: workerized WASM, presets, and visual polish
 
+Status: Completed 2026-06-05. Benchmark notes are recorded in `docs/plans/benchmarks/factorial-ybe-baseline.md`.
+
 ## Overview
 
 Make `/factorial/` a robust, fast, and beautiful exact sampler for the factorial Schur process. The current page is a useful proof-of-concept, but it has three serious problems:
@@ -105,17 +107,17 @@ If Chromium is available, the Node test should include browser smoke tests. If n
 
 Before changing architecture, document the current behavior and performance.
 
-- [ ] Identify the exact hot path causing tab freezes: `sampleMany()` / `sampleRows()` / `swapAdjacentRows()` / per-column `localForward()` in synchronous JS.
-- [ ] Record baseline timings for default sample, old screenshot-like parameters, and one larger stress case. If a case freezes, record that qualitatively instead of waiting forever.
-- [ ] Record current mathematical invariants to preserve:
+- [x] Identify the exact hot path causing tab freezes: `sampleMany()` / `sampleRows()` / `swapAdjacentRows()` / per-column `localForward()` in synchronous JS.
+- [x] Record baseline timings for default sample, old screenshot-like parameters, and one larger stress case. If a case freezes, record that qualitatively instead of waiting forever.
+- [x] Record current mathematical invariants to preserve:
   - row order after all swaps is `w_1,...,w_M,x_N,...,x_1`;
   - `mu[j]` has length `N` for `j=0..M`;
   - `lam[j]` has length `j` for `j=0..N`;
   - `lam[N] = mu[M]`;
   - partitions are weakly decreasing and nonnegative;
   - row interlacing holds on both sides.
-- [ ] Add a small deterministic JS reference hook if needed for tests. It can be dev-only, but must allow seeded randomness so C++/WASM can be checked on tiny systems.
-- [ ] Confirm which stale old files are unused (`js/factorial-glauber.js`, `js/factorial-wasm.js`). Do not delete them until a source search and browser smoke test confirm `/factorial/` does not load them.
+- [x] Add a small deterministic JS reference hook if needed for tests. It can be dev-only, but must allow seeded randomness so C++/WASM can be checked on tiny systems.
+- [x] Confirm which stale old files are unused (`js/factorial-glauber.js`, `js/factorial-wasm.js`). Do not delete them until a source search and browser smoke test confirm `/factorial/` does not load them.
 
 ### Task 1: Implement workerized WASM exact sampler
 
@@ -128,23 +130,23 @@ Before changing architecture, document the current behavior and performance.
 
 Move the exact reverse-Cauchy sampler into C++/WASM and run it off the main thread.
 
-- [ ] Build a C++ implementation of the current exact sampler, not the old Glauber chain.
-- [ ] Use Xoshiro256++ RNG and explicit seed inputs. Use the proven RNG pattern from `s/domino.cpp`.
-- [ ] Replace JS `Set` levels with compact flat/bit-packed level storage. Suggested structure: one bitset per level over `1..columnCap`, plus helpers `occ(level,column)`, `setOcc(level,column)`, and active max support. Avoid per-column allocations.
-- [ ] Avoid recomputing the full local weight enumeration for every cell. Precompute the finite admissible local transition table keyed by boundary bits and input triple; at runtime use direct deterministic outputs or the Bernoulli split with the current `x,w,y_k`. Keep a slow assertion/debug path only if useful.
-- [ ] Scan only to the actual active support plus the needed tail condition. Never blindly run to `columnCap` unless the sampler genuinely has not reached its forced tail.
-- [ ] Export a C ABI similar to:
+- [x] Build a C++ implementation of the current exact sampler, not the old Glauber chain.
+- [x] Use Xoshiro256++ RNG and explicit seed inputs. Use the proven RNG pattern from `s/domino.cpp`.
+- [x] Replace JS `Set` levels with compact flat/bit-packed level storage. Suggested structure: one bitset per level over `1..columnCap`, plus helpers `occ(level,column)`, `setOcc(level,column)`, and active max support. Avoid per-column allocations.
+- [x] Avoid recomputing the full local weight enumeration for every cell. Precompute the finite admissible local transition table keyed by boundary bits and input triple; at runtime use direct deterministic outputs or the Bernoulli split with the current `x,w,y_k`. Keep a slow assertion/debug path only if useful.
+- [x] Scan only to the actual active support plus the needed tail condition. Never blindly run to `columnCap` unless the sampler genuinely has not reached its forced tail.
+- [x] Export a C ABI similar to:
   - `_sampleFactorialYBE(N, M, xPtr, wPtr, yPtr, yLen, columnCap, seedLo, seedHi)` returning malloc-owned JSON `char*`;
   - `_freeString(ptr)`;
   - `_getProgress()`;
   - `_malloc`, `_free` for typed-array transfer.
-- [ ] Return JSON with at least `{ N, M, mu, lam, lambda, stats, levels? }`, plus enough data for the renderer without recomputing partitions in JS. Include row-swap count, local move count, random choice count, max position, elapsed or C++ timing if convenient.
-- [ ] Return structured errors as `{"error":"..."}` and ensure all C++ exceptions are caught and converted to JSON.
-- [ ] Compile with Emscripten as a modular worker-compatible single-file bundle, e.g. `MODULARIZE=1`, `EXPORT_NAME=createFactorialYBEModule`, `ENVIRONMENT=web,worker`, `ALLOW_MEMORY_GROWTH=1`, `SINGLE_FILE=1`, `-O3`, `-fexceptions`.
-- [ ] Implement `js/factorial-ybe-worker.js` that loads the WASM module, receives typed-array parameters, calls the C++ sampler, parses JSON/errors, and posts results back to the main thread.
-- [ ] Transfer large `Float64Array` buffers to the worker to avoid copies where practical. If transferring would detach arrays still needed by the UI, clone intentionally and document that choice.
-- [ ] Main thread must remain responsive while sampling. New sample/reset/cancel should terminate the current worker or ignore stale response IDs.
-- [ ] Keep the old JS sampler only as a small-system debug/reference fallback. The visible `Sample exactly` button should use workerized WASM by default when available; do not silently fall back to slow JS for large systems.
+- [x] Return JSON with at least `{ N, M, mu, lam, lambda, stats, levels? }`, plus enough data for the renderer without recomputing partitions in JS. Include row-swap count, local move count, random choice count, max position, elapsed or C++ timing if convenient.
+- [x] Return structured errors as `{"error":"..."}` and ensure all C++ exceptions are caught and converted to JSON.
+- [x] Compile with Emscripten as a modular worker-compatible single-file bundle, e.g. `MODULARIZE=1`, `EXPORT_NAME=createFactorialYBEModule`, `ENVIRONMENT=web,worker`, `ALLOW_MEMORY_GROWTH=1`, `SINGLE_FILE=1`, `-O3`, `-fexceptions`.
+- [x] Implement `js/factorial-ybe-worker.js` that loads the WASM module, receives typed-array parameters, calls the C++ sampler, parses JSON/errors, and posts results back to the main thread.
+- [x] Transfer large `Float64Array` buffers to the worker to avoid copies where practical. If transferring would detach arrays still needed by the UI, clone intentionally and document that choice.
+- [x] Main thread must remain responsive while sampling. New sample/reset/cancel should terminate the current worker or ignore stale response IDs.
+- [x] Keep the old JS sampler only as a small-system debug/reference fallback. The visible `Sample exactly` button should use workerized WASM by default when available; do not silently fall back to slow JS for large systems.
 
 ### Task 2: Robust JS orchestration, parameter parsing, and failure handling
 
@@ -154,20 +156,20 @@ Move the exact reverse-Cauchy sampler into C++/WASM and run it off the main thre
 
 Make the frontend durable under bad parameters and repeated user actions.
 
-- [ ] Split current monolithic JS into named sections/functions: control read, parameter expansion, validation, worker request, result normalization, stats update, render invalidation.
-- [ ] Keep the parameter expression syntax currently advertised, and improve it where needed:
+- [x] Split current monolithic JS into named sections/functions: control read, parameter expansion, validation, worker request, result normalization, stats update, render invalidation.
+- [x] Keep the parameter expression syntax currently advertised, and improve it where needed:
   - expressions like `q^(-50+i)` must work;
   - repeat syntax should support useful constants such as `1^N`, `1^M` if straightforward;
   - finite lists should fail with a clear message if too short, unless an explicit repeat/cycle syntax is documented.
-- [ ] Evaluate `y` to the required `columnCap` or a safe inferred length before transfer to WASM. Check for non-finite values and for local positivity `w_j + y_k > 0`, `x_i + y_k >= 0` over the range that will be used.
-- [ ] Strictly validate all `w_j > x_i`. If a preset needs an epsilon adjustment, make that explicit in the preset description.
-- [ ] Add structured status states: ready, validating, sampling, rendering, done, canceled, error.
-- [ ] Add visible elapsed time in seconds and phase text, following the polished style of the RSK/domino pages.
-- [ ] Disable only the controls that must not be edited during an active worker run, but keep Cancel/Reset available.
-- [ ] Guard against stale worker results by request ID. A slow old sample must not overwrite a newer sample.
-- [ ] Null-check all WASM pointers in the worker before `UTF8ToString`, always call `freeString()` in `finally`, and surface C++ `{error: ...}` messages clearly.
-- [ ] Do not use `innerHTML` with untrusted parameter/error text. Use `textContent` for statuses and summaries.
-- [ ] Add a dev-only benchmark helper, e.g. `window.factorialYBEBenchmark(options)`, that runs default, old preset, and stress cases, returns structured timings, and restores controls afterward.
+- [x] Evaluate `y` to the required `columnCap` or a safe inferred length before transfer to WASM. Check for non-finite values and for local positivity `w_j + y_k > 0`, `x_i + y_k >= 0` over the range that will be used.
+- [x] Strictly validate all `w_j > x_i`. If a preset needs an epsilon adjustment, make that explicit in the preset description.
+- [x] Add structured status states: ready, validating, sampling, rendering, done, canceled, error.
+- [x] Add visible elapsed time in seconds and phase text, following the polished style of the RSK/domino pages.
+- [x] Disable only the controls that must not be edited during an active worker run, but keep Cancel/Reset available.
+- [x] Guard against stale worker results by request ID. A slow old sample must not overwrite a newer sample.
+- [x] Null-check all WASM pointers in the worker before `UTF8ToString`, always call `freeString()` in `finally`, and surface C++ `{error: ...}` messages clearly.
+- [x] Do not use `innerHTML` with untrusted parameter/error text. Use `textContent` for statuses and summaries.
+- [x] Add a dev-only benchmark helper, e.g. `window.factorialYBEBenchmark(options)`, that runs default, old preset, and stress cases, returns structured timings, and restores controls afterward.
 
 ### Task 3: Beautiful path renderer and smooth viewport
 
@@ -178,10 +180,10 @@ Make the frontend durable under bad parameters and repeated user actions.
 
 Replace the ugly rainbow path display with a polished canvas visualization.
 
-- [ ] Default rendering must be single-palette/tonal, not rainbow. Suggested default: deep UVA navy paths with index-dependent opacity/lightness, amber/orange accent for the middle sampled `lambda` row, soft cream/blue stack backgrounds.
-- [ ] If retaining multicolor paths, put them behind an advanced `Path style: legacy colors` option. It must not be default.
-- [ ] Precompute path geometry from `mu/lam`/levels once per sample. Store arrays of model-space segments or polylines; do not derive positions repeatedly during every draw.
-- [ ] Implement a `FactorialPathCanvasRenderer` with:
+- [x] Default rendering must be single-palette/tonal, not rainbow. Suggested default: deep UVA navy paths with index-dependent opacity/lightness, amber/orange accent for the middle sampled `lambda` row, soft cream/blue stack backgrounds.
+- [x] If retaining multicolor paths, put them behind an advanced `Path style: legacy colors` option. It must not be default.
+- [x] Precompute path geometry from `mu/lam`/levels once per sample. Store arrays of model-space segments or polylines; do not derive positions repeatedly during every draw.
+- [x] Implement a `FactorialPathCanvasRenderer` with:
   - HiDPI setup;
   - persistent viewport `{scale, tx, ty}` in model coordinates;
   - pointer events with pointer capture for drag;
@@ -191,18 +193,18 @@ Replace the ugly rainbow path display with a polished canvas visualization.
   - clamped min/max zoom;
   - fit/reset methods;
   - no direct heavy draw from `mousemove`/`touchmove` handlers.
-- [ ] Add visible zoom controls in the canvas toolbar: Fit, 100%, +, −, and maybe a compact minimap/overview if simple. Do not add keyboard shortcuts.
-- [ ] Use semantic zoom/LOD:
+- [x] Add visible zoom controls in the canvas toolbar: Fit, 100%, +, −, and maybe a compact minimap/overview if simple. Do not add keyboard shortcuts.
+- [x] Use semantic zoom/LOD:
   - dense grid hidden or very faint when cells are too small;
   - row labels hidden/condensed when overlapping;
   - labels rendered only near visible rows/columns;
   - path endpoints/particles simplified at low zoom;
   - optional hover/selection details only if cheap and tasteful.
-- [ ] Cache static background/grid layers separately from path layers where useful. Use `OffscreenCanvas` or a hidden canvas when available, with normal canvas fallback.
-- [ ] Make initial fit beautiful: center the arctic/fan region, not a huge empty rectangle; include reasonable padding; do not bury the picture at the bottom of the viewport.
-- [ ] Render the sampled `lambda` signature/middle row in a visually meaningful way: subtle horizontal rule, highlighted particles, or a small summary panel.
-- [ ] Maintain accessibility: canvas `aria-label`, textual `lambda` summary, readable focus states, high contrast in light/dark mode.
-- [ ] The design should fit the homepage style: Franklin Gothic, UVA navy/orange, clean cards, subtle borders, dark-mode variables.
+- [x] Cache static background/grid layers separately from path layers where useful. Use `OffscreenCanvas` or a hidden canvas when available, with normal canvas fallback.
+- [x] Make initial fit beautiful: center the arctic/fan region, not a huge empty rectangle; include reasonable padding; do not bury the picture at the bottom of the viewport.
+- [x] Render the sampled `lambda` signature/middle row in a visually meaningful way: subtle horizontal rule, highlighted particles, or a small summary panel.
+- [x] Maintain accessibility: canvas `aria-label`, textual `lambda` summary, readable focus states, high contrast in light/dark mode.
+- [x] The design should fit the homepage style: Franklin Gothic, UVA navy/orange, clean cards, subtle borders, dark-mode variables.
 
 ### Task 4: Redesign controls and add presets
 
@@ -212,25 +214,25 @@ Replace the ugly rainbow path display with a polished canvas visualization.
 
 Make the controls feel intentional and reduce manual parameter pain.
 
-- [ ] Replace the stacked utilitarian controls with a two-column simulation layout on desktop: sticky control panel on the left, large canvas/results panel on the right. On mobile, controls should collapse above/below the canvas cleanly; do not implement a fragile custom drawer unless it is tested.
-- [ ] Use collapsible sections:
+- [x] Replace the stacked utilitarian controls with a two-column simulation layout on desktop: sticky control panel on the left, large canvas/results panel on the right. On mobile, controls should collapse above/below the canvas cleanly; do not implement a fragile custom drawer unless it is tested.
+- [x] Use collapsible sections:
   - Presets and size;
   - Spectral parameters;
   - Sampling/run controls;
   - View/style controls;
   - Model explanation.
-- [ ] Add a preset selector with named presets and short descriptions. Required presets:
+- [x] Add a preset selector with named presets and short descriptions. Required presets:
   - `Default balanced`: current safe small default or a better nontrivial small default.
   - `Old buggy sampler fan (epsilon-safe)`: `N=12`, `M=50`, `q=0.2`, `alpha=1`, `beta=1`, `gamma=1`, `x=1^12`, `w=1.001*q^(-50+i)`, `y=q^(i-50)`, with description noting original screenshot had `w_50=x=1` and this preset nudges `w` for strict validity.
   - `Uniform / Schur-like`: constant-ish safe values.
   - `Near frozen`: a low-activity case that often returns small `lambda`.
   - `Large stress`: a case large enough to prove the worker/WASM path does not freeze the UI.
-- [ ] Applying a preset should update all relevant controls: `N`, `M`, q/alpha/beta/gamma, x/w/y expressions, column cap, cell size/view fit, and notes.
-- [ ] Preset descriptions should explain what visual behavior to expect, not just list numbers.
-- [ ] Improve parameter summaries: show first/last values, min/max, and any dangerous values near equality `w_j ≈ x_i`.
-- [ ] Add a clear validation panel for strict inequalities and positivity. It should say what failed and how to fix it.
-- [ ] Keep advanced raw x/w/y entry available, but do not make it the first thing users see.
-- [ ] Preserve existing IDs where practical so browser tests can interact with controls.
+- [x] Applying a preset should update all relevant controls: `N`, `M`, q/alpha/beta/gamma, x/w/y expressions, column cap, cell size/view fit, and notes.
+- [x] Preset descriptions should explain what visual behavior to expect, not just list numbers.
+- [x] Improve parameter summaries: show first/last values, min/max, and any dangerous values near equality `w_j ≈ x_i`.
+- [x] Add a clear validation panel for strict inequalities and positivity. It should say what failed and how to fix it.
+- [x] Keep advanced raw x/w/y entry available, but do not make it the first thing users see.
+- [x] Preserve existing IDs where practical so browser tests can interact with controls.
 
 ### Task 5: Tests, smoke checks, and stale-file cleanup
 
@@ -241,17 +243,17 @@ Make the controls feel intentional and reduce manual parameter pain.
 
 Add automated protection so this page does not regress.
 
-- [ ] Add source checks:
+- [x] Add source checks:
   - page loads the worker/WASM files, not stale old Glauber files;
   - generated `js/factorial-ybe-wasm.js` contains the expected exported C++ function names;
   - no old hard-coded small caps contradict the UI;
   - no hot sampler path uses synchronous `Math.random` except the explicit debug/reference fallback.
-- [ ] Add C++/WASM smoke tests callable from Node or browser:
+- [x] Add C++/WASM smoke tests callable from Node or browser:
   - default small sample returns valid JSON and invariants;
   - old fan preset returns valid nonnegative interlacing data;
   - invalid equality/positivity cases return structured errors.
-- [ ] Add JS-vs-WASM deterministic cross-check for tiny cases where feasible (`N,M <= 3`, fixed x/w/y, fixed seed). If exact sample paths differ because RNG ordering differs, at least compare invariants and aggregate sanity; preferably align RNG draws so outputs match.
-- [ ] Add browser smoke using Chromium DevTools Protocol, modeled on `tools/test-domino.mjs` or `tools/test-temb-shuffling.mjs`:
+- [x] Add JS-vs-WASM deterministic cross-check for tiny cases where feasible (`N,M <= 3`, fixed x/w/y, fixed seed). If exact sample paths differ because RNG ordering differs, at least compare invariants and aggregate sanity; preferably align RNG draws so outputs match.
+- [x] Add browser smoke using Chromium DevTools Protocol, modeled on `tools/test-domino.mjs` or `tools/test-temb-shuffling.mjs`:
   - serve the site locally;
   - load `/factorial/`;
   - click/apply default preset and sample;
@@ -260,8 +262,8 @@ Add automated protection so this page does not regress.
   - verify worker/WASM path was used (`window` diagnostic or status text);
   - verify no console errors;
   - verify Cancel/Reset during a large sample does not leave stale UI.
-- [ ] Add visual screenshot helper in the smoke test or as a manual command. Store temporary screenshots in `/tmp` or `~/scratch`, not `~/Downloads`, and do not commit them.
-- [ ] If `rg` confirms `js/factorial-glauber.js` and `js/factorial-wasm.js` are no longer referenced, remove them to avoid future confusion. If keeping them for historical reasons, add a clear comment/test ensuring `/factorial/` does not load them.
+- [x] Add visual screenshot helper in the smoke test or as a manual command. Store temporary screenshots in `/tmp` or `~/scratch`, not `~/Downloads`, and do not commit them.
+- [x] If `rg` confirms `js/factorial-glauber.js` and `js/factorial-wasm.js` are no longer referenced, remove them to avoid future confusion. If keeping them for historical reasons, add a clear comment/test ensuring `/factorial/` does not load them.
 
 ### Task 6: Final visual QA and documentation polish
 
@@ -272,14 +274,14 @@ Add automated protection so this page does not regress.
 
 Finish with visual review, not just code tests.
 
-- [ ] Run `/factorial/` locally and inspect at desktop width around 1920×1080.
-- [ ] Capture screenshots for default preset, old fan preset, and large stress/pending state. Use `/tmp` or `~/scratch` only.
-- [ ] Check light and dark mode if the site supports both.
-- [ ] Check mobile/narrow layout: controls should not crush the canvas or create horizontal page scrolling.
-- [ ] Confirm pan/zoom feels smooth: wheel anchored under cursor, drag does not lag, fit button recenters the meaningful region.
-- [ ] Confirm multicolor is not the default and the default view is aesthetically coherent.
-- [ ] Confirm all controls still work: apply preset, edit parameters manually, apply/reset, sample once, sample many if retained, cancel/reset, fit/zoom buttons, square/non-square cells if retained.
-- [ ] Run final validation commands:
+- [x] Run `/factorial/` locally and inspect at desktop width around 1920×1080. Used local Jekyll preview plus Chromium screenshots.
+- [x] Capture screenshots for default preset, old fan preset, and large stress/pending state. Use `/tmp` or `~/scratch` only. Stored QA screenshots under `/tmp/factorial-ybe-qa*`.
+- [x] Check light and dark mode if the site supports both. Checked with `data-theme="dark"` and fixed remaining page-local fixed-color text.
+- [x] Check mobile/narrow layout: controls should not crush the canvas or create horizontal page scrolling. Checked 390px mobile viewport and canvas scroll position with no horizontal overflow.
+- [x] Confirm pan/zoom feels smooth: wheel anchored under cursor, drag does not lag, fit button recenters the meaningful region. Browser probes verified anchored zoom, pan updates, and fit behavior; subjective manual feel is not automatable here.
+- [x] Confirm multicolor is not the default and the default view is aesthetically coherent.
+- [x] Confirm all controls still work: apply preset, edit parameters manually, apply/reset, sample once, sample many if retained, cancel/reset, fit/zoom buttons, square/non-square cells if retained. Covered by browser smoke plus Task 6 QA probes.
+- [x] Run final validation commands:
 
 ```sh
 bash factorial/build-ybe.sh
@@ -287,4 +289,4 @@ node tools/test-factorial-ybe.mjs
 bundle exec jekyll build
 ```
 
-- [ ] Commit changes with a concise signed-off message such as `Improve factorial sampler performance and UI`.
+- [x] Commit changes with a concise signed-off message such as `Improve factorial sampler performance and UI`.

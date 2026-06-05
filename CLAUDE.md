@@ -139,6 +139,15 @@ simulations: simulations/YYYY-MM-DD-slug/    # optional
 - Between (λ,μ) going up: hole↔hole dominos
 - Bipartite matching: μ pos j → λ pos j or j+1 (midIsBigger=false)
 
+## Factorial Schur/YBE Sampler (`/factorial/`)
+
+- C++ source is `factorial/factorial-ybe-sampler.cpp`; rebuild the generated single-file WASM bundle `js/factorial-ybe-wasm.js` with `factorial/build-ybe.sh` or `make test-factorial-ybe`.
+- Runtime sampling goes through `js/factorial-ybe-worker.js`; page orchestration, validation, presets, JS reference sampling, and canvas rendering live in `js/factorial-ybe-sampler.js`.
+- Do not hand-edit `js/factorial-ybe-wasm.js`; regenerate it from C++ after source changes.
+- The old Glauber artifacts `js/factorial-glauber.js` and `js/factorial-wasm.js` were removed after smoke tests confirmed `/factorial/` no longer loads them.
+- Preserve stable `fs-*` control IDs and the browser hooks `window.factorialYBEWorkerSample`, `window.factorialYBEReferenceSample`, `window.factorialYBEApplyPreset`, `window.factorialYBEValidateControls`, and `window.factorialYBECancelSample`; the smoke tests use them.
+- Browser smoke requires Node.js 22+ global `WebSocket` and Chrome/Chromium. Use `FACTORIAL_YBE_SKIP_BROWSER=1` only for explicit source-only local checks.
+
 ### 2×2 Periodic Weights (parameter a)
 - isAlpha: horizontal + black-left/white-right + (gx+gy)%4===2 + gx parity (toggle)
 - x-odd vs x-even gives two different polynomials
