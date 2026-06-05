@@ -1857,6 +1857,14 @@
       }
 
       const centersFromPartition = (row) => (row || []).map((part, index) => part - (index + 1)).sort((a, b) => a - b);
+      // Lozenge rows are stored in top-to-bottom order for the final two-sided
+      // GT pattern:
+      //
+      //   lam[0], lam[1], ..., lam[n] = lambda = mu[M],
+      //   mu[M-1], ..., mu[0].
+      //
+      // The renderer's model y-coordinate is also top-to-bottom, so
+      // lozengeModelPoint must use +0.85*y, not -0.85*y.
       const lozengeRows = [];
       for (let length = 0; length <= n; length++) {
         lozengeRows.push({ level: length, rank: length, kind: 'lambda', centers: centersFromPartition(data.lam?.[length]) });
@@ -1880,8 +1888,8 @@
       const lozengeBounds = {
         minX: lozengeMinCenter - 4,
         maxX: lozengeMaxCenter + rowCount / 2 + 4,
-        minY: -0.9 * (rowCount + 2),
-        maxY: 2,
+        minY: -2,
+        maxY: 0.9 * (rowCount + 2),
       };
 
       return {
@@ -2136,7 +2144,7 @@
         gridMajor: 'rgba(229,114,0,0.30)',
         label: '#d7dde5',
         muted: '#aeb7c0',
-        navy: uvaOrange25,
+        navy: uvaBlue,
         orange: uvaOrange,
         lambda: uvaOrange,
         lozengeA: uvaBlue,
@@ -2152,7 +2160,7 @@
         gridMajor: 'rgba(229,114,0,0.28)',
         label: '#27394f',
         muted: '#66788a',
-        navy: uvaDarkBlue || uvaBlue,
+        navy: uvaBlue,
         orange: uvaOrange,
         lambda: uvaOrange,
         lozengeA: uvaBlue,
@@ -2296,11 +2304,11 @@
       this.ctx.drawImage(this.backgroundCache, 0, 0);
     }
 
-    tonalStroke(index, count, colors) {
+    tonalStroke(index, count, _colors) {
       const t = count <= 1 ? 0.5 : index / (count - 1);
-      const alpha = Math.max(0.22, Math.min(0.82, 0.34 + 0.46 * t));
-      if (colors.navy.startsWith('#002f6c')) return `rgba(0,47,108,${alpha.toFixed(3)})`;
-      return `rgba(137,183,223,${Math.min(0.95, alpha + 0.12).toFixed(3)})`;
+      const alpha = Math.max(0.68, Math.min(0.96, 0.72 + 0.22 * t));
+      // UVA navy from ColorSchemes: #232D4B.
+      return `rgba(35,45,75,${alpha.toFixed(3)})`;
     }
 
     drawPaths(size, xStep, colors) {
@@ -2360,7 +2368,7 @@
             ? legacyPalette[path.track % legacyPalette.length]
             : colors.navy;
           ctx2d.fillStyle = color;
-          ctx2d.globalAlpha = this.pathStyle === 'legacy' ? 0.88 : 0.55;
+          ctx2d.globalAlpha = this.pathStyle === 'legacy' ? 0.88 : 0.78;
           const particles = drawAllParticles
             ? path.particles
             : path.particles.filter(point => point.level === geometry.M || point === path.endpoint);
@@ -2403,9 +2411,16 @@
     }
 
     lozengeModelPoint(x, y) {
-      // Mathematica Dynamic.nb uses GeometricTransformation[..., {{1,1/2},{0,.85}}].
-      // We flip the second coordinate for canvas-y-down rendering.
-      return { x: x + y / 2, y: -0.85 * y };
+      // Use the same y-down model-coordinate convention as the path renderer:
+      // screenY(modelY) = (modelY - viewport.ty) * scale.
+      //
+      // Therefore do NOT negate y here.  The raw lozenge row order is
+      //
+      //   lam[0], lam[1], ..., lam[n] = lambda = mu[M],
+      //   mu[M-1], ..., mu[0],
+      //
+      // and increasing raw y should move downward on the canvas.
+      return { x: x + y / 2, y: 0.85 * y };
     }
 
     lozengePolygon(kind, x, y) {
@@ -2458,8 +2473,8 @@
       }
     }
 
-    lozengeTileVisible(x, y, view) {
-      const pts = this.lozengePolygon('vertical', x, y);
+    lozengeTileVisible(kind, x, y, view) {
+      const pts = this.lozengePolygon(kind, x, y);
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
       for (const pt of pts) {
         minX = Math.min(minX, pt.x);
@@ -2531,10 +2546,10 @@
           for (let x = strip.minX; x <= strip.maxX; x++) {
             const delta = this.countCentersAtMost(strip.curr, x) - this.countCentersAtMost(strip.prev, x);
             if (delta === 1) {
-              if (!this.lozengeTileVisible(x + 1, strip.y, view)) continue;
+              if (!this.lozengeTileVisible('s', x + 1, strip.y, view)) continue;
               this.drawLozengePolygon(ctx2d, 's', x + 1, strip.y, colors.lozengeA, stroke, lineWidth);
             } else if (x + strip.rank > 0) {
-              if (!this.lozengeTileVisible(x + 1, strip.y, view)) continue;
+              if (!this.lozengeTileVisible('l', x + 1, strip.y, view)) continue;
               this.drawLozengePolygon(ctx2d, 'l', x + 1, strip.y, colors.lozengeB, stroke, lineWidth);
             }
           }
@@ -2547,7 +2562,7 @@
       for (let y = 1; y < rows.length; y++) {
         const row = rows[y];
         for (const center of row.centers) {
-          if (!this.lozengeTileVisible(center, y, view)) continue;
+          if (!this.lozengeTileVisible('vertical', center, y, view)) continue;
           this.drawLozengePolygon(ctx2d, 'vertical', center, y, colors.lozengeParticle, strongStroke, lineWidth);
           drawnVertical += 1;
           if (drawnVertical >= maxVertical) break;
