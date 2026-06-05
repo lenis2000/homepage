@@ -5157,7 +5157,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   }
 
   function renderVisibleSampleViews(controls, profile) {
-    resetSampleView();
+    // Preserve the current 2D pan/zoom when re-sampling, so a user can keep
+    // inspecting the same local window.  The first sample still fits to view
+    // because the renderer has no viewport yet; the explicit reset button calls
+    // resetSampleView().
     measureSamplePhase(profile, 'twoDRenderMs', () => renderSample(profile));
 
     if (isSample3DPaneVisible()) {
