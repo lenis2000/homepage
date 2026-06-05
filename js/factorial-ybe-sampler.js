@@ -42,7 +42,7 @@
   let elapsedTimer = null;
   let renderScheduled = false;
   let applyingPreset = false;
-  let currentPresetKey = 'default-balanced';
+  let currentPresetKey = 'schur';
 
   const LOCKED_DURING_SAMPLE_IDS = [
     'fs-N', 'fs-M', 'fs-q', 'fs-alpha', 'fs-beta', 'fs-gamma',
@@ -52,94 +52,43 @@
   ];
 
   const FACTORIAL_YBE_PRESETS = {
-    'default-balanced': {
-      label: 'Default balanced',
-      description: 'A small balanced sample with visible paths and quick worker turnaround. It is the safest starting point for checking the exact sampler.',
-      N: 6,
-      M: 6,
+    schur: {
+      label: 'Schur',
+      description: 'Plain Schur specialization with n=10 paths and N=20 check rows. The sampler uses check-coordinate w=2, equivalent to ordinary Schur dual ratio 0.5 while keeping w>x.',
+      N: 10,
+      M: 20,
       q: 0.95,
-      alpha: 0.55,
-      beta: 0,
-      gamma: 1,
-      x: 'alpha*q^i',
-      w: 'gamma*q^i',
-      y: 'beta*q^i',
-      columnCap: 20000,
-      cellSize: 20,
-      squareCells: true,
-      pathStyle: 'tonal',
-    },
-    'old-fan-epsilon-safe': {
-      label: 'Old buggy sampler fan (epsilon-safe)',
-      description: 'Recreates the broad fan shape from the old screenshot. The original had w_50=x=1; this preset uses 1.001*q^(-50+i) so every w_j is strictly larger than every x_i.',
-      N: 12,
-      M: 50,
-      q: 0.2,
       alpha: 1,
-      beta: 1,
-      gamma: 1,
-      x: '1^12',
-      w: '1.001*q^(-50+i)',
-      y: 'q^(i-50)',
-      columnCap: 20000,
-      cellSize: 13,
-      squareCells: false,
-      pathStyle: 'tonal',
-    },
-    'uniform-schur-like': {
-      label: 'Uniform / Schur-like',
-      description: 'Constant safe spectral values with y=0. The output behaves like a plain Schur-type ensemble with smoother, more even path spread.',
-      N: 10,
-      M: 12,
-      q: 0.95,
-      alpha: 0.45,
       beta: 0,
-      gamma: 1,
-      x: '0.45^N',
-      w: '1^M',
-      y: '0^columnCap',
-      columnCap: 12000,
-      cellSize: 18,
+      gamma: 2,
+      x: '1',
+      w: '2',
+      y: '0',
+      columnCap: 20000,
+      cellSize: 16,
       squareCells: true,
       pathStyle: 'tonal',
     },
-    'near-frozen': {
-      label: 'Near frozen',
-      description: 'Low x/w activity, so the sampled lambda row is often small or zero. This is useful for checking the frozen boundary and low-density rendering.',
-      N: 10,
-      M: 18,
+    'q-racah': {
+      label: 'q-Racah',
+      description: 'q-Racah-style specialization with n=20 paths and N=50 check rows: x_i=1, y_i=1.5 q^(i-N), w_i=2 q^(i-N).',
+      N: 20,
+      M: 50,
       q: 0.95,
-      alpha: 0.08,
-      beta: 0,
-      gamma: 1,
-      x: '0.08^N',
-      w: '1^M',
-      y: '0^columnCap',
-      columnCap: 10000,
-      cellSize: 18,
-      squareCells: true,
-      pathStyle: 'tonal',
-    },
-    'large-stress': {
-      label: 'Large stress',
-      description: 'A large N=80, M=120 run sized to exercise the worker/WASM path without locking the main browser thread. The view starts compressed so the whole ensemble remains legible.',
-      N: 80,
-      M: 120,
-      q: 0.9,
-      alpha: 0.3,
-      beta: 0,
-      gamma: 1,
-      x: '0.3^N',
-      w: '1^M',
-      y: '0^columnCap',
+      alpha: 1,
+      beta: 1.5,
+      gamma: 2,
+      x: '1',
+      w: '2*q^(i-N)',
+      y: '1.5*q^(i-N)',
       columnCap: 20000,
-      cellSize: 5,
+      cellSize: 10,
       squareCells: false,
       pathStyle: 'tonal',
     },
     custom: {
       label: 'Custom parameters',
-      description: 'Manual controls are active. Validate after changing size, q-specialization, or raw x/w/y expressions.',
+      description: 'Manual x, w, y controls are active. The visible n, N, and q fields set path count, check-zone size, and q.',
     },
   };
 
@@ -211,8 +160,8 @@
   }
 
   function readControlState(overrides = {}) {
-    const nextN = clampInt(overrides.N ?? $('fs-N')?.value ?? N, 1, 120);
-    const nextM = clampInt(overrides.M ?? $('fs-M')?.value ?? M, 1, 120);
+    const nextN = clampInt(overrides.N ?? $('fs-N')?.value ?? N, 1, 1000);
+    const nextM = clampInt(overrides.M ?? $('fs-M')?.value ?? M, 1, 1000);
     const rawCap = overrides.columnCap ?? $('fs-max-cols')?.value ?? '20000';
     const columnCap = normalizeColumnCap(rawCap, overrides.columnCapMinimum ?? 100);
     return {
@@ -220,9 +169,9 @@
       M: nextM,
       columnCap,
       q: parseFloat($('fs-q')?.value || '0.95'),
-      alpha: parseFloat($('fs-alpha')?.value || '0.55'),
+      alpha: parseFloat($('fs-alpha')?.value || '1'),
       beta: parseFloat($('fs-beta')?.value || '0'),
-      gamma: parseFloat($('fs-gamma')?.value || '1.0'),
+      gamma: parseFloat($('fs-gamma')?.value || '2'),
       xInput: $('fs-x')?.value || '',
       wInput: $('fs-w')?.value || '',
       yInput: $('fs-y')?.value || '',
@@ -379,8 +328,10 @@
 
   function evalExpression(fn, idx) {
     const env = numericEnv();
+    // User-facing notation: n is the number of x-rows/paths, while N is the
+    // number of check/w-rows. The internal variable names remain N and M.
     const v = fn(
-      idx, idx, idx, idx, N, M,
+      idx, idx, idx, N, M, M,
       env.q, env.alpha, env.beta, env.gamma, env.alpha, env.beta, env.gamma,
       Math.sqrt, Math.exp, Math.log, Math.pow, Math.sin, Math.cos, Math.tan,
       Math.abs, Math.min, Math.max, Math.PI, Math.E
@@ -396,8 +347,8 @@
       if (!Number.isSafeInteger(count)) throw new Error(`unsupported repeat count ${t}`);
       return count;
     }
-    if (t === 'N') return N;
-    if (t === 'M') return M;
+    if (t === 'n') return N;
+    if (t === 'N' || t === 'M') return M;
     if (t === 'columnCap' || t === 'cap' || t === 'K') return columnCap;
     throw new Error(`unsupported repeat count ${t}`);
   }
@@ -442,8 +393,8 @@
     const columnCap = normalizeColumnCap(options.columnCap ?? currentColumnCap(), 1);
     const out = [];
     const numberPattern = '[-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?';
-    const repeatPattern = new RegExp(`^(${numberPattern})\\^(\\d+|N|M|columnCap|cap|K)$`);
-    const patternRepeat = /^(.+)\^(\d+|N|M|columnCap|cap|K)$/;
+    const repeatPattern = new RegExp(`^(${numberPattern})\\^(\\d+|n|N|M|columnCap|cap|K)$`);
+    const patternRepeat = /^(.+)\^(\d+|n|N|M|columnCap|cap|K)$/;
     for (const token of splitTopLevelCommas(str)) {
       const tr = token.trim();
       if (!tr) continue;
@@ -478,11 +429,15 @@
 
   function finiteListTooShortMessage(label, got, needed) {
     const repeatHint = label === 'x'
-      ? 'Use a repeat like 1^N or an expression such as alpha*q^i.'
+      ? 'try 1^n'
       : label === 'w'
-        ? 'Use a repeat like 1^M or an expression such as gamma*q^i.'
-        : 'Use a repeat like 0^columnCap, a long enough list, or an expression such as beta*q^i.';
-    return `${label} finite list has length ${got}, but needs at least ${needed}. ${repeatHint}`;
+        ? 'try 1^N'
+        : 'try 0^columnCap';
+    return `${label} needs ${needed} values; got ${got} (${repeatHint}).`;
+  }
+
+  function isPlainNumber(str) {
+    return /^[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?$/.test(String(str || '').trim());
   }
 
   function parseArrayInput(input, len, label, options = {}) {
@@ -496,7 +451,11 @@
       finiteListError = error;
     }
     if (arr && arr.length > 0) {
-      if (arr.length < len) throw new Error(finiteListTooShortMessage(label, arr.length, len));
+      if (arr.length === 1 && isPlainNumber(str) && len > 1) {
+        arr = Array(len).fill(arr[0]);
+      } else if (arr.length < len) {
+        throw new Error(finiteListTooShortMessage(label, arr.length, len));
+      }
     } else if (looksLikeExpression(str)) {
       const fn = compileExpression(str);
       arr = [];
@@ -528,6 +487,19 @@
     if (arr && arr.length > 0) {
       for (const v of arr) {
         if (!Number.isFinite(v)) throw new Error('y contains a non-finite value');
+      }
+      if (arr.length === 1 && isPlainNumber(str)) {
+        const constant = arr[0];
+        const previewLen = Math.max(20, Math.min(120, 4 * (N + M) + 20));
+        return {
+          kind: 'constant',
+          preview: Array(previewLen).fill(constant),
+          value(k) {
+            if (k <= 0) return 0;
+            return constant;
+          },
+          length: Infinity,
+        };
       }
       return {
         kind: 'array',
@@ -574,7 +546,7 @@
           closestW = j + 1;
         }
         if (!(gap > 0)) {
-          fail(`Parameter check failed: need w${sub(j + 1)} > x${sub(i + 1)}, but ${formatValue(wArr[j])} <= ${formatValue(xArr[i])}. Increase that w value, lower that x value, or choose an epsilon-safe preset.`);
+          fail(`Need w${sub(j + 1)} > x${sub(i + 1)} (${formatValue(wArr[j])} ≤ ${formatValue(xArr[i])}).`);
         }
       }
     }
@@ -600,7 +572,7 @@
     let minWColumn = 1;
     for (let k = 1; k <= columnCap; k++) {
       const y = yVal(k);
-      if (!Number.isFinite(y)) fail(`Parameter check failed: y_${k} is non-finite. Shorten the expression or use a finite repeat such as 0^columnCap.`);
+      if (!Number.isFinite(y)) fail(`y_${k} is non-finite.`);
       if (k === 1) firstY = y;
       lastY = y;
       if (y < minY) minY = y;
@@ -616,10 +588,10 @@
         minWColumn = k;
       }
       if (!(wPlusY > 0)) {
-        fail(`Local positivity failed at y_${k}: min(w)+y_${k}=${formatValue(wPlusY)}. Increase w, raise y, or reduce the column cap if this tail was not intended.`);
+        fail(`Need min(w)+y_${k} > 0; got ${formatValue(wPlusY)}.`);
       }
       if (!(xPlusY >= 0)) {
-        fail(`Local positivity failed at y_${k}: min(x)+y_${k}=${formatValue(xPlusY)}. Increase x, raise y, or reduce the column cap if this tail was not intended.`);
+        fail(`Need min(x)+y_${k} ≥ 0; got ${formatValue(xPlusY)}.`);
       }
     }
     return {
@@ -637,12 +609,12 @@
 
   function validateParameters(columnCap = currentColumnCap()) {
     if (columnCap < N) {
-      fail(`Column cap ${columnCap} is too small for N=${N}. Increase the column cap to at least ${N}.`);
+      fail(`Need column cap ≥ n (${N}); got ${columnCap}.`);
     }
     const strict = validateStrictInequalities();
     const positivity = validatePositivityForCap(columnCap);
-    clearValidation(`OK: ${N * M} strict inequalities and positivity through column cap ${columnCap} hold.`);
-    setValidationDetail(`${describeGap(strict)} Positivity margins: min(x+y)=${formatValue(positivity.minXPlusY)} at y_${positivity.minXColumn}, min(w+y)=${formatValue(positivity.minWPlusY)} at y_${positivity.minWColumn}.`);
+    clearValidation('OK');
+    setValidationDetail('');
     return { strict, positivity };
   }
 
@@ -667,11 +639,13 @@
       const ySummary = summarize(ySpec.preview || []);
       $('fs-y-note').textContent = ySpec.kind === 'expr'
         ? `y: expression through cap ${controls.columnCap}; first=${formatValue(validation.positivity.firstY)}, last=${formatValue(validation.positivity.lastY)}, min=${formatValue(validation.positivity.minY)}, max=${formatValue(validation.positivity.maxY)}; preview [${ySummary}]`
-        : `y: ${ySpec.length} values; first=${formatValue(validation.positivity.firstY)}, last=${formatValue(validation.positivity.lastY)}, min=${formatValue(validation.positivity.minY)}, max=${formatValue(validation.positivity.maxY)}; preview [${ySummary}]`;
+        : ySpec.kind === 'constant'
+          ? `y: constant ${formatValue(validation.positivity.firstY)} through cap ${controls.columnCap}; min=${formatValue(validation.positivity.minY)}, max=${formatValue(validation.positivity.maxY)}`
+          : `y: ${ySpec.length} values; first=${formatValue(validation.positivity.firstY)}, last=${formatValue(validation.positivity.lastY)}, min=${formatValue(validation.positivity.minY)}, max=${formatValue(validation.positivity.maxY)}; preview [${ySummary}]`;
       return true;
     } catch (e) {
       setRunState('error', 'error', e.message, 'fs-note err');
-      setValidationDetail('Fix the highlighted parameter condition, then apply/reset or choose a preset.');
+      setValidationDetail('');
       return false;
     }
   }
@@ -767,8 +741,8 @@
 
   function applySafeConstantsToInputs() {
     markCustomPreset();
-    $('fs-x').value = '0.8^N';
-    $('fs-w').value = '1^M';
+    $('fs-x').value = '0.8^n';
+    $('fs-w').value = '1^N';
     $('fs-y').value = '0^columnCap';
     applyParamsFromInputs();
   }
@@ -1419,7 +1393,7 @@
     setSamplingUi(true);
     const started = performance.now();
     startElapsedTimer(started);
-    setRunState('sampling', 'sampling', `Sampling in WASM worker for N=${N}, M=${M}, cap=${request.columnCap}...`, 'fs-note ok');
+    setRunState('sampling', 'sampling', `Sampling in WASM worker for n=${N}, N=${M}, cap=${request.columnCap}...`, 'fs-note ok');
 
     return new Promise((resolve) => {
       let settled = false;
@@ -1497,54 +1471,53 @@
   function defaultBenchmarkCases(options = {}) {
     return [
       {
-        name: 'default',
-        N: 6,
-        M: 6,
+        name: 'schur',
+        N: 10,
+        M: 20,
         q: 0.95,
-        alpha: 0.55,
-        beta: 0,
-      gamma: 1,
-      x: 'alpha*q^i',
-      w: 'gamma*q^i',
-      y: 'beta*q^i',
-      columnCap: options.defaultColumnCap || 20000,
-      cellSize: 20,
-      squareCells: true,
-      pathStyle: 'tonal',
-    },
-      {
-        name: 'old fan epsilon-safe',
-        N: 12,
-        M: 50,
-        q: 0.2,
         alpha: 1,
-        beta: 1,
-        gamma: 1,
-        x: '1^N',
-        w: '1.001*q^(-50+i)',
-      y: 'q^(i-50)',
-      columnCap: options.oldFanColumnCap || 20000,
-      cellSize: 13,
-      squareCells: false,
-      pathStyle: 'tonal',
-      note: 'The original screenshot had w_50=x=1; this benchmark uses 1.001*w to keep strict w_j > x_i.',
-    },
+        beta: 0,
+        gamma: 2,
+        x: '1',
+        w: '2',
+        y: '0',
+        columnCap: options.schurColumnCap || 20000,
+        cellSize: 16,
+        squareCells: true,
+        pathStyle: 'tonal',
+      },
+      {
+        name: 'q-racah',
+        N: 20,
+        M: 50,
+        q: 0.95,
+        alpha: 1,
+        beta: 1.5,
+        gamma: 2,
+        x: '1',
+        w: '2*q^(i-N)',
+        y: '1.5*q^(i-N)',
+        columnCap: options.qRacahColumnCap || 20000,
+        cellSize: 10,
+        squareCells: false,
+        pathStyle: 'tonal',
+      },
       {
         name: 'large stress',
         N: options.stressN || 80,
         M: options.stressM || 120,
-        q: 0.9,
-        alpha: 0.3,
+        q: 0.95,
+        alpha: 1,
         beta: 0,
-        gamma: 1,
-        x: '0.3^N',
-      w: '1^M',
-      y: '0^columnCap',
-      columnCap: options.stressColumnCap || 20000,
-      cellSize: 5,
-      squareCells: false,
-      pathStyle: 'tonal',
-    },
+        gamma: 2,
+        x: '1',
+        w: '2*q^(i-N)',
+        y: '1.5*q^(i-N)',
+        columnCap: options.stressColumnCap || 20000,
+        cellSize: 5,
+        squareCells: false,
+        pathStyle: 'tonal',
+      },
     ];
   }
 
@@ -2464,8 +2437,8 @@
     });
     $('fs-resize-btn').addEventListener('click', () => {
       terminateActiveWorker('', { silent: true });
-      N = clampInt($('fs-N').value, 1, 120);
-      M = clampInt($('fs-M').value, 1, 120);
+      N = clampInt($('fs-N').value, 1, 1000);
+      M = clampInt($('fs-M').value, 1, 1000);
       $('fs-N').value = String(N);
       $('fs-M').value = String(M);
       applyParamsFromInputs();
@@ -2560,8 +2533,8 @@
   }
 
   function init() {
-    N = clampInt($('fs-N').value, 1, 120);
-    M = clampInt($('fs-M').value, 1, 120);
+    N = clampInt($('fs-N').value, 1, 1000);
+    M = clampInt($('fs-M').value, 1, 1000);
     $('fs-N').value = String(N);
     $('fs-M').value = String(M);
     pathRenderer = new FactorialPathCanvasRenderer(canvas, { viewbar: $('fs-viewbar') });
