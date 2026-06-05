@@ -592,6 +592,11 @@ async function runBrowserSmoke() {
       document.getElementById("fs-y").value = "0^columnCap";
       const okScientific = window.factorialYBEValidateControls();
       const scientificState = window.factorialExactSamplerState();
+      document.getElementById("fs-x").value = "0.4^1000000000";
+      document.getElementById("fs-w").value = "1^M";
+      document.getElementById("fs-y").value = "(0,0)^1000000000";
+      const okHugeRepeats = window.factorialYBEValidateControls();
+      const hugeRepeatState = window.factorialExactSamplerState();
       return {
         okExpression,
         expressionW: expressionState.wArr,
@@ -602,6 +607,8 @@ async function runBrowserSmoke() {
         repeatW: repeatState.wArr,
         okScientific,
         scientificX: scientificState.xArr,
+        okHugeRepeats,
+        hugeRepeatX: hugeRepeatState.xArr,
         phaseText: document.getElementById("fs-status-phase").textContent,
         elapsedText: document.getElementById("fs-status-elapsed").textContent,
         xNote: document.getElementById("fs-x-note").textContent,
@@ -620,10 +627,13 @@ async function runBrowserSmoke() {
     assert(parserResult.repeatW.length === 5 && parserResult.repeatW.every(value => value === 1.001), "1.001^M should expand to M w-values");
     assert(parserResult.okScientific, "scientific-notation expressions should validate");
     assert(parserResult.scientificX.length === 4 && parserResult.scientificX.every(value => value > 0 && value < 0.001), "scientific-notation expression should expand to small x-values");
+    assert(parserResult.okHugeRepeats, "large repeat counts should validate without materializing the full repeat");
+    assert(parserResult.hugeRepeatX.length === 4 && parserResult.hugeRepeatX.every(value => value === 0.4), "large numeric repeats should truncate to N values");
     assert(parserResult.phaseText === "ready", "successful validation should leave the page ready");
     assert(/s$/.test(parserResult.elapsedText), "elapsed status should be shown in seconds");
     assert(parserResult.xNote.includes("first=") && parserResult.xNote.includes("min=") && parserResult.xNote.includes("max="), "x summary should include first/last/min/max values");
     assert(parserResult.wNote.includes("Closest gap"), "w summary should include the closest strict-inequality gap");
+    assert(parserResult.yNote.includes("120 values"), "large y pattern repeats should truncate to the active column cap");
     assert(parserResult.yNote.includes("first=") && parserResult.yNote.includes("max="), "y summary should include cap-aware min/max values");
     assert(parserResult.validationDetail.includes("Positivity margins"), "validation detail should include positivity margins");
 
@@ -658,6 +668,7 @@ async function runBrowserSmoke() {
         { name: "invalid repeat count", values: { x: "1^0" }, message: "bad repeat token 1^0" },
         { name: "non-finite expression", values: { x: "exp(1000)*q^i" }, message: "expression produced a non-finite value" },
         { name: "short y list", values: { y: "0" }, message: "y finite list has length 1, but needs at least 100" },
+        { name: "column cap below N", values: { N: "120", cap: "100", x: "0.4^N" }, message: "Column cap 100 is too small for N=120" },
         { name: "negative q positivity", values: { q: "-0.5", x: "alpha*q^i" }, message: "Local positivity failed" }
       ];
       return cases.map(testCase => {
@@ -730,6 +741,48 @@ async function runBrowserSmoke() {
     assert(workerResult.runState === "done" && workerResult.phaseText === "done", "worker sample should finish in done status");
     assert(/s$/.test(workerResult.elapsedText), "worker sample should report elapsed seconds");
     console.log(`Factorial worker/WASM smoke passed: lambda=(${workerResult.lambda.join(",")}), moves=${workerResult.localMoves}.`);
+
+    const overrideCapResult = await evaluate(client, `(async () => {
+      document.getElementById("fs-N").value = "3";
+      document.getElementById("fs-M").value = "3";
+      document.getElementById("fs-x").value = "0.2,0.3,0.4";
+      document.getElementById("fs-w").value = "0.9,1.0,1.1";
+      document.getElementById("fs-y").value = "0^columnCap";
+      document.getElementById("fs-max-cols").value = "100";
+      const options = {
+        N: 3,
+        M: 3,
+        x: [0.2, 0.3, 0.4],
+        w: [0.9, 1.0, 1.1],
+        y: "0^columnCap",
+        seedLo: 24680,
+        seedHi: 13579,
+        columnCap: 220
+      };
+      let reference;
+      try {
+        reference = window.factorialYBEReferenceSample(options);
+      } catch (error) {
+        return { referenceError: error.message };
+      }
+      const ok = await window.factorialYBEWorkerSample({ seedLo: 24680, seedHi: 13579, columnCap: 220 });
+      const state = window.factorialExactSamplerState();
+      return {
+        referenceError: "",
+        ok,
+        sameMu: JSON.stringify(state.mu) === JSON.stringify(reference.mu),
+        sameLam: JSON.stringify(state.lam) === JSON.stringify(reference.lam),
+        rowSwaps: state.stats.rowSwaps,
+        phaseText: document.getElementById("fs-status-phase").textContent,
+        message: document.getElementById("fs-validation-note").textContent
+      };
+    })()`, 60000);
+
+    assert(!overrideCapResult.referenceError, `reference hook should parse y with the requested cap: ${JSON.stringify(overrideCapResult)}`);
+    assert(overrideCapResult.ok, `worker hook should parse y with the requested cap: ${JSON.stringify(overrideCapResult)}`);
+    assert(overrideCapResult.sameMu && overrideCapResult.sameLam, `worker override cap result should match the reference hook: ${JSON.stringify(overrideCapResult)}`);
+    assert(overrideCapResult.rowSwaps === 9, "worker override cap run should complete the N*M row swaps");
+    assert(overrideCapResult.phaseText === "done", "worker override cap run should finish in done status");
 
     const boundaryAgreement = await evaluate(client, `(async () => {
       const options = {

@@ -152,6 +152,12 @@
     return Math.max(lo, Math.min(hi, n));
   }
 
+  function normalizeColumnCap(value, minimum = 100) {
+    const number = Math.trunc(Number(value));
+    if (!Number.isFinite(number)) return 20000;
+    return Math.max(minimum, Math.min(1000000, number));
+  }
+
   function round6(x) {
     if (!Number.isFinite(x)) return x;
     return parseFloat(x.toPrecision(6));
@@ -208,7 +214,7 @@
     const nextN = clampInt(overrides.N ?? $('fs-N')?.value ?? N, 1, 120);
     const nextM = clampInt(overrides.M ?? $('fs-M')?.value ?? M, 1, 120);
     const rawCap = overrides.columnCap ?? $('fs-max-cols')?.value ?? '20000';
-    const columnCap = Math.max(100, Math.min(1000000, Math.trunc(Number(rawCap) || 20000)));
+    const columnCap = normalizeColumnCap(rawCap, overrides.columnCapMinimum ?? 100);
     return {
       N: nextN,
       M: nextM,
@@ -383,44 +389,89 @@
     return Number(v);
   }
 
-  function repeatCountFromToken(token) {
+  function repeatCountFromToken(token, columnCap = currentColumnCap()) {
     const t = String(token || '').trim();
-    if (/^\d+$/.test(t)) return parseInt(t, 10);
+    if (/^\d+$/.test(t)) {
+      const count = Number(t);
+      if (!Number.isSafeInteger(count)) throw new Error(`unsupported repeat count ${t}`);
+      return count;
+    }
     if (t === 'N') return N;
     if (t === 'M') return M;
-    if (t === 'columnCap' || t === 'cap' || t === 'K') return currentColumnCap();
+    if (t === 'columnCap' || t === 'cap' || t === 'K') return columnCap;
     throw new Error(`unsupported repeat count ${t}`);
   }
 
-  function expandRepeatedPatterns(str) {
-    return String(str).replace(/\(([^)]+)\)\^(\d+|N|M|columnCap|cap|K)\b/g, (m, pattern, count) => {
-      const n = repeatCountFromToken(count);
-      const vals = pattern.split(',').map(v => v.trim()).filter(Boolean);
-      const out = [];
-      for (let i = 0; i < n; i++) out.push(...vals);
-      return out.join(',');
-    });
+  function splitTopLevelCommas(str) {
+    const out = [];
+    const source = String(str || '');
+    let depth = 0;
+    let start = 0;
+    for (let i = 0; i < source.length; i++) {
+      const ch = source[i];
+      if (ch === '(') depth += 1;
+      if (ch === ')') depth = Math.max(0, depth - 1);
+      if (ch === ',' && depth === 0) {
+        out.push(source.slice(start, i));
+        start = i + 1;
+      }
+    }
+    out.push(source.slice(start));
+    return out;
   }
 
-  function parseFiniteList(str) {
-    const s = expandRepeatedPatterns(str);
+  function appendRepeatedValues(out, values, count, maxLength) {
+    const remaining = maxLength - out.length;
+    if (remaining <= 0) return;
+    if (values.length === 1) {
+      const copies = Math.min(count, remaining);
+      for (let i = 0; i < copies; i++) out.push(values[0]);
+      return;
+    }
+    const cycles = Math.min(count, Math.ceil(remaining / values.length));
+    for (let i = 0; i < cycles && out.length < maxLength; i++) {
+      for (const value of values) {
+        if (out.length >= maxLength) break;
+        out.push(value);
+      }
+    }
+  }
+
+  function parseFiniteList(str, options = {}) {
+    const maxLength = Math.max(0, Math.trunc(Number(options.maxLength ?? 1000000)));
+    const columnCap = normalizeColumnCap(options.columnCap ?? currentColumnCap(), 1);
     const out = [];
     const numberPattern = '[-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?';
     const repeatPattern = new RegExp(`^(${numberPattern})\\^(\\d+|N|M|columnCap|cap|K)$`);
-    for (const token of s.split(',')) {
+    const patternRepeat = /^(.+)\^(\d+|N|M|columnCap|cap|K)$/;
+    for (const token of splitTopLevelCommas(str)) {
       const tr = token.trim();
       if (!tr) continue;
+      const patternRep = tr.startsWith('(') ? tr.match(patternRepeat) : null;
+      if (patternRep && patternRep[1].startsWith('(') && patternRep[1].endsWith(')')) {
+        const count = repeatCountFromToken(patternRep[2], columnCap);
+        if (count <= 0) throw new Error(`bad repeat token ${tr}`);
+        const patternTokens = splitTopLevelCommas(patternRep[1].slice(1, -1))
+          .map(v => v.trim())
+          .filter(Boolean);
+        const patternValues = patternTokens.map(v => Number(v));
+        if (patternValues.length === 0 || patternValues.some(v => !Number.isFinite(v))) {
+          throw new Error(`bad repeat token ${tr}`);
+        }
+        appendRepeatedValues(out, patternValues, count, maxLength);
+        continue;
+      }
       const rep = tr.match(repeatPattern);
       if (rep) {
         const value = Number(rep[1]);
-        const count = repeatCountFromToken(rep[2]);
+        const count = repeatCountFromToken(rep[2], columnCap);
         if (!Number.isFinite(value) || count <= 0) throw new Error(`bad repeat token ${tr}`);
-        for (let i = 0; i < count; i++) out.push(value);
+        appendRepeatedValues(out, [value], count, maxLength);
         continue;
       }
       const value = Number(tr);
       if (!Number.isFinite(value)) throw new Error(`bad numeric token ${tr}`);
-      out.push(value);
+      if (out.length < maxLength) out.push(value);
     }
     return out;
   }
@@ -434,13 +485,13 @@
     return `${label} finite list has length ${got}, but needs at least ${needed}. ${repeatHint}`;
   }
 
-  function parseArrayInput(input, len, label) {
+  function parseArrayInput(input, len, label, options = {}) {
     const str = String(input || '').trim();
     if (!str) throw new Error(`${label} is empty`);
     let arr;
     let finiteListError = null;
     try {
-      arr = parseFiniteList(str);
+      arr = parseFiniteList(str, { maxLength: len, columnCap: options.columnCap });
     } catch (error) {
       finiteListError = error;
     }
@@ -463,13 +514,14 @@
     return arr;
   }
 
-  function parseYInput(input) {
+  function parseYInput(input, options = {}) {
     const str = String(input || '').trim();
     if (!str) throw new Error('y is empty');
+    const columnCap = normalizeColumnCap(options.columnCap ?? currentColumnCap(), 1);
     let arr;
     let finiteListError = null;
     try {
-      arr = parseFiniteList(str);
+      arr = parseFiniteList(str, { maxLength: columnCap, columnCap });
     } catch (error) {
       finiteListError = error;
     }
@@ -584,6 +636,9 @@
   }
 
   function validateParameters(columnCap = currentColumnCap()) {
+    if (columnCap < N) {
+      fail(`Column cap ${columnCap} is too small for N=${N}. Increase the column cap to at least ${N}.`);
+    }
     const strict = validateStrictInequalities();
     const positivity = validatePositivityForCap(columnCap);
     clearValidation(`OK: ${N * M} strict inequalities and positivity through column cap ${columnCap} hold.`);
@@ -591,17 +646,17 @@
     return { strict, positivity };
   }
 
-  function applyParamsFromInputs() {
+  function applyParamsFromInputs(overrides = {}) {
     setRunState('validating', 'validating', 'Checking parameters...', 'fs-note ok');
     try {
-      const controls = readControlState();
+      const controls = readControlState(overrides);
       N = controls.N;
       M = controls.M;
       if ($('fs-N')) $('fs-N').value = String(N);
       if ($('fs-M')) $('fs-M').value = String(M);
-      xArr = parseArrayInput($('fs-x').value, N, 'x');
-      wArr = parseArrayInput($('fs-w').value, M, 'w');
-      ySpec = parseYInput($('fs-y').value);
+      xArr = parseArrayInput($('fs-x').value, N, 'x', { columnCap: controls.columnCap });
+      wArr = parseArrayInput($('fs-w').value, M, 'w', { columnCap: controls.columnCap });
+      ySpec = parseYInput($('fs-y').value, { columnCap: controls.columnCap });
       if (ySpec.kind === 'array' && ySpec.length < controls.columnCap) {
         throw new Error(finiteListTooShortMessage('y', ySpec.length, controls.columnCap));
       }
@@ -844,7 +899,7 @@
 
   function currentColumnCap() {
     if (columnCapOverride != null) {
-      return Math.max(1, Math.min(1000000, Math.trunc(columnCapOverride)));
+      return normalizeColumnCap(columnCapOverride, 1);
     }
     return clampInt($('fs-max-cols')?.value || '20000', 100, 1000000);
   }
@@ -1118,9 +1173,9 @@
     return arr;
   }
 
-  function referenceYInput(input) {
+  function referenceYInput(input, options = {}) {
     if (Array.isArray(input)) return arrayYSpec(input);
-    if (typeof input === 'string') return parseYInput(input);
+    if (typeof input === 'string') return parseYInput(input, { columnCap: options.columnCap });
     if (ySpec) return ySpec;
     throw new Error('reference y values are required');
   }
@@ -1154,16 +1209,17 @@
     try {
       N = Math.max(1, Math.min(120, Math.trunc(Number(options.N ?? N))));
       M = Math.max(1, Math.min(120, Math.trunc(Number(options.M ?? M))));
+      const sampleColumnCap = normalizeColumnCap(options.columnCap ?? 20000, 1);
+      columnCapOverride = sampleColumnCap;
       xArr = referenceArrayInput(options.x, N, 'x');
       wArr = referenceArrayInput(options.w, M, 'w');
-      ySpec = referenceYInput(options.y);
+      ySpec = referenceYInput(options.y, { columnCap: sampleColumnCap });
       validateReferenceParameters();
 
       const seedLo = options.seedLo ?? options.seed ?? 1;
       const seedHi = options.seedHi ?? 0;
       randomUnit = createXoshiro256pp(seedLo, seedHi);
-      columnCapOverride = options.columnCap ?? 20000;
-      buildYArrayForWasm(columnCapOverride);
+      buildYArrayForWasm(sampleColumnCap);
       stats = {
         samples: 0,
         size: 0,
@@ -1218,17 +1274,20 @@
     invalidateRender();
   }
 
-  function sampleOnceJsFallback() {
-    if (!applyParamsFromInputs()) return false;
+  function sampleOnceJsFallback(options = {}) {
+    const columnCap = requestedColumnCap(options);
+    if (!applyParamsFromInputs({ columnCap, columnCapMinimum: 1 })) return false;
     const t0 = performance.now();
     stats.rowSwaps = 0;
     stats.localMoves = 0;
     stats.randomChoices = 0;
     stats.wasm = false;
     stats.wallElapsedMs = 0;
+    const savedColumnCapOverride = columnCapOverride;
     try {
+      columnCapOverride = columnCap;
       startElapsedTimer(t0);
-      buildYArrayForWasm(currentColumnCap());
+      buildYArrayForWasm(columnCap);
       setRunState('sampling', 'sampling', 'Sampling with the small-system JS reference fallback...', 'fs-note warn');
       sampleRows();
       setRunState('rendering', 'rendering', 'Normalizing JS reference result and redrawing...', 'fs-note ok');
@@ -1249,6 +1308,8 @@
       setRunState('error', 'error', e.message, 'fs-note err');
       console.error(e);
       return false;
+    } finally {
+      columnCapOverride = savedColumnCapOverride;
     }
   }
 
@@ -1279,14 +1340,18 @@
     bumpRenderDataVersion();
   }
 
-  function workerFallbackAllowed() {
-    return N * M <= 64 && currentColumnCap() <= 5000;
+  function requestedColumnCap(options = {}) {
+    return options.columnCap == null
+      ? currentColumnCap()
+      : normalizeColumnCap(options.columnCap, 1);
+  }
+
+  function workerFallbackAllowed(columnCap = currentColumnCap()) {
+    return N * M <= 64 && columnCap <= 5000;
   }
 
   function buildWorkerRequest(options = {}) {
-    const columnCap = options.columnCap == null
-      ? currentColumnCap()
-      : Math.max(1, Math.min(1000000, Math.trunc(Number(options.columnCap))));
+    const columnCap = requestedColumnCap(options);
     const yValues = buildYArrayForWasm(columnCap);
     const seeds = createSeedPair();
     if (options.seedLo != null) seeds[0] = Number(options.seedLo) >>> 0;
@@ -1317,11 +1382,12 @@
   }
 
   function sampleOnceWithWorker(options = {}) {
-    if (!applyParamsFromInputs()) return Promise.resolve(false);
+    const columnCap = requestedColumnCap(options);
+    if (!applyParamsFromInputs({ columnCap, columnCapMinimum: 1 })) return Promise.resolve(false);
     if (typeof Worker !== 'function') {
-      if (workerFallbackAllowed()) {
+      if (workerFallbackAllowed(columnCap)) {
         setRunState('sampling', 'sampling', 'Web Workers are unavailable; using the small-system JS reference fallback.', 'fs-note warn');
-        return Promise.resolve(sampleOnceJsFallback());
+        return Promise.resolve(sampleOnceJsFallback({ ...options, columnCap }));
       }
       setRunState('error', 'error', 'Web Workers are unavailable, so large exact samples cannot run without freezing the page.', 'fs-note err');
       return Promise.resolve(false);
@@ -1342,9 +1408,9 @@
     try {
       worker = new Worker('/js/factorial-ybe-worker.js?v=20260605-wasm');
     } catch (error) {
-      if (workerFallbackAllowed()) {
+      if (workerFallbackAllowed(columnCap)) {
         setRunState('sampling', 'sampling', `Worker could not start (${error.message}); using the small-system JS reference fallback.`, 'fs-note warn');
-        return Promise.resolve(sampleOnceJsFallback());
+        return Promise.resolve(sampleOnceJsFallback({ ...options, columnCap }));
       }
       setRunState('error', 'error', `Worker could not start: ${error.message}`, 'fs-note err');
       return Promise.resolve(false);
