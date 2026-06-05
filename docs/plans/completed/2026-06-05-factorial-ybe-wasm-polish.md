@@ -1,5 +1,7 @@
 # Factorial Schur exact sampler: workerized WASM, presets, and visual polish
 
+Status: Completed 2026-06-05. Benchmark notes are recorded in `docs/plans/benchmarks/factorial-ybe-baseline.md`.
+
 ## Overview
 
 Make `/factorial/` a robust, fast, and beautiful exact sampler for the factorial Schur process. The current page is a useful proof-of-concept, but it has three serious problems:

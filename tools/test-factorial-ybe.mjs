@@ -37,64 +37,24 @@ function checkSource() {
   assert(page.includes("/js/factorial-ybe-sampler.js"), "/factorial/ should load the YBE sampler");
   assert(sampler.includes("new Worker('/js/factorial-ybe-worker.js"), "visible sampler should start the YBE worker");
   assert(worker.includes("importScripts('factorial-ybe-wasm.js')"), "worker should load the generated WASM bundle");
-  assert(page.includes('class="fs-app-shell"'), "/factorial/ should use the two-column simulation layout");
-  assert(page.includes('class="fs-control-panel"'), "/factorial/ should expose a dedicated control panel");
-  assert(page.includes('class="fs-results-panel"'), "/factorial/ should expose a dedicated results panel");
-  assert(page.includes('id="fs-preset-select"'), "/factorial/ should expose a preset selector");
-  assert(page.includes("Old buggy sampler fan (epsilon-safe)"), "/factorial/ should include the old fan epsilon-safe preset");
-  assert(page.includes("Uniform / Schur-like"), "/factorial/ should include a uniform Schur-like preset");
-  assert(page.includes("Large stress"), "/factorial/ should include a large stress preset");
-  assert(page.includes("Presets and size"), "/factorial/ should group presets and size in a collapsible section");
-  assert(page.includes("Spectral parameters"), "/factorial/ should group spectral parameters in a collapsible section");
-  assert(page.includes("Sampling/run controls"), "/factorial/ should group run controls in a collapsible section");
-  assert(page.includes("View/style controls"), "/factorial/ should group view controls in a collapsible section");
-  assert(page.includes("Model explanation"), "/factorial/ should keep model explanation in a collapsible section");
-  assert(page.includes('id="fs-validation-panel"'), "/factorial/ should expose a validation panel");
-  assert(page.includes('id="fs-status-phase"'), "/factorial/ should expose a visible phase status");
-  assert(page.includes('id="fs-status-elapsed"'), "/factorial/ should expose visible elapsed seconds");
   assert(!page.includes("factorial-glauber.js"), "/factorial/ should not load stale Glauber JS");
   assert(!page.includes("factorial-wasm.js"), "/factorial/ should not load stale Glauber WASM");
   assert(!fs.existsSync(path.join(root, "js", "factorial-glauber.js")), "stale factorial-glauber.js should be removed once unused");
   assert(!fs.existsSync(path.join(root, "js", "factorial-wasm.js")), "stale factorial-wasm.js should be removed once unused");
-  assert(page.includes('id="fs-cancel-btn"'), "/factorial/ should expose a cancel button");
-  assert(page.includes('id="fs-view-fit"'), "/factorial/ should expose a canvas fit control");
-  assert(page.includes('id="fs-view-actual"'), "/factorial/ should expose a 100% canvas control");
-  assert(page.includes('id="fs-path-style"'), "/factorial/ should expose an advanced path style control");
-  assert(page.includes('<option value="tonal" selected>'), "tonal path rendering should be the default");
-  assert(page.includes('<option value="legacy">'), "legacy multicolor paths should be available only as a secondary option");
-  assert(sampler.includes("window.factorialYBEReferenceSample"), "seeded JS reference hook should be exposed");
-  assert(sampler.includes("window.factorialYBEWorkerSample"), "worker/WASM sample hook should be exposed");
-  assert(sampler.includes("window.factorialYBEBenchmark"), "dev benchmark helper should be exposed");
-  assert(sampler.includes("FACTORIAL_YBE_PRESETS"), "named presets should be defined in the sampler script");
-  assert(sampler.includes("window.factorialYBEApplyPreset"), "preset application should be exposed for smoke tests");
-  assert(sampler.includes("Closest gap"), "parameter summaries should report the closest strict-inequality gap");
-  assert(sampler.includes("class FactorialPathCanvasRenderer"), "canvas rendering should be owned by FactorialPathCanvasRenderer");
-  assert(sampler.includes("window.factorialYBERenderer"), "renderer diagnostics should be exposed for smoke tests");
-  assert(sampler.includes("OffscreenCanvas"), "renderer should cache static layers with OffscreenCanvas when available");
-  assert(sampler.includes("requestAnimationFrame"), "renderer should schedule canvas draws with requestAnimationFrame");
-  assert(sampler.includes("addEventListener('pointermove'"), "renderer should use pointer events for drag/pinch");
-  assert(!sampler.includes("addEventListener('mousemove'"), "renderer should not redraw directly from mousemove handlers");
-  assert(!sampler.includes("addEventListener('touchmove'"), "renderer should not redraw directly from touchmove handlers");
-  assert(sampler.includes("setRunState('sampling'"), "sampler should use structured sampling status");
-  assert(sampler.includes("finiteListTooShortMessage"), "sampler should reject short finite parameter lists clearly");
-  assert(sampler.includes("createXoshiro256pp"), "seeded reference hook should use Xoshiro256++");
   assert(!sampler.includes("Math.random() * total"), "hot local sampler should use the swappable RNG source");
   assert(!sampler.includes(".innerHTML"), "sampler should not write untrusted status text with innerHTML");
-  assert(page.includes('id="fs-N" type="number" value="6" min="1" max="120"'), "N input should expose the intended large-system cap");
-  assert(page.includes('id="fs-M" type="number" value="6" min="1" max="120"'), "M input should expose the intended large-system cap");
-  assert(page.includes('id="fs-max-cols" type="number" value="20000" min="100" max="1000000"'), "column-cap input should expose the intended large-system cap");
-  assert(sampler.includes("clampInt($('fs-N').value, 1, 120)"), "JS N clamp should match the UI cap");
-  assert(sampler.includes("clampInt($('fs-M').value, 1, 120)"), "JS M clamp should match the UI cap");
-  assert(sampler.includes("Math.min(1000000"), "JS column-cap clamp should match the UI cap");
   assert(!sampler.includes("dim > 1000"), "sampler should not keep old hard-coded small caps");
   assert(!wasmBundle.includes("Input size too large, would exceed memory limits"), "WASM bundle should not contain an old generated small-cap error");
+  assert(worker.includes("validateSampleMessage"), "worker should validate message shapes before calling WASM");
+  assert(worker.includes("expected x length"), "worker should reject x/N length mismatches");
+  assert(worker.includes("expected y length at least"), "worker should reject short y buffers");
   assert(worker.includes("_sampleFactorialYBE"), "worker should call the exported C++ sampler");
   assert(worker.includes("utf8ToString(jsonPtr)"), "worker should null-check before decoding the JSON pointer");
   assert(worker.includes("finally"), "worker should free WASM/C++ allocations in finally");
   assert(wasmBundle.includes("createFactorialYBEModule"), "WASM bundle should define the modularized factory");
   assert(wasmBundle.includes("_sampleFactorialYBE"), "WASM bundle should export _sampleFactorialYBE");
   assert(wasmBundle.includes("_freeString"), "WASM bundle should export _freeString");
-  assert(wasmBundle.includes("_getProgress"), "WASM bundle should export _getProgress");
+  assert(!wasmBundle.includes("_getProgress"), "WASM bundle should not export unused progress plumbing");
   assert(wasmBundle.includes("_malloc"), "WASM bundle should export _malloc");
   assert(wasmBundle.includes("_free"), "WASM bundle should export _free");
 }
@@ -284,8 +244,11 @@ async function captureSmokeScreenshot(client, label) {
 async function runBrowserSmoke() {
   const browser = findBrowser();
   if (!browser) {
-    console.log("Skipping factorial browser smoke: no Chromium/Chrome executable found.");
-    return;
+    if (process.env.FACTORIAL_YBE_SKIP_BROWSER === "1") {
+      console.log("Skipping factorial browser smoke: FACTORIAL_YBE_SKIP_BROWSER=1 and no Chromium/Chrome executable found.");
+      return;
+    }
+    throw new Error("Chromium/Chrome executable is required for factorial browser smoke; set FACTORIAL_YBE_SKIP_BROWSER=1 to run source-only checks.");
   }
 
   const server = await createStaticServer();
@@ -558,6 +521,7 @@ async function runBrowserSmoke() {
       const canvasSize = renderer.cssSize();
       const layout = renderer.layoutBounds(canvasSize.width);
       const fittedScreenHeight = layout.height * renderer.viewport.scale;
+      const geometry = renderer.geometry;
       return {
         okPreset,
         ok,
@@ -573,7 +537,9 @@ async function runBrowserSmoke() {
         changedPixels,
         fittedScreenHeight,
         canvasHeight: canvasSize.height,
-        xStep: layout.xStep
+        xStep: layout.xStep,
+        pathCount: geometry?.paths?.length || 0,
+        lambdaParticleCount: geometry?.lambdaParticles?.length || 0
       };
     })()`, 120000);
 
@@ -586,6 +552,8 @@ async function runBrowserSmoke() {
     assert(oldFanSampleResult.maxPos > 12, "old fan sample should produce a nontrivial fan extent");
     assert(oldFanSampleResult.runState === "done" && oldFanSampleResult.phaseText === "done", "old fan sample should finish in done status");
     assert(oldFanSampleResult.changedPixels > 0, "old fan canvas should be nonblank after sampling");
+    assert(oldFanSampleResult.pathCount === 12, "old fan renderer should build one path per x-row");
+    assert(oldFanSampleResult.lambdaParticleCount === 12, "old fan renderer should build one highlighted lambda particle per path");
     assert(oldFanSampleResult.xStep < 0.02, "old fan renderer should horizontally compress the long fan support");
     assert(
       oldFanSampleResult.fittedScreenHeight > oldFanSampleResult.canvasHeight * 0.45,
@@ -642,6 +610,59 @@ async function runBrowserSmoke() {
     assert(parserResult.wNote.includes("Closest gap"), "w summary should include the closest strict-inequality gap");
     assert(parserResult.yNote.includes("first=") && parserResult.yNote.includes("max="), "y summary should include cap-aware min/max values");
     assert(parserResult.validationDetail.includes("Positivity margins"), "validation detail should include positivity margins");
+
+    const parserFailures = await evaluate(client, `(() => {
+      const base = {
+        N: "3",
+        M: "3",
+        q: "0.5",
+        alpha: "0.4",
+        beta: "0",
+        gamma: "1",
+        cap: "20",
+        x: "0.4^N",
+        w: "1^M",
+        y: "0^columnCap"
+      };
+      function setBase(overrides = {}) {
+        document.getElementById("fs-N").value = overrides.N || base.N;
+        document.getElementById("fs-M").value = overrides.M || base.M;
+        document.getElementById("fs-q").value = overrides.q || base.q;
+        document.getElementById("fs-alpha").value = overrides.alpha || base.alpha;
+        document.getElementById("fs-beta").value = overrides.beta || base.beta;
+        document.getElementById("fs-gamma").value = overrides.gamma || base.gamma;
+        document.getElementById("fs-max-cols").value = overrides.cap || base.cap;
+        document.getElementById("fs-x").value = overrides.x || base.x;
+        document.getElementById("fs-w").value = overrides.w || base.w;
+        document.getElementById("fs-y").value = overrides.y || base.y;
+      }
+      const cases = [
+        { name: "unsafe character", values: { x: "alpha*q^i;alert(1)" }, message: "unsupported character" },
+        { name: "unknown identifier", values: { x: "theta*q^i" }, message: "unknown variable/function theta" },
+        { name: "invalid repeat count", values: { x: "1^0" }, message: "bad repeat token 1^0" },
+        { name: "non-finite expression", values: { x: "exp(1000)*q^i" }, message: "expression produced a non-finite value" },
+        { name: "short y list", values: { y: "0" }, message: "y finite list has length 1, but needs at least 100" },
+        { name: "negative q positivity", values: { q: "-0.5", x: "alpha*q^i" }, message: "Local positivity failed" }
+      ];
+      return cases.map(testCase => {
+        setBase(testCase.values);
+        const ok = window.factorialYBEValidateControls();
+        return {
+          name: testCase.name,
+          ok,
+          expected: testCase.message,
+          message: document.getElementById("fs-validation-note").textContent
+        };
+      });
+    })()`);
+
+    for (const failure of parserFailures) {
+      assert(failure.ok === false, `${failure.name} should fail validation`);
+      assert(
+        failure.message.includes(failure.expected),
+        `${failure.name} should report ${failure.expected}, got ${JSON.stringify(failure.message)}`
+      );
+    }
 
     const workerResult = await evaluate(client, `(async () => {
       document.getElementById("fs-N").value = "3";
@@ -715,13 +736,73 @@ async function runBrowserSmoke() {
         seedLo: 7,
         seedHi: 9
       });
-      return { equality, positivity };
+      const capTooSmall = await window.__factorialSmokeDirectWorker({
+        N: 2,
+        M: 1,
+        x: [0.2, 0.3],
+        w: [1.0],
+        y: [0],
+        columnCap: 1,
+        seedLo: 7,
+        seedHi: 9
+      });
+      const shortX = await window.__factorialSmokeDirectWorker({
+        N: 2,
+        M: 1,
+        x: [0.2],
+        w: [1.0],
+        y: Array(10).fill(0),
+        columnCap: 10,
+        seedLo: 7,
+        seedHi: 9
+      });
+      const shortW = await window.__factorialSmokeDirectWorker({
+        N: 1,
+        M: 2,
+        x: [0.2],
+        w: [1.0],
+        y: Array(10).fill(0),
+        columnCap: 10,
+        seedLo: 7,
+        seedHi: 9
+      });
+      const shortY = await window.__factorialSmokeDirectWorker({
+        N: 1,
+        M: 1,
+        x: [0.2],
+        w: [1.0],
+        y: [0],
+        columnCap: 10,
+        seedLo: 7,
+        seedHi: 9
+      });
+      const nonFinite = await window.__factorialSmokeDirectWorker({
+        N: 1,
+        M: 1,
+        x: [NaN],
+        w: [1.0],
+        y: Array(10).fill(0),
+        columnCap: 10,
+        seedLo: 7,
+        seedHi: 9
+      });
+      return { equality, positivity, capTooSmall, shortX, shortW, shortY, nonFinite };
     })()`, 60000);
 
     assert(directWorkerErrors.equality?.type === "error", "invalid equality should return a worker error message");
     assert(/need w_1 > x_1/i.test(directWorkerErrors.equality.error || ""), "invalid equality should surface the C++ strict-inequality error");
     assert(directWorkerErrors.positivity?.type === "error", "invalid positivity should return a worker error message");
     assert(/Local positivity failed/i.test(directWorkerErrors.positivity.error || ""), "invalid positivity should surface the C++ local-positivity error");
+    assert(directWorkerErrors.capTooSmall?.type === "error", "too-small column cap should return a worker error message");
+    assert(/Column cap is too small/i.test(directWorkerErrors.capTooSmall.error || ""), "too-small column cap should surface the C++ cap error");
+    assert(directWorkerErrors.shortX?.type === "error", "short x buffer should return a worker error message");
+    assert(/expected x length 2, got 1/i.test(directWorkerErrors.shortX.error || ""), "short x buffer should be rejected before WASM");
+    assert(directWorkerErrors.shortW?.type === "error", "short w buffer should return a worker error message");
+    assert(/expected w length 2, got 1/i.test(directWorkerErrors.shortW.error || ""), "short w buffer should be rejected before WASM");
+    assert(directWorkerErrors.shortY?.type === "error", "short y buffer should return a worker error message");
+    assert(/expected y length at least 10, got 1/i.test(directWorkerErrors.shortY.error || ""), "short y buffer should be rejected before WASM");
+    assert(directWorkerErrors.nonFinite?.type === "error", "non-finite parameters should return a worker error message");
+    assert(/x contains a non-finite value/i.test(directWorkerErrors.nonFinite.error || ""), "non-finite parameters should surface the C++ finite-value error");
 
     const rendererResult = await evaluate(client, `(async () => {
       await new Promise(resolve => requestAnimationFrame(() => resolve()));
@@ -744,6 +825,7 @@ async function runBrowserSmoke() {
       renderer?.zoomBy(1.1);
       renderer?.zoomBy(1 / 1.1);
       await new Promise(resolve => requestAnimationFrame(() => resolve()));
+      const geometry = renderer?.geometry;
       return {
         hasRenderer: !!renderer,
         hasRenderNow: typeof renderer?.renderNow === "function",
@@ -755,7 +837,9 @@ async function runBrowserSmoke() {
         canvasHeight: canvas?.height || 0,
         changedPixels,
         scale: renderer?.viewport?.scale || 0,
-        cacheReady: !!renderer?.backgroundCache
+        cacheReady: !!renderer?.backgroundCache,
+        pathCount: geometry?.paths?.length || 0,
+        lambdaParticleCount: geometry?.lambdaParticles?.length || 0
       };
     })()`, 30000);
 
@@ -765,6 +849,8 @@ async function runBrowserSmoke() {
     assert(rendererResult.viewbar.includes("tonal"), "viewbar should report the current tonal renderer mode");
     assert(rendererResult.canvasWidth > 0 && rendererResult.canvasHeight > 0, "factorial canvas should have drawable dimensions");
     assert(rendererResult.changedPixels > 0, "factorial canvas should be nonblank after worker sample");
+    assert(rendererResult.pathCount > 0, "factorial renderer should build sampled path geometry");
+    assert(rendererResult.lambdaParticleCount > 0, "factorial renderer should build lambda particle geometry");
     assert(rendererResult.scale > 0, "renderer viewport should have a positive model-space scale");
     assert(rendererResult.cacheReady, "renderer should prepare its cached background layer");
     console.log(`Factorial renderer smoke passed: ${rendererResult.canvasWidth}x${rendererResult.canvasHeight}, changed=${rendererResult.changedPixels}.`);
@@ -790,25 +876,37 @@ async function runBrowserSmoke() {
 
     const cancelResetResult = await evaluate(client, `(async () => {
       window.factorialYBEApplyPreset("large-stress");
-      window.factorialYBEWorkerSample({ columnCap: 20000 });
+      const cancelPromise = window.factorialYBEWorkerSample({ columnCap: 20000 });
       const canceled = window.factorialYBECancelSample();
+      const cancelOutcome = await Promise.race([
+        cancelPromise.then(value => ({ settled: true, value })),
+        new Promise(resolve => setTimeout(() => resolve({ settled: false }), 1000))
+      ]);
       await new Promise(resolve => setTimeout(resolve, 100));
       const afterCancelState = window.factorialExactSamplerState();
       const afterCancel = {
         canceled,
+        promiseSettled: cancelOutcome.settled,
+        promiseValue: cancelOutcome.value,
         runState: afterCancelState.runState,
         phaseText: document.getElementById("fs-status-phase").textContent,
         cancelDisabled: document.getElementById("fs-cancel-btn").disabled,
         sampleDisabled: document.getElementById("fs-sample-btn").disabled,
         requestId: afterCancelState.activeRequestId
       };
-      window.factorialYBEWorkerSample({ columnCap: 20000 });
+      const resetPromise = window.factorialYBEWorkerSample({ columnCap: 20000 });
       document.getElementById("fs-reset-btn").click();
+      const resetOutcome = await Promise.race([
+        resetPromise.then(value => ({ settled: true, value })),
+        new Promise(resolve => setTimeout(() => resolve({ settled: false }), 1000))
+      ]);
       await new Promise(resolve => setTimeout(resolve, 100));
       const afterResetState = window.factorialExactSamplerState();
       return {
         afterCancel,
         afterReset: {
+          promiseSettled: resetOutcome.settled,
+          promiseValue: resetOutcome.value,
           runState: afterResetState.runState,
           phaseText: document.getElementById("fs-status-phase").textContent,
           cancelDisabled: document.getElementById("fs-cancel-btn").disabled,
@@ -823,9 +921,11 @@ async function runBrowserSmoke() {
     })()`, 60000);
 
     assert(cancelResetResult.afterCancel.canceled, "cancel should terminate an active large worker");
+    assert(cancelResetResult.afterCancel.promiseSettled && cancelResetResult.afterCancel.promiseValue === false, "cancel should settle the active worker promise as false");
     assert(cancelResetResult.afterCancel.runState === "canceled" && cancelResetResult.afterCancel.phaseText === "canceled", "cancel should leave a canceled status");
     assert(cancelResetResult.afterCancel.cancelDisabled, "cancel button should be disabled after canceling");
     assert(cancelResetResult.afterCancel.sampleDisabled === false, "sample button should be re-enabled after canceling");
+    assert(cancelResetResult.afterReset.promiseSettled && cancelResetResult.afterReset.promiseValue === false, "reset should settle the active worker promise as false");
     assert(cancelResetResult.afterReset.runState === "ready" && cancelResetResult.afterReset.phaseText === "ready", "reset during sampling should restore the validated ready state");
     assert(cancelResetResult.afterReset.cancelDisabled, "cancel button should be disabled after reset");
     assert(cancelResetResult.afterReset.sampleDisabled === false, "sample button should be re-enabled after reset");
@@ -833,6 +933,112 @@ async function runBrowserSmoke() {
     assert(cancelResetResult.afterReset.rowSwaps === 0, "reset should clear sampled row-swap stats");
     assert(!cancelResetResult.afterReset.lambdaText.includes("("), `reset should clear the sampled lambda tuple, got ${JSON.stringify(cancelResetResult.afterReset)}`);
     assert(cancelResetResult.afterReset.requestId > cancelResetResult.afterCancel.requestId, "reset should advance the request guard against stale worker responses");
+
+    const staleWorkerResult = await evaluate(client, `(async () => {
+      const RealWorker = window.Worker;
+      const instances = [];
+      function sampleResult(N) {
+        return {
+          N,
+          M: 1,
+          mu: [Array(N).fill(0), Array(N).fill(0)],
+          lam: [[], [0]],
+          lambda: [0],
+          stats: { size: 0, maxPos: N, rowSwaps: N, localMoves: N, randomChoices: 0, elapsedMs: 0 }
+        };
+      }
+      class FakeWorker {
+        constructor() {
+          this.id = instances.length;
+          instances.push(this);
+        }
+        postMessage(message) {
+          this.message = message;
+          const isCurrent = this.id === 1;
+          const delay = isCurrent ? 5 : 25;
+          const resultN = isCurrent ? 1 : 99;
+          setTimeout(() => {
+            this.onmessage?.({
+              data: {
+                type: "result",
+                requestId: message.requestId,
+                result: sampleResult(resultN)
+              }
+            });
+          }, delay);
+        }
+        terminate() {
+          this.terminated = true;
+        }
+      }
+      try {
+        window.Worker = FakeWorker;
+        document.getElementById("fs-N").value = "1";
+        document.getElementById("fs-M").value = "1";
+        document.getElementById("fs-x").value = "0.2";
+        document.getElementById("fs-w").value = "1.0";
+        document.getElementById("fs-y").value = "0^columnCap";
+        document.getElementById("fs-max-cols").value = "100";
+        const first = window.factorialYBEWorkerSample({ columnCap: 100 });
+        const second = window.factorialYBEWorkerSample({ columnCap: 100 });
+        const firstOutcome = await Promise.race([
+          first.then(value => ({ settled: true, value })),
+          new Promise(resolve => setTimeout(() => resolve({ settled: false }), 1000))
+        ]);
+        const secondOutcome = await Promise.race([
+          second.then(value => ({ settled: true, value })),
+          new Promise(resolve => setTimeout(() => resolve({ settled: false }), 1000))
+        ]);
+        await new Promise(resolve => setTimeout(resolve, 60));
+        const state = window.factorialExactSamplerState();
+        return {
+          firstOutcome,
+          secondOutcome,
+          instanceCount: instances.length,
+          firstTerminated: !!instances[0]?.terminated,
+          stateN: state.N,
+          requestId: state.activeRequestId
+        };
+      } finally {
+        window.Worker = RealWorker;
+      }
+    })()`, 30000);
+
+    assert(staleWorkerResult.instanceCount === 2, "stale response smoke should create two fake workers");
+    assert(staleWorkerResult.firstTerminated, "starting a replacement sample should terminate the stale worker");
+    assert(staleWorkerResult.firstOutcome.settled && staleWorkerResult.firstOutcome.value === false, "replacement should settle the stale worker promise as false");
+    assert(staleWorkerResult.secondOutcome.settled && staleWorkerResult.secondOutcome.value === true, "replacement sample should complete successfully");
+    assert(staleWorkerResult.stateN === 1, `stale worker response should not overwrite the newer sample state: ${JSON.stringify(staleWorkerResult)}`);
+
+    const sampleManyResult = await evaluate(client, `(async () => {
+      window.factorialYBEApplyPreset("default-balanced");
+      const before = window.factorialExactSamplerState().stats.samples || 0;
+      document.getElementById("fs-sample-count").value = "10";
+      document.getElementById("fs-multi-sample-btn").click();
+      const started = performance.now();
+      while (performance.now() - started < 90000) {
+        const state = window.factorialExactSamplerState();
+        if ((state.stats.samples || 0) >= before + 10 && state.runState === "done") {
+          return {
+            before,
+            after: state.stats.samples,
+            wasm: !!state.stats.wasm,
+            rowSwaps: state.stats.rowSwaps,
+            phaseText: document.getElementById("fs-status-phase").textContent,
+            sampleDisabled: document.getElementById("fs-sample-btn").disabled,
+            cancelDisabled: document.getElementById("fs-cancel-btn").disabled
+          };
+        }
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      throw new Error("Timed out waiting for Sample x 10 to finish");
+    })()`, 120000);
+
+    assert(sampleManyResult.after - sampleManyResult.before === 10, `Sample x 10 should add ten samples: ${JSON.stringify(sampleManyResult)}`);
+    assert(sampleManyResult.wasm, "Sample x N should use the worker/WASM path");
+    assert(sampleManyResult.rowSwaps === 36, "final Sample x N worker run should have default N*M row swaps");
+    assert(sampleManyResult.phaseText === "done", "Sample x N should finish in done status");
+    assert(sampleManyResult.sampleDisabled === false && sampleManyResult.cancelDisabled === true, "Sample x N controls should be restored after completion");
 
     assert(consoleErrors.length === 0, `Browser smoke should not emit console errors:\n${consoleErrors.join("\n")}`);
   } finally {

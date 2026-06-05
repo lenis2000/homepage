@@ -56,18 +56,12 @@ The WASM rewrite should preserve these current exact-sampler invariants:
 
 ## Stale file audit
 
-The stale files still exist:
+The stale old Glauber artifacts were removed after source search and browser smoke tests confirmed that `/factorial/` no longer loads them:
 
 - `js/factorial-glauber.js`
 - `js/factorial-wasm.js`
 
-Source search found no `/factorial/` reference to either file. The current page loads only:
-
-```html
-<script src="/js/factorial-ybe-sampler.js?v=20260605-active"></script>
-```
-
-They were not deleted in this baseline task. A later cleanup should remove them only after the worker/WASM smoke tests confirm that `/factorial/` loads the new exact sampler bundle and not the old Glauber code.
+The current page loads `js/factorial-ybe-sampler.js`, which starts `js/factorial-ybe-worker.js`; the worker loads the generated exact-sampler bundle `js/factorial-ybe-wasm.js`.
 
 ## Added test coverage
 

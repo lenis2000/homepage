@@ -11,7 +11,7 @@ emcc factorial-ybe-sampler.cpp -o ../js/factorial-ybe-wasm.js \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s SINGLE_FILE=1 \
   -s DISABLE_EXCEPTION_CATCHING=0 \
-  -s "EXPORTED_FUNCTIONS=['_sampleFactorialYBE','_freeString','_getProgress','_malloc','_free']" \
+  -s "EXPORTED_FUNCTIONS=['_sampleFactorialYBE','_freeString','_malloc','_free']" \
   -s "EXPORTED_RUNTIME_METHODS=['UTF8ToString','HEAPF64']" \
   -O3 \
   -fexceptions

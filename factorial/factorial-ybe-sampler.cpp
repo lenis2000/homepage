@@ -15,8 +15,6 @@
 
 namespace {
 
-volatile int g_progress = 0;
-
 struct Xoshiro256pp {
   uint64_t s[4] = {0, 0, 0, 0};
 
@@ -495,9 +493,6 @@ class Sampler {
         rows[pos] = upper;
         rows[pos + 1] = lower;
         rowSwaps += 1;
-        const int totalSwaps = std::max(1, N * M);
-        g_progress = static_cast<int>(
-            std::min(100.0, std::floor(100.0 * rowSwaps / totalSwaps)));
         return;
       }
     }
@@ -600,18 +595,7 @@ class Sampler {
     appendRows(out, lam);
     out << ",\"lambda\":";
     appendIntArray(out, lambda);
-    out << ",\"levels\":[";
-    for (int level = 0; level <= N + M; ++level) {
-      if (level) out << ',';
-      const std::vector<int> columns = levels.occupiedColumns(level);
-      appendIntArray(out, columns);
-    }
-    out << "],\"rows\":[";
-    for (size_t i = 0; i < rows.size(); ++i) {
-      if (i) out << ',';
-      out << "{\"type\":\"" << rows[i].type << "\",\"idx\":" << rows[i].idx << '}';
-    }
-    out << "],\"stats\":{"
+    out << ",\"stats\":{"
         << "\"samples\":1"
         << ",\"size\":" << sampleSize()
         << ",\"maxPos\":" << maxPositionSeen()
@@ -644,7 +628,6 @@ EMSCRIPTEN_KEEPALIVE
 char* sampleFactorialYBE(int N, int M, const double* xPtr, const double* wPtr,
                          const double* yPtr, int yLen, int columnCap,
                          uint32_t seedLo, uint32_t seedHi) {
-  g_progress = 0;
   try {
     ensureTransitionTable();
     const auto started = std::chrono::high_resolution_clock::now();
@@ -654,7 +637,6 @@ char* sampleFactorialYBE(int N, int M, const double* xPtr, const double* wPtr,
     const auto finished = std::chrono::high_resolution_clock::now();
     const double elapsedMs =
         std::chrono::duration<double, std::milli>(finished - started).count();
-    g_progress = 100;
     return copyStringToHeap(sampler.resultJson(elapsedMs));
   } catch (const std::exception& error) {
     return copyStringToHeap(errorJson(error.what()));
@@ -666,11 +648,6 @@ char* sampleFactorialYBE(int N, int M, const double* xPtr, const double* wPtr,
 EMSCRIPTEN_KEEPALIVE
 void freeString(char* ptr) {
   std::free(ptr);
-}
-
-EMSCRIPTEN_KEEPALIVE
-int getProgress() {
-  return g_progress;
 }
 
 }  // extern "C"

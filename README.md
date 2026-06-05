@@ -18,6 +18,14 @@ The arbitrary-weight T-embedding page includes an optimized random shuffled samp
 
 Use `make test-temb-shuffling` to build `_site/` and run the focused source, WASM, and Chromium smoke test. To record benchmark JSON from the same built page, run `bundle exec jekyll build` and then `TEMB_SHUFFLED_BENCHMARK=1 node tools/test-temb-shuffling.mjs`. The smoke test requires Node.js 22+ for global `WebSocket` and a Chrome/Chromium executable discoverable through `CHROME_BIN`, `CHROMIUM_BIN`, `AGENT_BROWSER_EXECUTABLE_PATH`, or common system paths.
 
+## Factorial Schur Sampler (`/factorial/`)
+
+`/factorial/` is a workerized WASM exact reverse-Cauchy/Yang-Baxter sampler for the factorial Schur process. The page includes named presets, strict `w_j > x_i` and local positivity validation, cancel/reset controls for active worker runs, and a tonal canvas renderer with legacy multicolor paths kept as a secondary option. Advanced `x`/`w`/`y` inputs support finite lists, repeats such as `1^N`, `1^M`, and `0^columnCap`, repeated patterns such as `(0.5,0.7)^3`, and expressions such as `q^(-50+i)`.
+
+Rebuild the generated sampler bundle with `bash factorial/build-ybe.sh` or run the full focused check with `make test-factorial-ybe`. The smoke test runs `node tools/test-factorial-ybe.mjs` after rebuilding the WASM bundle; it requires Emscripten `emcc`, Node.js 22+ for global `WebSocket`, and a Chrome/Chromium executable discoverable through `CHROME_BIN`, `CHROMIUM_BIN`, `AGENT_BROWSER_EXECUTABLE_PATH`, or common system paths. Set `FACTORIAL_YBE_SKIP_BROWSER=1` only for source-only local checks when no browser is available.
+
+Developer console hooks include `window.factorialYBEBenchmark(options)`, `window.factorialYBEReferenceSample(options)`, `window.factorialYBEWorkerSample(options)`, `window.factorialYBEApplyPreset(key)`, `window.factorialYBEValidateControls()`, and `window.factorialYBECancelSample()`.
+
 ---
 
 ## Makefile Reference

@@ -33,6 +33,7 @@
     elapsedMs: 0,
   };
   let activeWorker = null;
+  let activeRunFinisher = null;
   let activeRequestId = 0;
   let samplingActive = false;
   let samplingCanceled = false;
@@ -856,12 +857,15 @@
   }
 
   function terminateActiveWorker(message, options = {}) {
-    const hadWorker = !!activeWorker;
+    const hadWorker = !!activeWorker || !!activeRunFinisher;
     activeRequestId += 1;
-    if (activeWorker) {
+    if (activeRunFinisher) {
+      activeRunFinisher(false);
+    } else if (activeWorker) {
       activeWorker.terminate();
       activeWorker = null;
     }
+    activeRunFinisher = null;
     setSamplingUi(false);
     samplingActive = false;
     if (!options.silent && message) {
@@ -1352,11 +1356,13 @@
         if (settled) return;
         settled = true;
         if (activeWorker === worker) activeWorker = null;
+        if (activeRunFinisher === finish) activeRunFinisher = null;
         worker.terminate();
         setSamplingUi(false);
         stopElapsedTimer(finalElapsedMs);
         resolve(ok);
       }
+      activeRunFinisher = finish;
 
       worker.onmessage = (event) => {
         const message = event.data || {};

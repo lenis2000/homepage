@@ -1,4 +1,4 @@
-.PHONY: serve serve-full test-domino test-temb-shuffling invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-venv arxiv-related arxiv-rebuild arxiv-full-update arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-search arxiv-sources arxiv-sources-upload arxiv-sources-upload-check arxiv-sources-convert-ps arxiv-sources-manifest arxiv-sources-process
+.PHONY: serve serve-full test-domino test-temb-shuffling test-factorial-ybe invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-venv arxiv-related arxiv-rebuild arxiv-full-update arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-search arxiv-sources arxiv-sources-upload arxiv-sources-upload-check arxiv-sources-convert-ps arxiv-sources-manifest arxiv-sources-process
 
 define jekyll_serve
 	@mkdir -p /tmp/jekyll-status
@@ -30,6 +30,10 @@ test-domino:
 test-temb-shuffling:
 	bundle exec jekyll build
 	node tools/test-temb-shuffling.mjs
+
+test-factorial-ybe:
+	bash factorial/build-ybe.sh
+	node tools/test-factorial-ybe.mjs
 
 invalidate:
 	@echo "Creating CloudFront invalidations..."

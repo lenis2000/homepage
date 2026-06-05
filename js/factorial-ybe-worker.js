@@ -29,11 +29,36 @@
     return Module[name].bind(Module);
   }
 
+  function finitePositiveInteger(value, label) {
+    const number = Number(value);
+    if (!Number.isSafeInteger(number) || number <= 0) {
+      throw new Error(`${label} must be a positive integer.`);
+    }
+    return number;
+  }
+
+  function validateSampleMessage(message, x, w, y) {
+    const N = finitePositiveInteger(message.N, 'N');
+    const M = finitePositiveInteger(message.M, 'M');
+    const columnCap = finitePositiveInteger(message.columnCap, 'columnCap');
+    if (!(x instanceof Float64Array) || x.length !== N) {
+      throw new Error(`Worker parameter mismatch: expected x length ${N}, got ${x?.length ?? 'missing'}.`);
+    }
+    if (!(w instanceof Float64Array) || w.length !== M) {
+      throw new Error(`Worker parameter mismatch: expected w length ${M}, got ${w?.length ?? 'missing'}.`);
+    }
+    if (!(y instanceof Float64Array) || y.length < columnCap) {
+      throw new Error(`Worker parameter mismatch: expected y length at least ${columnCap}, got ${y?.length ?? 'missing'}.`);
+    }
+    return { N, M, columnCap };
+  }
+
   async function runSample(message) {
     const Module = await loadModule();
     const x = new Float64Array(message.xBuffer);
     const w = new Float64Array(message.wBuffer);
     const y = new Float64Array(message.yBuffer);
+    const shape = validateSampleMessage(message, x, w, y);
     let xPtr = 0;
     let wPtr = 0;
     let yPtr = 0;
@@ -50,13 +75,13 @@
       wPtr = copyFloat64ToWasm(Module, w);
       yPtr = y.length ? copyFloat64ToWasm(Module, y) : 0;
       jsonPtr = sampleFactorialYBE(
-        message.N,
-        message.M,
+        shape.N,
+        shape.M,
         xPtr,
         wPtr,
         yPtr,
         y.length,
-        message.columnCap,
+        shape.columnCap,
         message.seedLo >>> 0,
         message.seedHi >>> 0
       );
