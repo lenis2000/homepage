@@ -241,17 +241,17 @@ Make the controls feel intentional and reduce manual parameter pain.
 
 Add automated protection so this page does not regress.
 
-- [ ] Add source checks:
+- [x] Add source checks:
   - page loads the worker/WASM files, not stale old Glauber files;
   - generated `js/factorial-ybe-wasm.js` contains the expected exported C++ function names;
   - no old hard-coded small caps contradict the UI;
   - no hot sampler path uses synchronous `Math.random` except the explicit debug/reference fallback.
-- [ ] Add C++/WASM smoke tests callable from Node or browser:
+- [x] Add C++/WASM smoke tests callable from Node or browser:
   - default small sample returns valid JSON and invariants;
   - old fan preset returns valid nonnegative interlacing data;
   - invalid equality/positivity cases return structured errors.
-- [ ] Add JS-vs-WASM deterministic cross-check for tiny cases where feasible (`N,M <= 3`, fixed x/w/y, fixed seed). If exact sample paths differ because RNG ordering differs, at least compare invariants and aggregate sanity; preferably align RNG draws so outputs match.
-- [ ] Add browser smoke using Chromium DevTools Protocol, modeled on `tools/test-domino.mjs` or `tools/test-temb-shuffling.mjs`:
+- [x] Add JS-vs-WASM deterministic cross-check for tiny cases where feasible (`N,M <= 3`, fixed x/w/y, fixed seed). If exact sample paths differ because RNG ordering differs, at least compare invariants and aggregate sanity; preferably align RNG draws so outputs match.
+- [x] Add browser smoke using Chromium DevTools Protocol, modeled on `tools/test-domino.mjs` or `tools/test-temb-shuffling.mjs`:
   - serve the site locally;
   - load `/factorial/`;
   - click/apply default preset and sample;
@@ -260,8 +260,8 @@ Add automated protection so this page does not regress.
   - verify worker/WASM path was used (`window` diagnostic or status text);
   - verify no console errors;
   - verify Cancel/Reset during a large sample does not leave stale UI.
-- [ ] Add visual screenshot helper in the smoke test or as a manual command. Store temporary screenshots in `/tmp` or `~/scratch`, not `~/Downloads`, and do not commit them.
-- [ ] If `rg` confirms `js/factorial-glauber.js` and `js/factorial-wasm.js` are no longer referenced, remove them to avoid future confusion. If keeping them for historical reasons, add a clear comment/test ensuring `/factorial/` does not load them.
+- [x] Add visual screenshot helper in the smoke test or as a manual command. Store temporary screenshots in `/tmp` or `~/scratch`, not `~/Downloads`, and do not commit them.
+- [x] If `rg` confirms `js/factorial-glauber.js` and `js/factorial-wasm.js` are no longer referenced, remove them to avoid future confusion. If keeping them for historical reasons, add a clear comment/test ensuring `/factorial/` does not load them.
 
 ### Task 6: Final visual QA and documentation polish
 
