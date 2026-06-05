@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var catButtons = document.getElementById('arxiv-cat-buttons');
     var statusRegion = document.getElementById('arxiv-status');
     var noResults = document.getElementById('arxiv-no-results');
+    var noResultsDefaultHtml = noResults ? noResults.innerHTML : 'No results found. Try adjusting your search or filters.';
     var listEl = document.querySelector('.arxiv-list');
     var template = document.getElementById('arxiv-data');
 
@@ -26,6 +27,10 @@ document.addEventListener('DOMContentLoaded', function() {
     var customYearTo = null;
     var statusTimeout;
     var searchIndex = null;
+    var searchIndexLoadPromise = null;
+    var searchIndexLoadState = 'idle'; // idle, loading, loaded, error
+    var overflowLoadPromise = null;
+    var overflowLoadState = 'idle'; // idle, loading, loaded, error
     var searchMap = {};  // arxiv-id -> search index entry (for Related dropdown)
     var pendingHash = null;
 
@@ -512,19 +517,47 @@ document.addEventListener('DOMContentLoaded', function() {
     resetDisplayList();
     renderBatch(INITIAL_BATCH);
 
+    function retryActiveFilterAfterDataLoad() {
+        if (searchInput.value.trim() || activeCategory !== 'all' || activeDateFilter !== 'all') {
+            applyFilter();
+        }
+    }
+
+    function loadSearchIndex() {
+        if (searchIndexLoadState === 'loaded') return Promise.resolve(searchIndex);
+        if (searchIndexLoadState === 'loading') return searchIndexLoadPromise;
+
+        searchIndexLoadState = 'loading';
+        searchIndexLoadPromise = fetch('/assets/data/arxiv-index.json')
+            .then(function(r) {
+                if (!r.ok) throw new Error(r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                searchIndexLoadState = 'loaded';
+                searchIndex = data;
+                searchMap = {};
+                data.forEach(function(e) { searchMap[e.id] = e; });
+                initButtons();
+                listEl.classList.add('arxiv-related-ready');
+                return data;
+            })
+            .catch(function() {
+                searchIndexLoadState = 'error';
+                initButtons();
+                retryActiveFilterAfterDataLoad();
+                return null;
+            });
+        return searchIndexLoadPromise;
+    }
+
+    function ensureFullDatabaseLoaded() {
+        if (searchIndexLoadState === 'idle') loadSearchIndex();
+        if (overflowLoadState === 'idle') loadOverflow();
+    }
+
     // Load prebuilt search index in background
-    fetch('/assets/data/arxiv-index.json')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            searchIndex = data;
-            searchMap = {};
-            data.forEach(function(e) { searchMap[e.id] = e; });
-            initButtons();
-            listEl.classList.add('arxiv-related-ready');
-        })
-        .catch(function() {
-            initButtons();
-        });
+    loadSearchIndex();
 
     // Load lightweight source IDs to show "src" badges
     var sourceIdSet = null;
@@ -546,13 +579,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function loadOverflow() {
+        if (overflowLoadState === 'loaded') return Promise.resolve();
+        if (overflowLoadState === 'loading') return overflowLoadPromise;
+
+        overflowLoadState = 'loading';
+        overflowLoadPromise = fetch('/arxiv/papers-overflow.html')
+            .then(function(r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+            .then(function(html) {
+                overflowLoadState = 'loaded';
+                parseOverflow(html);
+                return null;
+            })
+            .catch(function() {
+                overflowLoadState = 'error';
+                retryActiveFilterAfterDataLoad();
+                return null;
+            });
+        return overflowLoadPromise;
+    }
+
     // Load overflow papers (full prebuilt HTML for papers beyond the template)
-    fetch('/arxiv/papers-overflow.html')
-        .then(function(r) { if (!r.ok) throw new Error(r.status); return r.text(); })
-        .then(function(html) {
-            parseOverflow(html);
-        })
-        .catch(function() { /* page works with template papers only */ });
+    loadOverflow();
 
     // --- Date range helpers ---
 
@@ -1110,8 +1158,27 @@ document.addEventListener('DOMContentLoaded', function() {
         renderTopMatches();
         renderBatch(INITIAL_BATCH);
 
-        // No results
+        var hasActiveSearchOrFilter = !!(rawTerm || activeCategory !== 'all' || activeDateFilter !== 'all');
+        var fullDatabaseStillLoading = searchIndexLoadState !== 'loaded' || overflowLoadState !== 'loaded';
+        var fullDatabaseLoadFailed = searchIndexLoadState === 'error' || overflowLoadState === 'error';
+        var waitingForFullDatabase = totalMatches === 0 && hasActiveSearchOrFilter && fullDatabaseStillLoading && !fullDatabaseLoadFailed;
+
+        // No results / full database loading safeguard
         if (totalMatches === 0) {
+            if (waitingForFullDatabase) {
+                ensureFullDatabaseLoaded();
+                noResults.classList.remove('alert-info');
+                noResults.classList.add('alert-warning');
+                noResults.innerHTML = '<span class="arxiv-loading-inline" aria-hidden="true"></span>Loading the full arXiv database; retrying your search automatically\u2026';
+            } else if (hasActiveSearchOrFilter && fullDatabaseLoadFailed && fullDatabaseStillLoading) {
+                noResults.classList.remove('alert-info');
+                noResults.classList.add('alert-warning');
+                noResults.innerHTML = 'Could not load the full arXiv database. Showing results from the currently loaded papers only; try reloading the page.';
+            } else {
+                noResults.classList.remove('alert-warning');
+                noResults.classList.add('alert-info');
+                noResults.innerHTML = noResultsDefaultHtml;
+            }
             noResults.removeAttribute('hidden');
         } else {
             noResults.setAttribute('hidden', '');
@@ -1125,7 +1192,13 @@ document.addEventListener('DOMContentLoaded', function() {
             clearTimeout(statusTimeout);
             statusTimeout = setTimeout(function() {
                 if (totalMatches === 0) {
-                    statusRegion.textContent = 'No results found.';
+                    if (waitingForFullDatabase) {
+                        statusRegion.textContent = 'Loading the full arXiv database. Your search will retry automatically.';
+                    } else if (hasActiveSearchOrFilter && fullDatabaseLoadFailed && fullDatabaseStillLoading) {
+                        statusRegion.textContent = 'The full arXiv database could not be loaded.';
+                    } else {
+                        statusRegion.textContent = 'No results found.';
+                    }
                 } else if (term || hasOps || activeCategory !== 'all' || activeDateFilter !== 'all') {
                     var msg = totalMatches + ' result' + (totalMatches !== 1 ? 's' : '') + ' found.';
                     if (ops.author) msg += ' Filtered by author: ' + ops.author + '.';
