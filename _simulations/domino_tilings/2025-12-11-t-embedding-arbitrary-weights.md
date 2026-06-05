@@ -1057,6 +1057,18 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
                 aria-label="Generate random domino tiling">
           🎲 Sample
         </button>
+        <button id="sample-env-btn"
+                style="padding: 8px 16px; font-weight: bold; background: #2A69A6; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                aria-label="Resample random weights and domino tiling"
+                title="Resample the random weights/environment and then sample a tiling">
+          Resample weights and tiling
+        </button>
+        <button id="sample-annealed-btn"
+                style="padding: 8px 16px; font-weight: bold; background: #E57200; color: white; border: none; border-radius: 4px; cursor: pointer;"
+                aria-label="Generate annealed double dimer"
+                title="Sample two independent random environments and tilings, then draw their double dimer and height-function difference">
+          Annealed double dimer
+        </button>
         <span id="sample-time" style="color: #232D4B; font-weight: 500;" role="status" aria-live="polite"></span>
         <span id="sample-timing-display" style="margin-left: 8px; color: #666; font-size: 0.9em;" role="status" aria-live="polite"></span>
       </div>
@@ -1100,7 +1112,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
     <!-- Height Function Pane (for double dimer) -->
     <div id="height-function-container" style="display: none; margin-top: 15px; border: 1px solid #6A0572; border-radius: 4px; overflow: hidden;">
       <div style="background: #6A0572; color: white; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-weight: bold;">Height Function Difference (h&#8321; &#8722; h&#8322;) <span style="font-weight: normal; font-size: 12px; opacity: 0.85;">&mdash; quenched</span></span>
+        <span style="font-weight: bold;">Height Function Difference (h&#8321; &#8722; h&#8322;) <span id="height-function-mode-label" style="font-weight: normal; font-size: 12px; opacity: 0.85;">&mdash; quenched</span></span>
         <button id="height-function-close-btn" style="background: transparent; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0 8px;">&times;</button>
       </div>
       <div id="height-function-canvas-wrapper" style="position: relative; background: #fafafa;">
@@ -2747,6 +2759,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   let sampleDominoes = [];
   let sampleDominoes2 = [];  // Second configuration for double dimer mode
   let doubleDimerMode = false;
+  let sampleDoubleDimerEnvironmentMode = 'quenched';
   let minLoopLength = 2;
   let sampleZoom = 1.0;
   let samplePanX = 0, samplePanY = 0;
@@ -2791,6 +2804,15 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     sampleDoubleDimerHeightDiffCache.diff = null;
   }
 
+  function updateHeightFunctionModeLabel() {
+    const label = document.getElementById('height-function-mode-label');
+    if (label) {
+      label.textContent = sampleDoubleDimerEnvironmentMode === 'annealed'
+        ? '\u2014 annealed'
+        : '\u2014 quenched';
+    }
+  }
+
   const sampleWeightCache = new Map();
   const SAMPLE_WEIGHT_CACHE_MAX_ENTRIES = 8;
   const SAMPLE_WEIGHT_CACHEABLE_PRESETS = new Set([
@@ -2803,6 +2825,13 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     'gamma-periodic-2x2',
     'periodic'
   ]);
+  const SAMPLE_RANDOM_ENVIRONMENT_SEED_INPUTS = {
+    'random-iid': 'random-seed',
+    'random-layered': 'layered-seed',
+    'random-straight-layered': 'straight-layered-seed',
+    'random-gamma': 'gamma-seed',
+    'gamma-periodic-2x2': 'gamma-periodic-seed'
+  };
 
   const TEMB_SHUFFLED_DEFAULT_BENCHMARK_CASES = [
     { n: 100, doubleDimer: false, label: 'N=100 single' },
@@ -2827,6 +2856,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       n: null,
       requestedN: null,
       doubleDimer: null,
+      resampleEnvironment: !!options.resampleEnvironment,
+      annealedDoubleDimer: false,
+      environmentSeeds: [],
       dominoCount: 0,
       dominoCount2: 0,
       startedAt: performance.now(),
@@ -2970,7 +3002,26 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
   function setSampleButtonBusy(isBusy) {
     const sampleBtn = document.getElementById('sample-btn');
+    const sampleEnvBtn = document.getElementById('sample-env-btn');
+    const sampleAnnealedBtn = document.getElementById('sample-annealed-btn');
+    const randomEnvironmentAvailable = !!getCurrentSampleEnvironmentSeedInputId();
     if (sampleBtn) sampleBtn.disabled = !!isBusy;
+    if (sampleEnvBtn) {
+      sampleEnvBtn.disabled = !!isBusy || !randomEnvironmentAvailable;
+      sampleEnvBtn.style.opacity = randomEnvironmentAvailable ? '1' : '0.5';
+      sampleEnvBtn.style.cursor = randomEnvironmentAvailable ? 'pointer' : 'not-allowed';
+      sampleEnvBtn.title = randomEnvironmentAvailable
+        ? 'Resample the random weights/environment and then sample a tiling'
+        : 'Weight resampling applies only to random weight presets.';
+    }
+    if (sampleAnnealedBtn) {
+      sampleAnnealedBtn.disabled = !!isBusy || !randomEnvironmentAvailable;
+      sampleAnnealedBtn.style.opacity = randomEnvironmentAvailable ? '1' : '0.5';
+      sampleAnnealedBtn.style.cursor = randomEnvironmentAvailable ? 'pointer' : 'not-allowed';
+      sampleAnnealedBtn.title = randomEnvironmentAvailable
+        ? 'Sample two independent random environments and tilings, then draw their double dimer and height-function difference'
+        : 'Annealed double dimer applies only to random weight presets.';
+    }
   }
 
   function readSampleMinLoopLength() {
@@ -2979,7 +3030,67 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return Number.isFinite(parsed) ? Math.max(0, parsed) : 2;
   }
 
-  function readRandomSampleControls() {
+  function getCurrentSampleEnvironmentSeedInputId() {
+    const preset = document.getElementById('weight-preset-select')?.value || 'all-ones';
+    return SAMPLE_RANDOM_ENVIRONMENT_SEED_INPUTS[preset] || null;
+  }
+
+  function makeRandomSampleEnvironmentSeed(exclude = []) {
+    const excluded = new Set(exclude.filter(Number.isFinite));
+    for (let attempt = 0; attempt < 16; attempt++) {
+      let raw;
+      if (window.crypto?.getRandomValues) {
+        const buf = new Uint32Array(1);
+        window.crypto.getRandomValues(buf);
+        raw = buf[0];
+      } else {
+        raw = Math.floor((Date.now() + performance.now() + Math.random() * 0xFFFFFFFF) >>> 0);
+      }
+      const seed = 1 + (raw % 2147483646);
+      if (!excluded.has(seed)) return seed;
+    }
+    return 1 + (Math.floor(Math.random() * 2147483646));
+  }
+
+  function setCurrentSampleEnvironmentSeed(seed) {
+    const seedInputId = getCurrentSampleEnvironmentSeedInputId();
+    if (!seedInputId) return false;
+    const input = document.getElementById(seedInputId);
+    if (!input) return false;
+    input.value = seed;
+    return true;
+  }
+
+  function prepareSampleEnvironmentResample(controls, options = {}) {
+    controls.resampleEnvironment = true;
+    controls.environmentSeeds = [];
+    controls.annealedDoubleDimer = false;
+
+    if (!getCurrentSampleEnvironmentSeedInputId()) {
+      controls.environmentResampleSkipped = true;
+      controls.statusMessage = controls.doubleDimer
+        ? 'No random environment for this preset; sampling double dimer...'
+        : 'No random environment for this preset; sampling tiling...';
+      return;
+    }
+
+    const seed1 = makeRandomSampleEnvironmentSeed();
+    setCurrentSampleEnvironmentSeed(seed1);
+    controls.environmentSeeds.push(seed1);
+
+    if (controls.doubleDimer && options.annealedDoubleDimer) {
+      const seed2 = makeRandomSampleEnvironmentSeed([seed1]);
+      controls.environmentSeeds.push(seed2);
+      controls.annealedDoubleDimer = true;
+      controls.statusMessage = 'Sampling annealed double dimer (two environments)...';
+    } else if (controls.doubleDimer) {
+      controls.statusMessage = 'Resampling weights and quenched double dimer...';
+    } else {
+      controls.statusMessage = 'Resampling weights and tiling...';
+    }
+  }
+
+  function readRandomSampleControls(options = {}) {
     const input = document.getElementById('sample-N-input');
     const doubleDimerChk = document.getElementById('sample-double-dimer-chk');
     const requestedN = parseInt(input?.value) || 6;
@@ -2994,9 +3105,26 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       statusMessage = 'Sampling (large N, may be slow)...';
     }
 
-    doubleDimerMode = !!doubleDimerChk?.checked;
+    if (options.forceDoubleDimer) {
+      setSampleDoubleDimerControl(true);
+    }
+    doubleDimerMode = options.forceDoubleDimer ? true : !!doubleDimerChk?.checked;
     minLoopLength = readSampleMinLoopLength();
-    return { N, requestedN, doubleDimer: doubleDimerMode, minLoopLength, statusMessage };
+    const controls = {
+      N,
+      requestedN,
+      doubleDimer: doubleDimerMode,
+      minLoopLength,
+      statusMessage,
+      resampleEnvironment: false,
+      environmentSeeds: [],
+      environmentResampleSkipped: false,
+      annealedDoubleDimer: false
+    };
+    if (options.resampleEnvironment) {
+      prepareSampleEnvironmentResample(controls, options);
+    }
+    return controls;
   }
 
   function snapshotSampleBenchmarkControls() {
@@ -3763,6 +3891,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     const threeContainer = document.getElementById('height-function-3d-container');
     if (!container || !threeContainer) return;
 
+    updateHeightFunctionModeLabel();
     container.style.display = 'block';
     heightFunctionActive = true;
 
@@ -4899,14 +5028,17 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     return value;
   }
 
-  function createSampleWeightRequest(N) {
+  function createSampleWeightRequest(N, options = {}) {
     const preset = document.getElementById('weight-preset-select')?.value || 'all-ones';
     const { mode, params } = getCurrentWeightParams();
+    const requestParams = (options.seedOverride !== undefined && getCurrentSampleEnvironmentSeedInputId())
+      ? { ...params, seed: options.seedOverride }
+      : params;
     return {
       N,
       preset,
       mode,
-      params
+      params: requestParams
     };
   }
 
@@ -4930,9 +5062,9 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
   }
 
-  function getOrGenerateSampleWeights(controls, profile = null) {
+  function getOrGenerateSampleWeights(controls, profile = null, options = {}) {
     return measureSamplePhase(profile, 'weightGenerationConversionMs', () => {
-      const request = createSampleWeightRequest(controls.N);
+      const request = createSampleWeightRequest(controls.N, options);
       const cacheable = SAMPLE_WEIGHT_CACHEABLE_PRESETS.has(request.preset);
       const cacheKey = cacheable ? getSampleWeightCacheKey(request) : null;
 
@@ -4941,7 +5073,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         profile.weightCacheHit = false;
       }
 
-      if (cacheable) {
+      if (cacheable && !options.forceRegenerate) {
         const cached = getCachedSampleWeights(cacheKey);
         if (cached) {
           if (profile) profile.weightCacheHit = true;
@@ -5121,8 +5253,8 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
   }
 
-  function readRandomSampleControlPhase(profile) {
-    const controls = measureSamplePhase(profile, 'controlReadMs', readRandomSampleControls);
+  function readRandomSampleControlPhase(profile, options = {}) {
+    const controls = measureSamplePhase(profile, 'controlReadMs', () => readRandomSampleControls(options));
     profile.n = controls.N;
     profile.requestedN = controls.requestedN;
     profile.doubleDimer = controls.doubleDimer;
@@ -5133,9 +5265,16 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     if (controls.doubleDimer && result.config1) {
       sampleDominoes = result.config1;
       sampleDominoes2 = result.config2 || [];
+      sampleDoubleDimerEnvironmentMode = controls.annealedDoubleDimer ? 'annealed' : 'quenched';
     } else {
       sampleDominoes = Array.isArray(result) ? result : [];
       sampleDominoes2 = [];
+      sampleDoubleDimerEnvironmentMode = 'quenched';
+    }
+    updateHeightFunctionModeLabel();
+    if (profile) {
+      profile.annealedDoubleDimer = !!controls.annealedDoubleDimer;
+      profile.environmentSeeds = controls.environmentSeeds ? [...controls.environmentSeeds] : [];
     }
     invalidateSampleDoubleDimerLoopCache();
     invalidateSampleHeightFunctionCache();
@@ -5185,6 +5324,32 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
   }
 
+  async function runAnnealedDoubleDimerSample(controls, profile, requestId) {
+    if (!controls.environmentSeeds || controls.environmentSeeds.length < 2) {
+      throw new Error('Annealed double dimer needs two independent random environments.');
+    }
+
+    const runOne = async (index) => {
+      setSampleProgressStage(profile, `Annealed dimer ${index + 1}/2`, index === 0 ? 0 : 50);
+      const weights = getOrGenerateSampleWeights(controls, profile, {
+        seedOverride: controls.environmentSeeds[index],
+        forceRegenerate: true
+      });
+      const resultPtr = await runShufflingWithWeights(controls.N, weights, false, profile);
+      const config = decodeAndFreeShufflingResult(resultPtr, profile);
+      if (!Array.isArray(config)) {
+        throw new Error(`Annealed dimer ${index + 1} did not return a single tiling.`);
+      }
+      return config;
+    };
+
+    const config1 = await runOne(0);
+    if (!isActiveRandomSampleRequest(requestId)) return null;
+    const config2 = await runOne(1);
+    if (!isActiveRandomSampleRequest(requestId)) return null;
+    return { config1, config2 };
+  }
+
   async function generateRandomSample(options = {}) {
     const requestId = nextRandomSampleRequestId();
     const profile = createShuffledSamplerProfile(options);
@@ -5205,22 +5370,38 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     }
 
     try {
-      const controls = readRandomSampleControlPhase(profile);
+      const controls = readRandomSampleControlPhase(profile, options);
       setSampleStatus(options.source === 'benchmark'
         ? `${options.label || 'Benchmark'}: sampling...`
         : controls.statusMessage);
 
-      const sampleWeights = getOrGenerateSampleWeights(controls, profile);
       if (isUserVisibleRequest) {
-        startSampleProgressPolling(profile, requestId, controls.doubleDimer ? 'Sampling double dimer' : 'Sampling');
+        const progressLabel = controls.annealedDoubleDimer
+          ? 'Sampling annealed double dimer'
+          : (controls.doubleDimer ? 'Sampling double dimer' : 'Sampling');
+        startSampleProgressPolling(profile, requestId, progressLabel);
       }
-      const resultPtr = await runShufflingWithWeights(controls.N, sampleWeights, controls.doubleDimer, profile);
-      setSampleProgressStage(profile, 'Decoding', 100);
-      const result = decodeAndFreeShufflingResult(resultPtr, profile);
 
-      if (!isActiveRandomSampleRequest(requestId)) {
-        stopSampleProgressPolling();
-        return finishStaleShuffledSamplerProfile(profile);
+      let result;
+      if (controls.annealedDoubleDimer) {
+        result = await runAnnealedDoubleDimerSample(controls, profile, requestId);
+        if (!result) {
+          stopSampleProgressPolling();
+          return finishStaleShuffledSamplerProfile(profile);
+        }
+        setSampleProgressStage(profile, 'Decoding', 100);
+      } else {
+        const sampleWeights = getOrGenerateSampleWeights(controls, profile, {
+          forceRegenerate: controls.resampleEnvironment
+        });
+        const resultPtr = await runShufflingWithWeights(controls.N, sampleWeights, controls.doubleDimer, profile);
+        setSampleProgressStage(profile, 'Decoding', 100);
+        result = decodeAndFreeShufflingResult(resultPtr, profile);
+
+        if (!isActiveRandomSampleRequest(requestId)) {
+          stopSampleProgressPolling();
+          return finishStaleShuffledSamplerProfile(profile);
+        }
       }
 
       updateRandomSampleState(result, controls, profile);
@@ -6804,6 +6985,18 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   if (sampleCanvas) {
     getSample2DRenderer();
     document.getElementById('sample-btn').addEventListener('click', generateRandomSample);
+    document.getElementById('sample-env-btn')?.addEventListener('click', () => {
+      generateRandomSample({ resampleEnvironment: true, source: 'resample-environment' });
+    });
+    document.getElementById('sample-annealed-btn')?.addEventListener('click', () => {
+      setSampleDoubleDimerControl(true);
+      generateRandomSample({
+        resampleEnvironment: true,
+        annealedDoubleDimer: true,
+        forceDoubleDimer: true,
+        source: 'annealed-double-dimer'
+      });
+    });
 
     // Enter key on sample inputs triggers sample
     document.getElementById('sample-N-input').addEventListener('keydown', (e) => {
@@ -9646,6 +9839,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     } else {
       weightsEditor.style.display = 'none';
     }
+    setSampleButtonBusy(activeUserVisibleSampleRequestId !== 0);
   }
 
   // Handle weight preset dropdown change - show/hide relevant params
