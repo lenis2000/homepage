@@ -31,13 +31,22 @@ function findBrowser() {
 function checkSource() {
   const page = fs.readFileSync(path.join(root, "factorial", "index.html"), "utf8");
   const sampler = fs.readFileSync(path.join(root, "js", "factorial-ybe-sampler.js"), "utf8");
+  const worker = fs.readFileSync(path.join(root, "js", "factorial-ybe-worker.js"), "utf8");
+  const wasmBundle = fs.readFileSync(path.join(root, "js", "factorial-ybe-wasm.js"), "utf8");
 
   assert(page.includes("/js/factorial-ybe-sampler.js"), "/factorial/ should load the YBE sampler");
   assert(!page.includes("factorial-glauber.js"), "/factorial/ should not load stale Glauber JS");
   assert(!page.includes("factorial-wasm.js"), "/factorial/ should not load stale Glauber WASM");
+  assert(page.includes('id="fs-cancel-btn"'), "/factorial/ should expose a cancel button");
   assert(sampler.includes("window.factorialYBEReferenceSample"), "seeded JS reference hook should be exposed");
+  assert(sampler.includes("window.factorialYBEWorkerSample"), "worker/WASM sample hook should be exposed");
+  assert(sampler.includes("new Worker('/js/factorial-ybe-worker.js"), "visible sampler should start the YBE worker");
   assert(sampler.includes("createXoshiro256pp"), "seeded reference hook should use Xoshiro256++");
   assert(!sampler.includes("Math.random() * total"), "hot local sampler should use the swappable RNG source");
+  assert(worker.includes("factorial-ybe-wasm.js"), "worker should load the generated WASM bundle");
+  assert(worker.includes("_sampleFactorialYBE"), "worker should call the exported C++ sampler");
+  assert(wasmBundle.includes("_sampleFactorialYBE"), "WASM bundle should export _sampleFactorialYBE");
+  assert(wasmBundle.includes("_freeString"), "WASM bundle should export _freeString");
 }
 
 function mimeType(filePath) {
@@ -227,8 +236,8 @@ async function runBrowserSmoke() {
     await client.send("Runtime.enable");
     await waitForPageCondition(
       client,
-      "typeof window.factorialYBEReferenceSample === 'function'",
-      "factorial seeded reference hook"
+      "typeof window.factorialYBEReferenceSample === 'function' && typeof window.factorialYBEWorkerSample === 'function'",
+      "factorial sampler hooks"
     );
 
     const result = await evaluate(client, `(() => {
@@ -282,6 +291,50 @@ async function runBrowserSmoke() {
 
     assert(result && result.rowSwaps === 9, "browser smoke should return deterministic reference stats");
     console.log(`Factorial seeded reference smoke passed: lambda=(${result.lambda.join(",")}), moves=${result.localMoves}.`);
+
+    const workerResult = await evaluate(client, `(async () => {
+      document.getElementById("fs-N").value = "3";
+      document.getElementById("fs-M").value = "3";
+      document.getElementById("fs-x").value = "0.2,0.3,0.4";
+      document.getElementById("fs-w").value = "0.9,1.0,1.1";
+      document.getElementById("fs-y").value = "0^200";
+      document.getElementById("fs-max-cols").value = "200";
+      document.getElementById("fs-resize-btn").click();
+      const options = {
+        N: 3,
+        M: 3,
+        x: [0.2, 0.3, 0.4],
+        w: [0.9, 1.0, 1.1],
+        y: Array(200).fill(0),
+        seedLo: 12345,
+        seedHi: 67890,
+        columnCap: 200
+      };
+      const reference = window.factorialYBEReferenceSample(options);
+      const ok = await window.factorialYBEWorkerSample({ seedLo: 12345, seedHi: 67890, columnCap: 200 });
+      if (!ok) throw new Error(document.getElementById("fs-validation-note")?.textContent || "worker sample failed");
+      const state = window.factorialExactSamplerState();
+      const sameMu = JSON.stringify(state.mu) === JSON.stringify(reference.mu);
+      const sameLam = JSON.stringify(state.lam) === JSON.stringify(reference.lam);
+      return {
+        wasm: !!state.stats.wasm,
+        rowSwaps: state.stats.rowSwaps,
+        localMoves: state.stats.localMoves,
+        randomChoices: state.stats.randomChoices,
+        sameMu,
+        sameLam,
+        lambda: state.mu[state.M],
+        muRows: state.mu.length,
+        lamRows: state.lam.length
+      };
+    })()`, 60000);
+
+    assert(workerResult?.wasm, "visible sample should use the worker/WASM path");
+    assert(workerResult.rowSwaps === 9, "tiny worker sample should perform N*M row swaps");
+    assert(workerResult.localMoves >= workerResult.rowSwaps, "worker local moves should cover row swaps");
+    assert(workerResult.sameMu && workerResult.sameLam, "worker/WASM output should match the seeded JS reference");
+    assert(workerResult.muRows === 4 && workerResult.lamRows === 4, "worker sample should return tiny mu/lam row counts");
+    console.log(`Factorial worker/WASM smoke passed: lambda=(${workerResult.lambda.join(",")}), moves=${workerResult.localMoves}.`);
   } finally {
     client?.close();
     if (chrome.exitCode === null && chrome.signalCode === null) {

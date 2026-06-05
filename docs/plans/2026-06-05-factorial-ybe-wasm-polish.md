@@ -128,23 +128,23 @@ Before changing architecture, document the current behavior and performance.
 
 Move the exact reverse-Cauchy sampler into C++/WASM and run it off the main thread.
 
-- [ ] Build a C++ implementation of the current exact sampler, not the old Glauber chain.
-- [ ] Use Xoshiro256++ RNG and explicit seed inputs. Use the proven RNG pattern from `s/domino.cpp`.
-- [ ] Replace JS `Set` levels with compact flat/bit-packed level storage. Suggested structure: one bitset per level over `1..columnCap`, plus helpers `occ(level,column)`, `setOcc(level,column)`, and active max support. Avoid per-column allocations.
-- [ ] Avoid recomputing the full local weight enumeration for every cell. Precompute the finite admissible local transition table keyed by boundary bits and input triple; at runtime use direct deterministic outputs or the Bernoulli split with the current `x,w,y_k`. Keep a slow assertion/debug path only if useful.
-- [ ] Scan only to the actual active support plus the needed tail condition. Never blindly run to `columnCap` unless the sampler genuinely has not reached its forced tail.
-- [ ] Export a C ABI similar to:
+- [x] Build a C++ implementation of the current exact sampler, not the old Glauber chain.
+- [x] Use Xoshiro256++ RNG and explicit seed inputs. Use the proven RNG pattern from `s/domino.cpp`.
+- [x] Replace JS `Set` levels with compact flat/bit-packed level storage. Suggested structure: one bitset per level over `1..columnCap`, plus helpers `occ(level,column)`, `setOcc(level,column)`, and active max support. Avoid per-column allocations.
+- [x] Avoid recomputing the full local weight enumeration for every cell. Precompute the finite admissible local transition table keyed by boundary bits and input triple; at runtime use direct deterministic outputs or the Bernoulli split with the current `x,w,y_k`. Keep a slow assertion/debug path only if useful.
+- [x] Scan only to the actual active support plus the needed tail condition. Never blindly run to `columnCap` unless the sampler genuinely has not reached its forced tail.
+- [x] Export a C ABI similar to:
   - `_sampleFactorialYBE(N, M, xPtr, wPtr, yPtr, yLen, columnCap, seedLo, seedHi)` returning malloc-owned JSON `char*`;
   - `_freeString(ptr)`;
   - `_getProgress()`;
   - `_malloc`, `_free` for typed-array transfer.
-- [ ] Return JSON with at least `{ N, M, mu, lam, lambda, stats, levels? }`, plus enough data for the renderer without recomputing partitions in JS. Include row-swap count, local move count, random choice count, max position, elapsed or C++ timing if convenient.
-- [ ] Return structured errors as `{"error":"..."}` and ensure all C++ exceptions are caught and converted to JSON.
-- [ ] Compile with Emscripten as a modular worker-compatible single-file bundle, e.g. `MODULARIZE=1`, `EXPORT_NAME=createFactorialYBEModule`, `ENVIRONMENT=web,worker`, `ALLOW_MEMORY_GROWTH=1`, `SINGLE_FILE=1`, `-O3`, `-fexceptions`.
-- [ ] Implement `js/factorial-ybe-worker.js` that loads the WASM module, receives typed-array parameters, calls the C++ sampler, parses JSON/errors, and posts results back to the main thread.
-- [ ] Transfer large `Float64Array` buffers to the worker to avoid copies where practical. If transferring would detach arrays still needed by the UI, clone intentionally and document that choice.
-- [ ] Main thread must remain responsive while sampling. New sample/reset/cancel should terminate the current worker or ignore stale response IDs.
-- [ ] Keep the old JS sampler only as a small-system debug/reference fallback. The visible `Sample exactly` button should use workerized WASM by default when available; do not silently fall back to slow JS for large systems.
+- [x] Return JSON with at least `{ N, M, mu, lam, lambda, stats, levels? }`, plus enough data for the renderer without recomputing partitions in JS. Include row-swap count, local move count, random choice count, max position, elapsed or C++ timing if convenient.
+- [x] Return structured errors as `{"error":"..."}` and ensure all C++ exceptions are caught and converted to JSON.
+- [x] Compile with Emscripten as a modular worker-compatible single-file bundle, e.g. `MODULARIZE=1`, `EXPORT_NAME=createFactorialYBEModule`, `ENVIRONMENT=web,worker`, `ALLOW_MEMORY_GROWTH=1`, `SINGLE_FILE=1`, `-O3`, `-fexceptions`.
+- [x] Implement `js/factorial-ybe-worker.js` that loads the WASM module, receives typed-array parameters, calls the C++ sampler, parses JSON/errors, and posts results back to the main thread.
+- [x] Transfer large `Float64Array` buffers to the worker to avoid copies where practical. If transferring would detach arrays still needed by the UI, clone intentionally and document that choice.
+- [x] Main thread must remain responsive while sampling. New sample/reset/cancel should terminate the current worker or ignore stale response IDs.
+- [x] Keep the old JS sampler only as a small-system debug/reference fallback. The visible `Sample exactly` button should use workerized WASM by default when available; do not silently fall back to slow JS for large systems.
 
 ### Task 2: Robust JS orchestration, parameter parsing, and failure handling
 

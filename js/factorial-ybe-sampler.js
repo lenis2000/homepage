@@ -32,6 +32,10 @@
     randomChoices: 0,
     elapsedMs: 0,
   };
+  let activeWorker = null;
+  let activeRequestId = 0;
+  let samplingActive = false;
+  let samplingCanceled = false;
 
   const SUB = ['₀','₁','₂','₃','₄','₅','₆','₇','₈','₉'];
   function sub(n) { return String(n).split('').map(d => SUB[+d] || d).join(''); }
@@ -448,6 +452,58 @@
     return clampInt($('fs-max-cols')?.value || '20000', 100, 1000000);
   }
 
+  function setSamplingUi(active) {
+    samplingActive = active;
+    for (const id of ['fs-sample-btn', 'fs-multi-sample-btn', 'fs-sample-count']) {
+      const el = $(id);
+      if (el) el.disabled = active;
+    }
+    const cancelBtn = $('fs-cancel-btn');
+    if (cancelBtn) cancelBtn.disabled = !active;
+  }
+
+  function setStatus(message, className = 'fs-note ok') {
+    const note = $('fs-validation-note');
+    if (note) {
+      note.textContent = message;
+      note.className = className;
+    }
+  }
+
+  function terminateActiveWorker(message, options = {}) {
+    const hadWorker = !!activeWorker;
+    activeRequestId += 1;
+    if (activeWorker) {
+      activeWorker.terminate();
+      activeWorker = null;
+    }
+    setSamplingUi(false);
+    if (!options.silent && message) setStatus(message, options.className || 'fs-note warn');
+    return hadWorker;
+  }
+
+  function createSeedPair() {
+    const seeds = new Uint32Array(2);
+    if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+      window.crypto.getRandomValues(seeds);
+    } else {
+      seeds[0] = Math.floor(Math.random() * 0x100000000) >>> 0;
+      seeds[1] = Math.floor(Math.random() * 0x100000000) >>> 0;
+    }
+    if (seeds[0] === 0 && seeds[1] === 0) seeds[0] = 1;
+    return seeds;
+  }
+
+  function buildYArrayForWasm(columnCap) {
+    const values = new Float64Array(columnCap);
+    for (let k = 1; k <= columnCap; k++) {
+      const v = yVal(k);
+      if (!Number.isFinite(v)) throw new Error(`y_${k} is non-finite`);
+      values[k - 1] = v;
+    }
+    return values;
+  }
+
   function buildFrozenRhs() {
     rows = [];
     levels = [];
@@ -726,18 +782,22 @@
     stats.rowSwaps = 0;
     stats.localMoves = 0;
     stats.randomChoices = 0;
+    stats.wasm = false;
+    stats.wallElapsedMs = 0;
     stats.elapsedMs = 0;
     $('fs-lambda').textContent = '∅';
     refreshStats();
     draw();
   }
 
-  function sampleOnce() {
+  function sampleOnceJsFallback() {
     if (!applyParamsFromInputs()) return false;
     const t0 = performance.now();
     stats.rowSwaps = 0;
     stats.localMoves = 0;
     stats.randomChoices = 0;
+    stats.wasm = false;
+    stats.wallElapsedMs = 0;
     try {
       sampleRows();
       rebuildMuLamFromLevels();
@@ -766,10 +826,155 @@
     }
   }
 
-  function sampleMany(count) {
+  function normalizeWorkerResult(result, wallElapsedMs) {
+    if (!result || !Array.isArray(result.mu) || !Array.isArray(result.lam)) {
+      throw new Error('Worker returned malformed sampler data.');
+    }
+    const previousSamples = stats.samples || 0;
+    N = result.N;
+    M = result.M;
+    mu = result.mu;
+    lam = result.lam;
+    rows = Array.isArray(result.rows) ? result.rows : [];
+    levels = Array.isArray(result.levels) ? result.levels : [];
+    stats = {
+      samples: previousSamples + 1,
+      size: result.stats?.size || 0,
+      maxPos: result.stats?.maxPos || 0,
+      rowSwaps: result.stats?.rowSwaps || 0,
+      localMoves: result.stats?.localMoves || 0,
+      randomChoices: result.stats?.randomChoices || 0,
+      elapsedMs: Number.isFinite(result.stats?.elapsedMs) ? result.stats.elapsedMs : wallElapsedMs,
+      wallElapsedMs,
+      wasm: true,
+    };
+    const lambda = Array.isArray(result.lambda) ? result.lambda : (mu[M] || []);
+    $('fs-lambda').textContent = lambda.length ? `(${lambda.join(', ')})` : '∅';
+  }
+
+  function workerFallbackAllowed() {
+    return N * M <= 64 && currentColumnCap() <= 5000;
+  }
+
+  function sampleOnceWithWorker(options = {}) {
+    if (!applyParamsFromInputs()) return Promise.resolve(false);
+    if (typeof Worker !== 'function') {
+      if (workerFallbackAllowed()) {
+        setStatus('Web Workers are unavailable; using the small-system JS reference fallback.', 'fs-note warn');
+        return Promise.resolve(sampleOnceJsFallback());
+      }
+      setStatus('Web Workers are unavailable, so large exact samples cannot run without freezing the page.', 'fs-note err');
+      return Promise.resolve(false);
+    }
+
+    terminateActiveWorker('', { silent: true });
+    samplingCanceled = false;
+
+    let columnCap;
+    let yValues;
+    try {
+      columnCap = options.columnCap == null
+        ? currentColumnCap()
+        : Math.max(1, Math.min(1000000, Math.trunc(Number(options.columnCap))));
+      yValues = buildYArrayForWasm(columnCap);
+    } catch (error) {
+      setStatus(error.message, 'fs-note err');
+      return Promise.resolve(false);
+    }
+
+    const seeds = createSeedPair();
+    if (options.seedLo != null) seeds[0] = Number(options.seedLo) >>> 0;
+    if (options.seedHi != null) seeds[1] = Number(options.seedHi) >>> 0;
+    const requestId = activeRequestId + 1;
+    activeRequestId = requestId;
+    const started = performance.now();
+
+    // Fresh typed arrays are transferred so the UI-owned xArr/wArr arrays stay usable.
+    const xValues = new Float64Array(xArr);
+    const wValues = new Float64Array(wArr);
+    let worker;
+    try {
+      worker = new Worker('/js/factorial-ybe-worker.js?v=20260605-wasm');
+    } catch (error) {
+      if (workerFallbackAllowed()) {
+        setStatus(`Worker could not start (${error.message}); using the small-system JS reference fallback.`, 'fs-note warn');
+        return Promise.resolve(sampleOnceJsFallback());
+      }
+      setStatus(`Worker could not start: ${error.message}`, 'fs-note err');
+      return Promise.resolve(false);
+    }
+    activeWorker = worker;
+    setSamplingUi(true);
+    setStatus(`Sampling in WASM worker for N=${N}, M=${M}, cap=${columnCap}...`, 'fs-note ok');
+
+    return new Promise((resolve) => {
+      let settled = false;
+      function finish(ok) {
+        if (settled) return;
+        settled = true;
+        if (activeWorker === worker) activeWorker = null;
+        worker.terminate();
+        setSamplingUi(false);
+        resolve(ok);
+      }
+
+      worker.onmessage = (event) => {
+        const message = event.data || {};
+        if (message.requestId !== requestId || requestId !== activeRequestId) return;
+        if (message.type === 'result') {
+          try {
+            const wallElapsedMs = performance.now() - started;
+            normalizeWorkerResult(message.result, wallElapsedMs);
+            if (stats.size === 0) {
+              setStatus('Sample returned λ=0. This is valid; increase x/w for more activity while keeping every w_j > x_i.', 'fs-note warn');
+            } else {
+              setStatus(`Sampled with worker/WASM: |λ|=${stats.size}, wall time ${(wallElapsedMs / 1000).toFixed(2)}s.`, 'fs-note ok');
+            }
+            refreshStats();
+            draw();
+            finish(true);
+          } catch (error) {
+            setStatus(error.message, 'fs-note err');
+            console.error(error);
+            finish(false);
+          }
+        } else if (message.type === 'error') {
+          setStatus(message.error || 'Worker sampler failed.', 'fs-note err');
+          finish(false);
+        }
+      };
+
+      worker.onerror = (event) => {
+        if (requestId !== activeRequestId) return;
+        const message = event.message || 'Worker sampler failed to load.';
+        setStatus(message, 'fs-note err');
+        finish(false);
+      };
+
+      worker.postMessage({
+        type: 'sample',
+        requestId,
+        N,
+        M,
+        xBuffer: xValues.buffer,
+        wBuffer: wValues.buffer,
+        yBuffer: yValues.buffer,
+        columnCap,
+        seedLo: seeds[0],
+        seedHi: seeds[1],
+      }, [xValues.buffer, wValues.buffer, yValues.buffer]);
+    });
+  }
+
+  function sampleOnce() {
+    return sampleOnceWithWorker();
+  }
+
+  async function sampleMany(count) {
     let ok = true;
     for (let i = 0; i < count; i++) {
-      ok = sampleOnce();
+      if (samplingCanceled) break;
+      ok = await sampleOnce();
       if (!ok) break;
     }
   }
@@ -1058,14 +1263,17 @@
 
   function attachUiEvents() {
     $('fs-apply-q').addEventListener('click', () => {
+      terminateActiveWorker('', { silent: true });
       applyQSpecToInputs();
       resetFrozen();
     });
     $('fs-uniform-btn').addEventListener('click', () => {
+      terminateActiveWorker('', { silent: true });
       applySafeConstantsToInputs();
       resetFrozen();
     });
     $('fs-resize-btn').addEventListener('click', () => {
+      terminateActiveWorker('', { silent: true });
       N = clampInt($('fs-N').value, 1, 120);
       M = clampInt($('fs-M').value, 1, 120);
       $('fs-N').value = String(N);
@@ -1075,6 +1283,7 @@
       resetFrozen();
     });
     $('fs-reset-btn').addEventListener('click', () => {
+      terminateActiveWorker('Active sample canceled by reset.', { className: 'fs-note warn' });
       applyParamsFromInputs();
       viewInitialized = false;
       resetFrozen();
@@ -1086,6 +1295,13 @@
       const count = clampInt($('fs-sample-count').value, 1, 1000);
       sampleMany(count);
     });
+    const cancelBtn = $('fs-cancel-btn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        samplingCanceled = true;
+        terminateActiveWorker('Sampling canceled.', { className: 'fs-note warn' });
+      });
+    }
 
     for (const id of ['fs-x', 'fs-w', 'fs-y', 'fs-q', 'fs-alpha', 'fs-beta', 'fs-gamma']) {
       const el = $(id);
@@ -1139,6 +1355,11 @@
     window.factorialExactSamplerSample = sampleOnce;
     window.factorialExactSamplerState = () => ({ N, M, xArr, wArr, mu, lam, stats, rows, levels });
     window.factorialYBEReferenceSample = runReferenceSample;
+    window.factorialYBEWorkerSample = sampleOnceWithWorker;
+    window.factorialYBECancelSample = () => {
+      samplingCanceled = true;
+      return terminateActiveWorker('Sampling canceled.', { className: 'fs-note warn' });
+    };
   }
 
   if (document.readyState === 'loading') {
