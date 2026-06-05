@@ -1,6 +1,6 @@
 /* Exact sampler for factorial Schur processes via Yang--Baxter bijectivisation.
- * No Glauber dynamics, no WASM: this implements the reverse-Cauchy row-swap
- * sampler from the frozen RHS configuration.
+ * The visible sampler runs the reverse-Cauchy row-swap algorithm in a WASM
+ * worker, with this file retaining a seeded JS reference path for small tests.
  */
 (function () {
   'use strict';
@@ -40,12 +40,107 @@
   let elapsedStartedAt = 0;
   let elapsedTimer = null;
   let renderScheduled = false;
+  let applyingPreset = false;
+  let currentPresetKey = 'default-balanced';
 
   const LOCKED_DURING_SAMPLE_IDS = [
     'fs-N', 'fs-M', 'fs-q', 'fs-alpha', 'fs-beta', 'fs-gamma',
     'fs-x', 'fs-w', 'fs-y', 'fs-apply-q', 'fs-uniform-btn', 'fs-resize-btn',
+    'fs-preset-select', 'fs-preset-apply',
     'fs-sample-btn', 'fs-multi-sample-btn', 'fs-sample-count', 'fs-max-cols',
   ];
+
+  const FACTORIAL_YBE_PRESETS = {
+    'default-balanced': {
+      label: 'Default balanced',
+      description: 'A small balanced sample with visible paths and quick worker turnaround. It is the safest starting point for checking the exact sampler.',
+      N: 6,
+      M: 6,
+      q: 0.95,
+      alpha: 0.55,
+      beta: 0,
+      gamma: 1,
+      x: 'alpha*q^i',
+      w: 'gamma*q^i',
+      y: 'beta*q^i',
+      columnCap: 20000,
+      cellSize: 20,
+      squareCells: true,
+      pathStyle: 'tonal',
+    },
+    'old-fan-epsilon-safe': {
+      label: 'Old buggy sampler fan (epsilon-safe)',
+      description: 'Recreates the broad fan shape from the old screenshot. The original had w_50=x=1; this preset uses 1.001*q^(-50+i) so every w_j is strictly larger than every x_i.',
+      N: 12,
+      M: 50,
+      q: 0.2,
+      alpha: 1,
+      beta: 1,
+      gamma: 1,
+      x: '1^12',
+      w: '1.001*q^(-50+i)',
+      y: 'q^(i-50)',
+      columnCap: 20000,
+      cellSize: 13,
+      squareCells: false,
+      pathStyle: 'tonal',
+    },
+    'uniform-schur-like': {
+      label: 'Uniform / Schur-like',
+      description: 'Constant safe spectral values with y=0. The output behaves like a plain Schur-type ensemble with smoother, more even path spread.',
+      N: 10,
+      M: 12,
+      q: 0.95,
+      alpha: 0.45,
+      beta: 0,
+      gamma: 1,
+      x: '0.45^N',
+      w: '1^M',
+      y: '0^columnCap',
+      columnCap: 12000,
+      cellSize: 18,
+      squareCells: true,
+      pathStyle: 'tonal',
+    },
+    'near-frozen': {
+      label: 'Near frozen',
+      description: 'Low x/w activity, so the sampled lambda row is often small or zero. This is useful for checking the frozen boundary and low-density rendering.',
+      N: 10,
+      M: 18,
+      q: 0.95,
+      alpha: 0.08,
+      beta: 0,
+      gamma: 1,
+      x: '0.08^N',
+      w: '1^M',
+      y: '0^columnCap',
+      columnCap: 10000,
+      cellSize: 18,
+      squareCells: true,
+      pathStyle: 'tonal',
+    },
+    'large-stress': {
+      label: 'Large stress',
+      description: 'A large N=80, M=120 run sized to exercise the worker/WASM path without locking the main browser thread. The view starts compressed so the whole ensemble remains legible.',
+      N: 80,
+      M: 120,
+      q: 0.9,
+      alpha: 0.3,
+      beta: 0,
+      gamma: 1,
+      x: '0.3^N',
+      w: '1^M',
+      y: '0^columnCap',
+      columnCap: 20000,
+      cellSize: 5,
+      squareCells: false,
+      pathStyle: 'tonal',
+    },
+    custom: {
+      label: 'Custom parameters',
+      description: 'Manual controls are active. Validate after changing size, q-specialization, or raw x/w/y expressions.',
+    },
+  };
 
   const SUB = ['₀','₁','₂','₃','₄','₅','₆','₇','₈','₉'];
   function sub(n) { return String(n).split('').map(d => SUB[+d] || d).join(''); }
@@ -103,6 +198,8 @@
       note.textContent = message || '';
       note.className = className || classForRunState(state);
     }
+    const panel = $('fs-validation-panel');
+    if (panel) panel.className = validationPanelClass(state, className);
     if (state !== 'sampling') stopElapsedTimer(state === 'ready' || state === 'validating' ? 0 : undefined);
   }
 
@@ -176,6 +273,39 @@
     const head = arr.slice(0, 3).map(round6).join(', ');
     const tail = arr.slice(-2).map(round6).join(', ');
     return `${head}, ..., ${tail}  (${arr.length} total)`;
+  }
+
+  function formatValue(value) {
+    if (!Number.isFinite(value)) return String(value);
+    const abs = Math.abs(value);
+    if (abs > 0 && (abs < 1e-4 || abs >= 1e5)) return value.toExponential(4);
+    return String(round6(value));
+  }
+
+  function summarizeValues(label, arr) {
+    if (!arr.length) return `${label}: no values`;
+    const bounds = arrayMinMax(arr);
+    const sample = arr.length <= 5 ? `; values=[${arr.map(formatValue).join(', ')}]` : '';
+    return `${label}: ${arr.length} values; first=${formatValue(arr[0])}, last=${formatValue(arr[arr.length - 1])}; min=${formatValue(bounds.min)}, max=${formatValue(bounds.max)}${sample}`;
+  }
+
+  function describeGap(strict) {
+    if (!strict || !Number.isFinite(strict.minGap)) return '';
+    const near = strict.nearEquality ? ' near equality; increase w or lower x before sampling large systems.' : ' strict inequality margin OK.';
+    return `Closest gap: w${sub(strict.closestW)} - x${sub(strict.closestX)} = ${formatValue(strict.minGap)};${near}`;
+  }
+
+  function setValidationDetail(message) {
+    const detail = $('fs-validation-detail');
+    if (detail) detail.textContent = message || '';
+  }
+
+  function validationPanelClass(state, className) {
+    if (state === 'error' || /\berr\b/.test(className || '')) return 'fs-validation-panel fs-validation-error';
+    if (state === 'canceled' || /\bwarn\b/.test(className || '')) return 'fs-validation-panel fs-validation-warn';
+    if (state === 'done') return 'fs-validation-panel fs-validation-done';
+    if (state === 'ready') return 'fs-validation-panel fs-validation-ready';
+    return 'fs-validation-panel fs-validation-ok';
   }
 
   function fail(message) {
@@ -373,15 +503,86 @@
     return ySpec.value(k);
   }
 
-  function validateParameters() {
+  function validateStrictInequalities() {
+    let minGap = Infinity;
+    let closestX = 1;
+    let closestW = 1;
     for (let i = 0; i < xArr.length; i++) {
       for (let j = 0; j < wArr.length; j++) {
-        if (!(wArr[j] > xArr[i])) {
-          fail(`Parameter check failed: need w${sub(j + 1)} > x${sub(i + 1)}, but ${round6(wArr[j])} ≤ ${round6(xArr[i])}.`);
+        const gap = wArr[j] - xArr[i];
+        if (gap < minGap) {
+          minGap = gap;
+          closestX = i + 1;
+          closestW = j + 1;
+        }
+        if (!(gap > 0)) {
+          fail(`Parameter check failed: need w${sub(j + 1)} > x${sub(i + 1)}, but ${formatValue(wArr[j])} <= ${formatValue(xArr[i])}. Increase that w value, lower that x value, or choose an epsilon-safe preset.`);
         }
       }
     }
-    clearValidation(`OK: all ${N * M} inequalities w${sub(1)}…w${sub(M)} > x${sub(1)}…x${sub(N)} hold.`);
+    const scale = Math.max(1, Math.abs(wArr[closestW - 1]), Math.abs(xArr[closestX - 1]));
+    return {
+      minGap,
+      closestX,
+      closestW,
+      nearEquality: minGap / scale < 1e-5,
+    };
+  }
+
+  function validatePositivityForCap(columnCap) {
+    const xBounds = arrayMinMax(xArr);
+    const wBounds = arrayMinMax(wArr);
+    let firstY = 0;
+    let lastY = 0;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    let minXPlusY = Infinity;
+    let minWPlusY = Infinity;
+    let minXColumn = 1;
+    let minWColumn = 1;
+    for (let k = 1; k <= columnCap; k++) {
+      const y = yVal(k);
+      if (!Number.isFinite(y)) fail(`Parameter check failed: y_${k} is non-finite. Shorten the expression or use a finite repeat such as 0^columnCap.`);
+      if (k === 1) firstY = y;
+      lastY = y;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+      const xPlusY = xBounds.min + y;
+      const wPlusY = wBounds.min + y;
+      if (xPlusY < minXPlusY) {
+        minXPlusY = xPlusY;
+        minXColumn = k;
+      }
+      if (wPlusY < minWPlusY) {
+        minWPlusY = wPlusY;
+        minWColumn = k;
+      }
+      if (!(wPlusY > 0)) {
+        fail(`Local positivity failed at y_${k}: min(w)+y_${k}=${formatValue(wPlusY)}. Increase w, raise y, or reduce the column cap if this tail was not intended.`);
+      }
+      if (!(xPlusY >= 0)) {
+        fail(`Local positivity failed at y_${k}: min(x)+y_${k}=${formatValue(xPlusY)}. Increase x, raise y, or reduce the column cap if this tail was not intended.`);
+      }
+    }
+    return {
+      columnCap,
+      firstY,
+      lastY,
+      minY,
+      maxY,
+      minXPlusY,
+      minWPlusY,
+      minXColumn,
+      minWColumn,
+    };
+  }
+
+  function validateParameters(columnCap = currentColumnCap()) {
+    const strict = validateStrictInequalities();
+    const positivity = validatePositivityForCap(columnCap);
+    clearValidation(`OK: ${N * M} strict inequalities and positivity through column cap ${columnCap} hold.`);
+    setValidationDetail(`${describeGap(strict)} Positivity margins: min(x+y)=${formatValue(positivity.minXPlusY)} at y_${positivity.minXColumn}, min(w+y)=${formatValue(positivity.minWPlusY)} at y_${positivity.minWColumn}.`);
+    return { strict, positivity };
   }
 
   function applyParamsFromInputs() {
@@ -399,21 +600,104 @@
         throw new Error(finiteListTooShortMessage('y', ySpec.length, controls.columnCap));
       }
 
-      $('fs-x-note').textContent = `x: [${summarize(xArr)}]`;
-      $('fs-w-note').textContent = `w: [${summarize(wArr)}]`;
+      const validation = validateParameters(controls.columnCap);
+      $('fs-x-note').textContent = summarizeValues('x', xArr);
+      $('fs-w-note').textContent = `${summarizeValues('w', wArr)}. ${describeGap(validation.strict)}`;
       const ySummary = summarize(ySpec.preview || []);
       $('fs-y-note').textContent = ySpec.kind === 'expr'
-        ? `y: expression, first values [${ySummary}]`
-        : `y: [${ySummary}]${ySpec.length ? `  (length ${ySpec.length})` : ''}`;
-      validateParameters();
+        ? `y: expression through cap ${controls.columnCap}; first=${formatValue(validation.positivity.firstY)}, last=${formatValue(validation.positivity.lastY)}, min=${formatValue(validation.positivity.minY)}, max=${formatValue(validation.positivity.maxY)}; preview [${ySummary}]`
+        : `y: ${ySpec.length} values; first=${formatValue(validation.positivity.firstY)}, last=${formatValue(validation.positivity.lastY)}, min=${formatValue(validation.positivity.minY)}, max=${formatValue(validation.positivity.maxY)}; preview [${ySummary}]`;
       return true;
     } catch (e) {
       setRunState('error', 'error', e.message, 'fs-note err');
+      setValidationDetail('Fix the highlighted parameter condition, then apply/reset or choose a preset.');
       return false;
     }
   }
 
+  function setControlValue(id, value) {
+    const el = $(id);
+    if (el && value != null) el.value = String(value);
+  }
+
+  function setControlChecked(id, value) {
+    const el = $(id);
+    if (el && typeof value === 'boolean') el.checked = value;
+  }
+
+  function syncScaleLabel() {
+    const scaleEl = $('fs-scale');
+    const scaleValEl = $('fs-scale-val');
+    if (scaleEl && scaleValEl) scaleValEl.textContent = `${scaleEl.value}px`;
+  }
+
+  function updatePresetDescription(key = currentPresetKey) {
+    const preset = FACTORIAL_YBE_PRESETS[key] || FACTORIAL_YBE_PRESETS.custom;
+    const note = $('fs-preset-note');
+    if (note) note.textContent = preset.description || '';
+  }
+
+  function markCustomPreset() {
+    if (applyingPreset) return;
+    currentPresetKey = 'custom';
+    const select = $('fs-preset-select');
+    if (select) select.value = 'custom';
+    updatePresetDescription('custom');
+  }
+
+  function applyViewPreset(preset) {
+    if (!preset) return;
+    setControlValue('fs-scale', preset.cellSize);
+    setControlChecked('fs-square-cells', preset.squareCells);
+    setControlValue('fs-path-style', preset.pathStyle);
+    syncScaleLabel();
+    pathRenderer?.setBaseScale(getDesiredCellSize());
+    pathRenderer?.setSquareCells(isSquareCells());
+    pathRenderer?.setPathStyle(getPathStyle());
+  }
+
+  function applyPreset(key, options = {}) {
+    const preset = FACTORIAL_YBE_PRESETS[key];
+    if (!preset || key === 'custom') {
+      currentPresetKey = 'custom';
+      const select = $('fs-preset-select');
+      if (select) select.value = 'custom';
+      updatePresetDescription('custom');
+      return applyParamsFromInputs();
+    }
+
+    applyingPreset = true;
+    try {
+      terminateActiveWorker('', { silent: true });
+      currentPresetKey = key;
+      const select = $('fs-preset-select');
+      if (select) select.value = key;
+      updatePresetDescription(key);
+      setControlValue('fs-N', preset.N);
+      setControlValue('fs-M', preset.M);
+      setControlValue('fs-q', preset.q);
+      setControlValue('fs-alpha', preset.alpha);
+      setControlValue('fs-beta', preset.beta);
+      setControlValue('fs-gamma', preset.gamma);
+      setControlValue('fs-x', preset.x);
+      setControlValue('fs-w', preset.w);
+      setControlValue('fs-y', preset.y);
+      setControlValue('fs-max-cols', preset.columnCap);
+      applyViewPreset(preset);
+
+      const ok = applyParamsFromInputs();
+      if (ok && options.reset !== false) {
+        resetFrozen();
+        pathRenderer?.fit();
+      }
+      return ok;
+    } finally {
+      applyingPreset = false;
+    }
+  }
+
   function applyQSpecToInputs() {
+    markCustomPreset();
     $('fs-x').value = 'alpha*q^i';
     $('fs-w').value = 'gamma*q^i';
     $('fs-y').value = 'beta*q^i';
@@ -421,6 +705,7 @@
   }
 
   function applySafeConstantsToInputs() {
+    markCustomPreset();
     $('fs-x').value = '0.8^N';
     $('fs-w').value = '1^M';
     $('fs-y').value = '0^columnCap';
@@ -1127,7 +1412,8 @@
 
   const BENCHMARK_CONTROL_IDS = [
     'fs-N', 'fs-M', 'fs-q', 'fs-alpha', 'fs-beta', 'fs-gamma',
-    'fs-x', 'fs-w', 'fs-y', 'fs-max-cols',
+    'fs-x', 'fs-w', 'fs-y', 'fs-max-cols', 'fs-scale', 'fs-path-style',
+    'fs-preset-select', 'fs-square-cells',
   ];
 
   function defaultBenchmarkCases(options = {}) {
@@ -1139,12 +1425,15 @@
         q: 0.95,
         alpha: 0.55,
         beta: 0,
-        gamma: 1,
-        x: 'alpha*q^i',
-        w: 'gamma*q^i',
-        y: 'beta*q^i',
-        columnCap: options.defaultColumnCap || 20000,
-      },
+      gamma: 1,
+      x: 'alpha*q^i',
+      w: 'gamma*q^i',
+      y: 'beta*q^i',
+      columnCap: options.defaultColumnCap || 20000,
+      cellSize: 20,
+      squareCells: true,
+      pathStyle: 'tonal',
+    },
       {
         name: 'old fan epsilon-safe',
         N: 12,
@@ -1155,10 +1444,13 @@
         gamma: 1,
         x: '1^N',
         w: '1.001*q^(-50+i)',
-        y: 'q^(i-50)',
-        columnCap: options.oldFanColumnCap || 20000,
-        note: 'The original screenshot had w_50=x=1; this benchmark uses 1.001*w to keep strict w_j > x_i.',
-      },
+      y: 'q^(i-50)',
+      columnCap: options.oldFanColumnCap || 20000,
+      cellSize: 13,
+      squareCells: false,
+      pathStyle: 'tonal',
+      note: 'The original screenshot had w_50=x=1; this benchmark uses 1.001*w to keep strict w_j > x_i.',
+    },
       {
         name: 'large stress',
         N: options.stressN || 80,
@@ -1168,10 +1460,13 @@
         beta: 0,
         gamma: 1,
         x: '0.3^N',
-        w: '1^M',
-        y: '0^columnCap',
-        columnCap: options.stressColumnCap || 20000,
-      },
+      w: '1^M',
+      y: '0^columnCap',
+      columnCap: options.stressColumnCap || 20000,
+      cellSize: 5,
+      squareCells: false,
+      pathStyle: 'tonal',
+    },
     ];
   }
 
@@ -1180,7 +1475,7 @@
     for (const id of BENCHMARK_CONTROL_IDS) {
       const el = $(id);
       if (!el) continue;
-      controls[id] = { value: el.value };
+      controls[id] = { value: el.value, checked: typeof el.checked === 'boolean' ? el.checked : undefined };
     }
     return {
       controls,
@@ -1203,6 +1498,7 @@
     for (const [id, value] of Object.entries(saved.controls || {})) {
       const el = $(id);
       if (el) el.value = value.value;
+      if (el && typeof value.checked === 'boolean') el.checked = value.checked;
     }
     N = saved.N;
     M = saved.M;
@@ -1214,6 +1510,9 @@
     rows = saved.rows.map(row => ({ ...row }));
     levels = saved.levels.map(level => level instanceof Set ? new Set(level) : Array.isArray(level) ? level.slice() : level);
     stats = { ...saved.stats };
+    currentPresetKey = saved.controls?.['fs-preset-select']?.value || 'custom';
+    syncScaleLabel();
+    updatePresetDescription(currentPresetKey);
     if (saved.rendererViewport && pathRenderer) pathRenderer.restoreViewport(saved.rendererViewport);
     setSamplingUi(false);
     refreshStats();
@@ -1239,11 +1538,16 @@
       'fs-w': testCase.w,
       'fs-y': testCase.y,
       'fs-max-cols': testCase.columnCap,
+      'fs-scale': testCase.cellSize,
+      'fs-path-style': testCase.pathStyle,
     };
     for (const [id, value] of Object.entries(assignments)) {
       const el = $(id);
       if (el && value != null) el.value = String(value);
     }
+    setControlChecked('fs-square-cells', testCase.squareCells);
+    syncScaleLabel();
+    applyViewPreset(testCase);
     if (!applyParamsFromInputs()) {
       throw new Error($('fs-validation-note')?.textContent || `Benchmark case ${testCase.name} failed validation.`);
     }
@@ -2051,6 +2355,25 @@
   }
 
   function attachUiEvents() {
+    const presetSelect = $('fs-preset-select');
+    const presetApply = $('fs-preset-apply');
+    if (presetSelect) {
+      presetSelect.addEventListener('change', () => {
+        if (presetSelect.value === 'custom') {
+          currentPresetKey = 'custom';
+          updatePresetDescription('custom');
+          applyParamsFromInputs();
+        } else {
+          applyPreset(presetSelect.value);
+        }
+      });
+    }
+    if (presetApply) {
+      presetApply.addEventListener('click', () => {
+        applyPreset($('fs-preset-select')?.value || currentPresetKey);
+      });
+    }
+
     $('fs-apply-q').addEventListener('click', () => {
       terminateActiveWorker('', { silent: true });
       applyQSpecToInputs();
@@ -2092,7 +2415,23 @@
 
     for (const id of ['fs-x', 'fs-w', 'fs-y', 'fs-q', 'fs-alpha', 'fs-beta', 'fs-gamma']) {
       const el = $(id);
-      if (el) el.addEventListener('change', () => applyParamsFromInputs());
+      if (el) el.addEventListener('change', () => {
+        markCustomPreset();
+        applyParamsFromInputs();
+      });
+    }
+
+    for (const id of ['fs-N', 'fs-M']) {
+      const el = $(id);
+      if (el) el.addEventListener('change', () => markCustomPreset());
+    }
+
+    const capEl = $('fs-max-cols');
+    if (capEl) {
+      capEl.addEventListener('change', () => {
+        markCustomPreset();
+        applyParamsFromInputs();
+      });
     }
 
     const scaleEl = $('fs-scale');
@@ -2150,6 +2489,8 @@
     pathRenderer = new FactorialPathCanvasRenderer(canvas, { viewbar: $('fs-viewbar') });
     attachCanvasEvents();
     attachUiEvents();
+    updatePresetDescription(currentPresetKey);
+    syncScaleLabel();
     applyParamsFromInputs();
     resetFrozen();
 
@@ -2160,6 +2501,8 @@
     window.factorialYBEWorkerSample = sampleOnceWithWorker;
     window.factorialYBEValidateControls = applyParamsFromInputs;
     window.factorialYBEBenchmark = runBenchmark;
+    window.factorialYBEApplyPreset = applyPreset;
+    window.factorialYBEPresets = FACTORIAL_YBE_PRESETS;
     window.factorialYBECancelSample = () => {
       samplingCanceled = true;
       return terminateActiveWorker('Sampling canceled.', { className: 'fs-note warn' });

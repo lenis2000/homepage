@@ -212,25 +212,25 @@ Replace the ugly rainbow path display with a polished canvas visualization.
 
 Make the controls feel intentional and reduce manual parameter pain.
 
-- [ ] Replace the stacked utilitarian controls with a two-column simulation layout on desktop: sticky control panel on the left, large canvas/results panel on the right. On mobile, controls should collapse above/below the canvas cleanly; do not implement a fragile custom drawer unless it is tested.
-- [ ] Use collapsible sections:
+- [x] Replace the stacked utilitarian controls with a two-column simulation layout on desktop: sticky control panel on the left, large canvas/results panel on the right. On mobile, controls should collapse above/below the canvas cleanly; do not implement a fragile custom drawer unless it is tested.
+- [x] Use collapsible sections:
   - Presets and size;
   - Spectral parameters;
   - Sampling/run controls;
   - View/style controls;
   - Model explanation.
-- [ ] Add a preset selector with named presets and short descriptions. Required presets:
+- [x] Add a preset selector with named presets and short descriptions. Required presets:
   - `Default balanced`: current safe small default or a better nontrivial small default.
   - `Old buggy sampler fan (epsilon-safe)`: `N=12`, `M=50`, `q=0.2`, `alpha=1`, `beta=1`, `gamma=1`, `x=1^12`, `w=1.001*q^(-50+i)`, `y=q^(i-50)`, with description noting original screenshot had `w_50=x=1` and this preset nudges `w` for strict validity.
   - `Uniform / Schur-like`: constant-ish safe values.
   - `Near frozen`: a low-activity case that often returns small `lambda`.
   - `Large stress`: a case large enough to prove the worker/WASM path does not freeze the UI.
-- [ ] Applying a preset should update all relevant controls: `N`, `M`, q/alpha/beta/gamma, x/w/y expressions, column cap, cell size/view fit, and notes.
-- [ ] Preset descriptions should explain what visual behavior to expect, not just list numbers.
-- [ ] Improve parameter summaries: show first/last values, min/max, and any dangerous values near equality `w_j ≈ x_i`.
-- [ ] Add a clear validation panel for strict inequalities and positivity. It should say what failed and how to fix it.
-- [ ] Keep advanced raw x/w/y entry available, but do not make it the first thing users see.
-- [ ] Preserve existing IDs where practical so browser tests can interact with controls.
+- [x] Applying a preset should update all relevant controls: `N`, `M`, q/alpha/beta/gamma, x/w/y expressions, column cap, cell size/view fit, and notes.
+- [x] Preset descriptions should explain what visual behavior to expect, not just list numbers.
+- [x] Improve parameter summaries: show first/last values, min/max, and any dangerous values near equality `w_j ≈ x_i`.
+- [x] Add a clear validation panel for strict inequalities and positivity. It should say what failed and how to fix it.
+- [x] Keep advanced raw x/w/y entry available, but do not make it the first thing users see.
+- [x] Preserve existing IDs where practical so browser tests can interact with controls.
 
 ### Task 5: Tests, smoke checks, and stale-file cleanup
 

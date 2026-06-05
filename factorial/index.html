@@ -22,12 +22,68 @@ title: "Exact sampler for factorial Schur processes"
   [data-theme="dark"] .fs-wrap {
     --fs-panel-strong: #202833;
   }
+  .fs-app-shell {
+    display: grid;
+    grid-template-columns: minmax(292px, 350px) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+  .fs-control-panel {
+    position: sticky;
+    top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: calc(100vh - 20px);
+    overflow: auto;
+    padding-right: 2px;
+  }
+  .fs-results-panel {
+    min-width: 0;
+  }
+  .fs-section,
   .fs-controls {
     background: var(--fs-panel);
     border: 1px solid var(--fs-border);
     border-radius: 6px;
+    margin: 0;
+  }
+  .fs-controls {
     padding: 10px 14px;
     margin-bottom: 10px;
+  }
+  .fs-section > summary {
+    cursor: pointer;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0;
+    color: var(--fs-muted);
+    font-family: "franklingothic-demi", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    list-style: none;
+  }
+  .fs-section > summary::-webkit-details-marker {
+    display: none;
+  }
+  .fs-section > summary::after {
+    content: "+";
+    float: right;
+    color: var(--fs-orange);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .fs-section[open] > summary {
+    border-bottom: 1px solid var(--fs-border);
+  }
+  .fs-section[open] > summary::after {
+    content: "-";
+  }
+  .fs-section > summary:focus-visible {
+    outline: 3px solid var(--fs-orange);
+    outline-offset: 2px;
+  }
+  .fs-section-body {
+    padding: 10px 12px 12px;
   }
   .fs-controls h3 {
     font-size: 13px;
@@ -50,9 +106,40 @@ title: "Exact sampler for factorial Schur processes"
     align-items: center;
     gap: 4px;
   }
+  .fs-field.stack {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 3px;
+  }
   .fs-field input[type="number"] { width: 64px; padding: 3px 5px; }
   .fs-field input[type="text"]   { padding: 3px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .fs-field select,
+  .fs-select {
+    border: 1px solid var(--fs-border);
+    border-radius: 4px;
+    background: var(--fs-panel-strong);
+    color: var(--fs-text);
+    padding: 4px 6px;
+    font-size: 13px;
+  }
   .fs-field label { font-size: 13px; color: var(--fs-text); }
+  .fs-control-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .fs-control-grid .fs-field input,
+  .fs-control-grid .fs-field select {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .fs-button-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 8px;
+  }
   .fs-btn {
     padding: 4px 12px;
     border: 1px solid var(--fs-border);
@@ -64,6 +151,7 @@ title: "Exact sampler for factorial Schur processes"
   }
   .fs-btn:hover { border-color: var(--fs-navy); }
   .fs-btn:focus-visible,
+  .fs-select:focus-visible,
   .fs-view-select:focus-visible {
     outline: 3px solid var(--fs-orange);
     outline-offset: 2px;
@@ -81,13 +169,82 @@ title: "Exact sampler for factorial Schur processes"
     border-color: #b71c1c;
   }
   .fs-btn.danger:hover { background: #c62828; }
+  .fs-preset-note,
+  .fs-help {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--fs-muted);
+    margin-top: 7px;
+  }
+  .fs-preset-select {
+    width: 100%;
+    margin-top: 3px;
+  }
   .fs-paramline { display:flex; gap:6px; align-items:center; margin-top:4px; }
   .fs-paramline label { width: 22px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; font-size: 13px; }
   .fs-paramline input[type="text"] { flex: 1; }
-  .fs-note { font-size: 11px; color: #777; margin: 2px 0 4px 28px; }
+  .fs-note { font-size: 11px; color: #777; margin: 2px 0 4px 0; }
   .fs-note.ok { color:#137333; }
   .fs-note.warn { color:#9a5a00; font-weight:600; }
   .fs-note.err { color:#b00020; font-weight:600; }
+  .fs-summary-grid {
+    display: grid;
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+  .fs-param-summary {
+    background: var(--fs-panel-strong);
+    border: 1px solid var(--fs-border);
+    border-radius: 4px;
+    padding: 5px 7px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    overflow-wrap: anywhere;
+  }
+  .fs-validation-panel {
+    background: var(--fs-panel-strong);
+    border: 1px solid var(--fs-border);
+    border-left: 4px solid #1976d2;
+    border-radius: 4px;
+    padding: 7px 8px;
+    margin: 8px 0;
+  }
+  .fs-validation-panel.fs-validation-error {
+    border-left-color: #b00020;
+  }
+  .fs-validation-panel.fs-validation-warn,
+  .fs-validation-panel.fs-validation-canceled {
+    border-left-color: #9a5a00;
+  }
+  .fs-validation-panel.fs-validation-ok,
+  .fs-validation-panel.fs-validation-ready,
+  .fs-validation-panel.fs-validation-done {
+    border-left-color: #137333;
+  }
+  .fs-validation-heading {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--fs-text);
+    margin-bottom: 3px;
+  }
+  .fs-validation-detail {
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--fs-muted);
+    overflow-wrap: anywhere;
+  }
+  .fs-advanced-params {
+    margin-top: 8px;
+  }
+  .fs-advanced-params > summary {
+    cursor: pointer;
+    color: var(--fs-navy);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  [data-theme="dark"] .fs-advanced-params > summary {
+    color: #89b7df;
+  }
   #fs-canvas-wrap {
     overflow: hidden;
     border: 1px solid var(--fs-border);
@@ -96,7 +253,7 @@ title: "Exact sampler for factorial Schur processes"
     margin: 6px 0;
     padding: 0;
     width: 100%;
-    height: min(72vh, 80vw);
+    height: min(76vh, 760px);
     position: relative;
   }
   #fs-canvas {
@@ -183,23 +340,6 @@ title: "Exact sampler for factorial Schur processes"
     line-height: 1.55;
   }
   .fs-info code { background: #f5f5f5; padding: 1px 4px; border-radius: 3px; }
-  details.fs-about > summary {
-    cursor: pointer;
-    font-weight: 600;
-    color: #174a7c;
-    padding: 8px 12px;
-    background: #eef5fb;
-    border: 1px solid #cfe0f0;
-    border-radius: 5px;
-  }
-  details.fs-about[open] > summary { border-radius: 5px 5px 0 0; }
-  details.fs-about > div {
-    padding: 10px 14px;
-    border: 1px solid #cfe0f0;
-    border-top: none;
-    border-radius: 0 0 5px 5px;
-    background: #fafcfe;
-  }
   .fs-legend { font-size: 12px; color: #444; }
   .fs-chip { display:inline-block; padding:1px 6px; border-radius:8px; font-family: ui-monospace, monospace; }
   .fs-chip.mu { background:#fff4dc; border:1px solid #f0c067; color:#7a4a00; }
@@ -211,7 +351,24 @@ title: "Exact sampler for factorial Schur processes"
     margin: 6px 0 10px 0;
     overflow-wrap: anywhere;
   }
+  @media (max-width: 900px) {
+    .fs-app-shell {
+      grid-template-columns: 1fr;
+    }
+    .fs-control-panel {
+      position: static;
+      max-height: none;
+      overflow: visible;
+      padding-right: 0;
+    }
+    #fs-canvas-wrap {
+      height: 70vh;
+    }
+  }
   @media (max-width: 640px) {
+    .fs-control-grid {
+      grid-template-columns: 1fr;
+    }
     .fs-canvas-toolbar {
       right: 8px;
     }
@@ -237,130 +394,173 @@ Yang--Baxter bijectivisation.  The local random split is
 <code>(x+y)/(w+y)</code> versus <code>(w−x)/(w+y)</code>.
 </p>
 
-<details class="fs-about">
-  <summary>About the model and exact sampler</summary>
-  <div class="fs-info">
-    <p>The sampler starts from the frozen right-hand side configuration of the Cauchy identity</p>
-    <p style="text-align:center;">
-      <code>Σ<sub>λ</sub> s<sub>λ</sub>(x<sub>1</sub>,…,x<sub>N</sub> | y) š<sub>λ</sub>(w<sub>1</sub>,…,w<sub>M</sub> | y)
-      = Π<sub>i,j</sub>(w<sub>j</sub>−x<sub>i</sub>)<sup>−1</sup></code>,
-    </p>
-    <p>and runs the reverse Cauchy sequence of local Yang--Baxter moves.  In row language, the
-    initially frozen order has all <code>w</code>-rows above all <code>x</code>-rows.  The algorithm bubbles each
-    <code>x</code>-row through the <code>w</code>-rows.  Every adjacent row swap is deterministic except at one
-    Bernoulli split with probabilities
-    <code>θ=(x+y<sub>k</sub>)/(w+y<sub>k</sub>)</code> and <code>1−θ=(w−x)/(w+y<sub>k</sub>)</code>.</p>
-    <p>The output is the full two-sided Gelfand--Tsetlin path ensemble.  The common boundary row is
-    the sampled signature <code>λ</code>.  For probabilistic parameters the page checks
-    <code>w<sub>j</sub> &gt; x<sub>i</sub></code> for every pair before sampling.</p>
-  </div>
-</details>
+<div class="fs-app-shell">
+  <aside class="fs-control-panel" aria-label="Factorial Schur sampler controls">
+    <details class="fs-section" open>
+      <summary>Presets and size</summary>
+      <div class="fs-section-body">
+        <label class="fs-field stack" for="fs-preset-select">
+          <span>Preset</span>
+          <select id="fs-preset-select" class="fs-select fs-preset-select">
+            <option value="default-balanced" selected>Default balanced</option>
+            <option value="old-fan-epsilon-safe">Old buggy sampler fan (epsilon-safe)</option>
+            <option value="uniform-schur-like">Uniform / Schur-like</option>
+            <option value="near-frozen">Near frozen</option>
+            <option value="large-stress">Large stress</option>
+            <option value="custom">Custom parameters</option>
+          </select>
+        </label>
+        <div id="fs-preset-note" class="fs-preset-note"></div>
+        <div class="fs-button-row">
+          <button id="fs-preset-apply" class="fs-btn primary" type="button">Apply preset</button>
+          <button id="fs-resize-btn" class="fs-btn" type="button" title="Re-read N, M, params and reset to the frozen configuration">Apply &amp; Reset</button>
+        </div>
 
-<br>
+        <div class="fs-control-grid" style="margin-top:10px;">
+          <label class="fs-field stack" for="fs-N"><span>N (x-rows / paths)</span><input id="fs-N" type="number" value="6" min="1" max="120"></label>
+          <label class="fs-field stack" for="fs-M"><span>M (w-rows)</span><input id="fs-M" type="number" value="6" min="1" max="120"></label>
+          <label class="fs-field stack" for="fs-q"><span>q</span><input id="fs-q" type="number" value="0.95" min="0" max="0.999" step="0.001"></label>
+          <label class="fs-field stack" for="fs-alpha"><span>alpha</span><input id="fs-alpha" type="number" value="0.55" step="0.05"></label>
+          <label class="fs-field stack" for="fs-beta"><span>beta</span><input id="fs-beta" type="number" value="0" step="0.05"></label>
+          <label class="fs-field stack" for="fs-gamma"><span>gamma</span><input id="fs-gamma" type="number" value="1.0" step="0.05"></label>
+        </div>
+      </div>
+    </details>
 
-<div class="fs-controls">
-  <h3>Sizes &amp; q-specialization</h3>
-  <div class="fs-row">
-    <span class="fs-field"><label for="fs-N">N (x-rows / paths) =</label><input id="fs-N" type="number" value="6" min="1" max="120"></span>
-    <span class="fs-field"><label for="fs-M">M (w-rows) =</label><input id="fs-M" type="number" value="6" min="1" max="120"></span>
-    <span class="fs-field"><label for="fs-q">q =</label><input id="fs-q" type="number" value="0.95" min="0" max="0.999" step="0.001"></span>
-    <span class="fs-field"><label for="fs-alpha">α =</label><input id="fs-alpha" type="number" value="0.55" step="0.05"></span>
-    <span class="fs-field"><label for="fs-beta">β =</label><input id="fs-beta" type="number" value="0" step="0.05"></span>
-    <span class="fs-field"><label for="fs-gamma">γ =</label><input id="fs-gamma" type="number" value="1.0" step="0.05"></span>
-    <button id="fs-apply-q" class="fs-btn">Apply q-spec ⇒ x,y,w</button>
-    <button id="fs-uniform-btn" class="fs-btn">Safe constants</button>
-    <button id="fs-resize-btn" class="fs-btn primary" title="Re-read N, M, params and reset to the frozen configuration">Apply &amp; Reset</button>
-  </div>
-  <div style="font-size:11px; color:#666; margin-top:2px;">
-    q-specialization sets <code>x<sub>i</sub> = αq<sup>i</sup></code>, <code>w<sub>k</sub> = γq<sup>k</sup></code>,
-    <code>y<sub>r</sub> = βq<sup>r</sup></code>.  Choose parameters with every <code>w<sub>k</sub> &gt; x<sub>i</sub></code>;
-    if samples stay at λ=0, increase the ratios <code>x<sub>i</sub>/w<sub>k</sub></code> while preserving this inequality.
-  </div>
-</div>
+    <details class="fs-section" open>
+      <summary>Spectral parameters</summary>
+      <div class="fs-section-body">
+        <div class="fs-summary-grid" aria-live="polite">
+          <div id="fs-x-note" class="fs-note fs-param-summary"></div>
+          <div id="fs-w-note" class="fs-note fs-param-summary"></div>
+          <div id="fs-y-note" class="fs-note fs-param-summary"></div>
+        </div>
+        <div id="fs-validation-panel" class="fs-validation-panel fs-validation-ready" aria-live="polite">
+          <div class="fs-validation-heading">Validation</div>
+          <div id="fs-validation-note" class="fs-note"></div>
+          <div id="fs-validation-detail" class="fs-validation-detail"></div>
+        </div>
+        <div class="fs-button-row">
+          <button id="fs-apply-q" class="fs-btn" type="button">Apply q-specialization</button>
+          <button id="fs-uniform-btn" class="fs-btn" type="button">Safe constants</button>
+        </div>
+        <details class="fs-advanced-params">
+          <summary>Advanced x/w/y expressions</summary>
+          <div class="fs-paramline"><label for="fs-x">x:</label><input id="fs-x" type="text" value="alpha*q^i"></div>
+          <div class="fs-paramline"><label for="fs-w">w:</label><input id="fs-w" type="text" value="gamma*q^i"></div>
+          <div class="fs-paramline"><label for="fs-y">y:</label><input id="fs-y" type="text" value="beta*q^i"></div>
+          <div class="fs-help">
+            Syntax: list <code>1,2,3</code> · repeat <code>0.5^4</code>, <code>1^N</code>, <code>1^M</code>, <code>0^columnCap</code> · pattern <code>(0.5,0.7)^3</code> · expression
+            <code>alpha*q^i</code>, <code>10*q^i</code>, <code>q^(-i)/2</code>. Expressions are evaluated at
+            <code>i=1...N</code> for <code>x</code>, <code>i=1...M</code> for <code>w</code>, and up to the column cap for <code>y</code>.
+          </div>
+        </details>
+      </div>
+    </details>
 
-<div class="fs-controls">
-  <h3>Spectral parameters x, w, y</h3>
-  <div class="fs-paramline"><label>x:</label><input id="fs-x" type="text" value="alpha*q^i"></div>
-  <div id="fs-x-note" class="fs-note"></div>
-  <div class="fs-paramline"><label>w:</label><input id="fs-w" type="text" value="gamma*q^i"></div>
-  <div id="fs-w-note" class="fs-note"></div>
-  <div class="fs-paramline"><label>y:</label><input id="fs-y" type="text" value="beta*q^i"></div>
-  <div id="fs-y-note" class="fs-note"></div>
-  <div id="fs-validation-note" class="fs-note"></div>
-  <div style="font-size:11px; color:#666; margin-top:2px;">
-    Syntax: list <code>1,2,3</code> · repeat <code>0.5^4</code>, <code>1^N</code>, <code>1^M</code>, <code>0^columnCap</code> · pattern <code>(0.5,0.7)^3</code> · expression
-    <code>alpha*q^i</code>, <code>10*q^i</code>, <code>q^(-i)/2</code>.  Expressions are evaluated at
-    <code>i=1…N</code> for <code>x</code>, <code>i=1…M</code> for <code>w</code>, and up to the column cap for <code>y</code>.
-    Finite lists must be long enough; use a repeat when a constant sequence is intended.
-  </div>
-</div>
+    <details class="fs-section" open>
+      <summary>Sampling/run controls</summary>
+      <div class="fs-section-body">
+        <div class="fs-button-row">
+          <button id="fs-sample-btn" class="fs-btn primary" type="button">Sample exactly</button>
+          <span class="fs-field">
+            <button id="fs-multi-sample-btn" class="fs-btn" type="button">Sample</button>
+            <span style="margin-left:2px;">x</span>
+            <select id="fs-sample-count" class="fs-select" style="margin-left:2px;">
+              <option>1</option>
+              <option selected>10</option>
+              <option>100</option>
+            </select>
+          </span>
+          <button id="fs-reset-btn" class="fs-btn danger" type="button">Reset frozen</button>
+          <button id="fs-cancel-btn" class="fs-btn danger" type="button" disabled>Cancel</button>
+        </div>
+        <label class="fs-field stack" for="fs-max-cols" style="margin-top:10px;">
+          <span>column cap</span>
+          <input id="fs-max-cols" type="number" value="20000" min="100" max="1000000" step="100">
+        </label>
+      </div>
+    </details>
 
-<div class="fs-controls">
-  <h3>Exact Yang--Baxter sampler</h3>
-  <div class="fs-row">
-    <button id="fs-sample-btn" class="fs-btn primary">Sample exactly</button>
-    <span class="fs-field">
-      <button id="fs-multi-sample-btn" class="fs-btn">Sample</button>
-      <span style="margin-left:2px;">×</span>
-      <select id="fs-sample-count" style="margin-left:2px;">
-        <option>1</option>
-        <option selected>10</option>
-        <option>100</option>
-      </select>
-    </span>
-    <span class="fs-field"><label for="fs-max-cols">column cap:</label><input id="fs-max-cols" type="number" value="20000" min="100" max="1000000" step="100" style="width:86px;"></span>
-    <span class="fs-field">
-      <label for="fs-scale">cell size:</label>
-      <input id="fs-scale" type="range" min="3" max="60" step="1" value="20" style="width:120px;vertical-align:middle;">
-      <span id="fs-scale-val" style="font-size:11px;color:#1976d2;width:30px;display:inline-block;text-align:right;">20px</span>
-      <button id="fs-scale-fit" class="fs-btn" title="Auto-fit cell size to canvas" style="padding:2px 8px;font-size:11px;">fit</button>
-      <label style="margin-left:8px;font-size:12px;">
-        <input type="checkbox" id="fs-square-cells" checked>
-        square cells
-      </label>
-    </span>
-    <button id="fs-reset-btn" class="fs-btn danger">Reset frozen</button>
-    <button id="fs-cancel-btn" class="fs-btn danger" disabled>Cancel</button>
-  </div>
-  <div class="fs-stats" id="fs-stats">
-    <span>samples: <span class="v" id="fs-stat-samples">0</span></span>
-    <span>|λ|: <span class="v" id="fs-stat-size">0</span></span>
-    <span>max position: <span class="v" id="fs-stat-maxp">0</span></span>
-    <span>row swaps: <span class="v" id="fs-stat-swaps">0</span></span>
-    <span>YB moves: <span class="v" id="fs-stat-moves">0</span></span>
-    <span>Bernoulli choices: <span class="v" id="fs-stat-random">0</span></span>
-    <span>time: <span class="v" id="fs-stat-time">0.00 ms</span></span>
-  </div>
-  <div class="fs-status-strip" aria-live="polite">
-    <span>phase: <span class="v" id="fs-status-phase">ready</span></span>
-    <span>elapsed: <span class="v" id="fs-status-elapsed">0.00 s</span></span>
-  </div>
-  <div class="fs-lambda-line">λ = <span id="fs-lambda">∅</span></div>
-</div>
+    <details class="fs-section" open>
+      <summary>View/style controls</summary>
+      <div class="fs-section-body">
+        <label class="fs-field stack" for="fs-scale">
+          <span>cell size <span id="fs-scale-val" style="font-size:11px;color:#1976d2;">20px</span></span>
+          <input id="fs-scale" type="range" min="3" max="60" step="1" value="20">
+        </label>
+        <div class="fs-button-row">
+          <button id="fs-scale-fit" class="fs-btn" type="button" title="Auto-fit cell size to canvas">fit</button>
+          <label class="fs-field" style="font-size:12px;">
+            <input type="checkbox" id="fs-square-cells" checked>
+            square cells
+          </label>
+        </div>
+        <label class="fs-field stack" for="fs-path-style" style="margin-top:10px;">
+          <span>Path style</span>
+          <select id="fs-path-style" class="fs-select">
+            <option value="tonal" selected>Tonal navy</option>
+            <option value="legacy">Legacy colors</option>
+          </select>
+        </label>
+      </div>
+    </details>
 
-<div id="fs-canvas-wrap">
-  <canvas id="fs-canvas" role="img"
-          aria-label="Visualization of a sampled two-sided Gelfand-Tsetlin pattern as nonintersecting up-right paths"></canvas>
-  <div class="fs-canvas-toolbar" aria-label="Canvas view controls">
-    <button id="fs-view-fit" class="fs-btn fs-view-btn" type="button" title="Fit the sampled paths">Fit</button>
-    <button id="fs-view-actual" class="fs-btn fs-view-btn" type="button" title="Set one model cell to the selected cell size">100%</button>
-    <button id="fs-view-zoom-out" class="fs-btn fs-view-btn" type="button" title="Zoom out">&minus;</button>
-    <button id="fs-view-zoom-in" class="fs-btn fs-view-btn" type="button" title="Zoom in">+</button>
-    <label class="fs-view-label" for="fs-path-style">Path style</label>
-    <select id="fs-path-style" class="fs-view-select">
-      <option value="tonal" selected>Tonal navy</option>
-      <option value="legacy">Legacy colors</option>
-    </select>
-  </div>
-  <div class="fs-viewbar" id="fs-viewbar">zoom 100%</div>
-</div>
+    <details class="fs-section fs-about">
+      <summary>Model explanation</summary>
+      <div class="fs-section-body fs-info">
+        <p>The sampler starts from the frozen right-hand side configuration of the Cauchy identity</p>
+        <p style="text-align:center;">
+          <code>Σ<sub>λ</sub> s<sub>λ</sub>(x<sub>1</sub>,…,x<sub>N</sub> | y) š<sub>λ</sub>(w<sub>1</sub>,…,w<sub>M</sub> | y)
+          = Π<sub>i,j</sub>(w<sub>j</sub>−x<sub>i</sub>)<sup>−1</sup></code>,
+        </p>
+        <p>and runs the reverse Cauchy sequence of local Yang--Baxter moves. In row language, the
+        initially frozen order has all <code>w</code>-rows above all <code>x</code>-rows. The algorithm bubbles each
+        <code>x</code>-row through the <code>w</code>-rows. Every adjacent row swap is deterministic except at one
+        Bernoulli split with probabilities
+        <code>θ=(x+y<sub>k</sub>)/(w+y<sub>k</sub>)</code> and <code>1−θ=(w−x)/(w+y<sub>k</sub>)</code>.</p>
+        <p>The output is the full two-sided Gelfand--Tsetlin path ensemble. The common boundary row is
+        the sampled signature <code>λ</code>. For probabilistic parameters the page checks
+        <code>w<sub>j</sub> &gt; x<sub>i</sub></code> for every pair before sampling.</p>
+      </div>
+    </details>
+  </aside>
 
-<div class="fs-legend" style="margin: 6px 0;">
-  <span class="fs-chip mu">μ-stack</span> rows j=0..M (sampled <code>w</code>-environment, all N particles) &nbsp;·&nbsp;
-  <span class="fs-chip lam">λ-stack</span> rows j=0..N (sampled <code>x</code>-environment, j particles each) &nbsp;·&nbsp;
-  the middle row is the sampled signature λ.
+  <section class="fs-results-panel" aria-label="Sampler output">
+    <div class="fs-status-strip" aria-live="polite">
+      <span>phase: <span class="v" id="fs-status-phase">ready</span></span>
+      <span>elapsed: <span class="v" id="fs-status-elapsed">0.00 s</span></span>
+    </div>
+    <div id="fs-canvas-wrap">
+      <canvas id="fs-canvas" role="img"
+              aria-label="Visualization of a sampled two-sided Gelfand-Tsetlin pattern as nonintersecting up-right paths"></canvas>
+      <div class="fs-canvas-toolbar" aria-label="Canvas view controls">
+        <button id="fs-view-fit" class="fs-btn fs-view-btn" type="button" title="Fit the sampled paths">Fit</button>
+        <button id="fs-view-actual" class="fs-btn fs-view-btn" type="button" title="Set one model cell to the selected cell size">100%</button>
+        <button id="fs-view-zoom-out" class="fs-btn fs-view-btn" type="button" title="Zoom out">&minus;</button>
+        <button id="fs-view-zoom-in" class="fs-btn fs-view-btn" type="button" title="Zoom in">+</button>
+      </div>
+      <div class="fs-viewbar" id="fs-viewbar">zoom 100%</div>
+    </div>
+
+    <div class="fs-stats" id="fs-stats">
+      <span>samples: <span class="v" id="fs-stat-samples">0</span></span>
+      <span>|λ|: <span class="v" id="fs-stat-size">0</span></span>
+      <span>max position: <span class="v" id="fs-stat-maxp">0</span></span>
+      <span>row swaps: <span class="v" id="fs-stat-swaps">0</span></span>
+      <span>YB moves: <span class="v" id="fs-stat-moves">0</span></span>
+      <span>Bernoulli choices: <span class="v" id="fs-stat-random">0</span></span>
+      <span>time: <span class="v" id="fs-stat-time">0.00 ms</span></span>
+    </div>
+    <div class="fs-lambda-line">λ = <span id="fs-lambda">∅</span></div>
+    <div class="fs-legend" style="margin: 6px 0;">
+      <span class="fs-chip mu">μ-stack</span> rows j=0..M (sampled <code>w</code>-environment, all N particles) &nbsp;·&nbsp;
+      <span class="fs-chip lam">λ-stack</span> rows j=0..N (sampled <code>x</code>-environment, j particles each) &nbsp;·&nbsp;
+      the middle row is the sampled signature λ.
+    </div>
+  </section>
 </div>
 
 </div><!-- /fs-wrap -->
 
-<script src="/js/factorial-ybe-sampler.js?v=20260605-active"></script>
+<script src="/js/factorial-ybe-sampler.js?v=20260605-presets"></script>

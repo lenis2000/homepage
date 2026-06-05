@@ -35,6 +35,19 @@ function checkSource() {
   const wasmBundle = fs.readFileSync(path.join(root, "js", "factorial-ybe-wasm.js"), "utf8");
 
   assert(page.includes("/js/factorial-ybe-sampler.js"), "/factorial/ should load the YBE sampler");
+  assert(page.includes('class="fs-app-shell"'), "/factorial/ should use the two-column simulation layout");
+  assert(page.includes('class="fs-control-panel"'), "/factorial/ should expose a dedicated control panel");
+  assert(page.includes('class="fs-results-panel"'), "/factorial/ should expose a dedicated results panel");
+  assert(page.includes('id="fs-preset-select"'), "/factorial/ should expose a preset selector");
+  assert(page.includes("Old buggy sampler fan (epsilon-safe)"), "/factorial/ should include the old fan epsilon-safe preset");
+  assert(page.includes("Uniform / Schur-like"), "/factorial/ should include a uniform Schur-like preset");
+  assert(page.includes("Large stress"), "/factorial/ should include a large stress preset");
+  assert(page.includes("Presets and size"), "/factorial/ should group presets and size in a collapsible section");
+  assert(page.includes("Spectral parameters"), "/factorial/ should group spectral parameters in a collapsible section");
+  assert(page.includes("Sampling/run controls"), "/factorial/ should group run controls in a collapsible section");
+  assert(page.includes("View/style controls"), "/factorial/ should group view controls in a collapsible section");
+  assert(page.includes("Model explanation"), "/factorial/ should keep model explanation in a collapsible section");
+  assert(page.includes('id="fs-validation-panel"'), "/factorial/ should expose a validation panel");
   assert(page.includes('id="fs-status-phase"'), "/factorial/ should expose a visible phase status");
   assert(page.includes('id="fs-status-elapsed"'), "/factorial/ should expose visible elapsed seconds");
   assert(!page.includes("factorial-glauber.js"), "/factorial/ should not load stale Glauber JS");
@@ -48,6 +61,9 @@ function checkSource() {
   assert(sampler.includes("window.factorialYBEReferenceSample"), "seeded JS reference hook should be exposed");
   assert(sampler.includes("window.factorialYBEWorkerSample"), "worker/WASM sample hook should be exposed");
   assert(sampler.includes("window.factorialYBEBenchmark"), "dev benchmark helper should be exposed");
+  assert(sampler.includes("FACTORIAL_YBE_PRESETS"), "named presets should be defined in the sampler script");
+  assert(sampler.includes("window.factorialYBEApplyPreset"), "preset application should be exposed for smoke tests");
+  assert(sampler.includes("Closest gap"), "parameter summaries should report the closest strict-inequality gap");
   assert(sampler.includes("class FactorialPathCanvasRenderer"), "canvas rendering should be owned by FactorialPathCanvasRenderer");
   assert(sampler.includes("window.factorialYBERenderer"), "renderer diagnostics should be exposed for smoke tests");
   assert(sampler.includes("OffscreenCanvas"), "renderer should cache static layers with OffscreenCanvas when available");
@@ -256,7 +272,7 @@ async function runBrowserSmoke() {
     await client.send("Runtime.enable");
     await waitForPageCondition(
       client,
-      "typeof window.factorialYBEReferenceSample === 'function' && typeof window.factorialYBEWorkerSample === 'function' && typeof window.factorialYBEBenchmark === 'function'",
+      "typeof window.factorialYBEReferenceSample === 'function' && typeof window.factorialYBEWorkerSample === 'function' && typeof window.factorialYBEBenchmark === 'function' && typeof window.factorialYBEApplyPreset === 'function'",
       "factorial sampler hooks"
     );
 
@@ -312,6 +328,51 @@ async function runBrowserSmoke() {
     assert(result && result.rowSwaps === 9, "browser smoke should return deterministic reference stats");
     console.log(`Factorial seeded reference smoke passed: lambda=(${result.lambda.join(",")}), moves=${result.localMoves}.`);
 
+    const presetResult = await evaluate(client, `(() => {
+      function assertBrowser(condition, message) {
+        if (!condition) throw new Error(message);
+      }
+      const ok = window.factorialYBEApplyPreset("old-fan-epsilon-safe");
+      const state = window.factorialExactSamplerState();
+      const wMin = Math.min(...state.wArr);
+      const xMax = Math.max(...state.xArr);
+      const note = document.getElementById("fs-preset-note").textContent;
+      const validation = document.getElementById("fs-validation-note").textContent;
+      const detail = document.getElementById("fs-validation-detail").textContent;
+      assertBrowser(ok, "old fan preset should validate");
+      return {
+        N: document.getElementById("fs-N").value,
+        M: document.getElementById("fs-M").value,
+        q: document.getElementById("fs-q").value,
+        x: document.getElementById("fs-x").value,
+        w: document.getElementById("fs-w").value,
+        y: document.getElementById("fs-y").value,
+        cap: document.getElementById("fs-max-cols").value,
+        scale: document.getElementById("fs-scale").value,
+        square: document.getElementById("fs-square-cells").checked,
+        pathStyle: document.getElementById("fs-path-style").value,
+        selected: document.getElementById("fs-preset-select").value,
+        note,
+        validation,
+        detail,
+        wMin,
+        xMax
+      };
+    })()`, 30000);
+
+    assert(presetResult.N === "12" && presetResult.M === "50", "old fan preset should set N=12 and M=50");
+    assert(presetResult.q === "0.2", "old fan preset should set q=0.2");
+    assert(presetResult.x === "1^12", "old fan preset should use x=1^12");
+    assert(presetResult.w === "1.001*q^(-50+i)", "old fan preset should nudge w by epsilon");
+    assert(presetResult.y === "q^(i-50)", "old fan preset should use the old fan y expression");
+    assert(Number(presetResult.cap) >= 20000, "old fan preset should set a useful column cap");
+    assert(presetResult.scale === "13" && presetResult.square === false, "old fan preset should set view controls for the fan");
+    assert(presetResult.pathStyle === "tonal", "old fan preset should keep tonal paths as default");
+    assert(presetResult.selected === "old-fan-epsilon-safe", "old fan preset should remain selected after applying");
+    assert(presetResult.note.includes("fan shape") && presetResult.note.includes("strictly larger"), "old fan preset note should explain the expected visual behavior and epsilon fix");
+    assert(presetResult.validation.includes("strict inequalities") && presetResult.detail.includes("Closest gap"), "preset validation should summarize strict inequalities");
+    assert(presetResult.wMin > presetResult.xMax, "old fan preset should satisfy strict w>x");
+
     const parserResult = await evaluate(client, `(() => {
       document.getElementById("fs-N").value = "4";
       document.getElementById("fs-M").value = "5";
@@ -339,7 +400,11 @@ async function runBrowserSmoke() {
         repeatX: repeatState.xArr,
         repeatW: repeatState.wArr,
         phaseText: document.getElementById("fs-status-phase").textContent,
-        elapsedText: document.getElementById("fs-status-elapsed").textContent
+        elapsedText: document.getElementById("fs-status-elapsed").textContent,
+        xNote: document.getElementById("fs-x-note").textContent,
+        wNote: document.getElementById("fs-w-note").textContent,
+        yNote: document.getElementById("fs-y-note").textContent,
+        validationDetail: document.getElementById("fs-validation-detail").textContent
       };
     })()`);
 
@@ -352,6 +417,10 @@ async function runBrowserSmoke() {
     assert(parserResult.repeatW.length === 5 && parserResult.repeatW.every(value => value === 1.001), "1.001^M should expand to M w-values");
     assert(parserResult.phaseText === "ready", "successful validation should leave the page ready");
     assert(/s$/.test(parserResult.elapsedText), "elapsed status should be shown in seconds");
+    assert(parserResult.xNote.includes("first=") && parserResult.xNote.includes("min=") && parserResult.xNote.includes("max="), "x summary should include first/last/min/max values");
+    assert(parserResult.wNote.includes("Closest gap"), "w summary should include the closest strict-inequality gap");
+    assert(parserResult.yNote.includes("first=") && parserResult.yNote.includes("max="), "y summary should include cap-aware min/max values");
+    assert(parserResult.validationDetail.includes("Positivity margins"), "validation detail should include positivity margins");
 
     const workerResult = await evaluate(client, `(async () => {
       document.getElementById("fs-N").value = "3";
