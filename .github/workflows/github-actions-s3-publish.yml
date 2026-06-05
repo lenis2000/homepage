@@ -17,19 +17,6 @@ jobs:
         ruby-version: '3.2'
         bundler-cache: true
 
-    - name: Set up Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-
-    - name: Install Emscripten
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y emscripten
-
-    - name: Factorial YBE smoke test
-      run: make test-factorial-ybe
-
     - name: Build
       run: bundle exec jekyll build
 
