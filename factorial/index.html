@@ -68,6 +68,7 @@ title: "Exact sampler for factorial Schur processes"
   .fs-paramline input[type="text"] { flex: 1; }
   .fs-note { font-size: 11px; color: #777; margin: 2px 0 4px 28px; }
   .fs-note.ok { color:#137333; }
+  .fs-note.warn { color:#9a5a00; font-weight:600; }
   .fs-note.err { color:#b00020; font-weight:600; }
   #fs-canvas-wrap {
     overflow: hidden;
@@ -183,16 +184,17 @@ Yang--Baxter bijectivisation.  The local random split is
     <span class="fs-field"><label for="fs-N">N (x-rows / paths) =</label><input id="fs-N" type="number" value="6" min="1" max="120"></span>
     <span class="fs-field"><label for="fs-M">M (w-rows) =</label><input id="fs-M" type="number" value="6" min="1" max="120"></span>
     <span class="fs-field"><label for="fs-q">q =</label><input id="fs-q" type="number" value="0.95" min="0" max="0.999" step="0.001"></span>
-    <span class="fs-field"><label for="fs-alpha">α =</label><input id="fs-alpha" type="number" value="0.5" step="0.05"></span>
+    <span class="fs-field"><label for="fs-alpha">α =</label><input id="fs-alpha" type="number" value="0.55" step="0.05"></span>
     <span class="fs-field"><label for="fs-beta">β =</label><input id="fs-beta" type="number" value="0" step="0.05"></span>
-    <span class="fs-field"><label for="fs-gamma">γ =</label><input id="fs-gamma" type="number" value="1.5" step="0.05"></span>
+    <span class="fs-field"><label for="fs-gamma">γ =</label><input id="fs-gamma" type="number" value="1.0" step="0.05"></span>
     <button id="fs-apply-q" class="fs-btn">Apply q-spec ⇒ x,y,w</button>
     <button id="fs-uniform-btn" class="fs-btn">Safe constants</button>
     <button id="fs-resize-btn" class="fs-btn primary" title="Re-read N, M, params and reset to the frozen configuration">Apply &amp; Reset</button>
   </div>
   <div style="font-size:11px; color:#666; margin-top:2px;">
     q-specialization sets <code>x<sub>i</sub> = αq<sup>i</sup></code>, <code>w<sub>k</sub> = γq<sup>k</sup></code>,
-    <code>y<sub>r</sub> = βq<sup>r</sup></code>.  Choose parameters with every <code>w<sub>k</sub> &gt; x<sub>i</sub></code>.
+    <code>y<sub>r</sub> = βq<sup>r</sup></code>.  Choose parameters with every <code>w<sub>k</sub> &gt; x<sub>i</sub></code>;
+    if samples stay at λ=0, increase the ratios <code>x<sub>i</sub>/w<sub>k</sub></code> while preserving this inequality.
   </div>
 </div>
 
@@ -264,4 +266,4 @@ Yang--Baxter bijectivisation.  The local random split is
 
 </div><!-- /fs-wrap -->
 
-<script src="/js/factorial-ybe-sampler.js"></script>
+<script src="/js/factorial-ybe-sampler.js?v=20260605-active"></script>

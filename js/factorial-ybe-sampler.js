@@ -82,9 +82,9 @@
   function numericEnv() {
     return {
       q: parseFloat($('fs-q')?.value || '0.95'),
-      alpha: parseFloat($('fs-alpha')?.value || '0.5'),
+      alpha: parseFloat($('fs-alpha')?.value || '0.55'),
       beta: parseFloat($('fs-beta')?.value || '0'),
-      gamma: parseFloat($('fs-gamma')?.value || '1.5'),
+      gamma: parseFloat($('fs-gamma')?.value || '1.0'),
     };
   }
 
@@ -269,7 +269,7 @@
   }
 
   function applySafeConstantsToInputs() {
-    $('fs-x').value = `0.5^${N}`;
+    $('fs-x').value = `0.8^${N}`;
     $('fs-w').value = `1^${M}`;
     $('fs-y').value = `0^${Math.max(120, 4 * (N + M))}`;
     applyParamsFromInputs();
@@ -562,6 +562,15 @@
       rebuildMuLamFromLevels();
       stats.samples += 1;
       stats.elapsedMs = performance.now() - t0;
+      if (stats.size === 0) {
+        const note = $('fs-validation-note');
+        if (note) {
+          note.textContent = 'Sample returned λ=0. This is a valid sample, but if it happens repeatedly the specialization is too frozen; increase x/w while keeping every w_j > x_i.';
+          note.className = 'fs-note warn';
+        }
+      } else {
+        clearValidation(`Sampled |λ|=${stats.size}; all ${N * M} inequalities w_j > x_i hold.`);
+      }
       refreshStats();
       draw();
       return true;
