@@ -67,6 +67,8 @@
       columnCap: 20000,
       cellSize: 16,
       squareCells: true,
+      xAspect: 1,
+      pathWidth: 1,
       pathStyle: 'tonal',
     },
     'q-racah': {
@@ -84,6 +86,8 @@
       columnCap: 20000,
       cellSize: 10,
       squareCells: false,
+      xAspect: 0.25,
+      pathWidth: 1,
       pathStyle: 'tonal',
     },
     custom: {
@@ -666,6 +670,12 @@
     if (scaleEl && scaleValEl) scaleValEl.textContent = `${scaleEl.value}px`;
   }
 
+  function syncAspectControls() {
+    const aspectEl = $('fs-x-aspect');
+    const squareEl = $('fs-square-cells');
+    if (aspectEl && squareEl) aspectEl.disabled = !!squareEl.checked;
+  }
+
   function updatePresetDescription(key = currentPresetKey) {
     const preset = FACTORIAL_YBE_PRESETS[key] || FACTORIAL_YBE_PRESETS.custom;
     const note = $('fs-preset-note');
@@ -684,10 +694,15 @@
     if (!preset) return;
     setControlValue('fs-scale', preset.cellSize);
     setControlChecked('fs-square-cells', preset.squareCells);
+    setControlValue('fs-x-aspect', preset.xAspect ?? 1);
+    setControlValue('fs-path-width', preset.pathWidth ?? 1);
     setControlValue('fs-path-style', preset.pathStyle);
     syncScaleLabel();
+    syncAspectControls();
     pathRenderer?.setBaseScale(getDesiredCellSize());
     pathRenderer?.setSquareCells(isSquareCells());
+    pathRenderer?.setAspectRatio(getXAspectRatio());
+    pathRenderer?.setPathWidthFactor(getPathWidthFactor());
     pathRenderer?.setPathStyle(getPathStyle());
   }
 
@@ -1464,8 +1479,8 @@
 
   const BENCHMARK_CONTROL_IDS = [
     'fs-N', 'fs-M', 'fs-q', 'fs-alpha', 'fs-beta', 'fs-gamma',
-    'fs-x', 'fs-w', 'fs-y', 'fs-max-cols', 'fs-scale', 'fs-path-style', 'fs-view-mode',
-    'fs-preset-select', 'fs-square-cells',
+    'fs-x', 'fs-w', 'fs-y', 'fs-max-cols', 'fs-scale', 'fs-path-style',
+    'fs-x-aspect', 'fs-path-width', 'fs-preset-select', 'fs-square-cells',
   ];
 
   function defaultBenchmarkCases(options = {}) {
@@ -1484,6 +1499,8 @@
         columnCap: options.schurColumnCap || 20000,
         cellSize: 16,
         squareCells: true,
+        xAspect: 1,
+        pathWidth: 1,
         pathStyle: 'tonal',
       },
       {
@@ -1500,6 +1517,8 @@
         columnCap: options.qRacahColumnCap || 20000,
         cellSize: 10,
         squareCells: false,
+        xAspect: 0.25,
+        pathWidth: 1,
         pathStyle: 'tonal',
       },
       {
@@ -1516,6 +1535,8 @@
         columnCap: options.stressColumnCap || 20000,
         cellSize: 5,
         squareCells: false,
+        xAspect: 0.12,
+        pathWidth: 1,
         pathStyle: 'tonal',
       },
     ];
@@ -1590,6 +1611,8 @@
       'fs-y': testCase.y,
       'fs-max-cols': testCase.columnCap,
       'fs-scale': testCase.cellSize,
+      'fs-x-aspect': testCase.xAspect,
+      'fs-path-width': testCase.pathWidth,
       'fs-path-style': testCase.pathStyle,
     };
     for (const [id, value] of Object.entries(assignments)) {
@@ -1663,6 +1686,18 @@
     return (!Number.isFinite(v) || v <= 0) ? 20 : v;
   }
 
+  function getXAspectRatio() {
+    const input = $('fs-x-aspect');
+    const v = input ? Number(input.value) : 1;
+    return (!Number.isFinite(v) || v <= 0) ? 1 : Math.max(0.001, Math.min(10, v));
+  }
+
+  function getPathWidthFactor() {
+    const input = $('fs-path-width');
+    const v = input ? Number(input.value) : 1;
+    return (!Number.isFinite(v) || v <= 0) ? 1 : Math.max(0.1, Math.min(10, v));
+  }
+
   function getPathStyle() {
     const select = $('fs-path-style');
     return select && select.value === 'legacy' ? 'legacy' : 'tonal';
@@ -1695,9 +1730,12 @@
       this.viewbar = options.viewbar || null;
       this.viewport = { scale: 20, tx: 0, ty: 0 };
       this.baseScale = 20;
-      this.minScale = 1.25;
+      // Allow zooming far out for very large samples: minimum is 0.01% of 100%.
+      this.minScale = this.baseScale * 0.0001;
       this.maxScale = 90;
       this.squareCells = true;
+      this.xAspect = 1;
+      this.pathWidthFactor = 1;
       this.pathStyle = 'tonal';
       this.viewMode = 'paths';
       this.viewInitialized = false;
@@ -1723,17 +1761,20 @@
 
     setData(data) {
       if (!data) return;
+      const sameShape = this.data && this.data.N === data.N && this.data.M === data.M;
+      const preserveView = !!this.geometry && this.viewInitialized && sameShape;
       this.data = data;
       if (data.version !== this.geometryVersion) {
         this.geometry = this.buildGeometry(data);
         this.geometryVersion = data.version;
-        this.viewInitialized = false;
+        if (!preserveView) this.viewInitialized = false;
         this.invalidateBackground();
       }
     }
 
     setBaseScale(value) {
       const next = Math.max(3, Math.min(80, Number(value) || 20));
+      this.minScale = next * 0.0001;
       if (Math.abs(next - this.baseScale) < 0.001) return;
       this.baseScale = next;
       this.maxScale = Math.max(48, next * 5);
@@ -1748,6 +1789,21 @@
       this.viewInitialized = false;
     }
 
+    setAspectRatio(value) {
+      const next = Math.max(0.001, Math.min(10, Number(value) || 1));
+      if (Math.abs(next - this.xAspect) < 0.0001) return;
+      this.xAspect = next;
+      this.invalidateBackground();
+      this.viewInitialized = false;
+    }
+
+    setPathWidthFactor(value) {
+      const next = Math.max(0.1, Math.min(10, Number(value) || 1));
+      if (Math.abs(next - this.pathWidthFactor) < 0.0001) return;
+      this.pathWidthFactor = next;
+      this.scheduleDraw();
+    }
+
     setPathStyle(value) {
       const next = value === 'legacy' ? 'legacy' : 'tonal';
       if (next === this.pathStyle) return;
@@ -1755,8 +1811,8 @@
       this.invalidateBackground();
     }
 
-    setViewMode(value) {
-      const next = value === 'lozenges' ? 'lozenges' : 'paths';
+    setViewMode(_value) {
+      const next = 'paths';
       if (next === this.viewMode) return;
       this.viewMode = next;
       this.viewInitialized = false;
@@ -1770,6 +1826,8 @@
         viewInitialized: this.viewInitialized,
         baseScale: this.baseScale,
         squareCells: this.squareCells,
+        xAspect: this.xAspect,
+        pathWidthFactor: this.pathWidthFactor,
         pathStyle: this.pathStyle,
         viewMode: this.viewMode,
       };
@@ -1778,10 +1836,15 @@
     restoreViewport(saved = {}) {
       if (saved.viewport) this.viewport = { ...saved.viewport };
       this.viewInitialized = !!saved.viewInitialized;
-      if (saved.baseScale) this.baseScale = saved.baseScale;
+      if (saved.baseScale) {
+        this.baseScale = saved.baseScale;
+        this.minScale = this.baseScale * 0.0001;
+      }
       if (typeof saved.squareCells === 'boolean') this.squareCells = saved.squareCells;
+      if (saved.xAspect) this.xAspect = Math.max(0.001, Math.min(10, Number(saved.xAspect) || 1));
+      if (saved.pathWidthFactor) this.pathWidthFactor = Math.max(0.1, Math.min(10, Number(saved.pathWidthFactor) || 1));
       if (saved.pathStyle) this.pathStyle = saved.pathStyle;
-      if (saved.viewMode) this.viewMode = saved.viewMode === 'lozenges' ? 'lozenges' : 'paths';
+      if (saved.viewMode) this.viewMode = 'paths';
       this.invalidateBackground();
       this.scheduleDraw();
     }
@@ -1927,27 +1990,13 @@
       return { width, height, dpr };
     }
 
-    xStep(width) {
+    xStep(_width) {
       if (this.squareCells || !this.geometry) return 1;
-      const rawWidth = Math.max(1, this.geometry.rawBounds.maxX - this.geometry.rawBounds.minX + 2);
-      const budgetUnits = Math.max(6, (width - 96) / Math.max(3, this.baseScale));
-      return Math.max(0.0015, Math.min(1, budgetUnits / rawWidth));
+      return Math.max(0.001, Math.min(10, this.xAspect || 1));
     }
 
     layoutBounds(width) {
       if (!this.geometry) return { minX: 0, minY: 0, maxX: 1, maxY: 1, width: 1, height: 1, xStep: 1 };
-      if (this.viewMode === 'lozenges' && this.geometry.lozengeBounds) {
-        const raw = this.geometry.lozengeBounds;
-        return {
-          minX: raw.minX,
-          minY: raw.minY,
-          maxX: raw.maxX,
-          maxY: raw.maxY,
-          width: Math.max(1, raw.maxX - raw.minX),
-          height: Math.max(1, raw.maxY - raw.minY),
-          xStep: 1,
-        };
-      }
       const xStep = this.xStep(width);
       const raw = this.geometry.rawBounds;
       const exitPad = Math.max(1.2, Math.min(4, (raw.maxX - raw.minX + 1) * 0.08));
@@ -2318,7 +2367,7 @@
       const cellPx = Math.min(this.viewport.scale, this.viewport.scale * xStep);
       const drawAllParticles = cellPx >= 11;
       const drawSomeParticles = cellPx >= 5.5;
-      const lineWidth = Math.max(1.15, Math.min(3.2, cellPx * 0.14));
+      const lineWidth = Math.max(0.1, Math.max(1.15, Math.min(3.2, cellPx * 0.14)) * this.pathWidthFactor);
       const legacyPalette = [
         '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
         '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
@@ -2500,6 +2549,21 @@
       return maxX >= view.left && minX <= view.right && maxY >= view.top && minY <= view.bottom;
     }
 
+    blueLozengeConflictsWithVertical(tx, strip) {
+      // The strip is between the upper particle row `prev` and
+      // the lower particle row `curr`.
+      //
+      // A blue s(tx,y) lozenge consists of the two elementary triangles
+      // adjacent to the same horizontal position tx.  If either adjacent
+      // particle row has a vertical/orange lozenge centered at tx, then
+      // s(tx,y) shares a triangle with that vertical lozenge.  Drawing it
+      // produces the visible extra blue triangles next to orange lozenges.
+      //
+      // In that case we leave the pale base layer visible instead.
+      const prevSet = strip.prevSet || new Set(strip.prev || []);
+      const currSet = strip.currSet || new Set(strip.curr || []);
+      return prevSet.has(tx) || currSet.has(tx);
+    }
 
     countCentersAtMost(centers, x) {
       let lo = 0;
@@ -2572,7 +2636,16 @@
         const maxX = Math.min(domainMaxX, visibleMaxX);
         if (maxX < minX) continue;
 
-        stripWindows.push({ rank, y, minX, maxX, prev, curr });
+        stripWindows.push({
+          rank,
+          y,
+          minX,
+          maxX,
+          prev,
+          curr,
+          prevSet: new Set(prev),
+          currSet: new Set(curr),
+        });
         estimatedFill += maxX - minX + 1;
       }
 
@@ -2584,23 +2657,30 @@
 
         for (const strip of stripWindows) {
           for (let x = strip.minX; x <= strip.maxX; x++) {
+            const tx = x + 1;
+
+            // First build the pale base layer.  This is deliberately NOT in an
+            // `else` branch.  The pale layer must exist even under candidate blue
+            // cells, because some candidate blue cells are forbidden near orange
+            // vertical lozenges.  If we skip those blue cells without a pale base,
+            // white triangular holes appear.
+            if (x + strip.rank > 0) {
+              if (this.lozengeTileVisible('l', tx, strip.y, view)) {
+                lightTiles.push({ kind: 'l', x: tx, y: strip.y });
+              }
+            }
+
             const delta =
               this.countCentersAtMost(strip.curr, x) -
               this.countCentersAtMost(strip.prev, x);
 
-            const tx = x + 1;
-
             if (delta === 1) {
-              // Blue/nonvertical orientation.
-              // IMPORTANT: do not apply any conflict filter here.
+              // Candidate blue orientation.  Do not draw it when it shares an
+              // elementary triangle with an orange vertical lozenge in either
+              // adjacent particle row.
+              if (this.blueLozengeConflictsWithVertical(tx, strip)) continue;
               if (!this.lozengeTileVisible('s', tx, strip.y, view)) continue;
               blueTiles.push({ kind: 's', x: tx, y: strip.y });
-            } else if (x + strip.rank > 0) {
-              // Pale/nonvertical orientation.
-              // IMPORTANT: these are real lozenges.  Do not skip them near
-              // orange vertical lozenges; skipping them creates white holes.
-              if (!this.lozengeTileVisible('l', tx, strip.y, view)) continue;
-              lightTiles.push({ kind: 'l', x: tx, y: strip.y });
             }
           }
         }
@@ -2676,27 +2756,29 @@
 
     updateViewbar() {
       if (!this.viewbar) return;
-      const percent = Math.round((this.viewport.scale / Math.max(1, this.baseScale)) * 100);
-      const style = this.viewMode === 'lozenges'
-        ? 'lozenges'
-        : (this.pathStyle === 'legacy' ? 'legacy paths' : 'paths');
+      const zoomPercent = (this.viewport.scale / Math.max(0.001, this.baseScale)) * 100;
+      const percent = zoomPercent >= 10
+        ? String(Math.round(zoomPercent))
+        : zoomPercent >= 1
+          ? zoomPercent.toFixed(1)
+          : zoomPercent >= 0.01
+            ? zoomPercent.toFixed(2)
+            : zoomPercent.toExponential(1);
+      const style = this.pathStyle === 'legacy' ? 'legacy paths' : 'paths';
       this.viewbar.textContent = `zoom ${percent}% · ${style}`;
     }
 
     renderNow() {
       if (!this.canvas || !this.ctx || !this.geometry) return;
+      this.viewMode = 'paths';
       const size = this.setupHiDpi();
       this.ensureView(size.width, size.height);
       const colors = this.theme();
       const xStep = this.xStep(size.width);
       this.ctx.setTransform(1, 0, 0, 1, 0, 0);
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      if (this.viewMode === 'lozenges') {
-        this.drawLozenges(size, xStep, colors);
-      } else {
-        this.drawBackground(size, xStep, colors);
-        this.drawPaths(size, xStep, colors);
-      }
+      this.drawBackground(size, xStep, colors);
+      this.drawPaths(size, xStep, colors);
       this.updateViewbar();
     }
 
@@ -2715,6 +2797,8 @@
     if (!pathRenderer) return;
     pathRenderer.setBaseScale(getDesiredCellSize());
     pathRenderer.setSquareCells(isSquareCells());
+    pathRenderer.setAspectRatio(getXAspectRatio());
+    pathRenderer.setPathWidthFactor(getPathWidthFactor());
     pathRenderer.setPathStyle(getPathStyle());
     pathRenderer.setData({
       version: renderDataVersion,
@@ -2860,13 +2944,27 @@
     }
     const square = $('fs-square-cells');
     if (square) square.addEventListener('change', () => {
+      syncAspectControls();
       pathRenderer?.setSquareCells(isSquareCells());
       pathRenderer?.fit();
     });
 
-    $('fs-view-mode')?.addEventListener('change', () => {
-      pathRenderer?.setViewMode($('fs-view-mode')?.value || 'paths');
+    const aspectEl = $('fs-x-aspect');
+    if (aspectEl) aspectEl.addEventListener('change', () => {
+      pathRenderer?.setAspectRatio(getXAspectRatio());
+      pathRenderer?.fit();
     });
+
+    const pathWidthEl = $('fs-path-width');
+    if (pathWidthEl) {
+      const onPathWidthChange = () => {
+        pathRenderer?.setPathWidthFactor(getPathWidthFactor());
+        invalidateRender();
+      };
+      pathWidthEl.addEventListener('input', onPathWidthChange);
+      pathWidthEl.addEventListener('change', onPathWidthChange);
+    }
+
     $('fs-view-fit')?.addEventListener('click', () => pathRenderer?.fit());
     $('fs-view-actual')?.addEventListener('click', () => pathRenderer?.setActualSize());
     $('fs-view-zoom-in')?.addEventListener('click', () => pathRenderer?.zoomBy(1.25));
@@ -2891,6 +2989,7 @@
     attachUiEvents();
     updatePresetDescription(currentPresetKey);
     syncScaleLabel();
+    syncAspectControls();
     applyParamsFromInputs();
     resetFrozen();
 

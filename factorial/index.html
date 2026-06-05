@@ -359,6 +359,30 @@ title: "Exact sampler for factorial Schur processes"
     padding: 2px 8px;
     line-height: 1;
   }
+  .fs-view-toggle,
+  .fs-view-number {
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    border: 1px solid var(--fs-border);
+    border-radius: 4px;
+    background: var(--fs-panel-strong);
+    color: var(--fs-text);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .fs-view-toggle input { margin: 0; }
+  .fs-view-number input {
+    width: 4.8em;
+    height: 20px;
+    border: 1px solid var(--fs-border);
+    border-radius: 3px;
+    background: var(--fs-panel-strong);
+    color: var(--fs-text);
+    font-size: 12px;
+  }
   .fs-view-label {
     font-size: 12px;
     color: var(--fs-muted);
@@ -534,7 +558,6 @@ Yang--Baxter bijectivisation.  The local random split is
       <button id="fs-multi-sample-btn" class="fs-btn" type="button">Sample</button>
       <select id="fs-sample-count" class="fs-select"><option selected>10</option></select>
       <button id="fs-scale-fit" class="fs-btn" type="button">fit</button>
-      <input type="checkbox" id="fs-square-cells" checked>
       <select id="fs-path-style" class="fs-select">
         <option value="tonal" selected>Tonal navy</option>
         <option value="legacy">Legacy colors</option>
@@ -551,14 +574,19 @@ Yang--Baxter bijectivisation.  The local random split is
       <canvas id="fs-canvas" role="img"
               aria-label="Visualization of a sampled two-sided Gelfand-Tsetlin pattern as nonintersecting up-right paths"></canvas>
       <div class="fs-canvas-toolbar" aria-label="Canvas view controls">
-        <select id="fs-view-mode" class="fs-view-select" aria-label="View mode">
-          <option value="paths" selected>Paths</option>
-          <option value="lozenges">Lozenges</option>
-        </select>
         <button id="fs-view-fit" class="fs-btn fs-view-btn" type="button" title="Fit the sampled paths">Fit</button>
         <button id="fs-view-actual" class="fs-btn fs-view-btn" type="button" title="Set one model cell to the selected cell size">100%</button>
         <button id="fs-view-zoom-out" class="fs-btn fs-view-btn" type="button" title="Zoom out">&minus;</button>
         <button id="fs-view-zoom-in" class="fs-btn fs-view-btn" type="button" title="Zoom in">+</button>
+        <label class="fs-view-toggle" title="Use equal horizontal and vertical cell spacing">
+          <input type="checkbox" id="fs-square-cells" checked> square
+        </label>
+        <label class="fs-view-number" title="Horizontal cell spacing relative to vertical spacing when square is off">
+          x/y <input id="fs-x-aspect" type="number" min="0.001" max="10" step="0.01" value="1">
+        </label>
+        <label class="fs-view-number" title="Path stroke width multiplier">
+          width <input id="fs-path-width" type="number" min="0.1" max="10" step="0.1" value="1">
+        </label>
       </div>
       <div class="fs-viewbar" id="fs-viewbar">zoom 100%</div>
     </div>
@@ -584,4 +612,4 @@ Yang--Baxter bijectivisation.  The local random split is
 </div><!-- /fs-wrap -->
 
 <script src="/js/colorschemes.js"></script>
-<script src="/js/factorial-ybe-sampler.js?v=20260605-lozenge-opaque-revert-conflict"></script>
+<script src="/js/factorial-ybe-sampler.js?v=20260605-paths-preserve-view"></script>
