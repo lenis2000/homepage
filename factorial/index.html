@@ -551,6 +551,10 @@ Yang--Baxter bijectivisation.  The local random split is
       <canvas id="fs-canvas" role="img"
               aria-label="Visualization of a sampled two-sided Gelfand-Tsetlin pattern as nonintersecting up-right paths"></canvas>
       <div class="fs-canvas-toolbar" aria-label="Canvas view controls">
+        <select id="fs-view-mode" class="fs-view-select" aria-label="View mode">
+          <option value="paths" selected>Paths</option>
+          <option value="lozenges">Lozenges</option>
+        </select>
         <button id="fs-view-fit" class="fs-btn fs-view-btn" type="button" title="Fit the sampled paths">Fit</button>
         <button id="fs-view-actual" class="fs-btn fs-view-btn" type="button" title="Set one model cell to the selected cell size">100%</button>
         <button id="fs-view-zoom-out" class="fs-btn fs-view-btn" type="button" title="Zoom out">&minus;</button>

@@ -1464,7 +1464,7 @@
 
   const BENCHMARK_CONTROL_IDS = [
     'fs-N', 'fs-M', 'fs-q', 'fs-alpha', 'fs-beta', 'fs-gamma',
-    'fs-x', 'fs-w', 'fs-y', 'fs-max-cols', 'fs-scale', 'fs-path-style',
+    'fs-x', 'fs-w', 'fs-y', 'fs-max-cols', 'fs-scale', 'fs-path-style', 'fs-view-mode',
     'fs-preset-select', 'fs-square-cells',
   ];
 
@@ -1699,6 +1699,7 @@
       this.maxScale = 90;
       this.squareCells = true;
       this.pathStyle = 'tonal';
+      this.viewMode = 'paths';
       this.viewInitialized = false;
       this.framePending = false;
       this.data = null;
@@ -1754,6 +1755,14 @@
       this.invalidateBackground();
     }
 
+    setViewMode(value) {
+      const next = value === 'lozenges' ? 'lozenges' : 'paths';
+      if (next === this.viewMode) return;
+      this.viewMode = next;
+      this.invalidateBackground();
+      this.scheduleDraw();
+    }
+
     snapshotViewport() {
       return {
         viewport: { ...this.viewport },
@@ -1761,6 +1770,7 @@
         baseScale: this.baseScale,
         squareCells: this.squareCells,
         pathStyle: this.pathStyle,
+        viewMode: this.viewMode,
       };
     }
 
@@ -1770,6 +1780,7 @@
       if (saved.baseScale) this.baseScale = saved.baseScale;
       if (typeof saved.squareCells === 'boolean') this.squareCells = saved.squareCells;
       if (saved.pathStyle) this.pathStyle = saved.pathStyle;
+      if (saved.viewMode) this.viewMode = saved.viewMode === 'lozenges' ? 'lozenges' : 'paths';
       this.invalidateBackground();
       this.scheduleDraw();
     }
@@ -1782,6 +1793,7 @@
       const lambdaLevel = m;
       const paths = [];
       const lambdaParticles = [];
+      const levelOccupancy = Array.from({ length: totalLevels + 1 }, () => new Set());
 
       const include = (point) => {
         rawBounds.minX = Math.min(rawBounds.minX, point.x);
@@ -1816,6 +1828,7 @@
           const point = { x: pos, y: totalLevels - level, level, track };
           particles.push(point);
           include(point);
+          levelOccupancy[level]?.add(point.x);
           if (level === lambdaLevel) lambdaParticles.push(point);
           if (!previous) {
             polyline.push(point);
@@ -1850,6 +1863,7 @@
         totalLevels,
         paths,
         lambdaParticles,
+        levelOccupancy,
         rawBounds,
       };
     }
@@ -2081,6 +2095,11 @@
         navy: '#89b7df',
         orange: '#ff9933',
         lambda: '#ffb15f',
+        lozengeA: '#26394c',
+        lozengeB: '#344255',
+        lozengeC: '#3c3428',
+        lozengeStroke: 'rgba(230,238,246,0.16)',
+        lozengeParticle: '#ff9933',
       } : {
         canvas: '#fbfcff',
         wBand: '#fff4df',
@@ -2092,6 +2111,11 @@
         navy: '#002f6c',
         orange: '#e57200',
         lambda: '#d65f00',
+        lozengeA: '#edf4fb',
+        lozengeB: '#fff4df',
+        lozengeC: '#f7efe6',
+        lozengeStroke: 'rgba(0,47,108,0.16)',
+        lozengeParticle: '#e57200',
       };
     }
 
@@ -2334,10 +2358,128 @@
       }
     }
 
+    lozengePath(ctx2d, cx, cy, rx, ry, kind) {
+      ctx2d.beginPath();
+      if (kind === 'left') {
+        ctx2d.moveTo(cx - rx, cy - ry);
+        ctx2d.lineTo(cx, cy - ry);
+        ctx2d.lineTo(cx + rx, cy + ry);
+        ctx2d.lineTo(cx, cy + ry);
+      } else if (kind === 'right') {
+        ctx2d.moveTo(cx, cy - ry);
+        ctx2d.lineTo(cx + rx, cy - ry);
+        ctx2d.lineTo(cx, cy + ry);
+        ctx2d.lineTo(cx - rx, cy + ry);
+      } else {
+        ctx2d.moveTo(cx - rx, cy);
+        ctx2d.lineTo(cx, cy - ry);
+        ctx2d.lineTo(cx + rx, cy);
+        ctx2d.lineTo(cx, cy + ry);
+      }
+      ctx2d.closePath();
+    }
+
+    fillLozenge(ctx2d, cx, cy, rx, ry, kind, fill, stroke, lineWidth = 1) {
+      this.lozengePath(ctx2d, cx, cy, rx, ry, kind);
+      ctx2d.fillStyle = fill;
+      ctx2d.fill();
+      if (stroke && lineWidth > 0) {
+        ctx2d.strokeStyle = stroke;
+        ctx2d.lineWidth = lineWidth;
+        ctx2d.stroke();
+      }
+    }
+
+    drawLozenges(size, xStep, colors) {
+      const geometry = this.geometry;
+      if (!geometry) return;
+      const ctx2d = this.ctx;
+      const scale = this.viewport.scale;
+      const cellPxX = Math.max(0.001, scale * xStep);
+      const cellPxY = Math.max(0.001, scale);
+      const rx = Math.max(1.4, cellPxX * 0.48);
+      const ry = Math.max(1.4, cellPxY * 0.46);
+      const viewLeftRaw = this.viewport.tx / Math.max(0.0001, xStep);
+      const viewRightRaw = (this.viewport.tx + size.width / scale) / Math.max(0.0001, xStep);
+      const viewTop = this.viewport.ty;
+      const viewBottom = this.viewport.ty + size.height / scale;
+      const firstCol = Math.max(Math.floor(geometry.rawBounds.minX) - 2, Math.floor(viewLeftRaw) - 2);
+      const lastCol = Math.min(Math.ceil(geometry.rawBounds.maxX) + 2, Math.ceil(viewRightRaw) + 2);
+      const firstLevel = Math.max(0, Math.floor(geometry.totalLevels - viewBottom) - 2);
+      const lastLevel = Math.min(geometry.totalLevels, Math.ceil(geometry.totalLevels - viewTop) + 2);
+      const estimatedTiles = Math.max(0, lastCol - firstCol + 1) * Math.max(0, lastLevel - firstLevel + 1);
+      const drawBackgroundTiles = cellPxX >= 4 && cellPxY >= 4 && estimatedTiles <= 45000;
+      const stroke = cellPxX >= 7 && cellPxY >= 7 ? colors.lozengeStroke : '';
+
+      ctx2d.setTransform(size.dpr, 0, 0, size.dpr, 0, 0);
+      ctx2d.fillStyle = colors.canvas;
+      ctx2d.fillRect(0, 0, size.width, size.height);
+
+      if (drawBackgroundTiles) {
+        ctx2d.globalAlpha = 0.78;
+        for (let level = firstLevel; level <= lastLevel; level++) {
+          const occ = geometry.levelOccupancy[level] || new Set();
+          const prev = level > 0 ? geometry.levelOccupancy[level - 1] : null;
+          for (let col = firstCol; col <= lastCol; col++) {
+            if (occ.has(col)) continue;
+            const kind = prev?.has(col) ? 'right' : prev?.has(col - 1) ? 'left' : ((col + level) & 1 ? 'right' : 'left');
+            const fill = kind === 'left' ? colors.lozengeA : kind === 'right' ? colors.lozengeB : colors.lozengeC;
+            const cx = this.screenX(col, xStep);
+            const cy = this.screenY(this.modelYForLevel(level));
+            if (cx < -rx || cx > size.width + rx || cy < -ry || cy > size.height + ry) continue;
+            this.fillLozenge(ctx2d, cx, cy, rx, ry, kind, fill, stroke, 1);
+          }
+        }
+        ctx2d.globalAlpha = 1;
+      }
+
+      const lambdaY = this.screenY(this.modelYForLevel(geometry.M));
+      ctx2d.strokeStyle = colors.orange;
+      ctx2d.globalAlpha = 0.55;
+      ctx2d.lineWidth = Math.max(1.2, Math.min(3, cellPxY * 0.08));
+      ctx2d.beginPath();
+      ctx2d.moveTo(0, lambdaY);
+      ctx2d.lineTo(size.width, lambdaY);
+      ctx2d.stroke();
+      ctx2d.globalAlpha = 1;
+
+      let drawn = 0;
+      const maxParticleLozenges = cellPxX >= 3 && cellPxY >= 3 ? 90000 : 30000;
+      const particleStroke = colors.canvas;
+      for (let level = firstLevel; level <= lastLevel; level++) {
+        const occ = geometry.levelOccupancy[level];
+        if (!occ) continue;
+        for (const col of occ) {
+          if (col < firstCol || col > lastCol) continue;
+          const cx = this.screenX(col, xStep);
+          const cy = this.screenY(this.modelYForLevel(level));
+          if (cx < -rx || cx > size.width + rx || cy < -ry || cy > size.height + ry) continue;
+          const isLambda = level === geometry.M;
+          const fill = isLambda ? colors.lambda : colors.lozengeParticle;
+          const kind = isLambda ? 'flat' : 'flat';
+          const lw = Math.max(0.8, Math.min(2, Math.min(cellPxX, cellPxY) * 0.08));
+          this.fillLozenge(ctx2d, cx, cy, rx * 0.96, ry * 0.96, kind, fill, particleStroke, lw);
+          drawn += 1;
+          if (drawn >= maxParticleLozenges) break;
+        }
+        if (drawn >= maxParticleLozenges) break;
+      }
+
+      if (!drawBackgroundTiles && cellPxX >= 2.5 && cellPxY >= 2.5) {
+        ctx2d.font = '12px "franklingothic-book", Arial, sans-serif';
+        ctx2d.fillStyle = colors.muted;
+        ctx2d.textAlign = 'left';
+        ctx2d.textBaseline = 'top';
+        ctx2d.fillText('zoom in for individual lozenges', 12, 42);
+      }
+    }
+
     updateViewbar() {
       if (!this.viewbar) return;
       const percent = Math.round((this.viewport.scale / Math.max(1, this.baseScale)) * 100);
-      const style = this.pathStyle === 'legacy' ? 'legacy' : 'tonal';
+      const style = this.viewMode === 'lozenges'
+        ? 'lozenges'
+        : (this.pathStyle === 'legacy' ? 'legacy paths' : 'paths');
       this.viewbar.textContent = `zoom ${percent}% · ${style}`;
     }
 
@@ -2349,8 +2491,12 @@
       const xStep = this.xStep(size.width);
       this.ctx.setTransform(1, 0, 0, 1, 0, 0);
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.drawBackground(size, xStep, colors);
-      this.drawPaths(size, xStep, colors);
+      if (this.viewMode === 'lozenges') {
+        this.drawLozenges(size, xStep, colors);
+      } else {
+        this.drawBackground(size, xStep, colors);
+        this.drawPaths(size, xStep, colors);
+      }
       this.updateViewbar();
     }
 
@@ -2518,6 +2664,9 @@
       pathRenderer?.fit();
     });
 
+    $('fs-view-mode')?.addEventListener('change', () => {
+      pathRenderer?.setViewMode($('fs-view-mode')?.value || 'paths');
+    });
     $('fs-view-fit')?.addEventListener('click', () => pathRenderer?.fit());
     $('fs-view-actual')?.addEventListener('click', () => pathRenderer?.setActualSize());
     $('fs-view-zoom-in')?.addEventListener('click', () => pathRenderer?.zoomBy(1.25));
