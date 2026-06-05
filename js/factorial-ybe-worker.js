@@ -12,10 +12,21 @@
   }
 
   function copyFloat64ToWasm(Module, values) {
+    if (!(values instanceof Float64Array)) throw new Error('Expected Float64Array sampler parameters.');
+    if (typeof Module._malloc !== 'function') throw new Error('WASM module is missing _malloc.');
+    if (!Module.HEAPF64) throw new Error('WASM module is missing HEAPF64.');
+    if (values.byteLength === 0) return 0;
     const ptr = Module._malloc(values.byteLength);
     if (!ptr) throw new Error('WASM malloc failed for sampler parameters.');
     Module.HEAPF64.set(values, ptr >> 3);
     return ptr;
+  }
+
+  function requireExport(Module, name) {
+    if (typeof Module[name] !== 'function') {
+      throw new Error(`WASM module is missing ${name}.`);
+    }
+    return Module[name].bind(Module);
   }
 
   async function runSample(message) {
@@ -27,12 +38,18 @@
     let wPtr = 0;
     let yPtr = 0;
     let jsonPtr = 0;
+    let freeString = null;
+    let free = null;
 
     try {
+      const sampleFactorialYBE = requireExport(Module, '_sampleFactorialYBE');
+      const utf8ToString = requireExport(Module, 'UTF8ToString');
+      freeString = requireExport(Module, '_freeString');
+      free = requireExport(Module, '_free');
       xPtr = copyFloat64ToWasm(Module, x);
       wPtr = copyFloat64ToWasm(Module, w);
       yPtr = y.length ? copyFloat64ToWasm(Module, y) : 0;
-      jsonPtr = Module._sampleFactorialYBE(
+      jsonPtr = sampleFactorialYBE(
         message.N,
         message.M,
         xPtr,
@@ -43,9 +60,14 @@
         message.seedLo >>> 0,
         message.seedHi >>> 0
       );
-      if (!jsonPtr) throw new Error('WASM sampler returned a null JSON pointer.');
+      if (!jsonPtr || !Number.isFinite(Number(jsonPtr))) {
+        throw new Error('WASM sampler returned a null JSON pointer.');
+      }
 
-      const json = Module.UTF8ToString(jsonPtr);
+      const json = utf8ToString(jsonPtr);
+      if (typeof json !== 'string' || json.length === 0) {
+        throw new Error('WASM sampler returned an empty JSON string.');
+      }
       const parsed = JSON.parse(json);
       if (parsed && parsed.error) throw new Error(parsed.error);
       self.postMessage({
@@ -54,10 +76,10 @@
         result: parsed,
       });
     } finally {
-      if (jsonPtr) Module._freeString(jsonPtr);
-      if (xPtr) Module._free(xPtr);
-      if (wPtr) Module._free(wPtr);
-      if (yPtr) Module._free(yPtr);
+      if (jsonPtr && freeString) freeString(jsonPtr);
+      if (xPtr && free) free(xPtr);
+      if (wPtr && free) free(wPtr);
+      if (yPtr && free) free(yPtr);
     }
   }
 

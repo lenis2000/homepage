@@ -35,16 +35,24 @@ function checkSource() {
   const wasmBundle = fs.readFileSync(path.join(root, "js", "factorial-ybe-wasm.js"), "utf8");
 
   assert(page.includes("/js/factorial-ybe-sampler.js"), "/factorial/ should load the YBE sampler");
+  assert(page.includes('id="fs-status-phase"'), "/factorial/ should expose a visible phase status");
+  assert(page.includes('id="fs-status-elapsed"'), "/factorial/ should expose visible elapsed seconds");
   assert(!page.includes("factorial-glauber.js"), "/factorial/ should not load stale Glauber JS");
   assert(!page.includes("factorial-wasm.js"), "/factorial/ should not load stale Glauber WASM");
   assert(page.includes('id="fs-cancel-btn"'), "/factorial/ should expose a cancel button");
   assert(sampler.includes("window.factorialYBEReferenceSample"), "seeded JS reference hook should be exposed");
   assert(sampler.includes("window.factorialYBEWorkerSample"), "worker/WASM sample hook should be exposed");
+  assert(sampler.includes("window.factorialYBEBenchmark"), "dev benchmark helper should be exposed");
+  assert(sampler.includes("setRunState('sampling'"), "sampler should use structured sampling status");
+  assert(sampler.includes("finiteListTooShortMessage"), "sampler should reject short finite parameter lists clearly");
   assert(sampler.includes("new Worker('/js/factorial-ybe-worker.js"), "visible sampler should start the YBE worker");
   assert(sampler.includes("createXoshiro256pp"), "seeded reference hook should use Xoshiro256++");
   assert(!sampler.includes("Math.random() * total"), "hot local sampler should use the swappable RNG source");
+  assert(!sampler.includes(".innerHTML"), "sampler should not write untrusted status text with innerHTML");
   assert(worker.includes("factorial-ybe-wasm.js"), "worker should load the generated WASM bundle");
   assert(worker.includes("_sampleFactorialYBE"), "worker should call the exported C++ sampler");
+  assert(worker.includes("utf8ToString(jsonPtr)"), "worker should null-check before decoding the JSON pointer");
+  assert(worker.includes("finally"), "worker should free WASM/C++ allocations in finally");
   assert(wasmBundle.includes("_sampleFactorialYBE"), "WASM bundle should export _sampleFactorialYBE");
   assert(wasmBundle.includes("_freeString"), "WASM bundle should export _freeString");
 }
@@ -236,7 +244,7 @@ async function runBrowserSmoke() {
     await client.send("Runtime.enable");
     await waitForPageCondition(
       client,
-      "typeof window.factorialYBEReferenceSample === 'function' && typeof window.factorialYBEWorkerSample === 'function'",
+      "typeof window.factorialYBEReferenceSample === 'function' && typeof window.factorialYBEWorkerSample === 'function' && typeof window.factorialYBEBenchmark === 'function'",
       "factorial sampler hooks"
     );
 
@@ -276,7 +284,7 @@ async function runBrowserSmoke() {
         M: 3,
         x: [0.2, 0.3, 0.4],
         w: [0.9, 1.0, 1.1],
-        y: Array(80).fill(0),
+        y: Array(200).fill(0),
         seedLo: 12345,
         seedHi: 67890,
         columnCap: 200
@@ -291,6 +299,47 @@ async function runBrowserSmoke() {
 
     assert(result && result.rowSwaps === 9, "browser smoke should return deterministic reference stats");
     console.log(`Factorial seeded reference smoke passed: lambda=(${result.lambda.join(",")}), moves=${result.localMoves}.`);
+
+    const parserResult = await evaluate(client, `(() => {
+      document.getElementById("fs-N").value = "4";
+      document.getElementById("fs-M").value = "5";
+      document.getElementById("fs-q").value = "0.2";
+      document.getElementById("fs-max-cols").value = "120";
+      document.getElementById("fs-x").value = "1^N";
+      document.getElementById("fs-w").value = "1.001*q^(-5+i)";
+      document.getElementById("fs-y").value = "q^(-50+i)";
+      const okExpression = window.factorialYBEValidateControls();
+      const expressionState = window.factorialExactSamplerState();
+      document.getElementById("fs-x").value = "1";
+      const okShort = window.factorialYBEValidateControls();
+      const shortMessage = document.getElementById("fs-validation-note").textContent;
+      document.getElementById("fs-x").value = "1^N";
+      document.getElementById("fs-w").value = "1.001^M";
+      document.getElementById("fs-y").value = "0^columnCap";
+      const okRepeats = window.factorialYBEValidateControls();
+      const repeatState = window.factorialExactSamplerState();
+      return {
+        okExpression,
+        expressionW: expressionState.wArr,
+        okShort,
+        shortMessage,
+        okRepeats,
+        repeatX: repeatState.xArr,
+        repeatW: repeatState.wArr,
+        phaseText: document.getElementById("fs-status-phase").textContent,
+        elapsedText: document.getElementById("fs-status-elapsed").textContent
+      };
+    })()`);
+
+    assert(parserResult.okExpression, "q^(-50+i)-style expressions should validate");
+    assert(parserResult.expressionW.every(value => value > 1), "epsilon-safe expression w values should exceed x=1");
+    assert(parserResult.okShort === false, "short finite x list should fail validation");
+    assert(parserResult.shortMessage.includes("1^N"), "short finite list error should suggest explicit repeat syntax");
+    assert(parserResult.okRepeats, "symbolic repeat syntax should validate");
+    assert(parserResult.repeatX.length === 4 && parserResult.repeatX.every(value => value === 1), "1^N should expand to N x-values");
+    assert(parserResult.repeatW.length === 5 && parserResult.repeatW.every(value => value === 1.001), "1.001^M should expand to M w-values");
+    assert(parserResult.phaseText === "ready", "successful validation should leave the page ready");
+    assert(/s$/.test(parserResult.elapsedText), "elapsed status should be shown in seconds");
 
     const workerResult = await evaluate(client, `(async () => {
       document.getElementById("fs-N").value = "3";
@@ -325,7 +374,10 @@ async function runBrowserSmoke() {
         sameLam,
         lambda: state.mu[state.M],
         muRows: state.mu.length,
-        lamRows: state.lam.length
+        lamRows: state.lam.length,
+        runState: state.runState,
+        phaseText: document.getElementById("fs-status-phase").textContent,
+        elapsedText: document.getElementById("fs-status-elapsed").textContent
       };
     })()`, 60000);
 
@@ -334,7 +386,28 @@ async function runBrowserSmoke() {
     assert(workerResult.localMoves >= workerResult.rowSwaps, "worker local moves should cover row swaps");
     assert(workerResult.sameMu && workerResult.sameLam, "worker/WASM output should match the seeded JS reference");
     assert(workerResult.muRows === 4 && workerResult.lamRows === 4, "worker sample should return tiny mu/lam row counts");
+    assert(workerResult.runState === "done" && workerResult.phaseText === "done", "worker sample should finish in done status");
+    assert(/s$/.test(workerResult.elapsedText), "worker sample should report elapsed seconds");
     console.log(`Factorial worker/WASM smoke passed: lambda=(${workerResult.lambda.join(",")}), moves=${workerResult.localMoves}.`);
+
+    const positivityResult = await evaluate(client, `(async () => {
+      document.getElementById("fs-N").value = "2";
+      document.getElementById("fs-M").value = "2";
+      document.getElementById("fs-x").value = "0.2^N";
+      document.getElementById("fs-w").value = "0.9^M";
+      document.getElementById("fs-y").value = "-1^columnCap";
+      document.getElementById("fs-max-cols").value = "120";
+      const ok = await window.factorialYBEWorkerSample({ columnCap: 120 });
+      return {
+        ok,
+        phaseText: document.getElementById("fs-status-phase").textContent,
+        message: document.getElementById("fs-validation-note").textContent
+      };
+    })()`, 30000);
+
+    assert(positivityResult.ok === false, "invalid local positivity should fail before worker sampling");
+    assert(positivityResult.phaseText === "error", "invalid local positivity should enter error status");
+    assert(positivityResult.message.includes("Local positivity failed"), "positivity failure should surface clearly");
   } finally {
     client?.close();
     if (chrome.exitCode === null && chrome.signalCode === null) {

@@ -36,6 +36,16 @@
   let activeRequestId = 0;
   let samplingActive = false;
   let samplingCanceled = false;
+  let runState = 'ready';
+  let elapsedStartedAt = 0;
+  let elapsedTimer = null;
+  let renderScheduled = false;
+
+  const LOCKED_DURING_SAMPLE_IDS = [
+    'fs-N', 'fs-M', 'fs-q', 'fs-alpha', 'fs-beta', 'fs-gamma',
+    'fs-x', 'fs-w', 'fs-y', 'fs-apply-q', 'fs-uniform-btn', 'fs-resize-btn',
+    'fs-sample-btn', 'fs-multi-sample-btn', 'fs-sample-count', 'fs-max-cols',
+  ];
 
   const SUB = ['₀','₁','₂','₃','₄','₅','₆','₇','₈','₉'];
   function sub(n) { return String(n).split('').map(d => SUB[+d] || d).join(''); }
@@ -49,6 +59,70 @@
   function round6(x) {
     if (!Number.isFinite(x)) return x;
     return parseFloat(x.toPrecision(6));
+  }
+
+  function formatSeconds(ms) {
+    const value = Number.isFinite(ms) && ms > 0 ? ms : 0;
+    return `${(value / 1000).toFixed(2)} s`;
+  }
+
+  function updateElapsedDisplay(ms) {
+    const el = $('fs-status-elapsed');
+    if (el) el.textContent = formatSeconds(ms);
+  }
+
+  function stopElapsedTimer(finalMs) {
+    if (elapsedTimer) {
+      clearInterval(elapsedTimer);
+      elapsedTimer = null;
+    }
+    if (finalMs != null) updateElapsedDisplay(finalMs);
+  }
+
+  function startElapsedTimer(startedAt = performance.now()) {
+    elapsedStartedAt = startedAt;
+    stopElapsedTimer(0);
+    elapsedTimer = setInterval(() => {
+      updateElapsedDisplay(performance.now() - elapsedStartedAt);
+    }, 100);
+  }
+
+  function classForRunState(state) {
+    if (state === 'error') return 'fs-note err';
+    if (state === 'canceled') return 'fs-note warn';
+    if (state === 'sampling' || state === 'rendering' || state === 'validating') return 'fs-note ok';
+    return 'fs-note ok';
+  }
+
+  function setRunState(state, phase, message, className) {
+    runState = state;
+    const phaseEl = $('fs-status-phase');
+    if (phaseEl) phaseEl.textContent = phase || state;
+    const note = $('fs-validation-note');
+    if (note) {
+      note.textContent = message || '';
+      note.className = className || classForRunState(state);
+    }
+    if (state !== 'sampling') stopElapsedTimer(state === 'ready' || state === 'validating' ? 0 : undefined);
+  }
+
+  function readControlState(overrides = {}) {
+    const nextN = clampInt(overrides.N ?? $('fs-N')?.value ?? N, 1, 120);
+    const nextM = clampInt(overrides.M ?? $('fs-M')?.value ?? M, 1, 120);
+    const rawCap = overrides.columnCap ?? $('fs-max-cols')?.value ?? '20000';
+    const columnCap = Math.max(100, Math.min(1000000, Math.trunc(Number(rawCap) || 20000)));
+    return {
+      N: nextN,
+      M: nextM,
+      columnCap,
+      q: parseFloat($('fs-q')?.value || '0.95'),
+      alpha: parseFloat($('fs-alpha')?.value || '0.55'),
+      beta: parseFloat($('fs-beta')?.value || '0'),
+      gamma: parseFloat($('fs-gamma')?.value || '1.0'),
+      xInput: $('fs-x')?.value || '',
+      wInput: $('fs-w')?.value || '',
+      yInput: $('fs-y')?.value || '',
+    };
   }
 
   function createXoshiro256pp(seedLo = 1, seedHi = 0) {
@@ -105,20 +179,12 @@
   }
 
   function fail(message) {
-    const note = $('fs-validation-note');
-    if (note) {
-      note.textContent = message;
-      note.className = 'fs-note err';
-    }
+    setRunState('error', 'error', message, 'fs-note err');
     throw new Error(message);
   }
 
   function clearValidation(message) {
-    const note = $('fs-validation-note');
-    if (note) {
-      note.textContent = message || '';
-      note.className = message ? 'fs-note ok' : 'fs-note';
-    }
+    setRunState('ready', 'ready', message || '', message ? 'fs-note ok' : 'fs-note');
   }
 
   // ---------------------------------------------------------------------------
@@ -126,11 +192,12 @@
   // ---------------------------------------------------------------------------
 
   function numericEnv() {
+    const controls = readControlState();
     return {
-      q: parseFloat($('fs-q')?.value || '0.95'),
-      alpha: parseFloat($('fs-alpha')?.value || '0.55'),
-      beta: parseFloat($('fs-beta')?.value || '0'),
-      gamma: parseFloat($('fs-gamma')?.value || '1.0'),
+      q: controls.q,
+      alpha: controls.alpha,
+      beta: controls.beta,
+      gamma: controls.gamma,
     };
   }
 
@@ -180,9 +247,18 @@
     return Number(v);
   }
 
+  function repeatCountFromToken(token) {
+    const t = String(token || '').trim();
+    if (/^\d+$/.test(t)) return parseInt(t, 10);
+    if (t === 'N') return N;
+    if (t === 'M') return M;
+    if (t === 'columnCap' || t === 'cap' || t === 'K') return currentColumnCap();
+    throw new Error(`unsupported repeat count ${t}`);
+  }
+
   function expandRepeatedPatterns(str) {
-    return String(str).replace(/\(([^)]+)\)\^(\d+)/g, (m, pattern, count) => {
-      const n = parseInt(count, 10);
+    return String(str).replace(/\(([^)]+)\)\^(\d+|N|M|columnCap|cap|K)\b/g, (m, pattern, count) => {
+      const n = repeatCountFromToken(count);
       const vals = pattern.split(',').map(v => v.trim()).filter(Boolean);
       const out = [];
       for (let i = 0; i < n; i++) out.push(...vals);
@@ -193,13 +269,15 @@
   function parseFiniteList(str) {
     const s = expandRepeatedPatterns(str);
     const out = [];
+    const numberPattern = '[-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?';
+    const repeatPattern = new RegExp(`^(${numberPattern})\\^(\\d+|N|M|columnCap|cap|K)$`);
     for (const token of s.split(',')) {
       const tr = token.trim();
       if (!tr) continue;
-      const rep = tr.match(/^([-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?)\^(\d+)$/);
+      const rep = tr.match(repeatPattern);
       if (rep) {
         const value = Number(rep[1]);
-        const count = parseInt(rep[2], 10);
+        const count = repeatCountFromToken(rep[2]);
         if (!Number.isFinite(value) || count <= 0) throw new Error(`bad repeat token ${tr}`);
         for (let i = 0; i < count; i++) out.push(value);
         continue;
@@ -211,19 +289,33 @@
     return out;
   }
 
+  function finiteListTooShortMessage(label, got, needed) {
+    const repeatHint = label === 'x'
+      ? 'Use a repeat like 1^N or an expression such as alpha*q^i.'
+      : label === 'w'
+        ? 'Use a repeat like 1^M or an expression such as gamma*q^i.'
+        : 'Use a repeat like 0^columnCap, a long enough list, or an expression such as beta*q^i.';
+    return `${label} finite list has length ${got}, but needs at least ${needed}. ${repeatHint}`;
+  }
+
   function parseArrayInput(input, len, label) {
     const str = String(input || '').trim();
     if (!str) throw new Error(`${label} is empty`);
     let arr;
-    if (looksLikeExpression(str)) {
+    let finiteListError = null;
+    try {
+      arr = parseFiniteList(str);
+    } catch (error) {
+      finiteListError = error;
+    }
+    if (arr && arr.length > 0) {
+      if (arr.length < len) throw new Error(finiteListTooShortMessage(label, arr.length, len));
+    } else if (looksLikeExpression(str)) {
       const fn = compileExpression(str);
       arr = [];
       for (let i = 1; i <= len; i++) arr.push(evalExpression(fn, i));
     } else {
-      arr = parseFiniteList(str);
-      if (arr.length === 1 && len > 1) {
-        arr = Array(len).fill(arr[0]);
-      }
+      throw finiteListError || new Error(`${label} is not a valid list or expression`);
     }
     if (arr.length < len) {
       throw new Error(`${label} has length ${arr.length}, but needs at least ${len}`);
@@ -238,6 +330,27 @@
   function parseYInput(input) {
     const str = String(input || '').trim();
     if (!str) throw new Error('y is empty');
+    let arr;
+    let finiteListError = null;
+    try {
+      arr = parseFiniteList(str);
+    } catch (error) {
+      finiteListError = error;
+    }
+    if (arr && arr.length > 0) {
+      for (const v of arr) {
+        if (!Number.isFinite(v)) throw new Error('y contains a non-finite value');
+      }
+      return {
+        kind: 'array',
+        preview: arr.slice(0, Math.min(arr.length, 120)),
+        value(k) {
+          if (k <= 0) return 0;
+          return k <= arr.length ? arr[k - 1] : undefined;
+        },
+        length: arr.length,
+      };
+    }
     if (looksLikeExpression(str)) {
       const fn = compileExpression(str);
       const previewLen = Math.max(20, Math.min(200, 4 * (N + M) + 20));
@@ -252,19 +365,7 @@
         },
       };
     }
-    const arr = parseFiniteList(str);
-    for (const v of arr) {
-      if (!Number.isFinite(v)) throw new Error('y contains a non-finite value');
-    }
-    return {
-      kind: 'array',
-      preview: arr.slice(0, Math.min(arr.length, 120)),
-      value(k) {
-        if (k <= 0) return 0;
-        return k <= arr.length ? arr[k - 1] : 0;
-      },
-      length: arr.length,
-    };
+    throw finiteListError || new Error('y is not a valid list or expression');
   }
 
   function yVal(k) {
@@ -284,25 +385,30 @@
   }
 
   function applyParamsFromInputs() {
+    setRunState('validating', 'validating', 'Checking parameters...', 'fs-note ok');
     try {
+      const controls = readControlState();
+      N = controls.N;
+      M = controls.M;
+      if ($('fs-N')) $('fs-N').value = String(N);
+      if ($('fs-M')) $('fs-M').value = String(M);
       xArr = parseArrayInput($('fs-x').value, N, 'x');
       wArr = parseArrayInput($('fs-w').value, M, 'w');
       ySpec = parseYInput($('fs-y').value);
+      if (ySpec.kind === 'array' && ySpec.length < controls.columnCap) {
+        throw new Error(finiteListTooShortMessage('y', ySpec.length, controls.columnCap));
+      }
 
       $('fs-x-note').textContent = `x: [${summarize(xArr)}]`;
       $('fs-w-note').textContent = `w: [${summarize(wArr)}]`;
       const ySummary = summarize(ySpec.preview || []);
       $('fs-y-note').textContent = ySpec.kind === 'expr'
         ? `y: expression, first values [${ySummary}]`
-        : `y: [${ySummary}]${ySpec.length ? `  (length ${ySpec.length}; y_k=0 beyond this)` : ''}`;
+        : `y: [${ySummary}]${ySpec.length ? `  (length ${ySpec.length})` : ''}`;
       validateParameters();
       return true;
     } catch (e) {
-      const note = $('fs-validation-note');
-      if (note) {
-        note.textContent = e.message;
-        note.className = 'fs-note err';
-      }
+      setRunState('error', 'error', e.message, 'fs-note err');
       return false;
     }
   }
@@ -315,9 +421,9 @@
   }
 
   function applySafeConstantsToInputs() {
-    $('fs-x').value = `0.8^${N}`;
-    $('fs-w').value = `1^${M}`;
-    $('fs-y').value = `0^${Math.max(120, 4 * (N + M))}`;
+    $('fs-x').value = '0.8^N';
+    $('fs-w').value = '1^M';
+    $('fs-y').value = '0^columnCap';
     applyParamsFromInputs();
   }
 
@@ -454,20 +560,14 @@
 
   function setSamplingUi(active) {
     samplingActive = active;
-    for (const id of ['fs-sample-btn', 'fs-multi-sample-btn', 'fs-sample-count']) {
+    for (const id of LOCKED_DURING_SAMPLE_IDS) {
       const el = $(id);
       if (el) el.disabled = active;
     }
     const cancelBtn = $('fs-cancel-btn');
     if (cancelBtn) cancelBtn.disabled = !active;
-  }
-
-  function setStatus(message, className = 'fs-note ok') {
-    const note = $('fs-validation-note');
-    if (note) {
-      note.textContent = message;
-      note.className = className;
-    }
+    const resetBtn = $('fs-reset-btn');
+    if (resetBtn) resetBtn.disabled = false;
   }
 
   function terminateActiveWorker(message, options = {}) {
@@ -478,7 +578,10 @@
       activeWorker = null;
     }
     setSamplingUi(false);
-    if (!options.silent && message) setStatus(message, options.className || 'fs-note warn');
+    samplingActive = false;
+    if (!options.silent && message) {
+      setRunState(options.state || 'canceled', options.phase || 'canceled', message, options.className || 'fs-note warn');
+    }
     return hadWorker;
   }
 
@@ -494,13 +597,39 @@
     return seeds;
   }
 
+  function arrayMinMax(values) {
+    let min = Infinity;
+    let max = -Infinity;
+    for (const v of values) {
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+    return { min, max };
+  }
+
   function buildYArrayForWasm(columnCap) {
+    if (ySpec?.kind === 'array' && ySpec.length < columnCap) {
+      throw new Error(finiteListTooShortMessage('y', ySpec.length, columnCap));
+    }
     const values = new Float64Array(columnCap);
+    let minY = Infinity;
+    let maxY = -Infinity;
     for (let k = 1; k <= columnCap; k++) {
       const v = yVal(k);
       if (!Number.isFinite(v)) throw new Error(`y_${k} is non-finite`);
       values[k - 1] = v;
+      if (v < minY) minY = v;
+      if (v > maxY) maxY = v;
     }
+    const xBounds = arrayMinMax(xArr);
+    const wBounds = arrayMinMax(wArr);
+    if (!(wBounds.min + minY > 0)) {
+      throw new Error(`Local positivity failed over the first ${columnCap} columns: need every w_j + y_k > 0, but min(w)+min(y)=${round6(wBounds.min + minY)}.`);
+    }
+    if (!(xBounds.min + minY >= 0)) {
+      throw new Error(`Local positivity failed over the first ${columnCap} columns: need every x_i + y_k >= 0, but min(x)+min(y)=${round6(xBounds.min + minY)}.`);
+    }
+    values.summary = { minY, maxY };
     return values;
   }
 
@@ -665,7 +794,7 @@
       preview: arr.slice(0, Math.min(arr.length, 120)),
       value(k) {
         if (k <= 0) return 0;
-        return k <= arr.length ? arr[k - 1] : 0;
+        return k <= arr.length ? arr[k - 1] : undefined;
       },
       length: arr.length,
     };
@@ -737,6 +866,7 @@
       const seedHi = options.seedHi ?? 0;
       randomUnit = createXoshiro256pp(seedLo, seedHi);
       columnCapOverride = options.columnCap ?? 20000;
+      buildYArrayForWasm(columnCapOverride);
       stats = {
         samples: 0,
         size: 0,
@@ -787,7 +917,7 @@
     stats.elapsedMs = 0;
     $('fs-lambda').textContent = '∅';
     refreshStats();
-    draw();
+    invalidateRender();
   }
 
   function sampleOnceJsFallback() {
@@ -799,28 +929,26 @@
     stats.wasm = false;
     stats.wallElapsedMs = 0;
     try {
+      startElapsedTimer(t0);
+      buildYArrayForWasm(currentColumnCap());
+      setRunState('sampling', 'sampling', 'Sampling with the small-system JS reference fallback...', 'fs-note warn');
       sampleRows();
+      setRunState('rendering', 'rendering', 'Normalizing JS reference result and redrawing...', 'fs-note ok');
       rebuildMuLamFromLevels();
       stats.samples += 1;
       stats.elapsedMs = performance.now() - t0;
+      stopElapsedTimer(stats.elapsedMs);
       if (stats.size === 0) {
-        const note = $('fs-validation-note');
-        if (note) {
-          note.textContent = 'Sample returned λ=0. This is a valid sample, but if it happens repeatedly the specialization is too frozen; increase x/w while keeping every w_j > x_i.';
-          note.className = 'fs-note warn';
-        }
+        setRunState('done', 'done', 'Sample returned λ=0. This is a valid sample, but if it happens repeatedly the specialization is too frozen; increase x/w while keeping every w_j > x_i.', 'fs-note warn');
       } else {
-        clearValidation(`Sampled |λ|=${stats.size}; all ${N * M} inequalities w_j > x_i hold.`);
+        setRunState('done', 'done', `Sampled |λ|=${stats.size}; all ${N * M} inequalities w_j > x_i hold.`, 'fs-note ok');
       }
       refreshStats();
-      draw();
+      invalidateRender();
       return true;
     } catch (e) {
-      const note = $('fs-validation-note');
-      if (note) {
-        note.textContent = e.message;
-        note.className = 'fs-note err';
-      }
+      stopElapsedTimer(performance.now() - t0);
+      setRunState('error', 'error', e.message, 'fs-note err');
       console.error(e);
       return false;
     }
@@ -856,102 +984,24 @@
     return N * M <= 64 && currentColumnCap() <= 5000;
   }
 
-  function sampleOnceWithWorker(options = {}) {
-    if (!applyParamsFromInputs()) return Promise.resolve(false);
-    if (typeof Worker !== 'function') {
-      if (workerFallbackAllowed()) {
-        setStatus('Web Workers are unavailable; using the small-system JS reference fallback.', 'fs-note warn');
-        return Promise.resolve(sampleOnceJsFallback());
-      }
-      setStatus('Web Workers are unavailable, so large exact samples cannot run without freezing the page.', 'fs-note err');
-      return Promise.resolve(false);
-    }
-
-    terminateActiveWorker('', { silent: true });
-    samplingCanceled = false;
-
-    let columnCap;
-    let yValues;
-    try {
-      columnCap = options.columnCap == null
-        ? currentColumnCap()
-        : Math.max(1, Math.min(1000000, Math.trunc(Number(options.columnCap))));
-      yValues = buildYArrayForWasm(columnCap);
-    } catch (error) {
-      setStatus(error.message, 'fs-note err');
-      return Promise.resolve(false);
-    }
-
+  function buildWorkerRequest(options = {}) {
+    const columnCap = options.columnCap == null
+      ? currentColumnCap()
+      : Math.max(1, Math.min(1000000, Math.trunc(Number(options.columnCap))));
+    const yValues = buildYArrayForWasm(columnCap);
     const seeds = createSeedPair();
     if (options.seedLo != null) seeds[0] = Number(options.seedLo) >>> 0;
     if (options.seedHi != null) seeds[1] = Number(options.seedHi) >>> 0;
     const requestId = activeRequestId + 1;
     activeRequestId = requestId;
-    const started = performance.now();
-
     // Fresh typed arrays are transferred so the UI-owned xArr/wArr arrays stay usable.
+    // The worker owns these buffers after postMessage; xArr/wArr remain normal JS arrays.
     const xValues = new Float64Array(xArr);
     const wValues = new Float64Array(wArr);
-    let worker;
-    try {
-      worker = new Worker('/js/factorial-ybe-worker.js?v=20260605-wasm');
-    } catch (error) {
-      if (workerFallbackAllowed()) {
-        setStatus(`Worker could not start (${error.message}); using the small-system JS reference fallback.`, 'fs-note warn');
-        return Promise.resolve(sampleOnceJsFallback());
-      }
-      setStatus(`Worker could not start: ${error.message}`, 'fs-note err');
-      return Promise.resolve(false);
-    }
-    activeWorker = worker;
-    setSamplingUi(true);
-    setStatus(`Sampling in WASM worker for N=${N}, M=${M}, cap=${columnCap}...`, 'fs-note ok');
-
-    return new Promise((resolve) => {
-      let settled = false;
-      function finish(ok) {
-        if (settled) return;
-        settled = true;
-        if (activeWorker === worker) activeWorker = null;
-        worker.terminate();
-        setSamplingUi(false);
-        resolve(ok);
-      }
-
-      worker.onmessage = (event) => {
-        const message = event.data || {};
-        if (message.requestId !== requestId || requestId !== activeRequestId) return;
-        if (message.type === 'result') {
-          try {
-            const wallElapsedMs = performance.now() - started;
-            normalizeWorkerResult(message.result, wallElapsedMs);
-            if (stats.size === 0) {
-              setStatus('Sample returned λ=0. This is valid; increase x/w for more activity while keeping every w_j > x_i.', 'fs-note warn');
-            } else {
-              setStatus(`Sampled with worker/WASM: |λ|=${stats.size}, wall time ${(wallElapsedMs / 1000).toFixed(2)}s.`, 'fs-note ok');
-            }
-            refreshStats();
-            draw();
-            finish(true);
-          } catch (error) {
-            setStatus(error.message, 'fs-note err');
-            console.error(error);
-            finish(false);
-          }
-        } else if (message.type === 'error') {
-          setStatus(message.error || 'Worker sampler failed.', 'fs-note err');
-          finish(false);
-        }
-      };
-
-      worker.onerror = (event) => {
-        if (requestId !== activeRequestId) return;
-        const message = event.message || 'Worker sampler failed to load.';
-        setStatus(message, 'fs-note err');
-        finish(false);
-      };
-
-      worker.postMessage({
+    return {
+      requestId,
+      columnCap,
+      payload: {
         type: 'sample',
         requestId,
         N,
@@ -962,7 +1012,97 @@
         columnCap,
         seedLo: seeds[0],
         seedHi: seeds[1],
-      }, [xValues.buffer, wValues.buffer, yValues.buffer]);
+      },
+      transfer: [xValues.buffer, wValues.buffer, yValues.buffer],
+    };
+  }
+
+  function sampleOnceWithWorker(options = {}) {
+    if (!applyParamsFromInputs()) return Promise.resolve(false);
+    if (typeof Worker !== 'function') {
+      if (workerFallbackAllowed()) {
+        setRunState('sampling', 'sampling', 'Web Workers are unavailable; using the small-system JS reference fallback.', 'fs-note warn');
+        return Promise.resolve(sampleOnceJsFallback());
+      }
+      setRunState('error', 'error', 'Web Workers are unavailable, so large exact samples cannot run without freezing the page.', 'fs-note err');
+      return Promise.resolve(false);
+    }
+
+    terminateActiveWorker('', { silent: true });
+    samplingCanceled = false;
+
+    let request;
+    try {
+      request = buildWorkerRequest(options);
+    } catch (error) {
+      setRunState('error', 'error', error.message, 'fs-note err');
+      return Promise.resolve(false);
+    }
+
+    let worker;
+    try {
+      worker = new Worker('/js/factorial-ybe-worker.js?v=20260605-wasm');
+    } catch (error) {
+      if (workerFallbackAllowed()) {
+        setRunState('sampling', 'sampling', `Worker could not start (${error.message}); using the small-system JS reference fallback.`, 'fs-note warn');
+        return Promise.resolve(sampleOnceJsFallback());
+      }
+      setRunState('error', 'error', `Worker could not start: ${error.message}`, 'fs-note err');
+      return Promise.resolve(false);
+    }
+    activeWorker = worker;
+    setSamplingUi(true);
+    const started = performance.now();
+    startElapsedTimer(started);
+    setRunState('sampling', 'sampling', `Sampling in WASM worker for N=${N}, M=${M}, cap=${request.columnCap}...`, 'fs-note ok');
+
+    return new Promise((resolve) => {
+      let settled = false;
+      function finish(ok, finalElapsedMs = performance.now() - started) {
+        if (settled) return;
+        settled = true;
+        if (activeWorker === worker) activeWorker = null;
+        worker.terminate();
+        setSamplingUi(false);
+        stopElapsedTimer(finalElapsedMs);
+        resolve(ok);
+      }
+
+      worker.onmessage = (event) => {
+        const message = event.data || {};
+        if (message.requestId !== request.requestId || request.requestId !== activeRequestId) return;
+        if (message.type === 'result') {
+          try {
+            const wallElapsedMs = performance.now() - started;
+            setRunState('rendering', 'rendering', 'Normalizing worker result and redrawing...', 'fs-note ok');
+            normalizeWorkerResult(message.result, wallElapsedMs);
+            if (stats.size === 0) {
+              setRunState('done', 'done', 'Sample returned λ=0. This is valid; increase x/w for more activity while keeping every w_j > x_i.', 'fs-note warn');
+            } else {
+              setRunState('done', 'done', `Sampled with worker/WASM: |λ|=${stats.size}, wall time ${(wallElapsedMs / 1000).toFixed(2)}s.`, 'fs-note ok');
+            }
+            refreshStats();
+            invalidateRender();
+            finish(true, wallElapsedMs);
+          } catch (error) {
+            setRunState('error', 'error', error.message, 'fs-note err');
+            console.error(error);
+            finish(false);
+          }
+        } else if (message.type === 'error') {
+          setRunState('error', 'error', message.error || 'Worker sampler failed.', 'fs-note err');
+          finish(false);
+        }
+      };
+
+      worker.onerror = (event) => {
+        if (request.requestId !== activeRequestId) return;
+        const message = event.message || 'Worker sampler failed to load.';
+        setRunState('error', 'error', message, 'fs-note err');
+        finish(false);
+      };
+
+      worker.postMessage(request.payload, request.transfer);
     });
   }
 
@@ -976,6 +1116,170 @@
       if (samplingCanceled) break;
       ok = await sampleOnce();
       if (!ok) break;
+    }
+    return ok;
+  }
+
+  const BENCHMARK_CONTROL_IDS = [
+    'fs-N', 'fs-M', 'fs-q', 'fs-alpha', 'fs-beta', 'fs-gamma',
+    'fs-x', 'fs-w', 'fs-y', 'fs-max-cols',
+  ];
+
+  function defaultBenchmarkCases(options = {}) {
+    return [
+      {
+        name: 'default',
+        N: 6,
+        M: 6,
+        q: 0.95,
+        alpha: 0.55,
+        beta: 0,
+        gamma: 1,
+        x: 'alpha*q^i',
+        w: 'gamma*q^i',
+        y: 'beta*q^i',
+        columnCap: options.defaultColumnCap || 20000,
+      },
+      {
+        name: 'old fan epsilon-safe',
+        N: 12,
+        M: 50,
+        q: 0.2,
+        alpha: 1,
+        beta: 1,
+        gamma: 1,
+        x: '1^N',
+        w: '1.001*q^(-50+i)',
+        y: 'q^(i-50)',
+        columnCap: options.oldFanColumnCap || 20000,
+        note: 'The original screenshot had w_50=x=1; this benchmark uses 1.001*w to keep strict w_j > x_i.',
+      },
+      {
+        name: 'large stress',
+        N: options.stressN || 80,
+        M: options.stressM || 120,
+        q: 0.9,
+        alpha: 0.3,
+        beta: 0,
+        gamma: 1,
+        x: '0.3^N',
+        w: '1^M',
+        y: '0^columnCap',
+        columnCap: options.stressColumnCap || 20000,
+      },
+    ];
+  }
+
+  function snapshotUiAndSamplerState() {
+    const controls = {};
+    for (const id of BENCHMARK_CONTROL_IDS) {
+      const el = $(id);
+      if (!el) continue;
+      controls[id] = { value: el.value };
+    }
+    return {
+      controls,
+      N,
+      M,
+      xArr: xArr.slice(),
+      wArr: wArr.slice(),
+      ySpec,
+      mu: mu.map(row => row.slice()),
+      lam: lam.map(row => row.slice()),
+      rows: rows.map(row => ({ ...row })),
+      levels: levels.map(level => level instanceof Set ? new Set(level) : Array.isArray(level) ? level.slice() : level),
+      stats: { ...stats },
+      panX,
+      panY,
+      zoom,
+      viewInitialized,
+    };
+  }
+
+  function restoreUiAndSamplerState(saved) {
+    terminateActiveWorker('', { silent: true });
+    for (const [id, value] of Object.entries(saved.controls || {})) {
+      const el = $(id);
+      if (el) el.value = value.value;
+    }
+    N = saved.N;
+    M = saved.M;
+    xArr = saved.xArr.slice();
+    wArr = saved.wArr.slice();
+    ySpec = saved.ySpec;
+    mu = saved.mu.map(row => row.slice());
+    lam = saved.lam.map(row => row.slice());
+    rows = saved.rows.map(row => ({ ...row }));
+    levels = saved.levels.map(level => level instanceof Set ? new Set(level) : Array.isArray(level) ? level.slice() : level);
+    stats = { ...saved.stats };
+    panX = saved.panX;
+    panY = saved.panY;
+    zoom = saved.zoom;
+    viewInitialized = saved.viewInitialized;
+    setSamplingUi(false);
+    refreshStats();
+    const lambda = mu[M] || [];
+    const lambdaEl = $('fs-lambda');
+    if (lambdaEl) lambdaEl.textContent = lambda.length ? `(${lambda.join(', ')})` : '∅';
+    applyParamsFromInputs();
+    stats = { ...saved.stats };
+    setRunState('ready', 'ready', 'Benchmark complete; controls restored.', 'fs-note ok');
+    invalidateRender();
+  }
+
+  function applyBenchmarkControls(testCase) {
+    const assignments = {
+      'fs-N': testCase.N,
+      'fs-M': testCase.M,
+      'fs-q': testCase.q,
+      'fs-alpha': testCase.alpha,
+      'fs-beta': testCase.beta,
+      'fs-gamma': testCase.gamma,
+      'fs-x': testCase.x,
+      'fs-w': testCase.w,
+      'fs-y': testCase.y,
+      'fs-max-cols': testCase.columnCap,
+    };
+    for (const [id, value] of Object.entries(assignments)) {
+      const el = $(id);
+      if (el && value != null) el.value = String(value);
+    }
+    if (!applyParamsFromInputs()) {
+      throw new Error($('fs-validation-note')?.textContent || `Benchmark case ${testCase.name} failed validation.`);
+    }
+  }
+
+  async function runBenchmark(options = {}) {
+    const saved = snapshotUiAndSamplerState();
+    const cases = Array.isArray(options.cases) ? options.cases : defaultBenchmarkCases(options);
+    const results = [];
+    try {
+      terminateActiveWorker('', { silent: true });
+      for (const testCase of cases) {
+        applyBenchmarkControls(testCase);
+        const started = performance.now();
+        const ok = await sampleOnceWithWorker({
+          columnCap: testCase.columnCap,
+          seedLo: testCase.seedLo ?? options.seedLo,
+          seedHi: testCase.seedHi ?? options.seedHi,
+        });
+        const elapsedMs = performance.now() - started;
+        const state = snapshotReferenceResult();
+        results.push({
+          name: testCase.name,
+          ok,
+          elapsedMs,
+          elapsedSeconds: elapsedMs / 1000,
+          lambda: state.lambda,
+          stats: { ...stats },
+          status: $('fs-validation-note')?.textContent || '',
+          note: testCase.note || '',
+        });
+        if (!ok && options.stopOnError) break;
+      }
+      return { results };
+    } finally {
+      restoreUiAndSamplerState(saved);
     }
   }
 
@@ -1047,6 +1351,17 @@
     panX = (cssW - plotW * zoom) / 2 - 38 * zoom;
     panY = (cssH - plotH * zoom) / 2 - 14 * zoom;
     viewInitialized = true;
+  }
+
+  function invalidateRender(options = {}) {
+    if (options.resetView) viewInitialized = false;
+    if (renderScheduled) return;
+    renderScheduled = true;
+    const schedule = window.requestAnimationFrame || ((callback) => window.setTimeout(callback, 16));
+    schedule(() => {
+      renderScheduled = false;
+      draw();
+    });
   }
 
   function draw() {
@@ -1353,9 +1668,11 @@
     resetFrozen();
 
     window.factorialExactSamplerSample = sampleOnce;
-    window.factorialExactSamplerState = () => ({ N, M, xArr, wArr, mu, lam, stats, rows, levels });
+    window.factorialExactSamplerState = () => ({ N, M, xArr, wArr, mu, lam, stats, rows, levels, runState, activeRequestId });
     window.factorialYBEReferenceSample = runReferenceSample;
     window.factorialYBEWorkerSample = sampleOnceWithWorker;
+    window.factorialYBEValidateControls = applyParamsFromInputs;
+    window.factorialYBEBenchmark = runBenchmark;
     window.factorialYBECancelSample = () => {
       samplingCanceled = true;
       return terminateActiveWorker('Sampling canceled.', { className: 'fs-note warn' });

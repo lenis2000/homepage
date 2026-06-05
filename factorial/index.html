@@ -112,6 +112,17 @@ title: "Exact sampler for factorial Schur processes"
   }
   .fs-stats span { display:inline-block; margin-right: 14px; }
   .fs-stats .v { color:#1976d2; font-weight: 600; }
+  .fs-status-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    color: #444;
+    margin: 2px 0 6px 0;
+  }
+  .fs-status-strip .v { color:#1976d2; font-weight: 600; }
   .fs-info {
     font-size: 14px;
     line-height: 1.55;
@@ -208,9 +219,10 @@ Yang--Baxter bijectivisation.  The local random split is
   <div id="fs-y-note" class="fs-note"></div>
   <div id="fs-validation-note" class="fs-note"></div>
   <div style="font-size:11px; color:#666; margin-top:2px;">
-    Syntax: list <code>1,2,3</code> · repeat <code>0.5^4</code> · pattern <code>(0.5,0.7)^3</code> · expression
+    Syntax: list <code>1,2,3</code> · repeat <code>0.5^4</code>, <code>1^N</code>, <code>1^M</code>, <code>0^columnCap</code> · pattern <code>(0.5,0.7)^3</code> · expression
     <code>alpha*q^i</code>, <code>10*q^i</code>, <code>q^(-i)/2</code>.  Expressions are evaluated at
-    <code>i=1…N</code> for <code>x</code>, <code>i=1…M</code> for <code>w</code>, and on demand for <code>y</code>.
+    <code>i=1…N</code> for <code>x</code>, <code>i=1…M</code> for <code>w</code>, and up to the column cap for <code>y</code>.
+    Finite lists must be long enough; use a repeat when a constant sequence is intended.
   </div>
 </div>
 
@@ -249,6 +261,10 @@ Yang--Baxter bijectivisation.  The local random split is
     <span>YB moves: <span class="v" id="fs-stat-moves">0</span></span>
     <span>Bernoulli choices: <span class="v" id="fs-stat-random">0</span></span>
     <span>time: <span class="v" id="fs-stat-time">0.00 ms</span></span>
+  </div>
+  <div class="fs-status-strip" aria-live="polite">
+    <span>phase: <span class="v" id="fs-status-phase">ready</span></span>
+    <span>elapsed: <span class="v" id="fs-status-elapsed">0.00 s</span></span>
   </div>
   <div class="fs-lambda-line">λ = <span id="fs-lambda">∅</span></div>
 </div>

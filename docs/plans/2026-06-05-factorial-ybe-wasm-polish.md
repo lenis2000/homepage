@@ -154,20 +154,20 @@ Move the exact reverse-Cauchy sampler into C++/WASM and run it off the main thre
 
 Make the frontend durable under bad parameters and repeated user actions.
 
-- [ ] Split current monolithic JS into named sections/functions: control read, parameter expansion, validation, worker request, result normalization, stats update, render invalidation.
-- [ ] Keep the parameter expression syntax currently advertised, and improve it where needed:
+- [x] Split current monolithic JS into named sections/functions: control read, parameter expansion, validation, worker request, result normalization, stats update, render invalidation.
+- [x] Keep the parameter expression syntax currently advertised, and improve it where needed:
   - expressions like `q^(-50+i)` must work;
   - repeat syntax should support useful constants such as `1^N`, `1^M` if straightforward;
   - finite lists should fail with a clear message if too short, unless an explicit repeat/cycle syntax is documented.
-- [ ] Evaluate `y` to the required `columnCap` or a safe inferred length before transfer to WASM. Check for non-finite values and for local positivity `w_j + y_k > 0`, `x_i + y_k >= 0` over the range that will be used.
-- [ ] Strictly validate all `w_j > x_i`. If a preset needs an epsilon adjustment, make that explicit in the preset description.
-- [ ] Add structured status states: ready, validating, sampling, rendering, done, canceled, error.
-- [ ] Add visible elapsed time in seconds and phase text, following the polished style of the RSK/domino pages.
-- [ ] Disable only the controls that must not be edited during an active worker run, but keep Cancel/Reset available.
-- [ ] Guard against stale worker results by request ID. A slow old sample must not overwrite a newer sample.
-- [ ] Null-check all WASM pointers in the worker before `UTF8ToString`, always call `freeString()` in `finally`, and surface C++ `{error: ...}` messages clearly.
-- [ ] Do not use `innerHTML` with untrusted parameter/error text. Use `textContent` for statuses and summaries.
-- [ ] Add a dev-only benchmark helper, e.g. `window.factorialYBEBenchmark(options)`, that runs default, old preset, and stress cases, returns structured timings, and restores controls afterward.
+- [x] Evaluate `y` to the required `columnCap` or a safe inferred length before transfer to WASM. Check for non-finite values and for local positivity `w_j + y_k > 0`, `x_i + y_k >= 0` over the range that will be used.
+- [x] Strictly validate all `w_j > x_i`. If a preset needs an epsilon adjustment, make that explicit in the preset description.
+- [x] Add structured status states: ready, validating, sampling, rendering, done, canceled, error.
+- [x] Add visible elapsed time in seconds and phase text, following the polished style of the RSK/domino pages.
+- [x] Disable only the controls that must not be edited during an active worker run, but keep Cancel/Reset available.
+- [x] Guard against stale worker results by request ID. A slow old sample must not overwrite a newer sample.
+- [x] Null-check all WASM pointers in the worker before `UTF8ToString`, always call `freeString()` in `finally`, and surface C++ `{error: ...}` messages clearly.
+- [x] Do not use `innerHTML` with untrusted parameter/error text. Use `textContent` for statuses and summaries.
+- [x] Add a dev-only benchmark helper, e.g. `window.factorialYBEBenchmark(options)`, that runs default, old preset, and stress cases, returns structured timings, and restores controls afterward.
 
 ### Task 3: Beautiful path renderer and smooth viewport
 
