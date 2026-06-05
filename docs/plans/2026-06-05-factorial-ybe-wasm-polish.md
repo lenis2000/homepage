@@ -178,10 +178,10 @@ Make the frontend durable under bad parameters and repeated user actions.
 
 Replace the ugly rainbow path display with a polished canvas visualization.
 
-- [ ] Default rendering must be single-palette/tonal, not rainbow. Suggested default: deep UVA navy paths with index-dependent opacity/lightness, amber/orange accent for the middle sampled `lambda` row, soft cream/blue stack backgrounds.
-- [ ] If retaining multicolor paths, put them behind an advanced `Path style: legacy colors` option. It must not be default.
-- [ ] Precompute path geometry from `mu/lam`/levels once per sample. Store arrays of model-space segments or polylines; do not derive positions repeatedly during every draw.
-- [ ] Implement a `FactorialPathCanvasRenderer` with:
+- [x] Default rendering must be single-palette/tonal, not rainbow. Suggested default: deep UVA navy paths with index-dependent opacity/lightness, amber/orange accent for the middle sampled `lambda` row, soft cream/blue stack backgrounds.
+- [x] If retaining multicolor paths, put them behind an advanced `Path style: legacy colors` option. It must not be default.
+- [x] Precompute path geometry from `mu/lam`/levels once per sample. Store arrays of model-space segments or polylines; do not derive positions repeatedly during every draw.
+- [x] Implement a `FactorialPathCanvasRenderer` with:
   - HiDPI setup;
   - persistent viewport `{scale, tx, ty}` in model coordinates;
   - pointer events with pointer capture for drag;
@@ -191,18 +191,18 @@ Replace the ugly rainbow path display with a polished canvas visualization.
   - clamped min/max zoom;
   - fit/reset methods;
   - no direct heavy draw from `mousemove`/`touchmove` handlers.
-- [ ] Add visible zoom controls in the canvas toolbar: Fit, 100%, +, −, and maybe a compact minimap/overview if simple. Do not add keyboard shortcuts.
-- [ ] Use semantic zoom/LOD:
+- [x] Add visible zoom controls in the canvas toolbar: Fit, 100%, +, −, and maybe a compact minimap/overview if simple. Do not add keyboard shortcuts.
+- [x] Use semantic zoom/LOD:
   - dense grid hidden or very faint when cells are too small;
   - row labels hidden/condensed when overlapping;
   - labels rendered only near visible rows/columns;
   - path endpoints/particles simplified at low zoom;
   - optional hover/selection details only if cheap and tasteful.
-- [ ] Cache static background/grid layers separately from path layers where useful. Use `OffscreenCanvas` or a hidden canvas when available, with normal canvas fallback.
-- [ ] Make initial fit beautiful: center the arctic/fan region, not a huge empty rectangle; include reasonable padding; do not bury the picture at the bottom of the viewport.
-- [ ] Render the sampled `lambda` signature/middle row in a visually meaningful way: subtle horizontal rule, highlighted particles, or a small summary panel.
-- [ ] Maintain accessibility: canvas `aria-label`, textual `lambda` summary, readable focus states, high contrast in light/dark mode.
-- [ ] The design should fit the homepage style: Franklin Gothic, UVA navy/orange, clean cards, subtle borders, dark-mode variables.
+- [x] Cache static background/grid layers separately from path layers where useful. Use `OffscreenCanvas` or a hidden canvas when available, with normal canvas fallback.
+- [x] Make initial fit beautiful: center the arctic/fan region, not a huge empty rectangle; include reasonable padding; do not bury the picture at the bottom of the viewport.
+- [x] Render the sampled `lambda` signature/middle row in a visually meaningful way: subtle horizontal rule, highlighted particles, or a small summary panel.
+- [x] Maintain accessibility: canvas `aria-label`, textual `lambda` summary, readable focus states, high contrast in light/dark mode.
+- [x] The design should fit the homepage style: Franklin Gothic, UVA navy/orange, clean cards, subtle borders, dark-mode variables.
 
 ### Task 4: Redesign controls and add presets
 

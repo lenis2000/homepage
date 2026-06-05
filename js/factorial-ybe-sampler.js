@@ -764,7 +764,10 @@
     const lambda = mu[M] || [];
     stats.size = lambda.reduce((s, v) => s + v, 0);
     stats.maxPos = maxPositionSeen();
-    if (updateDom) $('fs-lambda').textContent = lambda.length ? `(${lambda.join(', ')})` : '∅';
+    if (updateDom) {
+      $('fs-lambda').textContent = lambda.length ? `(${lambda.join(', ')})` : '∅';
+      bumpRenderDataVersion();
+    }
   }
 
   function sortedLevelArray(set) {
@@ -916,6 +919,7 @@
     stats.wallElapsedMs = 0;
     stats.elapsedMs = 0;
     $('fs-lambda').textContent = '∅';
+    bumpRenderDataVersion();
     refreshStats();
     invalidateRender();
   }
@@ -978,6 +982,7 @@
     };
     const lambda = Array.isArray(result.lambda) ? result.lambda : (mu[M] || []);
     $('fs-lambda').textContent = lambda.length ? `(${lambda.join(', ')})` : '∅';
+    bumpRenderDataVersion();
   }
 
   function workerFallbackAllowed() {
@@ -1189,10 +1194,7 @@
       rows: rows.map(row => ({ ...row })),
       levels: levels.map(level => level instanceof Set ? new Set(level) : Array.isArray(level) ? level.slice() : level),
       stats: { ...stats },
-      panX,
-      panY,
-      zoom,
-      viewInitialized,
+      rendererViewport: pathRenderer?.snapshotViewport() || null,
     };
   }
 
@@ -1212,10 +1214,7 @@
     rows = saved.rows.map(row => ({ ...row }));
     levels = saved.levels.map(level => level instanceof Set ? new Set(level) : Array.isArray(level) ? level.slice() : level);
     stats = { ...saved.stats };
-    panX = saved.panX;
-    panY = saved.panY;
-    zoom = saved.zoom;
-    viewInitialized = saved.viewInitialized;
+    if (saved.rendererViewport && pathRenderer) pathRenderer.restoreViewport(saved.rendererViewport);
     setSamplingUi(false);
     refreshStats();
     const lambda = mu[M] || [];
@@ -1223,6 +1222,7 @@
     if (lambdaEl) lambdaEl.textContent = lambda.length ? `(${lambda.join(', ')})` : '∅';
     applyParamsFromInputs();
     stats = { ...saved.stats };
+    bumpRenderDataVersion();
     setRunState('ready', 'ready', 'Benchmark complete; controls restored.', 'fs-note ok');
     invalidateRender();
   }
@@ -1284,7 +1284,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Stats and drawing
+  // Stats and canvas renderer
   // ---------------------------------------------------------------------------
 
   function refreshStats() {
@@ -1308,6 +1308,11 @@
     return (!Number.isFinite(v) || v <= 0) ? 20 : v;
   }
 
+  function getPathStyle() {
+    const select = $('fs-path-style');
+    return select && select.value === 'legacy' ? 'legacy' : 'tonal';
+  }
+
   function maxPositionSeen() {
     let m = N + 1;
     for (let j = 0; j <= M; j++) {
@@ -1321,40 +1326,708 @@
     return m;
   }
 
-  function pathPosition(k, lvl) {
-    if (lvl <= M) {
-      if (!mu[lvl]) return null;
-      return mu[lvl][k] + N - k;
-    }
-    const s = lvl - M;
-    const lamLevel = N - s;
-    const track = k - s;
-    if (track < 0 || track >= lamLevel) return null;
-    if (!lam[lamLevel]) return null;
-    return lam[lamLevel][track] + lamLevel - track;
+  let renderDataVersion = 0;
+  let pathRenderer = null;
+
+  function bumpRenderDataVersion() {
+    renderDataVersion += 1;
   }
 
-  let panX = 0;
-  let panY = 0;
-  let zoom = 1.0;
-  let viewInitialized = false;
-  let cachedDrawDims = null;
+  class FactorialPathCanvasRenderer {
+    constructor(canvasEl, options = {}) {
+      this.canvas = canvasEl;
+      this.ctx = canvasEl ? canvasEl.getContext('2d') : null;
+      this.viewbar = options.viewbar || null;
+      this.viewport = { scale: 20, tx: 0, ty: 0 };
+      this.baseScale = 20;
+      this.minScale = 1.25;
+      this.maxScale = 90;
+      this.squareCells = true;
+      this.pathStyle = 'tonal';
+      this.viewInitialized = false;
+      this.framePending = false;
+      this.data = null;
+      this.geometry = null;
+      this.geometryVersion = -1;
+      this.backgroundCache = null;
+      this.backgroundCacheKey = '';
+      this.pointers = new Map();
+      this.lastPinch = null;
+      this.resizeObserver = null;
 
-  function fitViewToContent(maxPos, totalLevels, plotW, plotH) {
-    const cssW = canvas.clientWidth || 800;
-    const cssH = canvas.clientHeight || 480;
-    const padding = 24;
-    const targetW = Math.max(50, cssW - padding);
-    const targetH = Math.max(50, cssH - padding);
-    const z = Math.min(targetW / plotW, targetH / plotH, 1.0);
-    zoom = z > 0 ? z : 1.0;
-    panX = (cssW - plotW * zoom) / 2 - 38 * zoom;
-    panY = (cssH - plotH * zoom) / 2 - 14 * zoom;
-    viewInitialized = true;
+      this.attachPointerEvents();
+      if (typeof ResizeObserver === 'function' && this.canvas) {
+        this.resizeObserver = new ResizeObserver(() => {
+          this.invalidateBackground();
+          this.fit();
+        });
+        this.resizeObserver.observe(this.canvas);
+      }
+    }
+
+    setData(data) {
+      if (!data) return;
+      this.data = data;
+      if (data.version !== this.geometryVersion) {
+        this.geometry = this.buildGeometry(data);
+        this.geometryVersion = data.version;
+        this.viewInitialized = false;
+        this.invalidateBackground();
+      }
+    }
+
+    setBaseScale(value) {
+      const next = Math.max(3, Math.min(80, Number(value) || 20));
+      if (Math.abs(next - this.baseScale) < 0.001) return;
+      this.baseScale = next;
+      this.maxScale = Math.max(48, next * 5);
+      this.invalidateBackground();
+    }
+
+    setSquareCells(value) {
+      const next = !!value;
+      if (next === this.squareCells) return;
+      this.squareCells = next;
+      this.invalidateBackground();
+      this.viewInitialized = false;
+    }
+
+    setPathStyle(value) {
+      const next = value === 'legacy' ? 'legacy' : 'tonal';
+      if (next === this.pathStyle) return;
+      this.pathStyle = next;
+      this.invalidateBackground();
+    }
+
+    snapshotViewport() {
+      return {
+        viewport: { ...this.viewport },
+        viewInitialized: this.viewInitialized,
+        baseScale: this.baseScale,
+        squareCells: this.squareCells,
+        pathStyle: this.pathStyle,
+      };
+    }
+
+    restoreViewport(saved = {}) {
+      if (saved.viewport) this.viewport = { ...saved.viewport };
+      this.viewInitialized = !!saved.viewInitialized;
+      if (saved.baseScale) this.baseScale = saved.baseScale;
+      if (typeof saved.squareCells === 'boolean') this.squareCells = saved.squareCells;
+      if (saved.pathStyle) this.pathStyle = saved.pathStyle;
+      this.invalidateBackground();
+      this.scheduleDraw();
+    }
+
+    buildGeometry(data) {
+      const n = data.N || 0;
+      const m = data.M || 0;
+      const totalLevels = n + m;
+      const rawBounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+      const lambdaLevel = m;
+      const paths = [];
+      const lambdaParticles = [];
+
+      const include = (point) => {
+        rawBounds.minX = Math.min(rawBounds.minX, point.x);
+        rawBounds.maxX = Math.max(rawBounds.maxX, point.x);
+        rawBounds.minY = Math.min(rawBounds.minY, point.y);
+        rawBounds.maxY = Math.max(rawBounds.maxY, point.y);
+      };
+
+      const positionAt = (track, level) => {
+        if (level <= m) {
+          const row = data.mu && data.mu[level];
+          if (!row || row[track] == null) return null;
+          return row[track] + n - track;
+        }
+        const s = level - m;
+        const lamLevel = n - s;
+        const lamTrack = track - s;
+        if (lamTrack < 0 || lamTrack >= lamLevel) return null;
+        const row = data.lam && data.lam[lamLevel];
+        if (!row || row[lamTrack] == null) return null;
+        return row[lamTrack] + lamLevel - lamTrack;
+      };
+
+      for (let track = 0; track < n; track++) {
+        const lastLevel = Math.min(m + track, totalLevels);
+        const polyline = [];
+        const particles = [];
+        let previous = null;
+        for (let level = 0; level <= lastLevel; level++) {
+          const pos = positionAt(track, level);
+          if (pos == null) break;
+          const point = { x: pos, y: totalLevels - level, level, track };
+          particles.push(point);
+          include(point);
+          if (level === lambdaLevel) lambdaParticles.push(point);
+          if (!previous) {
+            polyline.push(point);
+          } else if (point.x !== previous.x) {
+            polyline.push({ x: previous.x, y: point.y, level, track });
+            polyline.push(point);
+          } else {
+            polyline.push(point);
+          }
+          previous = point;
+        }
+        if (polyline.length) {
+          paths.push({
+            track,
+            polyline,
+            particles,
+            endpoint: particles[particles.length - 1],
+          });
+        }
+      }
+
+      if (!Number.isFinite(rawBounds.minX)) {
+        rawBounds.minX = 0;
+        rawBounds.minY = 0;
+        rawBounds.maxX = Math.max(1, n + 1);
+        rawBounds.maxY = Math.max(1, totalLevels);
+      }
+
+      return {
+        N: n,
+        M: m,
+        totalLevels,
+        paths,
+        lambdaParticles,
+        rawBounds,
+      };
+    }
+
+    cssSize() {
+      const rect = this.canvas?.getBoundingClientRect();
+      const width = Math.max(1, Math.round(rect?.width || this.canvas?.clientWidth || 800));
+      const height = Math.max(1, Math.round(rect?.height || this.canvas?.clientHeight || 480));
+      return { width, height };
+    }
+
+    setupHiDpi() {
+      if (!this.canvas || !this.ctx) return { width: 0, height: 0, dpr: 1 };
+      const { width, height } = this.cssSize();
+      const dpr = window.devicePixelRatio || 1;
+      const pixelWidth = Math.max(1, Math.round(width * dpr));
+      const pixelHeight = Math.max(1, Math.round(height * dpr));
+      if (this.canvas.width !== pixelWidth || this.canvas.height !== pixelHeight) {
+        this.canvas.width = pixelWidth;
+        this.canvas.height = pixelHeight;
+        this.invalidateBackground();
+      }
+      return { width, height, dpr };
+    }
+
+    xStep(width) {
+      if (this.squareCells || !this.geometry) return 1;
+      const rawWidth = Math.max(1, this.geometry.rawBounds.maxX - this.geometry.rawBounds.minX + 2);
+      const budgetUnits = Math.max(6, (width - 96) / Math.max(3, this.baseScale));
+      return Math.max(0.08, Math.min(1, budgetUnits / rawWidth));
+    }
+
+    layoutBounds(width) {
+      if (!this.geometry) return { minX: 0, minY: 0, maxX: 1, maxY: 1, width: 1, height: 1, xStep: 1 };
+      const xStep = this.xStep(width);
+      const raw = this.geometry.rawBounds;
+      const exitPad = Math.max(1.2, Math.min(4, (raw.maxX - raw.minX + 1) * 0.08));
+      const minX = Math.max(0, raw.minX - 1) * xStep;
+      const maxX = (raw.maxX + exitPad) * xStep;
+      const minY = Math.max(0, raw.minY - 1);
+      const maxY = Math.min(this.geometry.totalLevels + 1, raw.maxY + 1);
+      return {
+        minX,
+        minY,
+        maxX,
+        maxY,
+        width: Math.max(1, maxX - minX),
+        height: Math.max(1, maxY - minY),
+        xStep,
+      };
+    }
+
+    ensureView(width, height) {
+      if (!this.geometry) return;
+      if (!this.viewInitialized) this.fitToContent(width, height);
+    }
+
+    fitToContent(width, height) {
+      const bounds = this.layoutBounds(width);
+      const pad = 36;
+      const availableW = Math.max(80, width - pad * 2);
+      const availableH = Math.max(80, height - pad * 2);
+      const fitScale = Math.min(availableW / bounds.width, availableH / bounds.height);
+      const targetScale = Math.min(Math.max(this.minScale, fitScale), this.baseScale * 1.25);
+      this.viewport.scale = Math.max(this.minScale, Math.min(this.maxScale, targetScale));
+      this.viewport.tx = (bounds.minX + bounds.maxX) / 2 - width / (2 * this.viewport.scale);
+      this.viewport.ty = (bounds.minY + bounds.maxY) / 2 - height / (2 * this.viewport.scale);
+      this.viewInitialized = true;
+      this.invalidateBackground();
+    }
+
+    fit() {
+      const { width, height } = this.setupHiDpi();
+      this.fitToContent(width || 800, height || 480);
+      this.scheduleDraw();
+    }
+
+    setActualSize() {
+      const { width, height } = this.setupHiDpi();
+      const bounds = this.layoutBounds(width || 800);
+      this.viewport.scale = Math.max(this.minScale, Math.min(this.maxScale, this.baseScale));
+      this.viewport.tx = (bounds.minX + bounds.maxX) / 2 - (width || 800) / (2 * this.viewport.scale);
+      this.viewport.ty = (bounds.minY + bounds.maxY) / 2 - (height || 480) / (2 * this.viewport.scale);
+      this.viewInitialized = true;
+      this.invalidateBackground();
+      this.scheduleDraw();
+    }
+
+    zoomAt(canvasX, canvasY, factor) {
+      if (!Number.isFinite(factor) || factor <= 0) return;
+      const oldScale = this.viewport.scale;
+      const modelX = this.viewport.tx + canvasX / oldScale;
+      const modelY = this.viewport.ty + canvasY / oldScale;
+      const nextScale = Math.max(this.minScale, Math.min(this.maxScale, oldScale * factor));
+      this.viewport.scale = nextScale;
+      this.viewport.tx = modelX - canvasX / nextScale;
+      this.viewport.ty = modelY - canvasY / nextScale;
+      this.viewInitialized = true;
+      this.invalidateBackground();
+      this.scheduleDraw();
+    }
+
+    zoomBy(factor) {
+      const { width, height } = this.cssSize();
+      this.zoomAt(width / 2, height / 2, factor);
+    }
+
+    panByScreen(dx, dy) {
+      if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+      this.viewport.tx -= dx / this.viewport.scale;
+      this.viewport.ty -= dy / this.viewport.scale;
+      this.viewInitialized = true;
+      this.invalidateBackground();
+      this.scheduleDraw();
+    }
+
+    screenToModel(clientX, clientY) {
+      const rect = this.canvas.getBoundingClientRect();
+      return {
+        x: this.viewport.tx + (clientX - rect.left) / this.viewport.scale,
+        y: this.viewport.ty + (clientY - rect.top) / this.viewport.scale,
+      };
+    }
+
+    pointerMetrics() {
+      const points = Array.from(this.pointers.values());
+      if (points.length < 2) return null;
+      const a = points[0];
+      const b = points[1];
+      const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      return { center, distance: Math.hypot(dx, dy) };
+    }
+
+    attachPointerEvents() {
+      if (!this.canvas) return;
+
+      this.canvas.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        this.canvas.setPointerCapture?.(event.pointerId);
+        this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        this.canvas.classList.add('dragging');
+        this.lastPinch = this.pointerMetrics();
+      });
+
+      this.canvas.addEventListener('pointermove', (event) => {
+        if (!this.pointers.has(event.pointerId)) return;
+        event.preventDefault();
+        const previousPoint = this.pointers.get(event.pointerId);
+        this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+        if (this.pointers.size >= 2) {
+          const previousPinch = this.lastPinch;
+          const nextPinch = this.pointerMetrics();
+          if (previousPinch && nextPinch && previousPinch.distance > 0 && nextPinch.distance > 0) {
+            const rect = this.canvas.getBoundingClientRect();
+            const anchored = this.screenToModel(previousPinch.center.x, previousPinch.center.y);
+            const factor = nextPinch.distance / previousPinch.distance;
+            const nextScale = Math.max(this.minScale, Math.min(this.maxScale, this.viewport.scale * factor));
+            this.viewport.scale = nextScale;
+            this.viewport.tx = anchored.x - (nextPinch.center.x - rect.left) / nextScale;
+            this.viewport.ty = anchored.y - (nextPinch.center.y - rect.top) / nextScale;
+            this.viewInitialized = true;
+            this.invalidateBackground();
+            this.scheduleDraw();
+          }
+          this.lastPinch = nextPinch;
+          return;
+        }
+
+        if (previousPoint) {
+          this.panByScreen(event.clientX - previousPoint.x, event.clientY - previousPoint.y);
+        }
+      });
+
+      const release = (event) => {
+        this.pointers.delete(event.pointerId);
+        try {
+          if (!this.canvas.hasPointerCapture || this.canvas.hasPointerCapture(event.pointerId)) {
+            this.canvas.releasePointerCapture?.(event.pointerId);
+          }
+        } catch {
+          // Some browsers drop capture implicitly when a touch sequence ends.
+        }
+        this.lastPinch = this.pointerMetrics();
+        if (!this.pointers.size) this.canvas.classList.remove('dragging');
+      };
+      this.canvas.addEventListener('pointerup', release);
+      this.canvas.addEventListener('pointercancel', release);
+      this.canvas.addEventListener('pointerleave', (event) => {
+        if (event.pointerType === 'mouse' && this.pointers.has(event.pointerId)) release(event);
+      });
+
+      this.canvas.addEventListener('wheel', (event) => {
+        event.preventDefault();
+        const rect = this.canvas.getBoundingClientRect();
+        const factor = Math.exp(-event.deltaY * 0.001);
+        this.zoomAt(event.clientX - rect.left, event.clientY - rect.top, factor);
+      }, { passive: false });
+
+      this.canvas.addEventListener('dblclick', () => this.fit());
+    }
+
+    invalidateBackground() {
+      this.backgroundCacheKey = '';
+    }
+
+    createLayer(width, height) {
+      if (typeof OffscreenCanvas === 'function') return new OffscreenCanvas(width, height);
+      const layer = document.createElement('canvas');
+      layer.width = width;
+      layer.height = height;
+      return layer;
+    }
+
+    theme() {
+      const darkAttr = document.documentElement.getAttribute('data-theme') === 'dark';
+      const darkMedia = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const dark = darkAttr || (!document.documentElement.getAttribute('data-theme') && darkMedia);
+      return dark ? {
+        canvas: '#17232d',
+        wBand: '#2c241b',
+        xBand: '#172b3c',
+        grid: 'rgba(214,223,232,0.18)',
+        gridMajor: 'rgba(229,114,0,0.30)',
+        label: '#d7dde5',
+        muted: '#aeb7c0',
+        navy: '#89b7df',
+        orange: '#ff9933',
+        lambda: '#ffb15f',
+      } : {
+        canvas: '#fbfcff',
+        wBand: '#fff4df',
+        xBand: '#eef5fb',
+        grid: 'rgba(0,47,108,0.12)',
+        gridMajor: 'rgba(229,114,0,0.28)',
+        label: '#27394f',
+        muted: '#66788a',
+        navy: '#002f6c',
+        orange: '#e57200',
+        lambda: '#d65f00',
+      };
+    }
+
+    screenX(rawX, xStep) {
+      return (rawX * xStep - this.viewport.tx) * this.viewport.scale;
+    }
+
+    screenY(modelY) {
+      return (modelY - this.viewport.ty) * this.viewport.scale;
+    }
+
+    modelYForLevel(level) {
+      return (this.geometry?.totalLevels || 0) - level;
+    }
+
+    drawBackgroundLayer(targetCtx, size, xStep, colors) {
+      const width = size.width;
+      const height = size.height;
+      const scale = this.viewport.scale;
+      const geometry = this.geometry;
+      if (!geometry) return;
+
+      targetCtx.fillStyle = colors.canvas;
+      targetCtx.fillRect(0, 0, width, height);
+
+      const bandMinX = this.screenX(Math.max(0, geometry.rawBounds.minX - 1), xStep);
+      const bandMaxX = this.screenX(geometry.rawBounds.maxX + 4, xStep);
+      const topY = this.screenY(0);
+      const middleY = this.screenY(this.modelYForLevel(geometry.M));
+      const bottomY = this.screenY(geometry.totalLevels);
+      targetCtx.fillStyle = colors.xBand;
+      targetCtx.fillRect(bandMinX, topY, bandMaxX - bandMinX, middleY - topY);
+      targetCtx.fillStyle = colors.wBand;
+      targetCtx.fillRect(bandMinX, middleY, bandMaxX - bandMinX, bottomY - middleY);
+
+      const cellPxX = scale * xStep;
+      const cellPxY = scale;
+      const viewLeft = this.viewport.tx;
+      const viewRight = this.viewport.tx + width / scale;
+      const viewTop = this.viewport.ty;
+      const viewBottom = this.viewport.ty + height / scale;
+
+      if (cellPxY >= 7) {
+        const rowStep = cellPxY < 13 ? 5 : 1;
+        const first = Math.max(0, Math.floor(geometry.totalLevels - viewBottom) - 1);
+        const last = Math.min(geometry.totalLevels, Math.ceil(geometry.totalLevels - viewTop) + 1);
+        targetCtx.strokeStyle = rowStep === 1 ? colors.grid : colors.gridMajor;
+        targetCtx.lineWidth = 1;
+        targetCtx.beginPath();
+        for (let level = first; level <= last; level += rowStep) {
+          const y = this.screenY(this.modelYForLevel(level));
+          targetCtx.moveTo(Math.max(0, bandMinX), y);
+          targetCtx.lineTo(Math.min(width, bandMaxX), y);
+        }
+        targetCtx.stroke();
+      }
+
+      if (cellPxX >= 5) {
+        const colStep = cellPxX < 11 ? 5 : 1;
+        const firstCol = Math.max(0, Math.floor(viewLeft / xStep) - 1);
+        const lastCol = Math.ceil(viewRight / xStep) + 1;
+        targetCtx.strokeStyle = colStep === 1 ? colors.grid : colors.gridMajor;
+        targetCtx.lineWidth = 1;
+        targetCtx.beginPath();
+        for (let column = firstCol; column <= lastCol; column += colStep) {
+          const x = this.screenX(column, xStep);
+          targetCtx.moveTo(x, Math.max(0, topY));
+          targetCtx.lineTo(x, Math.min(height, bottomY));
+        }
+        targetCtx.stroke();
+      }
+
+      const lambdaY = middleY;
+      targetCtx.strokeStyle = colors.orange;
+      targetCtx.lineWidth = Math.max(1.4, Math.min(3, scale * 0.08));
+      targetCtx.beginPath();
+      targetCtx.moveTo(Math.max(0, bandMinX), lambdaY);
+      targetCtx.lineTo(Math.min(width, bandMaxX), lambdaY);
+      targetCtx.stroke();
+
+      targetCtx.font = '12px "franklingothic-book", Arial, sans-serif';
+      targetCtx.fillStyle = colors.muted;
+      targetCtx.textBaseline = 'middle';
+      if (cellPxY >= 14) {
+        targetCtx.textAlign = 'right';
+        const labelX = this.screenX(Math.max(0, geometry.rawBounds.minX), xStep) - 8;
+        const firstLevel = Math.max(1, Math.floor(geometry.totalLevels - viewBottom));
+        const lastLevel = Math.min(geometry.totalLevels, Math.ceil(geometry.totalLevels - viewTop));
+        for (let level = firstLevel; level <= lastLevel; level++) {
+          const mid = this.modelYForLevel(level - 0.5);
+          const y = this.screenY(mid);
+          if (y < 12 || y > height - 12) continue;
+          if (level <= geometry.M) {
+            targetCtx.fillText('w' + sub(level), labelX, y);
+          } else {
+            const xIndex = geometry.N - (level - geometry.M) + 1;
+            targetCtx.fillText('x' + sub(xIndex), labelX, y);
+          }
+        }
+      } else if (cellPxY >= 5) {
+        targetCtx.textAlign = 'left';
+        targetCtx.fillText('x-stack', Math.max(8, bandMinX + 8), Math.max(16, (topY + middleY) / 2));
+        targetCtx.fillText('lambda', Math.max(8, bandMinX + 8), lambdaY - 10);
+        targetCtx.fillText('w-stack', Math.max(8, bandMinX + 8), Math.min(height - 16, (middleY + bottomY) / 2));
+      }
+    }
+
+    drawBackground(size, xStep, colors) {
+      const pixelW = Math.max(1, Math.round(size.width * size.dpr));
+      const pixelH = Math.max(1, Math.round(size.height * size.dpr));
+      const key = [
+        pixelW,
+        pixelH,
+        size.dpr.toFixed(2),
+        this.geometryVersion,
+        this.viewport.scale.toFixed(4),
+        this.viewport.tx.toFixed(4),
+        this.viewport.ty.toFixed(4),
+        xStep.toFixed(4),
+        this.squareCells ? 'sq' : 'wide',
+        colors.canvas,
+      ].join('|');
+
+      if (!this.backgroundCache || this.backgroundCacheKey !== key ||
+          this.backgroundCache.width !== pixelW || this.backgroundCache.height !== pixelH) {
+        this.backgroundCache = this.createLayer(pixelW, pixelH);
+        this.backgroundCacheKey = key;
+        const layerCtx = this.backgroundCache.getContext('2d');
+        layerCtx.setTransform(size.dpr, 0, 0, size.dpr, 0, 0);
+        this.drawBackgroundLayer(layerCtx, size, xStep, colors);
+      }
+
+      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      this.ctx.drawImage(this.backgroundCache, 0, 0);
+    }
+
+    tonalStroke(index, count, colors) {
+      const t = count <= 1 ? 0.5 : index / (count - 1);
+      const alpha = Math.max(0.22, Math.min(0.82, 0.34 + 0.46 * t));
+      if (colors.navy.startsWith('#002f6c')) return `rgba(0,47,108,${alpha.toFixed(3)})`;
+      return `rgba(137,183,223,${Math.min(0.95, alpha + 0.12).toFixed(3)})`;
+    }
+
+    drawPaths(size, xStep, colors) {
+      const geometry = this.geometry;
+      if (!geometry) return;
+      const ctx2d = this.ctx;
+      const cellPx = Math.min(this.viewport.scale, this.viewport.scale * xStep);
+      const drawAllParticles = cellPx >= 11;
+      const drawSomeParticles = cellPx >= 5.5;
+      const lineWidth = Math.max(1.15, Math.min(3.2, cellPx * 0.14));
+      const legacyPalette = [
+        '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+        '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf',
+      ];
+
+      ctx2d.setTransform(size.dpr, 0, 0, size.dpr, 0, 0);
+      ctx2d.lineJoin = 'round';
+      ctx2d.lineCap = 'round';
+
+      for (const path of geometry.paths) {
+        const color = this.pathStyle === 'legacy'
+          ? legacyPalette[path.track % legacyPalette.length]
+          : this.tonalStroke(path.track, Math.max(1, geometry.paths.length), colors);
+        ctx2d.strokeStyle = color;
+        ctx2d.lineWidth = lineWidth;
+        ctx2d.setLineDash([]);
+        ctx2d.beginPath();
+        path.polyline.forEach((point, index) => {
+          const x = this.screenX(point.x, xStep);
+          const y = this.screenY(point.y);
+          if (index === 0) ctx2d.moveTo(x, y);
+          else ctx2d.lineTo(x, y);
+        });
+        ctx2d.stroke();
+
+        if (path.endpoint) {
+          const ex = this.screenX(path.endpoint.x, xStep);
+          const ey = this.screenY(path.endpoint.y);
+          const tail = Math.max(16, Math.min(54, this.viewport.scale * 1.8));
+          ctx2d.strokeStyle = this.pathStyle === 'legacy' ? color : colors.orange;
+          ctx2d.globalAlpha = this.pathStyle === 'legacy' ? 0.55 : 0.42;
+          ctx2d.lineWidth = Math.max(1, lineWidth * 0.7);
+          ctx2d.setLineDash([5, 5]);
+          ctx2d.beginPath();
+          ctx2d.moveTo(ex, ey);
+          ctx2d.lineTo(ex + tail, ey);
+          ctx2d.stroke();
+          ctx2d.globalAlpha = 1;
+          ctx2d.setLineDash([]);
+        }
+      }
+
+      if (drawSomeParticles) {
+        const particleRadius = Math.max(1.5, Math.min(4.4, cellPx * 0.18));
+        for (const path of geometry.paths) {
+          const color = this.pathStyle === 'legacy'
+            ? legacyPalette[path.track % legacyPalette.length]
+            : colors.navy;
+          ctx2d.fillStyle = color;
+          ctx2d.globalAlpha = this.pathStyle === 'legacy' ? 0.88 : 0.55;
+          const particles = drawAllParticles
+            ? path.particles
+            : path.particles.filter(point => point.level === geometry.M || point === path.endpoint);
+          for (const point of particles) {
+            ctx2d.beginPath();
+            ctx2d.arc(this.screenX(point.x, xStep), this.screenY(point.y), particleRadius, 0, 2 * Math.PI);
+            ctx2d.fill();
+          }
+        }
+        ctx2d.globalAlpha = 1;
+      }
+
+      const lambdaRadius = Math.max(2.5, Math.min(6.2, cellPx * 0.26));
+      ctx2d.fillStyle = colors.lambda;
+      ctx2d.strokeStyle = colors.canvas;
+      ctx2d.lineWidth = Math.max(1.2, lambdaRadius * 0.36);
+      for (const point of geometry.lambdaParticles) {
+        const x = this.screenX(point.x, xStep);
+        const y = this.screenY(point.y);
+        ctx2d.beginPath();
+        ctx2d.arc(x, y, lambdaRadius, 0, 2 * Math.PI);
+        ctx2d.fill();
+        ctx2d.stroke();
+      }
+
+      for (const path of geometry.paths) {
+        if (!path.endpoint) continue;
+        const x = this.screenX(path.endpoint.x, xStep);
+        const y = this.screenY(path.endpoint.y);
+        ctx2d.fillStyle = colors.canvas;
+        ctx2d.strokeStyle = this.pathStyle === 'legacy'
+          ? legacyPalette[path.track % legacyPalette.length]
+          : colors.orange;
+        ctx2d.lineWidth = Math.max(1.4, lineWidth * 0.9);
+        ctx2d.beginPath();
+        ctx2d.arc(x, y, Math.max(2.4, lambdaRadius * 0.82), 0, 2 * Math.PI);
+        ctx2d.fill();
+        ctx2d.stroke();
+      }
+    }
+
+    updateViewbar() {
+      if (!this.viewbar) return;
+      const percent = Math.round((this.viewport.scale / Math.max(1, this.baseScale)) * 100);
+      const style = this.pathStyle === 'legacy' ? 'legacy' : 'tonal';
+      this.viewbar.textContent = `zoom ${percent}% · ${style}`;
+    }
+
+    renderNow() {
+      if (!this.canvas || !this.ctx || !this.geometry) return;
+      const size = this.setupHiDpi();
+      this.ensureView(size.width, size.height);
+      const colors = this.theme();
+      const xStep = this.xStep(size.width);
+      this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.drawBackground(size, xStep, colors);
+      this.drawPaths(size, xStep, colors);
+      this.updateViewbar();
+    }
+
+    scheduleDraw() {
+      if (this.framePending) return;
+      this.framePending = true;
+      const schedule = window.requestAnimationFrame || ((callback) => window.setTimeout(callback, 16));
+      schedule(() => {
+        this.framePending = false;
+        this.renderNow();
+      });
+    }
+  }
+
+  function syncRendererData() {
+    if (!pathRenderer) return;
+    pathRenderer.setBaseScale(getDesiredCellSize());
+    pathRenderer.setSquareCells(isSquareCells());
+    pathRenderer.setPathStyle(getPathStyle());
+    pathRenderer.setData({
+      version: renderDataVersion,
+      N,
+      M,
+      mu,
+      lam,
+      lambda: mu[M] || [],
+      stats,
+    });
   }
 
   function invalidateRender(options = {}) {
-    if (options.resetView) viewInitialized = false;
+    if (options.resetView && pathRenderer) pathRenderer.viewInitialized = false;
     if (renderScheduled) return;
     renderScheduled = true;
     const schedule = window.requestAnimationFrame || ((callback) => window.setTimeout(callback, 16));
@@ -1365,153 +2038,8 @@
   }
 
   function draw() {
-    if (!canvas || !ctx) return;
-    const maxPos = Math.max(N + 2, maxPositionSeen() + 2);
-    const totalLevels = M + N;
-    const ml = 38, mr = 18, mt = 14, mb = 28;
-
-    const userCell = getDesiredCellSize();
-    const square = isSquareCells();
-    let cellHeight = userCell;
-    let cellWidth = userCell;
-    if (!square) {
-      const cssWForFit = Math.max(400, canvas.clientWidth || 1000);
-      if (cellWidth * maxPos + ml + mr > cssWForFit) {
-        cellWidth = Math.max(0.5, (cssWForFit - ml - mr) / maxPos);
-      }
-    }
-
-    const plotW = cellWidth * maxPos;
-    const plotH = cellHeight * totalLevels;
-    const dpr = window.devicePixelRatio || 1;
-    const cssW = canvas.clientWidth || 800;
-    const cssH = canvas.clientHeight || 480;
-    if (canvas.width !== Math.round(cssW * dpr)) canvas.width = Math.round(cssW * dpr);
-    if (canvas.height !== Math.round(cssH * dpr)) canvas.height = Math.round(cssH * dpr);
-
-    if (!viewInitialized) fitViewToContent(maxPos, totalLevels, plotW, plotH);
-
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, dpr * panX, dpr * panY);
-
-    cachedDrawDims = { ml, mt, plotH, cellWidth, cellHeight, maxPos, totalLevels, panX, panY, zoom };
-
-    const xOf = (col) => ml + col * cellWidth;
-    const yOf = (lvl) => mt + plotH - lvl * cellHeight;
-    const cellSize = Math.min(cellWidth, cellHeight);
-
-    ctx.fillStyle = '#fff8e7';
-    ctx.fillRect(ml, yOf(M), plotW, yOf(0) - yOf(M));
-    ctx.fillStyle = '#e9f1ff';
-    ctx.fillRect(ml, yOf(totalLevels), plotW, yOf(M) - yOf(totalLevels));
-
-    ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let lvl = 0; lvl <= totalLevels; lvl++) {
-      const y = yOf(lvl);
-      ctx.moveTo(ml, y);
-      ctx.lineTo(ml + plotW, y);
-    }
-    ctx.stroke();
-
-    ctx.strokeStyle = '#eee';
-    ctx.beginPath();
-    for (let c = 0; c <= maxPos; c++) {
-      const x = xOf(c);
-      ctx.moveTo(x, mt);
-      ctx.lineTo(x, mt + plotH);
-    }
-    ctx.stroke();
-
-    ctx.strokeStyle = '#888';
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(ml, yOf(M));
-    ctx.lineTo(ml + plotW, yOf(M));
-    ctx.stroke();
-
-    ctx.fillStyle = '#555';
-    const labelFont = Math.min(13, Math.max(9, cellSize * 0.55));
-    ctx.font = labelFont + 'px ui-sans-serif, system-ui, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    for (let j = 1; j <= M; j++) {
-      const yMid = (yOf(j - 1) + yOf(j)) / 2;
-      ctx.fillText('w' + sub(j), ml - 6, yMid);
-    }
-    for (let s = 1; s <= N; s++) {
-      const yMid = (yOf(M + s - 1) + yOf(M + s)) / 2;
-      ctx.fillText('x' + sub(N - s + 1), ml - 6, yMid);
-    }
-
-    const palette = [
-      '#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2',
-      '#7f7f7f','#bcbd22','#17becf','#aec7e8','#ffbb78','#98df8a','#ff9896',
-      '#c5b0d5','#c49c94','#f7b6d2','#c7c7c7','#dbdb8d','#9edae5'
-    ];
-
-    for (let k = 0; k < N; k++) {
-      const color = palette[k % palette.length];
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1.8;
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      let prev = null;
-      let lastX = 0;
-      let lastY = 0;
-      const lastLvl = Math.min(M + k, M + N);
-      for (let lvl = 0; lvl <= lastLvl; lvl++) {
-        const pos = pathPosition(k, lvl);
-        if (pos == null) break;
-        const x = xOf(pos);
-        const y = yOf(lvl);
-        if (prev == null) ctx.moveTo(x, y);
-        else if (pos !== prev.pos) {
-          ctx.lineTo(prev.x, y);
-          ctx.lineTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
-        }
-        prev = { x, y, pos };
-        lastX = x;
-        lastY = y;
-      }
-      ctx.stroke();
-
-      if (prev) {
-        ctx.beginPath();
-        ctx.setLineDash([4, 4]);
-        ctx.lineWidth = 1.2;
-        ctx.strokeStyle = color;
-        ctx.moveTo(lastX, lastY);
-        ctx.lineTo(ml + plotW, lastY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-
-      ctx.fillStyle = color;
-      for (let lvl = 0; lvl <= lastLvl; lvl++) {
-        const pos = pathPosition(k, lvl);
-        if (pos == null) break;
-        ctx.beginPath();
-        ctx.arc(xOf(pos), yOf(lvl), Math.min(3.4, Math.max(1.6, cellSize * 0.14)), 0, 2 * Math.PI);
-        ctx.fill();
-      }
-
-      if (prev) {
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(lastX, lastY, Math.min(4.2, Math.max(2.1, cellSize * 0.18)), 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.lineWidth = 1.8;
-        ctx.strokeStyle = color;
-        ctx.beginPath();
-        ctx.arc(lastX, lastY, Math.min(4.2, Math.max(2.1, cellSize * 0.18)), 0, 2 * Math.PI);
-        ctx.stroke();
-      }
-    }
+    syncRendererData();
+    pathRenderer?.renderNow();
   }
 
   // ---------------------------------------------------------------------------
@@ -1519,61 +2047,7 @@
   // ---------------------------------------------------------------------------
 
   function attachCanvasEvents() {
-    let dragging = false;
-    let lastX = 0;
-    let lastY = 0;
-    canvas.addEventListener('mousedown', (e) => {
-      dragging = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      canvas.classList.add('dragging');
-    });
-    window.addEventListener('mouseup', () => {
-      dragging = false;
-      canvas.classList.remove('dragging');
-    });
-    window.addEventListener('mousemove', (e) => {
-      if (!dragging) return;
-      panX += e.clientX - lastX;
-      panY += e.clientY - lastY;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      draw();
-    });
-    canvas.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      const oldZoom = zoom;
-      const factor = Math.exp(-e.deltaY * 0.001);
-      zoom = Math.max(0.05, Math.min(8, zoom * factor));
-      panX = mx - (mx - panX) * (zoom / oldZoom);
-      panY = my - (my - panY) * (zoom / oldZoom);
-      draw();
-    }, { passive: false });
-    canvas.addEventListener('dblclick', () => {
-      viewInitialized = false;
-      draw();
-    });
-
-    let touchPrev = null;
-    canvas.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 1) {
-        touchPrev = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      }
-    }, { passive: true });
-    canvas.addEventListener('touchmove', (e) => {
-      if (e.touches.length === 1 && touchPrev) {
-        e.preventDefault();
-        const t = e.touches[0];
-        panX += t.clientX - touchPrev.x;
-        panY += t.clientY - touchPrev.y;
-        touchPrev = { x: t.clientX, y: t.clientY };
-        draw();
-      }
-    }, { passive: false });
-    canvas.addEventListener('touchend', () => { touchPrev = null; });
+    // Pointer, wheel, and pinch handling is owned by FactorialPathCanvasRenderer.
   }
 
   function attachUiEvents() {
@@ -1594,13 +2068,11 @@
       $('fs-N').value = String(N);
       $('fs-M').value = String(M);
       applyParamsFromInputs();
-      viewInitialized = false;
       resetFrozen();
     });
     $('fs-reset-btn').addEventListener('click', () => {
       terminateActiveWorker('Active sample canceled by reset.', { className: 'fs-note warn' });
       applyParamsFromInputs();
-      viewInitialized = false;
       resetFrozen();
     });
     $('fs-sample-btn').addEventListener('click', () => {
@@ -1628,7 +2100,8 @@
     if (scaleEl) {
       const onScaleChange = () => {
         if (scaleValEl) scaleValEl.textContent = scaleEl.value + 'px';
-        draw();
+        pathRenderer?.setBaseScale(getDesiredCellSize());
+        invalidateRender();
       };
       scaleEl.addEventListener('input', onScaleChange);
       scaleEl.addEventListener('change', onScaleChange);
@@ -1645,15 +2118,27 @@
         const fitted = Math.floor(Math.max(3, Math.min(60, (Math.min((cssW - ml - mr) / maxPos, (cssH - mt - mb) / totalLevels) || 20))));
         scaleEl.value = String(fitted);
         if (scaleValEl) scaleValEl.textContent = fitted + 'px';
-        viewInitialized = false;
-        draw();
+        pathRenderer?.setBaseScale(fitted);
+        pathRenderer?.fit();
       });
     }
     const square = $('fs-square-cells');
-    if (square) square.addEventListener('change', draw);
+    if (square) square.addEventListener('change', () => {
+      pathRenderer?.setSquareCells(isSquareCells());
+      pathRenderer?.fit();
+    });
+
+    $('fs-view-fit')?.addEventListener('click', () => pathRenderer?.fit());
+    $('fs-view-actual')?.addEventListener('click', () => pathRenderer?.setActualSize());
+    $('fs-view-zoom-in')?.addEventListener('click', () => pathRenderer?.zoomBy(1.25));
+    $('fs-view-zoom-out')?.addEventListener('click', () => pathRenderer?.zoomBy(0.8));
+    $('fs-path-style')?.addEventListener('change', () => {
+      pathRenderer?.setPathStyle(getPathStyle());
+      invalidateRender();
+    });
+
     window.addEventListener('resize', () => {
-      viewInitialized = false;
-      draw();
+      pathRenderer?.fit();
     });
   }
 
@@ -1662,6 +2147,7 @@
     M = clampInt($('fs-M').value, 1, 120);
     $('fs-N').value = String(N);
     $('fs-M').value = String(M);
+    pathRenderer = new FactorialPathCanvasRenderer(canvas, { viewbar: $('fs-viewbar') });
     attachCanvasEvents();
     attachUiEvents();
     applyParamsFromInputs();
@@ -1669,6 +2155,7 @@
 
     window.factorialExactSamplerSample = sampleOnce;
     window.factorialExactSamplerState = () => ({ N, M, xArr, wArr, mu, lam, stats, rows, levels, runState, activeRequestId });
+    window.factorialYBERenderer = pathRenderer;
     window.factorialYBEReferenceSample = runReferenceSample;
     window.factorialYBEWorkerSample = sampleOnceWithWorker;
     window.factorialYBEValidateControls = applyParamsFromInputs;

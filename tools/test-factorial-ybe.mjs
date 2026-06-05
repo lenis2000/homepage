@@ -40,9 +40,21 @@ function checkSource() {
   assert(!page.includes("factorial-glauber.js"), "/factorial/ should not load stale Glauber JS");
   assert(!page.includes("factorial-wasm.js"), "/factorial/ should not load stale Glauber WASM");
   assert(page.includes('id="fs-cancel-btn"'), "/factorial/ should expose a cancel button");
+  assert(page.includes('id="fs-view-fit"'), "/factorial/ should expose a canvas fit control");
+  assert(page.includes('id="fs-view-actual"'), "/factorial/ should expose a 100% canvas control");
+  assert(page.includes('id="fs-path-style"'), "/factorial/ should expose an advanced path style control");
+  assert(page.includes('<option value="tonal" selected>'), "tonal path rendering should be the default");
+  assert(page.includes('<option value="legacy">'), "legacy multicolor paths should be available only as a secondary option");
   assert(sampler.includes("window.factorialYBEReferenceSample"), "seeded JS reference hook should be exposed");
   assert(sampler.includes("window.factorialYBEWorkerSample"), "worker/WASM sample hook should be exposed");
   assert(sampler.includes("window.factorialYBEBenchmark"), "dev benchmark helper should be exposed");
+  assert(sampler.includes("class FactorialPathCanvasRenderer"), "canvas rendering should be owned by FactorialPathCanvasRenderer");
+  assert(sampler.includes("window.factorialYBERenderer"), "renderer diagnostics should be exposed for smoke tests");
+  assert(sampler.includes("OffscreenCanvas"), "renderer should cache static layers with OffscreenCanvas when available");
+  assert(sampler.includes("requestAnimationFrame"), "renderer should schedule canvas draws with requestAnimationFrame");
+  assert(sampler.includes("addEventListener('pointermove'"), "renderer should use pointer events for drag/pinch");
+  assert(!sampler.includes("addEventListener('mousemove'"), "renderer should not redraw directly from mousemove handlers");
+  assert(!sampler.includes("addEventListener('touchmove'"), "renderer should not redraw directly from touchmove handlers");
   assert(sampler.includes("setRunState('sampling'"), "sampler should use structured sampling status");
   assert(sampler.includes("finiteListTooShortMessage"), "sampler should reject short finite parameter lists clearly");
   assert(sampler.includes("new Worker('/js/factorial-ybe-worker.js"), "visible sampler should start the YBE worker");
@@ -389,6 +401,52 @@ async function runBrowserSmoke() {
     assert(workerResult.runState === "done" && workerResult.phaseText === "done", "worker sample should finish in done status");
     assert(/s$/.test(workerResult.elapsedText), "worker sample should report elapsed seconds");
     console.log(`Factorial worker/WASM smoke passed: lambda=(${workerResult.lambda.join(",")}), moves=${workerResult.localMoves}.`);
+
+    const rendererResult = await evaluate(client, `(async () => {
+      await new Promise(resolve => requestAnimationFrame(() => resolve()));
+      await new Promise(resolve => requestAnimationFrame(() => resolve()));
+      const canvas = document.getElementById("fs-canvas");
+      const renderer = window.factorialYBERenderer;
+      const ctx = canvas?.getContext("2d");
+      let changedPixels = 0;
+      if (canvas && ctx && canvas.width > 0 && canvas.height > 0) {
+        const image = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        const base = [image[0], image[1], image[2], image[3]];
+        for (let i = 0; i < image.length; i += 16) {
+          const dr = Math.abs(image[i] - base[0]);
+          const dg = Math.abs(image[i + 1] - base[1]);
+          const db = Math.abs(image[i + 2] - base[2]);
+          const da = Math.abs(image[i + 3] - base[3]);
+          if (dr + dg + db + da > 18) changedPixels += 1;
+        }
+      }
+      renderer?.zoomBy(1.1);
+      renderer?.zoomBy(1 / 1.1);
+      await new Promise(resolve => requestAnimationFrame(() => resolve()));
+      return {
+        hasRenderer: !!renderer,
+        hasRenderNow: typeof renderer?.renderNow === "function",
+        hasFit: typeof renderer?.fit === "function",
+        hasZoomBy: typeof renderer?.zoomBy === "function",
+        pathStyle: document.getElementById("fs-path-style")?.value || "",
+        viewbar: document.getElementById("fs-viewbar")?.textContent || "",
+        canvasWidth: canvas?.width || 0,
+        canvasHeight: canvas?.height || 0,
+        changedPixels,
+        scale: renderer?.viewport?.scale || 0,
+        cacheReady: !!renderer?.backgroundCache
+      };
+    })()`, 30000);
+
+    assert(rendererResult.hasRenderer, "page should expose the factorial path renderer");
+    assert(rendererResult.hasRenderNow && rendererResult.hasFit && rendererResult.hasZoomBy, "renderer should expose draw and zoom controls");
+    assert(rendererResult.pathStyle === "tonal", "tonal path style should remain the default");
+    assert(rendererResult.viewbar.includes("tonal"), "viewbar should report the current tonal renderer mode");
+    assert(rendererResult.canvasWidth > 0 && rendererResult.canvasHeight > 0, "factorial canvas should have drawable dimensions");
+    assert(rendererResult.changedPixels > 0, "factorial canvas should be nonblank after worker sample");
+    assert(rendererResult.scale > 0, "renderer viewport should have a positive model-space scale");
+    assert(rendererResult.cacheReady, "renderer should prepare its cached background layer");
+    console.log(`Factorial renderer smoke passed: ${rendererResult.canvasWidth}x${rendererResult.canvasHeight}, changed=${rendererResult.changedPixels}.`);
 
     const positivityResult = await evaluate(client, `(async () => {
       document.getElementById("fs-N").value = "2";
