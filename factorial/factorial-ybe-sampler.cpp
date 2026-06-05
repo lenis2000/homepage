@@ -356,9 +356,9 @@ class Sampler {
   std::vector<std::vector<int>> mu;
   std::vector<std::vector<int>> lam;
   std::vector<int> lambda;
-  int rowSwaps = 0;
-  int localMoves = 0;
-  int randomChoices = 0;
+  std::uint64_t rowSwaps = 0;
+  std::uint64_t localMoves = 0;
+  std::uint64_t randomChoices = 0;
 
   Sampler(int n, int m, const double* xPtr, const double* wPtr, const double* yPtr,
           int yLength, int cap, uint32_t seedLo, uint32_t seedHi)

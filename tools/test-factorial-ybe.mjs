@@ -33,6 +33,7 @@ function checkSource() {
   const sampler = fs.readFileSync(path.join(root, "js", "factorial-ybe-sampler.js"), "utf8");
   const worker = fs.readFileSync(path.join(root, "js", "factorial-ybe-worker.js"), "utf8");
   const wasmBundle = fs.readFileSync(path.join(root, "js", "factorial-ybe-wasm.js"), "utf8");
+  const cpp = fs.readFileSync(path.join(root, "factorial", "factorial-ybe-sampler.cpp"), "utf8");
 
   assert(page.includes("/js/factorial-ybe-sampler.js"), "/factorial/ should load the YBE sampler");
   assert(sampler.includes("new Worker('/js/factorial-ybe-worker.js"), "visible sampler should start the YBE worker");
@@ -60,6 +61,9 @@ function checkSource() {
   assert(wasmBundle.includes("_malloc"), "WASM bundle should export _malloc");
   assert(wasmBundle.includes("_free"), "WASM bundle should export _free");
   assert(wasmBundle.includes("Sampler level storage request is too large"), "WASM bundle should include the oversized-storage guard");
+  assert(cpp.includes("std::uint64_t rowSwaps"), "C++ sampler stats counters should not overflow under accepted caps");
+  assert(cpp.includes("std::uint64_t localMoves"), "C++ sampler stats counters should not overflow under accepted caps");
+  assert(cpp.includes("std::uint64_t randomChoices"), "C++ sampler stats counters should not overflow under accepted caps");
 }
 
 function mimeType(filePath) {
