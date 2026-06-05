@@ -2150,7 +2150,7 @@
         lozengeA: uvaBlue,
         lozengeB: uvaOrange25,
         lozengeC: uvaOrange25,
-        lozengeStroke: 'rgba(230,238,246,0.22)',
+        lozengeStroke: 'rgba(230,238,246,0.14)',
         lozengeParticle: uvaOrange,
       } : {
         canvas: '#fbfcff',
@@ -2166,7 +2166,7 @@
         lozengeA: uvaBlue,
         lozengeB: uvaOrange25,
         lozengeC: uvaOrange25,
-        lozengeStroke: 'rgba(0,47,108,0.18)',
+        lozengeStroke: 'rgba(0,47,108,0.10)',
         lozengeParticle: uvaOrange,
       };
     }
@@ -2457,15 +2457,30 @@
       };
     }
 
-    drawLozengePolygon(ctx2d, kind, x, y, fill, stroke, lineWidth = 1) {
+    drawLozengePolygon(ctx2d, kind, x, y, fill, stroke, lineWidth = 1, options = {}) {
       const vertices = this.lozengePolygon(kind, x, y).map(v => this.lozengeScreenPoint(v));
       if (!vertices.length) return;
+
       ctx2d.beginPath();
       ctx2d.moveTo(vertices[0].x, vertices[0].y);
       for (let i = 1; i < vertices.length; i++) ctx2d.lineTo(vertices[i].x, vertices[i].y);
       ctx2d.closePath();
+
+      // Opaque fill.
       ctx2d.fillStyle = fill;
       ctx2d.fill();
+
+      // Same-color seam stroke.  This seals subpixel anti-aliasing cracks
+      // without changing the mathematical polygon coordinates.
+      const defaultSeal = Math.max(0.45, Math.min(1.15, lineWidth || 0.6));
+      const sealWidth = Number.isFinite(options.sealWidth) ? options.sealWidth : defaultSeal;
+      if (sealWidth > 0) {
+        ctx2d.strokeStyle = fill;
+        ctx2d.lineWidth = sealWidth;
+        ctx2d.stroke();
+      }
+
+      // Optional visible grid/stroke.
       if (stroke && lineWidth > 0) {
         ctx2d.strokeStyle = stroke;
         ctx2d.lineWidth = lineWidth;
@@ -2485,6 +2500,7 @@
       return maxX >= view.left && minX <= view.right && maxY >= view.top && minY <= view.bottom;
     }
 
+
     countCentersAtMost(centers, x) {
       let lo = 0;
       let hi = centers.length;
@@ -2499,76 +2515,155 @@
     drawLozenges(size, _xStep, colors) {
       const geometry = this.geometry;
       if (!geometry) return;
+
       const rows = geometry.lozengeRows || [];
       const ctx2d = this.ctx;
-      const scale = this.viewport.scale;
+      const scale = this.viewport.scale || 1;
+
       const view = {
         left: this.viewport.tx,
         right: this.viewport.tx + size.width / scale,
         top: this.viewport.ty,
         bottom: this.viewport.ty + size.height / scale,
       };
+
       const cellPx = scale;
-      const stroke = cellPx >= 7 ? colors.lozengeStroke : '';
+      const stroke = cellPx >= 8 ? colors.lozengeStroke : '';
       const strongStroke = cellPx >= 4 ? (stroke || colors.lozengeStroke) : '';
-      const lineWidth = Math.max(0.5, Math.min(1.4, cellPx * 0.035));
+      const lineWidth = Math.max(0.45, Math.min(1.15, cellPx * 0.03));
+      const tileSealWidth = Math.max(0.45, Math.min(1.15, cellPx * 0.035));
+      const verticalSealWidth = Math.max(0.9, Math.min(2.0, cellPx * 0.07));
 
       ctx2d.setTransform(size.dpr, 0, 0, size.dpr, 0, 0);
+
+      // Flat lozenge rendering: no alpha, no shadows, no compositing tricks.
+      ctx2d.globalAlpha = 1;
+      ctx2d.globalCompositeOperation = 'source-over';
+      ctx2d.shadowColor = 'rgba(0,0,0,0)';
+      ctx2d.shadowBlur = 0;
+      ctx2d.shadowOffsetX = 0;
+      ctx2d.shadowOffsetY = 0;
+      ctx2d.lineJoin = 'bevel';
+      ctx2d.lineCap = 'butt';
+
       ctx2d.fillStyle = colors.canvas;
       ctx2d.fillRect(0, 0, size.width, size.height);
 
-      // Fill the non-vertical lozenges as in Dynamic_v_only.nb.  The row
-      // lambda^k has k particles with centers lambda^k_i-i; the strip below it
-      // is decided by the jump of cumulative counts between lambda^{k-1} and
-      // lambda^k.  This is the genuine triangular GT/lozenge dictionary.
-      const globalMaxX = Number.isFinite(geometry.lozengeMaxCenter) ? Math.ceil(geometry.lozengeMaxCenter) : -1;
-      let estimatedFill = 0;
+      const globalMaxX = Number.isFinite(geometry.lozengeMaxCenter)
+        ? Math.ceil(geometry.lozengeMaxCenter)
+        : -1;
+
       const stripWindows = [];
+      let estimatedFill = 0;
+
       for (let k = 1; k < rows.length; k++) {
-        const prev = rows[k - 1].centers;
-        const curr = rows[k].centers;
+        const prev = rows[k - 1].centers || [];
+        const curr = rows[k].centers || [];
         const y = k - 1;
         const rank = Math.max(1, rows[k].rank || k);
+
         const domainMinX = -rank;
         const domainMaxX = globalMaxX;
+
         const visibleMinX = Math.floor(view.left - y / 2) - 3;
         const visibleMaxX = Math.ceil(view.right - y / 2) + 3;
+
         const minX = Math.max(domainMinX, visibleMinX);
         const maxX = Math.min(domainMaxX, visibleMaxX);
         if (maxX < minX) continue;
+
         stripWindows.push({ rank, y, minX, maxX, prev, curr });
         estimatedFill += maxX - minX + 1;
       }
+
       const drawFill = cellPx >= 3.5 && estimatedFill <= 70000;
+
       if (drawFill) {
-        ctx2d.globalAlpha = 0.88;
+        const lightTiles = [];
+        const blueTiles = [];
+
         for (const strip of stripWindows) {
           for (let x = strip.minX; x <= strip.maxX; x++) {
-            const delta = this.countCentersAtMost(strip.curr, x) - this.countCentersAtMost(strip.prev, x);
+            const delta =
+              this.countCentersAtMost(strip.curr, x) -
+              this.countCentersAtMost(strip.prev, x);
+
+            const tx = x + 1;
+
             if (delta === 1) {
-              if (!this.lozengeTileVisible('s', x + 1, strip.y, view)) continue;
-              this.drawLozengePolygon(ctx2d, 's', x + 1, strip.y, colors.lozengeA, stroke, lineWidth);
+              // Blue/nonvertical orientation.
+              // IMPORTANT: do not apply any conflict filter here.
+              if (!this.lozengeTileVisible('s', tx, strip.y, view)) continue;
+              blueTiles.push({ kind: 's', x: tx, y: strip.y });
             } else if (x + strip.rank > 0) {
-              if (!this.lozengeTileVisible('l', x + 1, strip.y, view)) continue;
-              this.drawLozengePolygon(ctx2d, 'l', x + 1, strip.y, colors.lozengeB, stroke, lineWidth);
+              // Pale/nonvertical orientation.
+              // IMPORTANT: these are real lozenges.  Do not skip them near
+              // orange vertical lozenges; skipping them creates white holes.
+              if (!this.lozengeTileVisible('l', tx, strip.y, view)) continue;
+              lightTiles.push({ kind: 'l', x: tx, y: strip.y });
             }
           }
         }
-        ctx2d.globalAlpha = 1;
+
+        // Draw pale base orientation first.
+        for (const tile of lightTiles) {
+          this.drawLozengePolygon(
+            ctx2d,
+            tile.kind,
+            tile.x,
+            tile.y,
+            colors.lozengeB,
+            stroke,
+            lineWidth,
+            { sealWidth: tileSealWidth }
+          );
+        }
+
+        // Draw blue orientation second.
+        for (const tile of blueTiles) {
+          this.drawLozengePolygon(
+            ctx2d,
+            tile.kind,
+            tile.x,
+            tile.y,
+            colors.lozengeA,
+            stroke,
+            lineWidth,
+            { sealWidth: tileSealWidth }
+          );
+        }
       }
 
+      // Draw orange vertical lozenges last.  These are the particle lozenges.
+      // The slightly larger same-color seam stroke covers anti-aliased slivers
+      // from the opaque nonvertical layers underneath, but does not change data.
       let drawnVertical = 0;
       const maxVertical = cellPx >= 3.5 ? 120000 : 45000;
+
       for (let y = 1; y < rows.length; y++) {
         const row = rows[y];
-        for (const center of row.centers) {
+        for (const center of row.centers || []) {
           if (!this.lozengeTileVisible('vertical', center, y, view)) continue;
-          this.drawLozengePolygon(ctx2d, 'vertical', center, y, colors.lozengeParticle, strongStroke, lineWidth);
+
+          this.drawLozengePolygon(
+            ctx2d,
+            'vertical',
+            center,
+            y,
+            colors.lozengeParticle,
+            strongStroke,
+            lineWidth,
+            { sealWidth: verticalSealWidth }
+          );
+
           drawnVertical += 1;
           if (drawnVertical >= maxVertical) break;
         }
         if (drawnVertical >= maxVertical) break;
       }
+
+      ctx2d.globalAlpha = 1;
+      ctx2d.globalCompositeOperation = 'source-over';
 
       if (!drawFill && cellPx >= 2.5) {
         ctx2d.font = '12px "franklingothic-book", Arial, sans-serif';
