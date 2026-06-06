@@ -1743,9 +1743,8 @@
       this.pathWidthFactor = 1;
       this.pathStyle = 'tonal';
       this.viewMode = 'lozenges';
-      this.lozengeUpSlant = 0.42;
+      this.lozengeUpSlant = 0.58;
       this.lozengeUpHeight = 0.86;
-      this.lozengeStepOverlap = 0.035;
       this.viewInitialized = false;
       this.framePending = false;
       this.data = null;
@@ -1931,52 +1930,12 @@
         rawBounds.maxY = Math.max(1, totalLevels);
       }
 
-      const centersFromPartition = (row) => (row || []).map((part, index) => part - (index + 1)).sort((a, b) => a - b);
-      // Lozenge rows are stored in top-to-bottom order for the final two-sided
-      // GT pattern:
-      //
-      //   lam[0], lam[1], ..., lam[n] = lambda = mu[M],
-      //   mu[M-1], ..., mu[0].
-      //
-      // The renderer's model y-coordinate is also top-to-bottom, so
-      // lozengeModelPoint must use +0.85*y, not -0.85*y.
-      const lozengeRows = [];
-      for (let length = 0; length <= n; length++) {
-        lozengeRows.push({ level: length, rank: length, kind: 'lambda', centers: centersFromPartition(data.lam?.[length]) });
-      }
-      for (let j = m - 1; j >= 0; j--) {
-        lozengeRows.push({ level: n + (m - j), rank: n, kind: 'mu', centers: centersFromPartition(data.mu?.[j]) });
-      }
-      let lozengeMinCenter = Infinity;
-      let lozengeMaxCenter = -Infinity;
-      for (const row of lozengeRows) {
-        for (const center of row.centers) {
-          lozengeMinCenter = Math.min(lozengeMinCenter, center);
-          lozengeMaxCenter = Math.max(lozengeMaxCenter, center);
-        }
-      }
-      if (!Number.isFinite(lozengeMinCenter)) {
-        lozengeMinCenter = -n;
-        lozengeMaxCenter = 1;
-      }
-      const rowCount = Math.max(1, lozengeRows.length);
-      const lozengeBounds = {
-        minX: lozengeMinCenter - rowCount / 2 - 4,
-        maxX: lozengeMaxCenter + 4,
-        minY: -2,
-        maxY: 0.9 * (rowCount + 2),
-      };
-
       return {
         N: n,
         M: m,
         totalLevels,
         paths,
         lambdaParticles,
-        lozengeRows,
-        lozengeMinCenter,
-        lozengeMaxCenter,
-        lozengeBounds,
         rawBounds,
       };
     }
@@ -2503,18 +2462,52 @@
       return { x: 1, y: 0 };
     }
 
-    pathStepWidth(step) {
-      // Orange up-steps are drawn around the slanted-up center line.  Blue
-      // right-steps must be the LEFT-slanting horizontal lozenges, so their
-      // transverse direction is the up-left lattice vector.
-      return step.kind === 'up'
-        ? this.lozengeRightVector()
-        : { x: -this.lozengeUpSlant, y: -this.lozengeUpHeight };
+    lozengeLeftVector() {
+      const up = this.lozengeUpVector();
+      const right = this.lozengeRightVector();
+      return { x: up.x - right.x, y: up.y - right.y };
     }
 
-    backgroundLozengeWidth() {
-      // The non-path background uses the opposite horizontal lozenge orientation.
-      return this.lozengeUpVector();
+    addModelVectors(a, b) {
+      return { x: a.x + b.x, y: a.y + b.y };
+    }
+
+    tilePolygon(kind, anchor) {
+      const right = this.lozengeRightVector();
+      const upRight = this.lozengeUpVector();
+      const upLeft = this.lozengeLeftVector();
+
+      if (kind === 'up') {
+        // Orange path lozenge: the vertical diamond spanned by the two slanted
+        // triangular-lattice directions.  Its long center line points slightly
+        // up and to the right because lozengeUpSlant > 1/2.
+        return [
+          anchor,
+          this.addModelVectors(anchor, upRight),
+          this.addModelVectors(this.addModelVectors(anchor, upRight), upLeft),
+          this.addModelVectors(anchor, upLeft),
+        ];
+      }
+
+      if (kind === 'right') {
+        // Blue path lozenge: horizontal, with the non-horizontal sides slanting
+        // left, as in the sketches.
+        return [
+          anchor,
+          this.addModelVectors(anchor, right),
+          this.addModelVectors(this.addModelVectors(anchor, right), upLeft),
+          this.addModelVectors(anchor, upLeft),
+        ];
+      }
+
+      // Pale background lozenge: horizontal, with the non-horizontal sides
+      // slanting right.
+      return [
+        anchor,
+        this.addModelVectors(anchor, right),
+        this.addModelVectors(this.addModelVectors(anchor, right), upRight),
+        this.addModelVectors(anchor, upRight),
+      ];
     }
 
     lozengeScreenPoint(point) {
@@ -2522,40 +2515,6 @@
         x: (point.x - this.viewport.tx) * this.viewport.scale,
         y: (point.y - this.viewport.ty) * this.viewport.scale,
       };
-    }
-
-    segmentLozengePolygon(a, b, widthVector, overlap = 0) {
-      const vx = b.x - a.x;
-      const vy = b.y - a.y;
-      const length = Math.hypot(vx, vy) || 1;
-      const ox = (vx / length) * overlap;
-      const oy = (vy / length) * overlap;
-      const aa = { x: a.x - ox, y: a.y - oy };
-      const bb = { x: b.x + ox, y: b.y + oy };
-      const hx = widthVector.x / 2;
-      const hy = widthVector.y / 2;
-      return [
-        { x: aa.x + hx, y: aa.y + hy },
-        { x: bb.x + hx, y: bb.y + hy },
-        { x: bb.x - hx, y: bb.y - hy },
-        { x: aa.x - hx, y: aa.y - hy },
-      ];
-    }
-
-    pathStepPolygon(step, overlap = this.lozengeStepOverlap) {
-      return this.segmentLozengePolygon(step.a, step.b, this.pathStepWidth(step), overlap);
-    }
-
-    joinPatchPolygon(point, previousWidth, nextWidth) {
-      const candidates = [
-        { x: point.x + previousWidth.x / 2, y: point.y + previousWidth.y / 2 },
-        { x: point.x + nextWidth.x / 2, y: point.y + nextWidth.y / 2 },
-        { x: point.x - previousWidth.x / 2, y: point.y - previousWidth.y / 2 },
-        { x: point.x - nextWidth.x / 2, y: point.y - nextWidth.y / 2 },
-      ];
-      return candidates.sort((a, b) =>
-        Math.atan2(a.y - point.y, a.x - point.x) - Math.atan2(b.y - point.y, b.x - point.x)
-      );
     }
 
     modelPolygonBounds(polygon) {
@@ -2618,40 +2577,47 @@
       const geometry = this.geometry;
       const chains = [];
       const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+      const tileDomain = { minX: Infinity, maxX: -Infinity, minLevel: Infinity, maxLevel: -Infinity };
+      const includeTileDomain = (x, level) => {
+        tileDomain.minX = Math.min(tileDomain.minX, x);
+        tileDomain.maxX = Math.max(tileDomain.maxX, x);
+        tileDomain.minLevel = Math.min(tileDomain.minLevel, level);
+        tileDomain.maxLevel = Math.max(tileDomain.maxLevel, level);
+      };
 
       if (geometry) {
         for (const path of geometry.paths || []) {
           const particles = path.particles || [];
-          const steps = [];
+          const tiles = [];
 
           for (let i = 1; i < particles.length; i++) {
             const previous = particles[i - 1];
             const current = particles[i];
             const level = previous.level;
 
-            const upStep = {
-              kind: 'up',
-              track: path.track,
-              a: this.lozengePathPoint(previous.x, level),
-              b: this.lozengePathPoint(previous.x, level + 1),
-            };
-            steps.push(upStep);
-            this.includePolygonBounds(bounds, this.pathStepPolygon(upStep, this.lozengeStepOverlap));
+            // One elementary up step.  The lozenge anchor follows the slanted
+            // triangular-lattice path, so consecutive up lozenges share a full
+            // edge and the upper one is slightly to the right of the lower one.
+            const upAnchor = this.lozengePathPoint(previous.x, level);
+            const upPolygon = this.tilePolygon('up', upAnchor);
+            tiles.push({ kind: 'up', track: path.track, anchor: upAnchor, polygon: upPolygon });
+            this.includePolygonBounds(bounds, upPolygon);
+            includeTileDomain(previous.x, level);
+            includeTileDomain(previous.x, level + 1);
 
+            // Then zero or more elementary right steps on the new level.
             const rightCount = Math.max(0, Math.round(current.x - previous.x));
             for (let r = 0; r < rightCount; r++) {
-              const rightStep = {
-                kind: 'right',
-                track: path.track,
-                a: this.lozengePathPoint(previous.x + r, current.level),
-                b: this.lozengePathPoint(previous.x + r + 1, current.level),
-              };
-              steps.push(rightStep);
-              this.includePolygonBounds(bounds, this.pathStepPolygon(rightStep, this.lozengeStepOverlap));
+              const rightAnchorX = previous.x + r;
+              const rightAnchor = this.lozengePathPoint(rightAnchorX, current.level);
+              const rightPolygon = this.tilePolygon('right', rightAnchor);
+              tiles.push({ kind: 'right', track: path.track, anchor: rightAnchor, polygon: rightPolygon });
+              this.includePolygonBounds(bounds, rightPolygon);
+              includeTileDomain(rightAnchorX, current.level);
             }
           }
 
-          if (steps.length) chains.push({ track: path.track, steps });
+          if (tiles.length) chains.push({ track: path.track, tiles });
         }
       }
 
@@ -2661,11 +2627,24 @@
         bounds.maxX = Math.max(2, (geometry?.N || 1) + this.lozengeUpSlant * totalLevels + 2);
         bounds.minY = -2;
         bounds.maxY = this.lozengeUpHeight * (totalLevels + 2);
+        tileDomain.minX = -2;
+        tileDomain.maxX = Math.max(2, geometry?.N || 1);
+        tileDomain.minLevel = 0;
+        tileDomain.maxLevel = totalLevels;
       }
 
+      const totalLevels = geometry?.totalLevels || 1;
+      const domainPadding = 2;
+      const paddedDomain = {
+        minX: Math.floor(tileDomain.minX) - domainPadding,
+        maxX: Math.ceil(tileDomain.maxX) + domainPadding,
+        minLevel: Math.max(0, Math.floor(tileDomain.minLevel) - domainPadding),
+        maxLevel: Math.min(totalLevels, Math.ceil(tileDomain.maxLevel) + domainPadding),
+      };
       const padding = 2.5;
       const cache = {
         chains,
+        tileDomain: paddedDomain,
         bounds: {
           minX: bounds.minX - padding,
           minY: bounds.minY - padding,
@@ -2689,35 +2668,33 @@
       const cellPx = scale;
       const backgroundFill = colors.lozengeB;
 
-      ctx2d.fillStyle = backgroundFill;
+      ctx2d.fillStyle = colors.canvas;
       ctx2d.fillRect(0, 0, size.width, size.height);
 
       if (!geometry || cellPx < 3.2) return;
 
+      const domain = this.getPathLozengeChains().tileDomain;
       const h = this.lozengeUpHeight || 1;
       const s = this.lozengeUpSlant || 0;
-      const raw = geometry.rawBounds || { minX: 0, maxX: geometry.N || 1 };
-      const firstLevel = Math.max(0, Math.floor(totalLevels - view.bottom / h) - 4);
-      const lastLevel = Math.min(totalLevels, Math.ceil(totalLevels - view.top / h) + 4);
-      const domainMinX = Math.floor(raw.minX - totalLevels * 0.12 - 12);
-      const domainMaxX = Math.ceil(raw.maxX + 12);
-      const estimated = Math.max(0, lastLevel - firstLevel + 1) * Math.max(0, domainMaxX - domainMinX + 1);
-      if (estimated > 90000) return;
+      const firstVisibleLevel = Math.floor(totalLevels - view.bottom / h) - 3;
+      const lastVisibleLevel = Math.ceil(totalLevels - view.top / h) + 3;
+      const firstLevel = Math.max(domain.minLevel, firstVisibleLevel);
+      const lastLevel = Math.min(domain.maxLevel, lastVisibleLevel);
+      const estimated = Math.max(0, lastLevel - firstLevel + 1) * Math.max(0, domain.maxX - domain.minX + 1);
+      if (estimated > 110000) return;
 
       const stroke = cellPx >= 8 ? colors.lozengeStroke : '';
       const lineWidth = Math.max(0.35, Math.min(0.9, cellPx * 0.025));
       const sealWidth = Math.max(0.4, Math.min(1.0, cellPx * 0.03));
-      const width = this.backgroundLozengeWidth();
 
       for (let level = firstLevel; level <= lastLevel; level++) {
         const visibleMinX = Math.floor(view.left - s * level) - 4;
         const visibleMaxX = Math.ceil(view.right - s * level) + 4;
-        const minX = Math.max(domainMinX, visibleMinX);
-        const maxX = Math.min(domainMaxX, visibleMaxX);
+        const minX = Math.max(domain.minX, visibleMinX);
+        const maxX = Math.min(domain.maxX, visibleMaxX);
         for (let x = minX; x <= maxX; x++) {
-          const a = this.lozengePathPoint(x, level);
-          const b = this.lozengePathPoint(x + 1, level);
-          const polygon = this.segmentLozengePolygon(a, b, width, 0);
+          const anchor = this.lozengePathPoint(x, level);
+          const polygon = this.tilePolygon('background', anchor);
           if (!this.modelPolygonVisible(polygon, view)) continue;
           this.drawModelPolygon(ctx2d, polygon, backgroundFill, stroke, lineWidth, { sealWidth });
         }
@@ -2732,33 +2709,11 @@
       const lineWidth = Math.max(0.35, Math.min(1.05, cellPx * 0.026));
       const sealWidth = Math.max(0.85, Math.min(2.4, cellPx * 0.07));
 
-      const fillForStep = (step) => step.kind === 'up' ? colors.lozengeParticle : colors.lozengeA;
-
-      // Turn patches are the actual rewrite fix: the path is first converted to
-      // glued slanted-up and horizontal center-line steps.  At a turn, the two
-      // lozenges have different transverse directions; this patch lies underneath
-      // them and prevents pale background triangles from showing through.
       for (const chain of cache.chains) {
-        const steps = chain.steps || [];
-        for (let i = 1; i < steps.length; i++) {
-          const previous = steps[i - 1];
-          const current = steps[i];
-          if (previous.kind === current.kind) continue;
-          const patch = this.joinPatchPolygon(
-            current.a,
-            this.pathStepWidth(previous),
-            this.pathStepWidth(current)
-          );
-          if (!this.modelPolygonVisible(patch, view)) continue;
-          this.drawModelPolygon(ctx2d, patch, fillForStep(current), '', 0, { sealWidth });
-        }
-      }
-
-      for (const chain of cache.chains) {
-        for (const step of chain.steps || []) {
-          const polygon = this.pathStepPolygon(step, this.lozengeStepOverlap);
-          if (!this.modelPolygonVisible(polygon, view)) continue;
-          this.drawModelPolygon(ctx2d, polygon, fillForStep(step), stroke, lineWidth, { sealWidth });
+        for (const tile of chain.tiles || []) {
+          if (!this.modelPolygonVisible(tile.polygon, view)) continue;
+          const fill = tile.kind === 'up' ? colors.lozengeParticle : colors.lozengeA;
+          this.drawModelPolygon(ctx2d, tile.polygon, fill, stroke, lineWidth, { sealWidth });
         }
       }
     }
