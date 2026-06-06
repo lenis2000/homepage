@@ -388,6 +388,21 @@ title: "Exact sampler for factorial Schur processes"
     color: var(--fs-muted);
     margin-left: 4px;
   }
+  .fs-view-mode-control {
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border: 1px solid var(--fs-border);
+    border-radius: 4px;
+    background: var(--fs-panel-strong);
+    color: var(--fs-text);
+    white-space: nowrap;
+  }
+  .fs-view-mode-control .fs-view-label {
+    margin-left: 0;
+  }
   .fs-view-select {
     height: 28px;
     max-width: 132px;
@@ -396,6 +411,13 @@ title: "Exact sampler for factorial Schur processes"
     background: var(--fs-panel-strong);
     color: var(--fs-text);
     font-size: 12px;
+  }
+  .fs-view-mode-control .fs-view-select {
+    height: 22px;
+    max-width: none;
+    border: 0;
+    padding: 0 18px 0 2px;
+    background: transparent;
   }
   .fs-viewbar {
     position: absolute; top: 8px; right: 8px;
@@ -572,9 +594,16 @@ Yang--Baxter bijectivisation.  The local random split is
     </div>
     <div id="fs-canvas-wrap">
       <canvas id="fs-canvas" role="img"
-              aria-label="Visualization of a sampled two-sided Gelfand-Tsetlin pattern as nonintersecting up-right paths"></canvas>
+              aria-label="Visualization of a sampled two-sided Gelfand-Tsetlin pattern as lozenges or nonintersecting up-right paths"></canvas>
       <div class="fs-canvas-toolbar" aria-label="Canvas view controls">
-        <button id="fs-view-fit" class="fs-btn fs-view-btn" type="button" title="Fit the sampled paths">Fit</button>
+        <label class="fs-view-mode-control" title="Choose the visualization style">
+          <span class="fs-view-label">view</span>
+          <select id="fs-view-mode" class="fs-view-select" aria-label="Visualization view">
+            <option value="lozenges" selected>Lozenge view</option>
+            <option value="paths">Path view</option>
+          </select>
+        </label>
+        <button id="fs-view-fit" class="fs-btn fs-view-btn" type="button" title="Fit the sampled view">Fit</button>
         <button id="fs-view-actual" class="fs-btn fs-view-btn" type="button" title="Set one model cell to the selected cell size">100%</button>
         <button id="fs-view-zoom-out" class="fs-btn fs-view-btn" type="button" title="Zoom out">&minus;</button>
         <button id="fs-view-zoom-in" class="fs-btn fs-view-btn" type="button" title="Zoom in">+</button>
@@ -612,4 +641,4 @@ Yang--Baxter bijectivisation.  The local random split is
 </div><!-- /fs-wrap -->
 
 <script src="/js/colorschemes.js"></script>
-<script src="/js/factorial-ybe-sampler.js?v=20260605-paths-preserve-view"></script>
+<script src="/js/factorial-ybe-sampler.js?v=20260606-blue-left-pale-right"></script>
