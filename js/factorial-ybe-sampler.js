@@ -2646,11 +2646,15 @@
 
       const totalLevels = geometry?.totalLevels || 1;
       const domainPadding = 2;
+      const paddedMinLevel = Math.max(0, Math.floor(tileDomain.minLevel) - domainPadding);
+      const paddedMaxLevel = Math.min(totalLevels, Math.ceil(tileDomain.maxLevel) + domainPadding);
       const paddedDomain = {
-        minX: Math.floor(tileDomain.minX) - domainPadding,
+        // Trim one pale-orange slice from the left, bottom, and top edges of
+        // the finite background region; keep the right edge for the blue tails.
+        minX: Math.floor(tileDomain.minX) - domainPadding + 1,
         maxX: Math.ceil(tileDomain.maxX) + domainPadding,
-        minLevel: Math.max(0, Math.floor(tileDomain.minLevel) - domainPadding),
-        maxLevel: Math.min(totalLevels, Math.ceil(tileDomain.maxLevel) + domainPadding),
+        minLevel: Math.min(totalLevels, paddedMinLevel + 1),
+        maxLevel: Math.max(0, paddedMaxLevel - 1),
       };
       const tailTiles = [];
       for (const tail of terminalTailStarts) {
