@@ -1705,7 +1705,7 @@
 
   function getViewMode() {
     const select = $('fs-view-mode');
-    return select && select.value === 'paths' ? 'paths' : 'lozenges';
+    return select && select.value === 'lozenges' ? 'lozenges' : 'paths';
   }
 
   function maxPositionSeen() {
@@ -1742,7 +1742,7 @@
       this.xAspect = 1;
       this.pathWidthFactor = 1;
       this.pathStyle = 'tonal';
-      this.viewMode = 'lozenges';
+      this.viewMode = 'paths';
       this.lozengeUpSlant = 0.58;
       this.lozengeUpHeight = 0.86;
       this.viewInitialized = false;
@@ -1855,7 +1855,7 @@
       if (saved.xAspect) this.xAspect = Math.max(0.001, Math.min(10, Number(saved.xAspect) || 1));
       if (saved.pathWidthFactor) this.pathWidthFactor = Math.max(0.1, Math.min(10, Number(saved.pathWidthFactor) || 1));
       if (saved.pathStyle) this.pathStyle = saved.pathStyle;
-      if (saved.viewMode) this.viewMode = saved.viewMode === 'paths' ? 'paths' : 'lozenges';
+      if (saved.viewMode) this.viewMode = saved.viewMode === 'lozenges' ? 'lozenges' : 'paths';
       this.invalidateBackground();
       this.scheduleDraw();
     }
