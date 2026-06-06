@@ -2584,6 +2584,7 @@
         tileDomain.minLevel = Math.min(tileDomain.minLevel, level);
         tileDomain.maxLevel = Math.max(tileDomain.maxLevel, level);
       };
+      const terminalTailStarts = [];
 
       if (geometry) {
         for (const path of geometry.paths || []) {
@@ -2617,7 +2618,17 @@
             }
           }
 
-          if (tiles.length) chains.push({ track: path.track, tiles });
+          if (tiles.length) {
+            chains.push({ track: path.track, tiles });
+            const endpoint = path.endpoint || particles[particles.length - 1];
+            if (endpoint && endpoint.level >= (geometry.M || 0)) {
+              terminalTailStarts.push({
+                track: path.track,
+                x: Math.round(endpoint.x),
+                level: endpoint.level,
+              });
+            }
+          }
         }
       }
 
@@ -2641,9 +2652,21 @@
         minLevel: Math.max(0, Math.floor(tileDomain.minLevel) - domainPadding),
         maxLevel: Math.min(totalLevels, Math.ceil(tileDomain.maxLevel) + domainPadding),
       };
+      const tailTiles = [];
+      for (const tail of terminalTailStarts) {
+        const startX = Math.max(paddedDomain.minX, Math.floor(tail.x));
+        for (let x = startX; x <= paddedDomain.maxX; x++) {
+          const anchor = this.lozengePathPoint(x, tail.level);
+          const polygon = this.tilePolygon('right', anchor);
+          tailTiles.push({ kind: 'right-tail', track: tail.track, anchor, polygon });
+          this.includePolygonBounds(bounds, polygon);
+        }
+      }
+
       const padding = 2.5;
       const cache = {
         chains,
+        tailTiles,
         tileDomain: paddedDomain,
         bounds: {
           minX: bounds.minX - padding,
@@ -2708,6 +2731,11 @@
       const stroke = cellPx >= 8 ? colors.lozengeStroke : '';
       const lineWidth = Math.max(0.35, Math.min(1.05, cellPx * 0.026));
       const sealWidth = Math.max(0.85, Math.min(2.4, cellPx * 0.07));
+
+      for (const tile of cache.tailTiles || []) {
+        if (!this.modelPolygonVisible(tile.polygon, view)) continue;
+        this.drawModelPolygon(ctx2d, tile.polygon, colors.lozengeA, stroke, lineWidth, { sealWidth });
+      }
 
       for (const chain of cache.chains) {
         for (const tile of chain.tiles || []) {
