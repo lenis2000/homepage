@@ -50,7 +50,7 @@ exclude:
   - "_simulations/random-matrices/.claude"
   - "_simulations/TASEP-like-systems/.claude"
   - "tetris/"
-  - "block/"
+  # - "block/"
 
 plugins:
   - jekyll-paginate
