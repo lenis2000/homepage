@@ -56182,6 +56182,11 @@
     "decision": "ACCEPT",
     "source": "fetch"
   },
+  "2606.10727": {
+    "date": "2026-06-09",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
   "2606.10757": {
     "date": "2026-06-09",
     "decision": "REJECT",
@@ -56254,6 +56259,91 @@
   },
   "2606.12388": {
     "date": "2026-06-10",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.12670": {
+    "date": "2026-06-10",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.12776": {
+    "date": "2026-06-11",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.12786": {
+    "date": "2026-06-11",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.12796": {
+    "date": "2026-06-11",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.12919": {
+    "date": "2026-06-11",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.13149": {
+    "date": "2026-06-11",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.13487": {
+    "date": "2026-06-11",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.13653": {
+    "date": "2026-06-11",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.13903": {
+    "date": "2026-06-11",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.13972": {
+    "date": "2026-06-11",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.13999": {
+    "date": "2026-06-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.14133": {
+    "date": "2026-06-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.14140": {
+    "date": "2026-06-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.14241": {
+    "date": "2026-06-12",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.14444": {
+    "date": "2026-06-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.14450": {
+    "date": "2026-06-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.14564": {
+    "date": "2026-06-12",
     "decision": "REJECT",
     "source": "fetch"
   },
