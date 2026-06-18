@@ -56342,8 +56342,178 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2606.14509": {
+    "date": "2026-06-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
   "2606.14564": {
     "date": "2026-06-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.14995": {
+    "date": "2026-06-12",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.15131": {
+    "date": "2026-06-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.15168": {
+    "date": "2026-06-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.15185": {
+    "date": "2026-06-13",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.15219": {
+    "date": "2026-06-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.15375": {
+    "date": "2026-06-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.15515": {
+    "date": "2026-06-13",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.15541": {
+    "date": "2026-06-14",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.15584": {
+    "date": "2026-06-14",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.15612": {
+    "date": "2026-06-14",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.15747": {
+    "date": "2026-06-14",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.15844": {
+    "date": "2026-06-14",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.16361": {
+    "date": "2026-06-15",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.16487": {
+    "date": "2026-06-15",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.16609": {
+    "date": "2026-06-15",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.16627": {
+    "date": "2026-06-15",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.16854": {
+    "date": "2026-06-15",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.17154": {
+    "date": "2026-06-15",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.17425": {
+    "date": "2026-06-16",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.17429": {
+    "date": "2026-06-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.17525": {
+    "date": "2026-06-16",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.17840": {
+    "date": "2026-06-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.18015": {
+    "date": "2026-06-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.18039": {
+    "date": "2026-06-16",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.18047": {
+    "date": "2026-06-16",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.18095": {
+    "date": "2026-06-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.18321": {
+    "date": "2026-06-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.18359": {
+    "date": "2026-06-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.18470": {
+    "date": "2026-06-16",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.18578": {
+    "date": "2026-06-17",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2606.18854": {
+    "date": "2026-06-17",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.18934": {
+    "date": "2026-06-17",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2606.18942": {
+    "date": "2026-06-17",
     "decision": "REJECT",
     "source": "fetch"
   },
