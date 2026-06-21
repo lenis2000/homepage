@@ -20,7 +20,6 @@ Generated: 2026-03-02
 | RMT 2025 notes (local) | ~45 | varies |
 | VIPSS 2024 materials (local) | ~30 | varies |
 | Local talk slides (LaTeX/) | 2 | varies |
-| LMathNotes content (local) | 9 | varies |
 | CV PDFs (local `research/`) | 2 | varies |
 
 ---
