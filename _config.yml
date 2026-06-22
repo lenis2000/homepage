@@ -49,7 +49,6 @@ exclude:
   - "_simulations/permutations/.claude"
   - "_simulations/random-matrices/.claude"
   - "_simulations/TASEP-like-systems/.claude"
-  - "tetris/"
   # - "block/"
 
 plugins:
