@@ -46,29 +46,36 @@ ARXIV_API = "https://export.arxiv.org/api/query"
 RATE_LIMIT_SECONDS = 0.5
 USER_AGENT = "lpetrov-arxiv-scan/1.0 (mailto:petrov@virginia.edu)"
 
-# Use pi print mode for arXiv AI classification. Keep it ephemeral and
+# Print-mode AI command for arXiv classification. Honors the shared
+# $AI_BACKEND switch ('pi' default | 'claude'); both are kept ephemeral and
 # tool-free so the classifier only returns text for the prompt we pass in.
-PI_PRINT_CMD = ["pi", "--no-session", "--no-tools", "--no-context-files", "-p"]
+def _ai_print_cmd():
+    if os.environ.get("AI_BACKEND") == "claude":
+        # arXiv classification -> Claude Opus at xhigh effort.
+        return ["claude", "-p", "--model", "opus", "--effort", "xhigh"]
+    return ["pi", "--no-session", "--no-tools", "--no-context-files", "-p"]
 
 
 def run_ai_prompt(prompt: str, timeout: int):
-    """Run an AI classification prompt through pi and return (stdout, error)."""
+    """Run an AI classification prompt through the active backend and return (stdout, error)."""
+    cmd = _ai_print_cmd()
+    backend = "claude" if cmd[0] == "claude" else "pi"
     try:
         result = subprocess.run(
-            PI_PRINT_CMD + [prompt],
+            cmd + [prompt],
             capture_output=True, text=True, timeout=timeout,
         )
     except FileNotFoundError:
-        return "", "no pi CLI"
+        return "", f"no {backend} CLI"
     except subprocess.TimeoutExpired:
-        return "", "pi CLI timed out"
+        return "", f"{backend} CLI timed out"
 
     if result.returncode != 0:
         detail = (result.stderr or result.stdout).strip()
         if detail:
             detail = detail.splitlines()[-1][:200]
-            return "", f"pi CLI failed: {detail}"
-        return "", f"pi CLI failed with exit code {result.returncode}"
+            return "", f"{backend} CLI failed: {detail}"
+        return "", f"{backend} CLI failed with exit code {result.returncode}"
 
     return result.stdout.strip(), None
 
