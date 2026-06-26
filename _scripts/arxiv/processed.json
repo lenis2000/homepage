@@ -35002,6 +35002,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2012.11672": {
+    "date": "2020-12-21",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "2012.11993": {
     "date": "2020-12-22",
     "decision": "ACCEPT",
