@@ -199,7 +199,20 @@ def create_book():
         book.write("\\title{Lectures on Random Matrices (Spring 2025)}\n")
         book.write("\\author{Leonid Petrov}\n")
         book.write("\\date{Spring 2025}\n")
-        book.write("\\maketitle\n")
+        book.write("\\maketitle\n\n")
+
+        # Acknowledgment of the students enrolled in the course
+        book.write("\\begin{center}\n\\textit{Acknowledgments}\n\\end{center}\n")
+        book.write("\\noindent\n")
+        book.write(
+            "These notes grew out of the Spring 2025 graduate course MATH 8380 "
+            "``Random Matrices'' at the University of Virginia. I thank the students "
+            "enrolled in the course --- Annika Kelly, Suren Kyurumyan, Yizhen Li, "
+            "Connor MacMahon, Jun Hyun Park, Declan Stacy, Mikhail Tikhonov, and "
+            "Ryland Wilson --- for their questions, presentations, and feedback, "
+            "which helped shape and improve the text.\n\n"
+        )
+
         book.write("\\tableofcontents\n\n")
 
         # Track the last lecture for where we might get the final bibliography
@@ -265,7 +278,13 @@ def compile_book():
     """Compile the book using latexmk"""
     print("Compiling book...")
     try:
-        subprocess.run(["latexmk", "-pdf", output_file], check=True)
+        # Clean stale aux/toc files first: a leftover .toc from a previous
+        # structure can abort the run with "Argument of \@firstoffive ...".
+        subprocess.run(["latexmk", "-C", output_file], check=False)
+        subprocess.run(
+            ["latexmk", "-pdf", "-interaction=nonstopmode", output_file],
+            check=True,
+        )
         print(f"Book compiled successfully: {output_file.replace('.tex', '.pdf')}")
         return True
     except subprocess.CalledProcessError as e:
