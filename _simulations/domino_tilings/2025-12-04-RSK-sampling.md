@@ -319,7 +319,9 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings sample
     <input type="checkbox" id="show-curve-qto1-cb" style="margin-left: 4px;">
     <label for="show-curve-qto1-cb" style="font-size: 0.85em;">q&rarr;1 triangle</label>
     <input type="checkbox" id="show-curve-finiteq-cb" style="margin-left: 6px;">
-    <label for="show-curve-finiteq-cb" style="font-size: 0.85em;">finite-q arc</label>
+    <label for="show-curve-finiteq-cb" style="font-size: 0.85em;">physical boundary curve</label>
+    <input type="checkbox" id="show-curve-vadim-cb" style="margin-left: 6px;">
+    <label for="show-curve-vadim-cb" style="font-size: 0.85em; color: #800080;">full boundary curve</label>
     <a href="#frozen-curve-formulas" style="margin-left: 4px; font-size: 0.85em;">[?]</a>
   </span>
   <span style="border-left: 1px solid #ccc; padding-left: 10px;">
@@ -357,7 +359,7 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings sample
       $$ c \in \bigl[\,p(1-\kappa),\; p(1-\kappa) + \kappa\,\bigr], \qquad p = \frac{\alpha\beta}{1+\alpha\beta}. $$
       Two edges $u_L(\kappa) = p(1-\kappa)$ and $u_R(\kappa) = p(1-\kappa)+\kappa$ sweep the triangle.</p>
 
-    <p style="margin: 6px 0 0 0;"><strong>Finite-q arc</strong> (q-Whittaker arctic curve, double saddle of the exponent in section&nbsp;5 of <code>Aztec_sym_Vadim.tex</code>, specialised to $a_i=\alpha$, $b_j=\beta$):
+    <p style="margin: 6px 0 0 0;"><strong>Physical boundary curve</strong> (finite-q arc; q-Whittaker arctic curve, double saddle of the exponent in section&nbsp;5 of <code>Aztec_sym_Vadim.tex</code>, specialised to $a_i=\alpha$, $b_j=\beta$):
       $$f(w) = \kappa \log (w/\alpha;\,q)_\infty + (1-\kappa)\log(1+w\beta) - c\log w.$$
       Solving $f'(w)=f''(w)=0$ for $(\kappa, c)$:
       $$\kappa(w) = \frac{\alpha\beta}{\alpha\beta + \bigl(S_1 + \tfrac{w}{\alpha}\,S_2\bigr)(1+w\beta)^2},\qquad
@@ -366,6 +368,11 @@ a11y-description: "Interactive simulation of Aztec diamond domino tilings sample
         S_2 = \sum_{k\ge 0} \frac{q^{2k}}{\bigl(1 - (w/\alpha) q^k\bigr)^2}.$$
       The curve is traced by sweeping $w$ over the real line; poles of $S_1, S_2$ at $w = \alpha\, q^{-k}$ partition the sweep into branches, and the parametrization singularity at $w = -1/\beta$ pins the curve to $\kappa=1$.
       At $\alpha=\beta=1$, $q=0$ this degenerates to the standard inscribed arctic circle $(\kappa - \tfrac12)^2 + (c-\tfrac12)^2 = \tfrac14$.</p>
+
+    <p style="margin: 6px 0 0 0;"><strong style="color:#800080;">Full boundary curve</strong> (purple; Vadim's MATLAB <code>Boundary.m</code>): a contour parametrization of the same finite-q boundary by $w_c$, with $t = q$,
+      $$ m(w_c) = \frac{A}{A + B},\quad A = \frac{\alpha}{(w_c+\alpha)^2},\quad B = \sum_{j\ge 0}\frac{\beta\, t^{j}}{(1 - \beta t^{j} w_c)^2}, $$
+      $$ x(w_c) = \frac{\alpha(1-m)}{w_c+\alpha} - m\sum_{j\ge 0}\Bigl(1 - \frac{1}{1-\beta t^{j} w_c}\Bigr). $$
+      The script plots $(1-m-x,\,m)$; in the diamond chart this is $\kappa = m$, $c = 1-m-x$, i.e. $h_x = R(2m+x-1)$, $h_y = -Rx$ with $R = N+\tfrac12$. On the main branch $w_c\in(0,1/\beta)$ this coincides with the black finite-q arc; sweeping $w_c$ over every interval between the poles $w_c=-\alpha$ and $w_c=1/(\beta t^{j})$ traces the rest of the boundary.</p>
   </div>
 </details>
 
@@ -1862,8 +1869,9 @@ async function initializeApp() {
   function getFrozenCurveParams() {
     const showQto1 = document.getElementById("show-curve-qto1-cb");
     const showFiniteq = document.getElementById("show-curve-finiteq-cb");
+    const showVadim = document.getElementById("show-curve-vadim-cb");
     if (!showQto1 || !showFiniteq) return null;
-    if (!showQto1.checked && !showFiniteq.checked) return null;
+    if (!showQto1.checked && !showFiniteq.checked && !(showVadim && showVadim.checked)) return null;
     const xArr = parseCSV(document.getElementById("x-params").value);
     const yArr = parseCSV(document.getElementById("y-params").value);
     // Formulas only valid when all x_i are equal and all y_j are equal.
@@ -1878,6 +1886,7 @@ async function initializeApp() {
     return {
       showQto1: showQto1.checked,
       showFiniteq: showFiniteq.checked,
+      showVadim: !!(showVadim && showVadim.checked),
       alpha, beta, q
     };
   }
@@ -2047,6 +2056,109 @@ async function initializeApp() {
     return pts;
   }
 
+  // ===== Vadim's frozen-boundary curve (MATLAB Boundary.m) =====
+  // Contour-parameterized boundary, with (alpha, beta) = (x_i, y_j) specializations
+  // and t = q. For a contour point wc:
+  //   A(wc) = alpha / (wc + alpha)^2
+  //   B(wc) = sum_{j>=0} beta t^j / (1 - beta t^j wc)^2
+  //   m(wc) = A / (A + B)
+  //   x(wc) = alpha (1 - m)/(wc + alpha) - m * sum_{j>=0} ( 1 - 1/(1 - beta t^j wc) )
+  // The MATLAB script plots (1 - m - x, m) and rotates 45 deg. In the diamond's
+  // rotated unit-square chart this is the lattice map (verified to coincide with
+  // the finite-q arc on the main branch wc in (0, 1/beta)):
+  //   hx = R (2m + x - 1),   hy = -R x,   R = N + 1/2.
+  // Boundary.m sweeps only wc in (0, 1/beta) (one arc); here we sweep wc across
+  // every interval between the poles wc = -alpha and wc = 1/(beta t^j) (j >= 0)
+  // and keep the in-diamond pieces, so the full closed boundary is traced.
+  function computeVadimCurveLattice(alpha, beta, q, N) {
+    const halfDiag = N + 0.5;
+    const t = (q >= 0 && q < 1) ? q : 0;
+    // Series truncation: t^K < 1e-15 keeps both sums accurate to ~1e-13.
+    const K = t <= 0 ? 0 : Math.min(Math.max(Math.ceil(Math.log(1e-15) / Math.log(t)), 4), 200000);
+    // Evaluate (m, x) at a contour point wc; null near a pole.
+    const evalWc = (wc) => {
+      const wpa = wc + alpha;
+      if (Math.abs(wpa) < 1e-12) return null;
+      const A = alpha / (wpa * wpa);
+      let B = 0, Xs = 0, tj = 1;
+      for (let j = 0; j <= K; j++) {
+        const d = 1 - beta * tj * wc;
+        if (Math.abs(d) < 1e-12) return null;  // series pole
+        B += beta * tj / (d * d);
+        Xs += 1 - 1 / d;
+        if (t <= 0) break;
+        tj *= t;
+        if (tj < 1e-18) break;
+      }
+      const m = A / (A + B);
+      const x = alpha * (1 - m) / wpa - m * Xs;
+      return { m, x };
+    };
+    // Poles: wc = -alpha and wc = 1/(beta t^j), j >= 0.
+    const poles = [-alpha];
+    let p = 1 / beta;
+    for (let j = 0; j <= 80; j++) {
+      poles.push(p);
+      if (t <= 0) break;
+      p = p / t;
+      if (!isFinite(p) || p > 1e12) break;
+    }
+    poles.sort((a, b) => a - b);
+    const edges = [-Infinity, ...poles, Infinity];
+    const STEPS = 900;
+    const scale = Math.max(1, alpha, 1 / beta);
+    // wc samples for one open interval (a, b). On a semi-infinite interval the
+    // curve approaches a corner as |wc| -> infinity, so we use a u/(1-u) map that
+    // stays dense near the finite pole (cosine on a huge interval would skip the
+    // near-pole region where the arc actually bends).
+    const branchSamples = (a, b) => {
+      const aFin = isFinite(a), bFin = isFinite(b);
+      const out = [];
+      if (aFin && bFin) {
+        const buf = Math.min(1e-3, 1e-4 * (b - a));
+        const lo = a + buf, hi = b - buf;
+        if (hi <= lo) return out;
+        for (let i = 0; i <= STEPS; i++) {
+          const tt = (1 - Math.cos((i / STEPS) * Math.PI)) / 2;  // dense at both poles
+          out.push(lo + (hi - lo) * tt);
+        }
+      } else if (aFin) {            // (a, +inf): dense near a
+        const lo = a + 1e-3;
+        for (let i = 1; i <= STEPS; i++) {
+          const u = i / (STEPS + 1);
+          out.push(lo + scale * u / (1 - u));
+        }
+      } else if (bFin) {            // (-inf, b): dense near b
+        const hi = b - 1e-3;
+        for (let i = 1; i <= STEPS; i++) {
+          const u = i / (STEPS + 1);
+          out.push(hi - scale * u / (1 - u));
+        }
+      }
+      return out;
+    };
+    const pts = [];
+    let needBreak = true;
+    const pushPt = (m, x) => {
+      const hxN = 2 * m + x - 1, hyN = -x;
+      if (!isFinite(hxN) || !isFinite(hyN) || Math.abs(hxN) + Math.abs(hyN) > 1.002) {
+        needBreak = true;  // left the diamond: break the polyline
+        return;
+      }
+      if (needBreak) { pts.push(null); needBreak = false; }
+      pts.push({ hx: halfDiag * hxN, hy: halfDiag * hyN });
+    };
+    for (let b = 0; b < edges.length - 1; b++) {
+      needBreak = true;  // branches are disjoint: never connect across a pole
+      for (const wc of branchSamples(edges[b], edges[b + 1])) {
+        const r = evalWc(wc);
+        if (!r) { needBreak = true; continue; }
+        pushPt(r.m, r.x);
+      }
+    }
+    return pts;
+  }
+
   function drawFrozenCurves(tctx) {
     const params = getFrozenCurveParams();
     if (!params) return;
@@ -2103,6 +2215,12 @@ async function initializeApp() {
       drawPolyline(restPts, "rgba(0, 0, 0, 0.25)");
       tctx.lineWidth = prevWidth;
       drawPolyline(mainPts, "rgba(0, 0, 0, 0.85)");
+    }
+    if (params.showVadim) {
+      // Vadim's MATLAB curve, swept over all branches. Uses alpha, beta directly
+      // (no inversion) and is drawn in purple to match the MATLAB plot color.
+      const vadimPts = computeVadimCurveLattice(params.alpha, params.beta, params.q, currentN);
+      drawPolyline(vadimPts, "rgba(128, 0, 128, 0.9)");
     }
     tctx.restore();
   }
@@ -2228,7 +2346,7 @@ async function initializeApp() {
     const hiresCacheScale = dpr * hiresMultiplier;
     const curveP = getFrozenCurveParams();
     const curveKey = curveP
-      ? `${curveP.showQto1}:${curveP.showFiniteq}:${curveP.alpha}:${curveP.beta}:${curveP.q}`
+      ? `${curveP.showQto1}:${curveP.showFiniteq}:${curveP.showVadim}:${curveP.alpha}:${curveP.beta}:${curveP.q}`
       : "off";
     const currentParams = `${showParticles}|${borderWidth}|${rotation}|${showDiagonalHighlights}|${getCurrentColors().join(',')}|c:${curveKey}`;
     const targetW = Math.round(w * hiresCacheScale);
@@ -3360,6 +3478,9 @@ async function initializeApp() {
     redrawOnly();
   });
   document.getElementById("show-curve-finiteq-cb").addEventListener("change", function() {
+    redrawOnly();
+  });
+  document.getElementById("show-curve-vadim-cb").addEventListener("change", function() {
     redrawOnly();
   });
 
