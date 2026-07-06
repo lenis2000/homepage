@@ -159,11 +159,21 @@ arxiv-semantic: arxiv-venv
 	else \
 		echo "Last arxiv-semantic run: (never)"; \
 	fi
-	@_scripts/arxiv/venv/bin/python _scripts/arxiv/fetch_arxiv.py \
-		--semantic --days $(or $(DAYS),30) --review $(ARGS)
-	python3 _scripts/arxiv/build_search_index.py
-	@date '+%Y-%m-%d %H:%M:%S %Z' > _scripts/arxiv/.last-semantic-run
-	@echo "Updated last-run timestamp: $$(cat _scripts/arxiv/.last-semantic-run)"
+	@# agterm glyph pings (no-op outside agterm): active while running, completed
+	@# on success, blocked/red on failure. The "review ready" ping is fired from
+	@# fetch_arxiv.py itself, at the moment the review TUI comes up.
+	@glyph() { [ -n "$$AGTERM_SESSION_ID" ] && agtermctl session status "$$@" --target "$$AGTERM_SESSION_ID" >/dev/null 2>&1 || true; }; \
+	glyph active --sound Tink; \
+	if _scripts/arxiv/venv/bin/python _scripts/arxiv/fetch_arxiv.py \
+			--semantic --days $(or $(DAYS),30) --review $(ARGS) \
+		&& { glyph active; python3 _scripts/arxiv/build_search_index.py; }; then \
+		date '+%Y-%m-%d %H:%M:%S %Z' > _scripts/arxiv/.last-semantic-run; \
+		echo "Updated last-run timestamp: $$(cat _scripts/arxiv/.last-semantic-run)"; \
+		glyph completed --blink --color "#22c55e" --sound Glass; \
+	else \
+		glyph blocked --blink --color "#dc2626" --sound Basso; \
+		exit 1; \
+	fi
 
 arxiv-venv:
 	@test -d _scripts/arxiv/venv || python3 -m venv _scripts/arxiv/venv

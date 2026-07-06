@@ -691,6 +691,38 @@ FETCH_CACHE = SCRIPT_DIR / "fetch_cache.json"
 REVIEW_TOOL = Path.home() / "bin" / "arxiv-review"
 
 
+def agterm_status(state, blink=False, color=None, sound=None, note=None):
+    """Ping the agterm sidebar glyph for the session running this workflow.
+
+    No-op unless we're inside an agterm session (needs AGTERM_ENABLED and
+    AGTERM_SESSION_ID). Lets the interactive review flow signal the user by
+    glyph — e.g. "blocked" the moment the review TUI is ready. Safe elsewhere.
+    """
+    sid = os.environ.get("AGTERM_SESSION_ID")
+    if not os.environ.get("AGTERM_ENABLED") or not sid:
+        return
+    args = ["session", "status", state, "--target", sid]
+    if blink:
+        args.append("--blink")
+    if color:
+        args += ["--color", color]
+    if sound:
+        args += ["--sound", sound]
+    for ctl in ("agtermctl", "/opt/homebrew/bin/agtermctl"):
+        try:
+            subprocess.run([ctl, *args], stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL, timeout=5, check=False)
+            if note:
+                subprocess.run([ctl, "notify", note, "--title", "arxiv-semantic",
+                                "--target", sid], stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL, timeout=5, check=False)
+            return
+        except FileNotFoundError:
+            continue
+        except Exception:
+            return
+
+
 def export_for_review(candidates, ai_decisions, processed, append_kaggle=True):
     """Write candidates to review.json for the TUI tool.
 
@@ -1158,6 +1190,9 @@ def main():
             print(f"  Run: make arxiv-install")
             return 1
 
+        # Ping by glyph: the slow fetch/embed is done — it's the user's turn to triage.
+        agterm_status("blocked", blink=True, color="#f59e0b", sound="Sosumi",
+                      note=f"Review ready — {len(candidates)} papers to triage")
         result = subprocess.run([str(REVIEW_TOOL), str(REVIEW_FILE)])
         if result.returncode != 0:
             print("  Review cancelled.")
