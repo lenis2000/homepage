@@ -50,7 +50,7 @@ a11y-description: "Interactive visualization of t-embeddings of the Aztec diamon
     </ul>
   </li>
   <li><strong>Layered (straight)</strong>: Horizontally layered weights where each row (y = const) shares the same weight. Same 6 regimes as diagonal layered, but layers run horizontally instead of along diagonals.</li>
-  <li><strong>Periodic (k×l)</strong>: k-by-l periodic pattern of face weights. Opens an editor to set individual weights.</li>
+  <li><strong>Periodic (k×l)</strong>: k-by-l periodic pattern of edge weights on black faces (α top, β right, γ left). Opens an editor to set individual weights.</li>
 </ol>
 
 <h5>Edge Weight Export/Import</h5>
@@ -289,7 +289,7 @@ $$\alpha = \frac{w_{\text{black} \to \text{white}}}{w_{\text{white} \to \text{bl
 </ul>
 
 <p><strong>Gamma Distribution</strong> <a href="https://arxiv.org/abs/2512.03033">[Duits–Van Peski]</a>:
-Edges on the bottom of each face have weight $\sim \Gamma(\alpha, 1)$; edges on the right of each face have weight $\sim \Gamma(\beta, 1)$. The 2×2 periodic preset replaces the constants $\alpha,\beta$ by shape matrices $\alpha_{ij},\beta_{ij}$ repeated periodically in the black-face diagonal coordinates.</p>
+The top edge of each black face has weight $\sim \Gamma(\alpha, 1)$; the right edge of each black face has weight $\sim \Gamma(\beta, 1)$; all other edges have weight $1$. The 2×2 periodic preset replaces the constants $\alpha,\beta$ by shape matrices $\alpha_{ij},\beta_{ij}$ repeated periodically in the black-face diagonal coordinates.</p>
 
 <p><strong>Layered Weights</strong> (diagonal: <a href="https://arxiv.org/abs/2507.08560">[Bufetov–Petrov–Zografos]</a>; straight: <a href="https://arxiv.org/abs/2507.11964">[Moulard–Toninelli]</a>):
 Weight depends on layer index (diagonal $i+j$ or row $y$). Six regimes:</p>
@@ -302,19 +302,19 @@ Weight depends on layer index (diagonal $i+j$ or row $y$). Six regimes:</p>
   <li><em>Regime 6 (Heavy Tails)</em>: $w = x_{\min} U^{-1/\alpha}$ independently for each layer; smaller α gives heavier tails.</li>
 </ul>
 
-<p><strong>Periodic (k×l)</strong>: Face weights follow a spatially periodic $k \times l$ pattern, specified via an interactive editor.</p>
+<p><strong>Periodic (k×l)</strong>: The top (α), right (β), and left (γ) edges of each black face carry weights from $k \times l$ matrices repeated periodically in diagonal coordinates (bottom edges have weight 1), set via an interactive editor; the resulting face weights are periodic with the same period.</p>
 
 <h5>3D Visualization: Origami Map</h5>
 <p>The <strong>origami map</strong> $\mathcal{O}$ is a companion to the T-embedding. Together, $\mathcal{T}$ and $\mathcal{O}$ define a <strong>t-surface</strong>
 $\bigl(\mathrm{Re}(\mathcal{T}), \mathrm{Im}(\mathcal{T}), \mathrm{Re}(\mathcal{O}), \mathrm{Im}(\mathcal{O})\bigr)$
-in the Minkowski space $\mathbb{R}^{2,2}$. For uniform weights, the surface lies in $\mathbb{R}^{2,1}$ [CLR2]; for periodic weights with gas regions, it is genuinely four-dimensional and converges to a <em>space-like maximal surface</em> [BNR].
+in the Minkowski space $\mathbb{R}^{2,2}$. For uniform weights, the limiting surface lies in $\mathbb{R}^{2,1}$ [ChR]; for periodic weights with gas regions, it converges to a <em>space-like maximal surface</em> in $\mathbb{R}^{2,2}$ not contained in any $\mathbb{R}^{2,1}$ [BNR].
 The scaling limit for arbitrary (non-periodic) weights remains an open question.</p>
 
 <p>The <strong>3D view</strong> shows a projection: the T-embedding as the $(x,y)$ base and $\mathrm{Re}(\mathcal{O})$ as height $z$.</p>
 
 <p><strong>Im(Origami), matched:</strong> The imaginary part $\mathrm{Im}(\mathcal{O})$ gives a second height function, but with different boundary conditions than $\mathrm{Re}(\mathcal{O})$.
-To compare them, we apply a linear transformation $z = \alpha \cdot \mathrm{Im}(\mathcal{O}) + \beta$
-where $\alpha, \beta$ are chosen via least squares to match $\mathrm{Re}(\mathcal{O})$ at the four external corners.
+To compare them, we apply a linear transformation $z = a \cdot \mathrm{Im}(\mathcal{O}) + b$
+where the scale $a$ and offset $b$ are chosen via least squares to match $\mathrm{Re}(\mathcal{O})$ at the four external corners.
 This "matched" Im surface can be overlaid with Re to visualize how the two components relate.</p>
 
 <h5>References</h5>
@@ -479,7 +479,7 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
   </div>
 
   <div style="padding: 8px; background: #fff; border: 1px solid #dee2e6; border-radius: 4px;">
-    <div style="font-size: 12px; color: #666; margin-bottom: 8px;">α edges (bottom of faces) ~ Γ(α, 1), β edges (right of faces) ~ Γ(β, 1)</div>
+    <div style="font-size: 12px; color: #666; margin-bottom: 8px;">α edges (top of black faces) ~ Γ(α, 1), β edges (right of black faces) ~ Γ(β, 1)</div>
     <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
       <label style="display: flex; align-items: center; gap: 4px;">
         <span>α:</span>
@@ -9918,7 +9918,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
 
     // Build tables for alpha, beta, gamma
     weightsTables.innerHTML = '';
-    const names = ['α (bottom)', 'β (right)', 'γ (left)'];
+    const names = ['α (top)', 'β (right)', 'γ (left)'];
     const arrays = [params.alpha, params.beta, params.gamma];
 
     for (let t = 0; t < 3; t++) {
@@ -10031,7 +10031,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
   // Build the weights tables UI from preset
   function rebuildWeightsTables(k, l, preset) {
     weightsTables.innerHTML = '';
-    const names = ['α (bottom)', 'β (right)', 'γ (left)'];
+    const names = ['α (top)', 'β (right)', 'γ (left)'];
     const arrays = [preset.alpha, preset.beta, preset.gamma];
 
     for (let t = 0; t < 3; t++) {
