@@ -187,7 +187,8 @@ $$X_{v^*}:=\prod_{s=1}^d\frac{\chi_{b_s w_s}}{\chi_{b_s w_{s+1}}},$$
 where the face $v^*$ has degree $2d$ with vertices denoted by $w_1, b_1, \ldots , w_d, b_d$ in counterclockwise order (white vertices $w_i$, black vertices $b_i$, and $w_{d+1}:=w_1$).</p>
 
 <h5>Recurrence algorithm for computing $\mathcal{T}_k$</h5>
-<p>The T-embedding $\mathcal{T}$ of the Aztec diamond of size $n$ is computed iteratively as a sequence of embeddings $\mathcal{T}_0, \mathcal{T}_1, \ldots, \mathcal{T}_{n-2}$, where $\mathcal{T}_k$ has vertices at integer points $(i,j)$ with $|i|+|j| \leq k+1$.</p>
+<p>The T-embedding $\mathcal{T}$ of the Aztec diamond of size $n$ is computed iteratively as a sequence of embeddings $\mathcal{T}_0, \mathcal{T}_1, \ldots, \mathcal{T}_{n-2}$, where $\mathcal{T}_k$ has vertices at integer points $(i,j)$ with $|i|+|j| \leq k+1$.
+This shuffling recurrence was first written down for the uniformly weighted Aztec diamond in <a href="https://arxiv.org/abs/2002.07540">[ChR]</a> (Proposition 2.4). The two-periodic case, and the extension to arbitrary edge weights implemented here, appear in <a href="https://arxiv.org/abs/2508.06697">[BR]</a> (Section 2.3 and Remark 2.9).</p>
 
 <p><strong>Base case ($k=0$):</strong> The initial embedding $\mathcal{T}_0$ has 5 vertices:</p>
 $$\mathcal{T}_0(0,0) = 0, \quad \mathcal{T}_0(\pm 1, 0) = \pm 1, \quad \mathcal{T}_0(0, \pm 1) = \pm \frac{i}{\sqrt{X_{\mathrm{root}}}}$$
@@ -319,6 +320,8 @@ This "matched" Im surface can be overlaid with Re to visualize how the two compo
 <h5>References</h5>
 <ul style="font-size: 13px;">
   <li><strong>[BNR]</strong> T. Berggren, M. Nicoletti, M. Russkikh. <em>Perfect t-embeddings of doubly periodic Aztec diamonds.</em> <a href="https://arxiv.org/abs/2508.04938">arXiv:2508.04938</a> (2025).</li>
+  <li><strong>[BR]</strong> T. Berggren, M. Russkikh. <em>Perfect t-embeddings and the octahedron equation of the two-periodic Aztec diamond.</em> Ann. Inst. Henri Poincaré D (2025). <a href="https://arxiv.org/abs/2508.06697">arXiv:2508.06697</a>.</li>
+  <li><strong>[ChR]</strong> D. Chelkak, S. Ramassamy. <em>Fluctuations in the Aztec diamonds via a space-like maximal surface in Minkowski 3-space.</em> Confluentes Math. 16:1–17 (2024). <a href="https://arxiv.org/abs/2002.07540">arXiv:2002.07540</a>.</li>
   <li><strong>[CLR2]</strong> D. Chelkak, B. Laslier, M. Russkikh. <em>Bipartite dimer model: perfect t-embeddings and Lorentz-minimal surfaces.</em> <a href="https://arxiv.org/abs/2109.06272">arXiv:2109.06272</a> (2021).</li>
   <li><strong>[CLR1]</strong> D. Chelkak, B. Laslier, M. Russkikh. <em>Dimer model and holomorphic functions on t-embeddings of planar graphs.</em> Proc. Lond. Math. Soc. 126(5):1656–1739 (2023). <a href="https://arxiv.org/abs/2001.11871">arXiv:2001.11871</a>.</li>
   <li><strong>[KLRR]</strong> R. Kenyon, W. Y. Lam, S. Ramassamy, M. Russkikh. <em>Dimers and circle patterns.</em> Ann. Sci. Éc. Norm. Supér. 55(3):863–901 (2022). <a href="https://arxiv.org/abs/1810.05616">arXiv:1810.05616</a>.</li>
