@@ -291,11 +291,22 @@ nav_weight: 1
         />
         <script>
             (function () {
-                if (Math.random() < 0.5) {
+                var alts = [
+                    {
+                        src: '{{site.storage_url}}/img/me_fence_lozenge.png',
+                        alt: 'Lozenge-tiled rendering of Leonid Petrov leaning on a wooden fence'
+                    },
+                    {
+                        src: '{{site.storage_url}}/img/me_ybe.jpg',
+                        alt: 'Photo of Leonid Petrov beside a stone carving of the Yang-Baxter equation'
+                    }
+                ];
+                var pick = Math.floor(Math.random() * (alts.length + 1));
+                if (pick > 0) {
                     var img = document.getElementById('me-fence-img');
                     if (img) {
-                        img.src = '{{site.storage_url}}/img/me_fence_lozenge.png';
-                        img.alt = 'Lozenge-tiled rendering of Leonid Petrov leaning on a wooden fence';
+                        img.src = alts[pick - 1].src;
+                        img.alt = alts[pick - 1].alt;
                     }
                 }
             })();
