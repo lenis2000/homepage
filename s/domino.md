@@ -1225,8 +1225,8 @@ permalink: /domino/
             <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; padding-left: 22px; flex-wrap: wrap;">
               <label for="temperley-width-2d" style="color: var(--text-secondary, #666);">Width</label>
               <input type="range" id="temperley-width-2d" min="0.1" max="1.6" step="0.05" value="0.45" style="width: 80px;" aria-label="Temperley tree line width">
-              <label for="temperley-stride-2d" style="color: var(--text-secondary, #666);">Erase every</label>
-              <input type="number" id="temperley-stride-2d" value="1" min="1" max="30" step="1" style="width: 48px;" title="1 = show all trees; k = erase every k-th whole tree (counted by boundary root)" aria-label="Erase every k-th Temperley tree (1 = show all)">
+              <label for="temperley-stride-2d" style="color: var(--text-secondary, #666);">Show every</label>
+              <input type="number" id="temperley-stride-2d" value="1" min="1" max="30" step="1" style="width: 48px;" title="1 = show all trees; k = keep 1 whole tree in every k (counted by boundary root)" aria-label="Show every k-th Temperley tree (1 = show all)">
             </div>
             <div id="height-function-toggle-container">
               <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
@@ -3834,10 +3834,11 @@ async function initializeDominoRuntime() {
   // directed edge toward its parent (through its matched black square to the
   // opposite white square v' = 2b - v); a vertex whose v' falls outside the
   // region has no parent and is a *root* on the boundary. The white squares thus
-  // decompose into whole trees, one per boundary root. With eraseK >= 2 we order
-  // the roots around the border and erase every k-th tree as a unit, so a tree
-  // (including its frozen straight-chain part) is always kept or removed whole.
-  function buildTemperleyEdges(dominoes, eraseK) {
+  // decompose into whole trees, one per boundary root. With keepK >= 2 we order
+  // the roots around the border and keep every k-th tree, erasing the rest as
+  // whole units (keepK=3 keeps 1 tree in 3). A tree — including its frozen
+  // straight-chain part — is always kept or removed whole.
+  function buildTemperleyEdges(dominoes, keepK) {
     const even = n => ((((n % 2) + 2) % 2) === 0);
     const isBlack = (cx, cy) => even((cx - 1) / 2 + (cy - 1) / 2);
 
@@ -3878,18 +3879,22 @@ async function initializeDominoRuntime() {
       return edges;
     };
 
-    if (!(eraseK >= 2) || cnt === 0) return collect(null); // show all trees
+    if (!(keepK >= 2) || cnt === 0) return collect(null); // show all trees
 
     // Root of each node (walk the parent chain to the boundary root), memoized.
     const rootOf = new Map();
     const findRoot = startKey => {
       const path = [];
       let k = startKey;
+      let steps = 0;
       while (k !== null && !rootOf.has(k)) {
         const node = nodes.get(k);
         if (!node) { k = null; break; }
         path.push(k);
         if (node.parentKey === null) { rootOf.set(k, k); break; }
+        // The essential spanning forest is acyclic, so this always terminates;
+        // the step bound is only a guard against a malformed parent graph.
+        if (++steps > nodes.size) { rootOf.set(k, k); break; }
         k = node.parentKey;
       }
       const root = (k !== null && rootOf.has(k)) ? rootOf.get(k)
@@ -3899,9 +3904,9 @@ async function initializeDominoRuntime() {
     };
     for (const key of nodes.keys()) findRoot(key);
 
-    // Order the distinct roots around the border and erase every k-th tree.
-    // The primal and dual forests are erased independently so both colours thin
-    // symmetrically rather than one dominating.
+    // Order the distinct roots around the border and keep every k-th tree,
+    // erasing the rest. The primal and dual forests are handled independently so
+    // both colours thin symmetrically rather than one dominating.
     const cx0 = sumX / cnt, cy0 = sumY / cnt;
     const primalRoots = [], dualRoots = [];
     const seen = new Set();
@@ -3915,9 +3920,10 @@ async function initializeDominoRuntime() {
     primalRoots.sort(byAngle);
     dualRoots.sort(byAngle);
     const erased = new Set();
-    const markErase = list => list.forEach((r, i) => { if (((i + 1) % eraseK) === 0) erased.add(r.root); });
-    markErase(primalRoots);
-    markErase(dualRoots);
+    // Keep roots 0, k, 2k, ...; erase the rest (keepK=3 keeps 1 tree in 3).
+    const markKeep = list => list.forEach((r, j) => { if ((j % keepK) !== 0) erased.add(r.root); });
+    markKeep(primalRoots);
+    markKeep(dualRoots);
 
     return collect(node => !erased.has(rootOf.get(ddPack(node.wx, node.wy))));
   }
