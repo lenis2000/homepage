@@ -1197,6 +1197,10 @@ permalink: /domino/
               <label for="temperley-stride-2d" style="color: var(--text-secondary, #666);">Show every</label>
               <input type="number" id="temperley-stride-2d" value="1" min="1" max="30" step="1" style="width: 48px;" title="1 = show all trees; k = keep 1 whole tree in every k (counted by boundary root)" aria-label="Show every k-th Temperley tree (1 = show all)">
             </div>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; padding-left: 22px;">
+              <input type="checkbox" id="temperley-backbone-2d">
+              Backbone only (root → other border)
+            </label>
             <div id="height-function-toggle-container">
               <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
                 <input type="checkbox" id="height-function-checkbox-2d">
@@ -3607,6 +3611,13 @@ async function initializeDominoRuntime() {
     }
   });
 
+  // Temperley backbone-only toggle
+  document.getElementById("temperley-backbone-2d").addEventListener("change", function() {
+    if (getActiveView() === "2d" && document.getElementById("temperley-checkbox-2d")?.checked) {
+      updateDominoDisplay();
+    }
+  });
+
   // Double-dimer overlay: sample a second independent tiling of the same region.
   async function sampleSecondDominoConfig() {
     if (!cachedDominoes || !cachedDominoes.length) return;
@@ -3766,6 +3777,7 @@ async function initializeDominoRuntime() {
       showTemperley: Boolean(document.getElementById("temperley-checkbox-2d")?.checked),
       temperleyWidth: Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45),
       temperleyStride: Math.max(1, parseInt(document.getElementById("temperley-stride-2d")?.value, 10) || 1),
+      temperleyBackbone: Boolean(document.getElementById("temperley-backbone-2d")?.checked),
       showDoubleDimer: Boolean(document.getElementById("double-dimer-checkbox-2d")?.checked),
       doubleDimerMinLoop: Math.max(2, parseInt(document.getElementById("double-dimer-minloop-2d")?.value, 10) || 6),
       doubleDimerWidth: Math.max(0.05, parseFloat(document.getElementById("double-dimer-width-2d")?.value) || 0.5),
@@ -3884,7 +3896,7 @@ async function initializeDominoRuntime() {
   // the roots around the border and keep every k-th tree, erasing the rest as
   // whole units (keepK=3 keeps 1 tree in 3). A tree — including its frozen
   // straight-chain part — is always kept or removed whole.
-  function buildTemperleyEdges(dominoes, keepK) {
+  function buildTemperleyEdges(dominoes, keepK, backbone) {
     const even = n => ((((n % 2) + 2) % 2) === 0);
     const isBlack = (cx, cy) => even((cx - 1) / 2 + (cy - 1) / 2);
 
@@ -3925,7 +3937,7 @@ async function initializeDominoRuntime() {
       return edges;
     };
 
-    if (!(keepK >= 2) || cnt === 0) return collect(null); // show all trees
+    if ((!(keepK >= 2) && !backbone) || cnt === 0) return collect(null); // whole forest
 
     // Root of each node (walk the parent chain to the boundary root), memoized.
     const rootOf = new Map();
@@ -3950,28 +3962,74 @@ async function initializeDominoRuntime() {
     };
     for (const key of nodes.keys()) findRoot(key);
 
-    // Order the distinct roots around the border and keep every k-th tree,
-    // erasing the rest. The primal and dual forests are handled independently so
-    // both colours thin symmetrically rather than one dominating.
     const cx0 = sumX / cnt, cy0 = sumY / cnt;
-    const primalRoots = [], dualRoots = [];
-    const seen = new Set();
-    for (const root of rootOf.values()) {
-      if (seen.has(root)) continue;
-      seen.add(root);
-      const rn = nodes.get(root);
-      (rn.primal ? primalRoots : dualRoots).push({ root, angle: Math.atan2(rn.wy - cy0, rn.wx - cx0) });
-    }
-    const byAngle = (a, b) => a.angle - b.angle;
-    primalRoots.sort(byAngle);
-    dualRoots.sort(byAngle);
-    const erased = new Set();
-    // Keep roots 0, k, 2k, ...; erase the rest (keepK=3 keeps 1 tree in 3).
-    const markKeep = list => list.forEach((r, j) => { if ((j % keepK) !== 0) erased.add(r.root); });
-    markKeep(primalRoots);
-    markKeep(dualRoots);
 
-    return collect(node => !erased.has(rootOf.get(ddPack(node.wx, node.wy))));
+    // Keep every k-th whole tree, erasing the rest. Primal and dual forests are
+    // ordered by boundary-root angle and thinned independently for symmetric
+    // colour (keepK=3 keeps 1 tree in 3).
+    const erased = new Set();
+    if (keepK >= 2) {
+      const primalRoots = [], dualRoots = [];
+      const seen = new Set();
+      for (const root of rootOf.values()) {
+        if (seen.has(root)) continue;
+        seen.add(root);
+        const rn = nodes.get(root);
+        (rn.primal ? primalRoots : dualRoots).push({ root, angle: Math.atan2(rn.wy - cy0, rn.wx - cx0) });
+      }
+      const byAngle = (a, b) => a.angle - b.angle;
+      primalRoots.sort(byAngle);
+      dualRoots.sort(byAngle);
+      const markKeep = list => list.forEach((r, j) => { if ((j % keepK) !== 0) erased.add(r.root); });
+      markKeep(primalRoots);
+      markKeep(dualRoots);
+    }
+
+    if (!backbone) {
+      return collect(node => !erased.has(rootOf.get(ddPack(node.wx, node.wy))));
+    }
+
+    // Backbone: for each kept tree, draw the unique path from its boundary root
+    // to the tree vertex that reaches the most different border — the vertex on
+    // the boundary with the largest angular separation (around the diamond
+    // centre) from the root. A vertex is on the boundary if an orthogonally
+    // adjacent lattice square lies outside the region.
+    const inRegion = key => squares.has(key);
+    const isBorder = node =>
+      !inRegion(ddPack(node.wx + 2, node.wy)) || !inRegion(ddPack(node.wx - 2, node.wy)) ||
+      !inRegion(ddPack(node.wx, node.wy + 2)) || !inRegion(ddPack(node.wx, node.wy - 2));
+    const angleOf = node => Math.atan2(node.wy - cy0, node.wx - cx0);
+    const angSep = (a, b) => { const d = Math.abs(a - b); return d > Math.PI ? 2 * Math.PI - d : d; };
+
+    const bordersByRoot = new Map();
+    for (const node of nodes.values()) {
+      const rk = rootOf.get(ddPack(node.wx, node.wy));
+      if (erased.has(rk) || !isBorder(node)) continue;
+      if (!bordersByRoot.has(rk)) bordersByRoot.set(rk, []);
+      bordersByRoot.get(rk).push(node);
+    }
+
+    const backboneNodes = new Set();
+    for (const [rk, borderNodes] of bordersByRoot) {
+      const rn = nodes.get(rk);
+      const aR = angleOf(rn);
+      let best = null, bestSep = -1;
+      for (const bn of borderNodes) {
+        if (ddPack(bn.wx, bn.wy) === rk) continue;
+        const sep = angSep(angleOf(bn), aR);
+        if (sep > bestSep) { bestSep = sep; best = bn; }
+      }
+      if (!best || bestSep < Math.PI / 2) continue; // stays on one border → no backbone
+      let curKey = ddPack(best.wx, best.wy);
+      let guard = 0;
+      while (curKey !== null && curKey !== rk && guard++ <= nodes.size) {
+        backboneNodes.add(curKey);
+        const cur = nodes.get(curKey);
+        if (!cur) break;
+        curKey = cur.parentKey;
+      }
+    }
+    return collect(node => backboneNodes.has(ddPack(node.wx, node.wy)));
   }
 
   function dominoDimerEdgeGeometry(d) {
@@ -4407,7 +4465,7 @@ async function initializeDominoRuntime() {
     // "Trees and matchings".
     drawTemperleyOverlay(ctx, settings) {
       if (!settings.showTemperley) return;
-      const edges = buildTemperleyEdges(this.dominoes, settings.temperleyStride);
+      const edges = buildTemperleyEdges(this.dominoes, settings.temperleyStride, settings.temperleyBackbone);
       if (!edges.length) return;
 
       const strokeColor = { primal: "#111827", dual: "#d6117f" };
@@ -5039,6 +5097,7 @@ async function initializeDominoRuntime() {
     const useTemperley = document.getElementById("temperley-checkbox-2d")?.checked || false;
     const temperleyWidth = Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45);
     const temperleyStrideExport = Math.max(1, parseInt(document.getElementById("temperley-stride-2d")?.value, 10) || 1);
+    const temperleyBackboneExport = Boolean(document.getElementById("temperley-backbone-2d")?.checked);
     const useDoubleDimer = document.getElementById("double-dimer-checkbox-2d")?.checked || false;
     const hideDominoesExport = document.getElementById("hide-dominoes-checkbox")?.checked || false;
     const doubleDimerMinLoopExport = Math.max(2, parseInt(document.getElementById("double-dimer-minloop-2d")?.value, 10) || 6);
@@ -5475,7 +5534,7 @@ async function initializeDominoRuntime() {
         const x2 = (e.ex / 100) - minX, y2 = maxY - (e.ey / 100);
         return `(${x1.toFixed(2)}, ${y1.toFixed(2)}) -- (${x2.toFixed(2)}, ${y2.toFixed(2)})`;
       };
-      const tEdges = buildTemperleyEdges(cachedDominoes, temperleyStrideExport);
+      const tEdges = buildTemperleyEdges(cachedDominoes, temperleyStrideExport, temperleyBackboneExport);
       const primalSegs = tEdges.filter(e => e.primal).map(toTreeSeg);
       const dualSegs = tEdges.filter(e => !e.primal).map(toTreeSeg);
 
@@ -5997,8 +6056,9 @@ async function initializeDominoRuntime() {
       if (useTemperleyPDF) {
         const twidth = Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45);
         const tstride = Math.max(1, parseInt(document.getElementById("temperley-stride-2d")?.value, 10) || 1);
+        const tbackbone = Boolean(document.getElementById("temperley-backbone-2d")?.checked);
         const primalE = [], dualE = [];
-        for (const e of buildTemperleyEdges(cachedDominoes, tstride)) {
+        for (const e of buildTemperleyEdges(cachedDominoes, tstride, tbackbone)) {
           const seg = [(e.wx - minX) * scaleX, (e.wy - minY) * scaleY, (e.ex - minX) * scaleX, (e.ey - minY) * scaleY];
           (e.primal ? primalE : dualE).push(seg);
         }
