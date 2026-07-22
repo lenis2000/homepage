@@ -43,10 +43,20 @@ function checkPageSource() {
   assert(source.includes('id="no-3d-checkbox" checked'), "No 3D should be checked by default");
   assert(source.includes('<button id="view-2d-btn" class="active"'), "2D view should be active by default");
   assert(source.includes('<canvas id="aztec-canvas-2d"'), "2D view should include the canvas renderer");
-  assert(source.includes('max="2000"'), "2D sampler input should allow n up to 2000");
-  assert(source.includes('const max2DN = 2000'), "2D sampler guard should allow n up to 2000");
+  const orderInput = source.match(/<input id="n-input"[^>]*>/)?.[0] || "";
+  assert(orderInput && !/\smax=/.test(orderInput), "2D sampler input should not impose an application-level maximum n");
+  assert(!source.includes("max2DN"), "2D sampler should leave size limits to the browser");
+  assert(source.includes('document.getElementById("n-input").removeAttribute("max")'), "2D view should remove the 3D-only maximum");
   assert(source.includes('const DOMINO_2D_EXACT_RENDER_LIMIT = 100'), "Small 2D tilings should use exact canvas rendering");
-  assert(cppSource.includes("PackedDecisionPyramid"), "C++ sampler should use packed shuffling decisions for large n");
+  assert(source.includes("class CanvasSegmentBatch"), "Large canvas overlays should use bounded native path batches");
+  assert(source.includes("getDoubleDimerScreenSelection"), "Double-dimer previews should use the compact cycle decomposition");
+  assert(source.includes("new Uint8Array(siteCount)"), "Double-dimer previews should use compact typed grids");
+  assert(!source.includes("DOUBLE_DIMER_SEGMENT_BUDGET"), "Double-dimer previews must not cap or thin loop edges");
+  assert(cppSource.includes("PeriodicProbabilityPyramid"), "C++ sampler should reuse periodic shuffling probabilities");
+  assert(cppSource.includes("MatrixConfig = FlatMatrix<uint8_t>"), "C++ sampler should use byte-sized configuration cells");
+  assert(cppSource.includes("kDelslideBlockTransform"), "C++ sampler should fuse deletion and sliding by 2x2 block");
+  assert(cppSource.includes("class JsonBuffer"), "C++ sampler should serialize directly into its returned buffer");
+  assert(cppSource.includes("PackedDecisionPyramid"), "C++ sampler should retain the exact finite fallback for periods larger than n");
   assert(!cppSource.includes("dim > 1000"), "C++ sampler should not keep the old n=500 hard cap");
   assert(!wasmBundle.includes("Input size too large, would exceed memory limits"), "Compiled WASM bundle should not contain the old n=500 hard cap");
   assert(!source.includes("periodicity-select"), "Share links should not reference the removed periodicity select");
@@ -70,6 +80,13 @@ function checkPageSource() {
   assert(benchmarkStart >= 0 && benchmarkEnd > benchmarkStart, "default benchmark cases should be present");
   const benchmarkCases = source.slice(benchmarkStart, benchmarkEnd);
   assert(!benchmarkCases.includes('view: "3d"'), "default benchmark cases should not include 3D");
+
+  const doubleDimerStart = source.indexOf("drawDoubleDimerOverlay(ctx, settings) {");
+  const doubleDimerEnd = source.indexOf("drawHeightLabels(ctx, settings) {", doubleDimerStart);
+  assert(doubleDimerStart >= 0 && doubleDimerEnd > doubleDimerStart, "double-dimer canvas renderer should be present");
+  const doubleDimerBody = source.slice(doubleDimerStart, doubleDimerEnd);
+  assert(doubleDimerBody.includes("getDoubleDimerScreenSelection"), "canvas loops should use compact cycle selection");
+  assert(!doubleDimerBody.includes("getDoubleDimerDrawableEdges"), "canvas loops should not materialize the vector-export edge graph");
 }
 
 async function wait(ms) {
@@ -289,6 +306,9 @@ async function evaluateDominoWasm(client) {
           "number", "number", "number", "number", "number", "number", "number",
           "number", "number", "number", "number", "number", "number"
         ];
+        const periodicSamplerArgs = [
+          "number", "number", "number", "number", "number", "number"
+        ];
         const freeString = Module.cwrap("freeString", null, ["number"]);
         const callSampler = async (name, args, argTypes = samplerArgs) => {
           const fn = Module.cwrap(name, "number", argTypes, { async: true });
@@ -312,6 +332,12 @@ async function evaluateDominoWasm(client) {
           }
           const cells = new Set();
           for (const d of dominoes) {
+            if (!Number.isInteger(d.x) || !Number.isInteger(d.y)) {
+              throw new Error(label + " returned non-integer coordinates");
+            }
+            if (!((d.w === 4 && d.h === 2) || (d.w === 2 && d.h === 4))) {
+              throw new Error(label + " returned invalid domino dimensions");
+            }
             if (orientation === "horizontal" && !(d.w === 4 && d.h === 2)) {
               throw new Error(label + " returned a non-horizontal domino");
             }
@@ -320,7 +346,12 @@ async function evaluateDominoWasm(client) {
             }
             for (let dx = 0; dx < d.w; dx += 2) {
               for (let dy = 0; dy < d.h; dy += 2) {
-                const key = String(d.x + dx) + "," + String(d.y + dy);
+                const cellX = d.x + dx;
+                const cellY = d.y + dy;
+                if (Math.abs(cellX + 1) + Math.abs(cellY - 1) > 2 * n) {
+                  throw new Error(label + " has a cell outside the Aztec diamond");
+                }
+                const key = String(cellX) + "," + String(cellY);
                 if (cells.has(key)) throw new Error(label + " has overlapping cell " + key);
                 cells.add(key);
               }
@@ -338,24 +369,59 @@ async function evaluateDominoWasm(client) {
         for (const n of [2, 4, 12, 50]) {
           checkDominoes("uniform n=" + n, await callNineWeightSampler("simulateAztec", n), n);
         }
-        checkDominoes("2x2 n=50", await callNineWeightSampler(
-          "simulateAztec",
-          50,
-          [1, 0.5, 1, 1.25, 1, 1.25, 1, 0.5, 1]
-        ), 50);
-        checkDominoes("3x3 n=50", await callNineWeightSampler(
-          "simulateAztec",
-          50,
-          [1, 1.2, 0.8, 1.5, 0.9, 1.1, 1.3, 0.7, 1.4]
-        ), 50);
-        checkDominoes("6x2 n=50", await call6x2Sampler(
-          50,
-          [1, 2, 1, 3, 1, 0.5, 1.5, 1, 0.75, 1, 2.5, 2]
-        ), 50);
+        for (const n of [2, 50]) {
+          checkDominoes("2x2 n=" + n, await callNineWeightSampler(
+            "simulateAztec",
+            n,
+            [1, 0.5, 1, 1.25, 1, 1.25, 1, 0.5, 1]
+          ), n);
+          checkDominoes("3x3 n=" + n, await callNineWeightSampler(
+            "simulateAztec",
+            n,
+            [1, 1.2, 0.8, 1.5, 0.9, 1.1, 1.3, 0.7, 1.4]
+          ), n);
+          checkDominoes("6x2 n=" + n, await call6x2Sampler(
+            n,
+            [1, 2, 1, 3, 1, 0.5, 1.5, 1, 0.75, 1, 2.5, 2]
+          ), n);
+        }
+
+        const k = 4;
+        const l = 5;
+        const count = k * l;
+        const bytes = count * Float64Array.BYTES_PER_ELEMENT;
+        const alphaPtr = Module._malloc(bytes);
+        const betaPtr = Module._malloc(bytes);
+        const gammaPtr = Module._malloc(bytes);
+        try {
+          const periodicWeights = shift => Array.from(
+            { length: count },
+            (_, i) => 0.25 + ((i + shift) % 11) / 4
+          );
+          Module.HEAPF64.set(periodicWeights(0), alphaPtr >> 3);
+          Module.HEAPF64.set(periodicWeights(3), betaPtr >> 3);
+          Module.HEAPF64.set(periodicWeights(7), gammaPtr >> 3);
+          for (const n of [2, 50]) {
+            checkDominoes(
+              "general periodic n=" + n,
+              await callSampler(
+                "simulateAztecPeriodic",
+                [n, k, l, alphaPtr, betaPtr, gammaPtr],
+                periodicSamplerArgs
+              ),
+              n
+            );
+          }
+        } finally {
+          Module._free(alphaPtr);
+          Module._free(betaPtr);
+          Module._free(gammaPtr);
+        }
         resolve("ok");
       };
-      if (Module.calledRun) ready().catch(fail);
-      else Module.onRuntimeInitialized = () => ready().catch(fail);
+      // checkWasmBundle waits for the exported WASM function itself. Calling
+      // ready directly avoids racing a late onRuntimeInitialized assignment.
+      ready().catch(fail);
     })
   `;
 
@@ -463,6 +529,9 @@ async function checkBuiltDominoPage() {
       "--headless=new",
       "--no-sandbox",
       "--disable-gpu",
+      "--disable-background-timer-throttling",
+      "--disable-backgrounding-occluded-windows",
+      "--disable-renderer-backgrounding",
       `--remote-debugging-port=${chromePort}`,
       `--user-data-dir=${profileDir}`,
       "about:blank"
@@ -472,6 +541,7 @@ async function checkBuiltDominoPage() {
     const tab = await openTab(chromePort, `http://127.0.0.1:${sitePort}/domino/`);
     client = createCdpClient(tab.webSocketDebuggerUrl);
     await client.send("Page.enable");
+    await client.send("Page.bringToFront");
     await client.send("Runtime.enable");
     await client.send("Log.enable").catch(() => {});
 
@@ -563,6 +633,9 @@ async function checkWasmBundle() {
     "--headless=new",
     "--no-sandbox",
     "--disable-gpu",
+    "--disable-background-timer-throttling",
+    "--disable-backgrounding-occluded-windows",
+    "--disable-renderer-backgrounding",
     `--remote-debugging-port=${port}`,
     `--user-data-dir=${profileDir}`,
     "about:blank"
@@ -574,10 +647,11 @@ async function checkWasmBundle() {
     const tab = await openTab(port, `file://${htmlPath}`);
     client = createCdpClient(tab.webSocketDebuggerUrl);
     await client.send("Page.enable");
+    await client.send("Page.bringToFront");
     await client.send("Runtime.enable");
     await waitForPageCondition(
       client,
-      `typeof Module !== "undefined" && Boolean(Module.cwrap)`,
+      `typeof Module !== "undefined" && typeof Module._simulateAztec === "function"`,
       "the standalone domino WASM bundle to load",
       30000
     );
@@ -589,6 +663,8 @@ async function checkWasmBundle() {
 }
 
 checkPageSource();
-await checkBuiltDominoPage();
+if (process.env.DOMINO_SKIP_PAGE_BUILD !== "1") {
+  await checkBuiltDominoPage();
+}
 await checkWasmBundle();
 console.log("domino smoke checks passed");

@@ -966,7 +966,7 @@ permalink: /domino/
       <div class="control-section-content">
         <div class="control-row">
           <label for="n-input">Aztec Diamond Order:</label>
-          <input id="n-input" type="number" value="12" min="2" step="2" max="2000" size="3" class="mobile-input" style="width: 70px;">
+          <input id="n-input" type="number" value="12" min="2" step="2" size="3" class="mobile-input" style="width: 70px;">
         </div>
         <div class="control-row">
           <button id="sample-btn" class="btn-action">Sample</button>
@@ -1391,7 +1391,13 @@ async function initializeDominoRuntime() {
   let progressInterval;
   let cachedDominoes = null; // Store dominoes for 2D view
   let cachedDominoes2 = null; // Second independent tiling for the double-dimer overlay
-  const doubleDimerLoopCache = { config1: null, config2: null, minLoop: null, edges: null };
+  const doubleDimerLoopCache = {
+    config1: null,
+    config2: null,
+    minLoop: null,
+    edges: null,
+    screen: null
+  };
   let domino2DRenderer = null;
   let useHeightFunction = false; // Track height function visibility state
   let heightGroup; // Group for height function display
@@ -1426,7 +1432,7 @@ async function initializeDominoRuntime() {
     document.getElementById("download-png-btn").style.display = "inline-block";
     document.getElementById("download-pdf-btn").style.display = "inline-block";
     document.getElementById("download-3d-btn").style.display = "none";
-    document.getElementById("n-input").setAttribute("max", "2000");
+    document.getElementById("n-input").removeAttribute("max");
   }
 
   initializeDefaultPaneState();
@@ -2627,8 +2633,9 @@ async function initializeDominoRuntime() {
     }, 250);
 
     try {
-      // Allow UI to update before starting heavy computation
-      await sleep(50);
+      // Yield one task so the sampling status can paint without imposing a
+      // fixed 50 ms delay on every (including very small) sample.
+      await sleep(0);
       if (signal.aborted) return completeProfile("aborted");
 
       const raw = await sampleDominoesFromWasm(n, profile, signal);
@@ -2651,6 +2658,7 @@ async function initializeDominoRuntime() {
         cachedDominoes2 = null;
       }
       doubleDimerLoopCache.edges = null;
+      doubleDimerLoopCache.screen = null;
       invalidate2DCanvasCache();
 
       await render2DIfVisible(dominoes, n, profile);
@@ -2832,16 +2840,6 @@ async function initializeDominoRuntime() {
     // Update height function visibility based on n value
     updateHeightFunctionVisibility(n);
 
-    // Absolute maximum n value for the sampler.
-    const max2DN = 2000;
-
-    // Check if n is within allowed range
-    if (n > max2DN) {
-      // Absolute maximum exceeded
-      return alert(`n is too large. Maximum value is ${max2DN}.`);
-    }
-
-    // If we get here, n is within allowed range for current view
     updateVisualization(n);
   });
 
@@ -3629,6 +3627,7 @@ async function initializeDominoRuntime() {
       cachedDominoes2 = null;
     }
     doubleDimerLoopCache.edges = null;
+    doubleDimerLoopCache.screen = null;
   }
 
   document.getElementById("double-dimer-checkbox-2d").addEventListener("change", async function() {
@@ -3641,6 +3640,7 @@ async function initializeDominoRuntime() {
     } else {
       cachedDominoes2 = null;
       doubleDimerLoopCache.edges = null;
+      doubleDimerLoopCache.screen = null;
     }
     if (getActiveView() === "2d") updateDominoDisplay();
   });
@@ -3753,6 +3753,7 @@ async function initializeDominoRuntime() {
   const DOMINO_2D_SVG_COMPAT_LIMIT = 5000;
   const DOMINO_2D_CACHE_MAX_PX = 4096;
   const DOMINO_2D_CACHE_PADDING = 4;
+  const DOMINO_2D_STROKE_BATCH_SIZE = 65536;
   let prevCanvasDominoKey = null;
   let svg2DExportDirty = true;
 
@@ -3833,6 +3834,33 @@ async function initializeDominoRuntime() {
     canvas.width = safeWidth;
     canvas.height = safeHeight;
     return canvas;
+  }
+
+  // Keep native canvas paths bounded. Multi-million-segment paths can retain a
+  // large command buffer (or fail to paint altogether) even when stroke() itself
+  // is fast. This tiny batching wrapper has constant JS memory.
+  class CanvasSegmentBatch {
+    constructor(ctx, limit = DOMINO_2D_STROKE_BATCH_SIZE) {
+      this.ctx = ctx;
+      this.limit = limit;
+      this.count = 0;
+      ctx.beginPath();
+    }
+
+    add(x1, y1, x2, y2) {
+      this.ctx.moveTo(x1, y1);
+      this.ctx.lineTo(x2, y2);
+      if (++this.count >= this.limit) {
+        this.ctx.stroke();
+        this.ctx.beginPath();
+        this.count = 0;
+      }
+    }
+
+    finish() {
+      if (this.count > 0) this.ctx.stroke();
+      this.count = 0;
+    }
   }
 
   function collectCheckerboardSquares(dominoes) {
@@ -4128,6 +4156,139 @@ async function initializeDominoRuntime() {
     return drawable;
   }
 
+  // Compact screen-only double-dimer decomposition. Two perfect matchings have
+  // degree two after shared edges are removed, so their symmetric difference is
+  // already a disjoint union of alternating cycles. Encoding each matching as
+  // one direction byte per lattice site avoids the Map/array/object graph used
+  // by the vector exporters (which can exceed a gigabyte around n=1500).
+  const DD_RIGHT = 1, DD_LEFT = 2, DD_DOWN = 3, DD_UP = 4;
+
+  function doubleDimerOrderFromCount(dominoCount) {
+    const n = Math.round((Math.sqrt(1 + 4 * dominoCount) - 1) / 2);
+    return n > 0 && n * (n + 1) === dominoCount ? n : 0;
+  }
+
+  function doubleDimerCellIndex(x, y, n, dim) {
+    const col = Math.round((x + 2 * n) / 2);
+    const row = Math.round((y + 2 * n - 2) / 2);
+    return row * dim + col;
+  }
+
+  function fillDoubleDimerDirections(dominoes, directions, n, dim) {
+    for (const d of dominoes) {
+      const horizontal = d.w > d.h;
+      const first = doubleDimerCellIndex(d.x, d.y, n, dim);
+      const second = first + (horizontal ? 1 : dim);
+      directions[first] = horizontal ? DD_RIGHT : DD_DOWN;
+      directions[second] = horizontal ? DD_LEFT : DD_UP;
+    }
+  }
+
+  function nextDoubleDimerVertex(index, direction, dim) {
+    if (direction === DD_RIGHT) return index + 1;
+    if (direction === DD_LEFT) return index - 1;
+    if (direction === DD_DOWN) return index + dim;
+    return index - dim;
+  }
+
+  function getDoubleDimerScreenSelection(config1, config2, minLoop) {
+    const cached = doubleDimerLoopCache.screen;
+    if (cached && cached.config1 === config1 && cached.config2 === config2 &&
+        cached.minLoop === minLoop) {
+      return cached;
+    }
+
+    const n = doubleDimerOrderFromCount(config1?.length || 0);
+    if (!n || !config2 || config2.length !== config1.length) return null;
+    const dim = 2 * n;
+    const siteCount = dim * dim;
+    const firstMatch = new Uint8Array(siteCount);
+    const secondMatch = new Uint8Array(siteCount);
+    const visited = new Uint8Array(siteCount);
+    const kept = new Uint8Array(siteCount);
+    fillDoubleDimerDirections(config1, firstMatch, n, dim);
+    fillDoubleDimerDirections(config2, secondMatch, n, dim);
+
+    let totalLoops = 0;
+    let totalEdges = 0;
+    let shownLoops = 0;
+    let shownEdges = 0;
+
+    for (let start = 0; start < siteCount; ++start) {
+      if (!firstMatch[start] || firstMatch[start] === secondMatch[start] || visited[start]) continue;
+
+      let current = start;
+      let useFirst = true;
+      let loopSize = 0;
+      do {
+        if (!firstMatch[current] || !secondMatch[current]) {
+          throw new Error("Malformed double-dimer cycle");
+        }
+        visited[current] = 1;
+        const direction = useFirst ? firstMatch[current] : secondMatch[current];
+        current = nextDoubleDimerVertex(current, direction, dim);
+        useFirst = !useFirst;
+        if (++loopSize > siteCount) throw new Error("Double-dimer cycle did not close");
+      } while (current !== start);
+      if (!useFirst) throw new Error("Odd double-dimer cycle");
+      if (loopSize < minLoop) continue;
+
+      ++totalLoops;
+      totalEdges += loopSize;
+      current = start;
+      useFirst = true;
+      do {
+        kept[current] = 1;
+        const direction = useFirst ? firstMatch[current] : secondMatch[current];
+        current = nextDoubleDimerVertex(current, direction, dim);
+        useFirst = !useFirst;
+      } while (current !== start);
+      ++shownLoops;
+      shownEdges += loopSize;
+    }
+
+    const selection = {
+      config1,
+      config2,
+      minLoop,
+      n,
+      dim,
+      kept,
+      totalLoops,
+      totalEdges,
+      shownLoops,
+      shownEdges
+    };
+    doubleDimerLoopCache.screen = selection;
+    window.dominoDoubleDimerPreview = {
+      n,
+      minLoop,
+      totalLoops,
+      totalEdges,
+      shownLoops,
+      shownEdges,
+      thinned: false
+    };
+    return selection;
+  }
+
+  function forEachSelectedDoubleDimerEdge(dominoes, selection, visit) {
+    const { kept, n, dim } = selection;
+    for (const d of dominoes) {
+      const first = doubleDimerCellIndex(d.x, d.y, n, dim);
+      if (!kept[first]) continue;
+      const cx = d.x + d.w / 2;
+      const cy = d.y + d.h / 2;
+      if (d.w > d.h) {
+        const half = d.w / 4;
+        visit(cx - half, cy, cx + half, cy);
+      } else {
+        const half = d.h / 4;
+        visit(cx, cy - half, cx, cy + half);
+      }
+    }
+  }
+
   class Domino2DCanvasRenderer {
     constructor(container, canvas) {
       this.container = container;
@@ -4389,7 +4550,10 @@ async function initializeDominoRuntime() {
     drawPathOverlay(ctx, settings) {
       if (!settings.showPaths) return;
       ctx.save();
-      ctx.beginPath();
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 0.6;
+      ctx.lineCap = "round";
+      const batch = new CanvasSegmentBatch(ctx);
       for (const d of this.dominoes) {
         const isHorizontal = d.w > d.h;
         const colorType = normalizeDominoColorName(d);
@@ -4398,20 +4562,20 @@ async function initializeDominoRuntime() {
         const pathHalfLength = Math.min(d.w, d.h) * 1.2;
 
         if (isHorizontal && colorType === "green") {
-          ctx.moveTo(d.x, centerY);
-          ctx.lineTo(d.x + d.w, centerY);
+          batch.add(d.x, centerY, d.x + d.w, centerY);
         } else if (!isHorizontal && colorType === "yellow") {
-          ctx.moveTo(centerX - pathHalfLength / 2, centerY + pathHalfLength / 2);
-          ctx.lineTo(centerX + pathHalfLength / 2, centerY - pathHalfLength / 2);
+          batch.add(
+            centerX - pathHalfLength / 2, centerY + pathHalfLength / 2,
+            centerX + pathHalfLength / 2, centerY - pathHalfLength / 2
+          );
         } else if (!isHorizontal && colorType === "red") {
-          ctx.moveTo(centerX - pathHalfLength / 2, centerY - pathHalfLength / 2);
-          ctx.lineTo(centerX + pathHalfLength / 2, centerY + pathHalfLength / 2);
+          batch.add(
+            centerX - pathHalfLength / 2, centerY - pathHalfLength / 2,
+            centerX + pathHalfLength / 2, centerY + pathHalfLength / 2
+          );
         }
       }
-      ctx.strokeStyle = "black";
-      ctx.lineWidth = 0.6;
-      ctx.lineCap = "round";
-      ctx.stroke();
+      batch.finish();
       ctx.restore();
     }
 
@@ -4472,39 +4636,66 @@ async function initializeDominoRuntime() {
     // "Trees and matchings".
     drawTemperleyOverlay(ctx, settings) {
       if (!settings.showTemperley) return;
-      const edges = buildTemperleyEdges(this.dominoes, settings.temperleyStride, settings.temperleyBackbone);
-      if (!edges.length) return;
+      const useStreamingForest = settings.temperleyStride === 1 && !settings.temperleyBackbone;
+      const edges = useStreamingForest
+        ? null
+        : buildTemperleyEdges(this.dominoes, settings.temperleyStride, settings.temperleyBackbone);
+      if (edges && !edges.length) return;
 
       const strokeColor = { primal: "#111827", dual: "#d6117f" };
       const lineW = settings.temperleyWidth;
       const haloW = lineW + 0.6;
+      // Model bounds are exactly 4n by 4n for every sampler exposed here. Use
+      // the rendered tiling rather than the current input value, which may have
+      // been edited since the last sample.
+      const order = Math.max(1, Math.round(this.modelBounds.width / 4));
 
       ctx.save();
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
 
-      const traceEdges = (pred) => {
-        for (const e of edges) {
-          if (pred && !pred(e)) continue;
-          ctx.moveTo(e.wx, e.wy);
-          ctx.lineTo(e.ex, e.ey);
+      const traceEdges = primalFilter => {
+        const batch = new CanvasSegmentBatch(ctx);
+        if (useStreamingForest) {
+          // For the full forest every domino contributes one edge, so no graph
+          // needs to be materialized. A unit-square centre (x,y) is in this
+          // Aztec diamond exactly when |x| + |y-2| <= 2n. This replaces the
+          // 2N-entry Set, N-entry Map, and N edge objects used by the general
+          // thinning/backbone builder while producing identical endpoints.
+          for (const d of this.dominoes) {
+            if (d.w <= 0 || d.h <= 0) continue;
+            const horizontal = d.w > d.h;
+            const ax = d.x + 1, ay = d.y + 1;
+            const bx = horizontal ? d.x + 3 : d.x + 1;
+            const by = horizontal ? d.y + 1 : d.y + 3;
+            const aIsBlack = ((((ax + ay - 2) / 2) & 1) === 0);
+            const wx = aIsBlack ? bx : ax, wy = aIsBlack ? by : ay;
+            const blx = aIsBlack ? ax : bx, bly = aIsBlack ? ay : by;
+            const primal = ((((wx - 1) / 2) & 1) === 0);
+            if (primalFilter !== null && primal !== primalFilter) continue;
+            const vx = 2 * blx - wx, vy = 2 * bly - wy;
+            const hasFar = Math.abs(vx) + Math.abs(vy - 2) <= 2 * order;
+            batch.add(wx, wy, hasFar ? vx : blx, hasFar ? vy : bly);
+          }
+        } else {
+          for (const e of edges) {
+            if (primalFilter !== null && e.primal !== primalFilter) continue;
+            batch.add(e.wx, e.wy, e.ex, e.ey);
+          }
         }
+        batch.finish();
       };
 
       // White halo underlay so the trees read over any domino colour.
       ctx.strokeStyle = "rgba(255,255,255,0.85)";
       ctx.lineWidth = haloW;
-      ctx.beginPath();
-      traceEdges();
-      ctx.stroke();
+      traceEdges(null);
 
       // Two interleaved trees: primal (I even) and its dual (I odd).
       for (const isPrimal of [true, false]) {
         ctx.strokeStyle = isPrimal ? strokeColor.primal : strokeColor.dual;
         ctx.lineWidth = lineW;
-        ctx.beginPath();
-        traceEdges(e => e.primal === isPrimal);
-        ctx.stroke();
+        traceEdges(isPrimal);
       }
       ctx.restore();
     }
@@ -4512,19 +4703,20 @@ async function initializeDominoRuntime() {
     drawDoubleDimerOverlay(ctx, settings) {
       if (!settings.showDoubleDimer) return;
       if (!cachedDominoes2 || !cachedDominoes2.length) return;
-      const edges = getDoubleDimerDrawableEdges(this.dominoes, cachedDominoes2, settings.doubleDimerMinLoop);
-      if (!edges.length) return;
+      const selection = getDoubleDimerScreenSelection(
+        this.dominoes,
+        cachedDominoes2,
+        settings.doubleDimerMinLoop
+      );
+      if (!selection || selection.shownEdges === 0) return;
 
       const w = settings.doubleDimerWidth;
-      const batches = new Map();
-      for (const e of edges) {
-        if (!batches.has(e.color)) batches.set(e.color, []);
-        batches.get(e.color).push(e);
-      }
-      const traceLines = list => {
-        ctx.beginPath();
-        for (const e of list) { ctx.moveTo(e.x1, e.y1); ctx.lineTo(e.x2, e.y2); }
-        ctx.stroke();
+      const traceConfig = dominoes => {
+        const batch = new CanvasSegmentBatch(ctx);
+        forEachSelectedDoubleDimerEdge(dominoes, selection, (x1, y1, x2, y2) => {
+          batch.add(x1, y1, x2, y2);
+        });
+        batch.finish();
       };
 
       ctx.save();
@@ -4535,14 +4727,15 @@ async function initializeDominoRuntime() {
       // would otherwise blend into the black domino borders).
       ctx.strokeStyle = "rgba(255,255,255,0.85)";
       ctx.lineWidth = w + 0.5;
-      traceLines(edges);
+      traceConfig(this.dominoes);
+      traceConfig(cachedDominoes2);
 
       // Coloured cores: config-1 edges dark, config-2 edges crimson.
       ctx.lineWidth = w;
-      for (const [color, es] of batches) {
-        ctx.strokeStyle = color;
-        traceLines(es);
-      }
+      ctx.strokeStyle = "#111111";
+      traceConfig(this.dominoes);
+      ctx.strokeStyle = "#e6194b";
+      traceConfig(cachedDominoes2);
       ctx.restore();
     }
 
@@ -4712,8 +4905,9 @@ async function initializeDominoRuntime() {
     document.getElementById("download-pdf-btn").style.display = "inline-block";
     document.getElementById("download-3d-btn").style.display = "none";
 
-    // Set the max n for 2D view
-    document.getElementById("n-input").setAttribute("max", "2000");
+    // The 2D sampler is intentionally uncapped; browser memory/time is the
+    // limiting factor. The 3D pane still has its separate n=300 guard.
+    document.getElementById("n-input").removeAttribute("max");
 
     // Always reuse the cached dominoes if we have them
     if (cachedDominoes && cachedDominoes.length > 0) {

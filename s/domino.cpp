@@ -8,9 +8,9 @@ emcc domino.cpp -o domino.js\
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
  -s ENVIRONMENT=web \
- -fexceptions \
+ -s "EXCEPTION_CATCHING_ALLOWED=['simulateAztec','simulateAztec6x2','simulateAztecPeriodic','simulateAztecHorizontal','simulateAztecVertical','performGlauberSteps']" \
  -s SINGLE_FILE=1 \
- -O3 -ffast-math
+ -O3 -ffast-math -flto -DNDEBUG -fno-rtti
 
 
 Features:
@@ -128,6 +128,17 @@ public:
         std::fill(data_.begin(), data_.begin() + needed, value);
     }
 
+    // Use only when the caller overwrites every active cell. This avoids a
+    // full matrix clear in the shuffling ping-pong loop.
+    void resetUninitialized(int rows, int cols) {
+        const size_t needed = static_cast<size_t>(rows) * static_cast<size_t>(cols);
+        if (data_.size() < needed) {
+            data_.resize(needed);
+        }
+        rows_ = rows;
+        cols_ = cols;
+    }
+
     T* operator[](int row) {
         return data_.data() + static_cast<size_t>(row) * cols_;
     }
@@ -137,14 +148,17 @@ public:
     }
 
     int size() const { return rows_; }
+    int rows() const { return rows_; }
+    int cols() const { return cols_; }
 };
 
 using MatrixDouble = FlatMatrix<double>;
 using MatrixInt = FlatMatrix<int>;
+using MatrixConfig = FlatMatrix<uint8_t>;
 using Vertex = pair<int, int>;
 
 /* ---------- Global state for incremental Glauber dynamics ---------- */
-static MatrixInt      g_conf;        // current domino configuration
+static MatrixConfig   g_conf;        // current domino configuration
 static MatrixDouble   g_W;           // current weight matrix
 static int            g_N    = 0;    // linear size of g_conf (2n)
 static string         g_periodicity = "uniform"; // "uniform", "2x2", or "3x3"
@@ -171,6 +185,12 @@ double plaquetteWeight(int r, int c, bool horizontal) {
     if (r < 0 || r + 1 >= g_N || c < 0 || c + 1 >= g_N) {
          // Bounds check - should not happen if called correctly
          return 1.0; // Or some other default/error handling
+    }
+
+    // Uniform samples do not need to retain a dense 2n x 2n matrix merely
+    // for later Glauber updates.
+    if (g_periodicity == "uniform") {
+        return 1.0;
     }
 
     const double wNW = g_W[r][c];         // Weight at NW corner (r, c)
@@ -289,13 +309,165 @@ void normalizeMatrixIfNeeded(MatrixDouble& matrix, double maxAbs) {
     // both overflow and the old incorrect practice of clamping tiny
     // denominators to an arbitrary epsilon (which changed the measure).
     if (maxAbs < 1e-100 || maxAbs > 1e100) {
-        const int n = matrix.size();
-        for (int i = 0; i < n; ++i) {
-            for (int j = 0; j < n; ++j) {
+        for (int i = 0; i < matrix.rows(); ++i) {
+            for (int j = 0; j < matrix.cols(); ++j) {
                 matrix[i][j] /= maxAbs;
             }
         }
     }
+}
+
+class PeriodicProbabilityPyramid {
+public:
+    int levels = 0;
+    int blockRows = 0;
+    int blockCols = 0;
+    vector<double> probabilities;
+
+    PeriodicProbabilityPyramid() = default;
+
+    PeriodicProbabilityPyramid(int levelCount, int rowPeriod, int colPeriod) {
+        reset(levelCount, rowPeriod, colPeriod);
+    }
+
+    void reset(int levelCount, int rowPeriod, int colPeriod) {
+        if (levelCount <= 0 || rowPeriod <= 0 || colPeriod <= 0 ||
+            (rowPeriod & 1) || (colPeriod & 1)) {
+            throw std::runtime_error("Periodic probability dimensions must be positive and even");
+        }
+        levels = levelCount;
+        blockRows = rowPeriod / 2;
+        blockCols = colPeriod / 2;
+        probabilities.assign(
+            static_cast<size_t>(levels) * static_cast<size_t>(blockRows) * static_cast<size_t>(blockCols),
+            0.0);
+    }
+
+    inline double& at(int rows, int i, int j) {
+        const size_t levelOffset = static_cast<size_t>(rows - 1) * blockRows * blockCols;
+        return probabilities[levelOffset + static_cast<size_t>(i) * blockCols + j];
+    }
+
+    inline double get(int rows, int i, int j) const {
+        const size_t levelOffset = static_cast<size_t>(rows - 1) * blockRows * blockCols;
+        const int tileRow = i % blockRows;
+        const int tileCol = j % blockCols;
+        return probabilities[levelOffset + static_cast<size_t>(tileRow) * blockCols + tileCol];
+    }
+};
+
+PeriodicProbabilityPyramid computePeriodicProbabilityPyramid(
+    const MatrixDouble& weights,
+    int levels,
+    int rowPeriod,
+    int colPeriod) {
+
+    if (weights.rows() < rowPeriod || weights.cols() < colPeriod ||
+        rowPeriod <= 0 || colPeriod <= 0 || (rowPeriod & 1) || (colPeriod & 1)) {
+        throw std::runtime_error("Invalid periodic weight tile");
+    }
+
+    PeriodicProbabilityPyramid result(levels, rowPeriod, colPeriod);
+    MatrixDouble currentValue(rowPeriod, colPeriod, 0.0);
+    MatrixInt currentExp(rowPeriod, colPeriod, 0);
+    MatrixDouble nextValue(rowPeriod, colPeriod, 0.0);
+    MatrixInt nextExp(rowPeriod, colPeriod, 0);
+
+    double currentMaxAbs = 0.0;
+    for (int i = 0; i < rowPeriod; ++i) {
+        for (int j = 0; j < colPeriod; ++j) {
+            const double weight = weights[i][j];
+            if (fabs(weight) < 1e-9) {
+                currentValue[i][j] = 1.0;
+                currentExp[i][j] = 1;
+            } else {
+                currentValue[i][j] = weight;
+                currentExp[i][j] = 0;
+            }
+            currentMaxAbs = std::max(currentMaxAbs, fabs(currentValue[i][j]));
+        }
+    }
+    normalizeMatrixIfNeeded(currentValue, currentMaxAbs);
+
+    const int probabilityRows = rowPeriod / 2;
+    const int probabilityCols = colPeriod / 2;
+    for (int rows = levels; rows >= 1; --rows) {
+        for (int i = 0; i < probabilityRows; ++i) {
+            for (int j = 0; j < probabilityCols; ++j) {
+                const int i0 = i << 1;
+                const int j0 = j << 1;
+                const int expMain = currentExp[i0][j0] + currentExp[i0 + 1][j0 + 1];
+                const int expOther = currentExp[i0 + 1][j0] + currentExp[i0][j0 + 1];
+
+                double probability;
+                if (expMain > expOther) {
+                    probability = 0.0;
+                } else if (expMain < expOther) {
+                    probability = 1.0;
+                } else {
+                    const double prodMain = currentValue[i0 + 1][j0 + 1] * currentValue[i0][j0];
+                    const double prodOther = currentValue[i0 + 1][j0] * currentValue[i0][j0 + 1];
+                    const double denom = prodMain + prodOther;
+                    if (denom == 0.0 || !std::isfinite(denom)) {
+                        throw std::runtime_error("Degenerate creation probability denominator");
+                    }
+                    probability = prodMain / denom;
+                }
+                result.at(rows, i, j) = probability;
+            }
+        }
+
+        if (rows == 1) {
+            break;
+        }
+
+        double nextMaxAbs = 0.0;
+        for (int i = 0; i < rowPeriod; ++i) {
+            const int ii = (i + 2 * (i & 1)) % rowPeriod;
+            const int nextI = (i + 1) % rowPeriod;
+            for (int j = 0; j < colPeriod; ++j) {
+                const int jj = (j + 2 * (j & 1)) % colPeriod;
+                const int nextJ = (j + 1) % colPeriod;
+
+                const double current = currentValue[ii][jj];
+                const double diag = currentValue[nextI][nextJ];
+                const double right = currentValue[ii][nextJ];
+                const double down = currentValue[nextI][jj];
+                const int currentFlag = currentExp[ii][jj];
+                const int diagFlag = currentExp[nextI][nextJ];
+                const int rightFlag = currentExp[ii][nextJ];
+                const int downFlag = currentExp[nextI][jj];
+                const int expMain = currentFlag + diagFlag;
+                const int expOther = rightFlag + downFlag;
+
+                double denominator;
+                int denominatorExp;
+                if (expMain == expOther) {
+                    denominator = current * diag + right * down;
+                    denominatorExp = expMain;
+                } else if (expMain < expOther) {
+                    denominator = current * diag;
+                    denominatorExp = expMain;
+                } else {
+                    denominator = right * down;
+                    denominatorExp = expOther;
+                }
+                if (denominator == 0.0 || !std::isfinite(denominator)) {
+                    throw std::runtime_error("Degenerate square-move denominator");
+                }
+
+                nextValue[i][j] = current / denominator;
+                nextExp[i][j] = currentFlag - denominatorExp;
+                nextMaxAbs = std::max(nextMaxAbs, fabs(nextValue[i][j]));
+            }
+        }
+
+        normalizeMatrixIfNeeded(nextValue, nextMaxAbs);
+        std::swap(currentValue, nextValue);
+        std::swap(currentExp, nextExp);
+    }
+
+    return result;
 }
 
 PackedDecisionPyramid computeDecisionPyramid(const MatrixDouble& weights) {
@@ -418,77 +590,196 @@ PackedDecisionPyramid computeDecisionPyramid(const MatrixDouble& weights) {
     return decisions;
 }
 
-void delslideInPlace(MatrixInt& out, const MatrixInt& in) {
+static constexpr uint8_t kDelslideBlockTransform[16] = {
+    0, 8, 4, 10, 2, 12, 0, 8,
+    1, 0, 3, 4, 5, 2, 1, 2
+};
+
+struct DelslidePackedRows {
+    uint16_t top;
+    uint16_t bottom;
+};
+
+constexpr array<DelslidePackedRows, 16> makeDelslidePackedRows() {
+    array<DelslidePackedRows, 16> result{};
+    for (size_t state = 0; state < result.size(); ++state) {
+        const uint8_t moved = kDelslideBlockTransform[state];
+        result[state] = {
+            static_cast<uint16_t>((moved & 1U) | ((moved & 2U) << 7)),
+            static_cast<uint16_t>(((moved & 4U) >> 2) | ((moved & 8U) << 5))
+        };
+    }
+    return result;
+}
+
+// Compile-time-derived from the authoritative transition table above: this
+// retains fast packed row stores without maintaining a second hand-coded map.
+static constexpr auto kDelslidePackedRows = makeDelslidePackedRows();
+
+class EmptyBlockBitset {
+public:
+    int blocks = 0;
+    int wordsPerRow = 0;
+    vector<uint64_t> words;
+
+    void reset(int newBlocks) {
+        blocks = newBlocks;
+        wordsPerRow = (blocks + 63) / 64;
+        words.resize(static_cast<size_t>(blocks) * wordsPerRow);
+    }
+};
+
+inline uint8_t delslideStateFromPairs(const uint8_t* top, const uint8_t* bottom) {
+    uint16_t topPair;
+    uint16_t bottomPair;
+    std::memcpy(&topPair, top, sizeof(topPair));
+    std::memcpy(&bottomPair, bottom, sizeof(bottomPair));
+    return static_cast<uint8_t>(
+        (topPair & 1U) |
+        ((topPair >> 7) & 2U) |
+        ((bottomPair << 2) & 4U) |
+        ((bottomPair >> 5) & 8U));
+}
+
+void delslideInPlace(MatrixConfig& out, const MatrixConfig& in, EmptyBlockBitset& emptyBlocks) {
     const int n = in.size();
-    out.reset(n + 2, n + 2, 0);
-
-    for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-            out[i + 1][j + 1] = in[i][j];
-        }
-    }
-
+    const int outSize = n + 2;
+    out.resetUninitialized(outSize, outSize);
     const int half = n / 2;
-    for (int i = 0; i < half; ++i) {
-        for (int j = 0; j < half; ++j) {
-            const int i2 = i << 1;
-            const int j2 = j << 1;
-            if (out[i2][j2] == 1 && out[i2 + 1][j2 + 1] == 1) {
-                out[i2][j2] = 0;
-                out[i2 + 1][j2 + 1] = 0;
-            } else if (out[i2][j2 + 1] == 1 && out[i2 + 1][j2] == 1) {
-                out[i2 + 1][j2] = 0;
-                out[i2][j2 + 1] = 0;
+    const int blocks = half + 1;
+    emptyBlocks.reset(blocks);
+
+    // Embedding, deletion, and sliding are all local on the same aligned
+    // 2x2 blocks. Read the shifted input block and apply their combined
+    // 16-state lookup in one pass instead of clearing/copying/scanning the
+    // whole matrix three separate times.
+    for (int blockRow = 0; blockRow < blocks; ++blockRow) {
+        uint64_t* emptyRow = emptyBlocks.words.data() +
+            static_cast<size_t>(blockRow) * emptyBlocks.wordsPerRow;
+        int wordIndex = 0;
+        int bitIndex = 0;
+        uint64_t emptyWord = 0;
+        const int outRow = blockRow << 1;
+        const int inputTopRow = outRow - 1;
+        const int inputBottomRow = outRow;
+        const uint8_t* inputTop = inputTopRow >= 0 ? in[inputTopRow] : nullptr;
+        const uint8_t* inputBottom = inputBottomRow < n ? in[inputBottomRow] : nullptr;
+        uint8_t* outputTop = out[outRow];
+        uint8_t* outputBottom = out[outRow + 1];
+
+        auto writeBlock = [&](int col, uint8_t state) {
+            const uint8_t moved = kDelslideBlockTransform[state];
+            const DelslidePackedRows packed = kDelslidePackedRows[state];
+            // WASM memory is little-endian, and memcpy lowers these to
+            // unaligned 16-bit stores.
+            std::memcpy(outputTop + col, &packed.top, sizeof(packed.top));
+            std::memcpy(outputBottom + col, &packed.bottom, sizeof(packed.bottom));
+
+            // Creation only needs to inspect blocks whose four output bytes
+            // are zero. Accumulate those locations a machine word at a time,
+            // avoiding a second full-grid scan in createStepInPlace().
+            emptyWord |= static_cast<uint64_t>(moved == 0) << bitIndex;
+            if (++bitIndex == 64) {
+                emptyRow[wordIndex++] = emptyWord;
+                bitIndex = 0;
+                emptyWord = 0;
+            }
+        };
+
+        // Left boundary block: its shifted left input column is outside.
+        uint8_t state = 0;
+        if (inputTop) state |= static_cast<uint8_t>(inputTop[0] << 1);
+        if (inputBottom) state |= static_cast<uint8_t>(inputBottom[0] << 3);
+        writeBlock(0, state);
+
+        // Interior blocks are branch-free; only the O(n) boundary blocks need
+        // special handling.
+        if (inputTop && inputBottom) {
+            for (int blockCol = 1; blockCol < half; ++blockCol) {
+                const int outCol = blockCol << 1;
+                state = delslideStateFromPairs(
+                    inputTop + outCol - 1,
+                    inputBottom + outCol - 1);
+                writeBlock(outCol, state);
+            }
+        } else {
+            for (int blockCol = 1; blockCol < half; ++blockCol) {
+                const int outCol = blockCol << 1;
+                const int inputLeftCol = outCol - 1;
+                const int inputRightCol = outCol;
+                state = 0;
+                if (inputTop) {
+                    state |= inputTop[inputLeftCol];
+                    state |= static_cast<uint8_t>(inputTop[inputRightCol] << 1);
+                }
+                if (inputBottom) {
+                    state |= static_cast<uint8_t>(inputBottom[inputLeftCol] << 2);
+                    state |= static_cast<uint8_t>(inputBottom[inputRightCol] << 3);
+                }
+                writeBlock(outCol, state);
             }
         }
-    }
 
-    for (int i = 0; i < half + 1; ++i) {
-        for (int j = 0; j < half + 1; ++j) {
-            const int i2 = i << 1;
-            const int j2 = j << 1;
-            if (out[i2 + 1][j2 + 1] == 1) {
-                out[i2][j2] = 1;
-                out[i2 + 1][j2 + 1] = 0;
-            } else if (out[i2][j2] == 1) {
-                out[i2][j2] = 0;
-                out[i2 + 1][j2 + 1] = 1;
-            } else if (out[i2 + 1][j2] == 1) {
-                out[i2][j2 + 1] = 1;
-                out[i2 + 1][j2] = 0;
-            } else if (out[i2][j2 + 1] == 1) {
-                out[i2 + 1][j2] = 1;
-                out[i2][j2 + 1] = 0;
-            }
+        // Right boundary block: its shifted right input column is outside.
+        state = 0;
+        if (inputTop) state |= inputTop[n - 1];
+        if (inputBottom) state |= static_cast<uint8_t>(inputBottom[n - 1] << 2);
+        writeBlock(n, state);
+        if (bitIndex != 0) {
+            emptyRow[wordIndex] = emptyWord;
         }
     }
 }
 
-void createStepInPlace(MatrixInt& config, const PackedDecisionPyramid& decisions, int rows) {
+template <typename DecisionSource>
+void createStepInPlace(
+    MatrixConfig& config,
+    DecisionSource& decisions,
+    int rows,
+    const EmptyBlockBitset& emptyBlocks) {
     const int n = config.size();
     const int half = n / 2;
+    decisions.beginLevel(rows);
+
     for (int i = 0; i < half; ++i) {
-        for (int j = 0; j < half; ++j) {
-            const int i2 = i << 1;
-            const int j2 = j << 1;
-            if (config[i2][j2] == 0 && config[i2 + 1][j2] == 0 &&
-                config[i2][j2 + 1] == 0 && config[i2 + 1][j2 + 1] == 0) {
-                bool a1 = true, a2 = true, a3 = true, a4 = true;
-                if (j > 0)
-                    a1 = (config[i2][j2 - 1] == 0) && (config[i2 + 1][j2 - 1] == 0);
-                if (j < half - 1)
-                    a2 = (config[i2][j2 + 2] == 0) && (config[i2 + 1][j2 + 2] == 0);
-                if (i > 0)
-                    a3 = (config[i2 - 1][j2] == 0) && (config[i2 - 1][j2 + 1] == 0);
-                if (i < half - 1)
-                    a4 = (config[i2 + 2][j2] == 0) && (config[i2 + 2][j2 + 1] == 0);
-                if (a1 && a2 && a3 && a4) {
-                    if (decisions.get(rows, i, j)) {
-                        config[i2][j2] = 1;
-                        config[i2 + 1][j2 + 1] = 1;
+        decisions.beginRow(i);
+        const int i2 = i << 1;
+        uint8_t* top = config[i2];
+        uint8_t* bottom = config[i2 + 1];
+        const uint8_t* above = i > 0 ? config[i2 - 1] : nullptr;
+        const uint8_t* below = i < half - 1 ? config[i2 + 2] : nullptr;
+
+        const uint64_t* emptyWords = emptyBlocks.words.data() +
+            static_cast<size_t>(i) * emptyBlocks.wordsPerRow;
+        for (int wordIndex = 0; wordIndex < emptyBlocks.wordsPerRow; ++wordIndex) {
+            uint64_t emptyWord = emptyWords[wordIndex];
+            while (emptyWord != 0) {
+                const int bit = __builtin_ctzll(emptyWord);
+                const int j = (wordIndex << 6) + bit;
+                if (j >= half) break;
+                emptyWord &= emptyWord - 1;
+                const int j2 = j << 1;
+                uint8_t occupiedNeighbor = 0;
+                if (j > 0) {
+                    occupiedNeighbor |= top[j2 - 1] | bottom[j2 - 1];
+                }
+                if (j < half - 1) {
+                    occupiedNeighbor |= top[j2 + 2] | bottom[j2 + 2];
+                }
+                if (above) {
+                    occupiedNeighbor |= above[j2] | above[j2 + 1];
+                }
+                if (below) {
+                    occupiedNeighbor |= below[j2] | below[j2 + 1];
+                }
+
+                if (occupiedNeighbor == 0) {
+                    if (decisions.choose(j)) {
+                        top[j2] = 1;
+                        bottom[j2 + 1] = 1;
                     } else {
-                        config[i2 + 1][j2] = 1;
-                        config[i2][j2 + 1] = 1;
+                        bottom[j2] = 1;
+                        top[j2 + 1] = 1;
                     }
                 }
             }
@@ -496,17 +787,102 @@ void createStepInPlace(MatrixInt& config, const PackedDecisionPyramid& decisions
     }
 }
 
-MatrixInt aztecgen(const PackedDecisionPyramid& decisions) {
-    const int levels = decisions.levels;
-    if (levels <= 0) {
-        return MatrixInt();
+class PackedDecisionSource {
+public:
+    explicit PackedDecisionSource(const PackedDecisionPyramid& decisions) : decisions_(decisions) {}
+
+    inline void beginLevel(int rows) {
+        rowWidth_ = rows;
+        levelOffset_ = decisions_.offsets[rows - 1];
     }
 
-    MatrixInt bufferA((levels << 1) + 2, (levels << 1) + 2, 0);
-    MatrixInt bufferB((levels << 1) + 2, (levels << 1) + 2, 0);
+    inline void beginRow(int row) {
+        rowOffset_ = levelOffset_ + static_cast<uint64_t>(row) * rowWidth_;
+    }
+
+    inline bool choose(int col) {
+        const uint64_t idx = rowOffset_ + static_cast<uint64_t>(col);
+        return (decisions_.words[static_cast<size_t>(idx >> 5)] >> (idx & 31U)) & 1U;
+    }
+
+private:
+    const PackedDecisionPyramid& decisions_;
+    uint64_t levelOffset_ = 0;
+    uint64_t rowOffset_ = 0;
+    int rowWidth_ = 0;
+};
+
+class PeriodicProbabilitySource {
+public:
+    explicit PeriodicProbabilitySource(const PeriodicProbabilityPyramid& probabilities)
+        : probabilities_(probabilities),
+          rowOffsets_(static_cast<size_t>(probabilities.levels)),
+          colOffsets_(static_cast<size_t>(probabilities.levels)) {
+        for (int i = 0; i < probabilities.levels; ++i) {
+            rowOffsets_[i] = (i % probabilities.blockRows) * probabilities.blockCols;
+            colOffsets_[i] = i % probabilities.blockCols;
+        }
+    }
+
+    inline void beginLevel(int rows) {
+        levelOffset_ = static_cast<size_t>(rows - 1) *
+            probabilities_.blockRows * probabilities_.blockCols;
+    }
+
+    inline void beginRow(int row) {
+        rowOffset_ = levelOffset_ + static_cast<size_t>(rowOffsets_[row]);
+    }
+
+    inline bool choose(int col) {
+        const double probability = probabilities_.probabilities[
+            rowOffset_ + static_cast<size_t>(colOffsets_[col])];
+        if (probability <= 0.0) return false;
+        if (probability >= 1.0) return true;
+        return shuffleRng.next_double() < probability;
+    }
+
+private:
+    const PeriodicProbabilityPyramid& probabilities_;
+    vector<int> rowOffsets_;
+    vector<int> colOffsets_;
+    size_t levelOffset_ = 0;
+    size_t rowOffset_ = 0;
+};
+
+class UniformDecisionSource {
+public:
+    inline void beginLevel(int) {}
+    inline void beginRow(int) {}
+
+    inline bool choose(int) {
+        if (remaining_ == 0) {
+            bits_ = shuffleRng.next();
+            remaining_ = 64;
+        }
+        const bool result = (bits_ & 1U) != 0;
+        bits_ >>= 1;
+        --remaining_;
+        return result;
+    }
+
+private:
+    uint64_t bits_ = 0;
+    int remaining_ = 0;
+};
+
+template <typename DecisionSource>
+MatrixConfig aztecgenWithDecisionSource(int levels, DecisionSource& decisions) {
+    if (levels <= 0) {
+        return MatrixConfig();
+    }
+
+    MatrixConfig bufferA((levels << 1) + 2, (levels << 1) + 2, 0);
+    MatrixConfig bufferB((levels << 1) + 2, (levels << 1) + 2, 0);
 
     bufferA.reset(2, 2, 0);
-    if (decisions.get(1, 0, 0)) {
+    decisions.beginLevel(1);
+    decisions.beginRow(0);
+    if (decisions.choose(0)) {
         bufferA[0][0] = 1;
         bufferA[1][1] = 1;
     } else {
@@ -514,54 +890,182 @@ MatrixInt aztecgen(const PackedDecisionPyramid& decisions) {
         bufferA[1][0] = 1;
     }
 
-    MatrixInt* current = &bufferA;
-    MatrixInt* next = &bufferB;
+    MatrixConfig* current = &bufferA;
+    MatrixConfig* next = &bufferB;
+    EmptyBlockBitset emptyBlocks;
     const int totalIterations = levels - 1;
+    double nextYieldAt = emscripten_get_now() + 100.0;
 
     for (int i = 0; i < totalIterations; ++i) {
-        delslideInPlace(*next, *current);
-        createStepInPlace(*next, decisions, i + 2);
+        delslideInPlace(*next, *current, emptyBlocks);
+        createStepInPlace(*next, decisions, i + 2, emptyBlocks);
         std::swap(current, next);
 
-        progressCounter = 10 + static_cast<int>(((i + 1) / static_cast<double>(totalIterations)) * 80);
-        emscripten_sleep(0);
+        // Asyncify has to unwind and restore the WASM stack for every sleep.
+        // Check cheaply every eight levels, but yield only after roughly one
+        // frame of real work. This keeps long samples responsive without
+        // making fast samples pay for dozens of timers.
+        if (((i + 1) & 7) == 0) {
+            progressCounter = 10 + static_cast<int>(((i + 1) / static_cast<double>(totalIterations)) * 80);
+            const double now = emscripten_get_now();
+            if (now >= nextYieldAt) {
+                emscripten_sleep(0);
+                nextYieldAt = emscripten_get_now() + 100.0;
+            }
+        }
     }
+
+    progressCounter = 90;
 
     return std::move(*current);
 }
 
-void appendJsonNumber(string& json, double value) {
-    char buf[32];
-    const int len = std::snprintf(buf, sizeof(buf), "%.15g", value);
-    if (len > 0) {
-        json.append(buf, static_cast<size_t>(len));
-    }
+MatrixConfig aztecgen(const PackedDecisionPyramid& decisions) {
+    PackedDecisionSource source(decisions);
+    return aztecgenWithDecisionSource(decisions.levels, source);
 }
 
-void appendDominoJSON(string& json, bool& first, double x, double y, double w, double h, const char* color) {
+MatrixConfig aztecgen(const PeriodicProbabilityPyramid& probabilities) {
+    PeriodicProbabilitySource source(probabilities);
+    return aztecgenWithDecisionSource(probabilities.levels, source);
+}
+
+MatrixConfig aztecgenUniform(int levels) {
+    UniformDecisionSource source;
+    return aztecgenWithDecisionSource(levels, source);
+}
+
+MatrixConfig samplePeriodicConfig(
+    const MatrixDouble& weights,
+    int levels,
+    int rowPeriod,
+    int colPeriod) {
+
+    // If the requested period is larger than this tiny diamond, the finite
+    // matrix does not contain one complete tile to copy. The original finite
+    // recurrence is cheap at these sizes and remains the exact fallback.
+    if (weights.rows() < rowPeriod || weights.cols() < colPeriod) {
+        PackedDecisionPyramid decisions = computeDecisionPyramid(weights);
+        return aztecgen(decisions);
+    }
+
+    PeriodicProbabilityPyramid probabilities =
+        computePeriodicProbabilityPyramid(weights, levels, rowPeriod, colPeriod);
+    return aztecgen(probabilities);
+}
+
+class JsonBuffer {
+public:
+    explicit JsonBuffer(size_t initialCapacity)
+        : capacity_(std::max<size_t>(initialCapacity, 2)),
+          data_(static_cast<char*>(std::malloc(capacity_))) {
+        if (!data_) {
+            throw std::runtime_error("Failed to allocate JSON output");
+        }
+    }
+
+    ~JsonBuffer() {
+        std::free(data_);
+    }
+
+    void append(char value) {
+        ensure(1);
+        data_[size_++] = value;
+    }
+
+    void append(const char* value, size_t length) {
+        ensure(length);
+        std::memcpy(data_ + size_, value, length);
+        size_ += length;
+    }
+
+    template <size_t N>
+    void append(const char (&literal)[N]) {
+        append(literal, N - 1);
+    }
+
+    char* release() {
+        ensure(1);
+        data_[size_] = '\0';
+        char* result = data_;
+        data_ = nullptr;
+        capacity_ = 0;
+        size_ = 0;
+        return result;
+    }
+
+private:
+    void ensure(size_t extra) {
+        if (extra <= capacity_ - size_) return;
+        if (extra > SIZE_MAX - size_) {
+            throw std::runtime_error("JSON output is too large");
+        }
+        const size_t needed = size_ + extra;
+        size_t nextCapacity = capacity_;
+        while (nextCapacity < needed) {
+            const size_t grown = nextCapacity + nextCapacity / 2;
+            if (grown <= nextCapacity) {
+                nextCapacity = needed;
+                break;
+            }
+            nextCapacity = grown;
+        }
+        char* grown = static_cast<char*>(std::realloc(data_, nextCapacity));
+        if (!grown) {
+            throw std::runtime_error("Failed to grow JSON output");
+        }
+        data_ = grown;
+        capacity_ = nextCapacity;
+    }
+
+    size_t capacity_ = 0;
+    size_t size_ = 0;
+    char* data_ = nullptr;
+};
+
+void appendJsonInteger(JsonBuffer& json, int value) {
+    char buffer[16];
+    char* end = buffer + sizeof(buffer);
+    char* cursor = end;
+    const bool negative = value < 0;
+    unsigned int magnitude = negative
+        ? static_cast<unsigned int>(-static_cast<long long>(value))
+        : static_cast<unsigned int>(value);
+
+    do {
+        *--cursor = static_cast<char>('0' + (magnitude % 10));
+        magnitude /= 10;
+    } while (magnitude != 0);
+    if (negative) {
+        *--cursor = '-';
+    }
+    json.append(cursor, static_cast<size_t>(end - cursor));
+}
+
+void appendDominoJSON(JsonBuffer& json, bool& first, int x, int y, int w, int h, const char* color) {
     if (!first) {
-        json.push_back(',');
+        json.append(',');
     } else {
         first = false;
     }
 
-    json += "{\"x\":";
-    appendJsonNumber(json, x);
-    json += ",\"y\":";
-    appendJsonNumber(json, y);
-    json += ",\"w\":";
-    appendJsonNumber(json, w);
-    json += ",\"h\":";
-    appendJsonNumber(json, h);
-    json += ",\"color\":\"";
-    json += color;
-    json += "\"}";
+    json.append("{\"x\":");
+    appendJsonInteger(json, x);
+    json.append(",\"y\":");
+    appendJsonInteger(json, y);
+    json.append(",\"w\":");
+    appendJsonInteger(json, w);
+    json.append(",\"h\":");
+    appendJsonInteger(json, h);
+    json.append(",\"color\":\"");
+    json.append(color, std::strlen(color));
+    json.append("\"}");
 }
 
-bool appendStandardDominoFromMarker(string& json, bool& first, int i, int j, int size) {
+bool appendStandardDominoFromMarker(JsonBuffer& json, bool& first, int i, int j, int size) {
     const bool oddI = i & 1;
     const bool oddJ = j & 1;
-    double x, y, w, h;
+    int x, y, w, h;
     const char* color;
 
     if (oddI && oddJ) {
@@ -596,11 +1100,18 @@ bool appendStandardDominoFromMarker(string& json, bool& first, int i, int j, int
     return true;
 }
 
-string serializeDominoConfig(const MatrixInt& config) {
+char* serializeDominoConfig(const MatrixConfig& config) {
     const int size = config.size();
-    string json;
-    json.reserve(std::max<size_t>(2, static_cast<size_t>(size) * static_cast<size_t>(size) * 24));
-    json.push_back('[');
+    const size_t order = static_cast<size_t>(size / 2);
+    const size_t expectedDominoes = order * (order + 1);
+    if (expectedDominoes > (SIZE_MAX - 2) / 52) {
+        throw std::runtime_error("Domino JSON output is too large");
+    }
+    // At n=2000, the longest emitted object is 50 bytes including its comma.
+    // Leave a small margin; JsonBuffer still grows safely when larger
+    // coordinates require another digit.
+    JsonBuffer json(expectedDominoes * 52 + 2);
+    json.append('[');
 
     bool first = true;
     for (int i = 0; i < size; ++i) {
@@ -611,8 +1122,8 @@ string serializeDominoConfig(const MatrixInt& config) {
         }
     }
 
-    json.push_back(']');
-    return json;
+    json.append(']');
+    return json.release();
 }
 
 char* makeCString(const string& value) {
@@ -667,11 +1178,13 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
 
         progressCounter = 0; // Reset progress.
 
-        // Create weight matrix A1a: dimensions 2*n x 2*n with periodic pattern
-        int dim = 2 * n;
+        const int dim = 2 * n;
+        const bool isUniformPattern =
+            std::abs(w1 - 1.0) < 1e-9 && std::abs(w2 - 1.0) < 1e-9 && std::abs(w3 - 1.0) < 1e-9 &&
+            std::abs(w4 - 1.0) < 1e-9 && std::abs(w5 - 1.0) < 1e-9 && std::abs(w6 - 1.0) < 1e-9 &&
+            std::abs(w7 - 1.0) < 1e-9 && std::abs(w8 - 1.0) < 1e-9 && std::abs(w9 - 1.0) < 1e-9;
 
-
-        MatrixDouble A1a(dim, dim, 0.0);
+        MatrixDouble A1a;
 
         // Check if the weights match the pattern for a 2x2 periodic configuration
         // In a 2x2 pattern, w2 and w8 are 'a', w4 and w6 are 'b', and the rest are 1.0
@@ -680,7 +1193,15 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
                              std::abs(w9 - 1.0) < 1e-9 &&
                              std::abs(w2 - w8) < 1e-9 && std::abs(w4 - w6) < 1e-9);
 
-        if (is2x2Pattern) {
+        if (!isUniformPattern) {
+            A1a.reset(dim, dim, 0.0);
+        }
+
+        if (isUniformPattern) {
+            // Every creation probability is exactly 1/2. Generating only the
+            // choices for actual holes avoids the cubic weight recurrence and
+            // the cubic-size packed decision pyramid.
+        } else if (is2x2Pattern) {
             // Use the direct 2x2 pattern implementation from the reference code
             double a = w2; // w2 and w8 are 'a'
             double b = w4; // w4 and w6 are 'b'
@@ -710,38 +1231,32 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
             }
         }
 
-        emscripten_sleep(0); // Yield to update UI
-
-        PackedDecisionPyramid decisions;
-        try {
-            decisions = computeDecisionPyramid(A1a);
-        } catch (const std::exception& e) {
-            throw std::runtime_error(string("Error computing shuffling decisions: ") + e.what());
-        }
-        progressCounter = 10; // Decisions computed.
-        emscripten_sleep(0); // Yield to update UI
-
         // Generate domino configuration.
-        MatrixInt dominoConfig;
+        MatrixConfig dominoConfig;
         try {
-            dominoConfig = aztecgen(decisions);
+            if (isUniformPattern) {
+                progressCounter = 10;
+                dominoConfig = aztecgenUniform(n);
+            } else {
+                const int period = is2x2Pattern ? 4 : 6;
+                progressCounter = 10;
+                dominoConfig = samplePeriodicConfig(A1a, n, period, period);
+            }
         } catch (const std::exception& e) {
             throw std::runtime_error(string("Error generating domino configuration: ") + e.what());
         }
         // Store the generated configuration and parameters globally
-        g_conf = dominoConfig; // Store the generated MatrixInt
-        g_W    = A1a;          // Store the calculated weight MatrixDouble
+        g_conf = std::move(dominoConfig);
+        g_W    = isUniformPattern ? MatrixDouble() : std::move(A1a);
         g_N    = dim;          // Store the dimension (2*n)
 
         // Store the periodicity type and corresponding weights
-        if (is2x2Pattern) {
+        if (isUniformPattern) {
+            g_periodicity = "uniform";
+        } else if (is2x2Pattern) {
             g_periodicity = "2x2";
             g_a = w2; // 'a' from input
             g_b = w4; // 'b' from input
-        } else if (std::abs(w1 - 1.0) < 1e-9 && std::abs(w2 - 1.0) < 1e-9 && std::abs(w3 - 1.0) < 1e-9 &&
-                   std::abs(w4 - 1.0) < 1e-9 && std::abs(w5 - 1.0) < 1e-9 && std::abs(w6 - 1.0) < 1e-9 &&
-                   std::abs(w7 - 1.0) < 1e-9 && std::abs(w8 - 1.0) < 1e-9 && std::abs(w9 - 1.0) < 1e-9) {
-            g_periodicity = "uniform";
         } else {
             g_periodicity = "3x3";
             g_w = {w1, w2, w3, w4, w5, w6, w7, w8, w9}; // Store all 9 weights
@@ -750,16 +1265,9 @@ char* simulateAztec(int n, double w1, double w2, double w3, double w4, double w5
         g_glauber_active = false; // Reset Glauber flag after fresh sample
 
         progressCounter = 90; // Simulation steps complete.
-        emscripten_sleep(0);  // Yield to update UI
 
-        string json = serializeDominoConfig(dominoConfig);
+        char* out = serializeDominoConfig(g_conf);
         progressCounter = 100; // Finished.
-        emscripten_sleep(0); // Yield to update UI
-
-        char* out = makeCString(json);
-        if (!out) {
-            throw std::runtime_error("Failed to allocate memory for output");
-        }
 
         return out;
     } catch (const std::exception& e) {
@@ -798,30 +1306,21 @@ char* simulateAztec6x2(int n, double v1, double v2, double v3, double v4, double
                 A1a[i][j] = W[ii][jj];
             }
         }
-        emscripten_sleep(0);
-
-        PackedDecisionPyramid decisions = computeDecisionPyramid(A1a);
         progressCounter = 10;
-        emscripten_sleep(0);
 
-        MatrixInt dominoConfig = aztecgen(decisions);
+        MatrixConfig dominoConfig = samplePeriodicConfig(A1a, n, 2, 6);
 
         // Store the generated configuration and parameters globally for Glauber
-        g_conf = dominoConfig;
-        g_W    = A1a;
+        g_conf = std::move(dominoConfig);
+        g_W    = std::move(A1a);
         g_N    = dim;
         g_periodicity = "6x2"; // Set periodicity for Glauber context
         g_glauber_active = false;
 
         progressCounter = 90;
-        emscripten_sleep(0);
 
-        string json = serializeDominoConfig(dominoConfig);
+        char* out = serializeDominoConfig(g_conf);
         progressCounter = 100;
-        emscripten_sleep(0);
-
-        char* out = makeCString(json);
-        if (!out) { throw std::runtime_error("Failed to allocate memory for output"); }
         return out;
     } catch (const std::exception& e) {
         progressCounter = 100;
@@ -874,28 +1373,20 @@ char* simulateAztecPeriodic(int n, int k, int l,
     try {
         progressCounter = 0;
         MatrixDouble A1a = generatePeriodicEdgeWeights(n, k, l, alpha, beta, gamma);
-        emscripten_sleep(0);
 
-        PackedDecisionPyramid decisions = computeDecisionPyramid(A1a);
         progressCounter = 10;
-        emscripten_sleep(0);
 
-        MatrixInt dominoConfig = aztecgen(decisions);
-        g_conf = dominoConfig;
-        g_W    = A1a;
+        MatrixConfig dominoConfig = samplePeriodicConfig(A1a, n, 2 * k, 2 * l);
+        g_conf = std::move(dominoConfig);
+        g_W    = std::move(A1a);
         g_N    = 2 * n;
         g_periodicity = "periodic"; // Glauber keeps using g_W (no rebuild branch)
         g_glauber_active = false;
 
         progressCounter = 90;
-        emscripten_sleep(0);
 
-        string json = serializeDominoConfig(dominoConfig);
+        char* out = serializeDominoConfig(g_conf);
         progressCounter = 100;
-        emscripten_sleep(0);
-
-        char* out = makeCString(json);
-        if (!out) { throw std::runtime_error("Failed to allocate memory for output"); }
         return out;
     } catch (const std::exception& e) {
         progressCounter = 100;
@@ -916,7 +1407,7 @@ char* simulateAztecHorizontal(int n,
     try {
         const int N = 2 * n;                     // lattice size
 
-        MatrixInt conf(N, N, 0);
+        MatrixConfig conf(N, N, 0);
 
         for (int i = 0; i < N; ++i) {
             for (int j = 0; j < N; ++j) {
@@ -933,33 +1424,13 @@ char* simulateAztecHorizontal(int n,
         }
 
         /* ---- stash in globals so renderers & Glauber can use it ---- */
-        g_conf           = conf;
-        g_W              = MatrixDouble(N, N, 1.0);
+        g_conf           = std::move(conf);
+        g_W              = MatrixDouble();
         g_N              = N;
         g_periodicity    = "uniform";
         g_glauber_active = false;
 
-        string json;
-        json.reserve(std::max<size_t>(2, static_cast<size_t>(N) * static_cast<size_t>(N) * 16));
-        json.push_back('[');
-        bool first = true;
-
-        for (int i = 0; i < N; ++i) {
-            for (int j = 0; j < N; ++j) {
-                if (!conf[i][j]) continue;
-
-                double x  = j - i - 2;
-                double yy = N + 1 - (i + j) - 1;
-                const char* col = ((i & 1) && (j & 1)) ? "blue" : "green";
-
-                appendDominoJSON(json, first, x, yy, 4, 2, col);
-            }
-        }
-        json.push_back(']');
-
-        char* out = makeCString(json);
-        if (!out) throw std::runtime_error("Failed to allocate memory for output");
-        return out;
+        return serializeDominoConfig(g_conf);
     }
     catch (const std::exception& e) {
         return makeErrorCString(e.what());
@@ -981,7 +1452,7 @@ char* simulateAztecVertical(int n,
         const int N = 2 * n;                       /* lattice size */
 
 
-        MatrixInt conf(N, N, 0);
+        MatrixConfig conf(N, N, 0);
 
         for (int i = 0; i < N; ++i){
             for (int j = 0; j < N; ++j){
@@ -999,33 +1470,13 @@ char* simulateAztecVertical(int n,
         }
 
         /* --- stash in globals so downstream renderers / Glauber work --- */
-        g_conf           = conf;
-        g_W              = MatrixDouble(N, N, 1.0);
+        g_conf           = std::move(conf);
+        g_W              = MatrixDouble();
         g_N              = N;
         g_periodicity    = "uniform";
         g_glauber_active = false;
 
-        string json;
-        json.reserve(std::max<size_t>(2, static_cast<size_t>(N) * static_cast<size_t>(N) * 16));
-        json.push_back('[');
-        bool first = true;
-
-        for (int i = 0; i < N; ++i){
-            for (int j = 0; j < N; ++j){
-                if (!conf[i][j]) continue;
-
-                double x = j - i - 1;
-                double y = N + 1 - (i + j) - 2;
-                const char* col = (x < 0) ? "yellow" : "red";
-
-                appendDominoJSON(json, first, x, y, 2, 4, col);
-            }
-        }
-        json.push_back(']');
-
-        char* out = makeCString(json);
-        if (!out) throw std::runtime_error("Failed to allocate memory for output");
-        return out;
+        return serializeDominoConfig(g_conf);
     }
     catch (const std::exception& e){
         return makeErrorCString(e.what());
@@ -1154,10 +1605,7 @@ char* performGlauberSteps(
 
          g_glauber_active = true; // Mark that Glauber has run
 
-        string json = serializeDominoConfig(g_conf);
-        char* out = makeCString(json);
-        if (!out) throw std::runtime_error("Memory allocation failed for Glauber result");
-        return out;
+        return serializeDominoConfig(g_conf);
 
     } catch (const std::exception& e) {
         return makeErrorCString(std::string("Glauber step error: ") + e.what());
