@@ -917,6 +917,8 @@ permalink: /domino/
               <li>grayscale shading for distinguishing domino orientations (handy for the gas phase of the $2 \times 2$ periodic model)</li>
               <li>non‑intersecting Motzkin (or Scrhoeder) paths</li>
               <li>dimers inscribed into dominos</li>
+              <li>Temperley spanning trees (the primal tree and its interleaved dual, from Temperley's bijection)</li>
+              <li>double‑dimer loops (symmetric difference of two independent samples, with a minimum loop length filter)</li>
               <li>integer‑valued height function labels (shown only for orders $n \leq 30$ to avoid clutter).</li>
             </ul>
           </li>
@@ -971,6 +973,18 @@ permalink: /domino/
           <button id="cancel-btn" style="display: none; background-color: #dc3545; color: white; border-color: #dc3545;">Cancel</button>
           <span id="progress-indicator" style="font-size: 12px; color: #666;" role="status" aria-live="polite"></span>
           <span id="timing-display" style="font-size: 12px; color: #666; margin-left: 4px;" role="status" aria-live="polite"></span>
+        </div>
+        <div class="control-row" style="flex-direction: column; align-items: flex-start; gap: 6px;">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+            <input type="checkbox" id="double-dimer-checkbox-2d">
+            Double dimer (2 independent samples)
+          </label>
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; padding-left: 22px; flex-wrap: wrap;">
+            <label for="double-dimer-minloop-2d" style="color: var(--text-secondary, #666);">Min loop</label>
+            <input type="number" id="double-dimer-minloop-2d" value="6" min="2" max="200" step="2" style="width: 56px;" aria-label="Minimum double-dimer loop length">
+            <label for="double-dimer-width-2d" style="color: var(--text-secondary, #666);">Width</label>
+            <input type="range" id="double-dimer-width-2d" min="0.1" max="1.6" step="0.05" value="0.5" style="width: 90px;" aria-label="Double-dimer loop width">
+          </div>
         </div>
         <div class="control-row">
           <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
@@ -1399,6 +1413,8 @@ async function initializeDominoRuntime() {
   const cancelBtn = document.getElementById("cancel-btn");
   let progressInterval;
   let cachedDominoes = null; // Store dominoes for 2D view
+  let cachedDominoes2 = null; // Second independent tiling for the double-dimer overlay
+  const doubleDimerLoopCache = { config1: null, config2: null, minLoop: null, edges: null };
   let domino2DRenderer = null;
   let useHeightFunction = false; // Track height function visibility state
   let heightGroup; // Group for height function display
@@ -2637,6 +2653,18 @@ async function initializeDominoRuntime() {
 
       // Cache the dominoes for 2D view
       cachedDominoes = dominoes;
+
+      // Double-dimer mode: draw a second independent tiling of the same region.
+      if (document.getElementById("double-dimer-checkbox-2d")?.checked) {
+        setProgressStatus("Sampling 2nd configuration...", { immediate: true });
+        const raw2 = await sampleDominoesFromWasm(n, null, signal);
+        if (!signal.aborted && raw2) {
+          cachedDominoes2 = parseDominoWasmResult(raw2, null);
+        }
+      } else {
+        cachedDominoes2 = null;
+      }
+      doubleDimerLoopCache.edges = null;
       invalidate2DCanvasCache();
 
       await render2DIfVisible(dominoes, n, profile);
@@ -3525,6 +3553,45 @@ async function initializeDominoRuntime() {
     }
   });
 
+  // Double-dimer overlay: sample a second independent tiling of the same region.
+  async function sampleSecondDominoConfig() {
+    if (!cachedDominoes || !cachedDominoes.length) return;
+    const n = get2DOrder();
+    try {
+      const raw2 = await sampleDominoesFromWasm(n, null, abortController?.signal || null);
+      if (raw2) cachedDominoes2 = parseDominoWasmResult(raw2, null);
+    } catch (e) {
+      cachedDominoes2 = null;
+    }
+    doubleDimerLoopCache.edges = null;
+  }
+
+  document.getElementById("double-dimer-checkbox-2d").addEventListener("change", async function() {
+    if (this.checked) {
+      if (cachedDominoes && cachedDominoes.length && (!cachedDominoes2 || !cachedDominoes2.length)) {
+        setProgressStatus("Sampling 2nd configuration...", { immediate: true });
+        await sampleSecondDominoConfig();
+        clearProgressStatus({ immediate: true });
+      }
+    } else {
+      cachedDominoes2 = null;
+      doubleDimerLoopCache.edges = null;
+    }
+    if (getActiveView() === "2d") updateDominoDisplay();
+  });
+
+  document.getElementById("double-dimer-minloop-2d").addEventListener("input", function() {
+    if (getActiveView() === "2d" && document.getElementById("double-dimer-checkbox-2d")?.checked) {
+      updateDominoDisplay();
+    }
+  });
+
+  document.getElementById("double-dimer-width-2d").addEventListener("input", function() {
+    if (getActiveView() === "2d" && document.getElementById("double-dimer-checkbox-2d")?.checked) {
+      updateDominoDisplay();
+    }
+  });
+
   // Height function toggle handler
   document.getElementById("height-function-checkbox-2d").addEventListener("change", function() {
     useHeightFunction = this.checked;
@@ -3644,6 +3711,9 @@ async function initializeDominoRuntime() {
       showDimers: Boolean(document.getElementById("dimers-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
       showTemperley: Boolean(document.getElementById("temperley-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
       temperleyWidth: Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45),
+      showDoubleDimer: Boolean(document.getElementById("double-dimer-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
+      doubleDimerMinLoop: Math.max(2, parseInt(document.getElementById("double-dimer-minloop-2d")?.value, 10) || 6),
+      doubleDimerWidth: Math.max(0.05, parseFloat(document.getElementById("double-dimer-width-2d")?.value) || 0.5),
       showHeightLabels: Boolean(document.getElementById("height-function-checkbox-2d")?.checked) && n <= 30,
       borderWidth: Math.max(0, parseFloat(document.getElementById("border-width-input")?.value) || 0),
       borderColor: currentColors.border || "#000",
@@ -3731,6 +3801,99 @@ async function initializeDominoRuntime() {
       }
     }
     return squares;
+  }
+
+  // --- Double-dimer loops -------------------------------------------------
+  // Superimpose the sampled tiling with a second independent tiling of the same
+  // region. Each domino is a dimer edge between the centres of its two unit
+  // squares (same geometry as the "Show dimers" overlay). Edges shared by both
+  // tilings are dropped; the remaining edges form disjoint closed loops (the
+  // symmetric difference / double-dimer loops). Ported from the arbitrary-weight
+  // T-embedding page.
+  function dominoDimerEdgeGeometry(d) {
+    const cx = d.x + d.w / 2, cy = d.y + d.h / 2;
+    const horiz = d.w > d.h;
+    let x1, y1, x2, y2;
+    if (horiz) { x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy; }
+    else { x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4; }
+    const q = v => Math.round(v * 1000);
+    const v1Key = q(x1) + "," + q(y1);
+    const v2Key = q(x2) + "," + q(y2);
+    const key = Math.min(q(x1), q(x2)) + "," + Math.min(q(y1), q(y2)) +
+      "-" + Math.max(q(x1), q(x2)) + "," + Math.max(q(y1), q(y2));
+    return { x1, y1, x2, y2, v1Key, v2Key, key };
+  }
+
+  function buildDoubleDimerLoops(config1, config2) {
+    const edgeMap = new Map();
+    const addEdges = (list, bit) => {
+      for (const d of list || []) {
+        const g = dominoDimerEdgeGeometry(d);
+        if (!edgeMap.has(g.key)) edgeMap.set(g.key, { ...g, typeMask: 0, loopId: -1 });
+        edgeMap.get(g.key).typeMask |= bit;
+      }
+    };
+    addEdges(config1, 1);
+    addEdges(config2, 2);
+
+    const vertexToEdges = new Map();
+    const allEdges = [];
+    edgeMap.forEach(edge => {
+      allEdges.push(edge);
+      if (!vertexToEdges.has(edge.v1Key)) vertexToEdges.set(edge.v1Key, []);
+      if (!vertexToEdges.has(edge.v2Key)) vertexToEdges.set(edge.v2Key, []);
+      vertexToEdges.get(edge.v1Key).push(edge);
+      vertexToEdges.get(edge.v2Key).push(edge);
+    });
+
+    let loopId = 0;
+    const loopSizes = new Map();
+    for (const edge of allEdges) {
+      if (edge.loopId >= 0) continue;
+      if (edge.typeMask === 3) { edge.loopId = -2; continue; } // shared: not a loop
+      const queue = [edge];
+      const visited = new Set([edge.key]);
+      edge.loopId = loopId;
+      let loopSize = 1;
+      for (let head = 0; head < queue.length; head++) {
+        const curr = queue[head];
+        for (const vKey of [curr.v1Key, curr.v2Key]) {
+          for (const nb of (vertexToEdges.get(vKey) || [])) {
+            if (visited.has(nb.key) || nb.typeMask === 3) continue;
+            visited.add(nb.key);
+            nb.loopId = loopId;
+            loopSize++;
+            queue.push(nb);
+          }
+        }
+      }
+      loopSizes.set(loopId, loopSize);
+      loopId++;
+    }
+    return { allEdges, loopSizes };
+  }
+
+  function getDoubleDimerDrawableEdges(config1, config2, minLoop) {
+    if (doubleDimerLoopCache.config1 === config1 &&
+        doubleDimerLoopCache.config2 === config2 &&
+        doubleDimerLoopCache.minLoop === minLoop &&
+        doubleDimerLoopCache.edges) {
+      return doubleDimerLoopCache.edges;
+    }
+    const { allEdges, loopSizes } = buildDoubleDimerLoops(config1, config2);
+    const drawable = [];
+    for (const edge of allEdges) {
+      if (edge.typeMask === 3) continue; // hide edges shared by both tilings
+      const size = loopSizes.get(edge.loopId) || 0;
+      if (size < minLoop) continue;
+      const color = (edge.typeMask & 1) ? "#111111" : "#e6194b"; // config1 vs config2
+      drawable.push({ x1: edge.x1, y1: edge.y1, x2: edge.x2, y2: edge.y2, color });
+    }
+    doubleDimerLoopCache.config1 = config1;
+    doubleDimerLoopCache.config2 = config2;
+    doubleDimerLoopCache.minLoop = minLoop;
+    doubleDimerLoopCache.edges = drawable;
+    return drawable;
   }
 
   class Domino2DCanvasRenderer {
@@ -3923,6 +4086,7 @@ async function initializeDominoRuntime() {
       this.drawPathOverlay(ctx, settings);
       this.drawDimerOverlay(ctx, settings);
       this.drawTemperleyOverlay(ctx, settings);
+      this.drawDoubleDimerOverlay(ctx, settings);
       this.drawHeightLabels(ctx, settings);
       ctx.restore();
 
@@ -4144,6 +4308,56 @@ async function initializeDominoRuntime() {
       ctx.restore();
     }
 
+    drawDoubleDimerOverlay(ctx, settings) {
+      if (!settings.showDoubleDimer) return;
+      if (!cachedDominoes2 || !cachedDominoes2.length) return;
+      const edges = getDoubleDimerDrawableEdges(this.dominoes, cachedDominoes2, settings.doubleDimerMinLoop);
+      if (!edges.length) return;
+
+      const w = settings.doubleDimerWidth;
+      const r = w * 0.9;
+      const batches = new Map();
+      for (const e of edges) {
+        if (!batches.has(e.color)) batches.set(e.color, []);
+        batches.get(e.color).push(e);
+      }
+
+      const traceLines = list => {
+        ctx.beginPath();
+        for (const e of list) { ctx.moveTo(e.x1, e.y1); ctx.lineTo(e.x2, e.y2); }
+        ctx.stroke();
+      };
+      const traceDots = (list, radius) => {
+        ctx.beginPath();
+        for (const e of list) {
+          ctx.moveTo(e.x1 + radius, e.y1); ctx.arc(e.x1, e.y1, radius, 0, Math.PI * 2);
+          ctx.moveTo(e.x2 + radius, e.y2); ctx.arc(e.x2, e.y2, radius, 0, Math.PI * 2);
+        }
+        ctx.fill();
+      };
+
+      ctx.save();
+      ctx.lineCap = "round";
+
+      // White halo so the loops read over any domino colour (the config-1 edges
+      // would otherwise blend into the black domino borders).
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = w + 0.5;
+      traceLines(edges);
+      traceDots(edges, r + 0.25);
+
+      // Coloured cores: config-1 edges dark, config-2 edges crimson.
+      ctx.lineWidth = w;
+      for (const [color, es] of batches) {
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        traceLines(es);
+        traceDots(es, r);
+      }
+      ctx.restore();
+    }
+
     drawHeightLabels(ctx, settings) {
       if (!settings.showHeightLabels) return;
       const heights = calculateHeightFunction(this.dominoes);
@@ -4181,6 +4395,7 @@ async function initializeDominoRuntime() {
       this.drawPathOverlay(ctx, settings);
       this.drawDimerOverlay(ctx, settings);
       this.drawTemperleyOverlay(ctx, settings);
+      this.drawDoubleDimerOverlay(ctx, settings);
       this.drawHeightLabels(ctx, settings);
       ctx.restore();
     }
@@ -4700,6 +4915,9 @@ async function initializeDominoRuntime() {
     const useDimers = document.getElementById("dimers-checkbox-2d")?.checked || false;
     const useTemperley = document.getElementById("temperley-checkbox-2d")?.checked || false;
     const temperleyWidth = Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45);
+    const useDoubleDimer = document.getElementById("double-dimer-checkbox-2d")?.checked || false;
+    const doubleDimerMinLoopExport = Math.max(2, parseInt(document.getElementById("double-dimer-minloop-2d")?.value, 10) || 6);
+    const doubleDimerWidthExport = Math.max(0.05, parseFloat(document.getElementById("double-dimer-width-2d")?.value) || 0.5);
     const showColors = document.getElementById("show-colors-checkbox")?.checked || false;
     const useGrayscale = document.getElementById("grayscale-checkbox-2d")?.checked || false;
 
@@ -5036,6 +5254,8 @@ async function initializeDominoRuntime() {
 \\definecolor{svgborder}{RGB}{${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}}
 \\definecolor{treeprimal}{RGB}{17, 24, 39}
 \\definecolor{treedual}{RGB}{214, 17, 127}
+\\definecolor{ddconfigone}{RGB}{17, 17, 17}
+\\definecolor{ddconfigtwo}{RGB}{230, 25, 75}
 
 \\begin{document}
 % Aztec Diamond Tiling
@@ -5162,6 +5382,26 @@ async function initializeDominoRuntime() {
         tikzCode += `\\draw[white, line width=${haloPt}pt, line cap=round] ${primalSegs.concat(dualSegs).join(" ")};\n`;
         if (primalSegs.length) tikzCode += `\\draw[treeprimal, line width=${treePt}pt, line cap=round] ${primalSegs.join(" ")};\n`;
         if (dualSegs.length) tikzCode += `\\draw[treedual, line width=${treePt}pt, line cap=round] ${dualSegs.join(" ")};\n`;
+      }
+    }
+
+    // Add double-dimer loops if enabled
+    if (useDoubleDimer && cachedDominoes2 && cachedDominoes2.length > 0) {
+      const ddEdges = getDoubleDimerDrawableEdges(cachedDominoes, cachedDominoes2, doubleDimerMinLoopExport);
+      if (ddEdges.length > 0) {
+        tikzCode += "\n% Double-dimer loops\n";
+        const toSeg = e => {
+          const x1 = (e.x1 / 100) - minX, y1 = maxY - (e.y1 / 100);
+          const x2 = (e.x2 / 100) - minX, y2 = maxY - (e.y2 / 100);
+          return `(${x1.toFixed(2)}, ${y1.toFixed(2)}) -- (${x2.toFixed(2)}, ${y2.toFixed(2)})`;
+        };
+        const c1 = ddEdges.filter(e => e.color === "#111111").map(toSeg);
+        const c2 = ddEdges.filter(e => e.color === "#e6194b").map(toSeg);
+        const ddPt = (doubleDimerWidthExport * 8).toFixed(2);
+        const ddHaloPt = ((doubleDimerWidthExport + 0.5) * 8).toFixed(2);
+        tikzCode += `\\draw[white, line width=${ddHaloPt}pt, line cap=round] ${c1.concat(c2).join(" ")};\n`;
+        if (c1.length) tikzCode += `\\draw[ddconfigone, line width=${ddPt}pt, line cap=round] ${c1.join(" ")};\n`;
+        if (c2.length) tikzCode += `\\draw[ddconfigtwo, line width=${ddPt}pt, line cap=round] ${c2.join(" ")};\n`;
       }
     }
 
@@ -5698,6 +5938,32 @@ async function initializeDominoRuntime() {
         drawBars(primalE, twidth * scaleX);
         pdf.setFillColor(214, 17, 127);
         drawBars(dualE, twidth * scaleX);
+      }
+
+      // Double-dimer loops (axis-aligned edges drawn as filled bars).
+      const useDoubleDimerPDF = document.getElementById("double-dimer-checkbox-2d")?.checked || false;
+      if (useDoubleDimerPDF && cachedDominoes2 && cachedDominoes2.length > 0) {
+        const ddMin = Math.max(2, parseInt(document.getElementById("double-dimer-minloop-2d")?.value, 10) || 6);
+        const ddW = Math.max(0.05, parseFloat(document.getElementById("double-dimer-width-2d")?.value) || 0.5);
+        const ddEdges = getDoubleDimerDrawableEdges(cachedDominoes, cachedDominoes2, ddMin);
+        const ddBars = (list, tw) => {
+          const half = tw / 2;
+          list.forEach(e => {
+            const x1 = (e.x1 - minX) * scaleX, y1 = (e.y1 - minY) * scaleY;
+            const x2 = (e.x2 - minX) * scaleX, y2 = (e.y2 - minY) * scaleY;
+            if (Math.abs(y1 - y2) < 1e-6) {
+              pdf.rect(Math.min(x1, x2) - half, y1 - half, Math.abs(x2 - x1) + tw, tw, 'F');
+            } else {
+              pdf.rect(x1 - half, Math.min(y1, y2) - half, tw, Math.abs(y2 - y1) + tw, 'F');
+            }
+          });
+        };
+        pdf.setFillColor(255, 255, 255);
+        ddBars(ddEdges, (ddW + 0.5) * scaleX);
+        pdf.setFillColor(17, 17, 17);
+        ddBars(ddEdges.filter(e => e.color === "#111111"), ddW * scaleX);
+        pdf.setFillColor(230, 25, 75);
+        ddBars(ddEdges.filter(e => e.color === "#e6194b"), ddW * scaleX);
       }
     }
 
