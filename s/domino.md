@@ -1007,6 +1007,27 @@ permalink: /domino/
       </div>
     </details>
 
+    <!-- Section: Temperley (open by default) -->
+    <details class="control-section" open>
+      <summary>Temperley</summary>
+      <div class="control-section-content">
+        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
+          <input type="checkbox" id="temperley-checkbox-2d">
+          Temperley trees
+        </label>
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; padding-left: 22px; flex-wrap: wrap; margin-top: 4px;">
+          <label for="temperley-width-2d" style="color: var(--text-secondary, #666);">Width</label>
+          <input type="range" id="temperley-width-2d" min="0.1" max="1.6" step="0.05" value="0.45" style="width: 80px;" aria-label="Temperley tree line width">
+          <label for="temperley-stride-2d" style="color: var(--text-secondary, #666);">Show every</label>
+          <input type="number" id="temperley-stride-2d" value="1" min="1" max="30" step="1" style="width: 48px;" title="1 = show all trees; k = keep 1 whole tree in every k (counted by boundary root)" aria-label="Show every k-th Temperley tree (1 = show all)">
+        </div>
+        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; padding-left: 22px; margin-top: 4px;">
+          <input type="checkbox" id="temperley-backbone-2d">
+          Backbone only (root → other border)
+        </label>
+      </div>
+    </details>
+
     <!-- Section 2: Periodicity (open by default) -->
     <details class="control-section" open>
       <summary>Periodicity</summary>
@@ -1039,6 +1060,7 @@ permalink: /domino/
             <label style="font-size: 12px;">l (cols):
               <input id="periodic-l" type="number" value="2" min="1" max="8" step="1" style="width: 48px;">
             </label>
+            <button id="periodic-random-btn" class="btn-utility" style="font-size: 11px; margin-left: auto;" title="Fill every α/β/γ cell with a uniform random value in [0.5, 4]">Random</button>
           </div>
           <div style="font-size: 11px; color: #888; margin: 6px 0 8px;">
             Edge weights on each black face: <strong>α</strong> = top, <strong>β</strong> = right,
@@ -1186,20 +1208,6 @@ permalink: /domino/
             <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
               <input type="checkbox" id="dimers-checkbox-2d">
               Show dimers
-            </label>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
-              <input type="checkbox" id="temperley-checkbox-2d">
-              Temperley trees
-            </label>
-            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; padding-left: 22px; flex-wrap: wrap;">
-              <label for="temperley-width-2d" style="color: var(--text-secondary, #666);">Width</label>
-              <input type="range" id="temperley-width-2d" min="0.1" max="1.6" step="0.05" value="0.45" style="width: 80px;" aria-label="Temperley tree line width">
-              <label for="temperley-stride-2d" style="color: var(--text-secondary, #666);">Show every</label>
-              <input type="number" id="temperley-stride-2d" value="1" min="1" max="30" step="1" style="width: 48px;" title="1 = show all trees; k = keep 1 whole tree in every k (counted by boundary root)" aria-label="Show every k-th Temperley tree (1 = show all)">
-            </div>
-            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; padding-left: 22px;">
-              <input type="checkbox" id="temperley-backbone-2d">
-              Backbone only (root → other border)
             </label>
             <div id="height-function-toggle-container">
               <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
@@ -2918,6 +2926,21 @@ async function initializeDominoRuntime() {
     document.getElementById(id)?.addEventListener('change', buildPeriodicWeightsEditor);
   });
 
+  // Randomize only the variable sublattice, uniform in [0.5, 4]. The Chhita-
+  // Johansson default is a checkerboard: γ is 1 everywhere and α, β carry the
+  // weight 0.3 on the (i+j)-even cells and 1 on the odd ones. "Random" perturbs
+  // exactly those variable (i+j)-even α/β cells and leaves the fixed 1's alone,
+  // so the checkerboard structure is preserved.
+  document.getElementById('periodic-random-btn')?.addEventListener('click', () => {
+    const inputs = document.querySelectorAll('#periodic-weights-tables input[data-pw]');
+    inputs.forEach(inp => {
+      const parts = inp.dataset.pw.split('-');
+      const kind = parts[0], j = parseInt(parts[1], 10), i = parseInt(parts[2], 10);
+      const isVariable = kind !== 'gamma' && ((i + j) % 2 === 0);
+      if (isVariable) inp.value = (0.5 + Math.random() * 3.5).toFixed(2);
+    });
+  });
+
   // Add handlers for periodicity radio buttons
   document.querySelectorAll('input[name="periodicity"]').forEach(radio => {
     radio.addEventListener('change', updatePeriodicityParams);
@@ -3782,6 +3805,11 @@ async function initializeDominoRuntime() {
       showDoubleDimer: Boolean(document.getElementById("double-dimer-checkbox-2d")?.checked),
       doubleDimerMinLoop: Math.max(2, parseInt(document.getElementById("double-dimer-minloop-2d")?.value, 10) || 6),
       doubleDimerWidth: Math.max(0.05, parseFloat(document.getElementById("double-dimer-width-2d")?.value) || 0.5),
+      showLevelLines: Boolean(document.getElementById("level-lines-checkbox-2d")?.checked),
+      levelSlopeX: parseFloat(document.getElementById("level-slope-x-2d")?.value) || 0,
+      levelSlopeY: parseFloat(document.getElementById("level-slope-y-2d")?.value) || 0,
+      levelWidth: Math.max(0.05, parseFloat(document.getElementById("level-width-2d")?.value) || 0.45),
+      levelMinLen: Math.max(1, parseInt(document.getElementById("level-minlen-2d")?.value, 10) || 8),
       showHeightLabels: Boolean(document.getElementById("height-function-checkbox-2d")?.checked) && n <= 30,
       borderWidth: Math.max(0, parseFloat(document.getElementById("border-width-input")?.value) || 0),
       borderColor: currentColors.border || "#000",
@@ -4218,6 +4246,186 @@ async function initializeDominoRuntime() {
     }
   }
 
+  // ---- Temperley level lines: slope-adapted gas/liquid border ----
+  // The double-dimer / superposition picture voids a *slope-0* gas region, but a
+  // sloped gas is traversed by loops, so its border blurs into the liquid. The
+  // fix (Route B) is to subtract a linear plane of the gas slope (sx, sy) from
+  // the domino height function: this retilts the gas facet flat, so its level
+  // lines vanish while the liquid keeps its dense level lines — a border adapted
+  // to the current slope. We draw the contour between adjacent unit cells whose
+  // (height - plane) rounds to different integers, then drop connected contour
+  // components shorter than minLen (microscopic gas defects). Realised from the
+  // scalar height function so the slope is a live, continuously tunable control.
+  const levelLineCache = { dominoes: null, sx: null, sy: null, minLen: null, edges: null };
+
+  // Domino height function in normalised lattice coordinates with packed-integer
+  // keys, mirroring calculateHeightFunction's increment rules but avoiding its
+  // Math.min(...spread) (which overflows the call stack at large n) and its
+  // string keys. Corners live on even lattice coordinates; model = lattice*unit.
+  function computeHeightMapPacked(dominoes) {
+    let minSide = Infinity;
+    for (const d of dominoes) {
+      if (d.w > 0 && d.w < minSide) minSide = d.w;
+      if (d.h > 0 && d.h < minSide) minSide = d.h;
+    }
+    if (!isFinite(minSide) || minSide <= 0) return null;
+    const unit = minSide / 2;
+
+    const adj = new Map(); // packed corner -> flattened [otherKey, dh, otherKey, dh, ...]
+    const push = (k, other, dh) => {
+      let a = adj.get(k);
+      if (!a) { a = []; adj.set(k, a); }
+      a.push(other, dh);
+    };
+    const addEdge = (ax, ay, bx, by, dh) => {
+      const ka = ddPack(ax, ay), kb = ddPack(bx, by);
+      push(ka, kb, dh);
+      push(kb, ka, -dh);
+    };
+
+    for (const d of dominoes) {
+      if (d.w <= 0 || d.h <= 0) continue;
+      const horiz = d.w > d.h;
+      const s = horiz
+        ? (d.color === "green" ? -1 : 1)    // horizontal: green = -1, else +1
+        : (d.color === "yellow" ? -1 : 1);  // vertical: yellow = -1, else +1
+      const x = Math.round(d.x / unit), y = Math.round(d.y / unit);
+      if (horiz) { // 4x2 in lattice units
+        addEdge(x, y + 2, x + 2, y + 2, -s); addEdge(x + 2, y + 2, x + 4, y + 2, s);
+        addEdge(x, y, x + 2, y, s);          addEdge(x + 2, y, x + 4, y, -s);
+        addEdge(x, y + 2, x, y, s);          addEdge(x + 2, y + 2, x + 2, y, 3 * s);
+        addEdge(x + 4, y + 2, x + 4, y, s);
+      } else { // 2x4 in lattice units
+        addEdge(x, y + 4, x + 2, y + 4, -s); addEdge(x, y + 2, x + 2, y + 2, -3 * s);
+        addEdge(x, y, x + 2, y, -s);
+        addEdge(x, y + 4, x, y + 2, s);      addEdge(x, y + 2, x, y, -s);
+        addEdge(x + 2, y + 4, x + 2, y + 2, -s); addEdge(x + 2, y + 2, x + 2, y, s);
+      }
+    }
+    if (!adj.size) return null;
+
+    const decode = k => {
+      const gy = (k % DD_STRIDE) - DD_OFFSET;
+      const gx = Math.floor(k / DD_STRIDE) - DD_OFFSET;
+      return [gx, gy];
+    };
+    // Root at the bottom-left corner, matching calculateHeightFunction.
+    let rootKey = null, rootGx = Infinity, rootGy = Infinity;
+    for (const k of adj.keys()) {
+      const [gx, gy] = decode(k);
+      if (gy < rootGy || (gy === rootGy && gx < rootGx)) { rootGy = gy; rootGx = gx; rootKey = k; }
+    }
+
+    const height = new Map([[rootKey, 0]]);
+    const queue = [rootKey];
+    for (let qi = 0; qi < queue.length; qi++) {
+      const v = queue[qi];
+      const hv = height.get(v);
+      const a = adj.get(v);
+      for (let i = 0; i < a.length; i += 2) {
+        const w = a[i];
+        if (!height.has(w)) { height.set(w, hv + a[i + 1]); queue.push(w); }
+      }
+    }
+    return { height, unit };
+  }
+
+  function computeLevelLineEdges(dominoes, sx, sy, minLen) {
+    if (!dominoes || !dominoes.length) return [];
+    const hm = computeHeightMapPacked(dominoes);
+    if (!hm) return [];
+    const { height, unit } = hm;
+    // Negate to match the 3D height convention (calculateHeightFunction does the
+    // same), so the slope the user dials reads the same way as the 3D surface.
+    const hAt = k => { const v = height.get(k); return v === undefined ? undefined : -v; };
+
+    // Level of each unit cell = round(mean corner height - plane at centre).
+    // Cells are keyed by their packed centre (odd lattice coords).
+    const level = new Map();
+    const cells = [];
+    const registerCell = (llx, lly) => {
+      const h00 = hAt(ddPack(llx, lly));
+      const h10 = hAt(ddPack(llx + 2, lly));
+      const h01 = hAt(ddPack(llx, lly + 2));
+      const h11 = hAt(ddPack(llx + 2, lly + 2));
+      if (h00 === undefined || h10 === undefined || h01 === undefined || h11 === undefined) return;
+      const cx = llx + 1, cy = lly + 1;
+      const ck = ddPack(cx, cy);
+      if (level.has(ck)) return;
+      const havg = (h00 + h10 + h01 + h11) / 4;
+      level.set(ck, Math.round(havg - (sx * cx + sy * cy)));
+      cells.push({ cx, cy, ck });
+    };
+    for (const d of dominoes) {
+      if (d.w <= 0 || d.h <= 0) continue;
+      const x = Math.round(d.x / unit), y = Math.round(d.y / unit);
+      if (d.w > d.h) { registerCell(x, y); registerCell(x + 2, y); }
+      else { registerCell(x, y); registerCell(x, y + 2); }
+    }
+
+    // Contour = shared cell edge between adjacent cells of differing level. Each
+    // internal adjacency is visited once (right and top neighbour of each cell).
+    const contour = [];
+    for (const c of cells) {
+      const lv = level.get(c.ck);
+      const rv = level.get(ddPack(c.cx + 2, c.cy));
+      if (rv !== undefined && rv !== lv) {
+        contour.push({ ax: c.cx + 1, ay: c.cy - 1, bx: c.cx + 1, by: c.cy + 1 });
+      }
+      const tv = level.get(ddPack(c.cx, c.cy + 2));
+      if (tv !== undefined && tv !== lv) {
+        contour.push({ ax: c.cx - 1, ay: c.cy + 1, bx: c.cx + 1, by: c.cy + 1 });
+      }
+    }
+    if (!contour.length) return [];
+
+    // Drop connected contour components shorter than minLen (gas defects): union
+    // the corner endpoints over contour edges, tally edges per component, keep
+    // edges whose component is long enough. A microscopic one-cell defect loop is
+    // four edges, so minLen ~ 8 clears them while liquid level lines survive.
+    const parent = new Map();
+    const find = k => {
+      let r = k;
+      while (parent.get(r) !== r) r = parent.get(r);
+      while (parent.get(k) !== r) { const nx = parent.get(k); parent.set(k, r); k = nx; }
+      return r;
+    };
+    const ensure = k => { if (!parent.has(k)) parent.set(k, k); };
+    for (const e of contour) {
+      const ka = ddPack(e.ax, e.ay), kb = ddPack(e.bx, e.by);
+      ensure(ka); ensure(kb);
+      const ra = find(ka), rb = find(kb);
+      if (ra !== rb) parent.set(ra, rb);
+    }
+    const compEdges = new Map();
+    for (const e of contour) {
+      const r = find(ddPack(e.ax, e.ay));
+      compEdges.set(r, (compEdges.get(r) || 0) + 1);
+    }
+    const kept = [];
+    for (const e of contour) {
+      const r = find(ddPack(e.ax, e.ay));
+      if ((compEdges.get(r) || 0) >= minLen) {
+        kept.push({ ax: e.ax * unit, ay: e.ay * unit, bx: e.bx * unit, by: e.by * unit });
+      }
+    }
+    return kept;
+  }
+
+  function buildLevelLineEdges(dominoes, sx, sy, minLen) {
+    if (levelLineCache.dominoes === dominoes && levelLineCache.sx === sx &&
+        levelLineCache.sy === sy && levelLineCache.minLen === minLen && levelLineCache.edges) {
+      return levelLineCache.edges;
+    }
+    const edges = computeLevelLineEdges(dominoes, sx, sy, minLen);
+    levelLineCache.dominoes = dominoes;
+    levelLineCache.sx = sx;
+    levelLineCache.sy = sy;
+    levelLineCache.minLen = minLen;
+    levelLineCache.edges = edges;
+    return edges;
+  }
+
   class Domino2DCanvasRenderer {
     constructor(container, canvas) {
       this.container = container;
@@ -4409,6 +4617,7 @@ async function initializeDominoRuntime() {
       this.drawDimerOverlay(ctx, settings);
       this.drawTemperleyOverlay(ctx, settings);
       this.drawDoubleDimerOverlay(ctx, settings);
+      this.drawLevelLinesOverlay(ctx, settings);
       this.drawHeightLabels(ctx, settings);
       ctx.restore();
 
@@ -4668,6 +4877,33 @@ async function initializeDominoRuntime() {
       ctx.restore();
     }
 
+    drawLevelLinesOverlay(ctx, settings) {
+      if (!settings.showLevelLines) return;
+      const edges = buildLevelLineEdges(
+        this.dominoes,
+        settings.levelSlopeX,
+        settings.levelSlopeY,
+        settings.levelMinLen
+      );
+      if (!edges || !edges.length) return;
+      const w = settings.levelWidth;
+      const trace = () => {
+        const batch = new CanvasSegmentBatch(ctx);
+        for (const e of edges) batch.add(e.ax, e.ay, e.bx, e.by);
+        batch.finish();
+      };
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "rgba(255,255,255,0.85)"; // halo
+      ctx.lineWidth = w + 0.5;
+      trace();
+      ctx.strokeStyle = "#0b5cad"; // level lines in denim blue, distinct from the trees/loops
+      ctx.lineWidth = w;
+      trace();
+      ctx.restore();
+    }
+
     drawHeightLabels(ctx, settings) {
       if (!settings.showHeightLabels) return;
       const heights = calculateHeightFunction(this.dominoes);
@@ -4706,6 +4942,7 @@ async function initializeDominoRuntime() {
       this.drawDimerOverlay(ctx, settings);
       this.drawTemperleyOverlay(ctx, settings);
       this.drawDoubleDimerOverlay(ctx, settings);
+      this.drawLevelLinesOverlay(ctx, settings);
       this.drawHeightLabels(ctx, settings);
       ctx.restore();
     }
@@ -5232,6 +5469,11 @@ async function initializeDominoRuntime() {
     const hideDominoesExport = document.getElementById("hide-dominoes-checkbox")?.checked || false;
     const doubleDimerMinLoopExport = Math.max(2, parseInt(document.getElementById("double-dimer-minloop-2d")?.value, 10) || 6);
     const doubleDimerWidthExport = Math.max(0.05, parseFloat(document.getElementById("double-dimer-width-2d")?.value) || 0.5);
+    const useLevelLines = document.getElementById("level-lines-checkbox-2d")?.checked || false;
+    const levelSlopeXExport = parseFloat(document.getElementById("level-slope-x-2d")?.value) || 0;
+    const levelSlopeYExport = parseFloat(document.getElementById("level-slope-y-2d")?.value) || 0;
+    const levelWidthExport = Math.max(0.05, parseFloat(document.getElementById("level-width-2d")?.value) || 0.45);
+    const levelMinLenExport = Math.max(1, parseInt(document.getElementById("level-minlen-2d")?.value, 10) || 8);
     const showColors = document.getElementById("show-colors-checkbox")?.checked || false;
     const useGrayscale = document.getElementById("grayscale-checkbox-2d")?.checked || false;
 
@@ -5570,6 +5812,7 @@ async function initializeDominoRuntime() {
 \\definecolor{treedual}{RGB}{214, 17, 127}
 \\definecolor{ddconfigone}{RGB}{17, 17, 17}
 \\definecolor{ddconfigtwo}{RGB}{230, 25, 75}
+\\definecolor{levelline}{RGB}{11, 92, 173}
 
 \\begin{document}
 % Aztec Diamond Tiling
@@ -5695,6 +5938,23 @@ async function initializeDominoRuntime() {
         tikzCode += `\\draw[white, line width=${ddHaloPt}pt, line cap=round] ${c1.concat(c2).join(" ")};\n`;
         if (c1.length) tikzCode += `\\draw[ddconfigone, line width=${ddPt}pt, line cap=round] ${c1.join(" ")};\n`;
         if (c2.length) tikzCode += `\\draw[ddconfigtwo, line width=${ddPt}pt, line cap=round] ${c2.join(" ")};\n`;
+      }
+    }
+
+    // Add Temperley level lines if enabled (contours of height − sloped plane)
+    if (useLevelLines && cachedDominoes && cachedDominoes.length > 0) {
+      const llEdges = buildLevelLineEdges(cachedDominoes, levelSlopeXExport, levelSlopeYExport, levelMinLenExport);
+      if (llEdges.length > 0) {
+        tikzCode += "\n% Temperley level lines\n";
+        const segs = llEdges.map(e => {
+          const x1 = (e.ax / 100) - minX, y1 = maxY - (e.ay / 100);
+          const x2 = (e.bx / 100) - minX, y2 = maxY - (e.by / 100);
+          return `(${x1.toFixed(2)}, ${y1.toFixed(2)}) -- (${x2.toFixed(2)}, ${y2.toFixed(2)})`;
+        });
+        const llPt = (levelWidthExport * 8).toFixed(2);
+        const llHaloPt = ((levelWidthExport + 0.5) * 8).toFixed(2);
+        tikzCode += `\\draw[white, line width=${llHaloPt}pt, line cap=round] ${segs.join(" ")};\n`;
+        tikzCode += `\\draw[levelline, line width=${llPt}pt, line cap=round] ${segs.join(" ")};\n`;
       }
     }
 
@@ -6238,6 +6498,34 @@ async function initializeDominoRuntime() {
         ddBars(ddEdges.filter(e => e.color === "#111111"), ddW * scaleX);
         pdf.setFillColor(230, 25, 75);
         ddBars(ddEdges.filter(e => e.color === "#e6194b"), ddW * scaleX);
+      }
+
+      // Temperley level lines (axis-aligned contour edges drawn as filled bars).
+      const useLevelLinesPDF = document.getElementById("level-lines-checkbox-2d")?.checked || false;
+      if (useLevelLinesPDF && cachedDominoes && cachedDominoes.length > 0) {
+        const llSx = parseFloat(document.getElementById("level-slope-x-2d")?.value) || 0;
+        const llSy = parseFloat(document.getElementById("level-slope-y-2d")?.value) || 0;
+        const llW = Math.max(0.05, parseFloat(document.getElementById("level-width-2d")?.value) || 0.45);
+        const llMin = Math.max(1, parseInt(document.getElementById("level-minlen-2d")?.value, 10) || 8);
+        const llEdges = buildLevelLineEdges(cachedDominoes, llSx, llSy, llMin);
+        const llBars = (tw) => {
+          const half = tw / 2;
+          llEdges.forEach(e => {
+            const x1 = (e.ax - minX) * scaleX, y1 = (e.ay - minY) * scaleY;
+            const x2 = (e.bx - minX) * scaleX, y2 = (e.by - minY) * scaleY;
+            if (Math.abs(y1 - y2) < 1e-6) {
+              pdf.rect(Math.min(x1, x2) - half, y1 - half, Math.abs(x2 - x1) + tw, tw, 'F');
+            } else {
+              pdf.rect(x1 - half, Math.min(y1, y2) - half, tw, Math.abs(y2 - y1) + tw, 'F');
+            }
+          });
+        };
+        if (llEdges.length > 0) {
+          pdf.setFillColor(255, 255, 255);
+          llBars((llW + 0.5) * scaleX);
+          pdf.setFillColor(11, 92, 173);
+          llBars(llW * scaleX);
+        }
       }
     }
 
