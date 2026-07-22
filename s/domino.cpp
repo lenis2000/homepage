@@ -3,8 +3,8 @@
 emcc domino.cpp -o domino.js\
  -s WASM=1 \
  -s ASYNCIFY=1 \
- -s "EXPORTED_FUNCTIONS=['_simulateAztec','_simulateAztec6x2','_performGlauberSteps','_simulateAztecVertical','_simulateAztecHorizontal','_wasGlauberActive','_freeString','_getProgress']" \
- -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString"]' \
+ -s "EXPORTED_FUNCTIONS=['_simulateAztec','_simulateAztec6x2','_simulateAztecPeriodic','_performGlauberSteps','_simulateAztecVertical','_simulateAztecHorizontal','_wasGlauberActive','_freeString','_getProgress','_malloc','_free']" \
+ -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","HEAPF64"]' \
  -s ALLOW_MEMORY_GROWTH=1 \
  -s INITIAL_MEMORY=64MB \
  -s ENVIRONMENT=web \
@@ -811,6 +811,80 @@ char* simulateAztec6x2(int n, double v1, double v2, double v3, double v4, double
         g_W    = A1a;
         g_N    = dim;
         g_periodicity = "6x2"; // Set periodicity for Glauber context
+        g_glauber_active = false;
+
+        progressCounter = 90;
+        emscripten_sleep(0);
+
+        string json = serializeDominoConfig(dominoConfig);
+        progressCounter = 100;
+        emscripten_sleep(0);
+
+        char* out = makeCString(json);
+        if (!out) { throw std::runtime_error("Failed to allocate memory for output"); }
+        return out;
+    } catch (const std::exception& e) {
+        progressCounter = 100;
+        return makeErrorCString(e.what());
+    }
+}
+
+/* ------------------------------------------------------------------ *
+ *  simulateAztecPeriodic – general k×l periodic edge weights.
+ *  Matches the T-embedding page convention: for each interior black
+ *  face, alpha = top edge, beta = right edge, gamma = left edge, and
+ *  delta = bottom edge = 1. alpha/beta/gamma point to k*l arrays in
+ *  row-major order; the entry for EKLP cell (cellI, cellJ) is
+ *  index (cellI % k) * l + (cellJ % l). Placement in the 2n×2n matrix:
+ *  alpha -> even row / odd col, beta -> even/even, gamma -> odd/even.
+ *  The shuffle core is identical to the T-embedding sampler, so this
+ *  reproduces the same weighted distribution.
+ * ------------------------------------------------------------------ */
+static MatrixDouble generatePeriodicEdgeWeights(int n, int k, int l,
+                                                const double* alpha,
+                                                const double* beta,
+                                                const double* gamma) {
+    if (k < 1 || l < 1) {
+        throw std::runtime_error("Period dimensions k and l must be >= 1");
+    }
+    const int dim = 2 * n;
+    MatrixDouble weights(dim, dim, 1.0); // delta (odd row, odd col) defaults to 1
+    for (int cellI = 0; cellI < n; ++cellI) {
+        const int pi = cellI % k;
+        for (int cellJ = 0; cellJ < n; ++cellJ) {
+            const int pj = cellJ % l;
+            const size_t idx = static_cast<size_t>(pi) * l + pj;
+            const double a = alpha[idx], b = beta[idx], g = gamma[idx];
+            if (!(a > 0.0) || !(b > 0.0) || !(g > 0.0) ||
+                !std::isfinite(a) || !std::isfinite(b) || !std::isfinite(g)) {
+                throw std::runtime_error("Periodic weights must be finite and positive");
+            }
+            const int row = 2 * cellI, col = 2 * cellJ;
+            weights[row][col + 1] = a;   // alpha: even row, odd col
+            weights[row][col]     = b;   // beta:  even row, even col
+            weights[row + 1][col] = g;   // gamma: odd row, even col
+        }
+    }
+    return weights;
+}
+
+extern "C" EMSCRIPTEN_KEEPALIVE
+char* simulateAztecPeriodic(int n, int k, int l,
+                            double* alpha, double* beta, double* gamma) {
+    try {
+        progressCounter = 0;
+        MatrixDouble A1a = generatePeriodicEdgeWeights(n, k, l, alpha, beta, gamma);
+        emscripten_sleep(0);
+
+        PackedDecisionPyramid decisions = computeDecisionPyramid(A1a);
+        progressCounter = 10;
+        emscripten_sleep(0);
+
+        MatrixInt dominoConfig = aztecgen(decisions);
+        g_conf = dominoConfig;
+        g_W    = A1a;
+        g_N    = 2 * n;
+        g_periodicity = "periodic"; // Glauber keeps using g_W (no rebuild branch)
         g_glauber_active = false;
 
         progressCounter = 90;

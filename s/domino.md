@@ -1017,16 +1017,8 @@ permalink: /domino/
             Uniform
           </label>
           <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
-            <input type="radio" id="2x2-radio" name="periodicity" value="2x2">
-            2×2 Periodic
-          </label>
-          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
-            <input type="radio" id="3x3-radio" name="periodicity" value="3x3">
-            3×3 Periodic
-          </label>
-          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
-            <input type="radio" id="6x2-radio" name="periodicity" value="6x2">
-            6×2 Periodic
+            <input type="radio" id="periodic-radio" name="periodicity" value="periodic">
+            k×l Periodic
           </label>
           <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px;">
             <input type="radio" id="frozenH-radio" name="periodicity" value="frozenH">
@@ -1038,50 +1030,21 @@ permalink: /domino/
           </label>
         </div>
 
-        <!-- 2×2 Periodic Weights -->
-        <div id="weights-2x2" style="display: none; padding-top: 10px; border-top: 1px solid var(--border-color, #e0e0e0); margin-top: 8px;">
-          <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px;">2×2 Weights</div>
-          <div class="control-row">
-            <label style="font-size: 12px;">a:</label>
-            <input id="a-input" type="number" value="0.5" step="0.1" min="0.1" max="10" style="width: 55px;">
-            <label style="font-size: 12px; margin-left: 10px;">b:</label>
-            <input id="b-input" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 55px;">
+        <!-- General k×l Periodic Weights (T-embedding α/β/γ edge-weight convention) -->
+        <div id="periodic-editor" style="display: none; padding-top: 10px; border-top: 1px solid var(--border-color, #e0e0e0); margin-top: 8px;">
+          <div class="control-row" style="gap: 12px;">
+            <label style="font-size: 12px;">k (rows):
+              <input id="periodic-k" type="number" value="2" min="1" max="8" step="1" style="width: 48px;">
+            </label>
+            <label style="font-size: 12px;">l (cols):
+              <input id="periodic-l" type="number" value="2" min="1" max="8" step="1" style="width: 48px;">
+            </label>
           </div>
-        </div>
-
-        <!-- 3×3 Periodic Weights -->
-        <div id="weights-3x3" style="display: none; padding-top: 10px; border-top: 1px solid var(--border-color, #e0e0e0); margin-top: 8px;">
-          <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px;">3×3 Weights</div>
-          <div style="display: grid; grid-template-columns: repeat(3, 55px); gap: 4px;">
-            <input id="w1" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-            <input id="w2" type="number" value="4.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-            <input id="w3" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-            <input id="w4" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-            <input id="w5" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-            <input id="w6" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-            <input id="w7" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-            <input id="w8" type="number" value="1.0" step="0.1" min="0.1" max="10" style="width: 50px;">
-            <input id="w9" type="number" value="9.0" step="0.1" min="0.1" max="10" style="width: 50px;">
+          <div style="font-size: 11px; color: #888; margin: 6px 0 8px;">
+            Edge weights on each black face: <strong>α</strong> = top, <strong>β</strong> = right,
+            <strong>γ</strong> = left (bottom δ = 1). Tiled with period k×l.
           </div>
-        </div>
-
-        <!-- 6×2 Periodic Weights -->
-        <div id="weights-6x2" style="display: none; padding-top: 10px; border-top: 1px solid var(--border-color, #e0e0e0); margin-top: 8px;">
-          <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px;">6×2 Weights</div>
-          <div style="display: grid; grid-template-columns: repeat(6, 45px); gap: 3px;">
-            <input id="w6x2_1" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
-            <input id="w6x2_2" type="number" value="20.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
-            <input id="w6x2_3" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
-            <input id="w6x2_4" type="number" value="30.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
-            <input id="w6x2_5" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
-            <input id="w6x2_6" type="number" value="0.1" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
-            <input id="w6x2_7" type="number" value="5.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
-            <input id="w6x2_8" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
-            <input id="w6x2_9" type="number" value="0.1" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
-            <input id="w6x2_10" type="number" value="1.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
-            <input id="w6x2_11" type="number" value="30.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
-            <input id="w6x2_12" type="number" value="30.0" step="0.1" min="0.1" max="100" style="width: 42px; font-size: 11px;">
-          </div>
+          <div id="periodic-weights-tables"></div>
         </div>
       </div>
     </details>
@@ -1386,6 +1349,8 @@ async function initializeDominoRuntime() {
 
   const simulateAztec = Module.cwrap('simulateAztec','number',['number','number','number','number','number','number','number','number','number','number'],{async:true});
   const simulateAztec6x2 = Module.cwrap('simulateAztec6x2', 'number', ['number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number', 'number'], {async:true});
+  // General k×l periodic: (n, k, l, alphaPtr, betaPtr, gammaPtr)
+  const simulateAztecPeriodic = Module.cwrap('simulateAztecPeriodic', 'number', ['number', 'number', 'number', 'number', 'number', 'number'], {async:true});
   const simulateAztecHorizontal = Module.cwrap(
     'simulateAztecHorizontal', 'number',
     ['number','number','number','number','number','number',
@@ -2345,13 +2310,22 @@ async function initializeDominoRuntime() {
       ptr = await simulateAztecHorizontal(n, 0,0,0,0,0,0,0,0,0,0);
     } else if (isFrozenV) {
       ptr = await simulateAztecVertical(n, 0,0,0,0,0,0,0,0,0,0);
-    } else if (periodicity === '6x2') {
-      const v = [];
-      for (let i = 1; i <= 12; i++) {
-        const input = document.getElementById(`w6x2_${i}`);
-        v.push(input && !isNaN(parseFloat(input.value)) ? parseFloat(input.value) : 1.0);
+    } else if (periodicity === 'periodic') {
+      const { k, l, alpha, beta, gamma } = readPeriodicWeights();
+      const bytes = k * l * 8;
+      const aPtr = Module._malloc(bytes);
+      const bPtr = Module._malloc(bytes);
+      const gPtr = Module._malloc(bytes);
+      try {
+        Module.HEAPF64.set(alpha, aPtr >> 3);
+        Module.HEAPF64.set(beta, bPtr >> 3);
+        Module.HEAPF64.set(gamma, gPtr >> 3);
+        ptr = await simulateAztecPeriodic(n, k, l, aPtr, bPtr, gPtr);
+      } finally {
+        Module._free(aPtr);
+        Module._free(bPtr);
+        Module._free(gPtr);
       }
-      ptr = await simulateAztec6x2(n, ...v);
     } else {
       ptr = await simulateAztec(n, ...weights);
     }
@@ -2867,20 +2841,80 @@ async function initializeDominoRuntime() {
     updateVisualization(n);
   });
 
+  // Default k×l periodic weights: Chhita–Johansson-style (α=β checkerboard
+  // 0.3/1, γ=1), which gives an interesting tiling out of the box.
+  function periodicDefaultWeight(kind, j, i) {
+    if (kind === 'gamma') return 1.0;
+    return ((i + j) % 2 === 0) ? 0.3 : 1.0;
+  }
+
+  // Build the α/β/γ weight grids for the current k, l (preserving typed values).
+  function buildPeriodicWeightsEditor() {
+    const container = document.getElementById('periodic-weights-tables');
+    if (!container) return;
+    const k = Math.max(1, Math.min(8, parseInt(document.getElementById('periodic-k')?.value, 10) || 2));
+    const l = Math.max(1, Math.min(8, parseInt(document.getElementById('periodic-l')?.value, 10) || 2));
+    const prev = {};
+    container.querySelectorAll('input[data-pw]').forEach(inp => { prev[inp.dataset.pw] = inp.value; });
+
+    const kinds = [['alpha', 'α (top)'], ['beta', 'β (right)'], ['gamma', 'γ (left)']];
+    let html = '';
+    for (const [kind, title] of kinds) {
+      html += `<div style="margin-bottom:8px;"><div style="font-size:11px; font-weight:600; margin-bottom:3px;">${title}</div>`;
+      html += `<div style="display:grid; grid-template-columns:repeat(${l}, 44px); gap:3px;">`;
+      for (let j = 0; j < k; j++) {
+        for (let i = 0; i < l; i++) {
+          const key = `${kind}-${j}-${i}`;
+          const val = prev[key] !== undefined ? prev[key] : periodicDefaultWeight(kind, j, i);
+          html += `<input type="number" data-pw="${key}" value="${val}" step="0.1" min="0.01" max="1000" style="width:40px; font-size:11px;">`;
+        }
+      }
+      html += `</div></div>`;
+    }
+    container.innerHTML = html;
+  }
+
+  // Read the k×l periodic weights as three flat Float64Arrays (row-major j*l+i).
+  function readPeriodicWeights() {
+    const k = Math.max(1, Math.min(8, parseInt(document.getElementById('periodic-k')?.value, 10) || 2));
+    const l = Math.max(1, Math.min(8, parseInt(document.getElementById('periodic-l')?.value, 10) || 2));
+    const arrs = {
+      alpha: new Float64Array(k * l).fill(1),
+      beta: new Float64Array(k * l).fill(1),
+      gamma: new Float64Array(k * l).fill(1)
+    };
+    document.querySelectorAll('#periodic-weights-tables input[data-pw]').forEach(inp => {
+      const parts = inp.dataset.pw.split('-');
+      const kind = parts[0], j = parseInt(parts[1], 10), i = parseInt(parts[2], 10);
+      if (arrs[kind] && j < k && i < l) {
+        const v = parseFloat(inp.value);
+        arrs[kind][j * l + i] = (isFinite(v) && v > 0) ? v : 1;
+      }
+    });
+    return { k, l, alpha: arrs.alpha, beta: arrs.beta, gamma: arrs.gamma };
+  }
+
   // Function to update parameter visibility based on selected periodicity
   function updatePeriodicityParams() {
     const p = document.querySelector('input[name="periodicity"]:checked')?.value || 'uniform';
     const isFrozen = (p === 'frozenH' || p === 'frozenV');
 
-    // 2×2, 3×3, and 6x2 weight panels
-    document.getElementById('weights-2x2').style.display = (p === '2x2') ? 'block' : 'none';
-    document.getElementById('weights-3x3').style.display = (p === '3x3') ? 'block' : 'none';
-    document.getElementById('weights-6x2').style.display = (p === '6x2') ? 'block' : 'none';
+    const periodicEditor = document.getElementById('periodic-editor');
+    if (periodicEditor) {
+      const on = (p === 'periodic');
+      periodicEditor.style.display = on ? 'block' : 'none';
+      if (on) buildPeriodicWeightsEditor();
+    }
 
     // Glauber controls
     const glauberControls = document.getElementById('glauber-controls');
     if (glauberControls) glauberControls.style.display = isFrozen ? 'none' : 'block';
   }
+
+  // Rebuild the weight grids when k or l change.
+  ['periodic-k', 'periodic-l'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', buildPeriodicWeightsEditor);
+  });
 
   // Add handlers for periodicity radio buttons
   document.querySelectorAll('input[name="periodicity"]').forEach(radio => {
