@@ -1225,8 +1225,8 @@ permalink: /domino/
             <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; padding-left: 22px; flex-wrap: wrap;">
               <label for="temperley-width-2d" style="color: var(--text-secondary, #666);">Width</label>
               <input type="range" id="temperley-width-2d" min="0.1" max="1.6" step="0.05" value="0.45" style="width: 80px;" aria-label="Temperley tree line width">
-              <label for="temperley-stride-2d" style="color: var(--text-secondary, #666);">Show every</label>
-              <input type="number" id="temperley-stride-2d" value="1" min="1" max="30" step="1" style="width: 48px;" aria-label="Show every k-th Temperley tree branch">
+              <label for="temperley-stride-2d" style="color: var(--text-secondary, #666);">Erase every</label>
+              <input type="number" id="temperley-stride-2d" value="1" min="1" max="30" step="1" style="width: 48px;" title="1 = show all trees; k = erase every k-th whole tree (counted by boundary root)" aria-label="Erase every k-th Temperley tree (1 = show all)">
             </div>
             <div id="height-function-toggle-container">
               <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
@@ -3830,14 +3830,96 @@ async function initializeDominoRuntime() {
     return (Math.round(x) + DD_OFFSET) * DD_STRIDE + (Math.round(y) + DD_OFFSET);
   }
 
-  // "Show every k-th" thinning for the Temperley trees: keep ~1/stride of the
-  // white squares in diagonal bands. floor((c-1)/4) steps by 1 between adjacent
-  // tree nodes (2 squares = 4 model units apart), so a single sublattice's fixed
-  // parity never wipes out a whole tree.
-  function temperleyKeep(wx, wy, stride) {
-    if (stride <= 1) return true;
-    const cell = Math.floor((wx - 1) / 4) + Math.floor((wy - 1) / 4);
-    return (((cell % stride) + stride) % stride) === 0;
+  // Build the Temperley tree edges to draw. Each white square is the tail of one
+  // directed edge toward its parent (through its matched black square to the
+  // opposite white square v' = 2b - v); a vertex whose v' falls outside the
+  // region has no parent and is a *root* on the boundary. The white squares thus
+  // decompose into whole trees, one per boundary root. With eraseK >= 2 we order
+  // the roots around the border and erase every k-th tree as a unit, so a tree
+  // (including its frozen straight-chain part) is always kept or removed whole.
+  function buildTemperleyEdges(dominoes, eraseK) {
+    const even = n => ((((n % 2) + 2) % 2) === 0);
+    const isBlack = (cx, cy) => even((cx - 1) / 2 + (cy - 1) / 2);
+
+    const squares = new Set();
+    const nodes = new Map(); // whiteKey -> node
+    let sumX = 0, sumY = 0, cnt = 0;
+    for (const d of dominoes) {
+      if (d.w <= 0 || d.h <= 0) continue;
+      const horiz = d.w > d.h;
+      const ax = Math.round(d.x + 1), ay = Math.round(d.y + 1);
+      const bx = Math.round(horiz ? d.x + 3 : d.x + 1);
+      const by = Math.round(horiz ? d.y + 1 : d.y + 3);
+      squares.add(ddPack(ax, ay));
+      squares.add(ddPack(bx, by));
+      let wx, wy, blx, bly;
+      if (isBlack(ax, ay)) { wx = bx; wy = by; blx = ax; bly = ay; }
+      else { wx = ax; wy = ay; blx = bx; bly = by; }
+      nodes.set(ddPack(wx, wy), { wx, wy, blx, bly });
+      sumX += wx; sumY += wy; cnt++;
+    }
+
+    for (const node of nodes.values()) {
+      const vx = 2 * node.blx - node.wx, vy = 2 * node.bly - node.wy;
+      const pk = ddPack(vx, vy);
+      node.hasFar = squares.has(pk);
+      node.parentKey = node.hasFar ? pk : null;
+      node.ex = node.hasFar ? vx : node.blx;
+      node.ey = node.hasFar ? vy : node.bly;
+      node.primal = even((node.wx - 1) / 2);
+    }
+
+    const collect = predicate => {
+      const edges = [];
+      for (const node of nodes.values()) {
+        if (predicate && !predicate(node)) continue;
+        edges.push({ wx: node.wx, wy: node.wy, ex: node.ex, ey: node.ey, primal: node.primal });
+      }
+      return edges;
+    };
+
+    if (!(eraseK >= 2) || cnt === 0) return collect(null); // show all trees
+
+    // Root of each node (walk the parent chain to the boundary root), memoized.
+    const rootOf = new Map();
+    const findRoot = startKey => {
+      const path = [];
+      let k = startKey;
+      while (k !== null && !rootOf.has(k)) {
+        const node = nodes.get(k);
+        if (!node) { k = null; break; }
+        path.push(k);
+        if (node.parentKey === null) { rootOf.set(k, k); break; }
+        k = node.parentKey;
+      }
+      const root = (k !== null && rootOf.has(k)) ? rootOf.get(k)
+        : (path.length ? path[path.length - 1] : startKey);
+      for (const p of path) rootOf.set(p, root);
+      return root;
+    };
+    for (const key of nodes.keys()) findRoot(key);
+
+    // Order the distinct roots around the border and erase every k-th tree.
+    // The primal and dual forests are erased independently so both colours thin
+    // symmetrically rather than one dominating.
+    const cx0 = sumX / cnt, cy0 = sumY / cnt;
+    const primalRoots = [], dualRoots = [];
+    const seen = new Set();
+    for (const root of rootOf.values()) {
+      if (seen.has(root)) continue;
+      seen.add(root);
+      const rn = nodes.get(root);
+      (rn.primal ? primalRoots : dualRoots).push({ root, angle: Math.atan2(rn.wy - cy0, rn.wx - cx0) });
+    }
+    const byAngle = (a, b) => a.angle - b.angle;
+    primalRoots.sort(byAngle);
+    dualRoots.sort(byAngle);
+    const erased = new Set();
+    const markErase = list => list.forEach((r, i) => { if (((i + 1) % eraseK) === 0) erased.add(r.root); });
+    markErase(primalRoots);
+    markErase(dualRoots);
+
+    return collect(node => !erased.has(rootOf.get(ddPack(node.wx, node.wy))));
   }
 
   function dominoDimerEdgeGeometry(d) {
@@ -4271,46 +4353,9 @@ async function initializeDominoRuntime() {
     // "Trees and matchings".
     drawTemperleyOverlay(ctx, settings) {
       if (!settings.showTemperley) return;
+      const edges = buildTemperleyEdges(this.dominoes, settings.temperleyStride);
+      if (!edges.length) return;
 
-      const key = (x, y) => x + "," + y;
-      const even = n => ((((n % 2) + 2) % 2) === 0);
-      const isBlack = (cx, cy) => even((cx - 1) / 2 + (cy - 1) / 2);
-
-      const squares = new Set();
-      const partner = new Map(); // white centre key -> [blackCx, blackCy]
-      for (const d of this.dominoes) {
-        if (d.w <= 0 || d.h <= 0) continue;
-        const horizontal = d.w > d.h;
-        const c1x = Math.round(d.x + 1);
-        const c1y = Math.round(d.y + 1);
-        const c2x = Math.round(horizontal ? d.x + 3 : d.x + 1);
-        const c2y = Math.round(horizontal ? d.y + 1 : d.y + 3);
-        squares.add(key(c1x, c1y));
-        squares.add(key(c2x, c2y));
-        if (isBlack(c1x, c1y)) partner.set(key(c2x, c2y), [c1x, c1y]);
-        else partner.set(key(c1x, c1y), [c2x, c2y]);
-      }
-
-      // "Show every k-th" thinning: at large n every white square carries a tree
-      // edge, so the trees clump into a solid mesh. Keep ~1/stride of the edges
-      // along diagonal bands (temperleyKeep steps by 1 between adjacent nodes).
-      const stride = settings.temperleyStride;
-      const edges = [];
-      for (const [wkey, b] of partner) {
-        const comma = wkey.indexOf(",");
-        const wx = +wkey.slice(0, comma);
-        const wy = +wkey.slice(comma + 1);
-        if (!temperleyKeep(wx, wy, stride)) continue;
-        const bx = b[0], by = b[1];
-        const vx = 2 * bx - wx, vy = 2 * by - wy;
-        edges.push({
-          wx, wy, bx, by, vx, vy,
-          hasFar: squares.has(key(vx, vy)),
-          primal: even((wx - 1) / 2)
-        });
-      }
-
-      const halo = "rgba(255,255,255,0.85)";
       const strokeColor = { primal: "#111827", dual: "#d6117f" };
       const lineW = settings.temperleyWidth;
       const haloW = lineW + 0.6;
@@ -4323,13 +4368,12 @@ async function initializeDominoRuntime() {
         for (const e of edges) {
           if (pred && !pred(e)) continue;
           ctx.moveTo(e.wx, e.wy);
-          if (e.hasFar) ctx.lineTo(e.vx, e.vy);
-          else ctx.lineTo(e.bx, e.by);
+          ctx.lineTo(e.ex, e.ey);
         }
       };
 
       // White halo underlay so the trees read over any domino colour.
-      ctx.strokeStyle = halo;
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
       ctx.lineWidth = haloW;
       ctx.beginPath();
       traceEdges();
@@ -5371,36 +5415,14 @@ async function initializeDominoRuntime() {
 
     // Add Temperley trees if enabled (same construction as the 2D overlay)
     if (useTemperley && cachedDominoes && cachedDominoes.length > 0) {
-      const tkey = (x, y) => x + "," + y;
-      const teven = k => ((((k % 2) + 2) % 2) === 0);
-      const tIsBlack = (cx, cy) => teven((cx - 1) / 2 + (cy - 1) / 2);
-      const tSquares = new Set();
-      const tPartner = new Map();
-      cachedDominoes.forEach(d => {
-        if (d.w <= 0 || d.h <= 0) return;
-        const horiz = d.w > d.h;
-        const c1x = Math.round(d.x + 1), c1y = Math.round(d.y + 1);
-        const c2x = Math.round(horiz ? d.x + 3 : d.x + 1);
-        const c2y = Math.round(horiz ? d.y + 1 : d.y + 3);
-        tSquares.add(tkey(c1x, c1y));
-        tSquares.add(tkey(c2x, c2y));
-        if (tIsBlack(c1x, c1y)) tPartner.set(tkey(c2x, c2y), [c1x, c1y]);
-        else tPartner.set(tkey(c1x, c1y), [c2x, c2y]);
-      });
-
-      const primalSegs = [], dualSegs = [];
-      for (const [wk, b] of tPartner) {
-        const ci = wk.indexOf(",");
-        const wx = +wk.slice(0, ci), wy = +wk.slice(ci + 1);
-        if (!temperleyKeep(wx, wy, temperleyStrideExport)) continue;
-        const vx = 2 * b[0] - wx, vy = 2 * b[1] - wy;
-        const far = tSquares.has(tkey(vx, vy));
-        const ex = far ? vx : b[0], ey = far ? vy : b[1];
-        const x1 = (wx / 100) - minX, y1 = maxY - (wy / 100);
-        const x2 = (ex / 100) - minX, y2 = maxY - (ey / 100);
-        const seg = `(${x1.toFixed(2)}, ${y1.toFixed(2)}) -- (${x2.toFixed(2)}, ${y2.toFixed(2)})`;
-        (teven((wx - 1) / 2) ? primalSegs : dualSegs).push(seg);
-      }
+      const toTreeSeg = e => {
+        const x1 = (e.wx / 100) - minX, y1 = maxY - (e.wy / 100);
+        const x2 = (e.ex / 100) - minX, y2 = maxY - (e.ey / 100);
+        return `(${x1.toFixed(2)}, ${y1.toFixed(2)}) -- (${x2.toFixed(2)}, ${y2.toFixed(2)})`;
+      };
+      const tEdges = buildTemperleyEdges(cachedDominoes, temperleyStrideExport);
+      const primalSegs = tEdges.filter(e => e.primal).map(toTreeSeg);
+      const dualSegs = tEdges.filter(e => !e.primal).map(toTreeSeg);
 
       if (primalSegs.length + dualSegs.length > 0) {
         tikzCode += "\n% Temperley trees\n";
@@ -5919,33 +5941,10 @@ async function initializeDominoRuntime() {
       if (useTemperleyPDF) {
         const twidth = Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45);
         const tstride = Math.max(1, parseInt(document.getElementById("temperley-stride-2d")?.value, 10) || 1);
-        const tkey = (px, py) => px + "," + py;
-        const teven = k => ((((k % 2) + 2) % 2) === 0);
-        const tIsBlack = (cx, cy) => teven((cx - 1) / 2 + (cy - 1) / 2);
-        const tSquares = new Set();
-        const tPartner = new Map();
-        cachedDominoes.forEach(d => {
-          if (d.w <= 0 || d.h <= 0) return;
-          const horiz = d.w > d.h;
-          const c1x = Math.round(d.x + 1), c1y = Math.round(d.y + 1);
-          const c2x = Math.round(horiz ? d.x + 3 : d.x + 1);
-          const c2y = Math.round(horiz ? d.y + 1 : d.y + 3);
-          tSquares.add(tkey(c1x, c1y));
-          tSquares.add(tkey(c2x, c2y));
-          if (tIsBlack(c1x, c1y)) tPartner.set(tkey(c2x, c2y), [c1x, c1y]);
-          else tPartner.set(tkey(c1x, c1y), [c2x, c2y]);
-        });
-
         const primalE = [], dualE = [];
-        for (const [wk, b] of tPartner) {
-          const ci = wk.indexOf(",");
-          const wx = +wk.slice(0, ci), wy = +wk.slice(ci + 1);
-          if (!temperleyKeep(wx, wy, tstride)) continue;
-          const vx = 2 * b[0] - wx, vy = 2 * b[1] - wy;
-          const far = tSquares.has(tkey(vx, vy));
-          const ex = far ? vx : b[0], ey = far ? vy : b[1];
-          const seg = [(wx - minX) * scaleX, (wy - minY) * scaleY, (ex - minX) * scaleX, (ey - minY) * scaleY];
-          (teven((wx - 1) / 2) ? primalE : dualE).push(seg);
+        for (const e of buildTemperleyEdges(cachedDominoes, tstride)) {
+          const seg = [(e.wx - minX) * scaleX, (e.wy - minY) * scaleY, (e.ex - minX) * scaleX, (e.ey - minY) * scaleY];
+          (e.primal ? primalE : dualE).push(seg);
         }
 
         // Tree edges are all axis-aligned, so draw them as filled bars (this
