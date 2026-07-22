@@ -3989,50 +3989,54 @@ async function initializeDominoRuntime() {
       return collect(node => !erased.has(rootOf.get(ddPack(node.wx, node.wy))));
     }
 
-    // Backbone: for each kept tree, draw the unique path from its boundary root
-    // to the tree vertex that reaches the most different border — the vertex on
-    // the boundary with the largest angular separation (around the diamond
-    // centre) from the root. A vertex is on the boundary if an orthogonally
-    // adjacent lattice square lies outside the region.
+    // Backbone = the boundary-to-boundary skeleton of each kept tree. Iteratively
+    // trim leaves that are NOT on the boundary; what remains is exactly the set of
+    // edges lying on a path between two boundary points, so every such path is
+    // drawn (not just one per tree). A vertex is on the boundary if an
+    // orthogonally adjacent lattice square lies outside the region, or if it is a
+    // root (its outgoing edge exits the region). A tree that touches the boundary
+    // at only its root trims away to nothing.
     const inRegion = key => squares.has(key);
-    const isBorder = node =>
+    const isBoundary = node =>
+      node.parentKey === null ||
       !inRegion(ddPack(node.wx + 2, node.wy)) || !inRegion(ddPack(node.wx - 2, node.wy)) ||
       !inRegion(ddPack(node.wx, node.wy + 2)) || !inRegion(ddPack(node.wx, node.wy - 2));
-    const angleOf = node => Math.atan2(node.wy - cy0, node.wx - cx0);
-    const angSep = (a, b) => { const d = Math.abs(a - b); return d > Math.PI ? 2 * Math.PI - d : d; };
 
-    const bordersByRoot = new Map();
+    // Undirected tree degree = (#children pointing here) + (1 if it has a parent).
+    const childCount = new Map();
     for (const node of nodes.values()) {
-      const rk = rootOf.get(ddPack(node.wx, node.wy));
-      if (erased.has(rk) || !isBorder(node)) continue;
-      if (!bordersByRoot.has(rk)) bordersByRoot.set(rk, []);
-      bordersByRoot.get(rk).push(node);
+      if (node.parentKey !== null && nodes.has(node.parentKey)) {
+        childCount.set(node.parentKey, (childCount.get(node.parentKey) || 0) + 1);
+      }
+    }
+    const deg = new Map();
+    for (const [key, node] of nodes) {
+      const hasParent = node.parentKey !== null && nodes.has(node.parentKey);
+      deg.set(key, (childCount.get(key) || 0) + (hasParent ? 1 : 0));
     }
 
-    const backboneNodes = new Set();
-    for (const [rk, borderNodes] of bordersByRoot) {
-      const rn = nodes.get(rk);
-      const aR = angleOf(rn);
-      // Target = the tree's boundary vertex whose direction differs most from the
-      // root's; every tree that reaches the boundary at a second point gets a
-      // backbone (the unique path connecting the two boundary points).
-      let best = null, bestSep = 0;
-      for (const bn of borderNodes) {
-        if (ddPack(bn.wx, bn.wy) === rk) continue;
-        const sep = angSep(angleOf(bn), aR);
-        if (sep > bestSep) { bestSep = sep; best = bn; }
-      }
-      if (!best) continue; // only the root touches the boundary → no backbone
-      let curKey = ddPack(best.wx, best.wy);
-      let guard = 0;
-      while (curKey !== null && curKey !== rk && guard++ <= nodes.size) {
-        backboneNodes.add(curKey);
-        const cur = nodes.get(curKey);
-        if (!cur) break;
-        curKey = cur.parentKey;
+    const removed = new Set();
+    const queue = [];
+    for (const [key, node] of nodes) {
+      if (erased.has(rootOf.get(key))) { removed.add(key); continue; } // erased trees gone
+      if ((deg.get(key) || 0) <= 1 && !isBoundary(node)) queue.push(key);
+    }
+    for (let h = 0; h < queue.length; h++) {
+      const key = queue[h];
+      if (removed.has(key)) continue;
+      removed.add(key);
+      const pk = nodes.get(key).parentKey;
+      if (pk !== null && nodes.has(pk) && !removed.has(pk)) {
+        deg.set(pk, (deg.get(pk) || 0) - 1);
+        if ((deg.get(pk) || 0) <= 1 && !isBoundary(nodes.get(pk))) queue.push(pk);
       }
     }
-    return collect(node => backboneNodes.has(ddPack(node.wx, node.wy)));
+
+    // Keep an edge (node -> parent) when both endpoints survive the trim.
+    return collect(node => {
+      if (node.parentKey === null || !nodes.has(node.parentKey)) return false;
+      return !removed.has(ddPack(node.wx, node.wy)) && !removed.has(node.parentKey);
+    });
   }
 
   function dominoDimerEdgeGeometry(d) {
