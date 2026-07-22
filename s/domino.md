@@ -1204,6 +1204,14 @@ permalink: /domino/
               <input type="checkbox" id="dimers-checkbox-2d">
               Show dimers
             </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
+              <input type="checkbox" id="temperley-checkbox-2d">
+              Temperley trees
+            </label>
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; padding-left: 22px;">
+              <label for="temperley-width-2d" style="color: var(--text-secondary, #666);">Width</label>
+              <input type="range" id="temperley-width-2d" min="0.1" max="1.6" step="0.05" value="0.45" style="flex: 1; min-width: 80px;" aria-label="Temperley tree line width">
+            </div>
             <div id="height-function-toggle-container">
               <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
                 <input type="checkbox" id="height-function-checkbox-2d">
@@ -3505,6 +3513,18 @@ async function initializeDominoRuntime() {
     if (getActiveView() === "2d") updateDominoDisplay();
   });
 
+  // Temperley trees toggle handler
+  document.getElementById("temperley-checkbox-2d").addEventListener("change", function() {
+    if (getActiveView() === "2d") updateDominoDisplay();
+  });
+
+  // Temperley tree width slider
+  document.getElementById("temperley-width-2d").addEventListener("input", function() {
+    if (getActiveView() === "2d" && document.getElementById("temperley-checkbox-2d")?.checked) {
+      updateDominoDisplay();
+    }
+  });
+
   // Height function toggle handler
   document.getElementById("height-function-checkbox-2d").addEventListener("change", function() {
     useHeightFunction = this.checked;
@@ -3622,6 +3642,8 @@ async function initializeDominoRuntime() {
       showCheckerboard: Boolean(document.getElementById("checkerboard-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
       showPaths: Boolean(document.getElementById("paths-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
       showDimers: Boolean(document.getElementById("dimers-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
+      showTemperley: Boolean(document.getElementById("temperley-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
+      temperleyWidth: Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45),
       showHeightLabels: Boolean(document.getElementById("height-function-checkbox-2d")?.checked) && n <= 30,
       borderWidth: Math.max(0, parseFloat(document.getElementById("border-width-input")?.value) || 0),
       borderColor: currentColors.border || "#000",
@@ -3900,6 +3922,7 @@ async function initializeDominoRuntime() {
       this.drawBorderStrokePass(ctx, settings, cacheScale);
       this.drawPathOverlay(ctx, settings);
       this.drawDimerOverlay(ctx, settings);
+      this.drawTemperleyOverlay(ctx, settings);
       this.drawHeightLabels(ctx, settings);
       ctx.restore();
 
@@ -4038,6 +4061,89 @@ async function initializeDominoRuntime() {
       ctx.restore();
     }
 
+    // Temperley's bijection: a domino tiling of the Aztec diamond is a dimer
+    // cover of its interior dual graph. Unit squares are 2x2 in model space with
+    // centres on the odd lattice; each domino pairs one white square with one
+    // black square (a square (cx,cy) is black iff ((cx-1)/2 + (cy-1)/2) is even,
+    // the same rule the checkerboard overlay uses). Every white square v is the
+    // tail of exactly one tree edge: it runs from v through its matched black
+    // square b (the domino partner) on to the opposite white square v' = 2b - v.
+    // Whites with (cx-1)/2 even carry the primal spanning tree, the others its
+    // interleaved dual (drawn as undirected edges). See Kenyon,
+    // "Conformal invariance of domino tiling", and Kenyon-Propp-Wilson,
+    // "Trees and matchings".
+    drawTemperleyOverlay(ctx, settings) {
+      if (!settings.showTemperley) return;
+
+      const key = (x, y) => x + "," + y;
+      const even = n => ((((n % 2) + 2) % 2) === 0);
+      const isBlack = (cx, cy) => even((cx - 1) / 2 + (cy - 1) / 2);
+
+      const squares = new Set();
+      const partner = new Map(); // white centre key -> [blackCx, blackCy]
+      for (const d of this.dominoes) {
+        if (d.w <= 0 || d.h <= 0) continue;
+        const horizontal = d.w > d.h;
+        const c1x = Math.round(d.x + 1);
+        const c1y = Math.round(d.y + 1);
+        const c2x = Math.round(horizontal ? d.x + 3 : d.x + 1);
+        const c2y = Math.round(horizontal ? d.y + 1 : d.y + 3);
+        squares.add(key(c1x, c1y));
+        squares.add(key(c2x, c2y));
+        if (isBlack(c1x, c1y)) partner.set(key(c2x, c2y), [c1x, c1y]);
+        else partner.set(key(c1x, c1y), [c2x, c2y]);
+      }
+
+      const edges = [];
+      for (const [wkey, b] of partner) {
+        const comma = wkey.indexOf(",");
+        const wx = +wkey.slice(0, comma);
+        const wy = +wkey.slice(comma + 1);
+        const bx = b[0], by = b[1];
+        const vx = 2 * bx - wx, vy = 2 * by - wy;
+        edges.push({
+          wx, wy, bx, by, vx, vy,
+          hasFar: squares.has(key(vx, vy)),
+          primal: even((wx - 1) / 2)
+        });
+      }
+
+      const halo = "rgba(255,255,255,0.85)";
+      const strokeColor = { primal: "#111827", dual: "#d6117f" };
+      const lineW = settings.temperleyWidth;
+      const haloW = lineW + 0.6;
+
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      const traceEdges = (pred) => {
+        for (const e of edges) {
+          if (pred && !pred(e)) continue;
+          ctx.moveTo(e.wx, e.wy);
+          if (e.hasFar) ctx.lineTo(e.vx, e.vy);
+          else ctx.lineTo(e.bx, e.by);
+        }
+      };
+
+      // White halo underlay so the trees read over any domino colour.
+      ctx.strokeStyle = halo;
+      ctx.lineWidth = haloW;
+      ctx.beginPath();
+      traceEdges();
+      ctx.stroke();
+
+      // Two interleaved trees: primal (I even) and its dual (I odd).
+      for (const isPrimal of [true, false]) {
+        ctx.strokeStyle = isPrimal ? strokeColor.primal : strokeColor.dual;
+        ctx.lineWidth = lineW;
+        ctx.beginPath();
+        traceEdges(e => e.primal === isPrimal);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     drawHeightLabels(ctx, settings) {
       if (!settings.showHeightLabels) return;
       const heights = calculateHeightFunction(this.dominoes);
@@ -4074,6 +4180,7 @@ async function initializeDominoRuntime() {
       this.drawBorderStrokePass(ctx, settings, Math.max(1, this.viewport.scale));
       this.drawPathOverlay(ctx, settings);
       this.drawDimerOverlay(ctx, settings);
+      this.drawTemperleyOverlay(ctx, settings);
       this.drawHeightLabels(ctx, settings);
       ctx.restore();
     }
@@ -4591,6 +4698,8 @@ async function initializeDominoRuntime() {
     const useHeightFunctionExport = document.getElementById("height-function-checkbox-2d")?.checked || false;
     const useCheckerboard = document.getElementById("checkerboard-checkbox-2d")?.checked || false;
     const useDimers = document.getElementById("dimers-checkbox-2d")?.checked || false;
+    const useTemperley = document.getElementById("temperley-checkbox-2d")?.checked || false;
+    const temperleyWidth = Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45);
     const showColors = document.getElementById("show-colors-checkbox")?.checked || false;
     const useGrayscale = document.getElementById("grayscale-checkbox-2d")?.checked || false;
 
@@ -4925,6 +5034,8 @@ async function initializeDominoRuntime() {
 \\definecolor{svgyellow}{RGB}{${yellowRgb.r}, ${yellowRgb.g}, ${yellowRgb.b}}
 \\definecolor{svgblue}{RGB}{${blueRgb.r}, ${blueRgb.g}, ${blueRgb.b}}
 \\definecolor{svgborder}{RGB}{${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}}
+\\definecolor{treeprimal}{RGB}{17, 24, 39}
+\\definecolor{treedual}{RGB}{214, 17, 127}
 
 \\begin{document}
 % Aztec Diamond Tiling
@@ -5010,6 +5121,48 @@ async function initializeDominoRuntime() {
 
         tikzCode += `\\filldraw[fill=svgborder] (${x.toFixed(2)}, ${y.toFixed(2)}) circle (${radius.toFixed(2)/10});\n`;
       });
+    }
+
+    // Add Temperley trees if enabled (same construction as the 2D overlay)
+    if (useTemperley && cachedDominoes && cachedDominoes.length > 0) {
+      const tkey = (x, y) => x + "," + y;
+      const teven = k => ((((k % 2) + 2) % 2) === 0);
+      const tIsBlack = (cx, cy) => teven((cx - 1) / 2 + (cy - 1) / 2);
+      const tSquares = new Set();
+      const tPartner = new Map();
+      cachedDominoes.forEach(d => {
+        if (d.w <= 0 || d.h <= 0) return;
+        const horiz = d.w > d.h;
+        const c1x = Math.round(d.x + 1), c1y = Math.round(d.y + 1);
+        const c2x = Math.round(horiz ? d.x + 3 : d.x + 1);
+        const c2y = Math.round(horiz ? d.y + 1 : d.y + 3);
+        tSquares.add(tkey(c1x, c1y));
+        tSquares.add(tkey(c2x, c2y));
+        if (tIsBlack(c1x, c1y)) tPartner.set(tkey(c2x, c2y), [c1x, c1y]);
+        else tPartner.set(tkey(c1x, c1y), [c2x, c2y]);
+      });
+
+      const primalSegs = [], dualSegs = [];
+      for (const [wk, b] of tPartner) {
+        const ci = wk.indexOf(",");
+        const wx = +wk.slice(0, ci), wy = +wk.slice(ci + 1);
+        const vx = 2 * b[0] - wx, vy = 2 * b[1] - wy;
+        const far = tSquares.has(tkey(vx, vy));
+        const ex = far ? vx : b[0], ey = far ? vy : b[1];
+        const x1 = (wx / 100) - minX, y1 = maxY - (wy / 100);
+        const x2 = (ex / 100) - minX, y2 = maxY - (ey / 100);
+        const seg = `(${x1.toFixed(2)}, ${y1.toFixed(2)}) -- (${x2.toFixed(2)}, ${y2.toFixed(2)})`;
+        (teven((wx - 1) / 2) ? primalSegs : dualSegs).push(seg);
+      }
+
+      if (primalSegs.length + dualSegs.length > 0) {
+        tikzCode += "\n% Temperley trees\n";
+        const treePt = (temperleyWidth * 8).toFixed(2);
+        const haloPt = ((temperleyWidth + 0.6) * 8).toFixed(2);
+        tikzCode += `\\draw[white, line width=${haloPt}pt, line cap=round] ${primalSegs.concat(dualSegs).join(" ")};\n`;
+        if (primalSegs.length) tikzCode += `\\draw[treeprimal, line width=${treePt}pt, line cap=round] ${primalSegs.join(" ")};\n`;
+        if (dualSegs.length) tikzCode += `\\draw[treedual, line width=${treePt}pt, line cap=round] ${dualSegs.join(" ")};\n`;
+      }
     }
 
     // Add height function if enabled
@@ -5493,6 +5646,59 @@ async function initializeDominoRuntime() {
 
         pdf.rect(x, y, width, height, 'FD'); // Fill and Draw
       });
+
+      // Temperley trees (same construction as the 2D overlay)
+      const useTemperleyPDF = document.getElementById("temperley-checkbox-2d")?.checked || false;
+      if (useTemperleyPDF) {
+        const twidth = Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45);
+        const tkey = (px, py) => px + "," + py;
+        const teven = k => ((((k % 2) + 2) % 2) === 0);
+        const tIsBlack = (cx, cy) => teven((cx - 1) / 2 + (cy - 1) / 2);
+        const tSquares = new Set();
+        const tPartner = new Map();
+        cachedDominoes.forEach(d => {
+          if (d.w <= 0 || d.h <= 0) return;
+          const horiz = d.w > d.h;
+          const c1x = Math.round(d.x + 1), c1y = Math.round(d.y + 1);
+          const c2x = Math.round(horiz ? d.x + 3 : d.x + 1);
+          const c2y = Math.round(horiz ? d.y + 1 : d.y + 3);
+          tSquares.add(tkey(c1x, c1y));
+          tSquares.add(tkey(c2x, c2y));
+          if (tIsBlack(c1x, c1y)) tPartner.set(tkey(c2x, c2y), [c1x, c1y]);
+          else tPartner.set(tkey(c1x, c1y), [c2x, c2y]);
+        });
+
+        const primalE = [], dualE = [];
+        for (const [wk, b] of tPartner) {
+          const ci = wk.indexOf(",");
+          const wx = +wk.slice(0, ci), wy = +wk.slice(ci + 1);
+          const vx = 2 * b[0] - wx, vy = 2 * b[1] - wy;
+          const far = tSquares.has(tkey(vx, vy));
+          const ex = far ? vx : b[0], ey = far ? vy : b[1];
+          const seg = [(wx - minX) * scaleX, (wy - minY) * scaleY, (ex - minX) * scaleX, (ey - minY) * scaleY];
+          (teven((wx - 1) / 2) ? primalE : dualE).push(seg);
+        }
+
+        // Tree edges are all axis-aligned, so draw them as filled bars (this
+        // jsPDF build lacks line()/setLineCap()). The half-thickness overhang at
+        // each end squares off the caps and fills the junctions between edges.
+        const drawBars = (segs, tw) => {
+          const half = tw / 2;
+          segs.forEach(([x1, y1, x2, y2]) => {
+            if (Math.abs(y1 - y2) < 1e-6) {
+              pdf.rect(Math.min(x1, x2) - half, y1 - half, Math.abs(x2 - x1) + tw, tw, 'F');
+            } else {
+              pdf.rect(x1 - half, Math.min(y1, y2) - half, tw, Math.abs(y2 - y1) + tw, 'F');
+            }
+          });
+        };
+        pdf.setFillColor(255, 255, 255);
+        drawBars(primalE.concat(dualE), (twidth + 0.6) * scaleX);
+        pdf.setFillColor(17, 24, 39);
+        drawBars(primalE, twidth * scaleX);
+        pdf.setFillColor(214, 17, 127);
+        drawBars(dualE, twidth * scaleX);
+      }
     }
 
     // Save the PDF
