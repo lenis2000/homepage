@@ -45,6 +45,7 @@ The sampler still uses the same EKLP delete-slide-create dynamics. The implement
 | uniform | 500 | 137.2 ms |
 | uniform | 1000 | 1054.6 ms |
 | uniform | 2000 | 8598.4 ms (one run) |
+| uniform | 3000 | 28817.6 ms (one run) |
 | weighted 2x2 | 500 | 200.1 ms |
 | weighted 3x3 | 500 | 192.7 ms |
 | weighted 6x2 | 500 | 164.0 ms |
@@ -52,5 +53,7 @@ The sampler still uses the same EKLP delete-slide-create dynamics. The implement
 Compared with the immutable pre-change bundle, raw uniform sampling is 33.8x faster at n=500 and 21.0x faster at n=1000. The final `s/domino.js` is 102,250 bytes (39,396 bytes gzip), down 18.8% raw from the preceding optimized candidate.
 
 At n=2000, the sample contained 4,002,000 dominoes covering 8,004,000 distinct in-diamond cells. UTF-8 conversion took 204.3 ms, JSON parsing took 629.3 ms, and the no-render total was 9.432 s. Exact count, dimensions, full coverage, in-diamond placement, and non-overlap checks passed for every listed mode.
+
+The 2D order input is intentionally uncapped. An isolated n=3000 probe completed without a crash or out-of-memory failure: 9,003,000 dominoes, 410.6 MiB of JSON, a 515.3 MiB WASM heap, 524.7 ms UTF-8 conversion, 1614.0 ms JSON parsing, and a 30.956 s no-render total. The 3.35x raw-time increase from n=2000 is close to the expected cubic factor of 3.375. Count and a 20,007-record structural sample passed; the probe deliberately skipped a global 18,006,000-cell overlap `Set` to avoid making the validation structure the dominant memory test.
 
 Large Canvas overlays no longer materialize unbounded native paths. The full Temperley forest streams directly from dominoes, while double-dimer cycles use compact direction grids instead of JavaScript adjacency maps. Stroke batching limits only each Canvas command buffer; it does not omit or thin content. On an n=1500 double-dimer sample with minimum loop length 30, all 10,252 qualifying loops and all 1,197,432 edges were drawn. Cached redraw timings were 235 ms for those complete double-dimer loops, 282 ms for the complete Temperley forest, and 135 ms for nonintersecting paths.

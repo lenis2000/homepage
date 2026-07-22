@@ -49,9 +49,10 @@ function checkPageSource() {
   assert(source.includes('document.getElementById("n-input").removeAttribute("max")'), "2D view should remove the 3D-only maximum");
   assert(source.includes('const DOMINO_2D_EXACT_RENDER_LIMIT = 100'), "Small 2D tilings should use exact canvas rendering");
   assert(source.includes("class CanvasSegmentBatch"), "Large canvas overlays should use bounded native path batches");
-  assert(source.includes("getDoubleDimerScreenSelection"), "Double-dimer previews should use the compact cycle decomposition");
+  assert(source.includes("getDoubleDimerCompactLoops"), "Double-dimer previews should use the compact cycle decomposition");
   assert(source.includes("new Uint8Array(siteCount)"), "Double-dimer previews should use compact typed grids");
   assert(!source.includes("DOUBLE_DIMER_SEGMENT_BUDGET"), "Double-dimer previews must not cap or thin loop edges");
+  assert(!source.includes("buildDoubleDimerLoops"), "Double-dimer rendering and export should not rebuild the legacy object graph");
   assert(cppSource.includes("PeriodicProbabilityPyramid"), "C++ sampler should reuse periodic shuffling probabilities");
   assert(cppSource.includes("MatrixConfig = FlatMatrix<uint8_t>"), "C++ sampler should use byte-sized configuration cells");
   assert(cppSource.includes("kDelslideBlockTransform"), "C++ sampler should fuse deletion and sliding by 2x2 block");
@@ -85,7 +86,7 @@ function checkPageSource() {
   const doubleDimerEnd = source.indexOf("drawHeightLabels(ctx, settings) {", doubleDimerStart);
   assert(doubleDimerStart >= 0 && doubleDimerEnd > doubleDimerStart, "double-dimer canvas renderer should be present");
   const doubleDimerBody = source.slice(doubleDimerStart, doubleDimerEnd);
-  assert(doubleDimerBody.includes("getDoubleDimerScreenSelection"), "canvas loops should use compact cycle selection");
+  assert(doubleDimerBody.includes("getDoubleDimerCompactLoops"), "canvas loops should use compact cycle selection");
   assert(!doubleDimerBody.includes("getDoubleDimerDrawableEdges"), "canvas loops should not materialize the vector-export edge graph");
 }
 

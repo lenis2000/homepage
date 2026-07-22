@@ -1396,7 +1396,7 @@ async function initializeDominoRuntime() {
     config2: null,
     minLoop: null,
     edges: null,
-    screen: null
+    compact: null
   };
   let domino2DRenderer = null;
   let useHeightFunction = false; // Track height function visibility state
@@ -2658,7 +2658,7 @@ async function initializeDominoRuntime() {
         cachedDominoes2 = null;
       }
       doubleDimerLoopCache.edges = null;
-      doubleDimerLoopCache.screen = null;
+      doubleDimerLoopCache.compact = null;
       invalidate2DCanvasCache();
 
       await render2DIfVisible(dominoes, n, profile);
@@ -3627,7 +3627,7 @@ async function initializeDominoRuntime() {
       cachedDominoes2 = null;
     }
     doubleDimerLoopCache.edges = null;
-    doubleDimerLoopCache.screen = null;
+    doubleDimerLoopCache.compact = null;
   }
 
   document.getElementById("double-dimer-checkbox-2d").addEventListener("change", async function() {
@@ -3640,7 +3640,7 @@ async function initializeDominoRuntime() {
     } else {
       cachedDominoes2 = null;
       doubleDimerLoopCache.edges = null;
-      doubleDimerLoopCache.screen = null;
+      doubleDimerLoopCache.compact = null;
     }
     if (getActiveView() === "2d") updateDominoDisplay();
   });
@@ -4067,72 +4067,6 @@ async function initializeDominoRuntime() {
     });
   }
 
-  function dominoDimerEdgeGeometry(d) {
-    const cx = d.x + d.w / 2, cy = d.y + d.h / 2;
-    const horiz = d.w > d.h;
-    let x1, y1, x2, y2;
-    if (horiz) { x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy; }
-    else { x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4; }
-    const v1 = ddPack(x1, y1);
-    const v2 = ddPack(x2, y2);
-    // Key the edge by its midpoint + orientation (a single safe integer).
-    const key = ddPack((x1 + x2) / 2, (y1 + y2) / 2) * 2 + (horiz ? 0 : 1);
-    return { x1, y1, x2, y2, v1, v2, key };
-  }
-
-  function buildDoubleDimerLoops(config1, config2) {
-    const edgeMap = new Map();
-    const addEdges = (list, bit) => {
-      for (const d of list || []) {
-        const g = dominoDimerEdgeGeometry(d);
-        let e = edgeMap.get(g.key);
-        if (!e) { e = { ...g, typeMask: 0, loopId: -1 }; edgeMap.set(g.key, e); }
-        e.typeMask |= bit;
-      }
-    };
-    addEdges(config1, 1);
-    addEdges(config2, 2);
-
-    const vertexToEdges = new Map();
-    const allEdges = [];
-    edgeMap.forEach(edge => {
-      allEdges.push(edge);
-      let a = vertexToEdges.get(edge.v1);
-      if (!a) { a = []; vertexToEdges.set(edge.v1, a); }
-      a.push(edge);
-      let b = vertexToEdges.get(edge.v2);
-      if (!b) { b = []; vertexToEdges.set(edge.v2, b); }
-      b.push(edge);
-    });
-
-    let loopId = 0;
-    const loopSizes = new Map();
-    for (const edge of allEdges) {
-      if (edge.loopId !== -1) continue;
-      if (edge.typeMask === 3) { edge.loopId = -2; continue; } // shared: not a loop
-      const queue = [edge];
-      edge.loopId = loopId; // loopId doubles as the visited marker
-      let loopSize = 1;
-      for (let head = 0; head < queue.length; head++) {
-        const curr = queue[head];
-        const near = vertexToEdges.get(curr.v1);
-        const far = vertexToEdges.get(curr.v2);
-        for (const arr of [near, far]) {
-          if (!arr) continue;
-          for (const nb of arr) {
-            if (nb.loopId !== -1 || nb.typeMask === 3) continue;
-            nb.loopId = loopId;
-            loopSize++;
-            queue.push(nb);
-          }
-        }
-      }
-      loopSizes.set(loopId, loopSize);
-      loopId++;
-    }
-    return { allEdges, loopSizes };
-  }
-
   function getDoubleDimerDrawableEdges(config1, config2, minLoop) {
     if (doubleDimerLoopCache.config1 === config1 &&
         doubleDimerLoopCache.config2 === config2 &&
@@ -4140,14 +4074,15 @@ async function initializeDominoRuntime() {
         doubleDimerLoopCache.edges) {
       return doubleDimerLoopCache.edges;
     }
-    const { allEdges, loopSizes } = buildDoubleDimerLoops(config1, config2);
+    const selection = getDoubleDimerCompactLoops(config1, config2, minLoop);
     const drawable = [];
-    for (const edge of allEdges) {
-      if (edge.typeMask === 3) continue; // hide edges shared by both tilings
-      const size = loopSizes.get(edge.loopId) || 0;
-      if (size < minLoop) continue;
-      const color = (edge.typeMask & 1) ? "#111111" : "#e6194b"; // config1 vs config2
-      drawable.push({ x1: edge.x1, y1: edge.y1, x2: edge.x2, y2: edge.y2, color });
+    if (selection) {
+      forEachSelectedDoubleDimerEdge(config1, selection, (x1, y1, x2, y2) => {
+        drawable.push({ x1, y1, x2, y2, color: "#111111" });
+      });
+      forEachSelectedDoubleDimerEdge(config2, selection, (x1, y1, x2, y2) => {
+        drawable.push({ x1, y1, x2, y2, color: "#e6194b" });
+      });
     }
     doubleDimerLoopCache.config1 = config1;
     doubleDimerLoopCache.config2 = config2;
@@ -4156,11 +4091,11 @@ async function initializeDominoRuntime() {
     return drawable;
   }
 
-  // Compact screen-only double-dimer decomposition. Two perfect matchings have
+  // Compact double-dimer decomposition. Two perfect matchings have
   // degree two after shared edges are removed, so their symmetric difference is
   // already a disjoint union of alternating cycles. Encoding each matching as
   // one direction byte per lattice site avoids the Map/array/object graph used
-  // by the vector exporters (which can exceed a gigabyte around n=1500).
+  // by the former graph builder (which could exceed a gigabyte around n=1500).
   const DD_RIGHT = 1, DD_LEFT = 2, DD_DOWN = 3, DD_UP = 4;
 
   function doubleDimerOrderFromCount(dominoCount) {
@@ -4191,8 +4126,8 @@ async function initializeDominoRuntime() {
     return index - dim;
   }
 
-  function getDoubleDimerScreenSelection(config1, config2, minLoop) {
-    const cached = doubleDimerLoopCache.screen;
+  function getDoubleDimerCompactLoops(config1, config2, minLoop) {
+    const cached = doubleDimerLoopCache.compact;
     if (cached && cached.config1 === config1 && cached.config2 === config2 &&
         cached.minLoop === minLoop) {
       return cached;
@@ -4211,8 +4146,6 @@ async function initializeDominoRuntime() {
 
     let totalLoops = 0;
     let totalEdges = 0;
-    let shownLoops = 0;
-    let shownEdges = 0;
 
     for (let start = 0; start < siteCount; ++start) {
       if (!firstMatch[start] || firstMatch[start] === secondMatch[start] || visited[start]) continue;
@@ -4243,8 +4176,6 @@ async function initializeDominoRuntime() {
         current = nextDoubleDimerVertex(current, direction, dim);
         useFirst = !useFirst;
       } while (current !== start);
-      ++shownLoops;
-      shownEdges += loopSize;
     }
 
     const selection = {
@@ -4255,18 +4186,16 @@ async function initializeDominoRuntime() {
       dim,
       kept,
       totalLoops,
-      totalEdges,
-      shownLoops,
-      shownEdges
+      totalEdges
     };
-    doubleDimerLoopCache.screen = selection;
+    doubleDimerLoopCache.compact = selection;
     window.dominoDoubleDimerPreview = {
       n,
       minLoop,
       totalLoops,
       totalEdges,
-      shownLoops,
-      shownEdges,
+      shownLoops: totalLoops,
+      shownEdges: totalEdges,
       thinned: false
     };
     return selection;
@@ -4703,12 +4632,12 @@ async function initializeDominoRuntime() {
     drawDoubleDimerOverlay(ctx, settings) {
       if (!settings.showDoubleDimer) return;
       if (!cachedDominoes2 || !cachedDominoes2.length) return;
-      const selection = getDoubleDimerScreenSelection(
+      const selection = getDoubleDimerCompactLoops(
         this.dominoes,
         cachedDominoes2,
         settings.doubleDimerMinLoop
       );
-      if (!selection || selection.shownEdges === 0) return;
+      if (!selection || selection.totalEdges === 0) return;
 
       const w = settings.doubleDimerWidth;
       const traceConfig = dominoes => {
