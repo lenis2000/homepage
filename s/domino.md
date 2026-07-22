@@ -3711,7 +3711,7 @@ async function initializeDominoRuntime() {
       showDimers: Boolean(document.getElementById("dimers-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
       showTemperley: Boolean(document.getElementById("temperley-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
       temperleyWidth: Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45),
-      showDoubleDimer: Boolean(document.getElementById("double-dimer-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
+      showDoubleDimer: Boolean(document.getElementById("double-dimer-checkbox-2d")?.checked),
       doubleDimerMinLoop: Math.max(2, parseInt(document.getElementById("double-dimer-minloop-2d")?.value, 10) || 6),
       doubleDimerWidth: Math.max(0.05, parseFloat(document.getElementById("double-dimer-width-2d")?.value) || 0.5),
       showHeightLabels: Boolean(document.getElementById("height-function-checkbox-2d")?.checked) && n <= 30,
@@ -3810,18 +3810,28 @@ async function initializeDominoRuntime() {
   // tilings are dropped; the remaining edges form disjoint closed loops (the
   // symmetric difference / double-dimer loops). Ported from the arbitrary-weight
   // T-embedding page.
+  // Pack an integer lattice point into a single Number key. Coordinates are
+  // small integers (square centres), possibly negative, so offset and stride
+  // keep the packed value positive, unique, and inside the safe-integer range
+  // even for the largest tilings. Integer keys keep the loop builder fast and
+  // light at large n (string keys were the bottleneck).
+  const DD_OFFSET = 1 << 20;
+  const DD_STRIDE = 1 << 22;
+  function ddPack(x, y) {
+    return (Math.round(x) + DD_OFFSET) * DD_STRIDE + (Math.round(y) + DD_OFFSET);
+  }
+
   function dominoDimerEdgeGeometry(d) {
     const cx = d.x + d.w / 2, cy = d.y + d.h / 2;
     const horiz = d.w > d.h;
     let x1, y1, x2, y2;
     if (horiz) { x1 = cx - d.w / 4; x2 = cx + d.w / 4; y1 = y2 = cy; }
     else { x1 = x2 = cx; y1 = cy - d.h / 4; y2 = cy + d.h / 4; }
-    const q = v => Math.round(v * 1000);
-    const v1Key = q(x1) + "," + q(y1);
-    const v2Key = q(x2) + "," + q(y2);
-    const key = Math.min(q(x1), q(x2)) + "," + Math.min(q(y1), q(y2)) +
-      "-" + Math.max(q(x1), q(x2)) + "," + Math.max(q(y1), q(y2));
-    return { x1, y1, x2, y2, v1Key, v2Key, key };
+    const v1 = ddPack(x1, y1);
+    const v2 = ddPack(x2, y2);
+    // Key the edge by its midpoint + orientation (a single safe integer).
+    const key = ddPack((x1 + x2) / 2, (y1 + y2) / 2) * 2 + (horiz ? 0 : 1);
+    return { x1, y1, x2, y2, v1, v2, key };
   }
 
   function buildDoubleDimerLoops(config1, config2) {
@@ -3829,8 +3839,9 @@ async function initializeDominoRuntime() {
     const addEdges = (list, bit) => {
       for (const d of list || []) {
         const g = dominoDimerEdgeGeometry(d);
-        if (!edgeMap.has(g.key)) edgeMap.set(g.key, { ...g, typeMask: 0, loopId: -1 });
-        edgeMap.get(g.key).typeMask |= bit;
+        let e = edgeMap.get(g.key);
+        if (!e) { e = { ...g, typeMask: 0, loopId: -1 }; edgeMap.set(g.key, e); }
+        e.typeMask |= bit;
       }
     };
     addEdges(config1, 1);
@@ -3840,27 +3851,30 @@ async function initializeDominoRuntime() {
     const allEdges = [];
     edgeMap.forEach(edge => {
       allEdges.push(edge);
-      if (!vertexToEdges.has(edge.v1Key)) vertexToEdges.set(edge.v1Key, []);
-      if (!vertexToEdges.has(edge.v2Key)) vertexToEdges.set(edge.v2Key, []);
-      vertexToEdges.get(edge.v1Key).push(edge);
-      vertexToEdges.get(edge.v2Key).push(edge);
+      let a = vertexToEdges.get(edge.v1);
+      if (!a) { a = []; vertexToEdges.set(edge.v1, a); }
+      a.push(edge);
+      let b = vertexToEdges.get(edge.v2);
+      if (!b) { b = []; vertexToEdges.set(edge.v2, b); }
+      b.push(edge);
     });
 
     let loopId = 0;
     const loopSizes = new Map();
     for (const edge of allEdges) {
-      if (edge.loopId >= 0) continue;
+      if (edge.loopId !== -1) continue;
       if (edge.typeMask === 3) { edge.loopId = -2; continue; } // shared: not a loop
       const queue = [edge];
-      const visited = new Set([edge.key]);
-      edge.loopId = loopId;
+      edge.loopId = loopId; // loopId doubles as the visited marker
       let loopSize = 1;
       for (let head = 0; head < queue.length; head++) {
         const curr = queue[head];
-        for (const vKey of [curr.v1Key, curr.v2Key]) {
-          for (const nb of (vertexToEdges.get(vKey) || [])) {
-            if (visited.has(nb.key) || nb.typeMask === 3) continue;
-            visited.add(nb.key);
+        const near = vertexToEdges.get(curr.v1);
+        const far = vertexToEdges.get(curr.v2);
+        for (const arr of [near, far]) {
+          if (!arr) continue;
+          for (const nb of arr) {
+            if (nb.loopId !== -1 || nb.typeMask === 3) continue;
             nb.loopId = loopId;
             loopSize++;
             queue.push(nb);
@@ -4315,45 +4329,32 @@ async function initializeDominoRuntime() {
       if (!edges.length) return;
 
       const w = settings.doubleDimerWidth;
-      const r = w * 0.9;
       const batches = new Map();
       for (const e of edges) {
         if (!batches.has(e.color)) batches.set(e.color, []);
         batches.get(e.color).push(e);
       }
-
       const traceLines = list => {
         ctx.beginPath();
         for (const e of list) { ctx.moveTo(e.x1, e.y1); ctx.lineTo(e.x2, e.y2); }
         ctx.stroke();
       };
-      const traceDots = (list, radius) => {
-        ctx.beginPath();
-        for (const e of list) {
-          ctx.moveTo(e.x1 + radius, e.y1); ctx.arc(e.x1, e.y1, radius, 0, Math.PI * 2);
-          ctx.moveTo(e.x2 + radius, e.y2); ctx.arc(e.x2, e.y2, radius, 0, Math.PI * 2);
-        }
-        ctx.fill();
-      };
 
       ctx.save();
-      ctx.lineCap = "round";
+      ctx.lineCap = "round";   // round caps join edges that meet at a square centre
+      ctx.lineJoin = "round";
 
       // White halo so the loops read over any domino colour (the config-1 edges
       // would otherwise blend into the black domino borders).
       ctx.strokeStyle = "rgba(255,255,255,0.85)";
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
       ctx.lineWidth = w + 0.5;
       traceLines(edges);
-      traceDots(edges, r + 0.25);
 
       // Coloured cores: config-1 edges dark, config-2 edges crimson.
       ctx.lineWidth = w;
       for (const [color, es] of batches) {
         ctx.strokeStyle = color;
-        ctx.fillStyle = color;
         traceLines(es);
-        traceDots(es, r);
       }
       ctx.restore();
     }
