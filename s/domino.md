@@ -4013,13 +4013,16 @@ async function initializeDominoRuntime() {
     for (const [rk, borderNodes] of bordersByRoot) {
       const rn = nodes.get(rk);
       const aR = angleOf(rn);
-      let best = null, bestSep = -1;
+      // Target = the tree's boundary vertex whose direction differs most from the
+      // root's; every tree that reaches the boundary at a second point gets a
+      // backbone (the unique path connecting the two boundary points).
+      let best = null, bestSep = 0;
       for (const bn of borderNodes) {
         if (ddPack(bn.wx, bn.wy) === rk) continue;
         const sep = angSep(angleOf(bn), aR);
         if (sep > bestSep) { bestSep = sep; best = bn; }
       }
-      if (!best || bestSep < Math.PI / 2) continue; // stays on one border → no backbone
+      if (!best) continue; // only the root touches the boundary → no backbone
       let curKey = ddPack(best.wx, best.wy);
       let guard = 0;
       while (curKey !== null && curKey !== rk && guard++ <= nodes.size) {
