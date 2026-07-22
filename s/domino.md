@@ -3684,7 +3684,6 @@ async function initializeDominoRuntime() {
     }
   });
 
-  const DOMINO_2D_OVERLAY_LIMIT = 220;
   const DOMINO_2D_EXACT_RENDER_LIMIT = 100;
   const DOMINO_2D_SVG_COMPAT_LIMIT = 5000;
   const DOMINO_2D_CACHE_MAX_PX = 4096;
@@ -3706,10 +3705,10 @@ async function initializeDominoRuntime() {
       n,
       showColors: document.getElementById("show-colors-checkbox")?.checked !== false,
       useGrayscale: Boolean(document.getElementById("grayscale-checkbox-2d")?.checked),
-      showCheckerboard: Boolean(document.getElementById("checkerboard-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
-      showPaths: Boolean(document.getElementById("paths-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
-      showDimers: Boolean(document.getElementById("dimers-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
-      showTemperley: Boolean(document.getElementById("temperley-checkbox-2d")?.checked) && n <= DOMINO_2D_OVERLAY_LIMIT,
+      showCheckerboard: Boolean(document.getElementById("checkerboard-checkbox-2d")?.checked),
+      showPaths: Boolean(document.getElementById("paths-checkbox-2d")?.checked),
+      showDimers: Boolean(document.getElementById("dimers-checkbox-2d")?.checked),
+      showTemperley: Boolean(document.getElementById("temperley-checkbox-2d")?.checked),
       temperleyWidth: Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45),
       showDoubleDimer: Boolean(document.getElementById("double-dimer-checkbox-2d")?.checked),
       doubleDimerMinLoop: Math.max(2, parseInt(document.getElementById("double-dimer-minloop-2d")?.value, 10) || 6),
@@ -4230,12 +4229,12 @@ async function initializeDominoRuntime() {
         ctx.lineTo(x2, y2);
       }
       ctx.stroke();
-      ctx.beginPath();
+      // Square-cap dots (fillRect) instead of arcs: fast enough to stay uncapped
+      // at any tiling size. At the scale where the dots are visible they are
+      // indistinguishable from circles.
       for (const [x, y] of nodes) {
-        ctx.moveTo(x + 0.4, y);
-        ctx.arc(x, y, 0.4, 0, Math.PI * 2);
+        ctx.fillRect(x - 0.4, y - 0.4, 0.8, 0.8);
       }
-      ctx.fill();
       ctx.restore();
     }
 
