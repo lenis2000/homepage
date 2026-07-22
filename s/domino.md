@@ -1222,9 +1222,11 @@ permalink: /domino/
               <input type="checkbox" id="temperley-checkbox-2d">
               Temperley trees
             </label>
-            <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; padding-left: 22px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; padding-left: 22px; flex-wrap: wrap;">
               <label for="temperley-width-2d" style="color: var(--text-secondary, #666);">Width</label>
-              <input type="range" id="temperley-width-2d" min="0.1" max="1.6" step="0.05" value="0.45" style="flex: 1; min-width: 80px;" aria-label="Temperley tree line width">
+              <input type="range" id="temperley-width-2d" min="0.1" max="1.6" step="0.05" value="0.45" style="width: 80px;" aria-label="Temperley tree line width">
+              <label for="temperley-stride-2d" style="color: var(--text-secondary, #666);">Show every</label>
+              <input type="number" id="temperley-stride-2d" value="1" min="1" max="30" step="1" style="width: 48px;" aria-label="Show every k-th Temperley tree branch">
             </div>
             <div id="height-function-toggle-container">
               <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px;">
@@ -3553,6 +3555,13 @@ async function initializeDominoRuntime() {
     }
   });
 
+  // Temperley tree "show every k-th" thinning
+  document.getElementById("temperley-stride-2d").addEventListener("input", function() {
+    if (getActiveView() === "2d" && document.getElementById("temperley-checkbox-2d")?.checked) {
+      updateDominoDisplay();
+    }
+  });
+
   // Double-dimer overlay: sample a second independent tiling of the same region.
   async function sampleSecondDominoConfig() {
     if (!cachedDominoes || !cachedDominoes.length) return;
@@ -3710,6 +3719,7 @@ async function initializeDominoRuntime() {
       showDimers: Boolean(document.getElementById("dimers-checkbox-2d")?.checked),
       showTemperley: Boolean(document.getElementById("temperley-checkbox-2d")?.checked),
       temperleyWidth: Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45),
+      temperleyStride: Math.max(1, parseInt(document.getElementById("temperley-stride-2d")?.value, 10) || 1),
       showDoubleDimer: Boolean(document.getElementById("double-dimer-checkbox-2d")?.checked),
       doubleDimerMinLoop: Math.max(2, parseInt(document.getElementById("double-dimer-minloop-2d")?.value, 10) || 6),
       doubleDimerWidth: Math.max(0.05, parseFloat(document.getElementById("double-dimer-width-2d")?.value) || 0.5),
@@ -3818,6 +3828,16 @@ async function initializeDominoRuntime() {
   const DD_STRIDE = 1 << 22;
   function ddPack(x, y) {
     return (Math.round(x) + DD_OFFSET) * DD_STRIDE + (Math.round(y) + DD_OFFSET);
+  }
+
+  // "Show every k-th" thinning for the Temperley trees: keep ~1/stride of the
+  // white squares in diagonal bands. floor((c-1)/4) steps by 1 between adjacent
+  // tree nodes (2 squares = 4 model units apart), so a single sublattice's fixed
+  // parity never wipes out a whole tree.
+  function temperleyKeep(wx, wy, stride) {
+    if (stride <= 1) return true;
+    const cell = Math.floor((wx - 1) / 4) + Math.floor((wy - 1) / 4);
+    return (((cell % stride) + stride) % stride) === 0;
   }
 
   function dominoDimerEdgeGeometry(d) {
@@ -4271,11 +4291,16 @@ async function initializeDominoRuntime() {
         else partner.set(key(c1x, c1y), [c2x, c2y]);
       }
 
+      // "Show every k-th" thinning: at large n every white square carries a tree
+      // edge, so the trees clump into a solid mesh. Keep ~1/stride of the edges
+      // along diagonal bands (temperleyKeep steps by 1 between adjacent nodes).
+      const stride = settings.temperleyStride;
       const edges = [];
       for (const [wkey, b] of partner) {
         const comma = wkey.indexOf(",");
         const wx = +wkey.slice(0, comma);
         const wy = +wkey.slice(comma + 1);
+        if (!temperleyKeep(wx, wy, stride)) continue;
         const bx = b[0], by = b[1];
         const vx = 2 * bx - wx, vy = 2 * by - wy;
         edges.push({
@@ -4915,6 +4940,7 @@ async function initializeDominoRuntime() {
     const useDimers = document.getElementById("dimers-checkbox-2d")?.checked || false;
     const useTemperley = document.getElementById("temperley-checkbox-2d")?.checked || false;
     const temperleyWidth = Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45);
+    const temperleyStrideExport = Math.max(1, parseInt(document.getElementById("temperley-stride-2d")?.value, 10) || 1);
     const useDoubleDimer = document.getElementById("double-dimer-checkbox-2d")?.checked || false;
     const doubleDimerMinLoopExport = Math.max(2, parseInt(document.getElementById("double-dimer-minloop-2d")?.value, 10) || 6);
     const doubleDimerWidthExport = Math.max(0.05, parseFloat(document.getElementById("double-dimer-width-2d")?.value) || 0.5);
@@ -5366,6 +5392,7 @@ async function initializeDominoRuntime() {
       for (const [wk, b] of tPartner) {
         const ci = wk.indexOf(",");
         const wx = +wk.slice(0, ci), wy = +wk.slice(ci + 1);
+        if (!temperleyKeep(wx, wy, temperleyStrideExport)) continue;
         const vx = 2 * b[0] - wx, vy = 2 * b[1] - wy;
         const far = tSquares.has(tkey(vx, vy));
         const ex = far ? vx : b[0], ey = far ? vy : b[1];
@@ -5891,6 +5918,7 @@ async function initializeDominoRuntime() {
       const useTemperleyPDF = document.getElementById("temperley-checkbox-2d")?.checked || false;
       if (useTemperleyPDF) {
         const twidth = Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45);
+        const tstride = Math.max(1, parseInt(document.getElementById("temperley-stride-2d")?.value, 10) || 1);
         const tkey = (px, py) => px + "," + py;
         const teven = k => ((((k % 2) + 2) % 2) === 0);
         const tIsBlack = (cx, cy) => teven((cx - 1) / 2 + (cy - 1) / 2);
@@ -5912,6 +5940,7 @@ async function initializeDominoRuntime() {
         for (const [wk, b] of tPartner) {
           const ci = wk.indexOf(",");
           const wx = +wk.slice(0, ci), wy = +wk.slice(ci + 1);
+          if (!temperleyKeep(wx, wy, tstride)) continue;
           const vx = 2 * b[0] - wx, vy = 2 * b[1] - wy;
           const far = tSquares.has(tkey(vx, vy));
           const ex = far ? vx : b[0], ey = far ? vy : b[1];
