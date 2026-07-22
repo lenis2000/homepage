@@ -994,6 +994,12 @@ permalink: /domino/
         </div>
         <div class="control-row">
           <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
+            <input type="checkbox" id="hide-dominoes-checkbox">
+            No dimers
+          </label>
+        </div>
+        <div class="control-row">
+          <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 13px;">
             <input type="checkbox" id="height-gradient-checkbox" checked>
             Height gradient (3D)
           </label>
@@ -3523,6 +3529,11 @@ async function initializeDominoRuntime() {
     if (getActiveView() === "2d") updateDominoDisplay();
   });
 
+  // "No dimers" toggle: hide the domino tiles, show only the overlays
+  document.getElementById("hide-dominoes-checkbox").addEventListener("change", function() {
+    if (getActiveView() === "2d") updateDominoDisplay();
+  });
+
   // Checkerboard overlay toggle handler
   document.getElementById("checkerboard-checkbox-2d").addEventListener("change", function() {
     if (getActiveView() === "2d") updateDominoDisplay();
@@ -3713,6 +3724,7 @@ async function initializeDominoRuntime() {
     return {
       n,
       showColors: document.getElementById("show-colors-checkbox")?.checked !== false,
+      hideDominoes: Boolean(document.getElementById("hide-dominoes-checkbox")?.checked),
       useGrayscale: Boolean(document.getElementById("grayscale-checkbox-2d")?.checked),
       showCheckerboard: Boolean(document.getElementById("checkerboard-checkbox-2d")?.checked),
       showPaths: Boolean(document.getElementById("paths-checkbox-2d")?.checked),
@@ -4218,6 +4230,7 @@ async function initializeDominoRuntime() {
     }
 
     drawDominoFillBatches(ctx, settings) {
+      if (settings.hideDominoes) return; // "No dimers": show only the overlays
       const batches = new Map();
       const inset = settings.borderWidth > 0 ? Math.min(0.04, settings.borderWidth * 0.04) : 0;
       for (const d of this.dominoes) {
@@ -4240,6 +4253,7 @@ async function initializeDominoRuntime() {
     }
 
     drawBorderStrokePass(ctx, settings, cacheScale = 1) {
+      if (settings.hideDominoes) return;
       if (settings.borderWidth <= 0) return;
       if (settings.borderWidth * cacheScale < 0.5) return;
       const path = new Path2D();
@@ -4992,6 +5006,7 @@ async function initializeDominoRuntime() {
     const temperleyWidth = Math.max(0.05, parseFloat(document.getElementById("temperley-width-2d")?.value) || 0.45);
     const temperleyStrideExport = Math.max(1, parseInt(document.getElementById("temperley-stride-2d")?.value, 10) || 1);
     const useDoubleDimer = document.getElementById("double-dimer-checkbox-2d")?.checked || false;
+    const hideDominoesExport = document.getElementById("hide-dominoes-checkbox")?.checked || false;
     const doubleDimerMinLoopExport = Math.max(2, parseInt(document.getElementById("double-dimer-minloop-2d")?.value, 10) || 6);
     const doubleDimerWidthExport = Math.max(0.05, parseFloat(document.getElementById("double-dimer-width-2d")?.value) || 0.5);
     const showColors = document.getElementById("show-colors-checkbox")?.checked || false;
@@ -5347,8 +5362,8 @@ async function initializeDominoRuntime() {
 % Dominoes (rectangles)
 `;
 
-    // Add rectangles to TikZ code
-    rectangles.forEach(rect => {
+    // Add rectangles to TikZ code (skipped in "No dimers" mode)
+    if (!hideDominoesExport) rectangles.forEach(rect => {
       // Map SVG colors to TikZ colors
       let fillColor = rect.fill;
       // If it's already a TikZ grayscale format (black!X), keep it as is
@@ -5897,8 +5912,9 @@ async function initializeDominoRuntime() {
       const showColors = document.getElementById("show-colors-checkbox")?.checked !== false;
       const useGrayscale = document.getElementById("grayscale-checkbox-2d")?.checked === true;
       const borderWidth = parseFloat(document.getElementById("border-width-input").value) || 0.1;
+      const hideDominoesPDF = document.getElementById("hide-dominoes-checkbox")?.checked || false;
 
-      cachedDominoes.forEach(domino => {
+      if (!hideDominoesPDF) cachedDominoes.forEach(domino => {
         // Determine fill color based on current settings
         let fillColor;
         if (!showColors) {
