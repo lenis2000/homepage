@@ -10,7 +10,7 @@ link-description: |
   Notes in progress "From Yang-Baxter to Robinson-Schensted-Knuth", overview lectures at the conference "Solvable lattice models, representation theory of quantum groups and algebraic combinatorics", Institut Mittag-Leffler, Djursholm, Sweden, July 2026
 cv-number: 8
 lec-pdf: lec08-yang-baxter-rsk-notes.pdf
-lec-pdf-size: 618 KB, 39 pages
+lec-pdf-size: 635 KB, 40 pages
 pdf: lec08-yang-baxter-rsk-notes.pdf
 post-pdf: true
 show-date: true
@@ -18,7 +18,7 @@ no-page: true
 published: true
 ---
 
-[PDF]({{site.storage_url}}/papers/lec08-yang-baxter-rsk-notes.pdf) &bull; 39 pages.
+[PDF]({{site.storage_url}}/papers/lec08-yang-baxter-rsk-notes.pdf) &bull; 40 pages.
 
 These notes accompany two overview lectures given at the conference [Solvable lattice models, representation theory of quantum groups and algebraic combinatorics](https://www.mittag-leffler.se/activities/solvable-lattice-models-representation-theory-of-quantum-groups-and-algebraic-combinatorics/) at Institut Mittag-Leffler, Djursholm, Sweden, July 27-31, 2026.
 
