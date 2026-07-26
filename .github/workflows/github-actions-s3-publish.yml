@@ -1,5 +1,7 @@
 name: Build and deploy Jekyll site
-on: [push]
+on:
+  push:
+    branches: [master]
 
 jobs:
   jekyll:
