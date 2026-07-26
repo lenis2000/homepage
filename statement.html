@@ -176,7 +176,7 @@ published: false
                 <li value="{{post.cv-number}}" class="mb-1" style="padding:6px">
                   <strong>
                     {{post.link-description}} &bull;
-                    <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></strong> &bull; (<a href="{{site.storage_url}}/papers/{{post.lec-pdf}}">PDF</a>{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%})
+                    <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></strong> &bull; (<a href="{% if post.lec-pdf-link %}{{post.lec-pdf-link}}{% else %}{{site.storage_url}}/papers/{{post.lec-pdf}}{% endif %}">PDF</a>{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%})
                 </li>
 
               {% endif %}
@@ -265,7 +265,7 @@ published: false
           <strong>
             {{post.link-description}} &bull;
             <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></strong>
-            &bull; (<a href="{{site.storage_url}}/papers/{{post.lec-pdf}}">PDF</a>)
+            &bull; (<a href="{% if post.lec-pdf-link %}{{post.lec-pdf-link}}{% else %}{{site.storage_url}}/papers/{{post.lec-pdf}}{% endif %}">PDF</a>)
         </li>
 
       {% endif %}

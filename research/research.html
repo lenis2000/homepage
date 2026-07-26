@@ -134,7 +134,7 @@ nav_weight: 2
             <strong>
               {{post.link-description}}{% if post.link-for-cv %} &bull;
               <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a>{% endif %}</strong>
-              &bull; (<a href="{{site.storage_url}}/papers/{{post.lec-pdf}}" aria-label="PDF of {{post.link-description}}">PDF</a>{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%})
+              &bull; (<a href="{% if post.lec-pdf-link %}{{post.lec-pdf-link}}{% else %}{{site.storage_url}}/papers/{{post.lec-pdf}}{% endif %}" aria-label="PDF of {{post.link-description}}">PDF</a>{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%})
           </li>
 
         {% endif %}
