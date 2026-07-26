@@ -6,8 +6,6 @@ comments: false
 coauthors:
   - name: Leonid Petrov
 categories: unpublished-lecture-notes
-link-for-cv: https://lpetrov.cc/ybe-rsk-notes/
-link-text: Webpage with notes
 link-description: |
   Notes in progress "From Yang-Baxter to Robinson-Schensted-Knuth", overview lectures at the conference "Solvable lattice models, representation theory of quantum groups and algebraic combinatorics", Institut Mittag-Leffler, Djursholm, Sweden, July 2026
 cv-number: 8
@@ -16,8 +14,11 @@ lec-pdf-size: 618 KB, 39 pages
 pdf: lec08-yang-baxter-rsk-notes.pdf
 post-pdf: true
 show-date: true
+no-page: true
 published: true
 ---
+
+[PDF]({{site.storage_url}}/papers/lec08-yang-baxter-rsk-notes.pdf) &bull; 39 pages.
 
 These notes accompany two overview lectures given at the conference [Solvable lattice models, representation theory of quantum groups and algebraic combinatorics](https://www.mittag-leffler.se/activities/solvable-lattice-models-representation-theory-of-quantum-groups-and-algebraic-combinatorics/) at Institut Mittag-Leffler, Djursholm, Sweden, July 27-31, 2026.
 

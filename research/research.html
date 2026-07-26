@@ -132,8 +132,8 @@ nav_weight: 2
 
           <li value="{{post.cv-number}}" class="mb-1" style="padding:6px" data-category="lecture-notes" data-title="{{post.link-description | downcase}}" data-basic-search="{{post.cv-number}} {{post.link-description}} {{post.link-text}}">
             <strong>
-              {{post.link-description}} &bull;
-              <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a></strong>
+              {{post.link-description}}{% if post.link-for-cv %} &bull;
+              <a href="{{post.link-for-cv}}" class="highlighted-item">{{post.link-text}}</a>{% endif %}</strong>
               &bull; (<a href="{{site.storage_url}}/papers/{{post.lec-pdf}}" aria-label="PDF of {{post.link-description}}">PDF</a>{%if post.lec-pdf-size%}, {{post.lec-pdf-size}}{%endif%})
           </li>
 
