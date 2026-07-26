@@ -62,10 +62,6 @@ jobs:
         mv ./_site/teaching/syll/Syllabus_EGMT_s26.html ./_site/teaching/
         rm -Rf _site/teaching/syll
 
-        # temporary short link lpetrov.cc/ybe-rsk.pdf for the Mittag-Leffler lecture notes
-        curl -fsSL --retry 3 -o ./_site/ybe-rsk.pdf \
-          https://storage.lpetrov.cc/papers/lec08-yang-baxter-rsk-notes.pdf
-
     # - name: Check HTML
     #   uses: chabad360/htmlproofer@master
     #   with:
