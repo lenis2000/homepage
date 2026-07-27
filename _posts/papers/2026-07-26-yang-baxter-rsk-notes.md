@@ -11,7 +11,7 @@ link-description: |
 cv-number: 8
 lec-pdf: lec08-yang-baxter-rsk-notes.pdf
 lec-pdf-link: https://lpetrov.cc/ybe-rsk.pdf
-lec-pdf-size: 635 KB, 40 pages
+lec-pdf-size: 630 KB, 40 pages
 pdf: lec08-yang-baxter-rsk-notes.pdf
 post-pdf: true
 show-date: true
