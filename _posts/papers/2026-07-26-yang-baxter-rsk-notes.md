@@ -11,7 +11,7 @@ link-description: |
 cv-number: 8
 lec-pdf: lec08-yang-baxter-rsk-notes.pdf
 lec-pdf-link: https://lpetrov.cc/ybe-rsk.pdf
-lec-pdf-size: 630 KB, 40 pages
+lec-pdf-size: 639 KB, 42 pages
 pdf: lec08-yang-baxter-rsk-notes.pdf
 post-pdf: true
 show-date: true
@@ -19,7 +19,7 @@ no-page: true
 published: true
 ---
 
-[PDF](https://lpetrov.cc/ybe-rsk.pdf) &bull; 40 pages.
+[PDF](https://lpetrov.cc/ybe-rsk.pdf) &bull; 42 pages.
 
 These notes accompany two overview lectures given at the conference [Solvable lattice models, representation theory of quantum groups and algebraic combinatorics](https://www.mittag-leffler.se/activities/solvable-lattice-models-representation-theory-of-quantum-groups-and-algebraic-combinatorics/) at Institut Mittag-Leffler, Djursholm, Sweden, July 27-31, 2026.
 
