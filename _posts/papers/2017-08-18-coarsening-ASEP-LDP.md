@@ -47,6 +47,7 @@ our proofs are refinements of block arguments of Fontes-Schonmann-Sidoravicius
 and a novel exponential large deviation bound for the Asymmetric Simple
 Exclusion Process.
 
+{% comment %}
 ---
 
 ##### A poem on the topic 
@@ -83,3 +84,4 @@ With its biased flips and exponential bounds,<br>
 Will be the key to understanding,<br>
 The ASEP dynamics and its expanding.<br>
 </p>
+{% endcomment %}

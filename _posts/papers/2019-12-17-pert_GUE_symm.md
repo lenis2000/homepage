@@ -27,6 +27,7 @@ The perturbed GUE corners ensemble is the joint distribution of eigenvalues of a
 The construction we present may be viewed as a random matrix analogue of the [recent results]({{site.url}}/2019/07/backwards_TASEP/) of the first author and Axel Saenz.
 
 
+{% comment %}
 ---
 
 ##### A poem on the topic 
@@ -55,3 +56,4 @@ A mathematical game<br>
 The symmetry of perturbed GUE corners<br>
 And reflected drifted Brownian motion the same<br>
 </p>
+{% endcomment %}
