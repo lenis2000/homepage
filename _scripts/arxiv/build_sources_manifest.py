@@ -7,6 +7,9 @@ Outputs:
      — used by the source viewer page for instant loading
   2. assets/data/arxiv-sources-ids.json — lightweight ID list
      — used by the arxiv feed to show/hide "src" badges
+     — only papers marked uploaded in sources/manifest.json are listed,
+       since a badge on a paper whose files are not yet on S3 links to a
+       viewer page that can only 404
 
 Usage:
     python3 build_sources_manifest.py              # build + upload _files.json
@@ -25,6 +28,7 @@ from s3_upload_gate import should_upload, record_upload, days_until_next
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 SOURCES_DIR = SCRIPT_DIR / "sources"
+MANIFEST_FILE = SOURCES_DIR / "manifest.json"
 IDS_FILE = REPO_ROOT / "assets" / "data" / "arxiv-sources-ids.json"
 ARXIV_DIR = REPO_ROOT / "_arxiv"
 
@@ -60,6 +64,13 @@ def get_all_arxiv_ids() -> list[str]:
                     ids.append(arxiv_id)
                     break
     return ids
+
+
+def load_upload_manifest() -> dict:
+    """Read the upload manifest written by download_sources.py."""
+    if MANIFEST_FILE.exists():
+        return json.loads(MANIFEST_FILE.read_text())
+    return {}
 
 
 def scan_local_dir(arxiv_id: str) -> list[dict] | None:
@@ -107,10 +118,12 @@ def main():
     args = parser.parse_args()
 
     all_ids = get_all_arxiv_ids()
+    upload_manifest = load_upload_manifest()
     source_ids = []
     written = 0
     unchanged = 0
     missing_count = 0
+    pending_count = 0
 
     print(f"Papers in feed: {len(all_ids)}")
 
@@ -119,7 +132,10 @@ def main():
         files = scan_local_dir(arxiv_id)
 
         if files:
-            source_ids.append(arxiv_id)
+            if upload_manifest.get(arxiv_id, {}).get("uploaded"):
+                source_ids.append(arxiv_id)
+            else:
+                pending_count += 1
             if not args.dry_run:
                 _, changed = write_files_json(arxiv_id, files)
                 if changed:
@@ -134,6 +150,9 @@ def main():
 
     print(f"\nWith sources: {len(source_ids)}")
     print(f"Missing:      {missing_count}")
+    if pending_count:
+        print(f"Downloaded but not yet on S3 (no badge): {pending_count}"
+              f" — run 'make arxiv-sources-upload'")
 
     if args.dry_run:
         print("(dry run — nothing written)")
