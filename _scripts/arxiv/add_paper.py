@@ -3,13 +3,14 @@
 Add an individual arXiv paper by ID.
 
 Fetches from arXiv API, generates a Jekyll post, updates processed.json,
-inserts into Kaggle SQLite DB, rebuilds search index, and recomputes
-embeddings + related papers.
+inserts into Kaggle SQLite DB, and rebuilds the search index.
+
+Related-paper embeddings are not recomputed here; run
+`make arxiv-related` (or `make arxiv-full-update`) for that.
 
 Usage:
     python3 _scripts/arxiv/add_paper.py 2505.15726
     python3 _scripts/arxiv/add_paper.py https://arxiv.org/abs/2505.15726
-    python3 _scripts/arxiv/add_paper.py 2505.15726 --no-related   # skip embeddings
     python3 _scripts/arxiv/add_paper.py 2505.15726 --dry-run      # preview only
 """
 
@@ -196,8 +197,6 @@ def main():
     parser = argparse.ArgumentParser(description="Add a single arXiv paper by ID")
     parser.add_argument("paper_id", help="arXiv ID, URL, or citation (e.g. 2505.15726)")
     parser.add_argument("--dry-run", action="store_true", help="Preview without writing")
-    parser.add_argument("--no-related", action="store_true",
-                        help="Skip embeddings/related-papers recomputation")
     parser.add_argument("--no-index", action="store_true",
                         help="Skip search index rebuild")
     parser.add_argument("--source", default="manual",
@@ -292,17 +291,6 @@ def main():
         print("  Rebuilding search index...")
         subprocess.run(
             [sys.executable, str(SCRIPT_DIR / "build_search_index.py")],
-            check=True,
-        )
-
-    # Recompute embeddings + related papers
-    if not args.no_related:
-        print("  Recomputing embeddings and related papers...")
-        # Use the venv python if available (needs sentence-transformers)
-        venv_python = SCRIPT_DIR / "venv" / "bin" / "python"
-        python = str(venv_python) if venv_python.exists() else sys.executable
-        subprocess.run(
-            [python, str(SCRIPT_DIR / "build_arxiv_embeddings.py")],
             check=True,
         )
 

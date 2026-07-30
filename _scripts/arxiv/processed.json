@@ -31892,6 +31892,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "1912.03510": {
+    "date": "2019-12-07",
+    "decision": "ACCEPT",
+    "source": "manual"
+  },
   "1912.03636": {
     "date": "2019-12-08",
     "decision": "REJECT",
@@ -45256,6 +45261,11 @@
     "date": "2024-04-10",
     "decision": "ACCEPT",
     "source": "fetch"
+  },
+  "2404.07285": {
+    "date": "2024-04-10",
+    "decision": "ACCEPT",
+    "source": "manual"
   },
   "2404.07728": {
     "date": "2024-04-11",
