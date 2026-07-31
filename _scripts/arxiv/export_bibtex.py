@@ -132,8 +132,8 @@ def load_cache():
     rows = conn.execute(
         """
         SELECT arxiv_id,
-               journal_volume,
-               journal_pages,
+               CASE WHEN journal_name != '' THEN journal_volume ELSE crossref_volume END,
+               CASE WHEN journal_name != '' THEN journal_pages ELSE crossref_pages END,
                doi,
                COALESCE(crossref_year, pub_year)
         FROM journal_refs
