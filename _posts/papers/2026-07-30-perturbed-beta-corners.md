@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Perturbed Beta Corners Process"
-arXiv: 2607.????? [math.PR]
+arXiv: 2607.27810 [math.PR]
 coauthors:
   - name: Leonid Petrov
   - name: Jiaming Xu
