@@ -275,20 +275,19 @@ def update_post_frontmatter(filepath, related_ids):
     front = parts[1]
     body = parts[2]
 
-    # Remove any existing related-papers block
-    front = re.sub(
-        r'\nrelated-papers:.*?(?=\n[a-zA-Z_]|\Z)',
-        '',
-        front,
-        flags=re.DOTALL,
-    )
-
-    # Build new related-papers block
+    block = ""
     if related_ids:
-        lines = "\nrelated-papers:"
+        block = "\nrelated-papers:"
         for rid in related_ids:
-            lines += f'\n  - "{rid}"'
-        front = front.rstrip() + lines + "\n"
+            block += f'\n  - "{rid}"'
+
+    # Rewrite the block where it already sits, so posts that gained other keys
+    # afterwards (journal-ref, say) are not churned just to re-append this.
+    pattern = re.compile(r'\nrelated-papers:.*?(?=\n[a-zA-Z_]|\Z)', flags=re.DOTALL)
+    if pattern.search(front):
+        front = pattern.sub(lambda _: block, front, count=1)
+    elif block:
+        front = front.rstrip() + block
 
     # Ensure front matter ends with a newline before closing ---
     if not front.endswith("\n"):
