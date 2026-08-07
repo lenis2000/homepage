@@ -103,6 +103,8 @@ deploy-local-full:
 	@cp /tmp/homepage-syllabi/Syllabus_EGMT_f25.pdf _site/teaching/
 	@cp /tmp/homepage-syllabi/Syllabus_EGMT_s26.pdf _site/teaching/
 	@cp /tmp/homepage-syllabi/Syllabus_EGMT_s26.html _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_EGMT_f26.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_EGMT_f26.html _site/teaching/
 	@rm -rf /tmp/homepage-cv /tmp/homepage-syllabi
 	@echo "Syncing to S3 (full sync with --delete)..."
 	aws s3 sync _site/ s3://lpetrov.cc --delete
@@ -138,6 +140,8 @@ deploy-local:
 	@cp /tmp/homepage-syllabi/Syllabus_EGMT_f25.pdf _site/teaching/
 	@cp /tmp/homepage-syllabi/Syllabus_EGMT_s26.pdf _site/teaching/
 	@cp /tmp/homepage-syllabi/Syllabus_EGMT_s26.html _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_EGMT_f26.pdf _site/teaching/
+	@cp /tmp/homepage-syllabi/Syllabus_EGMT_f26.html _site/teaching/
 	@rm -rf /tmp/homepage-cv /tmp/homepage-syllabi
 	@echo "Syncing to S3 (size-only comparison, no deletes)..."
 	aws s3 sync _site/ s3://lpetrov.cc --size-only
