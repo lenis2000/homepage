@@ -60,6 +60,8 @@ jobs:
         mv ./_site/teaching/syll/Syllabus_EGMT_f25.pdf ./_site/teaching/
         mv ./_site/teaching/syll/Syllabus_EGMT_s26.pdf ./_site/teaching/
         mv ./_site/teaching/syll/Syllabus_EGMT_s26.html ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_EGMT_f26.pdf ./_site/teaching/
+        mv ./_site/teaching/syll/Syllabus_EGMT_f26.html ./_site/teaching/
         rm -Rf _site/teaching/syll
 
     # - name: Check HTML
