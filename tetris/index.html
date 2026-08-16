@@ -76,6 +76,8 @@ body{display:flex;flex-direction:column;align-items:center;
   padding:10px 28px;border-radius:6px;font-size:15px;font-weight:600;
   cursor:pointer;letter-spacing:1px;font-family:inherit}
 #overlay-btn:hover,#overlay-btn:active{background:#ff9100;color:#0d0d1a}
+#overlay-btn.locked{border-color:#555;color:#777;cursor:default}
+#overlay-btn.locked:hover,#overlay-btn.locked:active{background:none;color:#777}
 #level-pick{display:flex;align-items:center;gap:12px;margin-bottom:14px;
   -webkit-user-select:none;user-select:none}
 #level-pick span{font-family:'SF Mono',Monaco,'Courier New',monospace;
@@ -240,6 +242,8 @@ var state; // 'menu','playing','paused','clearing','dying','over'
 var deathRow, deathStart;
 var bag = [];
 var pieceGen = 0;
+var PLAY_GAP_MS = 15 * 60 * 1000;
+var overlayBtnLabel = 'START';
 var highScore = parseInt(localStorage.getItem('tetris-hi')) || 0;
 var startLevel = parseInt(localStorage.getItem('tetris-slv')) || 1;
 var cellSize = 30;
@@ -611,10 +615,47 @@ function showOverlay(title, sub, btn) {
   overlayTitle.textContent = title;
   overlaySub.textContent = sub;
   overlayBtn.textContent = btn;
+  overlayBtnLabel = btn;
   var lp = document.getElementById('level-pick');
   if (lp) lp.style.display = (title === 'PAUSED') ? 'none' : 'flex';
+  refreshLock();
 }
 function hideOverlay() { overlay.classList.add('hidden'); }
+
+// ── Play limit: one game per 15 minutes ──
+function lastStartAt() {
+  var t = 0;
+  try { t = parseInt(localStorage.getItem('tetris-last-start'), 10) || 0; } catch(e) { t = 0; }
+  // A clock moved backwards would otherwise lock the game out permanently.
+  if (t > Date.now()) t = 0;
+  return t;
+}
+function lockLeft() {
+  var left = lastStartAt() + PLAY_GAP_MS - Date.now();
+  return left > 0 ? left : 0;
+}
+function lockLabel(ms) {
+  var s = Math.ceil(ms / 1000);
+  var m = Math.floor(s / 60);
+  s -= m * 60;
+  return 'WAIT ' + m + ':' + (s < 10 ? '0' : '') + s;
+}
+function refreshLock() {
+  if (state !== 'menu' && state !== 'over') return;
+  var left = lockLeft();
+  if (left > 0) {
+    overlayBtn.textContent = lockLabel(left);
+    overlayBtn.classList.add('locked');
+  } else {
+    overlayBtn.textContent = overlayBtnLabel;
+    overlayBtn.classList.remove('locked');
+  }
+}
+function requestNewGame() {
+  if (lockLeft() > 0) { refreshLock(); return; }
+  try { localStorage.setItem('tetris-last-start', String(Date.now())); } catch(e) {}
+  newGame();
+}
 
 // ── Game Flow ──
 function newGame() {
@@ -720,7 +761,7 @@ function stopRepeat(key) {
 document.addEventListener('keydown', function(e) {
   if (e.repeat) return;
   if (state === 'menu' || state === 'over') {
-    if (e.key !== 'Tab') { newGame(); e.preventDefault(); }
+    if (e.key !== 'Tab') { requestNewGame(); e.preventDefault(); }
     return;
   }
   if (state === 'paused' && (e.key === 'p' || e.key === 'P' || e.key === 'Escape')) {
@@ -880,7 +921,7 @@ document.addEventListener('keyup', function(e) {
 
 // ── Overlay Button ──
 overlayBtn.addEventListener('click', function() {
-  if (state === 'menu' || state === 'over') newGame();
+  if (state === 'menu' || state === 'over') requestNewGame();
   else if (state === 'paused') togglePause();
 });
 
@@ -918,9 +959,10 @@ function init() {
   // Re-measure once layout has settled — preview canvases start at 72px
   // wide, but capped side panels need a second pass to stabilize.
   requestAnimationFrame(function(){ requestAnimationFrame(resize); });
-  showOverlay('TETRIS', 'Tap or press any key', 'START');
+  showOverlay('TETRIS', 'Tap or press any key · one game per 15 min', 'START');
   updateUI();
   draw();
+  setInterval(refreshLock, 1000);
   rafId = requestAnimationFrame(loop);
 }
 

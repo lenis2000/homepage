@@ -87,6 +87,8 @@ body{display:flex;flex-direction:column;align-items:center;
   padding:10px 28px;border-radius:6px;font-size:15px;font-weight:600;
   cursor:pointer;letter-spacing:1px;font-family:inherit;min-width:180px}
 .overlay-btn:hover,.overlay-btn:active{background:#ff9100;color:#0d0d1a}
+.overlay-btn.locked{border-color:#555;color:#777;cursor:default}
+.overlay-btn.locked:hover,.overlay-btn.locked:active{background:none;color:#777}
 .overlay-btn-ghost{border-color:#888;color:#ccc}
 .overlay-btn-ghost:hover,.overlay-btn-ghost:active{background:#888;color:#0d0d1a}
 #solution-btn[hidden]{display:none}
@@ -194,6 +196,7 @@ var tray = [];
 var score = 0;
 var best = parseInt(localStorage.getItem('block-hi') || '0', 10) || 0;
 var state = 'menu'; // 'menu' | 'playing' | 'animating' | 'over' | 'solving'
+var PLAY_GAP_MS = 15 * 60 * 1000;
 var dragState = null;
 var TARGET_SCORE_4TRAY = 5000;
 var TARGET_SCORE_5TRAY = 10000;
@@ -1159,7 +1162,7 @@ function onKeyDown(e) {
   if (state === 'menu') {
     if (key === 'Enter' || key === ' ') {
       e.preventDefault();
-      startGame();
+      requestStartGame();
     }
     return;
   }
@@ -1167,7 +1170,7 @@ function onKeyDown(e) {
   if (state === 'over') {
     if (key === 'Enter' || key === ' ') {
       e.preventDefault();
-      startGame();
+      requestStartGame();
     }
     return;
   }
@@ -1720,6 +1723,7 @@ function showGameOver() {
   overlaySub.innerHTML = sub;
   var canShow = !!(lastRefillBoardSnapshot && lastRefillSolution && lastRefillSolution.length > 0);
   solutionBtn.hidden = !canShow;
+  refreshLock();
   overlay.classList.remove('hidden');
 }
 
@@ -1729,13 +1733,49 @@ function showMenu() {
   trayBonusStartedAt = 0;
   trayBonusDurationMs = 0;
   overlayTitle.textContent = 'BLOCK PUZZLE';
-  overlaySub.innerHTML = 'Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Keyboard: <b>1</b>–<b>5</b> select, arrows skip blocked spots, <b>Shift</b>+arrows jump.<br>Start with <b>1</b> undo; recharge every <b>500</b> points.<br>Finish each tray before time ends for bonus.';
+  overlaySub.innerHTML = 'Drag pieces from the tray onto the grid.<br>Fill a row or column to clear it.<br>Keyboard: <b>1</b>–<b>5</b> select, arrows skip blocked spots, <b>Shift</b>+arrows jump.<br>Start with <b>1</b> undo; recharge every <b>500</b> points.<br>Finish each tray before time ends for bonus.<br>One game every <b>15</b> minutes.';
   solutionBtn.hidden = true;
+  refreshLock();
   overlay.classList.remove('hidden');
 }
 
 function hideOverlay() {
   overlay.classList.add('hidden');
+}
+
+// ── Play limit: one game per 15 minutes ──────────────────────────────────
+function lastStartAt() {
+  var t = 0;
+  try { t = parseInt(localStorage.getItem('block-last-start'), 10) || 0; } catch (e) { t = 0; }
+  // A clock moved backwards would otherwise lock the game out permanently.
+  if (t > Date.now()) t = 0;
+  return t;
+}
+
+function lockLeft() {
+  var left = lastStartAt() + PLAY_GAP_MS - Date.now();
+  return left > 0 ? left : 0;
+}
+
+function refreshLock() {
+  if (state !== 'menu' && state !== 'over') return;
+  var left = lockLeft();
+  if (left > 0) {
+    var s = Math.ceil(left / 1000);
+    var m = Math.floor(s / 60);
+    s -= m * 60;
+    startBtn.textContent = 'WAIT ' + m + ':' + (s < 10 ? '0' : '') + s;
+    startBtn.classList.add('locked');
+  } else {
+    startBtn.textContent = 'START';
+    startBtn.classList.remove('locked');
+  }
+}
+
+function requestStartGame() {
+  if (lockLeft() > 0) { refreshLock(); return; }
+  try { localStorage.setItem('block-last-start', String(Date.now())); } catch (e) {}
+  startGame();
 }
 
 function startGame() {
@@ -1785,7 +1825,7 @@ function init() {
   canvas.addEventListener('pointercancel', onPointerCancel, { passive: false });
   canvas.addEventListener('lostpointercapture', onPointerCancel, { passive: false });
 
-  startBtn.addEventListener('click', function() { startGame(); });
+  startBtn.addEventListener('click', function() { requestStartGame(); });
   solutionBtn.addEventListener('click', function() {
     if (state === 'over') startSolutionPlayback();
   });
@@ -1812,6 +1852,7 @@ function init() {
   requestAnimationFrame(function() { requestAnimationFrame(resize); });
 
   showMenu();
+  setInterval(refreshLock, 1000);
 
   // Register service worker
   if ('serviceWorker' in navigator) {
