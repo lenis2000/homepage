@@ -622,17 +622,20 @@ function showOverlay(title, sub, btn) {
 }
 function hideOverlay() { overlay.classList.add('hidden'); }
 
-// ── Play limit: one game per 15 minutes ──
-function lastStartAt() {
+// ── Play limit: 15 minutes after each game ends ──
+function lastEndAt() {
   var t = 0;
-  try { t = parseInt(localStorage.getItem('tetris-last-start'), 10) || 0; } catch(e) { t = 0; }
+  try { t = parseInt(localStorage.getItem('tetris-last-end'), 10) || 0; } catch(e) { t = 0; }
   // A clock moved backwards would otherwise lock the game out permanently.
   if (t > Date.now()) t = 0;
   return t;
 }
 function lockLeft() {
-  var left = lastStartAt() + PLAY_GAP_MS - Date.now();
+  var left = lastEndAt() + PLAY_GAP_MS - Date.now();
   return left > 0 ? left : 0;
+}
+function markGameEnd() {
+  try { localStorage.setItem('tetris-last-end', String(Date.now())); } catch(e) {}
 }
 function lockLabel(ms) {
   var s = Math.ceil(ms / 1000);
@@ -653,7 +656,6 @@ function refreshLock() {
 }
 function requestNewGame() {
   if (lockLeft() > 0) { refreshLock(); return; }
-  try { localStorage.setItem('tetris-last-start', String(Date.now())); } catch(e) {}
   newGame();
 }
 
@@ -732,6 +734,7 @@ function loop(now) {
       deathStart = now;
       if (deathRow < 0) {
         state = 'over';
+        markGameEnd();
         showOverlay('GAME OVER', 'Score: ' + score, 'RESTART');
       }
     }
@@ -959,7 +962,7 @@ function init() {
   // Re-measure once layout has settled — preview canvases start at 72px
   // wide, but capped side panels need a second pass to stabilize.
   requestAnimationFrame(function(){ requestAnimationFrame(resize); });
-  showOverlay('TETRIS', 'Tap or press any key · one game per 15 min', 'START');
+  showOverlay('TETRIS', 'Tap or press any key · 15 min wait after each game', 'START');
   updateUI();
   draw();
   setInterval(refreshLock, 1000);
