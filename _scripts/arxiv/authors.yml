@@ -10,6 +10,9 @@
 #   topics: Research topics (for AI context)
 #   disambiguation: Hint for AI to distinguish from namesakes
 #   high_ambiguity: Force AI review even for category-matching papers
+#   also_first_names: Extra first-name spellings (transliterations, nicknames) accepted
+#     for this author; a spelled-out first name matching none of the known
+#     variants (name, also_first_names, names on accepted posts) rejects the match
 
 categories:
   - math.PR

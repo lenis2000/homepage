@@ -16,6 +16,7 @@ import re
 import subprocess
 import sys
 import time
+import unicodedata
 import argparse
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -380,6 +381,99 @@ def semantic_filter(papers, threshold=0.72):
     return results
 
 
+def _norm_forename(name):
+    """Lowercase, strip diacritics, hyphens, dots and spaces: 'Jhih-Huang' -> 'jhihhuang'."""
+    stripped = "".join(c for c in unicodedata.normalize("NFKD", name)
+                       if not unicodedata.combining(c))
+    return re.sub(r"[\s.\-']", "", stripped).lower()
+
+
+def _is_full_forename(token):
+    """True for a spelled-out first name; False for initials like 'J.', 'J', 'J.-H.'."""
+    return len(_norm_forename(token)) >= 2 and not token.endswith(".")
+
+
+def _forenames_compatible(observed, known):
+    """Either name is a prefix of the other after normalization: Alex ~ Alexander, Jhih ~ Jhih-Huang."""
+    a, b = _norm_forename(observed), _norm_forename(known)
+    return bool(a) and bool(b) and (a.startswith(b) or b.startswith(a))
+
+
+def _split_tracked_name(arxiv_name):
+    """'Di_Francesco_P' -> ('Di Francesco', 'P'); None if malformed."""
+    parts = arxiv_name.split("_")
+    if len(parts) < 2:
+        return None
+    return " ".join(parts[:-1]), parts[-1]
+
+
+def _author_matches_pattern(paper_author, surname, initial):
+    """Surname + first-initial match used both for live matching and for learning forenames."""
+    name_parts = paper_author.strip().split()
+    surname_words = surname.split()
+    if len(name_parts) <= len(surname_words):
+        return False
+    pa_surname = " ".join(name_parts[-len(surname_words):])
+    pa_initial = name_parts[0][0] if name_parts[0] else ""
+    return pa_surname.lower() == surname.lower() and pa_initial.upper() == initial.upper()
+
+
+_known_forenames_cache = {}
+
+
+def known_forenames(config):
+    """Forename variants per tracked author, learned from accepted posts in OUTPUT_DIR.
+
+    Seeded with the first token of `name:` and any `also_first_names:` in
+    authors.yml, then extended by every forename on an accepted post whose
+    author matches the tracked Surname_Initial pattern. Namesake coauthors
+    on accepted posts leak into the set, which only makes the filter more
+    lenient, never causes a wrong rejection. Returns {tracked name: set}.
+    """
+    key = id(config)
+    if key in _known_forenames_cache:
+        return _known_forenames_cache[key]
+
+    patterns = []  # (tracked name, surname, initial)
+    result = {}
+    for tracked in config["authors"]:
+        names = {tracked["name"].split()[0]} if tracked.get("name") else set()
+        names.update(tracked.get("also_first_names", []))
+        result[tracked["name"]] = names
+        for arxiv_name in tracked["arxiv_names"]:
+            parsed = _split_tracked_name(arxiv_name)
+            if parsed:
+                patterns.append((tracked["name"], *parsed))
+
+    for path in OUTPUT_DIR.glob("*.md"):
+        text = path.read_text(errors="replace")
+        end = text.find("\n---", 3)
+        front = text[:end] if end > 0 else text
+        m = re.search(r"^authors:\n((?:  - .*\n)+)", front, re.M)
+        if not m:
+            continue
+        authors = [a.strip().strip('"') for a in re.findall(r"^  - (.*)$", m.group(1), re.M)]
+        for tracked_name, surname, initial in patterns:
+            for pa in authors:
+                if _author_matches_pattern(pa, surname, initial):
+                    first = pa.strip().split()[0]
+                    if _is_full_forename(first):
+                        result[tracked_name].add(first)
+
+    _known_forenames_cache[key] = result
+    return result
+
+
+def forename_rejects(paper_author, tracked, config):
+    """True when the paper author's spelled-out first name matches none of the
+    tracked author's known variants (and at least one full variant is known)."""
+    first = paper_author.strip().split()[0]
+    if not _is_full_forename(first):
+        return False
+    known = [k for k in known_forenames(config).get(tracked["name"], ()) if _is_full_forename(k)]
+    return bool(known) and not any(_forenames_compatible(first, k) for k in known)
+
+
 def match_authors(paper, config):
     """Check if any paper author matches our tracked authors.
     Returns (matched_author_config, is_ambiguous) or (None, False).
@@ -395,30 +489,20 @@ def match_authors(paper, config):
 
     for tracked in config["authors"]:
         for arxiv_name in tracked["arxiv_names"]:
-            # Parse arxiv_name format: Surname_Initial (or Multi_Part_Surname_Initial)
-            parts = arxiv_name.split("_")
-            if len(parts) < 2:
+            parsed = _split_tracked_name(arxiv_name)
+            if not parsed:
                 continue
-            surname = " ".join(parts[:-1])  # "Di Francesco", "Van Peski", etc.
-            initial = parts[-1]
+            surname, initial = parsed
 
             for pa in paper_authors:
-                # Check if paper author matches: surname match + first initial
-                name_parts = pa.strip().split()
-                if not name_parts:
+                if not _author_matches_pattern(pa, surname, initial):
                     continue
-                # Surname might be multi-word: compare last N words
-                surname_words = surname.split()
-                if len(name_parts) <= len(surname_words):
+                if forename_rejects(pa, tracked, config):
+                    paper.setdefault("forename_rejections", []).append(f"{pa} ≠ {tracked['name']}")
                     continue
-                pa_surname = " ".join(name_parts[-len(surname_words):])
-                pa_initial = name_parts[0][0] if name_parts[0] else ""
-
-                if (pa_surname.lower() == surname.lower() and
-                        pa_initial.upper() == initial.upper()):
-                    if tracked["name"] not in seen_names:
-                        seen_names.add(tracked["name"])
-                        all_matches.append(tracked)
+                if tracked["name"] not in seen_names:
+                    seen_names.add(tracked["name"])
+                    all_matches.append(tracked)
 
     if not all_matches:
         return None, False
@@ -893,9 +977,15 @@ def main():
                         help="Fetch ALL papers from categories and filter by name + embedding similarity")
     parser.add_argument("--threshold", type=float, default=0.72,
                         help="Cosine similarity threshold for semantic mode (default: 0.72)")
+    parser.add_argument("--forename-report", action="store_true",
+                        help="Print each tracked author's learned first-name variants and exit")
     args = parser.parse_args()
 
     config = load_config()
+    if args.forename_report:
+        for name, variants in sorted(known_forenames(config).items()):
+            print(f"{name}: {', '.join(sorted(variants))}")
+        return 0
     processed = load_processed()
     categories = config.get("categories", ["math.PR"])
     if args.backfill:
@@ -1065,7 +1155,7 @@ def main():
                 if cat in completed_cats:
                     print(f"  {cat}: skipped (cached)")
                     continue
-                print(f"  Querying {cat} ({len(config['authors'])} authors in batches of 20)...")
+                print(f"  Querying {cat}...")
                 papers = fetch_category(cat, args.days, config, before_date=before_date)
                 for p in papers:
                     if p["arxiv_id"] not in all_papers:
@@ -1115,7 +1205,11 @@ def main():
             else:
                 clear.append(paper)
 
-    print(f"  {len(clear)} clear name matches, {len(ambiguous)} ambiguous")
+    forename_rejected = [p for p in new_papers.values() if p.get("forename_rejections")]
+    print(f"  {len(clear)} clear name matches, {len(ambiguous)} ambiguous, "
+          f"{len(forename_rejected)} papers had surname+initial matches rejected by first name")
+    for p in forename_rejected[:20]:
+        print(f"      {p['arxiv_id']}: {'; '.join(p['forename_rejections'])}")
 
     # Step 3b: Semantic filtering (if --semantic)
     semantic_candidates = []
