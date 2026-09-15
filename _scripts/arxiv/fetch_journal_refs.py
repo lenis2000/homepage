@@ -29,10 +29,10 @@ import sys
 import time
 import urllib.parse
 import urllib.request
-import xml.etree.ElementTree as ET
 from difflib import SequenceMatcher
 from pathlib import Path
 
+from fetch_arxiv import fetch_oai_paper
 from journal_names import normalize_journal_name
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -48,13 +48,8 @@ S2_FIELDS = "title,externalIds,journal,venue,publicationVenue,year"
 S2_BATCH_SIZE = 500
 S2_RATE_LIMIT = 1.1  # seconds between requests
 
-ARXIV_API = "https://export.arxiv.org/api/query"
-ARXIV_BATCH_SIZE = 200  # IDs per request (comma-separated in id_list)
-ARXIV_RATE_LIMIT = 3.5  # arXiv asks for >=3s between requests
-ARXIV_NS = {
-    "a": "http://www.w3.org/2005/Atom",
-    "arxiv": "http://arxiv.org/schemas/atom",
-}
+ARXIV_BATCH_SIZE = 200  # IDs per progress line; OAI-PMH GetRecord is one id per request
+ARXIV_RATE_LIMIT = 3.5  # pause between batches
 
 CROSSREF_API = "https://api.crossref.org/works"
 CROSSREF_RATE_LIMIT = 0.05  # 20 req/s with polite pool (mailto in User-Agent)
@@ -282,38 +277,16 @@ def parse_s2_entry(entry, requested_arxiv_id="", expected_title=""):
 # ── arXiv API ──────────────────────────────────────────────────────────
 
 def arxiv_fetch_batch(arxiv_ids):
-    """Query arXiv API for journal_ref and doi. Returns dict of id -> info."""
-    id_list = ",".join(arxiv_ids)
-    url = f"{ARXIV_API}?id_list={id_list}&max_results={len(arxiv_ids)}"
-
-    try:
-        req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            xml_data = resp.read()
-    except Exception as e:
-        print(f"  arXiv API failed: {e}")
-        return {}
-
-    tree = ET.fromstring(xml_data)
+    """Fetch journal_ref and doi via OAI-PMH GetRecord. Returns dict of id -> info."""
     results = {}
-    for entry in tree.findall(".//a:entry", ARXIV_NS):
-        id_el = entry.find("a:id", ARXIV_NS)
-        if id_el is None:
+    for aid in arxiv_ids:
+        try:
+            paper = fetch_oai_paper(aid)
+        except Exception as e:
+            print(f"  OAI-PMH failed for {aid}: {e}")
             continue
-        # Extract clean arXiv ID from URL
-        raw_id = id_el.text.strip().split("/")[-1]
-        # Remove version suffix
-        aid = re.sub(r"v\d+$", "", raw_id)
-
-        jr_el = entry.find("arxiv:journal_ref", ARXIV_NS)
-        doi_el = entry.find("arxiv:doi", ARXIV_NS)
-
-        journal_ref = jr_el.text.strip() if jr_el is not None and jr_el.text else ""
-        doi = doi_el.text.strip() if doi_el is not None and doi_el.text else ""
-
-        if journal_ref or doi:
-            results[aid] = {"journal_ref_raw": journal_ref, "doi": doi}
-
+        if paper and (paper["journal_ref"] or paper["doi"]):
+            results[aid] = {"journal_ref_raw": paper["journal_ref"], "doi": paper["doi"]}
     return results
 
 

@@ -12,24 +12,15 @@ Usage:
 
 import re
 import sys
-import time
 import argparse
-import urllib.request
 from pathlib import Path
-
-try:
-    import feedparser
-except ImportError:
-    print("ERROR: feedparser not installed. Run: pip3 install feedparser")
-    sys.exit(1)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 POSTS_DIR = REPO_ROOT / "_arxiv"
 
-ARXIV_API = "https://export.arxiv.org/api/query"
-BATCH_SIZE = 20
-RATE_LIMIT_SECONDS = 3
+sys.path.insert(0, str(SCRIPT_DIR))
+from fetch_arxiv import fetch_oai_paper
 
 
 def extract_arxiv_id(filepath):
@@ -52,30 +43,13 @@ def has_abstract(filepath):
 
 
 def fetch_abstracts(arxiv_ids):
-    """Fetch abstracts for a list of arXiv IDs. Returns {id: abstract}."""
+    """Fetch abstracts for a list of arXiv IDs via OAI-PMH. Returns {id: abstract}."""
     results = {}
-    for i in range(0, len(arxiv_ids), BATCH_SIZE):
-        batch = arxiv_ids[i:i + BATCH_SIZE]
-        id_list = ",".join(batch)
-        url = f"{ARXIV_API}?id_list={id_list}&max_results={len(batch)}"
-
-        print(f"  Fetching batch {i // BATCH_SIZE + 1} "
-              f"({len(batch)} papers)...")
-
-        response = urllib.request.urlopen(url).read()
-        feed = feedparser.parse(response)
-
-        for entry in feed.entries:
-            arxiv_id = entry.id.split("/abs/")[-1].split("v")[0]
-            abstract = entry.get("summary", "").strip()
-            # Clean up whitespace
-            abstract = re.sub(r"\s+", " ", abstract)
-            if abstract:
-                results[arxiv_id] = abstract
-
-        if i + BATCH_SIZE < len(arxiv_ids):
-            time.sleep(RATE_LIMIT_SECONDS)
-
+    for n, arxiv_id in enumerate(arxiv_ids, 1):
+        print(f"  Fetching {n}/{len(arxiv_ids)}: {arxiv_id}...")
+        paper = fetch_oai_paper(arxiv_id)
+        if paper and paper["abstract"]:
+            results[arxiv_id] = paper["abstract"]
     return results
 
 

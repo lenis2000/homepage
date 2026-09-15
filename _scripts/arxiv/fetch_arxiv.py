@@ -17,17 +17,12 @@ import subprocess
 import sys
 import time
 import argparse
-import urllib.request
+import urllib.parse
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
-
-try:
-    import feedparser
-except ImportError:
-    print("ERROR: feedparser not installed. Run: pip3 install feedparser")
-    sys.exit(1)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
@@ -42,7 +37,11 @@ KAGGLE_DB = Path(os.environ.get(
     Path.home() / "Data" / "arxiv" / "arxiv-metadata.db",
 ))
 
-ARXIV_API = "https://export.arxiv.org/api/query"
+OAI_API = "https://oaipmh.arxiv.org/oai"
+OAI_RETRY_SECONDS = 10
+OAI_MAX_WAIT = 360
+OAI_SLICE_DAYS = 7
+OAI_NS = {"oai": "http://www.openarchives.org/OAI/2.0/", "arxiv": "http://arxiv.org/OAI/arXiv/"}
 RATE_LIMIT_SECONDS = 0.5
 USER_AGENT = "lpetrov-arxiv-scan/1.0 (mailto:petrov@virginia.edu)"
 
@@ -80,10 +79,6 @@ def run_ai_prompt(prompt: str, timeout: int):
     return result.stdout.strip(), None
 
 
-def _arxiv_request(url):
-    return urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-
-
 def load_config():
     with open(AUTHORS_FILE) as f:
         return yaml.safe_load(f)
@@ -99,137 +94,6 @@ def save_processed(processed):
     PROCESSED_FILE.write_text(json.dumps(processed, indent=2, sort_keys=True))
 
 
-def fetch_category(category, days, config, before_date=None):
-    """Fetch recent papers from a single arXiv category, with pagination.
-
-    Uses surname-only queries with parentheses and + encoding:
-      (au:Borodin+OR+au:Corwin+...)+AND+cat:math.PR
-    Initial matching is done locally after fetching.
-
-    If before_date is set (historical range), uses ascending sort order
-    so we start from the oldest papers and stop at before_date.
-    """
-    # Collect unique surnames for API queries
-    seen_surnames = set()
-    all_surname_terms = []
-    for author in config["authors"]:
-        for name in author["arxiv_names"]:
-            # Surname is everything before the last underscore
-            # e.g. "Di_Francesco_P" → "Di_Francesco", "Borodin_A" → "Borodin"
-            surname = "_".join(name.split("_")[:-1])
-            if surname.lower() not in seen_surnames:
-                seen_surnames.add(surname.lower())
-                # Multi-part surnames need %22 (URL-encoded quotes) to work
-                # in OR combinations. Without quotes, arXiv API silently
-                # drops them from compound queries.
-                if "_" in surname:
-                    spaced = surname.replace("_", "+")
-                    all_surname_terms.append(f'au:%22{spaced}%22')
-                else:
-                    all_surname_terms.append(f"au:{surname}")
-
-    # Split into batches to avoid URL length limits
-    AUTHOR_BATCH = 20
-    author_batches = [
-        all_surname_terms[i:i + AUTHOR_BATCH]
-        for i in range(0, len(all_surname_terms), AUTHOR_BATCH)
-    ]
-
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-    cutoff_naive = cutoff.replace(tzinfo=None)
-    upper_cutoff = datetime.strptime(before_date, "%Y-%m-%d") if before_date else None
-
-    all_papers = {}
-
-    for batch_idx, author_terms in enumerate(author_batches):
-        # Show which authors are in this batch
-        names = [t.replace("au:", "") for t in author_terms]
-        print(f"    batch {batch_idx + 1}/{len(author_batches)}: {', '.join(names[:5])}{'...' if len(names) > 5 else ''}")
-        author_query = "+OR+".join(author_terms)
-        search_query = f"({author_query})+AND+cat:{category}"
-
-        start = 0
-        PAGE_SIZE = 200
-
-        while True:
-            params = (
-                f"search_query={search_query}"
-                f"&start={start}&max_results={PAGE_SIZE}"
-                f"&sortBy=submittedDate&sortOrder=descending"
-            )
-
-            url = f"{ARXIV_API}?{params}"
-            for attempt in range(10):
-                try:
-                    response = urllib.request.urlopen(_arxiv_request(url)).read()
-                    break
-                except urllib.error.HTTPError as e:
-                    if e.code in (503, 429) and attempt < 9:
-                        wait = min(60, RATE_LIMIT_SECONDS * (2 ** (attempt + 1)))
-                        print(f"      {e.code} — retrying in {wait}s (attempt {attempt + 1}/10)...")
-                        time.sleep(wait)
-                    else:
-                        raise
-            feed = feedparser.parse(response)
-
-            if not feed.entries:
-                break
-
-            past_cutoff = False
-
-            for entry in feed.entries:
-                published = entry.get("published", "")
-                if not published:
-                    continue
-
-                try:
-                    pub_date = datetime.strptime(published[:19], "%Y-%m-%dT%H:%M:%S")
-                except ValueError:
-                    continue
-
-                if pub_date < cutoff_naive:
-                    past_cutoff = True
-                    continue
-
-                # Skip papers newer than --before (but keep paging)
-                if upper_cutoff and pub_date > upper_cutoff:
-                    continue
-
-                arxiv_id = entry.id.split("/abs/")[-1].split("v")[0]
-                if arxiv_id in all_papers:
-                    continue
-
-                authors = [a.name for a in entry.authors]
-                title = re.sub(r"\s+", " ", entry.title.replace("\n", " ")).strip()
-                categories = [t["term"] for t in entry.tags]
-                primary_cat = categories[0] if categories else category
-
-                abstract = re.sub(r"\s+", " ", entry.get("summary", "").strip())
-
-                all_papers[arxiv_id] = {
-                    "arxiv_id": arxiv_id,
-                    "title": title,
-                    "authors": authors,
-                    "date": published,
-                    "primary_category": primary_cat,
-                    "categories": categories,
-                    "abstract": abstract,
-                }
-
-            if past_cutoff or len(feed.entries) < PAGE_SIZE:
-                break
-
-            start += PAGE_SIZE
-            oldest = list(all_papers.values())[-1]["date"][:10] if all_papers else "?"
-            print(f"      page {start // PAGE_SIZE + 1} — reached {oldest} ({len(all_papers)} total)...")
-            time.sleep(RATE_LIMIT_SECONDS)
-
-        if batch_idx < len(author_batches) - 1:
-            time.sleep(RATE_LIMIT_SECONDS)
-
-    return list(all_papers.values())
-
-
 SEMANTIC_CATEGORIES = {
     "math.PR", "math-ph", "math.CO", "math.MP", "cond-mat.stat-mech",
     "math.RT", "math.CA", "math.QA", "hep-th", "nlin.SI",
@@ -242,77 +106,202 @@ SEMANTIC_CATEGORIES = {
 SKIP_RECENT_CATEGORIES = {"q-alg", "solv-int", "cond-mat"}
 
 
-def fetch_category_range(category, start_date, end_date):
-    """Fetch ALL papers from a category over an inclusive date range.
+def _oai_set(category):
+    """Map an arXiv category to its OAI-PMH set spec, e.g. math.PR -> math:math:PR."""
+    archive, _, sub = category.partition(".")
+    if archive == "math":
+        return f"math:math:{sub}" if sub else "math:math"
+    if archive == "stat":
+        return f"stat:stat:{sub}" if sub else "stat:stat"
+    if archive in ("math-ph", "hep-th"):
+        return f"physics:{archive}"
+    if archive in ("cond-mat", "nlin"):
+        return f"physics:{archive}:{sub}" if sub else f"physics:{archive}"
+    return None
 
-    One paginated query per category covers the whole window, replacing
-    the previous per-day loop and cutting API calls (and rate-limit risk)
-    by a factor of (# days in range).
+
+_oai_last_request = 0.0
+
+
+def _oai_get(params):
+    """One OAI-PMH request via curl, at most one per second.
+
+    curl, not urllib: on a cache miss arXiv's CDN answers Python's TLS
+    handshake with an empty 406 (same URL and headers succeed from curl, and
+    once the CDN has the page cached, urllib gets it too). 503 carries
+    Retry-After; poll on it and on 406/429 for up to OAI_MAX_WAIT seconds.
     """
-    start_str = start_date.strftime("%Y%m%d")
-    end_str = end_date.strftime("%Y%m%d")
-    search_query = f"cat:{category}+AND+submittedDate:[{start_str}0000+TO+{end_str}2359]"
-
-    all_papers = {}
-    start = 0
-    PAGE_SIZE = 200
-
+    global _oai_last_request
+    url = f"{OAI_API}?{params}"
+    deadline = time.monotonic() + OAI_MAX_WAIT
+    attempt = 0
     while True:
-        params = (
-            f"search_query={search_query}"
-            f"&start={start}&max_results={PAGE_SIZE}"
-            f"&sortBy=submittedDate&sortOrder=descending"
+        time.sleep(max(0.0, _oai_last_request + 1.0 - time.monotonic()))
+        _oai_last_request = time.monotonic()
+        result = subprocess.run(
+            ["curl", "-sS", "-A", USER_AGENT, "--max-time", "120",
+             "-D", "-", "-o", "-", url],
+            capture_output=True, check=False,
         )
+        if result.returncode != 0:
+            raise RuntimeError(f"curl failed ({result.returncode}): {result.stderr.decode(errors='replace').strip()}")
+        head, _, body = result.stdout.partition(b"\r\n\r\n")
+        status_line = head.split(b"\r\n", 1)[0].split()
+        code = int(status_line[1]) if len(status_line) > 1 else 0
+        if code == 200:
+            return body
+        if code not in (503, 429, 406) or time.monotonic() > deadline:
+            raise RuntimeError(f"OAI-PMH HTTP {code} for {url}")
+        m = re.search(rb"(?im)^retry-after:\s*(\d+)", head)
+        wait = int(m.group(1)) if m else OAI_RETRY_SECONDS
+        attempt += 1
+        if attempt == 1 or attempt % 6 == 0:
+            print(f"      {code} — retrying every {wait}s (waited {attempt * wait}s)...", flush=True)
+        time.sleep(wait)
 
-        url = f"{ARXIV_API}?{params}"
-        for attempt in range(10):
-            try:
-                response = urllib.request.urlopen(_arxiv_request(url)).read()
-                break
-            except urllib.error.HTTPError as e:
-                if e.code in (503, 429) and attempt < 9:
-                    wait = min(60, RATE_LIMIT_SECONDS * (2 ** (attempt + 1)))
-                    print(f"      {e.code} — retrying in {wait}s (attempt {attempt + 1}/10)...")
-                    time.sleep(wait)
-                else:
-                    raise
-        feed = feedparser.parse(response)
 
-        if not feed.entries:
-            break
+def _parse_oai_record(rec):
+    """Parse one OAI <record> into a dict, or None if deleted / no metadata."""
+    if rec.find("oai:header", OAI_NS).get("status") == "deleted":
+        return None
+    meta = rec.find("oai:metadata/arxiv:arXiv", OAI_NS)
+    if meta is None:
+        return None
+    authors = []
+    for a in meta.iterfind("arxiv:authors/arxiv:author", OAI_NS):
+        parts = [a.findtext("arxiv:forenames", "", OAI_NS),
+                 a.findtext("arxiv:keyname", "", OAI_NS),
+                 a.findtext("arxiv:suffix", "", OAI_NS)]
+        authors.append(" ".join(x for x in parts if x).strip())
+    return {
+        "arxiv_id": meta.findtext("arxiv:id", "", OAI_NS),
+        "created": meta.findtext("arxiv:created", "", OAI_NS),
+        "authors": authors,
+        "title": re.sub(r"\s+", " ", meta.findtext("arxiv:title", "", OAI_NS)).strip(),
+        "categories": meta.findtext("arxiv:categories", "", OAI_NS).split(),
+        "abstract": re.sub(r"\s+", " ", meta.findtext("arxiv:abstract", "", OAI_NS)).strip(),
+        "journal_ref": meta.findtext("arxiv:journal-ref", "", OAI_NS).strip(),
+        "doi": meta.findtext("arxiv:doi", "", OAI_NS).strip(),
+    }
 
-        for entry in feed.entries:
-            published = entry.get("published", "")
-            if not published:
-                continue
 
-            arxiv_id = entry.id.split("/abs/")[-1].split("v")[0]
-            if arxiv_id in all_papers:
-                continue
+def fetch_oai_paper(arxiv_id):
+    """Fetch one paper's metadata via OAI-PMH GetRecord; None if unknown id."""
+    params = f"verb=GetRecord&metadataPrefix=arXiv&identifier=oai:arXiv.org:{arxiv_id}"
+    root = ET.fromstring(_oai_get(params))
+    err = root.find("oai:error", OAI_NS)
+    if err is not None:
+        if err.get("code") == "idDoesNotExist":
+            return None
+        raise RuntimeError(f"OAI-PMH error {err.get('code')}: {err.text}")
+    rec = root.find(".//oai:record", OAI_NS)
+    parsed = _parse_oai_record(rec) if rec is not None else None
+    if parsed is None:
+        return None
+    categories = parsed["categories"]
+    return {
+        "arxiv_id": arxiv_id,
+        "title": parsed["title"],
+        "authors": parsed["authors"],
+        "date": parsed["created"],
+        "primary_category": categories[0] if categories else "",
+        "categories": categories,
+        "abstract": parsed["abstract"],
+        "journal_ref": parsed["journal_ref"],
+        "doi": parsed["doi"],
+    }
 
-            authors = [a.name for a in entry.authors]
-            title = re.sub(r"\s+", " ", entry.title.replace("\n", " ")).strip()
-            categories = [t["term"] for t in entry.tags]
-            primary_cat = categories[0] if categories else category
-            abstract = re.sub(r"\s+", " ", entry.get("summary", "").strip())
 
-            all_papers[arxiv_id] = {
-                "arxiv_id": arxiv_id,
-                "title": title,
-                "authors": authors,
-                "date": published,
-                "primary_category": primary_cat,
-                "categories": categories,
-                "abstract": abstract,
-            }
+def _oai_records(set_spec, start_date, end_date):
+    """Yield parsed <arXiv> metadata dicts for one OAI set over a datestamp range."""
+    params = (
+        f"verb=ListRecords&metadataPrefix=arXiv&set={set_spec}"
+        f"&from={start_date:%Y-%m-%d}&until={end_date:%Y-%m-%d}"
+    )
+    page = 1
+    while True:
+        root = ET.fromstring(_oai_get(params))
+        err = root.find("oai:error", OAI_NS)
+        if err is not None:
+            if err.get("code") == "noRecordsMatch":
+                return
+            raise RuntimeError(f"OAI-PMH error {err.get('code')}: {err.text}")
 
-        if len(feed.entries) < PAGE_SIZE:
-            break
+        for rec in root.iterfind(".//oai:record", OAI_NS):
+            parsed = _parse_oai_record(rec)
+            if parsed is not None:
+                yield parsed
 
-        start += PAGE_SIZE
+        token = root.find(".//oai:resumptionToken", OAI_NS)
+        if token is None or not (token.text or "").strip():
+            return
+        page += 1
+        print(f"      page {page}...", flush=True)
+        params = f"verb=ListRecords&resumptionToken={urllib.parse.quote(token.text.strip(), safe='')}"
         time.sleep(RATE_LIMIT_SECONDS)
 
+
+def fetch_category_range(category, start_date, end_date):
+    """Fetch new submissions in a category over an inclusive date range via OAI-PMH.
+
+    The legacy export.arxiv.org search API answers 429 "Rate exceeded" to
+    every search_query regardless of client pacing (server capacity, per
+    arXiv staff), so we harvest the category's OAI-PMH set instead. OAI
+    selects on last-modified datestamp, so the window also returns old
+    papers that were merely replaced; a record counts as a new submission
+    only if its id's YYMM prefix lies in the window and <created> does too.
+    """
+    set_spec = _oai_set(category)
+    if set_spec is None:
+        print(f"      no OAI-PMH set for {category}, skipping")
+        return []
+
+    months = set()
+    d = start_date.replace(day=1)
+    while d <= end_date:
+        months.add(f"{d:%y%m}")
+        d = (d + timedelta(days=32)).replace(day=1)
+    lo, hi = f"{start_date:%Y-%m-%d}", f"{end_date:%Y-%m-%d}"
+
+    def records():
+        # Small date slices come back synchronously; a month-sized set makes
+        # the harvester build pages in the background and answer 406 meanwhile.
+        d = start_date
+        while d <= end_date:
+            e = min(d + timedelta(days=OAI_SLICE_DAYS - 1), end_date)
+            yield from _oai_records(set_spec, d, e)
+            d = e + timedelta(days=1)
+
+    all_papers = {}
+    for rec in records():
+        arxiv_id = rec["arxiv_id"]
+        if arxiv_id[:4] not in months or not (lo <= rec["created"] <= hi):
+            continue
+        if arxiv_id in all_papers:
+            continue
+        categories = rec["categories"]
+        all_papers[arxiv_id] = {
+            "arxiv_id": arxiv_id,
+            "title": rec["title"],
+            "authors": rec["authors"],
+            "date": rec["created"],
+            "primary_category": categories[0] if categories else category,
+            "categories": categories,
+            "abstract": rec["abstract"],
+        }
+
     return list(all_papers.values())
+
+
+def fetch_category(category, days, config, before_date=None):
+    """Fetch the last `days` days of a category (up to before_date if set).
+
+    Author matching against config happens locally in match_authors, so
+    this is the same OAI-PMH harvest as fetch_category_range.
+    """
+    end_d = datetime.strptime(before_date, "%Y-%m-%d").date() if before_date else datetime.now().date()
+    start_d = (datetime.now() - timedelta(days=days)).date()
+    return fetch_category_range(category, start_d, end_d)
 
 
 def semantic_filter(papers, threshold=0.72):

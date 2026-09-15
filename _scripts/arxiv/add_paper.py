@@ -19,16 +19,7 @@ import json
 import re
 import subprocess
 import sys
-import time
-import urllib.error
-import urllib.request
 from pathlib import Path
-
-try:
-    import feedparser
-except ImportError:
-    print("ERROR: feedparser not installed. Run: pip3 install feedparser")
-    sys.exit(1)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
@@ -36,7 +27,7 @@ REPO_ROOT = SCRIPT_DIR.parent.parent
 # Re-use infrastructure from fetch_arxiv
 sys.path.insert(0, str(SCRIPT_DIR))
 from fetch_arxiv import (
-    ARXIV_API,
+    fetch_oai_paper,
     OUTPUT_DIR,
     generate_post,
     append_to_kaggle,
@@ -100,48 +91,14 @@ def fetch_from_kaggle(arxiv_id: str) -> dict:
 
 
 def fetch_paper(arxiv_id: str) -> dict:
-    """Fetch a single paper from the arXiv API, falling back to Kaggle DB."""
-    url = f"{ARXIV_API}?id_list={arxiv_id}"
+    """Fetch a single paper via OAI-PMH, falling back to Kaggle DB."""
     try:
-        for attempt in range(5):
-            try:
-                response = urllib.request.urlopen(url).read()
-                break
-            except urllib.error.HTTPError as e:
-                if e.code == 429 and attempt < 4:
-                    wait = 3 * (attempt + 1)
-                    print(f"  Rate limited, retrying in {wait}s...")
-                    time.sleep(wait)
-                else:
-                    raise
-        feed = feedparser.parse(response)
-
-        if not feed.entries:
-            raise ValueError("No entries returned")
-
-        entry = feed.entries[0]
-
-        # Check for "not found" — arXiv API returns an entry with error title
-        if "Error" in entry.get("title", ""):
-            raise ValueError("Paper not found in API")
-
-        authors = [a.name for a in entry.authors]
-        title = re.sub(r"\s+", " ", entry.title.replace("\n", " ")).strip()
-        categories = [t["term"] for t in entry.tags]
-        abstract = re.sub(r"\s+", " ", entry.get("summary", "").strip())
-        published = entry.get("published", "")
-
-        return {
-            "arxiv_id": arxiv_id,
-            "title": title,
-            "authors": authors,
-            "date": published,
-            "primary_category": categories[0] if categories else "",
-            "categories": categories,
-            "abstract": abstract,
-        }
+        paper = fetch_oai_paper(arxiv_id)
+        if paper is None:
+            raise ValueError("Paper not found in OAI-PMH")
+        return paper
     except Exception as e:
-        print(f"  arXiv API failed ({e}), trying Kaggle DB...")
+        print(f"  OAI-PMH failed ({e}), trying Kaggle DB...")
         paper = fetch_from_kaggle(arxiv_id)
         if paper:
             print("  Found in Kaggle DB")
