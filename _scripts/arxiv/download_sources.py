@@ -28,7 +28,6 @@ from s3_upload_gate import should_upload, record_upload, days_until_next
 import tarfile
 import time
 import urllib.error
-import urllib.request
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -130,21 +129,42 @@ def is_uploaded(arxiv_id: str, manifest: dict) -> bool:
 USER_AGENT = "lpetrov-arxiv-sources/1.0 (mailto:petrov@virginia.edu)"
 
 
-def _fetch_with_retry(url: str, timeout: int = 60) -> bytes:
-    """GET url with exponential backoff on 429/503. Other HTTPErrors raised."""
-    req = urllib.request.Request(url)
-    req.add_header("User-Agent", USER_AGENT)
+def _fetch_with_retry(url: str, timeout: int = 300) -> bytes:
+    """GET url via curl with exponential backoff on 429/503/406.
+
+    curl, not urllib: arxiv.org's CDN answers Python's TLS handshake with an
+    empty 406 on cache misses (see fetch_arxiv._oai_get). Non-2xx statuses
+    are raised as urllib.error.HTTPError so callers can keep branching on
+    e.code (404: no such paper, 403: source not public).
+    """
     for attempt in range(10):
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return resp.read()
-        except urllib.error.HTTPError as e:
-            if e.code in (503, 429) and attempt < 9:
-                wait = min(60, 2 ** (attempt + 1))
-                print(f" {e.code} — retrying in {wait}s (attempt {attempt + 1}/10)...", end="", flush=True)
-                time.sleep(wait)
-                continue
-            raise
+        result = subprocess.run(
+            ["curl", "-sS", "-L", "-A", USER_AGENT, "--max-time", str(timeout),
+             "-D", "-", "-o", "-", url],
+            capture_output=True, check=False,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(f"curl failed ({result.returncode}): {result.stderr.decode(errors='replace').strip()}")
+        # With -L there is one header block per hop; the body follows the last.
+        raw = result.stdout
+        code = 0
+        while True:
+            head, sep, rest = raw.partition(b"\r\n\r\n")
+            status = head.split(b"\r\n", 1)[0].split()
+            if not sep or len(status) < 2 or not status[0].startswith(b"HTTP/"):
+                break
+            code = int(status[1])
+            raw = rest
+            if not (300 <= code < 400 or code == 100):
+                break
+        if code == 200:
+            return raw
+        if code in (503, 429, 406) and attempt < 9:
+            wait = min(60, 2 ** (attempt + 1))
+            print(f" {code} — retrying in {wait}s (attempt {attempt + 1}/10)...", end="", flush=True)
+            time.sleep(wait)
+            continue
+        raise urllib.error.HTTPError(url, code, f"HTTP {code}", None, None)
     raise RuntimeError(f"unreachable: retries exhausted for {url}")
 
 
