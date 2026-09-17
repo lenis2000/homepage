@@ -48,7 +48,7 @@ simulations: simulations/YYYY-MM-DD-slug/    # optional
 - **Storage**: `s3://lpetrov.cc.storage` — paper PDFs go to `papers/` prefix, served at `https://storage.lpetrov.cc`
 
 ### Current Paper Count
-- Latest cv-number: 50 (as of Feb 2026)
+- Latest cv-number: 54 (as of Sep 2026: `54-ybe-rsk.pdf`, arXiv:2609.18502)
 
 ## Talk Slides
 
