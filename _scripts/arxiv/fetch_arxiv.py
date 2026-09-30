@@ -305,6 +305,21 @@ def fetch_category(category, days, config, before_date=None):
     return fetch_category_range(category, start_d, end_d)
 
 
+class _PadToMultiple:
+    """Tokenizer wrapper that pads every call to a multiple of `multiple` tokens."""
+
+    def __init__(self, tokenizer, multiple):
+        self._tokenizer = tokenizer
+        self._multiple = multiple
+
+    def __call__(self, *args, **kwargs):
+        kwargs.setdefault("pad_to_multiple_of", self._multiple)
+        return self._tokenizer(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._tokenizer, name)
+
+
 def semantic_filter(papers, threshold=0.72):
     """Filter papers by embedding similarity to known int-prob papers.
 
@@ -348,6 +363,12 @@ def semantic_filter(papers, threshold=0.72):
         device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
         print(f"  Loading embedding model on {device}...")
         model = SentenceTransformer(MODEL_NAME).to(device)
+        if device == "mps":
+            # MPS keeps driver memory for every distinct input shape and never
+            # frees it (empty_cache does not help), so padding each batch to its
+            # exact length hits OOM after ~800 papers. Rounding lengths up to a
+            # multiple of 128 caps the number of shapes.
+            model[0].tokenizer = _PadToMultiple(model[0].tokenizer, 128)
 
         BATCH = 64
         for b_start in range(0, len(to_embed_idx), BATCH):
@@ -362,10 +383,6 @@ def semantic_filter(papers, threshold=0.72):
                 cached[keys[idx]] = vec
                 new_items.append((keys[idx], vec))
             cache.put_many(new_items)
-            # MPS keeps freed blocks per padded shape and never returns them;
-            # without this the cache hits the watermark after ~800 papers.
-            if device == "mps":
-                torch.mps.empty_cache()
             if b_start + BATCH < len(to_embed_idx):
                 print(f"    embedded {b_start + len(b_idx)}/{len(to_embed_idx)}...")
 
