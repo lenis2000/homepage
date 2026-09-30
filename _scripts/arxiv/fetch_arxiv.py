@@ -362,6 +362,10 @@ def semantic_filter(papers, threshold=0.72):
                 cached[keys[idx]] = vec
                 new_items.append((keys[idx], vec))
             cache.put_many(new_items)
+            # MPS keeps freed blocks per padded shape and never returns them;
+            # without this the cache hits the watermark after ~800 papers.
+            if device == "mps":
+                torch.mps.empty_cache()
             if b_start + BATCH < len(to_embed_idx):
                 print(f"    embedded {b_start + len(b_idx)}/{len(to_embed_idx)}...")
 
