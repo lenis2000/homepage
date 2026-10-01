@@ -457,6 +457,8 @@ function initLocalPatchesSim() {
 
         let sampling = false;
         let pendingSample = null;
+        let patchId = 0;
+        let rotatedPatchId = -1;
 
         async function sampleQueued(A, B, resetCamera = true) {
             if (sampling) {
@@ -473,6 +475,7 @@ function initLocalPatchesSim() {
                     pendingSample = null;
                     sampleQueued(next.A, next.B, next.resetCamera);
                 } else {
+                    patchId++;
                     startOneRotation();
                 }
             }
@@ -714,8 +717,10 @@ function initLocalPatchesSim() {
 
         let autoRotateId = null;
         function startOneRotation() {
+            if (rotatedPatchId === patchId) return;
             stopAutoRotate();
             if (!controls || !renderer || !camera) return;
+            rotatedPatchId = patchId;
 
             const rotateSpeed = 0.015;
             let remainingAngle = Math.PI * 2;
@@ -757,7 +762,6 @@ function initLocalPatchesSim() {
             if (typeof window.slideEngine !== 'undefined') {
                 const presets = [
                     { A: -2, B: 0.3 },
-                    { A: -0.05, B: 0.4 },
                     { A: -0.2, B: 0.3 },
                     { A: -0.2, B: 0 },
                     { A: 0, B: 0 }
