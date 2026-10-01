@@ -5,7 +5,7 @@
  * /js/factorial-ybe-wasm.js, built from factorial/factorial-ybe-sampler.cpp).
  * Parameters follow the /factorial/ presets:
  *   waterfall: x_i = 1, y_k = 1.5 q^(k-M), w_j = 2 q^(j-M), M = 2.5 N
- *   Schur:     x_i = 1, y_k = 0,           w_j = 2,         M = 2 N
+ *   Schur:     x_i = 1, y_k = 0,           w_j = 1.5,       M = 2 N
  * Rendering (paths / lozenges) is a compact port of the /factorial/ canvas renderer.
  *
  * Slide ID: 'wip-factorial'
@@ -63,7 +63,7 @@
             return {
                 N, M,
                 x: new Float64Array(N).fill(1),
-                w: new Float64Array(M).fill(2),
+                w: new Float64Array(M).fill(1.5),
                 y: new Float64Array(COLUMN_CAP),
             };
         }
@@ -79,7 +79,7 @@
     function paramsHTML() {
         const N = state.n;
         if (state.spec === 'schur') {
-            return `\\(x_i = 1,\\ w_j = 2,\\ y_k = 0\\);&ensp;\\(N = ${N},\\ M = ${2 * N}\\)`;
+            return `\\(x_i = 1,\\ w_j = 1.5,\\ y_k = 0\\);&ensp;\\(N = ${N},\\ M = ${2 * N}\\)`;
         }
         return `\\(x_i = 1,\\ w_j = 2q^{j-M},\\ y_k = 1.5\\,q^{k-M}\\);&ensp;\\(q = ${state.q},\\ N = ${N},\\ M = ${Math.round(2.5 * N)}\\)`;
     }
@@ -428,21 +428,32 @@
         ctx.fillStyle = COLORS.cream;
         ctx.fill(bg);
 
-        const upPath = new Path2D();
-        const rightPath = new Path2D();
-        for (const t of tiles) addPoly(t.kind === 'up' ? upPath : rightPath, t.poly);
-        for (const [path2d, fill] of [[rightPath, COLORS.navy], [upPath, COLORS.orange]]) {
+        function tracePoly(poly) {
+            ctx.beginPath();
+            ctx.moveTo(ox + scale * poly[0].x, oy + scale * poly[0].y);
+            for (let i = 1; i < poly.length; i++) ctx.lineTo(ox + scale * poly[i].x, oy + scale * poly[i].y);
+            ctx.closePath();
+        }
+
+        // One small path per tile, as on /factorial/: stroking a single Path2D with ~1e5 subpaths freezes the page
+        ctx.lineWidth = seal;
+        for (const [kind, fill] of [['right', COLORS.navy], ['up', COLORS.orange]]) {
             ctx.fillStyle = fill;
-            ctx.fill(path2d);
             ctx.strokeStyle = fill;
-            ctx.lineWidth = seal;
-            ctx.stroke(path2d);
+            for (const t of tiles) {
+                if (t.kind !== kind) continue;
+                tracePoly(t.poly);
+                ctx.fill();
+                ctx.stroke();
+            }
         }
         if (stroke) {
             ctx.strokeStyle = stroke;
             ctx.lineWidth = lineWidth;
-            ctx.stroke(rightPath);
-            ctx.stroke(upPath);
+            for (const t of tiles) {
+                tracePoly(t.poly);
+                ctx.stroke();
+            }
         }
     }
 
