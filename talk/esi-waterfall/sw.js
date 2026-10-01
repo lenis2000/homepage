@@ -1,5 +1,5 @@
 // Service Worker for ESI Waterfall Talk — Aggressive Precaching
-const CACHE_NAME = 'esi-waterfall-talk-v11';
+const CACHE_NAME = 'esi-waterfall-talk-v12';
 
 // All local assets to precache
 const PRECACHE_ASSETS = [
@@ -119,6 +119,7 @@ const PRECACHE_ASSETS = [
   '/talk/esi-waterfall/images/fig_lozenge_and_paths.svg',
   '/talk/esi-waterfall/images/nsf-logo.png',
   '/talk/esi-waterfall/images/simons-logo.svg',
+  '/talk/esi-waterfall/images/qr-lozenge.svg',
   '/talk/esi-waterfall/images/details-concentration-paths.png',
 
   // Manifest

@@ -513,6 +513,19 @@
         [100000, 5000],
     ];
 
+    // Uniform case: the pace of the visual talk's CFTP slide (talk/visual/js/cftp-sim.js)
+    const UNIFORM_STEP_DELAY = 800;
+    const UNIFORM_MILESTONES = [2, 5, 10, 15, 20, 30, 50, 75, 100, 150, 200, 300, 500, 700];
+    const UNIFORM_AFTER_MILESTONES = 200;
+
+    function getNextMilestone(current) {
+        for (const m of UNIFORM_MILESTONES) {
+            if (m > current) return m;
+        }
+        const last = UNIFORM_MILESTONES[UNIFORM_MILESTONES.length - 1];
+        return last + (Math.floor((current - last) / UNIFORM_AFTER_MILESTONES) + 1) * UNIFORM_AFTER_MILESTONES;
+    }
+
     function getBatchSize(sweeps) {
         let batch = BATCH_RAMP[0][1];
         for (const [threshold, size] of BATCH_RAMP) {
@@ -549,7 +562,28 @@
         let lastRender = performance.now();
         let coalesced = false;
 
-        while (animating && gen === stepGeneration) {
+        if (qParam === 1.0) {
+            await new Promise(r => setTimeout(r, UNIFORM_STEP_DELAY));
+            if (gen !== stepGeneration) return;
+            while (animating && gen === stepGeneration) {
+                const next = getNextMilestone(sweepCount);
+                const result = JSON.parse(qrWasm.UTF8ToString(qrFuncs.runSweeps(next - sweepCount)));
+                sweepCount = next;
+                coalesced = result.status === 'coalesced';
+                if (coalesced) {
+                    if (statusEl) statusEl.textContent = 'coalesced after ' + formatSweeps(sweepCount) + ' sweeps';
+                    break;
+                }
+                if (meshGroup) {
+                    renderBounds(exportDimerListFromWasm(minGridPtr), exportDimerListFromWasm(maxGridPtr));
+                }
+                if (statusEl) statusEl.textContent = 'max and min chains: ' + formatSweeps(sweepCount) + ' sweeps, not coalesced';
+                await new Promise(r => setTimeout(r, UNIFORM_STEP_DELAY));
+                if (gen !== stepGeneration) return;
+            }
+        }
+
+        while (!coalesced && animating && gen === stepGeneration) {
             const batchSize = getBatchSize(sweepCount);
             const result = JSON.parse(qrWasm.UTF8ToString(qrFuncs.runSweeps(batchSize)));
             sweepCount += batchSize;
