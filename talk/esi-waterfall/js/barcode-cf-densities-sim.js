@@ -200,7 +200,7 @@
     const NSITES = 48;
     const NROWS = 14;
     const Q0 = 1 / 7, CHI0 = 3;
-    const Q_MIN = 0.02, Q_MAX = 0.6;
+    const Q_MIN = 0.02, Q_MAX = 0.95;
     const LCHI_MIN = Math.log(0.1), LCHI_MAX = Math.log(20);
     const NAVY = '#232D4B', ORANGE = '#E57200';
 
@@ -240,19 +240,17 @@
         ctx.clearRect(0, 0, W, H);
         const fs = Math.max(11, Math.round(H * 0.075));
         const padL = fs * 3.2, padR = fs * 0.8, padT = fs * 0.8, padB = fs * 1.9;
-        // x = log w over the chi-slider range; y = I, symmetric range fitted to the curve
+        // x = log w over the chi-slider range; y = I on the fixed range [-1, 1] (|d_0 - d_1| <= 1)
         const x0 = 2 * LCHI_MIN, x1 = 2 * LCHI_MAX;
-        const NPT = 400;
+        const NPT = Math.max(400, Math.ceil((x1 - x0) / (2 * Math.abs(Math.log(model.q))) * 48));
         const curve = [];
-        let vmax = Math.abs(dSer[0] - dSer[1]);
         for (let i = 0; i <= NPT; i++) {
             const lw = x0 + (x1 - x0) * i / NPT;
             const ww = Math.exp(lw);
             const v = model.Q2sq_over_Q4 * theta(ww, model.q) / theta(-ww, model.q);
             curve.push([lw, v]);
-            if (isFinite(v)) vmax = Math.max(vmax, Math.abs(v));
         }
-        const ymax = Math.max(0.1, Math.ceil(vmax * 1.12 * 10) / 10);
+        const ymax = 1;
         const X = lw => padL + (lw - x0) / (x1 - x0) * (W - padL - padR);
         const Y = v => padT + (ymax - v) / (2 * ymax) * (H - padT - padB);
         ctx.font = fs + 'px sans-serif';
@@ -263,22 +261,26 @@
         ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, H - padB); ctx.lineTo(W - padR, H - padB); ctx.stroke();
         ctx.fillStyle = '#555'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
         [-ymax, 0, ymax].forEach(v => ctx.fillText(v === 0 ? '0' : (v < 0 ? '\u2212' : '') + Math.abs(v).toFixed(1), padL - fs * 0.4, Y(v)));
-        // zeros of Pc at w = q^m
-        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        // zeros of Pc at w = q^m, drawn while they are at least ~1.5 labels apart
         const lq = Math.log(model.q);
-        for (let m = -12; m <= 12; m++) {
-            const lw = m * lq;
-            if (lw < x0 || lw > x1) continue;
-            ctx.strokeStyle = '#ddd';
-            ctx.beginPath(); ctx.moveTo(X(lw), padT); ctx.lineTo(X(lw), H - padB); ctx.stroke();
-            const lab = m === 0 ? '1' : (m === 1 ? 'q' : 'q' + sup(m));
-            ctx.fillStyle = '#555';
-            if (m === 0 || Math.abs(X(lq) - X(0)) > fs * 2.5 || m % 2 === 0 && Math.abs(X(2 * lq) - X(0)) > fs * 2.5)
-                ctx.fillText(lab, X(lw), H - padB + fs * 0.3);
+        if (Math.abs(X(lq) - X(0)) > fs * 1.5) {
+            ctx.strokeStyle = '#e4e4e4';
+            for (let m = Math.ceil(x1 / lq); m <= Math.floor(x0 / lq); m++) {
+                ctx.beginPath(); ctx.moveTo(X(m * lq), padT); ctx.lineTo(X(m * lq), H - padB); ctx.stroke();
+            }
         }
+        // fixed labeled ticks in chi (w = chi^2)
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.strokeStyle = '#888'; ctx.fillStyle = '#555';
+        [0.1, 0.3, 1, 3, 10].forEach(ct => {
+            const lw = 2 * Math.log(ct);
+            if (lw < x0 || lw > x1) return;
+            ctx.beginPath(); ctx.moveTo(X(lw), H - padB); ctx.lineTo(X(lw), H - padB + fs * 0.35); ctx.stroke();
+            ctx.fillText(String(ct), X(lw), H - padB + fs * 0.45);
+        });
         ctx.textAlign = 'left';
         ctx.fillStyle = '#555';
-        ctx.fillText('w', W - padR - fs * 0.8, H - padB - fs * 1.2);
+        ctx.fillText('\u03C7', W - padR - fs * 0.8, H - padB - fs * 1.2);
         // curve Pc(w)
         ctx.strokeStyle = NAVY; ctx.lineWidth = 2.5;
         ctx.beginPath();
@@ -327,7 +329,8 @@
         const model = makeModel(q, w, M_PAIRS);
         const Q = qpInf(q, q), Q2 = qpInf(q * q, q * q);
         model.Q2sq_over_Q4 = -Q2 * Q2 / (Q * Q * Q * Q);
-        const dSer = [model.dSeries(0), model.dSeries(1)];
+        // closed-form densities; the truncated series loses all precision as q -> 1
+        const dSer = [(1 + model.Pc) / 2, (1 - model.Pc) / 2];
         lastModel = model; lastD = dSer;
         const set = (id, txt) => { const el = $(id); if (el) el.textContent = txt; };
         set('bcf-qval', q.toFixed(4));

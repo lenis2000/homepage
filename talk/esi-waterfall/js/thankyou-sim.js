@@ -15,10 +15,10 @@ function initThankYouSim() {
         const wasm = await LozengeModule();
 
         const letters = ['T', 'H', 'A', 'N', 'K', 'Y', 'O', 'U'];
-        // Scotland: Saltire blue and white, with a darker blue face for depth
-        const scotlandColors = ['#0065BD', '#003F87', '#FFFFFF'];
+        // UVA: orange, navy, cream
+        const uvaColors = ['#E57200', '#232D4B', '#F9DCBF'];
         function colorsForLetter(letter) {
-            return scotlandColors;
+            return uvaColors;
         }
 
         const slope = 1 / Math.sqrt(3);

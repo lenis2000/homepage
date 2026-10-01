@@ -709,7 +709,7 @@
     }
 
     function reset() {
-        hideElement('sp-frozen-label');
+        ['sp-limit', 'sp-sine', 'sp-refs', 'sp-sim-container', 'sp-frozen-label'].forEach(hideElement);
         currentSimIdx = 0;
         // Initialize Three.js and start sampling both on slide load
         initThreeJS();
@@ -724,17 +724,35 @@
     }
 
     function onStep(step) {
-        // Step 1: Swap to frozen simulation (q=0.9)
+        // Step 1: limiting operator and sine kernel
         if (step >= 1) {
+            showElement('sp-limit');
+            showElement('sp-sine');
+        }
+        // Step 2: references
+        if (step >= 2) showElement('sp-refs');
+        // Step 3: q=0.97 simulation
+        if (step >= 3) {
+            showElement('sp-sim-container');
+            displaySimulation(0);
+        }
+        // Step 4: swap to q=0.9 and show frozen label
+        if (step >= 4) {
             displaySimulation(1);
             showElement('sp-frozen-label');
         }
     }
 
     function onStepBack(step) {
-        if (step < 1) {
+        if (step < 4) {
             displaySimulation(0);
             hideElement('sp-frozen-label');
+        }
+        if (step < 3) hideElement('sp-sim-container');
+        if (step < 2) hideElement('sp-refs');
+        if (step < 1) {
+            hideElement('sp-limit');
+            hideElement('sp-sine');
         }
     }
 
@@ -748,7 +766,7 @@
                 pause() {
                     stopRenderLoop();
                 },
-                steps: 1,
+                steps: 4,
                 onStep,
                 onStepBack,
                 onSlideEnter() { reset(); },
