@@ -1,5 +1,5 @@
 // Service Worker for ESI Waterfall Talk — Aggressive Precaching
-const CACHE_NAME = 'esi-waterfall-talk-v3';
+const CACHE_NAME = 'esi-waterfall-talk-v4';
 
 // All local assets to precache
 const PRECACHE_ASSETS = [
@@ -119,8 +119,6 @@ const PRECACHE_ASSETS = [
   '/talk/esi-waterfall/images/fig_lozenge_and_paths.svg',
   '/talk/esi-waterfall/images/nsf-logo.png',
   '/talk/esi-waterfall/images/simons-logo.svg',
-  '/talk/esi-waterfall/images/details-waterfall-region.png',
-  '/talk/esi-waterfall/images/details-waterfall-sample-300-225-150.jpg',
   '/talk/esi-waterfall/images/details-concentration-paths.png',
   '/talk/esi-waterfall/images/details-barcode-correlations.png',
   '/talk/esi-waterfall/images/details-barcode-height-L200.png',

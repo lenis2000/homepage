@@ -227,7 +227,7 @@ class SlideEngine {
         this.slides.forEach((slide, index) => {
             const title = slide.dataset.title || `Slide ${index + 1}`;
             const item = document.createElement('div');
-            item.className = 'slide-jump-item';
+            item.className = /^Part [IVXLC\d]+\b/.test(title) ? 'slide-jump-item part-divider' : 'slide-jump-item';
             item.setAttribute('tabindex', '0');
             item.setAttribute('role', 'button');
             item.setAttribute('aria-label', `Go to slide ${index + 1}: ${title}`);

@@ -1,52 +1,25 @@
-<section class="slide slide-top" id="details-concentration" data-title="Why the Paths Cluster">
-    <h2 class="slide-title">Why the Paths Cluster: Exponential Concentration</h2>
+<section class="slide slide-top" id="details-concentration" data-title="Why the Paths Cluster: Proof Idea">
+    <h2 class="slide-title">Why the Paths Cluster: Proof Idea</h2>
 
-    <div style="display: grid; grid-template-columns: 60vw 32vw; gap: 2vw; margin-top: 1vh; padding: 0 1vw;">
-        <!-- Left column: heuristics and proof idea -->
+    <div style="display: grid; grid-template-columns: 60vw 32vw; gap: 2vw; margin-top: 1vh; padding: 0 1vw; height: 80vh; align-items: center;">
+        <!-- Left column: proof idea -->
         <div style="display: flex; flex-direction: column; gap: 1vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
-            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1.2vw;">
-                <strong style="color: var(--slide-accent);">Heuristics.</strong>
-                A hole (horizontal lozenge) at \((t,x)\) carries the weight
-                <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.3rem, 2.2vw, 1.8rem);">
-                    \(\displaystyle \mathrm{w}\bigl(x-\tfrac{t}{2}+1\bigr) = \chi\, q^{\frac12 + \left(x - \frac{t+S}{2}\right)} + \frac{1}{\chi\, q^{\frac12 + \left(x - \frac{t+S}{2}\right)}}\)
-                </div>
-                <div style="margin-top: 0.5vh;">
-                    Both terms are \(O(1)\) near the center line \(x = \tfrac{t+S}{2}\), and one of them is exponentially large in \(L\) far from it
-                    \(\Rightarrow\) holes are pushed away from the center line, symmetrically.
-                    If \(\mathsf{t}_l < \mathsf{t} < \mathsf{t}_r\), there is room for a band of width \(\mathsf{N}\) of particles; otherwise the paths are frozen with slope \(0\) or \(1\).
-                </div>
-            </div>
-
-            <div class="fragment" style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.6vh 1.2vw;">
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 0.6vh 1.2vw;">
                 <strong style="color: var(--slide-navy);">Proof idea</strong> (on a vertical slice, via the \(q\)-Racah orthogonal polynomial ensemble):
                 <ul style="margin: 0.5vh 0 0 1.2em; padding: 0;">
                     <li>Compare two configurations differing by moving <strong>one particle</strong> \(x \to y\): the ratio of probabilities has a dominant factor \(q^{\mathscr{E}(x,y)}\)</li>
                     <li>\(\mathscr{E}\) = one-body term (integrated from \(x\) to \(y\)) + interaction with the other \(N-1\) particles</li>
                     <li>The interaction is minimized when the other particles form a <strong>densely packed block</strong> around the center line</li>
-                    <li>Moving a particle toward the center line gains \(q^{-cL}\) near the boundary of \(\mathcal{W}\), and \(q^{-c'L^2}\) across it</li>
+                    <li>Moving a particle toward the center line gains \(q^{-cN}\) near the edge of the waterfall region, and \(q^{-c'N^2}\) across it (recall \(0 &lt; q &lt; 1\))</li>
                 </ul>
-            </div>
-
-            <div class="fragment" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.6vh 1.2vw;">
-                <strong style="color: var(--slide-accent);">Theorem</strong> <span class="cite">[Knizel-P. 2025]</span>
-                For any \(\varepsilon > 0\), there is \(c > 0\) with
-                <div style="margin-top: 0.5vh; text-align: center; font-size: clamp(1.2rem, 2vw, 1.6rem);">
-                    \(\displaystyle \mathbb{P}\Bigl(\exists \text{ hole at } (t,y)\colon\ \mathsf{t}_l + \varepsilon < \tfrac{t}{L} < \mathsf{t}_r - \varepsilon,\ \ \Bigl|\tfrac{y}{L} - \tfrac{\mathsf{S}+\mathsf{t}}{2}\Bigr| < \tfrac{\mathsf{N}-\varepsilon}{2}\Bigr) < e^{-cL}\)
-                </div>
             </div>
         </div>
 
-        <!-- Right column: clustered paths, and what is new -->
+        <!-- Right column: clustered paths -->
         <div style="display: flex; flex-direction: column; align-items: center; gap: 1.2vh;">
             <div style="position: relative;">
                 <img src="images/details-concentration-paths.png" alt="Nonintersecting paths clustering into a band in the waterfall, with the middle path highlighted" style="height: 46vh; width: auto; max-width: 100%; object-fit: contain;">
                 <div style="position: absolute; top: 0.5vh; right: 0.5vw; background: rgba(229, 114, 0, 0.9); color: white; padding: 0.3vh 0.6vw; border-radius: 3px; font-size: clamp(0.7rem, 1.2vw, 1rem); font-weight: bold;">pre-sampled</div>
-            </div>
-            <div class="fragment" style="background: #fff3e0; border-left: 4px solid #E57200; padding: 0.8vh 1.2vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
-                <strong style="color: #E57200;">A new phase.</strong>
-                Frozen facets are nonrandom; semi-frozen zones (two lozenge types) are deterministic and periodic
-                <span class="cite">[Mkrtchyan 2014, 2021]</span>.
-                The waterfall is a macroscopic facet that is <strong>random</strong> and <strong>one-dimensional</strong>, under nonrandom weights.
             </div>
         </div>
     </div>

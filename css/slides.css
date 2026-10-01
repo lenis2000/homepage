@@ -384,6 +384,10 @@
     outline: 3px solid var(--slide-accent);
 }
 
+.slide-jump-item.part-divider {
+    background: #fde7d2;
+}
+
 .slide-jump-number {
     font-family: 'SF Mono', Monaco, monospace;
     font-size: 1.5rem;
