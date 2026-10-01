@@ -1,5 +1,5 @@
 // Service Worker for ESI Waterfall Talk — Aggressive Precaching
-const CACHE_NAME = 'esi-waterfall-talk-v22';
+const CACHE_NAME = 'esi-waterfall-talk-v24';
 
 // All local assets to precache
 const PRECACHE_ASSETS = [
