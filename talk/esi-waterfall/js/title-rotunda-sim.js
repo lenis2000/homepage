@@ -154,7 +154,7 @@
         function animate() {
             if (!isValid || !isRunning) return;
 
-            const ptr = performGlauberStepsWasm(8000);
+            const ptr = performGlauberStepsWasm(16000);
             freeStringWasm(ptr);
 
             const dPtr = exportDimersWasm();
