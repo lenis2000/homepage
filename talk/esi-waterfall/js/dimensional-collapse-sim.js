@@ -594,7 +594,7 @@
         if (!waterfallPaths) {
             waterfallPaths = await sampleAtQ(Q_WATERFALL);
         }
-        displayPaths(waterfallPaths);
+        displayPaths(intendedDisplay === 'classical' && classicalPaths ? classicalPaths : waterfallPaths);
         setCameraPosition(1);  // Final camera position
 
         // Pre-sample classical regime in background so it's ready on click

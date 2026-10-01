@@ -684,9 +684,8 @@
     // Display a specific simulation
     function displaySimulation(simIdx) {
         const data = sampledData[simIdx];
-        if (!data.sampled) return;
-
         currentSimIdx = simIdx;
+        if (!data.sampled) return;
 
         // Build 3D mesh
         pathsTo3D(data.paths, N_param, T_param, data.S_param);

@@ -8,6 +8,8 @@
 
     const canvas = document.getElementById('zoom-full-canvas');
     if (!canvas) return;
+    // setPixelRatio rescales canvas.width/height, so re-entry must not read them back
+    const BASE_W = canvas.width, BASE_H = canvas.height;
 
     let scene, camera, renderer, controls, meshGroup;
     let objLoaded = false;
@@ -77,7 +79,7 @@
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0xffffff);
 
-        const aspect = canvas.width / canvas.height;
+        const aspect = BASE_W / BASE_H;
         camera = new THREE.OrthographicCamera(-1000 * aspect, 1000 * aspect, 1000, -1000, 0.1, 10000);
         // Start at position 1
         const startPos = zoomPositions[0];
@@ -86,7 +88,7 @@
         camera.updateProjectionMatrix();
 
         renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-        renderer.setSize(canvas.width, canvas.height);
+        renderer.setSize(BASE_W, BASE_H);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
         controls = new THREE.OrbitControls(camera, renderer.domElement);

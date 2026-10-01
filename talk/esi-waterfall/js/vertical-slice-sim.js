@@ -660,9 +660,8 @@
 
     function displaySimulation(simIdx) {
         const data = sampledData[simIdx];
-        if (!data.sampled) return;
-
         currentSimIdx = simIdx;
+        if (!data.sampled) return;
 
         pathsTo3D(data.paths, N_param, T_param, data.S_param);
         drawSlice(data.sliceData);
