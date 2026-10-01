@@ -1,5 +1,5 @@
 // Service Worker for ESI Waterfall Talk — Aggressive Precaching
-const CACHE_NAME = 'esi-waterfall-talk-v7';
+const CACHE_NAME = 'esi-waterfall-talk-v9';
 
 // All local assets to precache
 const PRECACHE_ASSETS = [
@@ -86,10 +86,7 @@ const PRECACHE_ASSETS = [
   // Simulation JS files — Part IV (sampling)
   '/talk/esi-waterfall/js/sampling-cftp-sim.js',
   '/talk/esi-waterfall/js/sampling-shuffling-sim.js',
-  '/talk/esi-waterfall/js/sampling-ybe-sim.js',
   '/talk/visual/sim/qracah-coupled.js',
-  '/js/factorial-ybe-worker.js',
-  '/js/factorial-ybe-wasm.js',
 
   // Thank You
   '/talk/esi-waterfall/js/thankyou-sim.js',
@@ -122,7 +119,6 @@ const PRECACHE_ASSETS = [
   '/talk/esi-waterfall/images/details-concentration-paths.png',
   '/talk/esi-waterfall/images/details-barcode-correlations.png',
   '/talk/esi-waterfall/images/details-barcode-height-L200.png',
-  '/talk/esi-waterfall/images/factorial-waterfall-sample.png',
 
   // Manifest
   '/talk/esi-waterfall/manifest.json',
