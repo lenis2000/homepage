@@ -1,0 +1,46 @@
+<section class="slide slide-top" id="barcode-cf-elliptic" data-title="Barcode Kernel: Elliptic Level">
+    <h2 class="slide-title">Barcode Kernel: Elliptic Level</h2>
+
+    <div style="display: flex; flex-direction: column; gap: 1.8vh; margin-top: 1.5vh; font-size: clamp(1.2rem, 2.1vw, 1.7rem); width: 94%; margin-left: auto; margin-right: auto; text-align: left;">
+
+        <div>
+            Two-periodic \(\Rightarrow\) block-Toeplitz, with \(2\times2\) matrix symbol
+            \(\displaystyle \widehat{\mathcal{K}}(\theta)=\sum_{m\in\mathbb{Z}}\bigl[\mathcal{K}^{\mathrm{barcode}}(a+2m,b)\bigr]_{a,b\in\{0,1\}}\,e^{im\theta}\),
+            in the variable \(\eta:=-q^{3/2}e^{i\theta}\).
+        </div>
+
+        <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1.3vh 1.6vw;">
+            <strong style="color: var(--slide-navy);">Theorem</strong> <span class="cite">[Knizel&ndash;P., in preparation]</span>
+            <ul style="margin: 0.6vh 0 0 1.2em; padding: 0; line-height: 1.55;">
+                <li style="margin-bottom: 1vh;">\(\widehat{\mathcal{K}}\) is meromorphic in \(\eta\) and \(\widehat{\mathcal{K}}(q^2\eta)=D\,\widehat{\mathcal{K}}(\eta)\,D^{-1}\), \(D=\mathrm{diag}(q,1)\): a section of \(\mathrm{End}(\mathcal{O}_E\oplus\mathcal{L}_q)\) over the elliptic curve \(E=\mathbb{C}^\times/q^{2\mathbb{Z}}\), with \(\mathcal{L}_q\) a <strong>two-torsion</strong> line bundle</li>
+                <li style="margin-bottom: 1vh;">\(\operatorname{tr}\widehat{\mathcal{K}}\equiv 1\), and if \(\rho=1\), then \(\displaystyle \widehat{\mathcal{K}}_{00}(\eta)=\frac12\Bigl(1-\frac{R(w)}{R(\eta/q)}\Bigr)\), \(\displaystyle R(x):=\frac{\theta_q(x)}{\theta_q(-x)}\)</li>
+                <li>\(\widehat{\mathcal{K}}(\theta)\) is a <strong>rank-one orthogonal projection</strong> for every \(\theta\) \(\iff\) \(\rho(q)=1\)</li>
+            </ul>
+        </div>
+
+        <div class="fragment" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.2vh 1.6vw;">
+            <strong style="color: var(--slide-accent);">Levels of translation-invariant determinantal kernels</strong> (by their symbols)
+            <table style="width: 100%; margin-top: 0.8vh; border-collapse: collapse; line-height: 1.45; font-size: inherit;">
+                <tr style="border-bottom: 1px solid #ccc;">
+                    <td style="padding: 0.5vh 1vw 0.5vh 0; white-space: nowrap; color: var(--slide-navy);"><strong>rational</strong></td>
+                    <td style="padding: 0.5vh 0;">discrete sine kernel; incomplete beta kernel <span class="cite">[Okounkov&ndash;Reshetikhin 2003]</span></td>
+                </tr>
+                <tr style="border-bottom: 1px solid #ccc;">
+                    <td style="padding: 0.5vh 1vw 0.5vh 0; white-space: nowrap; color: var(--slide-navy);"><strong>trigonometric</strong></td>
+                    <td style="padding: 0.5vh 0;">finite-temperature sine kernel <span class="cite">[Moshe&ndash;Neuberger&ndash;Shapiro 1994], [Johansson 2007]</span></td>
+                </tr>
+                <tr>
+                    <td style="padding: 0.5vh 1vw 0.5vh 0; white-space: nowrap; vertical-align: top; color: var(--slide-navy);"><strong>elliptic</strong></td>
+                    <td style="padding: 0.5vh 0;">
+                        elliptic tail kernel <span class="cite">[Cuenca&ndash;Gorin&ndash;Olshanski 2021]</span>: from \(U(\infty)\), curve \(\mathbb{C}^\times/q^{\mathbb{Z}}\), free twist<br>
+                        <strong>barcode kernel</strong>: from random lozenge tilings, curve \(\mathbb{C}^\times/q^{2\mathbb{Z}}\), rigid two-torsion twist, \(d_0\ne d_1\)
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="fragment" style="background: #fff3e0; border-left: 4px solid #E57200; padding: 1.2vh 1.6vw;">
+            <strong style="color: #E57200;">Open:</strong> gap probabilities are block-Toeplitz determinants with an <strong>elliptic</strong> matrix symbol; their asymptotics call for an elliptic Szeg&#337;&ndash;Widom theory.
+        </div>
+    </div>
+</section>

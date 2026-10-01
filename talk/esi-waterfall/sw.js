@@ -1,5 +1,5 @@
 // Service Worker for ESI Waterfall Talk — Aggressive Precaching
-const CACHE_NAME = 'esi-waterfall-talk-v1';
+const CACHE_NAME = 'esi-waterfall-talk-v3';
 
 // All local assets to precache
 const PRECACHE_ASSETS = [
@@ -68,7 +68,6 @@ const PRECACHE_ASSETS = [
   '/talk/esi-waterfall/js/limit-shape-sim.js',
   '/talk/esi-waterfall/js/local-patches-sim.js',
   '/talk/esi-waterfall/js/universality-zoom-sim.js',
-  '/talk/esi-waterfall/js/gff-fluctuations-sim.js',
 
   // Simulation JS files — Part II
   '/talk/esi-waterfall/js/q-volume-sim.js',
@@ -82,6 +81,15 @@ const PRECACHE_ASSETS = [
   '/talk/esi-waterfall/js/inter-slice-sim.js',
   '/talk/esi-waterfall/js/why-2-periodic-sim.js',
   '/talk/esi-waterfall/js/barcode-conjecture-sim.js',
+  '/talk/esi-waterfall/js/barcode-cf-densities-sim.js',
+
+  // Simulation JS files — Part IV (sampling)
+  '/talk/esi-waterfall/js/sampling-cftp-sim.js',
+  '/talk/esi-waterfall/js/sampling-shuffling-sim.js',
+  '/talk/esi-waterfall/js/sampling-ybe-sim.js',
+  '/talk/visual/sim/qracah-coupled.js',
+  '/js/factorial-ybe-worker.js',
+  '/js/factorial-ybe-wasm.js',
 
   // Thank You
   '/talk/esi-waterfall/js/thankyou-sim.js',
@@ -111,6 +119,12 @@ const PRECACHE_ASSETS = [
   '/talk/esi-waterfall/images/fig_lozenge_and_paths.svg',
   '/talk/esi-waterfall/images/nsf-logo.png',
   '/talk/esi-waterfall/images/simons-logo.svg',
+  '/talk/esi-waterfall/images/details-waterfall-region.png',
+  '/talk/esi-waterfall/images/details-waterfall-sample-300-225-150.jpg',
+  '/talk/esi-waterfall/images/details-concentration-paths.png',
+  '/talk/esi-waterfall/images/details-barcode-correlations.png',
+  '/talk/esi-waterfall/images/details-barcode-height-L200.png',
+  '/talk/esi-waterfall/images/factorial-waterfall-sample.png',
 
   // Manifest
   '/talk/esi-waterfall/manifest.json',

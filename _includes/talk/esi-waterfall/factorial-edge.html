@@ -1,0 +1,39 @@
+<section class="slide slide-top" id="factorial-edge" data-title="Edge Waterfall and Essential Corner">
+    <h2 class="slide-title">Edge Waterfall and the Essential Corner <span class="cite">[Li, in prep.]</span></h2>
+
+    <div style="display: grid; grid-template-columns: 33% 67%; gap: 2vw; margin-top: 2.5vh; padding: 0 2vw; align-items: start;">
+        <div style="display: flex; justify-content: center; padding-top: 5vh;">
+            {% include talk/esi-waterfall/factorial-phase-svg.html mode="edge" %}
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 2.2vh; font-size: clamp(1.15rem, 2.1vw, 1.7rem); text-align: left;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Edge waterfall</strong> on \(z=t+K\), \(0&lt;t&lt;1\):
+                same residue kernel, with the theta function replaced by a <strong>one-sided</strong> product
+                <div style="text-align: center; margin-top: 0.6vh;">
+                    \(\displaystyle H^{\mathrm{edge}}_{\Delta t}(U)=\Big(\frac{\beta q}{U};q\Big)_{\Delta t}\Big(\frac{U}{\beta};q\Big)_{\infty}\,\Theta_q\Big(-\frac{U}{\alpha}\Big)\)
+                </div>
+                <div style="margin-top: 0.4vh;">still two phases \(\theta\in\{0,1\}\), but no translation invariance</div>
+            </div>
+
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-navy);">Essential corner</strong> \((t,z)=(0,K)\): full sequence \(M\to\infty\), limit <strong>independent of \(K\)</strong>:
+                <div style="text-align: center; margin-top: 0.6vh;">
+                    \[\mathcal{K}^{\mathrm{corner}}(T_1,\Delta z_1;T_2,\Delta z_2)=\frac{1}{(2\pi\mathrm{i})^2}\oint\!\!\oint\frac{dU\,dV}{V-U}\,\frac{H^{\mathrm{corner}}_{T_2}(U)}{H^{\mathrm{corner}}_{T_1}(V)}\,\frac{U^{r_2-1}}{V^{r_1}}\]
+                </div>
+                <div style="text-align: center; margin-top: 0.4vh;">
+                    \(\displaystyle H^{\mathrm{corner}}_T(U)=\Big(\frac{\beta q}{U};q\Big)_T\Big(-\frac{\alpha q}{U};q\Big)_\infty\)
+                </div>
+            </div>
+
+            <div class="fragment" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Match with <span class="cite" style="color: inherit;">[Borodin-Gorin 2013]</span></strong>
+                (particle-hole duality): <strong>holes</strong> of the corner process \(=\) particles of the Markov process of <strong>infinitely many nonintersecting Bernoulli walks</strong> with \(\xi_i=q^{1-i}\), \(g_t(w)=1+\frac{\beta}{\alpha}q^t w\), started densely packed
+                <ul style="margin: 0.6vh 0 0 1.2em; padding: 0;">
+                    <li style="font-size: inherit;">evolves in the <strong>vertical</strong> direction \(T\); each particle stays or jumps by 1, only finitely many stay</li>
+                    <li style="font-size: inherit;">explicit infinite-particle transition probabilities via the <strong>Feller property</strong></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>

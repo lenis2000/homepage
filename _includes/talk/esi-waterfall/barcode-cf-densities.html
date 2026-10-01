@@ -1,0 +1,74 @@
+<section class="slide slide-top" id="barcode-cf-densities" data-title="One Particle per Two Sites">
+    <h2 class="slide-title">One Particle per Two Sites, and the Imbalance</h2>
+
+    <div style="display: grid; grid-template-columns: 39vw 51vw; gap: 1.5vw; margin-top: 1.2vh; font-size: clamp(1.1rem, 1.9vw, 1.6rem); text-align: left;">
+        <!-- Left: statements -->
+        <div style="display: flex; flex-direction: column; gap: 1.6vh;">
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1.2vh 1.4vw;">
+                <strong style="color: var(--slide-navy);">Theorem (filling)</strong> <span class="cite">[Knizel&ndash;P., in preparation]</span>
+                <div style="margin-top: 0.6vh;">
+                    The diagonal \(d_a:=\mathcal{K}^{\mathrm{barcode}}(a,a)\), given by the paired series, satisfies
+                </div>
+                <div style="text-align: center; margin: 0.8vh 0; font-size: clamp(1.3rem, 2.1vw, 1.75rem);">
+                    \(d_a+d_{a+1}=1,\qquad a\in\mathbb{Z}.\)
+                </div>
+                <div>
+                    Exactly <strong>one particle per two-site cell</strong>: the slope \(\frac12\) of the waterfall.
+                </div>
+            </div>
+
+            <div class="fragment" style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1.2vh 1.4vw;">
+                <strong style="color: var(--slide-navy);">Theorem (imbalance)</strong>
+                <div style="margin-top: 0.6vh;">
+                    \(I:=d_0-d_1=\rho(q)\,\mathrm{Pc}(w)\), with \(\rho(q)\) independent of \(w\), where
+                </div>
+                <div style="text-align: center; margin: 0.8vh 0; font-size: clamp(1.3rem, 2.1vw, 1.75rem);">
+                    \(\displaystyle \mathrm{Pc}(w)=-\frac{(q^2;q^2)_\infty^2}{(q;q)_\infty^4}\,\frac{\theta_q(w)}{\theta_q(-w)}\)
+                </div>
+                <div>
+                    is elliptic on \(E=\mathbb{C}^\times/q^{2\mathbb{Z}}\):
+                    \(\mathrm{Pc}(qw)=\mathrm{Pc}(1/w)=-\mathrm{Pc}(w)\); zeros \(q^{\mathbb{Z}}\) (there \(d_0=d_1=\frac12\)), poles \(-q^{\mathbb{Z}}\).
+                </div>
+            </div>
+
+            <div class="fragment" style="background: #fff3e0; border-left: 4px solid #E57200; padding: 1.2vh 1.4vw;">
+                <strong style="color: #E57200;">Numerically</strong> \(\rho(q)=1\) (to 40+ digits), so
+                \(d_{0,1}=\frac12\bigl(1\pm\mathrm{Pc}(w)\bigr)\).
+                Proof in progress.
+            </div>
+        </div>
+
+        <!-- Right: interactive -->
+        <div style="display: flex; flex-direction: column; gap: 1vh;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 0.8vh 1.2vw; font-size: clamp(0.95rem, 1.4vw, 1.2rem);">
+                <div style="display: grid; grid-template-columns: auto 1fr auto; align-items: center; column-gap: 0.8vw; row-gap: 0.6vh;">
+                    <label for="bcf-q">\(q\)</label>
+                    <input type="range" id="bcf-q" min="0.02" max="0.6" step="any" value="0.142857" style="width: 100%;">
+                    <span id="bcf-qval" style="font-weight: bold; min-width: 4.5em; font-variant-numeric: tabular-nums;">0.1429</span>
+                    <label for="bcf-chi">\(\chi\)</label>
+                    <input type="range" id="bcf-chi" min="-2.302585" max="2.995732" step="any" value="1.098612" style="width: 100%;">
+                    <span id="bcf-chival" style="font-weight: bold; min-width: 4.5em; font-variant-numeric: tabular-nums;">3.000</span>
+                </div>
+                <table style="width: 100%; margin-top: 0.8vh; border-collapse: collapse; text-align: center; font-variant-numeric: tabular-nums;">
+                    <tr style="border-bottom: 1px solid #999;">
+                        <th style="padding: 0.2vh 0.4vw;"></th>
+                        <th style="padding: 0.2vh 0.4vw; font-weight: normal;">series (definition)</th>
+                        <th style="padding: 0.2vh 0.4vw; font-weight: normal;">\(\frac12\bigl(1\pm\mathrm{Pc}(w)\bigr)\), \(\mathrm{Pc}(w)\)</th>
+                    </tr>
+                    <tr><td>\(d_0\)</td><td id="bcf-d0s"></td><td id="bcf-d0c"></td></tr>
+                    <tr><td>\(d_1\)</td><td id="bcf-d1s"></td><td id="bcf-d1c"></td></tr>
+                    <tr><td>\(d_0-d_1\)</td><td id="bcf-Is" style="color: #E57200; font-weight: bold;"></td><td id="bcf-Ic" style="color: var(--slide-navy); font-weight: bold;"></td></tr>
+                    <tr style="border-top: 1px solid #ccc;"><td>\(d_0+d_1\)</td><td id="bcf-sums"></td><td>1</td></tr>
+                </table>
+            </div>
+            <canvas id="bcf-plot" style="width: 100%; height: 28vh; display: block;"></canvas>
+            <div style="display: flex; align-items: stretch; gap: 0.6vw;">
+                <canvas id="bcf-barcode" style="flex: 1; min-width: 0; height: 26vh; display: block; background: #fafafa;"></canvas>
+                <div style="display: flex; flex-direction: column; gap: 0.6vh; justify-content: center;">
+                    <button id="bcf-resample" type="button" style="padding: 0.6vh 0.8vw; border: 2px solid #232D4B; border-radius: 4px; background: #fff; color: #232D4B; font-size: clamp(0.8rem, 1.1vw, 1rem); cursor: pointer;">Resample</button>
+                    <button id="bcf-reset" type="button" style="padding: 0.6vh 0.8vw; border: 2px solid #232D4B; border-radius: 4px; background: #fff; color: #232D4B; font-size: clamp(0.8rem, 1.1vw, 1rem); cursor: pointer;">\((q,\chi)=(\tfrac17,3)\)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

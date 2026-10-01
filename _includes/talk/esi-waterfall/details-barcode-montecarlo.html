@@ -1,0 +1,50 @@
+<section class="slide slide-top" id="details-barcode-montecarlo" data-title="Barcode: Monte Carlo Check">
+    <h2 class="slide-title">Barcode Process: Monte Carlo Check</h2>
+
+    <div style="display: flex; flex-direction: column; gap: 1.5vh; margin-top: 1.5vh; padding: 0 3vw; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+        <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+            <strong style="color: var(--slide-accent);">Perfect sampling</strong> <span class="cite">[Borodin-Gorin-Rains 2009]</span>:
+            Markov moves \((T,S,N)\to(T,S+1,N)\) preserving the \(q\)-Racah measure, started from the parallelogram \(S=0\).
+            Vadim Gorin's original Fortran code ported to Python (ancillary file of arXiv:2507.22011) &mdash; <strong>batch</strong> samples of the barcode as a 0/1 sequence.
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 2vw;">
+            <div class="fragment" style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-navy);">Density on even / odd sites</strong>, \(q = \tfrac17\), \(\chi = 4.3\), 100 samples per row:
+                <table style="width: 100%; border-collapse: collapse; text-align: center; margin-top: 1vh;">
+                    <tr style="border-bottom: 1px solid #999;">
+                        <th style="padding: 0.4vh 0.5vw;">\((T,S,N)\)</th>
+                        <th style="padding: 0.4vh 0.5vw;">even</th>
+                        <th style="padding: 0.4vh 0.5vw;">odd</th>
+                    </tr>
+                    <tr><td>\((400,200,200)\)</td><td>0.3451</td><td>0.6546</td></tr>
+                    <tr><td>\((300,180,140)\)</td><td>0.3453</td><td>0.6558</td></tr>
+                    <tr><td>\((400,20,20)\)</td><td>0.3516</td><td>0.6516</td></tr>
+                    <tr style="border-bottom: 1px solid #999;"><td>\((400,200,50)\)</td><td>0.3432</td><td>0.6734</td></tr>
+                    <tr style="color: var(--slide-accent); font-weight: bold;"><td>prediction \(\mathcal{K}^{\mathrm{barcode}}_{(M)}(t,t)\)</td><td>0.3452</td><td>0.6548</td></tr>
+                </table>
+            </div>
+
+            <div class="fragment" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Two-point patterns</strong> (first row of the table):
+                <table style="width: 100%; border-collapse: collapse; text-align: center; margin-top: 1vh;">
+                    <tr style="border-bottom: 1px solid #999;">
+                        <th style="padding: 0.4vh 0.5vw;">pattern</th>
+                        <th style="padding: 0.4vh 0.5vw;">\(2\times 2\) det</th>
+                        <th style="padding: 0.4vh 0.5vw;">observed</th>
+                    </tr>
+                    <tr><td>\(11\)</td><td>0.1321</td><td>0.1339</td></tr>
+                    <tr><td>\(1{\star}1\), \(t\) even</td><td>0.1087</td><td>0.1065</td></tr>
+                    <tr><td>\(1{\star}1\), \(t\) odd</td><td>0.4183</td><td>0.4134</td></tr>
+                </table>
+                <div style="margin-top: 1vh;">
+                    Nearest-neighbor pattern is translation invariant; the next one is <strong>two-periodic</strong>.
+                </div>
+            </div>
+        </div>
+
+        <div class="fragment" style="background: #fff3e0; border-left: 4px solid #E57200; padding: 1vh 1.5vw;">
+            The local statistics depend only on \((q,\chi)\), not on the side lengths \((T,S,N)\) or the point of observation in \(\mathcal{W}\): a new family of <strong>one-dimensional determinantal processes</strong> indexed by \((q,\chi)\) (conjecturally).
+        </div>
+    </div>
+</section>

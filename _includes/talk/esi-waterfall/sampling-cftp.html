@@ -1,0 +1,36 @@
+<section class="slide slide-top" id="sampling-cftp" data-title="Glauber Dynamics and CFTP">
+    <h2 class="slide-title">Glauber Dynamics and Coupling From the Past</h2>
+
+    <div style="display: grid; grid-template-columns: 44vw 48vw; gap: 2vw; margin-top: 1.5vh; padding: 0 2vw;">
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Glauber dynamics:</strong>
+                add or remove one cube (rotate three lozenges around a vertex), accepted with probability <span style="white-space: nowrap;">\(\min\bigl(1,\mathrm{w}(h\pm1)/\mathrm{w}(h)\bigr)\)</span>.
+                Reversible for \(\prod \mathrm{w}(h)\); only <strong>approximate</strong> samples.
+                Uniform hexagon: mixing in \(O(N^{4+\epsilon})\) flips <span class="cite">[Laslier–Toninelli 2015]</span>
+            </div>
+
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-navy);">Coupling from the past</strong> <span class="cite">[Propp–Wilson 1996]</span>:
+                the dynamics is <strong>monotone</strong> in the height function, so it suffices to run the maximal and minimal tilings with common randomness from times \(-1,-2,-4,\ldots\).
+                Coalescence by time \(0\) &rArr; <strong>exact</strong> sample
+            </div>
+
+            <div id="sampling-cftp-fail" style="background: #fff3e0; border-left: 4px solid #E57200; padding: 1vh 1.5vw; opacity: 0; transition: opacity 0.3s;">
+                <strong style="color: #E57200;">Fails for the waterfall:</strong>
+                to coalesce, horizontal lozenges must cross the waterfall region, where they are exponentially rare
+                <span class="cite">[Knizel–P. 2025]</span>. The sandwich does not close in any reasonable time.
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1vh;">
+            <div id="sampling-cftp-label" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--slide-navy); font-weight: bold;">Hexagon 35 × 35 × 35, uniform</div>
+            <canvas id="sampling-cftp-canvas" width="1200" height="900" style="height: 58vh; width: auto; max-width: 100%; border-radius: 8px;"></canvas>
+            <div id="sampling-cftp-status" style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--slide-muted); min-height: 1.5em;"></div>
+            <div style="display: flex; gap: 1vw;">
+                <button id="sampling-cftp-btn-uniform" class="sampling-cftp-btn" style="padding: 0.3em 1em; cursor: pointer; border: 2px solid var(--slide-navy); border-radius: 4px; font-size: clamp(0.9rem, 1.5vw, 1.1rem);">uniform</button>
+                <button id="sampling-cftp-btn-qracah" class="sampling-cftp-btn" style="padding: 0.3em 1em; cursor: pointer; border: 2px solid var(--slide-navy); border-radius: 4px; font-size: clamp(0.9rem, 1.5vw, 1.1rem);"><em>q</em>-Racah, <em>q</em> = 0.67</button>
+            </div>
+        </div>
+    </div>
+</section>

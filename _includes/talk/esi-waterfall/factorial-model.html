@@ -1,0 +1,40 @@
+<section class="slide slide-top" id="factorial-model" data-title="Factorial Schur Process">
+    <h2 class="slide-title">Factorial Schur Process <span class="cite">[Li, in prep.]</span></h2>
+
+    <div style="display: grid; grid-template-columns: 52% 48%; gap: 2vw; margin-top: 2vh; padding: 0 2vw;">
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.1rem, 2vw, 1.6rem); text-align: left;">
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.2vw;">
+                <strong style="color: var(--slide-navy);">Factorial Schur functions</strong> \(s_\lambda(x\,|\,y)\) and duals \(\check s_\lambda(w\,|\,y)\): partition functions of a <strong>5-vertex model</strong> (nonintersecting paths) on a half-strip, column parameters \(y_1,y_2,\ldots\)
+                <div style="text-align: center; margin-top: 1vh;">
+                    \(\displaystyle \sum_{\lambda} s_\lambda(x_1,\ldots,x_N\,|\,y)\,\check s_\lambda(w_1,\ldots,w_M\,|\,y) = \prod_{i=1}^{N}\prod_{j=1}^{M}\frac{1}{w_j-x_i}\)
+                </div>
+                <div style="margin-top: 0.5vh;">Cauchy identity <span class="cite">[Aggarwal-Borodin-P.-Wheeler 2023]</span>: right-hand side <strong style="color: var(--slide-accent);">independent of \(y\)</strong></div>
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.2vw;">
+                <strong style="color: var(--slide-accent);">Process</strong> on two-sided interlacing sequences
+                \(\varnothing \prec \lambda^{(1)} \prec \cdots \prec \lambda^{(N)} = \mu^{(M)} \succ \cdots \succ \mu^{(1)} \succ \varnothing\):
+                <div style="text-align: center; margin-top: 1vh;">
+                    \(\displaystyle \mathrm{Prob} \propto \prod_{j=1}^{M} \check s_{\mu^{(j)}/\mu^{(j-1)}}(w_j\,|\,y) \prod_{i=1}^{N} s_{\lambda^{(i)}/\lambda^{(i-1)}}(x_i\,|\,y)\)
+                </div>
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-navy); padding: 1vh 1.2vw;">
+                <strong style="color: var(--slide-navy);">Waterfall specialization</strong>, \(q\in(0,1)\) <strong>fixed</strong>, \(\alpha>0\), \(\beta>1\):
+                <div style="text-align: center; margin-top: 0.8vh;">
+                    \(x_i = 1,\qquad y_k = \alpha\, q^{k-M},\qquad w_j = \beta\, q^{j-M}\)
+                </div>
+                <div style="margin-top: 0.8vh;">
+                    Lozenge tilings with <strong style="color: var(--slide-accent);">Gibbs ratios of \(q\)-Racah type</strong>: moving \(\mu_i^{(j)}\mapsto\mu_i^{(j)}+1\) (neighbors fixed) changes the weight by
+                    <div style="text-align: center; margin-top: 0.5vh;">
+                        \(\displaystyle \frac{\beta q^{j+1} + \alpha q^{\mu_i+N+1-i}}{\beta q^{j} + \alpha q^{\mu_i+N+2-i}}\)
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <img src="images/factorial-waterfall-sample.png" alt="Exact sample of the factorial Schur process with the waterfall specialization, drawn as a lozenge tiling: a frozen corner, an empty region, and a band of alternating vertical stripes (the waterfall)" style="width: 100%; max-height: 60vh; object-fit: contain;">
+        </div>
+    </div>
+</section>

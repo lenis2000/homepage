@@ -1,0 +1,30 @@
+{% comment %} Phase diagram in (z, t) for K = 0.8; include.mode = "bulk" or "edge". X(z) = 60 + 220 z, Y(t) = 290 - 250 t {% endcomment %}
+<svg viewBox="0 0 540 340" role="img" aria-label="Phase diagram in the (z, t) plane for K = 0.8: fully packed triangle t + z &lt; K, strict bulk |t - z| &lt; K &lt; t + z, empty region |t - z| &gt; K{% if include.mode == 'edge' %}; the edge z = t + K and the corner (z, t) = (K, 0) are highlighted{% endif %}" style="width: 100%; height: auto; max-height: 62vh; font-family: inherit;">
+    <polygon points="60,40 104,40 60,90" fill="#eeeeee"/>
+    <polygon points="236,290 500,290 500,40 456,40" fill="#eeeeee"/>
+    <polygon points="60,290 236,290 60,90" fill="#fbd9b8"/>
+    <polygon points="236,290 456,40 104,40 60,90" fill="#d6e4f5"/>
+    <line x1="60" y1="90" x2="236" y2="290" stroke="#232D4B" stroke-width="2"/>
+    <line x1="60" y1="90" x2="104" y2="40" stroke="#232D4B" stroke-width="2"/>
+    {% if include.mode == 'edge' %}
+    <line x1="236" y1="290" x2="456" y2="40" stroke="#E57200" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="236" cy="290" r="10" fill="#232D4B" stroke="#fff" stroke-width="2"/>
+    <text x="342" y="196" font-size="22" fill="#E57200" font-weight="bold">edge</text>
+    <text x="250" y="322" font-size="21" fill="#232D4B" font-weight="bold">corner</text>
+    {% else %}
+    <line x1="236" y1="290" x2="456" y2="40" stroke="#232D4B" stroke-width="2"/>
+    {% endif %}
+    <line x1="60" y1="40" x2="500" y2="40" stroke="#232D4B" stroke-width="1.5" stroke-dasharray="6 5"/>
+    <line x1="60" y1="290" x2="515" y2="290" stroke="#232D4B" stroke-width="2"/>
+    <line x1="60" y1="290" x2="60" y2="22" stroke="#232D4B" stroke-width="2"/>
+    <text x="520" y="296" font-size="22" font-style="italic" fill="#232D4B">z</text>
+    <text x="52" y="16" font-size="22" font-style="italic" fill="#232D4B">t</text>
+    <text x="36" y="47" font-size="18" fill="#555">1</text>
+    <text x="30" y="96" font-size="18" fill="#555">K</text>
+    <text x="54" y="314" font-size="18" fill="#555">0</text>
+    {% if include.mode != 'edge' %}<text x="228" y="314" font-size="18" fill="#555">K</text>{% endif %}
+    <text x="250" y="150" font-size="24" fill="#232D4B" font-weight="bold" text-anchor="middle">waterfall bulk</text>
+    <text x="250" y="178" font-size="18" fill="#232D4B" text-anchor="middle">|t − z| &lt; K &lt; t + z</text>
+    <text x="118" y="258" font-size="18" fill="#8a4a00" text-anchor="middle">packed</text>
+    <text x="430" y="240" font-size="20" fill="#555" text-anchor="middle">empty</text>
+</svg>

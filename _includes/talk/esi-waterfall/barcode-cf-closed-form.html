@@ -1,0 +1,48 @@
+<section class="slide slide-top" id="barcode-cf-closed-form" data-title="Barcode Kernel in Closed Form">
+    <h2 class="slide-title">Barcode Kernel: Closed Form</h2>
+
+    <div style="display: flex; flex-direction: column; gap: 1.4vh; margin-top: 1vh; font-size: clamp(1.05rem, 1.6vw, 1.38rem); width: 94%; margin-left: auto; margin-right: auto; text-align: left;">
+
+        <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1.2vh 1.8vw;">
+            <strong style="color: var(--slide-navy); font-size: 1.1em;">Theorem</strong> <span class="cite">[Knizel&ndash;P., in preparation]</span>
+            <div style="margin-top: 0.8vh;">
+                Write \(w:=\chi^2\) and \(x_s:=\frac{1-s}{2}\). The regularized series of the conjecture <strong>converges</strong> for all \(s,t\in\mathbb{Z}\), and for \(r=s-t\ge 1\)
+            </div>
+            <div style="text-align: center; margin-top: 0.8vh; font-size: clamp(1.25rem, 2vw, 1.65rem);">
+                \(\displaystyle \mathcal{K}^{\mathrm{barcode}}(s,t)=\frac{(-1)^{r+1}\,P_{s,t}}{q^{-r}-1}\Bigl(c^{(0)}_{s,t}+q^{-r/2}\,c^{(1)}_{s,t}\Bigr),\qquad c^{(p)}_{s,t}:=B\,G_p(x_s)\,G_p(x_{t-1}),\)
+            </div>
+            <div style="margin-top: 0.8vh;">
+                with \(P_{s,t}\) the prefactor of the conjecture, \(B=\dfrac{\theta_{\sqrt q}(\chi)^2}{w\,\theta_q(-1/w)}\), \(\theta_p(z)=(z;p)_\infty(p/z;p)_\infty\), and the <strong>vertex functions</strong>
+            </div>
+            <div style="text-align: center; margin-top: 0.8vh; font-size: clamp(1.15rem, 1.85vw, 1.55rem);">
+                \(\displaystyle G_0(x)=C(x)\,\theta_{q^2}\bigl(q^{2x+1}w\bigr),\quad G_1(x)=C(x)\,\chi\, q^{x+\frac14}\,\theta_{q^2}\bigl(q^{2x+2}w\bigr),\quad C(x)=\sqrt{1+\tfrac{q^{-2x}}{w}}\;\frac{(q^2;q^2)_\infty}{(q;q)_\infty^2\,\theta_{\sqrt q}\bigl(\chi q^{x+\frac12}\bigr)}.\)
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2vw;">
+            <div class="fragment" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.2vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Why the series collapses</strong>
+                <ul style="margin: 0.8vh 0 0 1.2em; padding: 0; line-height: 1.35;">
+                    <li style="margin-bottom: 0.8vh;">Exact all-orders expansion of the eigenfunctions:
+                        \(\mathcal{F}_n(x)=\pm\,G_p(x)\,\Phi_p\bigl(q^{n+1};x\bigr)\), \(p=2n \bmod 2\), with \(\Phi_p(\,\cdot\,;x)\) an entire theta series, \(\Phi_p(0;x)=1\)</li>
+                    <li style="margin-bottom: 0.8vh;">\(G_0,G_1\) are the two <strong>zero modes</strong> of the one-body operator (eigenvalues \(-q^n\to 0\))</li>
+                    <li>The renormalizer \(q^{(M+1)(s-t)}\) keeps only the leading term \(\Phi_p(0;x)=1\)</li>
+                </ul>
+            </div>
+            <div class="fragment" style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1.2vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Consequences</strong>
+                <ul style="margin: 0.8vh 0 0 1.2em; padding: 0; line-height: 1.35;">
+                    <li style="margin-bottom: 0.6vh;">An elementary quotient of Jacobi theta functions; reproduces the numerics of <span class="cite">[Knizel&ndash;P. 2025]</span></li>
+                    <li style="margin-bottom: 0.6vh;"><strong>Two-periodic</strong>: \(\mathcal{K}^{\mathrm{barcode}}(s+2,t+2)=\mathcal{K}^{\mathrm{barcode}}(s,t)\)</li>
+                    <li style="margin-bottom: 0.6vh;"><strong>Rank-two integrable</strong>: for \(s\ne t\),
+                        <div style="text-align: center;">\(\mathcal{K}^{\mathrm{barcode}}(s,t)=\dfrac{f_0(s)g_0(t)+f_1(s)g_1(t)}{q^{-(s-t)/2}-q^{(s-t)/2}}\)</div></li>
+                    <li><strong>Exponential decay</strong>: \(|\mathcal{K}^{\mathrm{barcode}}(s,t)|\le C\,q^{|s-t|/4}\), sharp</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="fragment" style="color: var(--slide-muted); font-size: 0.92em;">
+            Settles the existence of the limit in the conjecture. That this kernel is the correlation kernel of the barcode process of the tiling is work in progress.
+        </div>
+    </div>
+</section>

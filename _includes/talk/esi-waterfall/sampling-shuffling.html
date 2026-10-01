@@ -1,0 +1,35 @@
+<section class="slide slide-top" id="sampling-shuffling" data-title="Shuffling for q-Racah Tilings">
+    <h2 class="slide-title">Exact Sampling of <span style="text-transform: none; font-style: italic;">q</span>-Racah Tilings by Shuffling</h2>
+
+    <div style="display: grid; grid-template-columns: 40vw 52vw; gap: 2vw; margin-top: 1.5vh; padding: 0 2vw;">
+        <div style="display: flex; flex-direction: column; gap: 1.5vh; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: left;">
+            <div style="background: #e3f2fd; border-left: 4px solid var(--slide-navy); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-navy);">Markov operators changing the hexagon</strong>
+                <span class="cite">[Borodin–Gorin 2008], [Borodin–Gorin–Rains 2009]</span>:
+                explicit kernels mapping the \(q\)-Racah measure on the \((T,S,N)\) hexagon to the one on \((T,S\pm1,N)\)
+            </div>
+
+            <div style="background: #f5f5f5; border-left: 4px solid var(--slide-accent); padding: 1vh 1.5vw;">
+                <strong style="color: var(--slide-accent);">Algorithm:</strong>
+                <ul style="margin: 0.5vh 0 0 1.2em; padding: 0;">
+                    <li>\(S=0\): a parallelogram, unique tiling</li>
+                    <li>\(S\to S+1\): update the paths slice by slice, <span style="white-space: nowrap;">\(t=1,\ldots,T\)</span>: forced moves, plus random splits of blocks of adjacent particles with explicit probabilities</li>
+                    <li>Each step is exact; cost \(O(NT)\) per step, \(O(NTS)\) in total</li>
+                </ul>
+            </div>
+
+            <div style="background: #fff3e0; border-left: 4px solid #E57200; padding: 1vh 1.5vw;">
+                <strong style="color: #E57200;">Code:</strong>
+                Gorin's original Fortran program, ported to Python (ancillary file of arXiv:2507.22011) and to C++/WebAssembly, which generates the exact \(q\)-Racah samples of Part II live in this browser
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.8vh;">
+            <div style="font-size: clamp(1.2rem, 2.2vw, 1.8rem); color: var(--slide-navy);">
+                \((T,N) = (240,120)\), \(q = 0.8\), \(\chi = 3\);&ensp; <strong>\(S = \)<span id="sampling-shuffling-s">0</span></strong> / 80
+            </div>
+            <canvas id="sampling-shuffling-canvas" width="1400" height="1000" style="max-width: 100%; height: 62vh; width: auto; border-radius: 8px;"></canvas>
+            <button id="sampling-shuffling-btn" style="padding: 0.3em 1em; cursor: pointer; border: 2px solid var(--slide-accent); background: var(--slide-accent); color: white; border-radius: 4px; font-size: clamp(0.9rem, 1.5vw, 1.1rem);">Run from \(S=0\)</button>
+        </div>
+    </div>
+</section>
