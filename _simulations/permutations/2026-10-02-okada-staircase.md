@@ -11,7 +11,7 @@ papers:
   - title: "Alejandro H. Morales, Greta Panova, Leonid Petrov, Damir Yeliussizov. Grothendieck Shenanigans: Permutons from Pipe Dreams via Integrable Probability"
     arxiv-url: "https://arxiv.org/abs/2407.21653"
 published: true
-a11y-description: "Samples a random element of the Okada monoid from the staircase diamond diagram: every box is independently a double U-turn with probability p (shaded) or a double straight square. For N up to 10 the page draws the staircase with its loop picture and the resulting labelled arc diagram; for every N it plots the resulting permutation as a scatter of points (i, sigma(i)). Adjust N, p, and resample with the controls."
+a11y-description: "Samples a random element of the Okada monoid from the staircase diamond diagram: every box is independently a double U-turn with probability p (shaded) or a double straight square. For N up to 10 the page draws the staircase with its loop picture and the resulting labelled arc diagram; for every N it plots the resulting permutation as a scatter of points (i, sigma(i)), and its height function H(x, y), the number of points strictly north-east of (x, y), as a rotatable 3D surface and as a color map with level lines. Adjust N, p, and resample with the controls."
 ---
 
 <style>
@@ -100,6 +100,14 @@ a11y-description: "Samples a random element of the Okada monoid from the stairca
   }
   .okd-panel svg { width: 100%; height: auto; display: block; }
   #okdArcs, #okdPerm { max-height: 480px; }
+  .okd-hrow { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  .okd-hrow > div { flex: 1 1 340px; min-width: 0; }
+  #okdH3d { position: relative; touch-action: none; }
+  #okdH3d canvas { display: block; cursor: grab; }
+  #okdHMap { width: 100%; max-width: 520px; height: auto; display: block; margin: 0 auto; }
+  .okd-cbar { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--okd-muted); max-width: 520px; margin: 4px auto 0; }
+  .okd-cbar span.bar { flex: 1; height: 10px; border-radius: 2px;
+    background: linear-gradient(to right, #440154, #3b528b, #21918c, #5ec962, #fde725); }
   .okd-oneline { font-family: 'SF Mono', Monaco, monospace; font-size: 13px; margin: 4px 6px; color: var(--okd-text); overflow-wrap: anywhere; }
   .okd-hint { font-size: 12px; color: var(--okd-muted); margin: 6px 4px; }
 
@@ -139,6 +147,8 @@ a11y-description: "Samples a random element of the Okada monoid from the stairca
 <p><b>Loop picture and arc diagram.</b> The strands enter on the left at levels $1,\dots,N$ and leave on the right at levels $\bar 1,\dots,\bar N$, numbered from the bottom. Their connectivity is a non-crossing perfect matching of these $2N$ endpoints; each arc carries the lowest level its path reaches. Closed loops are discarded, since $e_i^2=e_i$. Hover over a strand or an arc to highlight it in both pictures.</p>
 
 <p><b>Decoding.</b> Let $D$ be the labelled arc diagram. If $N$ and $\bar N$ are joined by an arc of label $N$, put $d=N$ and delete that arc. Otherwise let $d$ be the largest index such that $\bar d$ and $\overline{d+1}$ are joined by an arc of label $d$; then $D=D^\flat e_{N-1}\cdots e_d$ (Hivert–Scott, Prop. right-code-factor). In both cases $N-d$ is the last entry of the Lehmer-type code of $\sigma$, and the procedure recurses on $D^\flat\in\mathcal{O}_{N-1}$.</p>
+
+<p><b>Height function.</b> For integers $0\le x,y\le N$ let $H(x,y)=\#\{i>x:\ \sigma(i)>y\}$, the number of points $(i,\sigma(i))$ strictly north-east of $(x,y)$. Then $H(x,0)=N-x$, $H(0,y)=N-y$, and $H$ is non-increasing in both variables. The rescaled function $N^{-1}H(Nx,Ny)=\mu_\sigma\bigl((x,1]\times(y,1]\bigr)$ is the joint survival function of the empirical permuton $\mu_\sigma$ of $\sigma$, so convergence of $N^{-1}H$ is convergence to a permuton. Up to the transposition $x\leftrightarrow y$ and a shift by one, this is the height function of [MPPY]. The surface is drawn in 3D (drag to rotate, scroll to zoom) and as a color map. For $N\le 60$ it is the exact step function, with the points of $\sigma$ at the corners of its steps and lines where $H$ jumps; for $N\le 12$ the values $H(x,y)$ are written in the cells. For larger $N$ it is sampled on a grid of mesh at most $N/160$, and the map shows the level lines $N^{-1}H=0.1,0.2,\dots,0.9$.</p>
 
 <p>For $N\le 10$ the staircase is drawn; for larger $N$ only the permutation is shown. The random numbers are reused when $p$ changes, so moving $p$ only flips boxes monotonically; <b>Resample</b> draws new ones. Nontrivial limit shapes appear when $1-p$ is of order $1/N$.</p>
 
@@ -193,7 +203,27 @@ a11y-description: "Samples a random element of the Okada monoid from the stairca
   </div>
 </div>
 
+<div class="okd-panels" style="margin-top: 16px;">
+  <div class="okd-panel wide" id="okdHPanel">
+    <h3>Height function</h3>
+    <div class="okd-hint">$H(x,y)=\#\{i>x:\ \sigma(i)>y\}$, the number of points north-east of $(x,y)$.</div>
+    <div class="okd-hrow">
+      <div>
+        <div id="okdH3d" role="img" aria-label="Rotatable 3D surface of the rescaled height function of the sampled permutation"></div>
+        <div class="okd-hint" id="okdH3dHint">Drag to rotate, scroll to zoom.</div>
+      </div>
+      <div>
+        <canvas id="okdHMap" role="img" aria-label="Color map of the rescaled height function of the sampled permutation, with its level lines"></canvas>
+        <div class="okd-cbar"><span>0</span><span class="bar"></span><span>1</span><span>&nbsp;$H/N$</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="okdTooltip"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
 
 <script>
 (function() {
@@ -467,6 +497,270 @@ a11y-description: "Samples a random element of the Okada monoid from the stairca
     svg.onmouseleave = function() { tip.style.opacity = 0; };
   }
 
+  // ---------- Height function ----------
+  // H(x, y) = #{i > x : sigma(i) > y}, sampled at x, y in xs = {round(kN/G) : 0 <= k <= G}.
+  function heightGrid(sigma, G) {
+    const N = sigma.length, S = G + 1;
+    const xs = new Int32Array(S);
+    for (let k = 0; k <= G; k++) xs[k] = Math.round(k * N / G);
+    const bin = new Int32Array(N + 1);  // bin[i] = max{k : xs[k] < i}
+    for (let i = 1, k = 0; i <= N; i++) { while (xs[k + 1] < i) k++; bin[i] = k; }
+    const H = new Int32Array(S * S);
+    for (let i = 1; i <= N; i++) H[bin[i] * S + bin[sigma[i - 1]]]++;
+    for (let k = G; k >= 0; k--)
+      for (let l = G; l >= 0; l--) {
+        let v = H[k * S + l];
+        if (k < G) v += H[(k + 1) * S + l];
+        if (l < G) v += H[k * S + l + 1];
+        if (k < G && l < G) v -= H[(k + 1) * S + l + 1];
+        H[k * S + l] = v;
+      }
+    return { N: N, G: G, S: S, xs: xs, H: H };
+  }
+
+  const VIRIDIS = [[68, 1, 84], [59, 82, 139], [33, 145, 140], [94, 201, 98], [253, 231, 37]];
+  function viridis(t) {
+    t = Math.max(0, Math.min(1, t));
+    const s = t * 4, j = Math.min(3, Math.floor(s)), f = s - j;
+    const a = VIRIDIS[j], b = VIRIDIS[j + 1];
+    return [a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1]), a[2] + f * (b[2] - a[2])];
+  }
+
+  const HS = 0.7;  // vertical scale of the 3D surface
+  let three = null;
+
+  function textSprite(txt, x, y, z) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const g = c.getContext('2d');
+    g.fillStyle = '#888'; g.font = 'italic 44px Georgia, serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(txt, 32, 32);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+    sp.scale.set(0.1, 0.1, 1);
+    sp.position.set(x, y, z);
+    return sp;
+  }
+
+  // World coordinates: X = x - 1/2, Z = 1/2 - y, Y = HS * h.
+  function initThree() {
+    if (three) return three;
+    const box = document.getElementById('okdH3d');
+    let renderer = null;
+    if (typeof THREE !== 'undefined' && THREE.OrbitControls) {
+      try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch (e) { renderer = null; }
+    }
+    if (!renderer) {
+      box.innerHTML = '<div class="okd-hint">3D view unavailable (WebGL or three.js failed to load).</div>';
+      document.getElementById('okdH3dHint').style.display = 'none';
+      three = { failed: true };
+      return three;
+    }
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    box.appendChild(renderer.domElement);
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
+    camera.position.set(1.55, 1.35, 1.85);
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 0.22, 0);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const light = new THREE.DirectionalLight(0xffffff, 0.55);
+    light.position.set(1, 2.5, 1.5);
+    scene.add(light);
+    const frame = new THREE.BufferGeometry().setFromPoints([
+      [-.5, 0, .5], [.5, 0, .5], [.5, 0, .5], [.5, 0, -.5], [.5, 0, -.5], [-.5, 0, -.5],
+      [-.5, 0, -.5], [-.5, 0, .5], [-.5, 0, .5], [-.5, HS * 1.08, .5]
+    ].map(function(P) { return new THREE.Vector3(P[0], P[1], P[2]); }));
+    scene.add(new THREE.LineSegments(frame, new THREE.LineBasicMaterial({ color: 0x888888 })));
+    scene.add(textSprite('x', 0, -0.03, 0.62));
+    scene.add(textSprite('y', -0.62, -0.03, 0));
+    scene.add(textSprite('h', -0.5, HS * 1.08 + 0.07, 0.5));
+    three = { renderer: renderer, scene: scene, camera: camera, controls: controls, box: box, mesh: null };
+    three.render = function() { renderer.render(scene, camera); };
+    controls.addEventListener('change', three.render);
+    window.addEventListener('resize', function() { resizeThree(); three.render(); });
+    resizeThree();
+    return three;
+  }
+
+  function resizeThree() {
+    const w = three.box.clientWidth || 400;
+    const h = Math.round(Math.max(280, Math.min(460, 0.85 * w)));
+    three.renderer.setSize(w, h);
+    three.camera.aspect = w / h;
+    three.camera.updateProjectionMatrix();
+  }
+
+  // stepped: G = N and the cell [k, k+1) x [l, l+1) carries H(k, l); otherwise a smooth mesh through the grid values.
+  function drawHeight3D(hg, stepped) {
+    const T = initThree();
+    if (T.failed) return;
+    const N = hg.N, G = hg.G, S = hg.S, xs = hg.xs, H = hg.H;
+    const X = function(k) { return xs[k] / N - 0.5; };
+    const Z = function(l) { return 0.5 - xs[l] / N; };
+    const Y = function(v) { return HS * v / N; };
+    const val = function(k, l) { return k < G && l < G ? H[k * S + l] : 0; };
+    const pos = [], col = [];
+    let idx = null;
+    const vert = function(x, y, z, c) { pos.push(x, y, z); col.push(c[0] / 255, c[1] / 255, c[2] / 255); };
+    const quad = function(a, b, c, d, rgb) {
+      for (const P of [a, b, c, a, c, d]) vert(P[0], P[1], P[2], rgb);
+    };
+    if (stepped) {
+      for (let k = 0; k < G; k++)
+        for (let l = 0; l < G; l++) {
+          const v = val(k, l), y = Y(v), rgb = viridis(v / N);
+          const dark = [rgb[0] * 0.75, rgb[1] * 0.75, rgb[2] * 0.75];
+          quad([X(k), y, Z(l)], [X(k + 1), y, Z(l)], [X(k + 1), y, Z(l + 1)], [X(k), y, Z(l + 1)], rgb);
+          const vx = val(k + 1, l), vy = val(k, l + 1);
+          if (vx !== v) quad([X(k + 1), Y(vx), Z(l)], [X(k + 1), y, Z(l)], [X(k + 1), y, Z(l + 1)], [X(k + 1), Y(vx), Z(l + 1)], dark);
+          if (vy !== v) quad([X(k), Y(vy), Z(l + 1)], [X(k), y, Z(l + 1)], [X(k + 1), y, Z(l + 1)], [X(k + 1), Y(vy), Z(l + 1)], dark);
+          if (k === 0) quad([X(0), 0, Z(l)], [X(0), y, Z(l)], [X(0), y, Z(l + 1)], [X(0), 0, Z(l + 1)], dark);
+          if (l === 0) quad([X(k), 0, Z(0)], [X(k), y, Z(0)], [X(k + 1), y, Z(0)], [X(k + 1), 0, Z(0)], dark);
+        }
+    } else {
+      for (let k = 0; k <= G; k++)
+        for (let l = 0; l <= G; l++) {
+          const v = H[k * S + l];
+          vert(X(k), Y(v), Z(l), viridis(v / N));
+        }
+      idx = [];
+      for (let k = 0; k < G; k++)
+        for (let l = 0; l < G; l++) {
+          const a = k * S + l, b = (k + 1) * S + l, c = (k + 1) * S + l + 1, d = k * S + l + 1;
+          idx.push(a, b, c, a, c, d);
+        }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    if (idx) geo.setIndex(idx);
+    geo.computeVertexNormals();
+    if (T.mesh) { T.scene.remove(T.mesh); T.mesh.geometry.dispose(); T.mesh.material.dispose(); }
+    T.mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+    T.scene.add(T.mesh);
+    resizeThree();
+    T.render();
+  }
+
+  function drawHeightMap(hg, sigma, stepped) {
+    const N = hg.N, G = hg.G, S = hg.S, xs = hg.xs, H = hg.H;
+    const cv = document.getElementById('okdHMap');
+    const m = 22, mL = 42, P = 576, LW = mL + P + m, LH = P + 2 * m;
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(LW * dpr); cv.height = Math.round(LH * dpr);
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, LW, LH);
+    const sx = function(x) { return mL + P * x / N; };
+    const sy = function(y) { return m + P - P * y / N; };
+
+    // one pixel per grid value, scaled up; stepped cells are drawn sharp, sampled grids are interpolated
+    const n = stepped ? G : G + 1;
+    const img = document.createElement('canvas');
+    img.width = img.height = n;
+    const ictx = img.getContext('2d'), data = ictx.createImageData(n, n);
+    for (let k = 0; k < n; k++)
+      for (let l = 0; l < n; l++) {
+        const c = viridis(H[k * S + l] / N), o = 4 * ((n - 1 - l) * n + k);
+        data.data[o] = c[0]; data.data[o + 1] = c[1]; data.data[o + 2] = c[2]; data.data[o + 3] = 255;
+      }
+    ictx.putImageData(data, 0, 0);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(mL, m, P, P); ctx.clip();
+    ctx.imageSmoothingEnabled = !stepped;
+    if (stepped) ctx.drawImage(img, mL, m, P, P);
+    else { const h = P / G / 2; ctx.drawImage(img, mL - h, m - h, P + 2 * h, P + 2 * h); }
+
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.beginPath();
+    if (stepped) {
+      for (let k = 0; k < G; k++)
+        for (let l = 0; l < G; l++) {
+          const v = H[k * S + l];
+          if (k + 1 < G && H[(k + 1) * S + l] !== v) { ctx.moveTo(sx(k + 1), sy(l)); ctx.lineTo(sx(k + 1), sy(l + 1)); }
+          if (l + 1 < G && H[k * S + l + 1] !== v) { ctx.moveTo(sx(k), sy(l + 1)); ctx.lineTo(sx(k + 1), sy(l + 1)); }
+        }
+    } else {
+      // marching squares for the level lines H = cN
+      for (let q = 1; q <= 9; q++) {
+        const c = q * N / 10;
+        for (let k = 0; k < G; k++)
+          for (let l = 0; l < G; l++) {
+            const v = [H[k * S + l], H[(k + 1) * S + l], H[(k + 1) * S + l + 1], H[k * S + l + 1]];
+            const Pt = [[xs[k], xs[l]], [xs[k + 1], xs[l]], [xs[k + 1], xs[l + 1]], [xs[k], xs[l + 1]]];
+            const pts = [];
+            for (let e = 0; e < 4; e++) {
+              const a = e, b = (e + 1) % 4;
+              if ((v[a] > c) !== (v[b] > c)) {
+                const t = (c - v[a]) / (v[b] - v[a]);
+                pts.push([Pt[a][0] + t * (Pt[b][0] - Pt[a][0]), Pt[a][1] + t * (Pt[b][1] - Pt[a][1])]);
+              }
+            }
+            for (let j = 0; j + 1 < pts.length; j += 2) {
+              ctx.moveTo(sx(pts[j][0]), sy(pts[j][1]));
+              ctx.lineTo(sx(pts[j + 1][0]), sy(pts[j + 1][1]));
+            }
+          }
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    const textCol = getComputedStyle(document.documentElement).getPropertyValue('--okd-text').trim() || '#333';
+    if (stepped && N <= 12) {
+      ctx.font = Math.round(Math.min(22, 0.3 * P / N)) + 'px "SF Mono", Monaco, monospace';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for (let k = 0; k < G; k++)
+        for (let l = 0; l < G; l++) {
+          const v = H[k * S + l];
+          ctx.fillStyle = v / N > 0.6 ? '#222' : '#fff';
+          ctx.fillText(String(v), sx(k + 0.5), sy(l + 0.5));
+        }
+    }
+    if (stepped) {
+      const r = Math.max(2, Math.min(6, 0.12 * P / N));
+      ctx.lineWidth = 1.2;
+      for (let i = 1; i <= N; i++) {
+        ctx.beginPath();
+        ctx.arc(sx(i), sy(sigma[i - 1]), r, 0, 2 * Math.PI);
+        ctx.fillStyle = '#E57200'; ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.stroke();
+      }
+    }
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+    ctx.strokeRect(mL, m, P, P);
+    ctx.fillStyle = textCol;
+    ctx.font = '13px "franklingothic-book", Arial, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('0', mL, m + P + 4); ctx.fillText(String(N), mL + P, m + P + 4); ctx.fillText('x', mL + P / 2, m + P + 4);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(N), mL - 4, m); ctx.fillText('y', mL - 6, m + P / 2);
+
+    const tip = document.getElementById('okdTooltip');
+    cv.onmousemove = function(e) {
+      const rect = cv.getBoundingClientRect();
+      const qx = (e.clientX - rect.left) * LW / rect.width, qy = (e.clientY - rect.top) * LH / rect.height;
+      const x = Math.floor((qx - mL) / P * N), y = Math.floor((m + P - qy) / P * N);
+      if (x < 0 || x >= N || y < 0 || y >= N) { tip.style.opacity = 0; return; }
+      let h = 0;
+      for (let i = x + 1; i <= N; i++) if (sigma[i - 1] > y) h++;
+      tip.textContent = 'H(' + x + ', ' + y + ') = ' + h + (N > 12 ? ',  H/N = ' + (h / N).toFixed(3) : '');
+      tip.style.left = (e.pageX + 12) + 'px';
+      tip.style.top = (e.pageY + 12) + 'px';
+      tip.style.opacity = 1;
+    };
+    cv.onmouseleave = function() { tip.style.opacity = 0; };
+  }
+
+  function drawHeight(sigma) {
+    const N = sigma.length, stepped = N <= 60;
+    const hg = heightGrid(sigma, stepped ? N : Math.min(N, 160));
+    drawHeightMap(hg, sigma, stepped);
+    drawHeight3D(hg, stepped);
+  }
+
   // ---------- Simulation ----------
   let seed = (Math.random() * 4294967296) >>> 0;
   let currentN = 8, currentP = 0.5;
@@ -520,6 +814,7 @@ a11y-description: "Samples a random element of the Okada monoid from the stairca
       document.getElementById('okdOneLine').textContent = '';
     }
     drawPermutation(sigma);
+    drawHeight(sigma);
   }
 
   let timer = null;
