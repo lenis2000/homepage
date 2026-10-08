@@ -75,6 +75,13 @@ a11y-description: "Displays a permutation matrix as a scatter plot of dots, wher
       </div>
     </div>
 
+    <div class="d-flex align-items-center mb-3">
+      <button id="copyPermBtn" class="btn btn-sm btn-outline-secondary">
+        Copy permutation
+      </button>
+      <span id="copyPermStatus" class="ms-2 small text-muted" role="status" aria-live="polite"></span>
+    </div>
+
     <!-- Tooltip for circles -->
     <div
       id="tooltip"
@@ -110,6 +117,7 @@ a11y-description: "Displays a permutation matrix as a scatter plot of dots, wher
 // 1) Global Variables
 // ==============================
 let currentN = null;
+let currentSigma = null;
 let debounceTimer = null;
 const INCREMENT_STEP = 0.05;
 
@@ -283,6 +291,8 @@ function drawPermutationMatrix(sigma) {
 // ==============================
 function simulateAndDraw(N, PROB, Q) {
   const sigma = runSimulation(N, PROB, Q);
+  currentSigma = sigma;
+  document.getElementById("copyPermStatus").textContent = "";
   drawPermutationMatrix(sigma);
 }
 
@@ -303,6 +313,39 @@ document.getElementById("runBtn").addEventListener("click", () => {
   const qVal = parseFloat(document.getElementById("qInput").value);
 
   simulateAndDraw(currentN, probVal, qVal);
+});
+
+function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text);
+  }
+  return new Promise((resolve, reject) => {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    ok ? resolve() : reject(new Error("execCommand copy failed"));
+  });
+}
+
+document.getElementById("copyPermBtn").addEventListener("click", () => {
+  const status = document.getElementById("copyPermStatus");
+  if (!currentSigma) {
+    status.textContent = "No permutation yet.";
+    return;
+  }
+  copyText("[" + currentSigma.join(", ") + "]")
+    .then(() => {
+      status.textContent = `Copied permutation of size ${currentSigma.length}.`;
+    })
+    .catch(() => {
+      status.textContent = "Copy failed.";
+    });
 });
 
 // Add event listeners for N slider
