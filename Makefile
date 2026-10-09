@@ -23,10 +23,10 @@ define jekyll_serve
 endef
 
 serve:
-	$(call jekyll_serve,--incremental)
+	$(call jekyll_serve,--incremental --livereload)
 
 serve-full:
-	$(call jekyll_serve,)
+	$(call jekyll_serve,--livereload)
 
 test-domino:
 	node tools/test-domino.mjs
