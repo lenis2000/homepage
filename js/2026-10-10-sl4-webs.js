@@ -317,7 +317,8 @@
           }
           if (rule === 'cap') {
             const xa = A.pts[A.pts.length - 2], xb = B.pts[B.pts.length - 2];
-            const capPts = [xa, y0, xa, ym, (xa + xb) / 2, ym + 0.2, xb, ym, xb, y0];
+            // the cap stays in the upper half of the round, where straight strands are vertical
+            const capPts = [xa, y0, xa, y0 + 0.25, (xa + xb) / 2, ym, xb, y0 + 0.25, xb, y0];
             // merge into one edge from A.start to B.start; the flow runs along a positive strand
             const e = eu.length;
             const pts = A.pts.slice();
@@ -361,14 +362,14 @@
         const S = next[k];
         const pts = (S.x !== undefined) ? S.pts : S.pts.slice();
         if (S.x === undefined) {
-          // straight strand: add the point at mid-round only if it bends
+          // straight strands stay vertical in the upper half and shift only in the lower half,
+          // like the outputs of the crossings, so the drawing is planar
           const xOld = pts[pts.length - 2];
-          if (pts[pts.length - 1] < y0) pts.push(xOld, y0);
+          if (xOld !== xNew) pts.push(xOld, ym);
         }
         pts.push(xNew, y1);
         next[k] = { lab: S.lab, start: S.start, pts };
       }
-      // fix up the bottom slots of the new crossings' edges later, when they close
       cur = next;
       round++;
       if (roundWords) {
@@ -425,7 +426,7 @@
     };
   }
 
-  // Proper labeling check (Def. 3.10 of arXiv:2306.12501, six-vertex form).
+  // Proper labeling check (Def. 3.24 of arXiv:2306.12501, six-vertex form).
   function checkProperLabeling(G) {
     for (let x = 0; x < G.nx; x++) {
       const labs = [], ins = [], outs = [];
@@ -446,7 +447,7 @@
   }
 
   /*
-   * Hourglass plabic graph from the six-vertex configuration (inverse of Def. 3.12):
+   * Hourglass plabic graph from the six-vertex configuration (inverse of the map of Def. 3.22):
    * sinks -> white, sources -> black, transmitting vertex -> white W (incoming edges)
    * joined by a 2-hourglass to black B (outgoing edges).
    * link[4*v+s] = endpoint at the other end of the strand leaving slot s of node v.
