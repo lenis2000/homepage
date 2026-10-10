@@ -52,9 +52,12 @@ deploy:
 	fi
 	@echo "Pushing to remote..."
 	@git push
-	@echo "Creating CloudFront invalidations..."
-	@$(MAKE) invalidate
-	@echo "Deployment complete!"
+	@if [ "$$(git rev-parse --git-path hooks/pre-push)" -ef _scripts/git-hooks/pre-push ]; then \
+		echo "Pushed; the pre-push hook's deploy-watch invalidates CloudFront once CI has synced S3."; \
+	else \
+		echo "No deploy-watch pre-push hook in this clone; following CI here, then invalidating."; \
+		python3 _scripts/deploy-watch "$$(git rev-parse HEAD)" || $(MAKE) invalidate; \
+	fi
 
 autodeploy:
 	@echo "Auto-deploying..."
@@ -62,8 +65,12 @@ autodeploy:
 	@git commit -m "autodeploy" --signoff || echo "No changes to commit"
 	@echo "Pushing to remote..."
 	@git push
-	@$(MAKE) invalidate
-	@echo "Auto-deployment complete!"
+	@if [ "$$(git rev-parse --git-path hooks/pre-push)" -ef _scripts/git-hooks/pre-push ]; then \
+		echo "Pushed; the pre-push hook's deploy-watch invalidates CloudFront once CI has synced S3."; \
+	else \
+		echo "No deploy-watch pre-push hook in this clone; following CI here, then invalidating."; \
+		python3 _scripts/deploy-watch "$$(git rev-parse HEAD)" || $(MAKE) invalidate; \
+	fi
 
 deploy-local-full:
 	@echo "Building Jekyll site..."
