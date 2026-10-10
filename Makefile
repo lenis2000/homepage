@@ -1,25 +1,12 @@
 .PHONY: serve serve-full test-domino test-temb-shuffling test-factorial-ybe invalidate deploy autodeploy deploy-local-full deploy-local arxiv arxiv-semantic arxiv-venv arxiv-related arxiv-rebuild arxiv-full-update arxiv-kaggle arxiv-import arxiv-scan arxiv-scan-import arxiv-delete arxiv-add arxiv-search arxiv-sources arxiv-sources-upload arxiv-sources-upload-check arxiv-sources-convert-ps arxiv-sources-manifest arxiv-sources-process
 
-# Status goes to /tmp/jekyll-status/Homepage for the SwiftBar jekyll-status
-# plugin; each write pokes SwiftBar so the menu bar updates without polling.
+# The log passes through ~/.vim/agterm/jekyll-watch.sh, which keeps the build
+# state in /tmp/jekyll-status/Homepage* for the SwiftBar jekyll-status plugin
+# and vim's :Jerr, and shows a failed build in agterm (panel and tab flag).
 define jekyll_serve
-	@mkdir -p /tmp/jekyll-status
-	@bar() { pgrep -qx SwiftBar && open -g 'swiftbar://refreshplugin?name=jekyll-status' 2>/dev/null; true; }; \
-	st() { echo "$$1" > /tmp/jekyll-status/Homepage; bar; }; \
-	st idle; \
-	trap 'rm -f /tmp/jekyll-status/Homepage; bar' EXIT INT TERM; \
-	bundle exec jekyll serve $(1) 2>&1 | while IFS= read -r line; do \
-		printf '%s\n' "$$line"; \
-		case "$$line" in \
-			*"Regenerating:"*|*"Generating..."*) st building ;; \
-			*"done in"*) st done ;; \
-			*"ERROR"*) \
-				case "$$line" in \
-					*".well-known"*|*"ECONNRESET"*) ;; \
-					*) st error ;; \
-				esac ;; \
-		esac; \
-	done
+	@W=$$HOME/.vim/agterm/jekyll-watch.sh; \
+	if [ -x "$$W" ]; then bundle exec jekyll serve $(1) 2>&1 | "$$W" Homepage; \
+	else bundle exec jekyll serve $(1); fi
 endef
 
 serve:

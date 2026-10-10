@@ -1,0 +1,24 @@
+#!/bin/sh
+# pre-push for a site that GitHub Actions deploys to S3: each push of the deploy branch (git config
+# deploy-watch.branch, default master) to GitHub starts ../deploy-watch, beside this file wherever
+# the hook is linked from, for the pushed commit, detached in its own session so neither the end
+# of the push nor a Ctrl-C in the pushing terminal stops it. It follows the Actions deploy and
+# invalidates CloudFront once S3 has the new site; one hook covers make deploy/autodeploy, GPP,
+# cmd+opt+p, lazygit and Claude alike. ~/homepage runs it through `git config core.hooksPath
+# _scripts/git-hooks`; a repo with hooks of its own links .git/hooks/pre-push here and sets its
+# deploy-watch.* keys (see deploy-watch).
+#
+# git passes the remote's name and URL, and on stdin one line per ref being pushed:
+#   <local ref> <local sha> <remote ref> <remote sha>
+# A deleted ref has an all-zero local sha. The push never waits for, or fails because of, this.
+root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+watch="$(dirname "$(readlink -f "$0")")/../deploy-watch"
+[ -x "$watch" ] || exit 0
+case $2 in *github.com[:/]*) ;; *) exit 0 ;; esac
+branch=$(git config deploy-watch.branch) || branch=master
+while read -r _ sha ref _; do
+  [ "$ref" = "refs/heads/$branch" ] || continue
+  case $sha in *[1-9a-f]*) ;; *) continue ;; esac
+  "$watch" --detach --root "$root" --remote "$2" --branch "$branch" "$sha" </dev/null >/dev/null 2>&1
+done
+exit 0

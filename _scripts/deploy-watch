@@ -1,0 +1,329 @@
+#!/usr/bin/env python3
+"""Follow the GitHub Actions deploy of one pushed commit, then invalidate the CDN cache.
+
+Started by _scripts/git-hooks/pre-push for every push of the deploy branch, whichever tool
+pushed: make deploy/autodeploy, GPP, cmd+opt+p, lazygit, Claude. The workflow's S3 step syncs
+_site to S3; CloudFront keeps serving the old objects until an invalidation, and one sent before
+that sync finishes lets the next fetch re-cache the old page. So this waits until the S3 step has
+succeeded, runs the invalidation command, waits for CloudFront invalidations it printed to
+complete, and only then says the site is live. A site with no CDN (invalidate = none) is live
+once the S3 step is done.
+
+  deploy-watch [--dry-run] [--detach] [--root DIR] [--remote URL] [--branch B] [--session SID]
+               [--site LABEL] [--repo OWNER/NAME] [--workflow FILE] [--s3-step NAME]
+               [--invalidate CMD|none] SHA
+
+DIR is the pushed repo (default: the one holding this script, ~/homepage). Each option not given
+comes from DIR's git config, section deploy-watch (site, repo, workflow, s3step, invalidate,
+branch), else from ~/homepage's values: lpetrov.cc, the repo of the remote (default: origin's
+URL), github-actions-s3-publish.yml, "Sync output to S3", `make invalidate` run in DIR, master.
+
+Progress is a corner HUD on the session that pushed ($AGTERM_SESSION_ID, else $AGT_SESSION_ID
+from a chord): it is only updated while the HUD slot is empty or holds this watcher's own panel,
+so an lmkf or GPP message posted meanwhile is left alone. The final ✓/✗ goes through
+~/.vim/agterm/hud.sh unconditionally, plus the sidebar flag the shell's _agt_status sets (not
+under Claude, whose turn it would mark finished, and not from an overlay, which has no pane id).
+A push the remote rejected never gets a run: if the remote branch does not reach SHA within
+FIND_WAIT, this exits without a word.
+
+--dry-run invalidates nothing and writes no files: it prints what it would run and the failure
+log it would save. Everything goes to stdout, which --detach sends to /tmp/<DIR name>-deploy/
+watch.log; the failed step's log goes to ci-last-failure.txt beside it. The exit status is 0 only
+when the site went live (or would have, under --dry-run).
+"""
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULTS = {"site": "lpetrov.cc", "workflow": "github-actions-s3-publish.yml",
+            "s3step": "Sync output to S3", "invalidate": "make invalidate", "branch": "master"}
+AGTERMCTL = "/opt/homebrew/bin/agtermctl"
+HUD = os.path.expanduser("~/.vim/agterm/hud.sh")
+FIND_WAIT, POLL, RUN_WAIT, INVALIDATION_WAIT, GH_FAILURES = 90, 10, 30 * 60, 15 * 60, 6
+os.environ["PATH"] = os.environ.get("PATH", "") + ":/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+
+
+def log(msg):
+    print(time.strftime("%m-%d %H:%M:%S"), msg, flush=True)
+
+
+def run(args, **kw):
+    return subprocess.run(args, stdin=subprocess.DEVNULL, capture_output=True, text=True, cwd=ROOT, **kw)
+
+
+def repo_config():
+    r = run(["git", "config", "--get-regexp", r"^deploy-watch\."])
+    return dict(line[len("deploy-watch."):].partition(" ")[::2] for line in r.stdout.splitlines())
+
+
+def gh_json(args):
+    r = run(["gh"] + args)
+    if r.returncode != 0:
+        log("gh %s: %s" % (" ".join(args[:2]), r.stderr.strip()))
+        return None
+    try:
+        return json.loads(r.stdout)
+    except ValueError:
+        return None
+
+
+class Panel:
+    """The HUD of the pushing session; the site and short sha in a message make it this watcher's."""
+
+    def __init__(self, sid, pane_id, window, site, sha):
+        self.sid, self.pane_id, self.window = sid, pane_id, window
+        self.mark = "%s %s" % (site, sha[:7])
+
+    def _hud(self, *args):
+        return run([AGTERMCTL, "session", "hud"] + list(args) + ["--target", self.sid]).returncode == 0
+
+    def _current(self):
+        args = [AGTERMCTL, "tree", "--json"] + (["--window", self.window] if self.window else [])
+        try:
+            tree = json.loads(run(args).stdout)["result"]["tree"]
+        except (ValueError, KeyError):
+            return False, None
+        for ws in tree.get("workspaces", []):
+            for s in ws.get("sessions", []):
+                if s["id"].upper() == self.sid.upper():
+                    return True, (s.get("hud") or {}).get("message")
+        return False, None
+
+    def progress(self, text):
+        msg = "⋮ %s · %s" % (self.mark, text)
+        log(msg)
+        if not self.sid or not os.path.exists(AGTERMCTL):
+            return
+        found, current = self._current()
+        if not found or (current and self.mark not in current):
+            return
+        spec = [msg, "--spinner-style", "dot", "--position", "top-right", "--hide-after", "0"]
+        if current:
+            self._hud("update", *spec)
+        else:
+            self._hud("open", *spec)
+
+    def final(self, glyph, text):
+        msg = "%s %s %s" % (glyph, self.mark, text)
+        log(msg)
+        if not self.sid:
+            return
+        if os.access(HUD, os.X_OK):
+            run([HUD, msg, self.sid], env=dict(os.environ, AGTERM_ENABLED="1"))
+        if self.pane_id and not os.environ.get("CLAUDECODE"):
+            look = {"✗": ["--color", "#FF2F92", "--shape", "diamond"], "⚠": ["--color", "#FF9500"]}
+            run([AGTERMCTL, "session", "status", "completed", "--auto-reset"] + look.get(glyph, [])
+                + ["--pane", os.environ.get("AGTERM_PANE", "left"), "--pane-id", self.pane_id,
+                   "--target", self.sid])
+
+
+def elapsed(since):
+    s = int(time.time() - since)
+    return "%dm%02ds" % (s // 60, s % 60)
+
+
+def remote_has(remote, branch, sha):
+    r = run(["git", "ls-remote", remote, "refs/heads/" + branch])
+    return r.returncode == 0 and r.stdout.split()[:1] == [sha]
+
+
+def gh_failed(a, panel):
+    then = "; run %s once CI is done" % a.invalidate if a.invalidate else ""
+    panel.final("⚠", "gh failed (see %s)%s" % (a.log, then))
+
+
+def find_run(a, panel):
+    deadline, pushed, answered = time.time() + FIND_WAIT, False, False
+    while time.time() < deadline:
+        runs = gh_json(["run", "list", "-R", a.repo, "--workflow", a.workflow, "--commit", a.sha,
+                        "--json", "databaseId,event,createdAt", "-L", "5"])
+        answered = answered or runs is not None
+        runs = [r for r in runs or [] if r.get("event") == "push"]
+        if runs:
+            return max(runs, key=lambda r: r["createdAt"])["databaseId"]
+        if not pushed and remote_has(a.remote, a.branch, a.sha):
+            pushed = True
+            deadline = time.time() + FIND_WAIT
+            panel.progress("waiting for CI")
+        time.sleep(5)
+    if pushed and not answered:
+        gh_failed(a, panel)
+    elif pushed:
+        panel.final("⚠", "no CI run for this push")
+    else:
+        log("%s never reached %s/%s: push rejected or not to this remote" % (a.sha[:7], a.remote, a.branch))
+    return None
+
+
+def steps(job):
+    return [s for s in job.get("steps", []) if not s["name"].startswith("Post ") and s["name"] != "Complete job"]
+
+
+def deploy_job(view, name):
+    jobs = view.get("jobs") or [{}]
+    return next((j for j in jobs if any(s["name"] == name for s in j.get("steps", []))), jobs[0])
+
+
+def sync_step(job, name):
+    return next((s for s in job.get("steps", []) if s["name"] == name), None)
+
+
+def follow_run(a, panel, run_id):
+    deadline, failures = time.time() + RUN_WAIT, 0
+    while time.time() < deadline:
+        view = gh_json(["run", "view", str(run_id), "-R", a.repo, "--json", "status,conclusion,jobs,url"])
+        if not view:
+            failures += 1
+            if failures == GH_FAILURES:
+                gh_failed(a, panel)
+                return None, None
+            time.sleep(POLL)
+            continue
+        failures = 0
+        job = deploy_job(view, a.s3_step)
+        step = sync_step(job, a.s3_step)
+        if view["status"] == "completed" or (step and step.get("conclusion") == "success"):
+            return view, job
+        main = steps(job)
+        now = next((i for i, s in enumerate(main) if s["status"] == "in_progress"), None)
+        if now is None:
+            panel.progress("CI %s · %s" % (view["status"].replace("_", " "), elapsed(a.since)))
+        else:
+            panel.progress("CI %d/%d %s · %s" % (now + 1, len(main), main[now]["name"], elapsed(a.since)))
+        time.sleep(POLL)
+    panel.final("⚠", "CI still running after %dm" % (RUN_WAIT // 60))
+    return None, None
+
+
+def save_failure(a, text):
+    if a.dry_run:
+        log("dry run, would save to %s:\n%s" % (a.failure, text))
+        return
+    os.makedirs(a.state, exist_ok=True)
+    with open(a.failure, "w") as f:
+        f.write(text)
+
+
+def report_failure(a, panel, view, job, run_id):
+    bad = next((s["name"] for s in steps(job) if s.get("conclusion") == "failure"), None)
+    r = run(["gh", "run", "view", str(run_id), "-R", a.repo, "--log-failed"])
+    tail = "\n".join(r.stdout.splitlines()[-60:]) if r.returncode == 0 else r.stderr.strip()
+    text = "%s\n%s: %s at %s\n\n%s\n" % (view.get("url", ""), a.sha[:7], view["conclusion"], bad or "?", tail)
+    save_failure(a, text)
+    if view["conclusion"] == "cancelled":
+        panel.final("⚠", "CI cancelled")
+    elif view["conclusion"] == "success":
+        panel.final("⚠", "CI passed without %s" % a.s3_step)
+    else:
+        verdict = "failed" if view["conclusion"] == "failure" else view["conclusion"].replace("_", " ")
+        panel.final("✗", "CI %s at %s" % (verdict, bad or "?"))
+
+
+def invalidate(a, panel):
+    if not a.invalidate:
+        return True
+    if a.dry_run:
+        log("dry run, would run in %s: %s" % (ROOT, a.invalidate))
+        return True
+    panel.progress("CloudFront invalidation · %s" % elapsed(a.since))
+    r = run(a.invalidate, shell=True)
+    log(r.stdout + r.stderr)
+    if r.returncode != 0:
+        save_failure(a, "%s failed for %s\n\n%s%s" % (a.invalidate, a.sha[:7], r.stdout, r.stderr))
+        panel.final("✗", "CloudFront invalidation failed")
+        return False
+    pending = set(re.findall(r"distribution/(\w+)/invalidation/(\w+)", r.stdout))
+    deadline = time.time() + INVALIDATION_WAIT
+    while pending and time.time() < deadline:
+        time.sleep(POLL)
+        for dist, inv in list(pending):
+            s = run(["aws", "cloudfront", "get-invalidation", "--distribution-id", dist, "--id", inv,
+                     "--query", "Invalidation.Status", "--output", "text"])
+            if s.stdout.strip() == "Completed":
+                pending.discard((dist, inv))
+        if pending:
+            panel.progress("CloudFront invalidation · %s" % elapsed(a.since))
+    if pending:
+        panel.final("⚠", "S3 updated, CloudFront still invalidating after %dm" % (INVALIDATION_WAIT // 60))
+        return False
+    return True
+
+
+def detach(a):
+    if os.fork():
+        os._exit(0)
+    os.setsid()
+    if os.fork():
+        os._exit(0)
+    os.makedirs(a.state, exist_ok=True)
+    big = os.path.exists(a.log) and os.path.getsize(a.log) > 512 * 1024
+    out = os.open(a.log, os.O_WRONLY | os.O_CREAT | os.O_APPEND | (os.O_TRUNC if big else 0), 0o644)
+    null = os.open(os.devnull, os.O_RDONLY)
+    os.dup2(null, 0)
+    os.dup2(out, 1)
+    os.dup2(out, 2)
+
+
+def main():
+    global ROOT
+    p = argparse.ArgumentParser(description="Follow the deploy run of SHA, then invalidate the CDN cache.")
+    p.add_argument("sha")
+    p.add_argument("--dry-run", action="store_true")
+    p.add_argument("--detach", action="store_true")
+    p.add_argument("--root", default=ROOT)
+    p.add_argument("--remote")
+    p.add_argument("--branch")
+    p.add_argument("--session", default=os.environ.get("AGTERM_SESSION_ID") or os.environ.get("AGT_SESSION_ID", ""))
+    p.add_argument("--site")
+    p.add_argument("--repo")
+    p.add_argument("--workflow")
+    p.add_argument("--s3-step")
+    p.add_argument("--invalidate")
+    a = p.parse_args()
+    ROOT = os.path.abspath(a.root)
+    conf = dict(DEFAULTS, **repo_config())
+    a.site, a.workflow, a.branch = a.site or conf["site"], a.workflow or conf["workflow"], a.branch or conf["branch"]
+    a.s3_step = a.s3_step or conf["s3step"]
+    a.invalidate = conf["invalidate"] if a.invalidate is None else a.invalidate
+    a.invalidate = None if a.invalidate.strip() in ("", "none") else a.invalidate
+    a.remote = a.remote or run(["git", "remote", "get-url", "origin"]).stdout.strip()
+    m = re.search(r"github\.com[:/]([^/]+/[^/]+?)(?:\.git)?/?$", a.remote)
+    a.repo = a.repo or conf.get("repo") or (m and m.group(1))
+    if not a.repo:
+        sys.exit("deploy-watch: %s is not a GitHub remote" % (a.remote or "origin"))
+    a.state = "/tmp/%s-deploy" % os.path.basename(ROOT).lower()
+    a.log, a.failure = os.path.join(a.state, "watch.log"), os.path.join(a.state, "ci-last-failure.txt")
+    a.since = time.time()
+    a.sha = run(["git", "rev-parse", "--verify", "-q", a.sha + "^{commit}"]).stdout.strip() or a.sha
+    if a.detach:
+        detach(a)
+    pane_id = os.environ.get("AGTERM_PANE_ID", "") if a.session == os.environ.get("AGTERM_SESSION_ID") else ""
+    window = os.environ.get("AGTERM_WINDOW_ID") or os.environ.get("AGT_WINDOW_ID", "")
+    panel = Panel(a.session, pane_id, window, a.site, a.sha)
+    log("watching %s on %s (%s)%s" % (a.sha[:7], a.repo, a.branch, ", dry run" if a.dry_run else ""))
+    run_id = find_run(a, panel)
+    if not run_id:
+        return 1
+    log("run %s" % run_id)
+    view, job = follow_run(a, panel, run_id)
+    if not view:
+        return 1
+    step = sync_step(job, a.s3_step)
+    if not step:
+        log("no step %r in the run; going by its conclusion" % a.s3_step)
+    if (step or view)["conclusion"] != "success":
+        report_failure(a, panel, view, job, run_id)
+        return 1
+    if not invalidate(a, panel):
+        return 1
+    panel.final("✓", "live in %s%s" % (elapsed(a.since), " (dry run)" if a.dry_run else ""))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
