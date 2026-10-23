@@ -10,10 +10,10 @@ coauthors:
   - name: Leonid Petrov
 comments: false
 selected: true
-categories: blog math preprint
-# journal-ref:
+categories: blog math paper
+journal-ref: Proceedings of the National Academy of Sciences, to appear
 # journal-web:
-# journal-year:
+journal-year: 2026
 image: __STORAGE_URL__/img/papers/bpd_sample_n100.png
 image-alt: "A uniformly random reduced bumpless pipe dream of size 100, sampled via MCMC"
 show-date: true
