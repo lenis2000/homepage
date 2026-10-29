@@ -11,8 +11,8 @@ coauthors:
 comments: false
 selected: true
 categories: blog math paper
-journal-ref: Proceedings of the National Academy of Sciences, to appear
-# journal-web:
+journal-ref: Proc. Natl. Acad. Sci. USA 123 (2026), no. 44, e2615757123
+journal-web: https://doi.org/10.1073/pnas.2615757123
 journal-year: 2026
 image: __STORAGE_URL__/img/papers/bpd_sample_n100.png
 image-alt: "A uniformly random reduced bumpless pipe dream of size 100, sampled via MCMC"
@@ -24,6 +24,6 @@ cv-number: 51
 published: true
 ---
 
-We present computational results related to principal specializations of the Schubert polynomials $\mathfrak{S}_w(1^n)$ for permutations $w\in S_n$. Equivalently, these specializations count reduced pipe dreams (and reduced bumpless pipe dreams - RBPD) with boundary conditions determined by $w$. We find the first counterexample, at $n=17$, to the conjecture of Merzon-Smirnov that the maximal value of $\mathfrak{S}_w(1^n)$ is obtained at a layered permutation. We explore the typical permutation obtained from uniformly random RBPDs, revealing a permuton-like asymptotic behavior similar to the one derived for Grothendieck polynomials.
+We study a problem at the interface of enumerative algebraic geometry, algebraic combinatorics, and the statistical mechanics of vertex models with long-range interactions. We develop methods to explore the values $\mathfrak{S}_w(1^n)$ of Schubert polynomials (called principal specializations), which count reduced bumpless pipe dreams (RBPDs) with boundary permutation $w$. We exhibit counterexamples to the conjecture of Merzon and Smirnov that $\mathfrak{S}_w(1^n)$ is maximized on layered permutations; the smallest such example we find is at $n=17$. Despite the counterexamples, we present bounds that support a refined conjecture that the maximum of $\mathfrak{S}_w(1^n)$ over all $w\in S_n$ grows at the same asymptotic rate as the maximum over layered permutations (found by Morales, Pak, and Panova).
 
-We implement and compare three recurrence relations for computing $\mathfrak{S}_w(1^n)$: the descent formula of Macdonald, the transition formula of Lascoux-Sch&uuml;tzenberger, and the cotransition formula of Knutson. We prove that the global constraint of reducedness breaks the sublattice property of the underlying alternating sign matrix (ASM) lattice, preventing standard monotone Coupling From The Past (CFTP). To bypass this, we develop a highly efficient MCMC sampler augmented with macroscopic "droop" updates to guarantee state space connectivity and accelerate mixing. Our implementations enable computation of $\mathfrak{S}_w(1^n)$ up to $n\sim 20$ on a personal computer, and uniform sampling of reduced bumpless pipe dreams up to $n\sim 100$ on a cluster.
+We implement and benchmark four recurrences for Schubert specializations: the descent formula of Macdonald, the transition formula of Lascoux-Sch&uuml;tzenberger, the cotransition formula of Knutson, and the formula of Billey, Jockusch, and Stanley. We also explore typical random permutations drawn with probability proportional to $\mathfrak{S}_w(1^n)$, equivalently from uniformly random RBPDs. Our simulations reveal a permuton-like limit analogous to the Grothendieck setting studied by Morales, Panova, Petrov, and Yeliussizov. For sampling, we show that the standard monotone Coupling From The Past framework does not apply to RBPDs, leaving exact uniform sampling open. To bypass this, we develop an efficient Markov chain Monte Carlo sampler augmented with macroscopic "droop" updates that preserve connectivity and accelerate mixing. Our publicly available fast implementations reach $n=20$ for exact computation of $\mathfrak{S}_w(1^n)$ and $n=100$ for Markov chain Monte Carlo sampling using a chain whose stationary distribution is uniform on RBPDs (run on a cluster).
