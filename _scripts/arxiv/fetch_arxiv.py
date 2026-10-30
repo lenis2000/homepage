@@ -46,14 +46,16 @@ OAI_NS = {"oai": "http://www.openarchives.org/OAI/2.0/", "arxiv": "http://arxiv.
 RATE_LIMIT_SECONDS = 0.5
 USER_AGENT = "lpetrov-arxiv-scan/1.0 (mailto:petrov@virginia.edu)"
 
-# Print-mode AI command for arXiv classification. Honors the shared
-# $AI_BACKEND switch ('pi' default | 'claude'); both are kept ephemeral and
-# tool-free so the classifier only returns text for the prompt we pass in.
+# Print-mode AI command for arXiv classification: Claude Opus 5.5 at high
+# effort unless $AI_BACKEND=pi. Both are kept ephemeral and tool-free so the
+# classifier only returns text for the prompt we pass in on stdin.
 def _ai_print_cmd():
-    if os.environ.get("AI_BACKEND") == "claude":
-        # arXiv classification -> Claude Opus at xhigh effort.
-        return ["claude", "-p", "--model", "opus", "--effort", "xhigh"]
-    return ["pi", "--no-session", "--no-tools", "--no-context-files", "-p"]
+    if os.environ.get("AI_BACKEND") == "pi":
+        return ["pi", "--no-session", "--no-tools", "--no-context-files", "-p"]
+    return ["claude", "-p", "--model", "claude-opus-5-5", "--effort", "high",
+            "--tools", "", "--no-session-persistence",
+            "--system-prompt", "You classify arXiv papers for a curated research feed. "
+                               "Answer only in the format the user asks for."]
 
 
 def run_ai_prompt(prompt: str, timeout: int):
@@ -61,10 +63,10 @@ def run_ai_prompt(prompt: str, timeout: int):
     cmd = _ai_print_cmd()
     backend = "claude" if cmd[0] == "claude" else "pi"
     try:
-        result = subprocess.run(
-            cmd + [prompt],
-            capture_output=True, text=True, timeout=timeout,
-        )
+        if backend == "pi":
+            result = subprocess.run(cmd + [prompt], capture_output=True, text=True, timeout=timeout)
+        else:
+            result = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=timeout)
     except FileNotFoundError:
         return "", f"no {backend} CLI"
     except subprocess.TimeoutExpired:
@@ -320,24 +322,11 @@ class _PadToMultiple:
         return getattr(self._tokenizer, name)
 
 
-def semantic_filter(papers, threshold=0.72):
-    """Filter papers by embedding similarity to known int-prob papers.
-
-    Returns list of (paper, similarity_score) for papers above threshold.
-    Uses EmbeddingCache and reference vectors from scan_full_arxiv.py.
-    """
-    if not papers:
-        return []
-
-    from scan_full_arxiv import EmbeddingCache, text_key, VECTORS_FILE, CACHE_DB, MODEL_NAME
-
-    if not VECTORS_FILE.exists():
-        print(f"  WARN: {VECTORS_FILE} not found — skipping semantic filter")
-        return []
-
+def embed_papers(papers):
+    """bge-m3 vectors (normalized, one row per paper) for title + abstract, via the shared cache."""
+    from scan_full_arxiv import EmbeddingCache, text_key, CACHE_DB, MODEL_NAME
     import numpy as np
 
-    ref_vectors = np.load(VECTORS_FILE)
     cache = EmbeddingCache(CACHE_DB)
     model = None
 
@@ -388,8 +377,31 @@ def semantic_filter(papers, threshold=0.72):
 
     print(f"  Embeddings: {len(keys) - len(to_embed_idx)} cached, {len(to_embed_idx)} computed")
 
+    cache.close()
+    return np.array([cached[k] for k in keys], dtype=np.float32)
+
+
+def semantic_filter(papers, threshold=0.72):
+    """Filter papers by embedding similarity to known int-prob papers.
+
+    Returns list of (paper, similarity_score) for papers above threshold.
+    Uses EmbeddingCache and reference vectors from scan_full_arxiv.py.
+    """
+    if not papers:
+        return []
+
+    from scan_full_arxiv import VECTORS_FILE
+
+    if not VECTORS_FILE.exists():
+        print(f"  WARN: {VECTORS_FILE} not found — skipping semantic filter")
+        return []
+
+    import numpy as np
+
+    ref_vectors = np.load(VECTORS_FILE)
+
     # Compute similarities
-    vecs_array = np.array([cached[k] for k in keys], dtype=np.float32)
+    vecs_array = embed_papers(papers)
     sims = vecs_array @ ref_vectors.T
     max_sims = sims.max(axis=1)
 
@@ -398,7 +410,6 @@ def semantic_filter(papers, threshold=0.72):
         if sim >= threshold:
             results.append((papers[i], float(sim)))
 
-    cache.close()
     return results
 
 
@@ -536,54 +547,151 @@ def match_authors(paper, config):
     return first, is_ambiguous
 
 
-def _format_paper_desc(p):
+DECISION_LOG = SCRIPT_DIR / "decision_log.jsonl"
+PRECEDENTS_K = 4
+
+
+def _short_authors(authors, n=3):
+    names = [a.split()[-1] for a in authors[:n]]
+    return ", ".join(names) + (" et al." if len(authors) > n else "")
+
+
+class Precedents:
+    """LP's past decisions with embeddings: the feed (accepted) and rejected papers.
+
+    Accepted rows come from the feed index and its vector file; rejected rows
+    from processed.json REJECT ids found in the Kaggle DB, plus every human
+    decision recorded in decision_log.jsonl, all looked up in the shared
+    embedding cache (misses are skipped, never embedded here).
+    """
+
+    def __init__(self):
+        import sqlite3
+        import numpy as np
+        from scan_full_arxiv import EmbeddingCache, text_key, CACHE_DB, INDEX_FILE, VECTORS_FILE
+
+        index = json.loads(INDEX_FILE.read_text(encoding="utf-8"))
+        acc_vecs = np.load(VECTORS_FILE)
+        acc = [(e["id"], e["t"], e["a"].split(", ")) for e in index]
+
+        # A high-confidence REJECT_PERSON was rejected unseen (export_for_review), so it
+        # says nothing about LP's taste; keep only rejections he actually made.
+        namesakes = set()
+        if AI_LOG_FILE.exists():
+            for line in AI_LOG_FILE.read_text().splitlines():
+                try:
+                    d = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if d.get("decision") == "REJECT_PERSON" and d.get("confidence") == "high":
+                    namesakes.add(d.get("arxiv_id"))
+                else:
+                    namesakes.discard(d.get("arxiv_id"))
+        rejected = {aid for aid, v in load_processed().items()
+                    if v.get("decision") == "REJECT" and aid not in namesakes}
+        texts = {}  # arxiv_id -> (title, authors, text)
+        if DECISION_LOG.exists():
+            for line in DECISION_LOG.read_text().splitlines():
+                r = json.loads(line)
+                if r["decision"] == "REJECT":
+                    rejected.add(r["arxiv_id"])
+                    t = f"{r['title']}. {r['abstract']}" if r.get("abstract") else r["title"]
+                    texts[r["arxiv_id"]] = (r["title"], r["authors"], t)
+                else:
+                    rejected.discard(r["arxiv_id"])
+        missing = [a for a in rejected if a not in texts]
+        if KAGGLE_DB.exists():
+            conn = sqlite3.connect(str(KAGGLE_DB))
+            for i in range(0, len(missing), 500):
+                b = missing[i:i + 500]
+                for aid, title, abstract, authors in conn.execute(
+                        f"SELECT id, title, abstract, authors FROM papers WHERE id IN ({','.join('?' * len(b))})", b):
+                    t = f"{title}. {abstract}" if abstract else title
+                    texts[aid] = (title, (authors or "").split(", "), t)
+            conn.close()
+
+        cache = EmbeddingCache(CACHE_DB)
+        keyed = [(aid, title, authors, text_key(t)) for aid, (title, authors, t) in texts.items()]
+        hits = cache.get_many([k for *_, k in keyed])
+        cache.close()
+        rej = [(aid, " ".join(title.split()), authors) for aid, title, authors, k in keyed if k in hits]
+        rej_vecs = np.array([hits[k] for *_, k in keyed if k in hits], dtype=np.float32)
+
+        self.rows = [("ACCEPTED", *r) for r in acc] + [("REJECTED", *r) for r in rej]
+        self.vecs = np.concatenate([acc_vecs.astype(np.float32), rej_vecs.reshape(-1, acc_vecs.shape[1])])
+        self.n_acc, self.n_rej = len(acc), len(rej)
+
+    def nearest(self, vec, exclude_id, k=PRECEDENTS_K):
+        """k nearest accepted and k nearest rejected past papers, as (label, sim, title, authors)."""
+        import numpy as np
+        sims = self.vecs @ vec
+        out = {"ACCEPTED": [], "REJECTED": []}
+        for i in np.argsort(-sims):
+            label, aid, title, authors = self.rows[i]
+            if aid == exclude_id or len(out[label]) >= k:
+                continue
+            out[label].append((label, float(sims[i]), title, authors))
+            if all(len(v) >= k for v in out.values()):
+                break
+        return out["ACCEPTED"] + out["REJECTED"]
+
+
+def _format_paper_desc(p, precedents=()):
     """Format a single paper for the AI prompt."""
-    all_matched = p.get("all_matched_authors", [])
-    matched = p.get("matched_author", {})
-    ambiguity = "HIGH_AMBIGUITY" if p.get("is_ambiguous") else ""
-
-    # Show all tracked authors that share this name pattern
-    if len(all_matched) > 1:
-        author_descs = []
-        for m in all_matched:
-            topics = ", ".join(m.get("topics", []))
-            hint = m.get("disambiguation", "")
-            ad = f"{m['name']} ({m.get('affiliation', '?')}) [{topics}]"
-            if hint:
-                ad += f" HINT: {hint}"
-            author_descs.append(ad)
-        matched_str = " OR ".join(author_descs)
+    lines = [
+        f"### arXiv:{p['arxiv_id']}",
+        f"Title: {' '.join(p['title'].split())}",
+        f"Authors: {', '.join(p['authors'])}",
+        f"Categories: {', '.join(p['categories'])}",
+    ]
+    if p.get("source") == "semantic":
+        lines.append(f"Found by: embedding (cosine {p.get('similarity', 0):.3f} to the nearest feed paper); "
+                     "no tracked author")
     else:
-        topics = ", ".join(matched.get("topics", []))
-        matched_str = f"{matched.get('name', '?')} ({matched.get('affiliation', '?')}) [{topics}]"
-        hint = matched.get("disambiguation", "")
-        if hint:
-            matched_str += f" HINT: {hint}"
+        descs = []
+        for m in p.get("all_matched_authors") or [p.get("matched_author", {})]:
+            d = f"{m.get('name', '?')} ({m.get('affiliation', '?')}) [{', '.join(m.get('topics', []))}]"
+            if m.get("disambiguation"):
+                d += f" HINT: {m['disambiguation']}"
+            descs.append(d)
+        lines.append("Found by: name match to tracked author " + " OR ".join(descs)
+                     + (" — HIGH_AMBIGUITY name" if p.get("is_ambiguous") else ""))
+    lines.append(f"Abstract: {' '.join(p.get('abstract', '').split()) or '(none)'}")
+    if precedents:
+        lines.append("Curator's decisions on the most similar past papers:")
+        for label, sim, title, authors in precedents:
+            lines.append(f"  {label} [{sim:.2f}] {title} ({_short_authors(authors)})")
+    return "\n".join(lines)
 
-    desc = (
-        f"arXiv:{p['arxiv_id']} | {', '.join(p['authors'])} | "
-        f"\"{p['title']}\" | categories: {', '.join(p['categories'])} | "
-        f"Matched author(s): {matched_str} {ambiguity}"
-    )
-    return desc
 
+def _ai_filter_batch(batch, prompt_template, precedents):
+    """Send one batch to the AI, return ({arxiv_id: decision}, error). Failed or missing ids get no decision."""
+    paper_descs = [_format_paper_desc(p, precedents.get(p["arxiv_id"], ())) for p in batch]
+    full_prompt = prompt_template + "\n\n".join(paper_descs)
 
-def _ai_filter_batch(batch, prompt_template):
-    """Send one batch to pi, return dict of {arxiv_id: decision}."""
-    paper_descs = [_format_paper_desc(p) for p in batch]
-    full_prompt = prompt_template + "\n".join(paper_descs)
-
-    output, err = run_ai_prompt(full_prompt, timeout=180)
-    if err:
-        return {p["arxiv_id"]: "ACCEPT" for p in batch}, err
-
-    try:
+    for attempt in range(2):
+        output, err = run_ai_prompt(full_prompt, timeout=600)
+        if err:
+            continue
         json_match = re.search(r"\[.*\]", output, re.DOTALL)
         if not json_match:
-            return {p["arxiv_id"]: "ACCEPT" for p in batch}, "no JSON"
-        decisions = json.loads(json_match.group())
-    except json.JSONDecodeError:
-        return {p["arxiv_id"]: "ACCEPT" for p in batch}, "parse error"
+            err = "no JSON"
+            continue
+        try:
+            decisions = json.loads(json_match.group())
+        except json.JSONDecodeError:
+            err = "parse error"
+            continue
+        break
+    else:
+        return {}, err
+
+    ids = {p["arxiv_id"] for p in batch}
+    decisions = [d for d in decisions
+                 if d.get("arxiv_id", "").removeprefix("arXiv:") in ids
+                 and d.get("decision") in ("ACCEPT", "REJECT_PERSON", "REJECT_TOPIC")]
+    for d in decisions:
+        d["arxiv_id"] = d["arxiv_id"].removeprefix("arXiv:")
 
     # Log
     with open(AI_LOG_FILE, "a") as f:
@@ -592,26 +700,29 @@ def _ai_filter_batch(batch, prompt_template):
                 "timestamp": datetime.now(timezone.utc).isoformat(), **d,
             }) + "\n")
 
-    return {d["arxiv_id"]: d for d in decisions}, None
+    missing = len(ids) - len(decisions)
+    return {d["arxiv_id"]: d for d in decisions}, (f"{missing} papers without a decision" if missing else None)
 
 
 def ai_filter(papers_to_review, config):
-    """Send papers to pi for filtering, in parallel batches."""
+    """Send papers to the AI in parallel batches, each paper with its nearest past decisions."""
     if not papers_to_review:
         return {}
 
     prompt_template = PROMPT_FILE.read_text()
-    BATCH_SIZE = 20
+    BATCH_SIZE = 8
     MAX_PARALLEL = 5
 
-    # Small batch: single call
-    if len(papers_to_review) <= BATCH_SIZE:
-        results, err = _ai_filter_batch(papers_to_review, prompt_template)
-        if err:
-            print(f"  WARN: AI batch error: {err}")
-        return results
+    precedents = {}
+    try:
+        prec = Precedents()
+        vecs = embed_papers(papers_to_review)
+        for p, v in zip(papers_to_review, vecs):
+            precedents[p["arxiv_id"]] = prec.nearest(v, p["arxiv_id"])
+        print(f"  Precedents: {prec.n_acc} accepted, {prec.n_rej} rejected past papers")
+    except Exception as e:
+        print(f"  WARN: no precedents ({type(e).__name__}: {e})")
 
-    # Large batch: parallel
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     batches = []
@@ -624,19 +735,21 @@ def ai_filter(papers_to_review, config):
 
     with ThreadPoolExecutor(max_workers=MAX_PARALLEL) as pool:
         futures = {
-            pool.submit(_ai_filter_batch, batch, prompt_template): i
+            pool.submit(_ai_filter_batch, batch, prompt_template, precedents): i
             for i, batch in enumerate(batches)
         }
         for future in as_completed(futures):
-            batch_idx = futures[future]
             result, err = future.result()
             all_decisions.update(result)
             done += 1
             status = f"  batch {done}/{len(batches)}"
             if err:
                 status += f" (WARN: {err})"
-            print(status)
+            print(status, flush=True)
 
+    undecided = len(papers_to_review) - len(all_decisions)
+    if undecided:
+        print(f"  WARN: {undecided} papers have no AI decision; they stay undecided in the review list")
     return all_decisions
 
 
@@ -818,18 +931,13 @@ def agterm_status(state, blink=False, color=None, sound=None, note=None):
 
 
 def export_for_review(candidates, ai_decisions, processed, append_kaggle=True):
-    """Write candidates to review.json for the TUI tool.
+    """Write candidates to review.json for the TUI list (`arxiv-review list`).
 
-    Auto-handles high-confidence cases:
-    - ACCEPT + high confidence → auto-accepted (not in TUI)
-    - REJECT_PERSON + high confidence → auto-rejected (not in TUI)
-    Shows in TUI:
-    - REJECT_TOPIC (all) — right person, wrong topic
-    - REJECT_PERSON + low confidence — uncertain identity
-    - ACCEPT + low confidence — uncertain
-    - No AI decision — needs review
+    REJECT_PERSON with high confidence (a namesake) is rejected here and not
+    shown. Every other paper goes to the list with its AI decision as the
+    default, which LP confirms or flips: AI accepts first, then papers without
+    an AI decision, low-confidence rejects, and high-confidence rejects.
     """
-    auto_accepted = []
     auto_rejected = []
     review = []
 
@@ -838,21 +946,9 @@ def export_for_review(candidates, ai_decisions, processed, append_kaggle=True):
         matched = p.get("matched_author", {})
         ai = ai_decisions.get(aid, {})
 
-        if isinstance(ai, str):
-            # Old format fallback
-            ai = {"decision": ai, "confidence": "low", "reason": ""}
-
         decision = ai.get("decision", "")
         confidence = ai.get("confidence", "low")
         reason = ai.get("reason", "")
-
-        # Semantic-only papers: no AI decision, show similarity score
-        source = p.get("source", "name")
-        if source == "semantic" and not decision:
-            sim = p.get("similarity", 0)
-            decision = "ACCEPT"
-            confidence = f"{sim:.3f}"
-            reason = f"Cosine similarity {sim:.3f} to known int-prob papers"
 
         entry = {
             "arxiv_id": aid,
@@ -864,38 +960,18 @@ def export_for_review(candidates, ai_decisions, processed, append_kaggle=True):
             "matched_author": matched.get("name", ""),
             "is_ambiguous": p.get("is_ambiguous", False),
             "ai_decision": decision,
-            "ai_confidence": confidence,
+            "ai_confidence": confidence if decision else "",
             "ai_reason": reason,
             "decision": "",
-            "source": source,
+            "source": p.get("source", "name"),
+            "similarity": round(p.get("similarity", 0), 3),
         }
 
-        if decision == "ACCEPT" and confidence == "high":
-            auto_accepted.append(entry)
-        elif decision == "REJECT_PERSON" and confidence == "high":
+        if decision == "REJECT_PERSON" and confidence == "high":
             auto_rejected.append(entry)
         else:
-            # Show in TUI: REJECT_TOPIC, low-confidence anything, no AI
             review.append(entry)
 
-    # Auto-accept: generate posts immediately
-    wrote = 0
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    for entry in auto_accepted:
-        aid = entry["arxiv_id"]
-        date_prefix = entry["date"].split("T")[0]
-        safe_id = aid.replace("/", "-")
-        filename = f"{date_prefix}-{safe_id}.md"
-        filepath = OUTPUT_DIR / filename
-        if not filepath.exists():
-            filepath.write_text(generate_post(entry))
-            if append_kaggle:
-                append_to_kaggle(entry)
-            wrote += 1
-        if aid not in processed:
-            processed[aid] = {"source": "fetch", "decision": "ACCEPT", "date": date_prefix}
-
-    # Auto-reject: mark in processed
     for entry in auto_rejected:
         aid = entry["arxiv_id"]
         date_prefix = entry["date"].split("T")[0]
@@ -904,14 +980,36 @@ def export_for_review(candidates, ai_decisions, processed, append_kaggle=True):
 
     save_processed(processed)
 
-    print(f"  Auto-accepted: {len(auto_accepted)} ({wrote} new posts)")
-    print(f"  Auto-rejected: {len(auto_rejected)} (wrong person, high confidence)")
-    print(f"  Need review: {len(review)}")
+    def rank(e):
+        if e["ai_decision"] == "ACCEPT":
+            return 0 if e["ai_confidence"] == "high" else 1
+        if not e["ai_decision"]:
+            return 2
+        return 3 if e["ai_confidence"] == "low" else 4
 
-    # Sort review by date descending
-    review.sort(key=lambda x: x["date"], reverse=True)
+    review.sort(key=lambda e: e["date"], reverse=True)
+    review.sort(key=rank)
+    counts = [sum(rank(e) == r for e in review) for r in range(5)]
+    print(f"  Auto-rejected: {len(auto_rejected)} (namesakes, high confidence)")
+    print(f"  Review list: {len(review)} — AI accept {counts[0]}+{counts[1]}?, "
+          f"no AI decision {counts[2]}, AI reject {counts[3]}?+{counts[4]}")
+
     REVIEW_FILE.write_text(json.dumps(review, indent=2, ensure_ascii=False))
     return review
+
+
+def log_decisions(entries):
+    """Append LP's confirmed decisions (with the AI's) to decision_log.jsonl, the precedent store."""
+    now = datetime.now(timezone.utc).isoformat()
+    with open(DECISION_LOG, "a") as f:
+        for r in entries:
+            if r.get("decision") not in ("ACCEPT", "REJECT"):
+                continue
+            f.write(json.dumps({
+                "timestamp": now,
+                **{k: r.get(k, "") for k in ("arxiv_id", "decision", "ai_decision", "ai_confidence",
+                                             "ai_reason", "source", "title", "authors", "abstract")},
+            }, ensure_ascii=False) + "\n")
 
 
 def import_review(all_papers, config, processed, append_kaggle=True):
@@ -956,6 +1054,8 @@ def import_review(all_papers, config, processed, append_kaggle=True):
                 append_to_kaggle(paper)
             print(f"  WROTE {filename}")
             wrote += 1
+
+    log_decisions(review)
 
     # Update processed for all decided papers
     for r in review:
@@ -1056,6 +1156,7 @@ def main():
                 processed[aid] = {"source": "fetch", "decision": "REJECT", "date": date_prefix}
 
         save_processed(processed)
+        log_decisions(review)
         print(f"  Generated {wrote} new posts")
         print(f"  Updated processed.json ({len(processed)} total entries)")
 
@@ -1250,17 +1351,14 @@ def main():
 
         print(f"  {len(semantic_candidates)} semantic-only candidates (not name-matched)")
 
-    candidates = clear + ambiguous
-    name_candidate_count = len(candidates)
+    name_candidate_count = len(clear) + len(ambiguous)
+    candidates = clear + ambiguous + semantic_candidates
 
-    # Step 4: AI filtering (name-matched papers only)
+    # Step 4: AI filtering (name-matched and semantic candidates)
     ai_decisions = {}
     if not args.no_ai and candidates:
-        print(f"  Sending {len(candidates)} name-matched papers to AI for review...")
+        print(f"  Sending {len(candidates)} candidates to AI for review...")
         ai_decisions = ai_filter(candidates, config)
-
-    # Add semantic candidates (they skip AI, go directly to review)
-    candidates = candidates + semantic_candidates
 
     if not candidates:
         print("  No candidates found (name or semantic).")
@@ -1271,21 +1369,13 @@ def main():
         # Export for TUI review
         export_for_review(candidates, ai_decisions, processed)
 
-        ai_accept = sum(1 for v in ai_decisions.values()
-                        if (v.get("decision") if isinstance(v, dict) else v) == "ACCEPT")
-        ai_reject = sum(1 for v in ai_decisions.values()
-                        if (v.get("decision") if isinstance(v, dict) else v) in ("REJECT_PERSON", "REJECT_TOPIC"))
         print(f"\n  === Review summary ===")
         print(f"  {name_candidate_count} papers matched tracked authors")
         if args.semantic:
             print(f"  {len(semantic_candidates)} papers matched by embedding similarity")
-        if ai_decisions:
-            print(f"  AI pre-filter: {ai_accept} suggested ACCEPT, {ai_reject} suggested REJECT")
-            print(f"  AI suggestions are shown in the TUI — you make the final call")
-        else:
+        if not ai_decisions:
             print(f"  No AI pre-filter (use without --no-ai to enable)")
-        print(f"  Papers sorted newest-first")
-        print(f"  Keys: a/v=accept  r/b=reject  s=skip  u=undo  n/p=nav  q=quit (resumable)")
+        print(f"  List is pre-filled with AI decisions — flip what is wrong, then C to confirm all")
         print()
 
         # Launch TUI
@@ -1297,9 +1387,11 @@ def main():
         # Ping by glyph: the slow fetch/embed is done — it's the user's turn to triage.
         agterm_status("blocked", blink=True, color="#f59e0b", sound="Sosumi",
                       note=f"Review ready — {len(candidates)} papers to triage")
-        result = subprocess.run([str(REVIEW_TOOL), str(REVIEW_FILE)])
+        result = subprocess.run([str(REVIEW_TOOL), "list", str(REVIEW_FILE)])
         if result.returncode != 0:
-            print("  Review cancelled.")
+            print("  Review not confirmed; your flips are saved in review.json.")
+            print(f"  Resume: arxiv-review list {REVIEW_FILE} && "
+                  f"_scripts/arxiv/venv/bin/python _scripts/arxiv/fetch_arxiv.py --import-review")
             return 1
 
         # Import decisions

@@ -271,8 +271,7 @@ def main():
         print(f"  {len(candidates)} papers matched tracked authors")
         if ai_decisions:
             print(f"  AI pre-filter: {ai_accept} suggested ACCEPT, {ai_reject} suggested REJECT")
-        print(f"  Papers sorted newest-first")
-        print(f"  Keys: a=accept  r=reject  s=skip  u=undo  n/p=nav  q=quit (resumable)")
+        print(f"  List is pre-filled with AI decisions — flip what is wrong, then C to confirm all")
         print()
 
         # Launch TUI
@@ -281,7 +280,7 @@ def main():
             print(f"  Run: make arxiv-install")
             return 1
 
-        result = subprocess.run([str(REVIEW_TOOL), str(REVIEW_FILE)])
+        result = subprocess.run([str(REVIEW_TOOL), "list", str(REVIEW_FILE)])
         if result.returncode != 0:
             print("  Review cancelled.")
             return 1

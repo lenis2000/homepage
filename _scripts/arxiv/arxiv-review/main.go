@@ -36,6 +36,9 @@ type Paper struct {
 	AIConfidence string   `json:"ai_confidence"`
 	AIReason     string   `json:"ai_reason"`
 	Decision     string   `json:"decision"`
+	UserDecision string   `json:"user_decision,omitempty"`
+	Source       string   `json:"source,omitempty"`
+	Similarity   float64  `json:"similarity,omitempty"`
 }
 
 type authorGroup struct {
@@ -1100,11 +1103,18 @@ func runSearch(query string, newOnly bool, numResults int, year string) {
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "Usage: arxiv-review <review.json>")
+		fmt.Fprintln(os.Stderr, "       arxiv-review list <review.json>")
 		fmt.Fprintln(os.Stderr, "       arxiv-review search [-new] \"query\"")
 		os.Exit(1)
 	}
 
-	if os.Args[1] == "search" {
+	if os.Args[1] == "list" {
+		if len(os.Args) < 3 {
+			fmt.Fprintln(os.Stderr, "Usage: arxiv-review list <review.json>")
+			os.Exit(1)
+		}
+		runList(os.Args[2])
+	} else if os.Args[1] == "search" {
 		if len(os.Args) < 3 {
 			fmt.Fprintln(os.Stderr, "Usage: arxiv-review search [-new] [-n NUM] [-year YYYY] \"query\"")
 			os.Exit(1)
