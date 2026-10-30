@@ -28,8 +28,8 @@ type listModel struct {
 }
 
 var (
-	cursorStyle = lipgloss.NewStyle().Background(lipgloss.Color("236"))
-	undecStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Bold(true)
+	cursorBg   = lipgloss.Color("238")
+	undecStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("11")).Bold(true)
 )
 
 func aiDefault(p Paper) string {
@@ -252,14 +252,19 @@ func shortAuthors(authors []string) string {
 	return strings.Join(names, ", ")
 }
 
-func decisionMark(d string) string {
+func markStyle(d string) (lipgloss.Style, string) {
 	switch d {
 	case "ACCEPT":
-		return acceptStyle.Render("[✓]")
+		return acceptStyle, "[✓]"
 	case "REJECT":
-		return rejectStyle.Render("[✗]")
+		return rejectStyle, "[✗]"
 	}
-	return undecStyle.Render("[?]")
+	return undecStyle, "[?]"
+}
+
+func decisionMark(d string) string {
+	st, mark := markStyle(d)
+	return st.Render(mark)
 }
 
 func aiTag(p Paper) string {
@@ -307,9 +312,16 @@ func (m listModel) View() string {
 	lines := []string{m.header(), ""}
 	for i := m.offset; i < len(m.papers) && i < m.offset+rows; i++ {
 		p := m.papers[i]
-		flip := " "
+		// Every segment carries the cursor background: a styled segment's reset
+		// would otherwise end a row-wide background at its first color change.
+		hl := func(st lipgloss.Style) lipgloss.Style { return st }
+		if i == m.cursor {
+			hl = func(st lipgloss.Style) lipgloss.Style { return st.Background(cursorBg) }
+		}
+		plain := hl(lipgloss.NewStyle())
+		flip := plain.Render(" ")
 		if p.UserDecision != "" {
-			flip = ambigStyle.Render("*")
+			flip = hl(ambigStyle).Render("*")
 		}
 		auth := truncRunes(shortAuthors(p.Authors), 30)
 		titleW := w - 13 - len([]rune(auth)) - 2
@@ -322,10 +334,16 @@ func (m listModel) View() string {
 		if i == m.cursor {
 			cur = "▸"
 		}
-		row := fmt.Sprintf("%s%s%s %s %s%s  %s", cur, decisionMark(effective(p)), flip, dimStyle.Render(aiTag(p)),
-			title, strings.Repeat(" ", pad), dimStyle.Render(auth))
+		tStyle := plain
 		if i == m.cursor {
-			row = cursorStyle.Render(row)
+			tStyle = hl(titleStyle)
+		}
+		ms, mark := markStyle(effective(p))
+		row := plain.Render(cur) + hl(ms).Render(mark) + flip + plain.Render(" ") +
+			hl(dimStyle).Render(aiTag(p)) + plain.Render(" ") +
+			tStyle.Render(title) + plain.Render(strings.Repeat(" ", pad)+"  ") + hl(dimStyle).Render(auth)
+		if fill := w - lipgloss.Width(row); fill > 0 {
+			row += plain.Render(strings.Repeat(" ", fill))
 		}
 		lines = append(lines, row)
 	}

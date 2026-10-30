@@ -168,7 +168,7 @@ arxiv-semantic: arxiv-venv
 	glyph active --sound Tink; \
 	if _scripts/arxiv/venv/bin/python _scripts/arxiv/fetch_arxiv.py \
 			--semantic --days $(or $(DAYS),30) --review $(ARGS) \
-		&& { glyph active; python3 _scripts/arxiv/build_search_index.py; }; then \
+		&& { glyph active; _scripts/arxiv/venv/bin/python _scripts/arxiv/build_search_index.py; }; then \
 		date '+%Y-%m-%d %H:%M:%S %Z' > _scripts/arxiv/.last-semantic-run; \
 		echo "Updated last-run timestamp: $$(cat _scripts/arxiv/.last-semantic-run)"; \
 		glyph completed --blink --color "#22c55e" --sound Glass; \
@@ -191,17 +191,17 @@ arxiv-rebuild:
 arxiv-full-update: arxiv-venv
 	@echo "=== Full arXiv update pipeline ==="
 	@echo "1/7 Rendering abstracts (KaTeX)..."
-	@python3 _scripts/arxiv/render_abstracts.py
+	@_scripts/arxiv/venv/bin/python _scripts/arxiv/render_abstracts.py
 	@echo "2/7 Building search index..."
-	@python3 _scripts/arxiv/build_search_index.py
+	@_scripts/arxiv/venv/bin/python _scripts/arxiv/build_search_index.py
 	@echo "3/7 Fetching journal references..."
-	@python3 _scripts/arxiv/fetch_journal_refs.py
+	@_scripts/arxiv/venv/bin/python _scripts/arxiv/fetch_journal_refs.py
 	@echo "4/7 Downloading sources..."
-	@python3 _scripts/arxiv/download_sources.py
+	@_scripts/arxiv/venv/bin/python _scripts/arxiv/download_sources.py
 	@echo "5/7 Processing sources (PS→PDF, manifest)..."
 	@$(MAKE) arxiv-sources-process
 	@echo "6/7 Uploading sources to S3..."
-	@python3 _scripts/arxiv/download_sources.py --upload-only
+	@_scripts/arxiv/venv/bin/python _scripts/arxiv/download_sources.py --upload-only
 	@echo "7/7 Building related-paper embeddings..."
 	@_scripts/arxiv/venv/bin/python _scripts/arxiv/build_arxiv_embeddings.py
 	@echo "=== Full update complete ==="
