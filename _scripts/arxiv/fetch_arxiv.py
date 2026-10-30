@@ -561,7 +561,7 @@ class Precedents:
 
     Accepted rows come from the feed index and its vector file; rejected rows
     from processed.json REJECT ids found in the Kaggle DB, plus every human
-    decision recorded in decision_log.jsonl, all looked up in the shared
+    decision recorded in decision_log.jsonl, looked up in the shared
     embedding cache (misses are skipped, never embedded here).
     """
 
@@ -571,8 +571,32 @@ class Precedents:
         from scan_full_arxiv import EmbeddingCache, text_key, CACHE_DB, INDEX_FILE, VECTORS_FILE
 
         index = json.loads(INDEX_FILE.read_text(encoding="utf-8"))
-        acc_vecs = np.load(VECTORS_FILE)
-        acc = [(e["id"], e["t"], e["a"].split(", ")) for e in index]
+        meta = {e["id"]: (e["t"], e["a"].split(", ")) for e in index}
+        acc_vecs = np.load(VECTORS_FILE).astype(np.float32)
+        feed_texts = {}  # arxiv_id -> title + abstract, as build_arxiv_embeddings embeds it
+        if KAGGLE_DB.exists():
+            conn = sqlite3.connect(str(KAGGLE_DB))
+            ids = list(meta)
+            for i in range(0, len(ids), 500):
+                b = ids[i:i + 500]
+                for aid, title, abstract in conn.execute(
+                        f"SELECT id, title, abstract FROM papers WHERE id IN ({','.join('?' * len(b))})", b):
+                    feed_texts[aid] = f"{title}. {abstract}" if abstract else title
+            conn.close()
+        # build_arxiv_embeddings writes one row per feed paper found in the Kaggle DB, in
+        # sorted-id order; feed papers added since then break that order.
+        order = sorted(feed_texts)
+        if len(order) == len(acc_vecs):
+            acc = [(aid, *meta[aid]) for aid in order]
+        else:
+            print(f"  WARN: {VECTORS_FILE.name} has {len(acc_vecs)} rows for {len(order)} feed papers; "
+                  f"run 'make arxiv-related'. Using cached embeddings only.")
+            cache = EmbeddingCache(CACHE_DB)
+            keyed = [(aid, text_key(t)) for aid, t in feed_texts.items()]
+            hits = cache.get_many([k for _, k in keyed])
+            cache.close()
+            acc = [(aid, *meta[aid]) for aid, k in keyed if k in hits]
+            acc_vecs = np.array([hits[k] for _, k in keyed if k in hits], dtype=np.float32).reshape(-1, acc_vecs.shape[1])
 
         # A high-confidence REJECT_PERSON was rejected unseen (export_for_review), so it
         # says nothing about LP's taste; keep only rejections he actually made.
@@ -618,7 +642,7 @@ class Precedents:
         rej_vecs = np.array([hits[k] for *_, k in keyed if k in hits], dtype=np.float32)
 
         self.rows = [("ACCEPTED", *r) for r in acc] + [("REJECTED", *r) for r in rej]
-        self.vecs = np.concatenate([acc_vecs.astype(np.float32), rej_vecs.reshape(-1, acc_vecs.shape[1])])
+        self.vecs = np.concatenate([acc_vecs, rej_vecs.reshape(-1, acc_vecs.shape[1])])
         self.n_acc, self.n_rej = len(acc), len(rej)
 
     def nearest(self, vec, exclude_id, k=PRECEDENTS_K):
