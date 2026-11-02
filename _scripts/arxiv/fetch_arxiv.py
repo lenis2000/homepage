@@ -439,6 +439,16 @@ def _split_tracked_name(arxiv_name):
     return " ".join(parts[:-1]), parts[-1]
 
 
+_UNDECOMPOSED = str.maketrans({"ł": "l", "Ł": "L", "ø": "o", "Ø": "O", "đ": "d", "Đ": "D"})
+
+
+def _fold(text):
+    """Lowercase and strip diacritics, so 'Seppäläinen' == 'Seppalainen' and 'Dołęga' == 'Dolega'.
+    NFKD leaves ł, ø, đ intact, hence the explicit table."""
+    decomposed = unicodedata.normalize("NFKD", text.translate(_UNDECOMPOSED))
+    return "".join(c for c in decomposed if not unicodedata.combining(c)).lower()
+
+
 def _author_matches_pattern(paper_author, surname, initial):
     """Surname + first-initial match used both for live matching and for learning forenames."""
     name_parts = paper_author.strip().split()
@@ -447,7 +457,7 @@ def _author_matches_pattern(paper_author, surname, initial):
         return False
     pa_surname = " ".join(name_parts[-len(surname_words):])
     pa_initial = name_parts[0][0] if name_parts[0] else ""
-    return pa_surname.lower() == surname.lower() and pa_initial.upper() == initial.upper()
+    return _fold(pa_surname) == _fold(surname) and _fold(pa_initial) == _fold(initial)
 
 
 _known_forenames_cache = {}

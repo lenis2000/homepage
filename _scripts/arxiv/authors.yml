@@ -886,9 +886,9 @@ authors:
     high_ambiguity: true
     disambiguation: "Sourav Sarkar, KPZ / exclusion processes — coauthor with Quastel on ASEP→KPZ fixed point convergence. Common name."
 
-  - name: "Sam Groathouse"
+  - name: "Sean Groathouse"
     arxiv_names: ["Groathouse_S"]
-    affiliation: ""
+    affiliation: "Utah"
     topics: ["KPZ", "jointly invariant measures", "random polymers"]
 
   - name: "Levi Haunschmid-Sibitz"
@@ -1142,3 +1142,170 @@ authors:
     topics: ["exactly solvable models", "Riemann-Hilbert problems", "correlation functions", "six-vertex model", "quantum integrable systems"]
     high_ambiguity: true
     disambiguation: "Karol Kajetan Kozlowski at ENS Lyon — exactly solvable models, Riemann-Hilbert approach to correlation functions. Not other Kozlowskis."
+
+  - name: "Shirshendu Ganguly"
+    arxiv_names: ["Ganguly_S"]
+    affiliation: "Berkeley"
+    topics: ["last passage percolation", "directed landscape", "line ensembles", "stochastic heat flow"]
+    high_ambiguity: true
+    disambiguation: "Shirshendu Ganguly at Berkeley — prolific in many areas. Include LPP, directed landscape, KPZ, line ensembles, 2d stochastic heat flow; NOT GFF level-set percolation, spin glasses, random graphs, hypercube combinatorics"
+
+  - name: "Rongfeng Sun"
+    arxiv_names: ["Sun_R"]
+    affiliation: "NUS"
+    topics: ["directed polymers", "critical 2d stochastic heat flow", "interacting particle systems"]
+    high_ambiguity: true
+    disambiguation: "Rongfeng Sun, probabilist at NUS — directed polymers and 2d stochastic heat flow (with Caravenna, Zygouras). Common name."
+
+  - name: "Francesco Caravenna"
+    arxiv_names: ["Caravenna_F"]
+    affiliation: "Milano-Bicocca"
+    topics: ["directed polymers", "critical 2d stochastic heat flow", "disordered systems"]
+
+  - name: "Sylvain Prolhac"
+    arxiv_names: ["Prolhac_S"]
+    affiliation: "Toulouse"
+    topics: ["ASEP", "Bethe ansatz", "KPZ fluctuations", "KPZ fixed point"]
+
+  - name: "Kirone Mallick"
+    arxiv_names: ["Mallick_K"]
+    affiliation: "IPhT Saclay"
+    topics: ["exclusion processes", "current fluctuations", "integrable statistical mechanics", "Dyson gas"]
+
+  - name: "Alexandre Krajenbrink"
+    arxiv_names: ["Krajenbrink_A"]
+    affiliation: "Quantinuum"
+    topics: ["KPZ", "weak noise theory", "integrable large deviations", "q-TASEP"]
+
+  - name: "Kevin Yang"
+    arxiv_names: ["Yang_K"]
+    affiliation: "Harvard"
+    topics: ["KPZ equation from particle systems", "ASEP", "random band matrices"]
+    high_ambiguity: true
+    disambiguation: "Kevin Yang, probabilist at Harvard — KPZ equation limits of ASEP and SDE models, random matrices. Very common name; not CS/biology/physics Kevin Yangs"
+
+  - name: "Gioia Carinci"
+    arxiv_names: ["Carinci_G"]
+    affiliation: "Modena"
+    topics: ["stochastic duality", "exactly solvable particle systems", "inclusion process"]
+
+  - name: "Eunghyun Lee"
+    arxiv_names: ["Lee_E"]
+    affiliation: "Nazarbayev University"
+    topics: ["ASEP", "Bethe ansatz", "multi-species exclusion", "transition probabilities"]
+    high_ambiguity: true
+    disambiguation: "Eunghyun Lee at Nazarbayev University — integrable ASEP and multispecies particle systems. Very common surname; reject other E. Lees"
+
+  - name: "Tamara Grava"
+    arxiv_names: ["Grava_T"]
+    affiliation: "Bristol/SISSA"
+    topics: ["random matrices", "integrable systems", "Riemann-Hilbert problems", "soliton gases"]
+
+  - name: "Mattia Cafasso"
+    arxiv_names: ["Cafasso_M"]
+    affiliation: "Angers"
+    topics: ["Fredholm determinants", "integrable probability", "Painlevé equations", "random matrices"]
+
+  - name: "Thomas Bothner"
+    arxiv_names: ["Bothner_T"]
+    affiliation: "Bristol"
+    topics: ["random matrices", "Riemann-Hilbert problems", "Fredholm determinants"]
+
+  - name: "Christophe Charlier"
+    arxiv_names: ["Charlier_C"]
+    affiliation: "UCLouvain"
+    topics: ["random matrices", "two-dimensional Coulomb gases", "Fisher-Hartwig asymptotics", "last passage percolation"]
+    disambiguation: "Christophe Charlier — random matrices, Coulomb gases, Riemann-Hilbert asymptotics. NOT his Boussinesq / water-wave / soliton-resolution papers"
+
+  - name: "Karl Liechty"
+    arxiv_names: ["Liechty_K"]
+    affiliation: "DePaul"
+    topics: ["random matrices", "nonintersecting paths", "Riemann-Hilbert problems"]
+
+  - name: "Gaultier Lambert"
+    arxiv_names: ["Lambert_G"]
+    affiliation: "KTH"
+    topics: ["random matrices", "multiplicative chaos", "beta-ensembles", "free fermions"]
+
+  - name: "Paul Bourgade"
+    arxiv_names: ["Bourgade_P"]
+    affiliation: "NYU Courant"
+    topics: ["random matrix universality", "log-correlated fields", "Dyson Brownian motion"]
+
+  - name: "Jérémie Bouttier"
+    arxiv_names: ["Bouttier_J"]
+    affiliation: "IMJ-PRG Paris"
+    topics: ["Schur processes", "random tilings", "random maps"]
+
+  - name: "Eugene Strahov"
+    arxiv_names: ["Strahov_E"]
+    affiliation: "Hebrew University"
+    topics: ["random partitions", "determinantal processes", "product matrix ensembles", "asymptotic representation theory"]
+
+  - name: "Valentin Féray"
+    arxiv_names: ["Feray_V"]
+    affiliation: "Lorraine"
+    topics: ["random partitions", "permutons", "asymptotic representation theory"]
+
+  - name: "Valentin Buciumas"
+    arxiv_names: ["Buciumas_V"]
+    affiliation: "POSTECH"
+    topics: ["solvable lattice models", "Yang-Baxter equation", "symmetric functions"]
+
+  - name: "Jiahe Shen"
+    arxiv_names: ["Shen_J"]
+    affiliation: "Columbia"
+    topics: ["p-adic random matrices", "Hall-Littlewood", "cokernels of random matrices"]
+    high_ambiguity: true
+    disambiguation: "Jiahe Shen at Columbia — p-adic random matrix products, Hall-Littlewood structures (Van Peski circle). Common surname; reject other J. Shens"
+
+  - name: "Tejaswi Tripathi"
+    arxiv_names: ["Tripathi_T"]
+    affiliation: "Kansas"
+    topics: ["Gibbsian line ensembles", "KPZ"]
+
+  - name: "Nimisha Pahuja"
+    arxiv_names: ["Pahuja_N"]
+    affiliation: "ICTS"
+    topics: ["exactly solvable stochastic models", "KPZ"]
+
+  - name: "Anastasiia Trofimova"
+    arxiv_names: ["Trofimova_A"]
+    affiliation: "GSSI"
+    topics: ["exactly solvable stochastic models", "zero range processes"]
+
+  - name: "Alex Fu"
+    arxiv_names: ["Fu_A"]
+    affiliation: "USC"
+    topics: ["Gibbsian line ensembles", "KPZ"]
+    high_ambiguity: true
+    disambiguation: "Alex Fu at USC — Gibbsian line ensembles / KPZ. Very common surname; reject other A. Fus"
+
+  - name: "Fardin Syed"
+    arxiv_names: ["Syed_F"]
+    affiliation: "Toronto"
+    topics: ["Gibbsian line ensembles", "KPZ"]
+
+  - name: "Pierre Le Doussal"
+    arxiv_names: ["Le_Doussal_P", "Doussal_P"]
+    affiliation: "ENS Paris"
+    topics: ["KPZ", "directed polymers", "Coulomb gases", "Dyson Brownian motion"]
+    high_ambiguity: true
+    disambiguation: "Pierre Le Doussal at ENS Paris — prolific physicist. Include exact KPZ/polymer results, Coulomb gases, Dyson-type models; NOT active matter, resetting, disordered elastic manifolds, spin-glass phenomenology"
+
+  - name: "Rinat Kedem"
+    arxiv_names: ["Kedem_R"]
+    affiliation: "Illinois"
+    topics: ["integrable lattice models", "T-system", "representation theory"]
+
+  - name: "Pierre-Yves Gaudreau Lamarre"
+    arxiv_names: ["Gaudreau_Lamarre_P", "Lamarre_P"]
+    affiliation: "Syracuse"
+    topics: ["beta-ensembles", "stochastic Airy operator", "random Schrödinger operators"]
+
+  - name: "László Erdős"
+    arxiv_names: ["Erdos_L"]
+    affiliation: "IST Austria"
+    topics: ["random matrix universality", "Wigner matrices", "non-Hermitian random matrices"]
+    high_ambiguity: true
+    disambiguation: "László Erdős at IST Austria — prolific. Include universality of local eigenvalue statistics and edge/cusp results; NOT eigenstate thermalization, quantum dynamics, or local laws aimed at statistics"
