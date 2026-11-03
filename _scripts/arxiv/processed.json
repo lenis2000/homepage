@@ -61255,6 +61255,11 @@
     "decision": "REJECT",
     "source": "fetch"
   },
+  "2610.31345": {
+    "date": "2026-10-30",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
   "2610.31590": {
     "date": "2026-10-22",
     "decision": "REJECT",
@@ -61557,6 +61562,31 @@
   },
   "2610.40555": {
     "date": "2026-10-29",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2610.41312": {
+    "date": "2026-10-30",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2610.41416": {
+    "date": "2026-10-30",
+    "decision": "ACCEPT",
+    "source": "fetch"
+  },
+  "2610.41758": {
+    "date": "2026-10-30",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2610.42088": {
+    "date": "2026-10-30",
+    "decision": "REJECT",
+    "source": "fetch"
+  },
+  "2610.42124": {
+    "date": "2026-10-30",
     "decision": "REJECT",
     "source": "fetch"
   },
