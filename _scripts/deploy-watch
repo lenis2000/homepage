@@ -94,11 +94,16 @@ class Panel:
                     return True, (s.get("hud") or {}).get("message")
         return False, None
 
+    def _info(self, msg, ttl):
+        """The line under the pushing session's sidebar row (agterm >= 0.40); it expires by itself."""
+        run([AGTERMCTL, "session", "info", msg[:160], "--hide-after", str(ttl), "--target", self.sid])
+
     def progress(self, text):
         msg = "⋮ %s · %s" % (self.mark, text)
         log(msg)
         if not self.sid or not os.path.exists(AGTERMCTL):
             return
+        self._info(msg, 300)
         found, current = self._current()
         if not found or (current and self.mark not in current):
             return
@@ -113,6 +118,8 @@ class Panel:
         log(msg)
         if not self.sid:
             return
+        if os.path.exists(AGTERMCTL):
+            self._info(msg, 900)
         if os.access(HUD, os.X_OK):
             run([HUD, msg, self.sid], env=dict(os.environ, AGTERM_ENABLED="1"))
         if self.pane_id and not os.environ.get("CLAUDECODE"):
