@@ -1309,3 +1309,52 @@ authors:
     topics: ["random matrix universality", "Wigner matrices", "non-Hermitian random matrices"]
     high_ambiguity: true
     disambiguation: "László Erdős at IST Austria — prolific. Include universality of local eigenvalue statistics and edge/cusp results; NOT eigenstate thermalization, quantum dynamics, or local laws aimed at statistics"
+
+  - name: "Horng-Tzer Yau"
+    arxiv_names: ["Yau_H"]
+    affiliation: "Harvard"
+    topics: ["random matrix universality", "Dyson Brownian motion", "random band matrices", "random regular graphs"]
+    disambiguation: "Horng-Tzer Yau (Harvard), random matrix theory and mathematical physics. Not Shing-Tung Yau or Stephen S.-T. Yau. Spin glass (SK model) and kernel-matrix statistics papers are out of scope."
+
+  - name: "Elliot Paquette"
+    arxiv_names: ["Paquette_E"]
+    affiliation: "McGill"
+    topics: ["beta-ensembles", "random matrix characteristic polynomials", "log-correlated fields", "GUE minor process"]
+    disambiguation: "Probabilist at McGill; accept beta-ensemble, CbetaE/GUE-minor and characteristic-polynomial papers, reject his high-dimensional SGD/optimization, random-features and sample-covariance local-law papers"
+
+  - name: "Pierre Lazag"
+    arxiv_names: ["Lazag_P"]
+    affiliation: "Aix-Marseille (PhD with A. Bufetov); current position unverified"
+    topics: ["determinantal point processes", "Schur measures", "Plancherel measure", "random partitions"]
+
+  - name: "Patrícia Gonçalves"
+    arxiv_names: ["Goncalves_P"]
+    affiliation: "IST Lisbon"
+    topics: ["hydrodynamic limits", "stochastic Burgers / KPZ equation from particle systems", "exclusion and zero-range processes", "boundary-driven systems"]
+    disambiguation: "Patrícia Gonçalves at Instituto Superior Técnico (Lisbon), probabilist - interacting particle systems, hydrodynamic limits, energy solutions of stochastic Burgers/KPZ. Not the medical physicist Patricia Gonçalves (LIP Lisbon) or other P. Gonçalves in physics/CS"
+
+  - name: "Grégory Schehr"
+    arxiv_names: ["Schehr_G"]
+    affiliation: "LPTHE, Sorbonne Université / CNRS"
+    topics: ["random matrices", "Coulomb gases", "non-intersecting Brownian motions", "trapped fermions", "KPZ"]
+    disambiguation: "Grégory Schehr (LPTHE Paris) — prolific statistical physicist. Include random matrices (extreme eigenvalues, Ginibre, beta-ensembles), Coulomb/log gases, vicious walkers and Airy processes, exact KPZ results, free fermions tied to RMT kernels; NOT stochastic resetting, run-and-tumble/active particles, random-walk record/extreme statistics, Riesz-gas phenomenology"
+
+  - name: "Kazumasa Takeuchi"
+    arxiv_names: ["Takeuchi_K"]
+    affiliation: "University of Tokyo"
+    topics: ["KPZ universality", "experimental growing interfaces", "Tracy-Widom statistics"]
+    disambiguation: "Kazumasa A. Takeuchi (U Tokyo), experimental/numerical physicist. Include KPZ interface statistics (Tracy-Widom, Airy processes, KPZ subclasses, half-space/stationary KPZ); NOT active matter, bacterial colonies, liquid-crystal defects, Lyapunov/chaos, directed percolation. Not other K. Takeuchis (e.g. BESS-Polar cosmic-ray physics)"
+
+  - name: "Dong Wang"
+    arxiv_names: ["Wang_D"]
+    affiliation: "UCAS Beijing (formerly NUS)"
+    topics: ["random matrices", "Riemann-Hilbert asymptotics", "Muttalib-Borodin ensembles", "external source models", "q-TAZRP"]
+    high_ambiguity: true
+    disambiguation: "Dong Wang at University of Chinese Academy of Sciences (formerly NUS, Michigan PhD with Baik) - random matrices, biorthogonal ensembles, Riemann-Hilbert, TASEP/q-TAZRP. Extremely common name: reject the numerical-analysis Dong Wang (CUHK-Shenzhen, threshold dynamics, math.NA), statistics, PDE (primitive equations), quantum-information and engineering Dong Wangs"
+
+  - name: "Yuan Tian"
+    arxiv_names: ["Tian_Y"]
+    affiliation: "unverified (coauthor of Alexey Bufetov, Leipzig)"
+    topics: ["multispecies ASEP", "ASEP speed process", "oriented swap process", "half-line exclusion"]
+    high_ambiguity: true
+    disambiguation: "Probabilist on multispecies ASEP, speed process and oriented swap process (works with Alexey Bufetov). Very common name: reject other Yuan Tians and any Y. Tian outside interacting particle systems."
