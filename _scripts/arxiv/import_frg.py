@@ -28,7 +28,7 @@ def parse_frg_post(filepath):
     text = filepath.read_text(encoding="utf-8")
 
     # Split front matter and body
-    parts = text.split("---", 2)
+    parts = re.split(r"^---[ \t]*$", text, maxsplit=2, flags=re.M)
     if len(parts) < 3:
         print(f"  WARN: no front matter in {filepath.name}")
         return None

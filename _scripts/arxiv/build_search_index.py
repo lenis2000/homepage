@@ -56,7 +56,7 @@ BIB_EXPORT_SCRIPT = SCRIPT_DIR / "export_bibtex.py"
 def parse_post(filepath):
     """Extract metadata from a post's YAML front matter."""
     text = filepath.read_text(encoding="utf-8")
-    parts = text.split("---", 2)
+    parts = re.split(r"^---[ \t]*$", text, maxsplit=2, flags=re.M)
     if len(parts) < 3:
         return None
 

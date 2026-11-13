@@ -154,7 +154,7 @@ def load_cache():
 
 def load_post(filepath):
     text = filepath.read_text(encoding="utf-8")
-    parts = text.split("---", 2)
+    parts = re.split(r"^---[ \t]*$", text, maxsplit=2, flags=re.M)
     if len(parts) < 3:
         return None
     front_matter = yaml.safe_load(parts[1]) or {}

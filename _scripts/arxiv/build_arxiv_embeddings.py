@@ -268,7 +268,7 @@ def update_post_frontmatter(filepath, related_ids):
     Returns True if the file was modified.
     """
     text = filepath.read_text(encoding="utf-8")
-    parts = text.split("---", 2)
+    parts = re.split(r"^---[ \t]*$", text, maxsplit=2, flags=re.M)
     if len(parts) < 3:
         return False
 

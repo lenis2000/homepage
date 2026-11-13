@@ -75,7 +75,7 @@ def rerender_post(filepath, abstract, force=False):
     text = filepath.read_text()
 
     # Find the body (everything after second ---)
-    parts = text.split("---", 2)
+    parts = re.split(r"^---[ \t]*$", text, maxsplit=2, flags=re.M)
     if len(parts) < 3:
         return False, 0
 

@@ -33,7 +33,7 @@ def extract_arxiv_id(filepath):
 def has_abstract(filepath):
     """Check if the post body already has abstract content (non-trivial)."""
     text = filepath.read_text(encoding="utf-8")
-    parts = text.split("---", 2)
+    parts = re.split(r"^---[ \t]*$", text, maxsplit=2, flags=re.M)
     if len(parts) < 3:
         return False
     body = parts[2].strip()
@@ -116,7 +116,7 @@ def _render_math(text):
 def update_post(filepath, abstract):
     """Replace the post body with the abstract, keeping front matter."""
     text = filepath.read_text(encoding="utf-8")
-    parts = text.split("---", 2)
+    parts = re.split(r"^---[ \t]*$", text, maxsplit=2, flags=re.M)
     if len(parts) < 3:
         return False
 

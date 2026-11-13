@@ -41,7 +41,7 @@ def has_raw_math(text):
 def extract_abstract(filepath):
     """Extract abstract text from a post file. Returns (front_matter, abstract) or None."""
     text = filepath.read_text(encoding="utf-8")
-    parts = text.split("---", 2)
+    parts = re.split(r"^---[ \t]*$", text, maxsplit=2, flags=re.M)
     if len(parts) < 3:
         return None
 

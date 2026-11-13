@@ -482,7 +482,7 @@ def get_post_metadata():
     posts = {}
     for f in sorted(POSTS_DIR.glob("*.md")):
         text = f.read_text(encoding="utf-8")
-        parts = text.split("---", 2)
+        parts = re.split(r"^---[ \t]*$", text, maxsplit=2, flags=re.M)
         front = parts[1] if len(parts) >= 3 else text
         m = re.search(r'^arxiv-id:\s*"?([^"\s]+)"?', front, re.MULTILINE)
         if not m:
@@ -553,7 +553,7 @@ def yaml_quote(s):
 def update_post_frontmatter(filepath, journal_name, journal_ref, doi):
     """Add journal-name, journal-ref, and doi to post YAML front matter. Returns True if changed."""
     text = filepath.read_text(encoding="utf-8")
-    parts = text.split("---", 2)
+    parts = re.split(r"^---[ \t]*$", text, maxsplit=2, flags=re.M)
     if len(parts) < 3:
         return False
 
