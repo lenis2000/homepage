@@ -119,6 +119,9 @@ simulations: simulations/YYYY-MM-DD-slug/    # optional
 - Embedding cache at `_scripts/arxiv/.embedding-cache-full.db` — cached papers are fast, uncached require model computation
 - `processed.json` tracks accepted/rejected papers — re-scanning already-processed years just iterates cached rows
 - Source use ideas tracked in `_scripts/arxiv/source_use_suggestions.md`
+- Routine update, in order: `make arxiv-semantic DAYS=N` (prints the last run, fetches, opens the `arxiv-review` list pre-filled with AI decisions, imports on confirm with `C`, rebuilds the search index, stamps `_scripts/arxiv/.last-semantic-run`) → `make arxiv-full-update` (abstracts, search index, journal refs, source download, PS→PDF and manifest, S3 upload, related embeddings) → commit and push
+- Pick `DAYS` as the days since `.last-semantic-run` plus 5 (Makefile default is 30)
+- A review quit before confirm keeps its flips in `review.json`; resume with `arxiv-review list _scripts/arxiv/review.json && _scripts/arxiv/venv/bin/python _scripts/arxiv/fetch_arxiv.py --import-review`, then `python3 _scripts/arxiv/build_search_index.py` — this path does not update `.last-semantic-run`
 
 ## Schur/GT Pattern Simulation (`2026-04-06-schur-gt-enumeration.md`)
 
