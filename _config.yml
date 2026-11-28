@@ -38,7 +38,10 @@ permalink: /:year/:month/:title/
 exclude:
   - _scripts
   - vendor
+  - CLAUDE.md
   - "**/CLAUDE.md"
+  - AGENTS.md
+  - "**/AGENTS.md"
   - "_simulations/**/README.md"
   - "_simulations/domino_tilings/myenv/"
   - ".claude"

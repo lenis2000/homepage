@@ -8,8 +8,7 @@ layout: default
 <p class="h3 mb-4">{{ page.date | date: "%Y/%m/%d" }}</p>
 {% endif %} {% for coa in page.coauthors %}{% if coa.noweb != true and coa.name
 != "Leonid Petrov" %}<a href="{{coa.web}}"
-    >{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid
-    Petrov" %}</a
+    >{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a
 >{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}<br />
 {%if page.journal-web%}<a href="{{page.journal-web}}" target="_blank"
     >{%endif%} <i>{{page.journal-ref}}</i>{%if page.journal-web%}<span class="sr-only"> (opens in new tab)</span></a
@@ -30,6 +29,20 @@ page.arXiv %}<a
     href="https://arxiv.org/html/{{ page.arxiv-id }}"
     target="_blank"
     >HTML<span class="sr-only"> (opens in new tab)</span></a
+>{% endif %}{% if page.hexagon %}<a
+    href="https://hexagonmath.org/abs/{{ page.hexagon }}"
+    target="_blank"
+    >hexagon:{{ page.hexagon }}<span class="sr-only"> (opens in new tab)</span></a
+> &bull; {% if page.pdf and page.categories contains "ai-generated" %}<a
+    href="{{site.storage_url}}/ai-generated/{{ page.pdf }}"
+    aria-label="PDF of {{page.title}}"
+    >PDF</a
+>{% else %}<a
+    href="https://hexagonmath.org/pdf/{{ page.hexagon }}"
+    target="_blank"
+    >PDF<span class="sr-only"> (opens in new tab)</span></a
+>{% endif %}{% endif %}{% if page.ai-models %}<br /><small
+    >Primarily AI-generated text. AI models: {{ page.ai-models | join: ", " }}</small
 >{% endif %} {% if page.post-pdf %}<br /><br /><a
     href="{{site.storage_url}}/papers/{{page.pdf}}"
     aria-label="PDF of {{page.title}}"

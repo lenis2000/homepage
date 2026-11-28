@@ -50,6 +50,14 @@ simulations: simulations/YYYY-MM-DD-slug/    # optional
 ### Current Paper Count
 - Latest cv-number: 54 (as of Sep 2026: `54-ybe-rsk.pdf`, arXiv:2609.18502)
 
+### Primarily AI-generated works (Hexagon)
+- Works whose text is primarily AI-generated are posted on Hexagon (https://hexagonmath.org), not arXiv, and listed separately from papers: last paper section on `/research/` (`#ai-generated`), and "Primarily AI-generated works" at the end of `_includes/cv_publist.html` and `_includes/publist.html` (not in the short/selected CV lists). Every section is hidden while no such post exists.
+- Post: `_posts/papers/YYYY-MM-DD-slug.md` with `categories: blog math ai-generated`, `hexagon: YYMM.NNNNN` (version suffix optional; links go to `hexagonmath.org/abs/` and `/pdf/`), `ai-models:` list (e.g. `Claude Opus 5.5`, `ChatGPT 6 Pro`), `coauthors`, `pages`, `pdf: slug.pdf`, abstract as body. No `cv-number`, no `post-pdf`, no `arXiv`.
+- PDF: `aws s3 cp main.pdf s3://lpetrov.cc.storage/ai-generated/slug.pdf --content-type application/pdf`, served at `https://storage.lpetrov.cc/ai-generated/slug.pdf`. PDF links go there; without `pdf:` they fall back to Hexagon's PDF.
+- These posts never count as papers: not in the coauthor sidebar, paper counts, or `statement.html`.
+- Single-quote a `title:` containing a backslash (`'... $\beta$ ...'`). In double quotes YAML turns `\b`, `\t`, `\n`, `\a`, `\v`, `\f`, `\e`, `\L`, `\P`, `\N` into control characters; `_plugins/title_escapes.rb` restores those in titles, but escapes YAML rejects (`\l`, `\m`, `\s`, `\x`, `\u`, ...) still break the front matter.
+- A humanized, extended version is a separate `preprint` post on arXiv that cites the Hexagon record; the Hexagon post stays.
+
 ## Talk Slides
 
 - Talk-specific documentation is in `talk/CLAUDE.md`

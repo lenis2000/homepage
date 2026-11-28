@@ -141,6 +141,32 @@ nav_weight: 2
         {% endfor %}
         </ol>
 
+    {% assign ai_works = site.posts | where_exp: "post", "post.categories contains 'ai-generated'" %}
+    {% if ai_works.size > 0 %}
+    <h2 id="ai-generated" class="mt-4">Primarily AI-generated works</h2>
+    <hr />
+    <p class="small text-muted">The text of these works is primarily AI-generated; the human contributors are listed. They are posted on <a href="https://hexagonmath.org" target="_blank">Hexagon<span class="sr-only"> (opens in new tab)</span></a>, and each entry names the AI models used.</p>
+
+    <ol reversed class="my-ul-zebra research-list">
+    {% for post in ai_works %}
+      <li class="mb-1" style="padding:6px" data-category="AI-generated" data-title="{{post.title | downcase}}" data-basic-search="{{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %} {{post.hexagon}}" data-year="{{post.date | date: '%Y'}}">
+        {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
+        <strong><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></strong> ({{post.date | date: '%Y'}})
+        {% if post.hexagon %}&bull; <a href="https://hexagonmath.org/abs/{{post.hexagon}}" target="_blank">hexagon:{{post.hexagon}}<span class="sr-only"> (opens in new tab)</span></a>{% endif %}
+        {% if post.pdf %}&bull; (<a href="{{site.storage_url}}/ai-generated/{{post.pdf}}" aria-label="PDF of {{post.title}}">PDF</a>){% elsif post.hexagon %}&bull; (<a href="https://hexagonmath.org/pdf/{{post.hexagon}}" aria-label="PDF of {{post.title}}">PDF</a>){% endif %}
+        {% if post.ai-models %}<br /><small>AI models: {{ post.ai-models | join: ", " }}</small>{% endif %}
+        {% unless post.no-abstract %}<details>
+          <summary>
+            Abstract
+          </summary>
+          <br />
+            {{ post.content | markdownify }}
+        </details>{% endunless %}
+      </li>
+    {% endfor %}
+    </ol>
+    {% endif %}
+
     <h2 id="slides" class="mt-4">Slides of some talks</h2>
     <hr />
 
@@ -178,6 +204,7 @@ nav_weight: 2
       <a class="list-group-item list-group-item-action h5" href="#published">Publications</a>
 
       <a class="list-group-item list-group-item-action h5" href="#lecture-notes">Lecture notes</a>
+      {% if ai_works.size > 0 %}<a class="list-group-item list-group-item-action h5" href="#ai-generated">AI-generated works</a>{% endif %}
       <a class="list-group-item list-group-item-action h5" href="#slides">Slides</a>
 			<a class="list-group-item list-group-item-action h5" href="{{site.url}}/simulations/">Gallery</a>
     </div>

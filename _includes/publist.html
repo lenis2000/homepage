@@ -32,3 +32,15 @@
 	\href{https://www.nature.com/articles/s41467-020-15936-z}{\textbf{Nature Communications, 11, Article number: 2066 (2020).}} \href{%raw%}{{%endraw%}{{site.storage_url}}/papers/nature-comm.pdf{%raw%}}{\texttt{{%endraw%}(PDF link){%raw%}}}{%endraw%}. 15 pages.
 	(Contribution: developed a mathematical model for reconstructing stereocilia length measurements from electron microscopy observations.)
 \end{etaremune}
+{% assign ai_works = site.posts | where_exp: "post", "post.categories contains 'ai-generated'" %}{% if ai_works.size > 0 %}
+\subsection*{Primarily AI-generated works}
+
+\begin{etaremune}
+\renewcommand{\labelenumi}{[\theenumi]}
+{% for post in ai_works %}
+\item
+{% for coa in post.coauthors %}{{coa.name}}{% unless forloop.last %}, {% endunless %}{% endfor %}.
+\emph{%raw%}{{%endraw%}{{post.title}}}. {% if post.hexagon %}\href{%raw%}{{%endraw%}https://hexagonmath.org/abs/{{post.hexagon}}{%raw%}}{\textbf{{%endraw%}hexagon:{{post.hexagon}}{%raw%}}}{%endraw%} \href{%raw%}{{%endraw%}{% if post.pdf %}{{site.storage_url}}/ai-generated/{{post.pdf}}{% else %}https://hexagonmath.org/pdf/{{post.hexagon}}{% endif %}{%raw%}}{\texttt{{%endraw%}(PDF link){%raw%}}}{%endraw%}. {% endif %}{% if post.pages %}{{post.pages}} pages. {% endif %}{% if post.ai-models %}AI models: {{ post.ai-models | join: ", " }}.{% endif %}
+{% endfor %}
+\end{etaremune}
+{% endif %}
