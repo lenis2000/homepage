@@ -149,7 +149,7 @@ nav_weight: 2
 
     <ol reversed class="my-ul-zebra research-list">
     {% for post in ai_works %}
-      <li class="mb-1" style="padding:6px" data-category="AI-generated" data-title="{{post.title | downcase}}" data-basic-search="{{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %} {{post.hexagon}}" data-year="{{post.date | date: '%Y'}}">
+      <li class="mb-1" style="padding:6px" data-category="AI-generated" data-title="{{post.title | downcase}}" data-basic-search="{{post.title}} {% for coa in post.coauthors %}{{coa.name}} {% endfor %} {{post.hexagon}} AI-generated {{ post.ai-models | join: ' ' }}" data-year="{{post.date | date: '%Y'}}">
         {% for coa in post.coauthors %}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}<a href="{{coa.web}}">{%endif%}{{coa.name}}{% if coa.noweb != true and coa.name != "Leonid Petrov" %}</a>{%endif%}{% unless forloop.last %}, {% endunless %}{% endfor %}.
         <strong><a href="{{site.url}}{{post.url}}"  class="highlighted-item">{{post.title}}</a></strong> ({{post.date | date: '%Y'}})
         {% if post.hexagon %}&bull; <a href="https://hexagonmath.org/abs/{{post.hexagon}}" target="_blank">hexagon:{{post.hexagon}}<span class="sr-only"> (opens in new tab)</span></a>{% endif %}
